@@ -1,6 +1,6 @@
 ---
 name: halpha-general-issue-skill
-description: Default Halpha skill for GitHub issue work. Use for any issue-related request, including creating structured issues, reviewing issue state, triaging issue readiness, and updating labels or milestone assignment. Keep issues aligned with the active milestone and focused on user value and product use value.
+description: Default Halpha skill for GitHub issue metadata and body work. Use for issue creation, structured issue drafting, issue state review, triage readiness, labels, milestone assignment, and duplicate checks. Do not use for issue comments.
 ---
 
 # Halpha General Issue Skill
@@ -9,7 +9,9 @@ Telegraph style. Issue workflow only.
 
 Default skill for Halpha issue handling.
 
-Use this skill for any request involving GitHub issues.
+Use this skill for GitHub issue title, body, label, milestone, state, duplicate, and readiness work.
+
+Do not use this skill for issue comments.
 
 ## Triggers
 
@@ -17,18 +19,26 @@ Use this skill when the task involves:
 
 - creating an issue;
 - drafting an issue;
-- reviewing an issue;
-- triaging an issue;
+- reviewing issue title or body;
+- reviewing issue state;
+- triaging issue readiness;
 - labeling an issue;
 - updating issue labels;
 - checking issue milestone fit;
 - assigning or correcting issue milestone;
+- checking issue open or closed state;
 - detecting duplicate issues;
 - preparing issue structure;
 - deciding whether an issue is ready for PR work.
 
 Do not use this skill for:
 
+- reading issue comments;
+- writing issue comments;
+- editing issue comments;
+- deleting issue comments;
+- reacting to issue comments;
+- using comments as triage evidence;
 - implementing code;
 - reviewing PR code;
 - changing repository files;
@@ -38,16 +48,47 @@ Do not use this skill for:
 ## Scope
 
 - Create structured issues.
-- Review existing issue state.
+- Review existing issue title and body.
+- Review existing issue labels.
+- Review existing issue milestone.
+- Review existing issue open or closed state.
 - Suggest issue labels.
 - Update issue labels when write intent is clear.
 - Assign or correct milestone when write intent is clear.
 - Triage issue readiness.
+- Detect likely duplicate issues.
 - Keep issues aligned with the active milestone.
 - Keep issues focused on user value and product use value.
 - Do not manage PRs here.
 - Do not implement code here.
+- Do not handle issue comments here.
 - Do not create future roadmap issues.
+
+## Scope Boundary
+
+In scope:
+
+- issue title;
+- issue body;
+- issue labels;
+- issue milestone;
+- issue open or closed state;
+- duplicate checks from issue title, body, labels, and milestone;
+- readiness triage from issue title, body, labels, and milestone.
+
+Out of scope:
+
+- issue comment reading;
+- issue comment creation;
+- issue comment editing;
+- issue comment deletion;
+- issue comment reactions;
+- issue comment summarization;
+- issue comment-based triage;
+- PR comments;
+- PR review comments.
+
+If comments are required, stop and report that this skill does not cover comments.
 
 ## Hard Rules
 
@@ -55,6 +96,7 @@ Do not use this skill for:
 - Issue creation must always use the active milestone.
 - Issue creation must always apply the active milestone label when milestone labels are used.
 - Public issue mutations require explicit write intent.
+- Issue comments are out of scope.
 - Do not create issues for future milestones.
 - Do not create speculative architecture issues.
 - Inspect existing issue before updating it.
@@ -71,7 +113,6 @@ Public issue mutations include:
 - adding labels;
 - removing labels;
 - changing milestone;
-- adding comments;
 - closing issues;
 - reopening issues.
 
@@ -82,6 +123,7 @@ Rules:
 - Public mutations require explicit write intent.
 - If write intent is unclear, provide the proposed mutation instead of applying it.
 - No surprise public writes.
+- Do not mutate issue comments.
 
 ## Active Milestone Rule
 
@@ -326,17 +368,16 @@ If duplicate exists:
 For an existing issue:
 
 1. Read issue title and body.
-2. Read comments if needed.
-3. Check active milestone fit.
-4. Check user value.
-5. Check product-use value.
-6. Check whether goal is clear.
-7. Check whether scope is bounded.
-8. Check whether acceptance is observable.
-9. Check duplicate risk.
-10. Recommend labels.
-11. Recommend milestone correction if needed.
-12. Update only when write intent is clear.
+2. Check active milestone fit.
+3. Check user value.
+4. Check product-use value.
+5. Check whether goal is clear.
+6. Check whether scope is bounded.
+7. Check whether acceptance is observable.
+8. Check duplicate risk.
+9. Recommend labels.
+10. Recommend milestone correction if needed.
+11. Update only when write intent is clear.
 
 ## Triage Outcomes
 
@@ -396,34 +437,6 @@ Apply:
 - Do not add labels outside the allowed set unless requested.
 - If a needed label does not exist, report it.
 - Do not create labels unless requested.
-
-## Comment Rules
-
-Use comments only when write intent is clear.
-
-Triage comment format:
-
-```markdown
-Triage result: <ready | needs-triage | blocked>
-
-Reason:
-- <short reason>
-- <short reason>
-
-Suggested labels:
-- `<label>`
-- `<label>`
-
-Milestone:
-- `<active milestone>`
-
-Next action:
-- <one concrete action>
-```
-
-Keep comments short.
-
-No long narratives.
 
 ## Duplicate Rules
 
