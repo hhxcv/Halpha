@@ -4,13 +4,25 @@ Halpha is an early-stage personal research project focused on market intelligenc
 
 The project explores how market data, public information, and structured reasoning can be organized into a reusable research context for personal analysis and review.
 
-At this stage, Halpha is only a public project space for recording ideas, planning directions, and future experiments. No stable implementation, usage interface, or release version is provided yet.
+At this stage, Halpha is a public project space for recording ideas, planning directions, future experiments, and the initial file-structure skeleton. No stable implementation, usage interface, or release version is provided yet.
 
 The long-term direction is to build a local-first research assistant that helps transform scattered market signals into clearer, reviewable research materials.
 
 ## Status
 
 This repository is currently in the initial planning stage.
+
+## Project Structure
+
+Current structure:
+
+- `AGENTS.md`: root instructions for AI agents.
+- `LICENSE`: project license.
+- `MILESTONES.md`: active and completed milestones only.
+- `README.md`: human-facing overview and structure index.
+- `src/halpha/`: intended Python source area; structure only, not implemented yet.
+- `tests/`: intended test area; structure only, no tests yet.
+- `runs/`: intended local run artifact area; generated contents stay local.
 
 ## Disclaimer
 
