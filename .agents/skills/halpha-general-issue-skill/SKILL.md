@@ -1,6 +1,6 @@
 ---
 name: halpha-general-issue-skill
-description: Default Halpha skill for GitHub issue metadata work. Use for issue creation, drafting, triage readiness, labels, milestone assignment, state checks, and duplicate checks. Do not use for issue comments, PRs, code review, or implementation.
+description: Default Halpha skill for GitHub issue metadata work. Use for issue creation, drafting, triage readiness, labels, GitHub milestone assignment, state checks, and duplicate checks. Do not use for issue comments, PRs, code review, or implementation.
 ---
 
 # Halpha General Issue Skill
@@ -9,7 +9,7 @@ Telegraph style. Issue metadata only.
 
 Default skill for Halpha issue handling.
 
-Use for issue title, body, labels, milestone, state, duplicate checks, and readiness triage.
+Use for issue title, body, labels, GitHub milestone, state, duplicate checks, and readiness triage.
 
 Do not use for issue comments.
 Do not use for PRs.
@@ -45,8 +45,8 @@ If comments or PR review are required, stop and report out of scope.
 ## Hard Rules
 
 - Every issue goal must serve the active milestone, focus user value, preserve product use value, and avoid goal drift.
-- Issue creation must always use the active milestone.
-- Issue creation must always apply the active milestone label when milestone labels are used.
+- Issue creation must always set the active GitHub milestone.
+- Do not represent milestones with labels.
 - Public issue mutations require explicit write intent.
 - Do not create issues for future milestones.
 - Do not create speculative architecture issues.
@@ -69,9 +69,16 @@ Before create or triage:
 1. Read the active milestone source.
 2. Identify the active milestone.
 3. Check direct fit.
-4. Reject, defer, or ask for owner decision if fit is unclear.
+4. Resolve the matching GitHub milestone.
+5. Reject, defer, or ask for owner decision if fit is unclear.
 
-Do not create placeholders for future phases.
+Rules:
+
+- Use the GitHub issue `milestone` field for milestone association.
+- Do not use labels for milestone association.
+- Do not create placeholders for future phases.
+- If the active GitHub milestone is missing, stop before creating an issue and report it.
+- Do not create GitHub milestones unless requested.
 
 ## Issue Fit
 
@@ -114,31 +121,26 @@ Use one status label:
 - `status:ready`
 - `status:blocked`
 
-Use the active milestone label:
-
-```text
-milestone:<active-milestone-id>
-```
-
 Rules:
 
 - `status:ready`: clear goal, clear scope, observable acceptance, clear active-milestone fit.
 - `status:needs-triage`: unclear goal, unclear value, broad scope, missing acceptance, or unclear milestone fit.
 - `status:blocked`: blocked by dependency, decision, credential, repo state, permission, or external condition.
 - Remove stale status labels before adding a new status label.
-- Remove stale milestone labels before adding the active milestone label.
 - Do not create labels unless requested.
 - Do not expand labels early.
+- Do not use labels for milestones.
 
 ## GitHub Milestone
 
-Use the active GitHub milestone when available.
+Use the active GitHub milestone.
 
 Rules:
 
-- New issues must target the active GitHub milestone.
+- New issues must set the GitHub issue `milestone` field to the active milestone.
 - Existing issues must be checked against the active GitHub milestone during triage.
-- If no GitHub milestone exists, use the active milestone label and report the missing GitHub milestone.
+- If an existing issue has the wrong milestone, recommend correction.
+- If no active GitHub milestone exists, do not create the issue.
 - Do not create GitHub milestones unless requested.
 
 ## Issue Title
@@ -227,11 +229,11 @@ Delete `Notes` if empty.
 1. Confirm explicit write intent.
 2. Read `MILESTONES.md`.
 3. Check active milestone fit.
-4. Search duplicate open issues.
-5. Select labels.
-6. Select active GitHub milestone when available.
+4. Resolve the active GitHub milestone.
+5. Search duplicate open issues.
+6. Select type, area, and status labels.
 7. Draft title and body.
-8. Create issue.
+8. Create issue with the GitHub milestone field set.
 
 If duplicate exists:
 
@@ -242,12 +244,12 @@ If duplicate exists:
 ## Triage Flow
 
 1. Read issue title and body.
-2. Check labels, milestone, and state.
+2. Check labels, GitHub milestone, and state.
 3. Check active milestone fit.
 4. Check user or product-use value.
 5. Check scope and acceptance.
 6. Check duplicate risk.
-7. Recommend status, labels, and milestone correction.
+7. Recommend status labels and GitHub milestone correction.
 8. Update only when write intent is clear.
 
 ## Mutation Safety
@@ -258,7 +260,7 @@ Public issue mutations include:
 - editing issue title or body;
 - adding labels;
 - removing labels;
-- changing milestone;
+- changing GitHub milestone;
 - closing issues;
 - reopening issues.
 
