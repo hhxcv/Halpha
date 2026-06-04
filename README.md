@@ -18,11 +18,12 @@ Implemented now:
 - `python -m halpha run --config config.example.yaml` entrypoint.
 - Run directory creation.
 - `run_manifest.json` lifecycle.
+- Narrow public Binance market collector.
+- `raw/market.json` artifact creation for collected market data or collector errors.
 - Explicit failure for unimplemented product stages.
 
 Not implemented yet:
 
-- market data collection;
 - public text event collection;
 - analysis material generation;
 - Codex report generation.
@@ -43,7 +44,7 @@ Run the current scaffold:
 python -m halpha run --config config.example.yaml
 ```
 
-Expected current result: non-zero exit, with a manifest under `runs/<run_id>/run_manifest.json` recording the first unimplemented stage.
+Expected current result in an online environment: writes `raw/market.json`, then exits non-zero at the unimplemented text collection stage. If market collection fails, `raw/market.json` and `run_manifest.json` record the collector error without fake market records.
 
 Run tests:
 

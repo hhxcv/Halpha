@@ -21,10 +21,18 @@ StageHandler = Callable[[dict[str, Any], "RunContext"], list[str] | None]
 
 
 class PipelineError(Exception):
-    def __init__(self, message: str, *, stage: str | None = None, exit_code: int = 1) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        stage: str | None = None,
+        exit_code: int = 1,
+        artifacts: list[str] | None = None,
+    ) -> None:
         super().__init__(message)
         self.stage = stage
         self.exit_code = exit_code
+        self.artifacts = artifacts or []
 
 
 class StageNotImplementedError(PipelineError):
@@ -65,6 +73,7 @@ def run_pipeline(
     _write_manifest(run)
 
     handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
+    handlers["collect_market_data"] = _collect_market_data
     if stage_handlers:
         handlers.update(stage_handlers)
 
@@ -88,6 +97,7 @@ def run_pipeline(
             error = _error_summary(failed_stage, reason)
             stage_record["status"] = "failed"
             stage_record["finished_at"] = _utc_timestamp(clock())
+            stage_record["artifacts"] = exc.artifacts
             stage_record["error"] = error
             _set_codex_status(run, stage=stage, status="failed")
             _finish_manifest(run, status="failed", error=error, finished_at=_utc_timestamp(clock()))
@@ -164,6 +174,12 @@ def _unimplemented_handler(stage: str) -> StageHandler:
         raise StageNotImplementedError(stage)
 
     return handler
+
+
+def _collect_market_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .collectors.market import collect_market_data
+
+    return collect_market_data(config, run)
 
 
 def _finish_manifest(run: RunContext, *, status: str, error: dict[str, str], finished_at: str) -> None:
