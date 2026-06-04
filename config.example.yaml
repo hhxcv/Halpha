@@ -1,0 +1,35 @@
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+
+text:
+  enabled: true
+  max_items: 30
+  sources:
+    - name: coindesk
+      type: rss
+      url: https://www.coindesk.com/arc/outboundfeeds/rss/
+    - name: cointelegraph
+      type: rss
+      url: https://cointelegraph.com/rss
+
+report:
+  title: 每日市场情报简报
+  language: zh-CN
+
+codex:
+  enabled: true
+  command: codex
+  args:
+    - exec
+    - --sandbox
+    - read-only
+    - "-"
+  timeout_seconds: 300
