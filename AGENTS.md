@@ -152,16 +152,20 @@ Use existing repo commands only.
 
 If no command exists, say so.
 
-When commands are introduced, document the smallest useful set here.
+Implemented setup command:
 
-Expected future commands may include:
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Implemented commands:
 
 ```bash
 python -m pytest
 python -m halpha run --config config.example.yaml
 ```
 
-Do not claim these commands work until implemented and verified.
+Do not claim success without running the relevant command.
 
 ## Validation
 
