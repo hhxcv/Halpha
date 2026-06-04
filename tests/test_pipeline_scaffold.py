@@ -50,6 +50,7 @@ def test_pipeline_scaffold_creates_failed_manifest_without_fake_artifacts(tmp_pa
             "message": "stage collect_market_data is not implemented",
         }
     ]
+    _assert_manifest_timeline(manifest)
 
 
 def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_path: Path) -> None:
@@ -77,8 +78,17 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
     assert "error" not in manifest["stages"][0]
     assert manifest["stages"][1]["name"] == "collect_text_events"
     assert manifest["stages"][1]["status"] == "failed"
+    assert manifest["stages"][1]["started_at"].endswith("Z")
+    assert manifest["stages"][1]["finished_at"].endswith("Z")
+    assert manifest["stages"][1]["artifacts"] == []
+    assert manifest["stages"][1]["error"] == {
+        "stage": "collect_text_events",
+        "message": "stage collect_text_events is not implemented",
+    }
+    assert manifest["errors"] == [manifest["stages"][1]["error"]]
     assert not (result.run.raw_dir / "text_events.json").exists()
     assert not (result.run.report_dir / "report.md").exists()
+    _assert_manifest_timeline(manifest)
 
 
 def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_path: Path) -> None:
@@ -94,6 +104,12 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
     assert first.run.run_dir != second.run.run_dir
     assert first.run.manifest_path.exists()
     assert second.run.manifest_path.exists()
+    manifest = json.loads(first.run.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["started_at"] == "2026-06-05T00:30:00Z"
+    assert manifest["stages"][0]["started_at"] == "2026-06-05T00:30:00Z"
+    assert manifest["stages"][0]["finished_at"] == "2026-06-05T00:30:00Z"
+    assert manifest["finished_at"] == "2026-06-05T00:30:00Z"
+    _assert_manifest_timeline(manifest)
 
 
 def test_cli_run_reports_manifest_and_nonzero_exit(tmp_path: Path, capsys) -> None:
@@ -144,3 +160,11 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _assert_manifest_timeline(manifest: dict) -> None:
+    stages = manifest["stages"]
+    assert manifest["started_at"] <= stages[0]["started_at"]
+    for stage in stages:
+        assert stage["started_at"] <= stage["finished_at"]
+    assert stages[-1]["finished_at"] <= manifest["finished_at"]
