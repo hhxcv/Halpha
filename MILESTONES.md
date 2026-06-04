@@ -32,16 +32,15 @@ Complete the smallest useful Halpha loop that can produce a research report.
 
 The loop is complete when Halpha can:
 
-- collect or load market-related input;
-- collect or load public information input;
-- keep input materials locally inspectable;
+- collect market-related input;
+- collect public information input;
+- keep input materials inspectable;
 - prepare structured research context;
 - produce a Simplified Chinese Markdown research report;
 - keep enough source awareness for later review.
 
 M0 favors:
 
-- local-first execution;
 - readable files;
 - narrow implementation steps;
 - source-aware materials;

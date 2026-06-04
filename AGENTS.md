@@ -25,7 +25,7 @@ Keep future edits in this style.
 * Root rules live here.
 * Scoped rules live in subtree `AGENTS.md`.
 * Read scoped `AGENTS.md` before subtree work.
-* Nearest scoped rule owns local implementation details.
+* Nearest scoped rule owns subtree implementation details.
 * Root safety, privacy, and financial-disclaimer rules always apply.
 * If rules conflict, stop and report the conflict.
 
@@ -39,7 +39,7 @@ Expected areas, when present:
 * Tests: `tests/`
 * Docs: `README.md`, `AGENTS.md`
 * Examples: `config.example.yaml`
-* Local run artifacts: `runs/`
+* Run artifacts: `runs/`
 
 Do not create this structure unless the task requires it.
 
@@ -53,17 +53,16 @@ Target direction:
 
 ```text
 market data + public information
--> local collection
--> local materials
+-> online data collection
+-> materials
 -> structured research context
 -> Codex-ready context
 -> Simplified Chinese research report
--> local archive
+-> archive
 ```
 
 Current bias:
 
-* local-first
 * readable artifacts
 * source-aware materials
 * simple pipeline
@@ -73,7 +72,7 @@ Current bias:
 ## Architecture
 
 * Python-first unless requested otherwise.
-* Local-first by default.
+* Configured collection and plain artifacts by default.
 * Plain files first: Markdown, JSON, YAML, CSV, text.
 * Keep raw data separate from processed material.
 * Keep processed material separate from generated narrative.
@@ -202,7 +201,7 @@ Do not claim these commands work until implemented and verified.
 * Do not log secrets.
 * Do not print secrets.
 * Do not add telemetry unless requested.
-* Do not send local research material to remote services unless requested.
+* Do not send research material to remote services unless requested.
 
 ## Financial Boundary
 

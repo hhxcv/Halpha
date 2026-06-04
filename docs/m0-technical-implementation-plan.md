@@ -4,16 +4,16 @@
 
 This document defines the M0 implementation plan for Halpha.
 
-M0 must deliver the smallest useful local report loop with real public inputs:
+M0 should deliver the smallest useful report loop:
 
 ```text
-public market data + public text event data
-  -> local collection
-  -> locally inspectable raw artifacts
+market data + public information
+  -> online data collection
+  -> inspectable raw artifacts
   -> AI-readable analysis artifacts
   -> Codex CLI report context
   -> Simplified Chinese Markdown research report
-  -> local run archive
+  -> run archive
 ```
 
 The design intentionally avoids extra architecture. M0 should prefer one working path over a broad framework.
@@ -22,15 +22,13 @@ Fixtures, static sample input files, fake collectors, and fake Codex runners are
 
 ## Scope
 
-M0 must support one command that runs the full report loop:
+M0 must support one command that runs the full report loop using real online data:
 
 ```bash
 python -m halpha run --config config.example.yaml
 ```
 
-The product path for that command is source-based collection, not fixture loading.
-
-A successful real-source run should create a local run directory:
+A successful run should create a run directory:
 
 ```text
 runs/<run_id>/
@@ -92,11 +90,11 @@ M0 must not implement:
 - background scheduling;
 - broad data-source frameworks.
 
-M0 may implement narrow real collectors for the first working path. These collectors should be explicit and source-specific, not plugin abstractions.
+M0 may implement narrow real collectors for the first working path. These collectors should be explicit and source-specific, not plugin abstractions. Test fixtures may be used only in tests and examples, and must be labeled as fixtures.
 
 ## Architecture
 
-M0 should use a small Python-first local pipeline:
+M0 should use a small Python-first pipeline:
 
 ```text
 config
@@ -112,7 +110,7 @@ config
   -> manifest update
 ```
 
-Halpha owns collection, normalization, source preservation, context assembly, and local artifact management. Codex CLI owns the final report writing step.
+Halpha owns collection, normalization, source preservation, context assembly, and artifact management. Codex CLI owns the final report writing step.
 
 The pipeline scaffold should be implemented early. Stage functions may initially be present as explicit unimplemented interfaces, but an unimplemented stage must fail honestly. It must not emit placeholder source data, placeholder analysis, or a placeholder report on the product path.
 
@@ -123,11 +121,11 @@ The pipeline scaffold should be implemented early. Stage functions may initially
 | Language | Python 3.11+ | Standard library coverage is sufficient for the first loop. |
 | CLI | `argparse` | Avoids unnecessary CLI dependencies. |
 | Config | YAML via `PyYAML` | Matches the intended configuration style. |
-| Storage | Plain JSON and Markdown files | Local-first and inspectable. |
+| Storage | Plain JSON and Markdown files | Simple and inspectable. |
 | Market collection | Narrow public market collector | Gives M0 real report value without account access. |
 | Text collection | Narrow public RSS/text collector | Gives M0 real public event context without broad crawling. |
 | Test runner | `pytest` | Small and conventional for Python projects. |
-| Report generation | `codex exec` through `subprocess.run()` | Keeps final narrative generation outside Halpha while preserving a local context artifact. |
+| Report generation | `codex exec` through `subprocess.run()` | Keeps final narrative generation outside Halpha while preserving a reviewable context artifact. |
 
 Runtime dependencies should stay minimal. A first implementation may use only `PyYAML` plus the Python standard library if HTTP and RSS handling are implemented narrowly. Add a package only when the current collector requires it.
 
@@ -896,7 +894,7 @@ Call Codex CLI, capture stdout, persist the final report, and update the manifes
 
 Done when:
 
-- local runs produce `report/report.md` when Codex CLI is available;
+- runs produce `report/report.md` when Codex CLI is available;
 - Codex failures are recorded in `run_manifest.json`.
 
 ### Step 9: real-source end-to-end run
@@ -921,7 +919,7 @@ Done when:
 
 M0 is complete when:
 
-- one command runs the full local report loop;
+- one command runs the full report loop;
 - the product path collects real public market data and real public text event data;
 - raw inputs remain locally inspectable;
 - analysis artifacts are AI-readable and source-aware;

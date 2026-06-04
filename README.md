@@ -6,7 +6,7 @@ The project explores how market data, public information, and structured reasoni
 
 At this stage, Halpha is a public project space for recording ideas, planning directions, future experiments, and the initial file-structure skeleton. No stable implementation, usage interface, or release version is provided yet.
 
-The long-term direction is to build a local-first research assistant that helps transform scattered market signals into clearer, reviewable research materials.
+The long-term direction is to build a research assistant that helps transform market signals into clearer, reviewable research materials.
 
 ## Status
 
@@ -22,7 +22,7 @@ Current structure:
 - `README.md`: human-facing overview and structure index.
 - `src/halpha/`: intended Python source area; structure only, not implemented yet.
 - `tests/`: intended test area; structure only, no tests yet.
-- `runs/`: intended local run artifact area; generated contents stay local.
+- `runs/`: intended run artifact area; generated contents are ignored by git.
 
 ## Disclaimer
 
