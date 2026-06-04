@@ -71,9 +71,12 @@ def run_pipeline(
         stage_record: dict[str, Any] = {
             "name": stage,
             "status": "running",
+            "started_at": _utc_timestamp(),
+            "finished_at": None,
             "artifacts": [],
         }
         run.manifest["stages"].append(stage_record)
+        _set_codex_status(run, stage=stage, status="running")
         _write_manifest(run)
 
         try:
@@ -81,19 +84,27 @@ def run_pipeline(
         except PipelineError as exc:
             failed_stage = exc.stage or stage
             reason = str(exc)
+            error = _error_summary(failed_stage, reason)
             stage_record["status"] = "failed"
-            stage_record["error"] = reason
-            _finish_manifest(run, status="failed", stage=failed_stage, reason=reason)
+            stage_record["finished_at"] = _utc_timestamp()
+            stage_record["error"] = error
+            _set_codex_status(run, stage=stage, status="failed")
+            _finish_manifest(run, status="failed", error=error)
             return RunResult(False, run, exc.exit_code, failed_stage, reason)
         except Exception as exc:
             reason = f"stage {stage} failed: {exc}"
+            error = _error_summary(stage, reason)
             stage_record["status"] = "failed"
-            stage_record["error"] = reason
-            _finish_manifest(run, status="failed", stage=stage, reason=reason)
+            stage_record["finished_at"] = _utc_timestamp()
+            stage_record["error"] = error
+            _set_codex_status(run, stage=stage, status="failed")
+            _finish_manifest(run, status="failed", error=error)
             return RunResult(False, run, 1, stage, reason)
 
         stage_record["status"] = "succeeded"
+        stage_record["finished_at"] = _utc_timestamp()
         stage_record["artifacts"] = artifacts or []
+        _set_codex_status(run, stage=stage, status="succeeded")
         _write_manifest(run)
 
     run.manifest["status"] = "succeeded"
@@ -131,6 +142,7 @@ def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datet
         "counts": {},
         "stage_order": list(STAGE_ORDER),
         "stages": [],
+        "codex": _codex_summary(config),
         "errors": [],
     }
 
@@ -153,11 +165,20 @@ def _unimplemented_handler(stage: str) -> StageHandler:
     return handler
 
 
-def _finish_manifest(run: RunContext, *, status: str, stage: str, reason: str) -> None:
+def _finish_manifest(run: RunContext, *, status: str, error: dict[str, str]) -> None:
     run.manifest["status"] = status
     run.manifest["finished_at"] = _utc_timestamp()
-    run.manifest["errors"].append({"stage": stage, "message": reason})
+    run.manifest["errors"].append(error)
     _write_manifest(run)
+
+
+def _error_summary(stage: str, reason: str) -> dict[str, str]:
+    return {"stage": stage, "message": reason}
+
+
+def _set_codex_status(run: RunContext, *, stage: str, status: str) -> None:
+    if stage == "run_codex_report":
+        run.manifest["codex"]["status"] = status
 
 
 def _write_manifest(run: RunContext) -> None:
@@ -209,6 +230,16 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
             }
             for source in text.get("sources", [])
         ],
+    }
+
+
+def _codex_summary(config: dict[str, Any]) -> dict[str, Any]:
+    codex = config.get("codex", {})
+    return {
+        "enabled": codex.get("enabled"),
+        "command": codex.get("command"),
+        "status": "not_started",
+        "exit_code": None,
     }
 
 
