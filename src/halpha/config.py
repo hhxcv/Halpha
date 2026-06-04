@@ -79,9 +79,7 @@ def validate_config(config: dict[str, Any]) -> None:
     if codex_enabled:
         _require_non_empty_string(codex, "command", "codex.command")
         _require_non_empty_string_list(codex, "args", "codex.args")
-        timeout = codex.get("timeout_seconds")
-        if not isinstance(timeout, int) or timeout <= 0:
-            raise ConfigError("codex.timeout_seconds must be a positive integer.")
+        _require_positive_int(codex, "timeout_seconds", "codex.timeout_seconds")
 
 
 def _validate_config_sections(config: dict[str, Any]) -> None:
@@ -123,7 +121,7 @@ def _require_http_url(data: dict[str, Any], key: str, path: str) -> str:
 
 def _require_positive_int(data: dict[str, Any], key: str, path: str) -> int:
     value = data.get(key)
-    if not isinstance(value, int) or value <= 0:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ConfigError(f"{path} must be a positive integer.")
     return value
 

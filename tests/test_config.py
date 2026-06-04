@@ -196,6 +196,26 @@ def test_load_config_rejects_invalid_text_max_items(tmp_path: Path) -> None:
         load_config(config_path)
 
 
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("text:\n  enabled: true", "text:\n  enabled: true\n  max_items: true", "text.max_items"),
+        ("timeout_seconds: 300", "timeout_seconds: true", "codex.timeout_seconds"),
+    ],
+)
+def test_load_config_rejects_boolean_positive_integer_fields(
+    tmp_path: Path, old: str, new: str, expected: str
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
 def _write_valid_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
