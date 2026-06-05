@@ -4,17 +4,17 @@ Halpha is an early-stage personal research project focused on market intelligenc
 
 The project explores how market data, public information, and structured reasoning can be organized into a reusable research context for personal analysis and review.
 
-At this stage, Halpha has an implemented M0 core report loop. No stable usage interface or release version is provided yet.
+At this stage, Halpha has an implemented core report loop. No stable usage interface or release version is provided yet.
 
 The long-term direction is to build a research assistant that helps transform market signals into clearer, reviewable research materials.
 
 ## Status
 
-This repository is currently in the implemented M0 core report loop stage.
+This repository is currently in the implemented core report loop stage.
 
 Implemented now:
 
-- M0 Python package skeleton.
+- Python package skeleton.
 - `python -m halpha run --config config.example.yaml` entrypoint.
 - Run directory creation.
 - `run_manifest.json` lifecycle.
@@ -48,7 +48,7 @@ Install the package and development dependencies:
 python -m pip install -e ".[dev]"
 ```
 
-Run the M0 report loop:
+Run the report loop:
 
 ```bash
 python -m halpha run --config config.example.yaml
@@ -94,13 +94,13 @@ python -m pytest
 Current structure:
 
 - `AGENTS.md`: root instructions for AI agents.
-- `config.example.yaml`: example M0 source-based configuration.
+- `config.example.yaml`: example source-based configuration.
 - `LICENSE`: project license.
 - `MILESTONES.md`: active and completed milestones only.
 - `pyproject.toml`: Python package metadata and test configuration.
 - `README.md`: human-facing overview and structure index.
-- `src/halpha/`: M0 Python package.
-- `tests/`: focused tests for config, collection, materials, context, Codex runner, and the M0 smoke path.
+- `src/halpha/`: Python package.
+- `tests/`: focused tests for config, collection, materials, context, Codex runner, and the smoke path.
 - `runs/`: intended run artifact area; generated contents are ignored by git.
 
 ## Disclaimer
