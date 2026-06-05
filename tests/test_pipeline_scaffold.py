@@ -6,14 +6,18 @@ from pathlib import Path
 
 from halpha.cli import main
 from halpha.config import load_config
-from halpha.pipeline import STAGE_ORDER, run_pipeline
+from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline
 
 
-def test_pipeline_scaffold_creates_failed_manifest_without_fake_artifacts(tmp_path: Path) -> None:
+def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    result = run_pipeline(config, config_path=config_path)
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_market_data": _failed_market_stage},
+    )
 
     assert result.succeeded is False
     assert result.exit_code == 3
@@ -96,8 +100,9 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
     config = load_config(config_path)
     now = datetime(2026, 6, 5, 8, 30, tzinfo=timezone(timedelta(hours=8)))
 
-    first = run_pipeline(config, config_path=config_path, now=now)
-    second = run_pipeline(config, config_path=config_path, now=now)
+    stage_handlers = {"collect_market_data": _failed_market_stage}
+    first = run_pipeline(config, config_path=config_path, stage_handlers=stage_handlers, now=now)
+    second = run_pipeline(config, config_path=config_path, stage_handlers=stage_handlers, now=now)
 
     assert first.run.run_id == "20260605T003000Z"
     assert second.run.run_id == "20260605T003000Z-01"
@@ -112,16 +117,17 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
     _assert_manifest_timeline(manifest)
 
 
-def test_cli_run_reports_manifest_and_nonzero_exit(tmp_path: Path, capsys) -> None:
+def test_cli_run_reports_manifest_and_nonzero_exit(tmp_path: Path, capsys, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
+    monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
 
     exit_code = main(["run", "--config", str(config_path)])
 
     captured = capsys.readouterr()
     assert exit_code == 3
     assert "Halpha run failed." in captured.out
-    assert "stage: collect_market_data" in captured.out
-    assert "reason: stage collect_market_data is not implemented" in captured.out
+    assert "stage: collect_text_events" in captured.out
+    assert "reason: stage collect_text_events is not implemented" in captured.out
     assert "manifest:" in captured.out
 
 
@@ -168,3 +174,38 @@ def _assert_manifest_timeline(manifest: dict) -> None:
     for stage in stages:
         assert stage["started_at"] <= stage["finished_at"]
     assert stages[-1]["finished_at"] <= manifest["finished_at"]
+
+
+def _failed_market_stage(config, run) -> None:
+    raise PipelineError(
+        "stage collect_market_data is not implemented",
+        stage="collect_market_data",
+        exit_code=3,
+    )
+
+
+def _fake_urlopen(request, timeout):
+    return _FakeResponse(
+        {
+            "symbol": "BTCUSDT",
+            "lastPrice": "68000.00",
+            "priceChangePercent": "1.25",
+            "volume": "123.45",
+            "quoteVolume": "8394600.00",
+            "closeTime": 1780619400000,
+        }
+    )
+
+
+class _FakeResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return json.dumps(self.payload).encode("utf-8")
