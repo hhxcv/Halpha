@@ -28,11 +28,13 @@ class PipelineError(Exception):
         stage: str | None = None,
         exit_code: int = 1,
         artifacts: list[str] | None = None,
+        error_details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.stage = stage
         self.exit_code = exit_code
         self.artifacts = artifacts or []
+        self.error_details = error_details or {}
 
 
 class StageNotImplementedError(PipelineError):
@@ -78,6 +80,7 @@ def run_pipeline(
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
+    handlers["run_codex_report"] = _run_codex_report
     if stage_handlers:
         handlers.update(stage_handlers)
 
@@ -98,7 +101,7 @@ def run_pipeline(
         except PipelineError as exc:
             failed_stage = exc.stage or stage
             reason = str(exc)
-            error = _error_summary(failed_stage, reason)
+            error = _error_summary(failed_stage, reason, details=exc.error_details)
             stage_record["status"] = "failed"
             stage_record["finished_at"] = _utc_timestamp(clock())
             stage_record["artifacts"] = exc.artifacts
@@ -219,19 +222,30 @@ def _build_codex_context(config: dict[str, Any], run: RunContext) -> list[str] |
     return build_codex_context(config, run)
 
 
-def _finish_manifest(run: RunContext, *, status: str, error: dict[str, str], finished_at: str) -> None:
+def _run_codex_report(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .codex.runner import run_codex_report
+
+    return run_codex_report(config, run)
+
+
+def _finish_manifest(run: RunContext, *, status: str, error: dict[str, Any], finished_at: str) -> None:
     run.manifest["status"] = status
     run.manifest["finished_at"] = finished_at
     run.manifest["errors"].append(error)
     _write_manifest(run)
 
 
-def _error_summary(stage: str, reason: str) -> dict[str, str]:
-    return {"stage": stage, "message": reason}
+def _error_summary(stage: str, reason: str, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
+    error: dict[str, Any] = {"stage": stage, "message": reason}
+    if details:
+        error.update(details)
+    return error
 
 
 def _set_codex_status(run: RunContext, *, stage: str, status: str) -> None:
     if stage == "run_codex_report":
+        if run.manifest["codex"].get("status") == "disabled" and status == "succeeded":
+            return
         run.manifest["codex"]["status"] = status
 
 

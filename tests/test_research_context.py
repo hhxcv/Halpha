@@ -18,11 +18,12 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_text_raw,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
     assert "artifact_type: research_context" in context
@@ -53,7 +54,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert manifest["stages"][4]["name"] == "build_codex_context"
     assert manifest["stages"][4]["status"] == "succeeded"
     assert manifest["stages"][5]["name"] == "run_codex_report"
-    assert manifest["stages"][5]["status"] == "failed"
+    assert manifest["stages"][5]["status"] == "succeeded"
 
 
 def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path: Path) -> None:
@@ -63,11 +64,14 @@ def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={"collect_market_data": _write_market_raw},
+        stage_handlers={
+            "collect_market_data": _write_market_raw,
+            "run_codex_report": _skip_codex_report,
+        },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
     assert not (result.run.analysis_dir / "text_material.md").exists()
 
     context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
@@ -232,4 +236,8 @@ def _write_text_raw(config, run) -> list[str]:
 
 
 def _skip_analysis_materials(config, run) -> list[str]:
+    return []
+
+
+def _skip_codex_report(config, run) -> list[str]:
     return []

@@ -18,11 +18,12 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_text_raw,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     context = (result.run.codex_context_dir / "context.md").read_text(encoding="utf-8")
     assert "# codex_context" in context
@@ -60,7 +61,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
         "codex_context/prompt.md",
     ]
     assert manifest["stages"][5]["name"] == "run_codex_report"
-    assert manifest["stages"][5]["status"] == "failed"
+    assert manifest["stages"][5]["status"] == "succeeded"
 
 
 def test_codex_context_fails_when_research_context_is_missing(tmp_path: Path) -> None:
@@ -209,4 +210,8 @@ def _write_text_raw(config, run) -> list[str]:
 
 
 def _skip_research_context(config, run) -> list[str]:
+    return []
+
+
+def _skip_codex_report(config, run) -> list[str]:
     return []

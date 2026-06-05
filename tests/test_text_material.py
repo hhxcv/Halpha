@@ -15,11 +15,14 @@ def test_pipeline_generates_ai_readable_text_material(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={"collect_text_events": _write_complete_text_raw},
+        stage_handlers={
+            "collect_text_events": _write_complete_text_raw,
+            "run_codex_report": _skip_codex_report,
+        },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_text_material" in material
@@ -56,11 +59,14 @@ def test_text_material_marks_missing_optional_source_values_explicitly(tmp_path:
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={"collect_text_events": _write_minimum_text_raw},
+        stage_handlers={
+            "collect_text_events": _write_minimum_text_raw,
+            "run_codex_report": _skip_codex_report,
+        },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "url: null" in material
@@ -77,11 +83,14 @@ def test_text_material_uses_artifact_source_url_when_item_url_is_missing(tmp_pat
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={"collect_text_events": _write_text_raw_with_artifact_source_url},
+        stage_handlers={
+            "collect_text_events": _write_text_raw_with_artifact_source_url,
+            "run_codex_report": _skip_codex_report,
+        },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "url: https://www.coindesk.com/arc/outboundfeeds/rss/" in material
@@ -92,10 +101,14 @@ def test_text_material_skips_when_text_disabled(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, text_enabled=False)
     config = load_config(config_path)
 
-    result = run_pipeline(config, config_path=config_path)
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"run_codex_report": _skip_codex_report},
+    )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
     assert not (result.run.raw_dir / "text_events.json").exists()
     assert not (result.run.analysis_dir / "text_material.md").exists()
 
@@ -276,6 +289,10 @@ def _write_invalid_text_raw(config, run) -> list[str]:
     del item["content_text"]
     write_json(run.raw_dir / "text_events.json", _text_raw(item))
     return ["raw/text_events.json"]
+
+
+def _skip_codex_report(config, run) -> list[str]:
+    return []
 
 
 def _text_raw(

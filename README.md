@@ -30,11 +30,13 @@ Implemented now:
 - `analysis/research_context.md` artifact creation from analysis materials.
 - Codex context artifact generation.
 - `codex_context/context.md` and `codex_context/prompt.md` artifact creation.
-- Explicit failure for unimplemented product stages.
+- Codex CLI report generation from persisted prompt context.
+- `report/report.md` artifact creation from Codex stdout when Codex CLI succeeds.
+- Codex execution status, exit code, and failure summary recording in `run_manifest.json`.
 
 Not implemented yet:
 
-- Codex report generation.
+- Report export formats other than Markdown.
 
 The scaffold must not emit fake raw data, fake analysis, or a placeholder report.
 
@@ -52,7 +54,7 @@ Run the current scaffold:
 python -m halpha run --config config.example.yaml
 ```
 
-Expected current result in an online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`, then exits non-zero at the unimplemented Codex report stage. If collection fails, raw artifacts and `run_manifest.json` record collector errors without fake records.
+Expected current result in an online environment with a configured Codex CLI: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, and `report/report.md`. If collection or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 Run tests:
 

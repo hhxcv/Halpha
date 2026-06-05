@@ -1,3 +1,8 @@
+---
+name: halpha-requirements-analysis-skill
+description: Halpha skill for analyzing requirements before implementation. Use for requirement decomposition, milestone fit, scope boundaries, pipeline position, acceptance criteria, sequencing, and fixture or mock risk checks. Do not use for code implementation, PR writing, PR review, issue comments, or GitHub metadata mutation.
+---
+
 # Halpha Requirements Analysis Skill
 
 Telegraph style. Requirements only.

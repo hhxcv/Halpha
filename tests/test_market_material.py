@@ -18,11 +18,12 @@ def test_pipeline_generates_ai_readable_market_material(tmp_path: Path) -> None:
         stage_handlers={
             "collect_market_data": _write_complete_market_raw,
             "collect_text_events": _skip_text_collection,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     material = (result.run.analysis_dir / "market_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_market_material" in material
@@ -60,11 +61,12 @@ def test_market_material_marks_missing_values_explicitly(tmp_path: Path) -> None
         stage_handlers={
             "collect_market_data": _write_minimum_market_raw,
             "collect_text_events": _skip_text_collection,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     material = (result.run.analysis_dir / "market_material.md").read_text(encoding="utf-8")
     assert "price: null" in material
@@ -86,11 +88,12 @@ def test_market_material_uses_artifact_source_url_when_item_url_is_missing(tmp_p
         stage_handlers={
             "collect_market_data": _write_market_raw_with_artifact_source_url,
             "collect_text_events": _skip_text_collection,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
 
     material = (result.run.analysis_dir / "market_material.md").read_text(encoding="utf-8")
     assert "url: https://data-api.binance.vision" in material
@@ -104,11 +107,14 @@ def test_market_material_skips_when_market_disabled(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={"collect_text_events": _skip_text_collection},
+        stage_handlers={
+            "collect_text_events": _skip_text_collection,
+            "run_codex_report": _skip_codex_report,
+        },
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
+    assert result.succeeded is True
+    assert result.failed_stage is None
     assert not (result.run.raw_dir / "market.json").exists()
     assert not (result.run.analysis_dir / "market_material.md").exists()
 
@@ -327,4 +333,8 @@ def _write_invalid_market_raw(config, run) -> list[str]:
 
 
 def _skip_text_collection(config, run) -> list[str]:
+    return []
+
+
+def _skip_codex_report(config, run) -> list[str]:
     return []
