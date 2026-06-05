@@ -45,11 +45,12 @@ def _run(config_arg: str) -> int:
     manifest = display_path(result.run.manifest_path)
 
     if result.succeeded:
-        report_artifact = result.run.manifest.get("artifacts", {}).get("report", "report/report.md")
-        report = display_path(result.run.run_dir / report_artifact)
+        report_artifact = result.run.manifest.get("artifacts", {}).get("report")
         print("Halpha run succeeded.")
         print(f"run_id: {result.run.run_id}")
-        print(f"report: {report}")
+        if report_artifact:
+            report = display_path(result.run.run_dir / report_artifact)
+            print(f"report: {report}")
         print(f"manifest: {manifest}")
         return 0
 

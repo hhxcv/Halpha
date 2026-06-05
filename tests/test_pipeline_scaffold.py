@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -120,19 +121,40 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
     _assert_manifest_timeline(manifest)
 
 
-def test_cli_run_reports_manifest_and_nonzero_exit(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_cli_run_reports_report_manifest_and_zero_exit(tmp_path: Path, capsys, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
     monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", _fake_codex_run)
 
     exit_code = main(["run", "--config", str(config_path)])
 
     captured = capsys.readouterr()
-    assert exit_code == 3
+    assert exit_code == 0
+    assert "Halpha run succeeded." in captured.out
+    assert "report:" in captured.out
+    assert "manifest:" in captured.out
+
+    report_paths = sorted(tmp_path.glob("runs/*/report/report.md"))
+    assert len(report_paths) == 1
+    assert "## 风险提示" in report_paths[0].read_text(encoding="utf-8")
+
+
+def test_cli_run_returns_codex_failure_exit_code(tmp_path: Path, capsys, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", _fake_codex_failure_run)
+
+    exit_code = main(["run", "--config", str(config_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 17
     assert "Halpha run failed." in captured.out
     assert "stage: run_codex_report" in captured.out
-    assert "reason: stage run_codex_report is not implemented" in captured.out
+    assert "reason: Codex command failed with exit code 17." in captured.out
     assert "manifest:" in captured.out
+    assert not list(tmp_path.glob("runs/*/report/report.md"))
 
 
 def _write_config(tmp_path: Path) -> Path:
@@ -224,6 +246,30 @@ def _fake_rss_urlopen(request, timeout):
   </channel>
 </rss>
 """
+    )
+
+
+def _fake_codex_run(command, input, text, capture_output, timeout, cwd):
+    assert command == ["codex", "exec", "--sandbox", "read-only", "-"]
+    assert "Generate a Simplified Chinese Markdown market intelligence report" in input
+    assert text is True
+    assert capture_output is True
+    assert timeout == 300
+    assert cwd.name
+    return subprocess.CompletedProcess(
+        command,
+        0,
+        stdout="# 每日市场简报\n\n## 风险提示\n本内容仅供个人研究，不构成投资建议。\n",
+        stderr="",
+    )
+
+
+def _fake_codex_failure_run(command, input, text, capture_output, timeout, cwd):
+    return subprocess.CompletedProcess(
+        command,
+        17,
+        stdout="partial report",
+        stderr="Codex failed",
     )
 
 
