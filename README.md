@@ -28,11 +28,12 @@ Implemented now:
 - `analysis/text_material.md` artifact creation from `raw/text_events.json`.
 - Research context generation.
 - `analysis/research_context.md` artifact creation from analysis materials.
+- Codex context artifact generation.
+- `codex_context/context.md` and `codex_context/prompt.md` artifact creation.
 - Explicit failure for unimplemented product stages.
 
 Not implemented yet:
 
-- Codex context generation;
 - Codex report generation.
 
 The scaffold must not emit fake raw data, fake analysis, or a placeholder report.
@@ -51,7 +52,7 @@ Run the current scaffold:
 python -m halpha run --config config.example.yaml
 ```
 
-Expected current result in an online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, and `analysis/research_context.md`, then exits non-zero at the unimplemented Codex context stage. If collection fails, raw artifacts and `run_manifest.json` record collector errors without fake records.
+Expected current result in an online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`, then exits non-zero at the unimplemented Codex report stage. If collection fails, raw artifacts and `run_manifest.json` record collector errors without fake records.
 
 Run tests:
 

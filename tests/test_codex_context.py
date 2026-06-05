@@ -8,7 +8,7 @@ from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
 
 
-def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: Path) -> None:
+def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
@@ -24,60 +24,46 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert result.succeeded is False
     assert result.failed_stage == "run_codex_report"
 
-    context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
-    assert "artifact_type: research_context" in context
-    assert "audience: codex_cli" in context
-    assert "language_target: zh-CN" in context
+    context = (result.run.codex_context_dir / "context.md").read_text(encoding="utf-8")
+    assert "# codex_context" in context
     assert "raw_market: raw/market.json" in context
     assert "raw_text_events: raw/text_events.json" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
-    assert "## source_policy" in context
-    assert "allowed_sources_only: true" in context
-    assert "fabricate_missing_sources: false" in context
-    assert "financial_advice: false" in context
-    assert "## generation_constraints" in context
-    assert "do_not_invent_prices_events_links_sources: true" in context
-    assert "required_sections:" in context
-    assert '<embed path="analysis/market_material.md">' in context
-    assert "artifact_type: analysis_market_material" in context
-    assert '<embed path="analysis/text_material.md">' in context
-    assert "artifact_type: analysis_text_material" in context
+    assert "research_context: analysis/research_context.md" in context
+    assert "codex_context: codex_context/context.md" in context
+    assert "codex_prompt: codex_context/prompt.md" in context
+    assert '<embed path="analysis/research_context.md">' in context
+    assert "artifact_type: research_context" in context
     assert "content_text: Source-provided event text." in context
 
+    prompt = (result.run.codex_context_dir / "prompt.md").read_text(encoding="utf-8")
+    assert "Generate a Simplified Chinese Markdown market intelligence report" in prompt
+    assert "Do not invent prices, events, links, sources, or certainty." in prompt
+    assert "Preserve source awareness." in prompt
+    assert "Distinguish facts, assumptions, uncertainties, and judgment." in prompt
+    assert "Use cautious language for market interpretation." in prompt
+    assert "Include a risk notice." in prompt
+    assert "not financial advice" in prompt
+    assert "Do not modify repository files" in prompt
+    assert "<context>" in prompt
+    assert "# codex_context" in prompt
+    assert "artifact_type: research_context" in prompt
+
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
-    assert manifest["stages"][3]["name"] == "build_research_context"
-    assert manifest["stages"][3]["status"] == "succeeded"
-    assert manifest["stages"][3]["artifacts"] == ["analysis/research_context.md"]
+    assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
+    assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
     assert manifest["stages"][4]["name"] == "build_codex_context"
     assert manifest["stages"][4]["status"] == "succeeded"
+    assert manifest["stages"][4]["artifacts"] == [
+        "codex_context/context.md",
+        "codex_context/prompt.md",
+    ]
     assert manifest["stages"][5]["name"] == "run_codex_report"
     assert manifest["stages"][5]["status"] == "failed"
 
 
-def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path, text_enabled=False)
-    config = load_config(config_path)
-
-    result = run_pipeline(
-        config,
-        config_path=config_path,
-        stage_handlers={"collect_market_data": _write_market_raw},
-    )
-
-    assert result.succeeded is False
-    assert result.failed_stage == "run_codex_report"
-    assert not (result.run.analysis_dir / "text_material.md").exists()
-
-    context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
-    assert "market_material: analysis/market_material.md" in context
-    assert "text_material: null" in context
-    assert "artifact: analysis/text_material.md" in context
-    assert "status: not_generated" in context
-
-
-def test_research_context_fails_when_enabled_material_is_missing(tmp_path: Path) -> None:
+def test_codex_context_fails_when_research_context_is_missing(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
@@ -87,46 +73,31 @@ def test_research_context_fails_when_enabled_material_is_missing(tmp_path: Path)
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_text_raw,
-            "build_analysis_materials": _skip_analysis_materials,
+            "build_research_context": _skip_research_context,
         },
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_research_context"
-    assert result.reason == "analysis/market_material.md was not found; build_analysis_materials must run first."
-    assert not (result.run.analysis_dir / "research_context.md").exists()
+    assert result.failed_stage == "build_codex_context"
+    assert result.reason == "analysis/research_context.md was not found; build_research_context must run first."
+    assert not (result.run.codex_context_dir / "context.md").exists()
+    assert not (result.run.codex_context_dir / "prompt.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    assert manifest["stages"][3]["name"] == "build_research_context"
-    assert manifest["stages"][3]["status"] == "failed"
+    assert manifest["stages"][4]["name"] == "build_codex_context"
+    assert manifest["stages"][4]["status"] == "failed"
     assert manifest["errors"] == [
         {
-            "stage": "build_research_context",
-            "message": "analysis/market_material.md was not found; build_analysis_materials must run first.",
+            "stage": "build_codex_context",
+            "message": "analysis/research_context.md was not found; build_research_context must run first.",
         }
     ]
 
 
-def _write_config(tmp_path: Path, *, text_enabled: bool = True) -> Path:
+def _write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
-    text_block = (
-        """
-text:
-  enabled: true
-  max_items: 1
-  sources:
-    - name: coindesk
-      type: rss
-      url: https://www.coindesk.com/arc/outboundfeeds/rss/
-"""
-        if text_enabled
-        else """
-text:
-  enabled: false
-"""
-    )
     config_path.write_text(
-        f"""
+        """
 run:
   output_dir: runs
   timezone: Asia/Shanghai
@@ -135,7 +106,13 @@ market:
   source: binance
   symbols:
     - BTCUSDT
-{text_block.rstrip()}
+text:
+  enabled: true
+  max_items: 1
+  sources:
+    - name: coindesk
+      type: rss
+      url: https://www.coindesk.com/arc/outboundfeeds/rss/
 report:
   title: Daily Market Brief
   language: zh-CN
@@ -231,5 +208,5 @@ def _write_text_raw(config, run) -> list[str]:
     return ["raw/text_events.json"]
 
 
-def _skip_analysis_materials(config, run) -> list[str]:
+def _skip_research_context(config, run) -> list[str]:
     return []
