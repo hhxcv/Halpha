@@ -165,6 +165,10 @@ python -m pytest
 python -m halpha run --config config.example.yaml
 ```
 
+The run command is the implemented M0 product path.
+
+It requires public network access, configured public sources, and a working Codex CLI.
+
 Do not claim success without running the relevant command.
 
 ## Validation
@@ -172,6 +176,10 @@ Do not claim success without running the relevant command.
 * Run the narrowest relevant check.
 * Prefer tests for changed behavior.
 * Use smoke checks for early scaffolding.
+* Use `python -m pytest` for automated validation.
+* Use `python -m halpha run --config config.example.yaml` for real-source M0 product acceptance when the user permits Codex CLI use.
+* State before a real Codex CLI run that generated local research context will be sent to Codex CLI.
+* Do not treat fixtures, mocked HTTP responses, or fake Codex subprocesses as product acceptance.
 * For docs-only changes, use `git diff --check` when available.
 * Do not claim success without proof.
 * If validation is blocked, state what was not run and why.
