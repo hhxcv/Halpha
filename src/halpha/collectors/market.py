@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from halpha.pipeline import PipelineError, RunContext
+from halpha.raw_artifacts import RawArtifactError, validate_market_raw_artifact
 from halpha.storage import write_json
 
 
@@ -26,6 +27,11 @@ def collect_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
         return []
 
     raw = _collect_raw_market(market)
+    try:
+        validate_market_raw_artifact(raw, MARKET_ARTIFACT)
+    except RawArtifactError as exc:
+        raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=3) from exc
+
     artifact_path = run.raw_dir / "market.json"
     write_json(artifact_path, raw)
     run.manifest["artifacts"]["raw_market"] = MARKET_ARTIFACT

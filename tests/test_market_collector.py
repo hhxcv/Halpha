@@ -42,6 +42,9 @@ def test_pipeline_collects_binance_market_data_and_writes_raw_artifact(tmp_path:
     ]
 
     raw = json.loads((result.run.raw_dir / "market.json").read_text(encoding="utf-8"))
+    raw_text = json.dumps(raw, ensure_ascii=False).lower()
+    assert "manually written" not in raw_text
+    assert "manually curated" not in raw_text
     assert raw["schema_version"] == 1
     assert raw["artifact_type"] == "market_raw"
     assert raw["collector"] == "market"
