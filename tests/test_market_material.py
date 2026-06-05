@@ -22,7 +22,7 @@ def test_pipeline_generates_ai_readable_market_material(tmp_path: Path) -> None:
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_research_context"
+    assert result.failed_stage == "build_codex_context"
 
     material = (result.run.analysis_dir / "market_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_market_material" in material
@@ -64,7 +64,7 @@ def test_market_material_marks_missing_values_explicitly(tmp_path: Path) -> None
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_research_context"
+    assert result.failed_stage == "build_codex_context"
 
     material = (result.run.analysis_dir / "market_material.md").read_text(encoding="utf-8")
     assert "price: null" in material
@@ -90,7 +90,7 @@ def test_market_material_uses_artifact_source_url_when_item_url_is_missing(tmp_p
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_research_context"
+    assert result.failed_stage == "build_codex_context"
 
     material = (result.run.analysis_dir / "market_material.md").read_text(encoding="utf-8")
     assert "url: https://data-api.binance.vision" in material
@@ -108,7 +108,7 @@ def test_market_material_skips_when_market_disabled(tmp_path: Path) -> None:
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_research_context"
+    assert result.failed_stage == "build_codex_context"
     assert not (result.run.raw_dir / "market.json").exists()
     assert not (result.run.analysis_dir / "market_material.md").exists()
 

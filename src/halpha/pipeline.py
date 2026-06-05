@@ -76,6 +76,7 @@ def run_pipeline(
     handlers["collect_market_data"] = _collect_market_data
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_analysis_materials"] = _build_analysis_materials
+    handlers["build_research_context"] = _build_research_context
     if stage_handlers:
         handlers.update(stage_handlers)
 
@@ -203,6 +204,12 @@ def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[s
             exc.artifacts = artifacts
         raise
     return artifacts
+
+
+def _build_research_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .analysis.research_context import build_research_context
+
+    return build_research_context(config, run)
 
 
 def _finish_manifest(run: RunContext, *, status: str, error: dict[str, str], finished_at: str) -> None:
