@@ -46,6 +46,8 @@ def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> 
     assert calls[0]["timeout"] == 9
     assert calls[0]["cwd"] == result.run.run_dir
     assert "Generate a Simplified Chinese Markdown market intelligence report" in calls[0]["input"]
+    assert "Use Chinese section headings only." in calls[0]["input"]
+    assert "- 核心摘要" in calls[0]["input"]
     assert "Do not invent prices, events, links, sources, or certainty." in calls[0]["input"]
 
     report = result.run.report_dir / "report.md"
