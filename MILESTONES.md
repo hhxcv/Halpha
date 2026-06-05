@@ -20,9 +20,59 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M0 — Core Report Loop
+### M1 — Signal-aware Report
 
 Status: active.
+
+Goal:
+
+```text
+Improve report value by turning real market data and public information into structured, source-aware signals that can support a more useful research report.
+```
+
+The loop is complete when Halpha can:
+
+* collect enough historical market data for configured symbols;
+* generate basic market signals from historical market data;
+* normalize public information into inspectable event materials;
+* generate basic text event signals from public information;
+* combine market signals and text signals into a unified signal summary;
+* identify aligned, mixed, conflicting, or weak signal conditions;
+* prepare Codex context that includes signal evidence, source awareness, and report requirements;
+* produce a Simplified Chinese Markdown research report that includes signal matrix, resonance analysis, scenario analysis, watch points, and risk notes.
+
+M1 favors:
+
+* signal-driven report materials;
+* simple and explainable market strategies;
+* real data and real pipeline artifacts;
+* readable local files;
+* source-aware text events;
+* narrow end-to-end improvements;
+* report value over broad system design.
+
+M1 does not require:
+
+* trading execution;
+* exchange account operations;
+* portfolio automation;
+* backtesting framework;
+* strategy parameter optimization;
+* machine learning prediction;
+* database-backed market history;
+* multi-exchange data aggregation;
+* generalized news crawling;
+* vector database or semantic search;
+* dashboard UI;
+* hosted service design;
+* multi-user features.
+
+
+## Completed Milestones
+
+### M0 — Core Report Loop
+
+Status: completed.
 
 Goal:
 
@@ -56,7 +106,3 @@ M0 does not require:
 - dashboard UI;
 - database-backed storage;
 - generalized plugin architecture.
-
-## Completed Milestones
-
-No completed milestones yet.
