@@ -40,6 +40,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
 
     prompt = (result.run.codex_context_dir / "prompt.md").read_text(encoding="utf-8")
     assert "Generate a Simplified Chinese Markdown market intelligence report" in prompt
+    assert "Use Chinese section headings only." in prompt
     assert "Do not invent prices, events, links, sources, or certainty." in prompt
     assert "Preserve source awareness." in prompt
     assert "Distinguish facts, assumptions, uncertainties, and judgment." in prompt
@@ -50,6 +51,8 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "<context>" in prompt
     assert "# codex_context" in prompt
     assert "artifact_type: research_context" in prompt
+    assert "- 核心摘要" in prompt
+    assert "- Market Overview" not in prompt
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"

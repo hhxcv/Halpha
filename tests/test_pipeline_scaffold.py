@@ -252,6 +252,7 @@ def _fake_rss_urlopen(request, timeout):
 def _fake_codex_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
     assert command[1:] == ["exec", "--sandbox", "read-only", "-"]
     assert "Generate a Simplified Chinese Markdown market intelligence report" in input
+    assert "Use Chinese section headings only." in input
     assert text is True
     assert encoding == "utf-8"
     assert errors == "replace"

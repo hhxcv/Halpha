@@ -40,6 +40,8 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "## generation_constraints" in context
     assert "do_not_invent_prices_events_links_sources: true" in context
     assert "required_sections:" in context
+    assert "- 核心摘要" in context
+    assert "- market_overview" not in context
     assert '<embed path="analysis/market_material.md">' in context
     assert "artifact_type: analysis_market_material" in context
     assert '<embed path="analysis/text_material.md">' in context

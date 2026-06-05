@@ -147,13 +147,13 @@ def _generation_constraints() -> dict[str, Any]:
         "do_not_invent_prices_events_links_sources": True,
         "include_risk_notice": True,
         "required_sections": [
-            "title",
-            "core_summary",
-            "market_overview",
-            "text_events",
-            "synthesis",
-            "watch_points",
-            "risk_notice",
+            "标题",
+            "核心摘要",
+            "市场概览",
+            "文本事件",
+            "综合判断",
+            "观察要点",
+            "风险提示",
         ],
     }
 
