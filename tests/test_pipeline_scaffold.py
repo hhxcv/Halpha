@@ -69,7 +69,10 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={"collect_market_data": collect_market_data},
+        stage_handlers={
+            "collect_market_data": collect_market_data,
+            "collect_text_events": _failed_text_stage,
+        },
     )
 
     assert result.succeeded is False
@@ -120,14 +123,15 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
 def test_cli_run_reports_manifest_and_nonzero_exit(tmp_path: Path, capsys, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
 
     exit_code = main(["run", "--config", str(config_path)])
 
     captured = capsys.readouterr()
     assert exit_code == 3
     assert "Halpha run failed." in captured.out
-    assert "stage: collect_text_events" in captured.out
-    assert "reason: stage collect_text_events is not implemented" in captured.out
+    assert "stage: build_analysis_materials" in captured.out
+    assert "reason: stage build_analysis_materials is not implemented" in captured.out
     assert "manifest:" in captured.out
 
 
@@ -184,6 +188,14 @@ def _failed_market_stage(config, run) -> None:
     )
 
 
+def _failed_text_stage(config, run) -> None:
+    raise PipelineError(
+        "stage collect_text_events is not implemented",
+        stage="collect_text_events",
+        exit_code=3,
+    )
+
+
 def _fake_urlopen(request, timeout):
     return _FakeResponse(
         {
@@ -194,6 +206,24 @@ def _fake_urlopen(request, timeout):
             "quoteVolume": "8394600.00",
             "closeTime": 1780619400000,
         }
+    )
+
+
+def _fake_rss_urlopen(request, timeout):
+    return _FakeBytesResponse(
+        b"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Market event</title>
+      <link>https://example.com/market-event</link>
+      <guid>event-1</guid>
+      <pubDate>Fri, 05 Jun 2026 00:30:00 GMT</pubDate>
+      <description>Source-provided event text.</description>
+    </item>
+  </channel>
+</rss>
+"""
     )
 
 
@@ -209,3 +239,17 @@ class _FakeResponse:
 
     def read(self) -> bytes:
         return json.dumps(self.payload).encode("utf-8")
+
+
+class _FakeBytesResponse:
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self.payload

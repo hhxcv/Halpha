@@ -20,11 +20,12 @@ Implemented now:
 - `run_manifest.json` lifecycle.
 - Narrow public Binance market collector.
 - `raw/market.json` artifact creation for collected market data or collector errors.
+- Narrow public RSS text event collector.
+- `raw/text_events.json` artifact creation for collected public text events or collector errors.
 - Explicit failure for unimplemented product stages.
 
 Not implemented yet:
 
-- public text event collection;
 - analysis material generation;
 - Codex report generation.
 
@@ -44,7 +45,7 @@ Run the current scaffold:
 python -m halpha run --config config.example.yaml
 ```
 
-Expected current result in an online environment: writes `raw/market.json`, then exits non-zero at the unimplemented text collection stage. If market collection fails, `raw/market.json` and `run_manifest.json` record the collector error without fake market records.
+Expected current result in an online environment: writes `raw/market.json` and `raw/text_events.json`, then exits non-zero at the unimplemented analysis stage. If collection fails, raw artifacts and `run_manifest.json` record collector errors without fake records.
 
 Run tests:
 

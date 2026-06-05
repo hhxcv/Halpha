@@ -74,6 +74,7 @@ def run_pipeline(
 
     handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
     handlers["collect_market_data"] = _collect_market_data
+    handlers["collect_text_events"] = _collect_text_events
     if stage_handlers:
         handlers.update(stage_handlers)
 
@@ -180,6 +181,12 @@ def _collect_market_data(config: dict[str, Any], run: RunContext) -> list[str] |
     from .collectors.market import collect_market_data
 
     return collect_market_data(config, run)
+
+
+def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .collectors.text import collect_text_events
+
+    return collect_text_events(config, run)
 
 
 def _finish_manifest(run: RunContext, *, status: str, error: dict[str, str], finished_at: str) -> None:
