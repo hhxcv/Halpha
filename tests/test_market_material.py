@@ -150,7 +150,12 @@ def test_market_material_rejects_invalid_raw_market_artifact(tmp_path: Path) -> 
     ]
 
 
-def _write_config(tmp_path: Path, *, market_enabled: bool = True) -> Path:
+def _write_config(
+    tmp_path: Path,
+    *,
+    market_enabled: bool = True,
+    text_enabled: bool = False,
+) -> Path:
     config_path = tmp_path / "config.yaml"
     market_block = (
         """
@@ -166,12 +171,8 @@ market:
   enabled: false
 """
     )
-    config_path.write_text(
-        f"""
-run:
-  output_dir: runs
-  timezone: Asia/Shanghai
-{market_block.rstrip()}
+    text_block = (
+        """
 text:
   enabled: true
   max_items: 1
@@ -179,6 +180,20 @@ text:
     - name: coindesk
       type: rss
       url: https://www.coindesk.com/arc/outboundfeeds/rss/
+"""
+        if text_enabled
+        else """
+text:
+  enabled: false
+"""
+    )
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+{market_block.rstrip()}
+{text_block.rstrip()}
 report:
   title: Daily Market Brief
   language: zh-CN

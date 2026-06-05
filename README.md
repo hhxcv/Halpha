@@ -24,11 +24,12 @@ Implemented now:
 - `raw/text_events.json` artifact creation for collected public text events or collector errors.
 - AI-readable market material generation.
 - `analysis/market_material.md` artifact creation from `raw/market.json`.
+- AI-readable text material generation.
+- `analysis/text_material.md` artifact creation from `raw/text_events.json`.
 - Explicit failure for unimplemented product stages.
 
 Not implemented yet:
 
-- text analysis material generation;
 - research context generation;
 - Codex report generation.
 
@@ -48,7 +49,7 @@ Run the current scaffold:
 python -m halpha run --config config.example.yaml
 ```
 
-Expected current result in an online environment: writes `raw/market.json`, `raw/text_events.json`, and `analysis/market_material.md`, then exits non-zero at the unimplemented research context stage. If collection fails, raw artifacts and `run_manifest.json` record collector errors without fake records.
+Expected current result in an online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, and `analysis/text_material.md`, then exits non-zero at the unimplemented research context stage. If collection fails, raw artifacts and `run_manifest.json` record collector errors without fake records.
 
 Run tests:
 
