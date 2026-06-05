@@ -130,8 +130,8 @@ def test_cli_run_reports_manifest_and_nonzero_exit(tmp_path: Path, capsys, monke
     captured = capsys.readouterr()
     assert exit_code == 3
     assert "Halpha run failed." in captured.out
-    assert "stage: build_analysis_materials" in captured.out
-    assert "reason: stage build_analysis_materials is not implemented" in captured.out
+    assert "stage: build_research_context" in captured.out
+    assert "reason: stage build_research_context is not implemented" in captured.out
     assert "manifest:" in captured.out
 
 
