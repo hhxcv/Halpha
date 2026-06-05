@@ -19,7 +19,7 @@ def test_pipeline_generates_ai_readable_text_material(tmp_path: Path) -> None:
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_codex_context"
+    assert result.failed_stage == "run_codex_report"
 
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_text_material" in material
@@ -60,7 +60,7 @@ def test_text_material_marks_missing_optional_source_values_explicitly(tmp_path:
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_codex_context"
+    assert result.failed_stage == "run_codex_report"
 
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "url: null" in material
@@ -81,7 +81,7 @@ def test_text_material_uses_artifact_source_url_when_item_url_is_missing(tmp_pat
     )
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_codex_context"
+    assert result.failed_stage == "run_codex_report"
 
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "url: https://www.coindesk.com/arc/outboundfeeds/rss/" in material
@@ -95,7 +95,7 @@ def test_text_material_skips_when_text_disabled(tmp_path: Path) -> None:
     result = run_pipeline(config, config_path=config_path)
 
     assert result.succeeded is False
-    assert result.failed_stage == "build_codex_context"
+    assert result.failed_stage == "run_codex_report"
     assert not (result.run.raw_dir / "text_events.json").exists()
     assert not (result.run.analysis_dir / "text_material.md").exists()
 
