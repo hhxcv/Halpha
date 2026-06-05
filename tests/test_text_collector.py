@@ -52,6 +52,9 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     assert requested_urls == ["https://www.coindesk.com/arc/outboundfeeds/rss/"]
 
     raw = json.loads((result.run.raw_dir / "text_events.json").read_text(encoding="utf-8"))
+    raw_text = json.dumps(raw, ensure_ascii=False).lower()
+    assert "manually written" not in raw_text
+    assert "manually curated" not in raw_text
     assert raw["schema_version"] == 1
     assert raw["artifact_type"] == "text_events_raw"
     assert raw["collector"] == "text"
