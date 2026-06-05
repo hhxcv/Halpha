@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 from typing import Any
 
@@ -20,7 +21,7 @@ def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
         return []
 
     prompt = _read_prompt(run)
-    command = [codex["command"], *codex["args"]]
+    command = _command_for_subprocess(codex)
     timeout = codex["timeout_seconds"]
 
     try:
@@ -28,6 +29,8 @@ def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
             command,
             input=prompt,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=timeout,
             cwd=run.run_dir,
@@ -97,6 +100,12 @@ def _read_prompt(run: RunContext) -> str:
             stage=STAGE_NAME,
             exit_code=3,
         ) from exc
+
+
+def _command_for_subprocess(codex: dict[str, Any]) -> list[str]:
+    executable = codex["command"]
+    resolved = shutil.which(executable) or executable
+    return [resolved, *codex["args"]]
 
 
 def _record_codex_failure(

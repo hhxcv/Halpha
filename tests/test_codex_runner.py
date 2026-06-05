@@ -16,12 +16,14 @@ def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> 
     config = load_config(config_path)
     calls: list[dict] = []
 
-    def fake_run(command, input, text, capture_output, timeout, cwd):
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
         calls.append(
             {
                 "command": command,
                 "input": input,
                 "text": text,
+                "encoding": encoding,
+                "errors": errors,
                 "capture_output": capture_output,
                 "timeout": timeout,
                 "cwd": cwd,
@@ -38,6 +40,8 @@ def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> 
     assert result.failed_stage is None
     assert calls[0]["command"] == ["fake-codex", "exec", "-"]
     assert calls[0]["text"] is True
+    assert calls[0]["encoding"] == "utf-8"
+    assert calls[0]["errors"] == "replace"
     assert calls[0]["capture_output"] is True
     assert calls[0]["timeout"] == 9
     assert calls[0]["cwd"] == result.run.run_dir
@@ -61,13 +65,37 @@ def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> 
     assert manifest["errors"] == []
 
 
+def test_codex_runner_resolves_configured_command_before_subprocess(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    commands: list[list[str]] = []
+
+    def fake_which(command):
+        assert command == "fake-codex"
+        return "fake-codex.cmd"
+
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout=REPORT_STDOUT, stderr="")
+
+    monkeypatch.setattr("halpha.codex.runner.shutil.which", fake_which)
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_run)
+
+    result = run_pipeline(config, config_path=config_path)
+
+    assert result.succeeded is True
+    assert commands == [["fake-codex.cmd", "exec", "-"]]
+
+
 def test_codex_runner_records_failure_exit_code_and_stderr_summary(
     tmp_path: Path, monkeypatch
 ) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    def fake_run(command, input, text, capture_output, timeout, cwd):
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
         return subprocess.CompletedProcess(
             command,
             17,
@@ -104,7 +132,7 @@ def test_codex_runner_rejects_report_without_risk_notice(tmp_path: Path, monkeyp
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    def fake_run(command, input, text, capture_output, timeout, cwd):
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
         return subprocess.CompletedProcess(
             command,
             0,
@@ -137,7 +165,7 @@ def test_codex_runner_records_timeout_without_cli_exit_code(tmp_path: Path, monk
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    def fake_run(command, input, text, capture_output, timeout, cwd):
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
         raise subprocess.TimeoutExpired(command, timeout, output="partial", stderr="sk-timeoutsecret")
 
     monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_run)
