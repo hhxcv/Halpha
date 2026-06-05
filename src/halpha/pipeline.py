@@ -192,8 +192,17 @@ def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] |
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:
     from .analysis.market_material import build_market_material
+    from .analysis.text_material import build_text_material
 
-    return build_market_material(config, run)
+    artifacts = []
+    try:
+        artifacts.extend(build_market_material(config, run))
+        artifacts.extend(build_text_material(config, run))
+    except PipelineError as exc:
+        if artifacts and not exc.artifacts:
+            exc.artifacts = artifacts
+        raise
+    return artifacts
 
 
 def _finish_manifest(run: RunContext, *, status: str, error: dict[str, str], finished_at: str) -> None:
