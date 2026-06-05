@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.error import URLError
 
 from halpha.config import load_config
-from halpha.pipeline import run_pipeline
+from halpha.pipeline import PipelineError, run_pipeline
 
 
 def test_pipeline_collects_binance_market_data_and_writes_raw_artifact(tmp_path: Path, monkeypatch) -> None:
@@ -29,7 +29,11 @@ def test_pipeline_collects_binance_market_data_and_writes_raw_artifact(tmp_path:
 
     monkeypatch.setattr("halpha.collectors.market.urlopen", fake_urlopen)
 
-    result = run_pipeline(config, config_path=config_path)
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_text_events": _failed_text_stage},
+    )
 
     assert result.succeeded is False
     assert result.failed_stage == "collect_text_events"
@@ -151,6 +155,14 @@ codex:
 
 def _millis(value: datetime) -> int:
     return int(value.timestamp() * 1000)
+
+
+def _failed_text_stage(config, run) -> None:
+    raise PipelineError(
+        "stage collect_text_events is not implemented",
+        stage="collect_text_events",
+        exit_code=3,
+    )
 
 
 class _FakeResponse:
