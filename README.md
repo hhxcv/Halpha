@@ -95,6 +95,7 @@ Current structure:
 
 - `AGENTS.md`: root instructions for AI agents.
 - `config.example.yaml`: example source-based configuration.
+- `docs/`: durable project documentation and reusable implementation contracts.
 - `LICENSE`: project license.
 - `MILESTONES.md`: active and completed milestones only.
 - `pyproject.toml`: Python package metadata and test configuration.
