@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 
 CONFIG_SECTIONS = {"codex", "market", "quant", "report", "run", "text"}
-SUPPORTED_MARKET_SOURCES = {"binance"}
+SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_QUANT_SIGNALS = {"trend", "momentum", "volatility", "volume_anomaly"}
 
@@ -71,7 +71,7 @@ def validate_config(config: dict[str, Any]) -> None:
         if not market_enabled:
             raise ConfigError("market.ohlcv requires market.enabled to be true.")
         market_source = _require_non_empty_string(market, "source", "market.source")
-        _require_supported_value(market_source, "market.source", SUPPORTED_MARKET_SOURCES)
+        _require_supported_value(market_source, "market.source", SUPPORTED_OHLCV_MARKET_SOURCES)
         _validate_ohlcv_config(config, market, quant_enabled=quant_enabled)
 
     text = _require_mapping(config, "text")
