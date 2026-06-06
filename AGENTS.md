@@ -37,7 +37,7 @@ Expected areas, when present:
 
 * Package code: `src/halpha/`
 * Tests: `tests/`
-* Docs: `README.md`, `AGENTS.md`
+* Docs: `README.md`, `AGENTS.md`, `docs/`
 * Examples: `config.example.yaml`
 * Run artifacts: `runs/`
 
@@ -68,6 +68,18 @@ Current bias:
 * simple pipeline
 * narrow implementation steps
 * no premature architecture
+
+## Milestone Evolution
+
+* Milestones are slices of the long-term goal, not disposable design eras.
+* Current-milestone work should fit the durable product shape where practical.
+* Milestone scope usually limits current content, coverage, implementation depth, and supported cases.
+* Milestone scope should not make reusable artifacts milestone-local in name, title, structure, or contract identity.
+* Do not mark reusable docs, protocols, contracts, schemas, modules, commands, or artifact names with current milestone labels.
+* Use milestone labels only for milestone records, planning notes, issue traces, or truly local transition bridges.
+* Prefer incremental evolution: add content, fill sections, deepen implementations, and stack modules on established structure.
+* Avoid disposable designs that assume a later milestone will replace or rebuild the current artifact.
+* If a current-milestone shortcut is unavoidable, mark it temporary, keep it narrow, and name the replacement requirement.
 
 ## Architecture
 
@@ -139,6 +151,12 @@ Current bias:
 * Docs match current repo state.
 * README is for humans.
 * AGENTS.md is for AI agents.
+* `docs/` is for durable project documentation and reusable implementation contracts.
+* Directory descriptions state long-term purpose, not just current file inventory.
+* Prefer stable contract files.
+* Update existing contract files as behavior evolves.
+* Do not title or name reusable docs and contracts with current milestone labels.
+* Do not create milestone-numbered successor contract files unless the contract is truly milestone-local.
 * Do not describe planned work as implemented.
 * Use `planned`, `intended`, or `not implemented yet` for future work.
 * Keep public docs concise.
