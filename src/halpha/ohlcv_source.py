@@ -3,13 +3,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from math import isfinite
+import os
 from typing import Any
 
 import ccxt
 
 
 SUPPORTED_OHLCV_SOURCES = {"binance"}
-BINANCE_PUBLIC_API_URL = "https://data-api.binance.vision/api/v3"
 TIMEFRAME_DURATIONS = {
     "1d": timedelta(days=1),
     "1h": timedelta(hours=1),
@@ -148,9 +148,27 @@ def _ccxt_exchange_factory(source: str) -> Callable[[dict[str, Any]], Any]:
 def _exchange_options(source: str) -> dict[str, Any]:
     options: dict[str, Any] = {"enableRateLimit": True}
     if source == "binance":
-        options["urls"] = {"api": {"public": BINANCE_PUBLIC_API_URL}}
         options["options"] = {"fetchMarkets": {"types": ["spot"]}}
+        proxy = _configured_proxy()
+        if proxy is not None:
+            options["httpsProxy"] = proxy
     return options
+
+
+def _configured_proxy() -> str | None:
+    for name in (
+        "HALPHA_MARKET_PROXY",
+        "HTTPS_PROXY",
+        "https_proxy",
+        "ALL_PROXY",
+        "all_proxy",
+        "HTTP_PROXY",
+        "http_proxy",
+    ):
+        value = os.environ.get(name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _normalize_row(
