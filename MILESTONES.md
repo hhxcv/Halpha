@@ -27,31 +27,33 @@ Status: active.
 Goal:
 
 ```text
-Improve report value by building a real historical OHLCV data flow and generating structured, source-aware quantitative signals for report generation.
+Improve report value by building a real historical OHLCV data flow and generating structured, source-aware quantitative market signals for report generation.
 ```
 
 The loop is complete when Halpha can:
 
-* store reusable historical OHLCV data for configured symbols outside per-run report directories;
+* maintain reusable local historical OHLCV data for configured symbols and timeframes outside per-run report directories;
 * incrementally update historical OHLCV data to the latest available closed candles;
-* support enough configured timeframes for basic long-period and intraday quantitative signals;
-* provide deterministic OHLCV data views for strategy execution;
-* run a small set of basic, explainable quantitative signal strategies;
-* generate structured market signal artifacts with direction, strength, confidence, evidence, input window, and uncertainty;
+* support enough configured timeframes for basic long-period and intraday quantitative signal evaluation;
+* provide deterministic OHLCV data views for quantitative signal evaluation;
+* run a small set of basic, explainable quantitative signal evaluators;
+* generate structured market signal artifacts with direction, strength, confidence, evidence, input window, key values, and uncertainty;
 * prepare AI-readable market signal material without embedding large raw OHLCV history into Codex context;
-* integrate market signal material into Codex context and report requirements;
+* integrate market signal material into the existing research context, Codex context, and report requirements;
 * produce a Simplified Chinese Markdown research report that includes quantitative signal conclusions, evidence, watch points, and risk notes;
 * keep the M1 product path covered by tests and verified by a real-source run.
 
 M1 favors:
 
-* quantitative signal generation;
-* real historical OHLCV data;
+* quantitative market signal generation;
+* real finalized OHLCV data;
 * incremental local data reuse;
-* simple and explainable strategies;
-* mature open-source libraries for data access, storage, querying, and indicator calculation when they reduce implementation risk;
+* deterministic strategy input views;
+* simple and explainable signal evaluators;
+* mature open-source libraries for market data access, storage, querying, and indicator or signal calculation when they reduce implementation risk;
+* clear separation between historical OHLCV storage, strategy inputs, signal artifacts, and AI-readable report context;
 * strategy inputs based on raw OHLCV-style data;
-* AI-readable outputs based on strategy conclusions and bounded market context;
+* AI-readable outputs based on signal conclusions and bounded market context;
 * readable local artifacts;
 * narrow end-to-end improvements;
 * report value over broad quant platform design.
@@ -68,13 +70,15 @@ M1 does not require:
 * backtesting product flow;
 * strategy parameter optimization;
 * machine learning prediction;
-* database-backed market history;
+* database service or database-backed primary history store;
 * multi-exchange data aggregation;
 * generalized strategy plugin architecture;
+* real-time market monitoring;
 * vector database or semantic search;
 * dashboard UI;
 * hosted service design;
 * multi-user features.
+
 
 
 ## Completed Milestones
