@@ -154,6 +154,32 @@ Validation contract:
 - Supported signal names are narrow and explicit. Unknown signal names fail with an actionable error.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.
 
+Proxy configuration:
+
+Public examples should leave proxy access disabled:
+
+```yaml
+market:
+  proxy:
+    enabled: false
+```
+
+Local-only configs may enable proxy access when direct public source access is unavailable:
+
+```yaml
+market:
+  proxy:
+    enabled: true
+    url: http://proxy.example:8080
+```
+
+Rules:
+
+- Keep real local proxy URLs, ports, hostnames, and private endpoints in gitignored local config files.
+- Use placeholder proxy values in docs, tests, issues, PRs, comments, and examples.
+- Do not embed proxy credentials in `market.proxy.url`.
+- Omit `market.proxy` or set `market.proxy.enabled: false` when direct public source access works.
+
 Initial adoption:
 
 - Add only the config fields required for historical OHLCV sync and basic signal evaluation.

@@ -100,13 +100,18 @@ Current bias:
 * No database until plain files are insufficient.
 * No background service unless requested.
 
-## Local Config
+## Local Privacy
 
 * Public config files stay portable.
 * Machine-local config lives in gitignored local config files.
-* Do not commit local proxy URLs, ports, credentials, hostnames, or machine paths.
-* Support proxy and no-proxy paths through config fields.
-* Do not hardcode local network settings in code, tests, docs, PR text, or examples.
+* Keep local privacy values out of code, tests, docs, commits, PRs, issues, comments, release notes, screenshots, and logs.
+* Local privacy values include proxy URLs, ports, hostnames, credentials, tokens, cookies, account IDs, machine paths, usernames, and private endpoints.
+* Do not hardcode local privacy values.
+* Do not print local privacy values.
+* Do not summarize local privacy values in network-visible text.
+* Use placeholders for examples.
+* Support local variations through config fields, not hardcoded branches or environment-only behavior.
+* Support both configured and omitted local values where practical.
 * If `config.example.yaml` changes, sync required local config copies before local runs.
 * Use local config files for local-only validation.
 
