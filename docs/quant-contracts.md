@@ -262,6 +262,7 @@ Storage rules:
       "source": "binance",
       "symbol": "BTCUSDT",
       "timeframe": "1d",
+      "earliest_open_time": "2025-01-22T00:00:00Z",
       "latest_open_time": "2026-06-05T00:00:00Z",
       "row_count": 500,
       "storage_ref": "data/market/ohlcv/source=binance/symbol=BTCUSDT/timeframe=1d",
