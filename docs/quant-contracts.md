@@ -83,6 +83,18 @@ Selected tools are implementation aids, not product architecture boundaries.
 
 Do not add a dependency until the current implementation step requires it.
 
+## Dependency Contract
+
+Runtime dependencies should serve the current quant flow. They must not introduce account operations, trading execution, hosted services, dashboard behavior, or unrelated quant frameworks into the product path.
+
+| Dependency | Purpose | Boundary |
+| --- | --- | --- |
+| `ccxt` | Public OHLCV market data access. | Public market endpoints only. No credentials, balances, orders, or trading operations. |
+| `pandas` | In-memory OHLCV data frames for strategy inputs. | Local tabular preparation only. No hidden network or persistence role. |
+| `pyarrow` | Parquet read/write support for the shared OHLCV fact store. | File format support only. Not an AI context input. |
+| `duckdb` | Local query and cropping layer over stored OHLCV data. | In-process local querying only. No database service assumption. |
+| `vectorbt` | Indicator and basic signal calculation support. | No portfolio automation, order simulation, or backtesting product flow. |
+
 ## Configuration Contract
 
 Quant configuration extends the existing source-based config. The product command remains:
