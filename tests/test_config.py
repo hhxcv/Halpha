@@ -122,29 +122,7 @@ profiles:
 
 def test_load_config_accepts_existing_report_config_without_quant_section(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
-    config_path.write_text(
-        config_path.read_text(encoding="utf-8").replace(
-            """
-  ohlcv:
-    storage_dir: data/market/ohlcv
-    timeframes:
-      - 1d
-      - 1h
-    lookback:
-      1d: 500
-      1h: 720
-quant:
-  enabled: true
-  signals:
-    - trend
-    - momentum
-    - volatility
-    - volume_anomaly
-""",
-            "\n",
-        ),
-        encoding="utf-8",
-    )
+    _remove_quant_and_ohlcv(config_path)
 
     config = load_config(config_path)
 
@@ -181,7 +159,23 @@ def test_load_config_rejects_missing_required_fields(
         load_config(config_path)
 
 
-def test_load_config_rejects_unsupported_market_source(tmp_path: Path) -> None:
+def test_load_config_accepts_existing_source_based_online_collection_contract(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _remove_quant_and_ohlcv(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        .replace("source: binance", "source: public_market_api")
+        .replace("type: rss", "type: public_feed"),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["market"]["source"] == "public_market_api"
+    assert config["text"]["sources"][0]["type"] == "public_feed"
+
+
+def test_load_config_rejects_unsupported_ohlcv_market_source(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace("source: binance", "source: public_market_api"),
@@ -416,3 +410,29 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _remove_quant_and_ohlcv(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            """
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 500
+      1h: 720
+quant:
+  enabled: true
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
+""",
+            "\n",
+        ),
+        encoding="utf-8",
+    )

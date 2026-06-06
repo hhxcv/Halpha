@@ -53,8 +53,7 @@ def validate_config(config: dict[str, Any]) -> None:
     market = _require_mapping(config, "market")
     market_enabled = _require_bool(market, "enabled", "market.enabled")
     if market_enabled:
-        market_source = _require_non_empty_string(market, "source", "market.source")
-        _require_supported_value(market_source, "market.source", SUPPORTED_MARKET_SOURCES)
+        _require_non_empty_string(market, "source", "market.source")
         _require_non_empty_string_list(market, "symbols", "market.symbols")
 
     quant = _optional_mapping(config, "quant")
@@ -69,6 +68,10 @@ def validate_config(config: dict[str, Any]) -> None:
     if quant_enabled and not market_enabled:
         raise ConfigError("quant.enabled requires market.enabled to be true.")
     if quant_enabled or "ohlcv" in market:
+        if not market_enabled:
+            raise ConfigError("market.ohlcv requires market.enabled to be true.")
+        market_source = _require_non_empty_string(market, "source", "market.source")
+        _require_supported_value(market_source, "market.source", SUPPORTED_MARKET_SOURCES)
         _validate_ohlcv_config(config, market, quant_enabled=quant_enabled)
 
     text = _require_mapping(config, "text")

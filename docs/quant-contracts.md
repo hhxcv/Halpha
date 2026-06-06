@@ -122,7 +122,7 @@ Validation contract:
 
 - `market.enabled` is required.
 - `market.source` is required when `market.enabled` is true.
-- `market.source` must be a supported public market source when `market.enabled` is true.
+- `market.source` must be a supported OHLCV market source when `market.ohlcv` exists or `quant.enabled` is true.
 - `market.symbols` must be a non-empty list when `market.enabled` is true.
 - `market.ohlcv` may be omitted when quant is not configured.
 - `market.ohlcv.storage_dir` is required when `market.ohlcv` exists or `quant.enabled` is true.
