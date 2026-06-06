@@ -11,6 +11,11 @@ def test_config_example_loads_successfully() -> None:
     assert config["run"]["output_dir"] == "runs"
     assert config["market"]["source"] == "binance"
     assert config["market"]["symbols"] == ["BTCUSDT", "ETHUSDT"]
+    assert config["market"]["ohlcv"]["storage_dir"] == "data/market/ohlcv"
+    assert config["market"]["ohlcv"]["timeframes"] == ["1d", "1h"]
+    assert config["market"]["ohlcv"]["lookback"] == {"1d": 500, "1h": 720}
+    assert config["quant"]["enabled"] is True
+    assert config["quant"]["signals"] == ["trend", "momentum", "volatility", "volume_anomaly"]
     assert config["text"]["sources"][0]["type"] == "rss"
     assert config["report"]["language"] == "zh-CN"
 
@@ -23,12 +28,35 @@ def test_load_config_rejects_non_mapping_root(tmp_path: Path) -> None:
         load_config(config_path)
 
 
-@pytest.mark.parametrize("section", ["run", "market", "text", "report", "codex"])
+@pytest.mark.parametrize("section", ["run", "market", "quant", "text", "report", "codex"])
 def test_load_config_rejects_non_mapping_sections(tmp_path: Path, section: str) -> None:
     config_path = _write_valid_config(tmp_path)
     section_blocks = {
         "run": "run:\n  output_dir: runs",
-        "market": "market:\n  enabled: true\n  source: binance\n  symbols:\n    - BTCUSDT",
+        "market": (
+            "market:\n"
+            "  enabled: true\n"
+            "  source: binance\n"
+            "  symbols:\n"
+            "    - BTCUSDT\n"
+            "  ohlcv:\n"
+            "    storage_dir: data/market/ohlcv\n"
+            "    timeframes:\n"
+            "      - 1d\n"
+            "      - 1h\n"
+            "    lookback:\n"
+            "      1d: 500\n"
+            "      1h: 720"
+        ),
+        "quant": (
+            "quant:\n"
+            "  enabled: true\n"
+            "  signals:\n"
+            "    - trend\n"
+            "    - momentum\n"
+            "    - volatility\n"
+            "    - volume_anomaly"
+        ),
         "text": (
             "text:\n"
             "  enabled: true\n"
@@ -92,6 +120,16 @@ profiles:
         load_config(config_path)
 
 
+def test_load_config_accepts_existing_report_config_without_quant_section(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _remove_quant_and_ohlcv(config_path)
+
+    config = load_config(config_path)
+
+    assert "quant" not in config
+    assert "ohlcv" not in config["market"]
+
+
 @pytest.mark.parametrize(
     ("old", "new", "expected"),
     [
@@ -121,8 +159,9 @@ def test_load_config_rejects_missing_required_fields(
         load_config(config_path)
 
 
-def test_load_config_accepts_source_based_online_collection_contract(tmp_path: Path) -> None:
+def test_load_config_accepts_existing_source_based_online_collection_contract(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
+    _remove_quant_and_ohlcv(config_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8")
         .replace("source: binance", "source: public_market_api")
@@ -134,6 +173,114 @@ def test_load_config_accepts_source_based_online_collection_contract(tmp_path: P
 
     assert config["market"]["source"] == "public_market_api"
     assert config["text"]["sources"][0]["type"] == "public_feed"
+
+
+def test_load_config_rejects_unsupported_ohlcv_market_source(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("source: binance", "source: public_market_api"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="market.source must be one of: binance"):
+        load_config(config_path)
+
+
+def test_load_config_accepts_existing_text_source_type_behavior(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("type: rss", "type: public_feed"),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["text"]["sources"][0]["type"] == "public_feed"
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("    storage_dir: data/market/ohlcv", "", "market.ohlcv.storage_dir"),
+        ("    storage_dir: data/market/ohlcv", "    storage_dir: runs/ohlcv", "market.ohlcv.storage_dir"),
+        ("    timeframes:\n      - 1d\n      - 1h", "    timeframes: []", "market.ohlcv.timeframes"),
+        ("      - 1h", "      - 5m", r"market\.ohlcv\.timeframes\[1\]"),
+        ("      1h: 720", "", "market.ohlcv.lookback.1h"),
+        ("      1h: 720", "      1h: 0", "market.ohlcv.lookback.1h"),
+        ("      1h: 720", "      1h: true", "market.ohlcv.lookback.1h"),
+    ],
+)
+def test_load_config_rejects_invalid_ohlcv_config(
+    tmp_path: Path, old: str, new: str, expected: str
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+def test_load_config_rejects_quant_enabled_without_ohlcv_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            """
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 500
+      1h: 720
+""",
+            "\n",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="market.ohlcv must be a mapping when quant.enabled is true"):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("quant:\n  enabled: true", "quant:\n  enabled: \"yes\"", "quant.enabled"),
+        (
+            "  signals:\n    - trend\n    - momentum\n    - volatility\n    - volume_anomaly",
+            "  signals: []",
+            "quant.signals",
+        ),
+        ("    - trend", "    - unsupported_signal", r"quant\.signals\[0\]"),
+        ("    - trend", "    - 123", r"quant\.signals\[0\]"),
+    ],
+)
+def test_load_config_rejects_invalid_quant_config(
+    tmp_path: Path, old: str, new: str, expected: str
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+def test_load_config_rejects_quant_enabled_when_market_disabled(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("market:\n  enabled: true", "market:\n  enabled: false"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="quant.enabled requires market.enabled"):
+        load_config(config_path)
 
 
 def test_load_config_rejects_local_text_source_url(tmp_path: Path) -> None:
@@ -227,6 +374,21 @@ market:
   source: binance
   symbols:
     - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 500
+      1h: 720
+quant:
+  enabled: true
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
 text:
   enabled: true
   sources:
@@ -248,3 +410,29 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _remove_quant_and_ohlcv(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            """
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 500
+      1h: 720
+quant:
+  enabled: true
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
+""",
+            "\n",
+        ),
+        encoding="utf-8",
+    )

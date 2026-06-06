@@ -122,11 +122,15 @@ Validation contract:
 
 - `market.enabled` is required.
 - `market.source` is required when `market.enabled` is true.
+- `market.source` must be a supported OHLCV market source when `market.ohlcv` exists or `quant.enabled` is true.
 - `market.symbols` must be a non-empty list when `market.enabled` is true.
-- `market.ohlcv.storage_dir` is required when `quant.enabled` is true.
-- `market.ohlcv.timeframes` must be a non-empty list when `quant.enabled` is true.
-- `market.ohlcv.lookback` must define a positive integer for each configured timeframe when `quant.enabled` is true.
-- `quant.enabled` is required.
+- `market.ohlcv` may be omitted when quant is not configured.
+- `market.ohlcv.storage_dir` is required when `market.ohlcv` exists or `quant.enabled` is true.
+- `market.ohlcv.storage_dir` must be outside `run.output_dir`.
+- `market.ohlcv.timeframes` must be a non-empty list when `market.ohlcv` exists or `quant.enabled` is true.
+- `market.ohlcv.lookback` must define a positive integer for each configured timeframe when `market.ohlcv` exists or `quant.enabled` is true.
+- `quant` may be omitted when the report path does not use quant signals.
+- `quant.enabled` is required when `quant` exists.
 - `quant.signals` must be a non-empty list when `quant.enabled` is true.
 - Supported signal names are narrow and explicit. Unknown signal names fail with an actionable error.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.

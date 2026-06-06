@@ -8,6 +8,22 @@ market:
   symbols:
     - BTCUSDT
     - ETHUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 500
+      1h: 720
+
+quant:
+  enabled: true
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
 
 text:
   enabled: true
