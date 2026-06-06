@@ -100,6 +100,16 @@ Current bias:
 * No database until plain files are insufficient.
 * No background service unless requested.
 
+## Local Config
+
+* Public config files stay portable.
+* Machine-local config lives in gitignored local config files.
+* Do not commit local proxy URLs, ports, credentials, hostnames, or machine paths.
+* Support proxy and no-proxy paths through config fields.
+* Do not hardcode local network settings in code, tests, docs, PR text, or examples.
+* If `config.example.yaml` changes, sync required local config copies before local runs.
+* Use local config files for local-only validation.
+
 ## Compatibility
 
 * Compatibility is opt-in.

@@ -9,5 +9,9 @@ dist/
 .env
 .venv/
 venv/
+config.local.yaml
+config.local.yml
+config.*.local.yaml
+config.*.local.yml
 runs/*
 !runs/README.md

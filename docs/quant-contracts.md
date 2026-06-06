@@ -109,6 +109,8 @@ Contract shape:
 market:
   enabled: true
   source: binance
+  proxy:
+    enabled: false
   symbols:
     - BTCUSDT
     - ETHUSDT
@@ -135,6 +137,11 @@ Validation contract:
 - `market.enabled` is required.
 - `market.source` is required when `market.enabled` is true.
 - `market.source` must be a supported OHLCV market source when `market.ohlcv` exists or `quant.enabled` is true.
+- `market.proxy` may be omitted when direct public source access works.
+- `market.proxy.enabled` is required when `market.proxy` exists.
+- `market.proxy.url` is required when `market.proxy.enabled` is true.
+- `market.proxy.url` must be an `http` or `https` proxy URL without embedded credentials.
+- Machine-local proxy values must stay in gitignored local config files, not committed examples or docs.
 - `market.symbols` must be a non-empty list when `market.enabled` is true.
 - `market.ohlcv` may be omitted when quant is not configured.
 - `market.ohlcv.storage_dir` is required when `market.ohlcv` exists or `quant.enabled` is true.

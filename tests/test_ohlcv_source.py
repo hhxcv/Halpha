@@ -9,10 +9,7 @@ import pytest
 from halpha.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, fetch_configured_ohlcv
 
 
-def test_fetch_configured_ohlcv_returns_normalized_finalized_records(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _clear_proxy_env(monkeypatch)
+def test_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
     exchange = _FakeExchange(
         {
             ("BTCUSDT", "1d"): [
@@ -94,25 +91,45 @@ def test_fetch_configured_ohlcv_returns_normalized_finalized_records(
     ]
 
 
-def test_ccxt_ohlcv_source_uses_configured_https_proxy_without_credentials(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _clear_proxy_env(monkeypatch)
-    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:7897")
+def test_fetch_configured_ohlcv_uses_configured_proxy_without_credentials() -> None:
     captured_options: dict[str, Any] = {}
 
     def factory(options: dict[str, Any]) -> _FakeExchange:
         captured_options.update(options)
-        return _FakeExchange({})
+        return _FakeExchange({("BTCUSDT", "1d"): [_row("2026-06-01T00:00:00Z", 100)]})
 
-    CCXTOHLCVSource("binance", exchange_factory=factory)
+    fetch_configured_ohlcv(
+        {
+            "source": "binance",
+            "symbols": ["BTCUSDT"],
+            "proxy": {
+                "enabled": True,
+                "url": "http://proxy.example:8080",
+            },
+            "ohlcv": {
+                "timeframes": ["1d"],
+                "lookback": {"1d": 1},
+            },
+        },
+        now="2026-06-03T00:00:00Z",
+        exchange_factory=factory,
+    )
 
     assert captured_options == {
         "enableRateLimit": True,
         "options": {"fetchMarkets": {"types": ["spot"]}},
-        "httpsProxy": "http://127.0.0.1:7897",
+        "httpsProxy": "http://proxy.example:8080",
     }
     assert not {"apiKey", "secret", "password", "uid"} & set(captured_options)
+
+
+def test_ccxt_ohlcv_source_rejects_proxy_credentials() -> None:
+    with pytest.raises(OHLCVSourceError, match="market.proxy.url must not include credentials"):
+        CCXTOHLCVSource(
+            "binance",
+            proxy_url="http://user:password@proxy.example:8080",
+            exchange_factory=lambda options: _FakeExchange({}),
+        )
 
 
 def test_ccxt_ohlcv_source_passes_since_as_milliseconds() -> None:
@@ -195,19 +212,6 @@ def test_ccxt_ohlcv_source_rejects_malformed_rows() -> None:
 def _row(open_time: str, close: float) -> list[float | int]:
     timestamp = int(datetime.fromisoformat(open_time.replace("Z", "+00:00")).timestamp() * 1000)
     return [timestamp, close - 1, close + 1, close - 2, close, 10]
-
-
-def _clear_proxy_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in (
-        "HALPHA_MARKET_PROXY",
-        "HTTPS_PROXY",
-        "https_proxy",
-        "ALL_PROXY",
-        "all_proxy",
-        "HTTP_PROXY",
-        "http_proxy",
-    ):
-        monkeypatch.delenv(name, raising=False)
 
 
 class _FakeExchange:

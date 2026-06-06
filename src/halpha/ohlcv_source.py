@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from math import isfinite
-import os
 from typing import Any
+from urllib.parse import urlparse
 
 import ccxt
 
@@ -25,11 +25,13 @@ class CCXTOHLCVSource:
         self,
         source: str,
         *,
+        proxy_url: str | None = None,
         exchange_factory: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self.source = _require_supported_source(source)
+        proxy_url = _normalize_proxy_url(proxy_url)
         factory = exchange_factory or _ccxt_exchange_factory(self.source)
-        self.exchange = factory(_exchange_options(self.source))
+        self.exchange = factory(_exchange_options(self.source, proxy_url=proxy_url))
         self._require_ohlcv_support()
 
     def fetch_records(
@@ -108,6 +110,7 @@ def fetch_configured_ohlcv(
 ) -> list[dict[str, Any]]:
     source = CCXTOHLCVSource(
         _required_mapping_text(market, "source", "market.source"),
+        proxy_url=_proxy_url_from_market_config(market),
         exchange_factory=exchange_factory,
     )
     symbols = _required_string_list(market, "symbols", "market.symbols")
@@ -145,30 +148,46 @@ def _ccxt_exchange_factory(source: str) -> Callable[[dict[str, Any]], Any]:
     return exchange_class
 
 
-def _exchange_options(source: str) -> dict[str, Any]:
+def _exchange_options(source: str, *, proxy_url: str | None) -> dict[str, Any]:
     options: dict[str, Any] = {"enableRateLimit": True}
     if source == "binance":
         options["options"] = {"fetchMarkets": {"types": ["spot"]}}
-        proxy = _configured_proxy()
-        if proxy is not None:
-            options["httpsProxy"] = proxy
+        if proxy_url is not None:
+            options["httpsProxy"] = proxy_url
     return options
 
 
-def _configured_proxy() -> str | None:
-    for name in (
-        "HALPHA_MARKET_PROXY",
-        "HTTPS_PROXY",
-        "https_proxy",
-        "ALL_PROXY",
-        "all_proxy",
-        "HTTP_PROXY",
-        "http_proxy",
-    ):
-        value = os.environ.get(name)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return None
+def _proxy_url_from_market_config(market: dict[str, Any]) -> str | None:
+    proxy = market.get("proxy")
+    if proxy is None:
+        return None
+    if not isinstance(proxy, dict):
+        raise OHLCVSourceError("market.proxy must be a mapping.")
+    enabled = proxy.get("enabled")
+    if not isinstance(enabled, bool):
+        raise OHLCVSourceError("market.proxy.enabled must be a boolean.")
+    if not enabled:
+        return None
+    url = proxy.get("url")
+    if not isinstance(url, str) or not url.strip():
+        raise OHLCVSourceError(
+            "market.proxy.url must be a non-empty string when market.proxy.enabled is true."
+        )
+    return _normalize_proxy_url(url)
+
+
+def _normalize_proxy_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise OHLCVSourceError("market.proxy.url must be a non-empty string.")
+    proxy_url = value.strip()
+    parsed = urlparse(proxy_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise OHLCVSourceError("market.proxy.url must be an http or https URL.")
+    if parsed.username or parsed.password:
+        raise OHLCVSourceError("market.proxy.url must not include credentials.")
+    return proxy_url
 
 
 def _normalize_row(
