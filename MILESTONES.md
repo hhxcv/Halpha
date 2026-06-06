@@ -20,48 +20,57 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M1 — Signal-aware Report
+### M1 — Quant Signal Report
 
 Status: active.
 
 Goal:
 
 ```text
-Improve report value by turning real market data and public information into structured, source-aware signals that can support a more useful research report.
+Improve report value by building a real historical OHLCV data flow and generating structured, source-aware quantitative signals for report generation.
 ```
 
 The loop is complete when Halpha can:
 
-* collect enough historical market data for configured symbols;
-* generate basic market signals from historical market data;
-* normalize public information into inspectable event materials;
-* generate basic text event signals from public information;
-* combine market signals and text signals into a unified signal summary;
-* identify aligned, mixed, conflicting, or weak signal conditions;
-* prepare Codex context that includes signal evidence, source awareness, and report requirements;
-* produce a Simplified Chinese Markdown research report that includes signal matrix, resonance analysis, scenario analysis, watch points, and risk notes.
+* store reusable historical OHLCV data for configured symbols outside per-run report directories;
+* incrementally update historical OHLCV data to the latest available closed candles;
+* support enough configured timeframes for basic long-period and intraday quantitative signals;
+* provide deterministic OHLCV data views for strategy execution;
+* run a small set of basic, explainable quantitative signal strategies;
+* generate structured market signal artifacts with direction, strength, confidence, evidence, input window, and uncertainty;
+* prepare AI-readable market signal material without embedding large raw OHLCV history into Codex context;
+* integrate market signal material into Codex context and report requirements;
+* produce a Simplified Chinese Markdown research report that includes quantitative signal conclusions, evidence, watch points, and risk notes;
+* keep the M1 product path covered by tests and verified by a real-source run.
 
 M1 favors:
 
-* signal-driven report materials;
-* simple and explainable market strategies;
-* real data and real pipeline artifacts;
-* readable local files;
-* source-aware text events;
+* quantitative signal generation;
+* real historical OHLCV data;
+* incremental local data reuse;
+* simple and explainable strategies;
+* mature open-source libraries for data access, storage, querying, and indicator calculation when they reduce implementation risk;
+* strategy inputs based on raw OHLCV-style data;
+* AI-readable outputs based on strategy conclusions and bounded market context;
+* readable local artifacts;
 * narrow end-to-end improvements;
-* report value over broad system design.
+* report value over broad quant platform design.
 
 M1 does not require:
 
+* new text event normalization;
+* text event signal generation;
+* market and text signal resonance analysis;
+* generalized public information processing beyond existing M0 behavior;
 * trading execution;
 * exchange account operations;
 * portfolio automation;
-* backtesting framework;
+* backtesting product flow;
 * strategy parameter optimization;
 * machine learning prediction;
 * database-backed market history;
 * multi-exchange data aggregation;
-* generalized news crawling;
+* generalized strategy plugin architecture;
 * vector database or semantic search;
 * dashboard UI;
 * hosted service design;
