@@ -46,9 +46,9 @@ def test_pipeline_generates_ai_readable_market_material(tmp_path: Path) -> None:
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["market_material"] == "analysis/market_material.md"
     assert manifest["counts"]["market_material_records"] == 1
-    assert manifest["stages"][2]["name"] == "build_analysis_materials"
-    assert manifest["stages"][2]["status"] == "succeeded"
-    assert manifest["stages"][2]["artifacts"] == ["analysis/market_material.md"]
+    stage = _stage(manifest, "build_analysis_materials")
+    assert stage["status"] == "succeeded"
+    assert stage["artifacts"] == ["analysis/market_material.md"]
 
 
 def test_market_material_marks_missing_values_explicitly(tmp_path: Path) -> None:
@@ -121,12 +121,12 @@ def test_market_material_skips_when_market_disabled(tmp_path: Path) -> None:
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["counts"]["market_items"] == 0
     assert manifest["counts"]["market_material_records"] == 0
-    assert manifest["stages"][0]["name"] == "collect_market_data"
-    assert manifest["stages"][0]["status"] == "succeeded"
-    assert manifest["stages"][0]["artifacts"] == []
-    assert manifest["stages"][2]["name"] == "build_analysis_materials"
-    assert manifest["stages"][2]["status"] == "succeeded"
-    assert manifest["stages"][2]["artifacts"] == []
+    market_stage = _stage(manifest, "collect_market_data")
+    analysis_stage = _stage(manifest, "build_analysis_materials")
+    assert market_stage["status"] == "succeeded"
+    assert market_stage["artifacts"] == []
+    assert analysis_stage["status"] == "succeeded"
+    assert analysis_stage["artifacts"] == []
 
 
 def test_market_material_rejects_invalid_raw_market_artifact(tmp_path: Path) -> None:
@@ -338,3 +338,7 @@ def _skip_text_collection(config, run) -> list[str]:
 
 def _skip_codex_report(config, run) -> list[str]:
     return []
+
+
+def _stage(manifest: dict, name: str) -> dict:
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)

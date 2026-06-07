@@ -22,6 +22,9 @@ Implemented now:
 - `raw/market.json` artifact creation for collected market data or collector errors.
 - Narrow public RSS text event collector.
 - `raw/text_events.json` artifact creation for collected public text events or collector errors.
+- Incremental public OHLCV history sync for configured symbols and timeframes.
+- Shared Parquet OHLCV history storage outside per-run report directories.
+- OHLCV sync status, counts, stored ranges, warnings, and errors in `run_manifest.json`.
 - AI-readable market material generation.
 - `analysis/market_material.md` artifact creation from `raw/market.json`.
 - AI-readable text material generation.
@@ -78,12 +81,15 @@ market:
 
 Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
 
-Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. If collection or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
+Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location. If collection, OHLCV sync, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 Output artifact roles:
 
 - `raw/market.json`: inspectable market observations from configured public market sources.
 - `raw/text_events.json`: inspectable public text events from configured RSS sources.
+- `data/market/ohlcv/`: shared finalized OHLCV history when configured.
+- `data/market/metadata/ohlcv_schema.json`: shared OHLCV storage schema metadata.
+- `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
 - `analysis/market_material.md`: AI-readable market material derived from raw market data.
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.
@@ -106,6 +112,7 @@ Current structure:
 
 - `AGENTS.md`: root instructions for AI agents.
 - `config.example.yaml`: example source-based configuration.
+- `data/`: intended shared local market history area; generated contents are ignored by git.
 - `docs/`: durable project documentation and reusable implementation contracts.
 - `LICENSE`: project license.
 - `MILESTONES.md`: active and completed milestones only.

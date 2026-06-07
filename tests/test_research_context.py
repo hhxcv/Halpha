@@ -50,13 +50,13 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
-    assert manifest["stages"][3]["name"] == "build_research_context"
-    assert manifest["stages"][3]["status"] == "succeeded"
-    assert manifest["stages"][3]["artifacts"] == ["analysis/research_context.md"]
-    assert manifest["stages"][4]["name"] == "build_codex_context"
-    assert manifest["stages"][4]["status"] == "succeeded"
-    assert manifest["stages"][5]["name"] == "run_codex_report"
-    assert manifest["stages"][5]["status"] == "succeeded"
+    research_stage = _stage(manifest, "build_research_context")
+    codex_context_stage = _stage(manifest, "build_codex_context")
+    report_stage = _stage(manifest, "run_codex_report")
+    assert research_stage["status"] == "succeeded"
+    assert research_stage["artifacts"] == ["analysis/research_context.md"]
+    assert codex_context_stage["status"] == "succeeded"
+    assert report_stage["status"] == "succeeded"
 
 
 def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path: Path) -> None:
@@ -103,8 +103,7 @@ def test_research_context_fails_when_enabled_material_is_missing(tmp_path: Path)
     assert not (result.run.analysis_dir / "research_context.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    assert manifest["stages"][3]["name"] == "build_research_context"
-    assert manifest["stages"][3]["status"] == "failed"
+    assert _stage(manifest, "build_research_context")["status"] == "failed"
     assert manifest["errors"] == [
         {
             "stage": "build_research_context",
@@ -243,3 +242,7 @@ def _skip_analysis_materials(config, run) -> list[str]:
 
 def _skip_codex_report(config, run) -> list[str]:
     return []
+
+
+def _stage(manifest: dict, name: str) -> dict:
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)

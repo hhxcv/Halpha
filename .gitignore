@@ -13,5 +13,6 @@ config.local.yaml
 config.local.yml
 config.*.local.yaml
 config.*.local.yml
+data/
 runs/*
 !runs/README.md

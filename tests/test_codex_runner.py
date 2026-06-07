@@ -61,9 +61,9 @@ def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> 
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert "stderr_summary" not in manifest["codex"]
-    assert manifest["stages"][5]["name"] == "run_codex_report"
-    assert manifest["stages"][5]["status"] == "succeeded"
-    assert manifest["stages"][5]["artifacts"] == ["report/report.md"]
+    stage = _stage(manifest, "run_codex_report")
+    assert stage["status"] == "succeeded"
+    assert stage["artifacts"] == ["report/report.md"]
     assert manifest["errors"] == []
 
 
@@ -117,7 +117,7 @@ def test_codex_runner_records_failure_exit_code_and_stderr_summary(
     assert not (result.run.report_dir / "report.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    failed_stage = manifest["stages"][5]
+    failed_stage = _stage(manifest, "run_codex_report")
     assert manifest["codex"]["status"] == "failed"
     assert manifest["codex"]["exit_code"] == 17
     assert manifest["codex"]["stderr_summary"] == "fatal Codex error\ntoken=[REDACTED]"
@@ -153,7 +153,7 @@ def test_codex_runner_rejects_report_without_risk_notice(tmp_path: Path, monkeyp
     assert not (result.run.report_dir / "report.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    failed_stage = manifest["stages"][5]
+    failed_stage = _stage(manifest, "run_codex_report")
     assert manifest["codex"]["status"] == "failed"
     assert manifest["codex"]["exit_code"] == 0
     assert failed_stage["error"] == {
@@ -181,7 +181,7 @@ def test_codex_runner_records_timeout_without_cli_exit_code(tmp_path: Path, monk
     assert not (result.run.report_dir / "report.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    failed_stage = manifest["stages"][5]
+    failed_stage = _stage(manifest, "run_codex_report")
     assert manifest["codex"]["status"] == "failed"
     assert manifest["codex"]["exit_code"] is None
     assert manifest["codex"]["stderr_summary"] == "sk-[REDACTED]"
@@ -227,9 +227,9 @@ def test_codex_runner_skips_when_codex_is_disabled(tmp_path: Path) -> None:
         "status": "disabled",
         "exit_code": None,
     }
-    assert manifest["stages"][5]["name"] == "run_codex_report"
-    assert manifest["stages"][5]["status"] == "succeeded"
-    assert manifest["stages"][5]["artifacts"] == []
+    stage = _stage(manifest, "run_codex_report")
+    assert stage["status"] == "succeeded"
+    assert stage["artifacts"] == []
 
 
 def _write_config(tmp_path: Path, *, codex_enabled: bool = True) -> Path:
@@ -271,3 +271,7 @@ report:
 
 def _skip_codex_context(config, run) -> list[str]:
     return []
+
+
+def _stage(manifest: dict, name: str) -> dict:
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)
