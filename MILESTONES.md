@@ -20,9 +20,67 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M1 — Quant Signal Report
+### M2 — Quant Strategy Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Improve report value by replacing M1 demo-style quantitative signal evaluators with a first set of configurable, vectorbt-backed quantitative strategies that produce inspectable strategy research artifacts, bounded backtest diagnostics, and higher-quality AI-readable quant material.
+```
+
+The loop is complete when Halpha can:
+
+* retire the M1 demo-style signal evaluators from the product quant path;
+* configure selected quantitative strategies through a strategy-oriented quant configuration;
+* run a small set of real, non-demo quantitative strategies using mature open-source quant or numerical computing libraries where they reduce implementation risk;
+* generate strategy run artifacts that preserve strategy name, version, parameters, input data window, calculated indicators, generated signals, backtest assumptions, bounded diagnostics, evidence, uncertainty, and warnings;
+* generate normalized market signal artifacts from strategy run results for the existing report loop;
+* prepare AI-readable quant material that summarizes strategy conclusions, confluence, conflicts, risk state, diagnostics, and uncertainty without exposing large raw OHLCV history to Codex context;
+* produce a Simplified Chinese Markdown research report that reflects the improved strategy analysis, including strategy conclusions, evidence, conflict notes, risk notes, and watch points;
+* record enough manifest details to explain which strategies ran, which failed, which had insufficient data, which assumptions were used, and which artifacts were generated;
+* keep the M2 product path covered by tests and verified by a real-source run.
+
+M2 favors:
+
+* strategy quality over strategy count;
+* real strategy behavior over demo signal labels;
+* mature open-source frameworks such as vectorbt, pandas, and numpy for indicator calculation, signal generation, portfolio-style research diagnostics, and parameter analysis when they reduce implementation risk;
+* Halpha-owned strategy run artifacts and signal contracts over direct exposure of third-party framework objects;
+* strategies with explicit assumptions, entry or exit logic, risk controls, evidence, uncertainty, and diagnostics;
+* bounded research backtest diagnostics as strategy validation material, not as return promises;
+* small but visible report-chain improvements that help AI output reflect upstream quantitative research;
+* readable local artifacts;
+* reproducible strategy runs;
+* narrow end-to-end improvements that preserve the main command path.
+
+M2 does not require:
+
+* migrating M1 demo strategy names or behavior;
+* a generalized external strategy plugin system;
+* a full backtesting platform;
+* a full parameter optimization platform;
+* walk-forward analysis;
+* machine learning prediction;
+* portfolio allocation optimization;
+* exchange account operations;
+* trading execution;
+* order placement, cancellation, or position management;
+* real-time market monitoring;
+* multi-exchange data aggregation;
+* new text event normalization;
+* text event signal generation;
+* market and text signal resonance analysis;
+* dashboard UI;
+* hosted service design;
+* multi-user features.
+
+## Completed Milestones
+
+### M1 — Quant Signal Report
+
+Status: completed.
 
 Goal:
 
@@ -78,10 +136,6 @@ M1 does not require:
 * dashboard UI;
 * hosted service design;
 * multi-user features.
-
-
-
-## Completed Milestones
 
 ### M0 — Core Report Loop
 
