@@ -130,6 +130,187 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert "tests/fixtures" not in config_path.read_text(encoding="utf-8")
 
 
+def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config_path = _write_m1_config(tmp_path)
+    requested_urls: list[str] = []
+    ohlcv_requests: list[dict] = []
+    codex_calls: list[dict] = []
+
+    def fake_market_urlopen(request, timeout):
+        requested_urls.append(request.full_url)
+        symbol = request.full_url.rsplit("=", 1)[-1]
+        return _JsonResponse(_market_payload(symbol))
+
+    def fake_text_urlopen(request, timeout):
+        requested_urls.append(request.full_url)
+        return _BytesResponse(_rss_payload())
+
+    class FakeOHLCVSource:
+        def __init__(self, source_name: str, proxy_url: str | None = None) -> None:
+            self.source_name = source_name
+            self.proxy_url = proxy_url
+
+        def fetch_records(self, *, symbol, timeframe, since=None, limit=None, now=None):
+            ohlcv_requests.append(
+                {
+                    "source": self.source_name,
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "since": since,
+                    "limit": limit,
+                    "now": now,
+                    "proxy_url": self.proxy_url,
+                }
+            )
+            return _ohlcv_records(symbol=symbol, timeframe=timeframe, limit=limit or 4)
+
+    def fake_codex_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+        codex_calls.append(
+            {
+                "command": command,
+                "input": input,
+                "text": text,
+                "encoding": encoding,
+                "errors": errors,
+                "capture_output": capture_output,
+                "timeout": timeout,
+                "cwd": cwd,
+            }
+        )
+        return subprocess.CompletedProcess(command, 0, stdout=_m1_report_stdout(), stderr="")
+
+    monkeypatch.setattr("halpha.collectors.market.urlopen", fake_market_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", fake_text_urlopen)
+    monkeypatch.setattr("halpha.ohlcv_sync.CCXTOHLCVSource", FakeOHLCVSource)
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_codex_run)
+
+    exit_code = main(["run", "--config", str(config_path)])
+
+    assert exit_code == 0
+    assert requested_urls == [
+        "https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT",
+        "https://data-api.binance.vision/api/v3/ticker/24hr?symbol=ETHUSDT",
+        "https://example.com/feed.xml",
+    ]
+    assert [request["symbol"] for request in ohlcv_requests] == [
+        "BTCUSDT",
+        "BTCUSDT",
+        "ETHUSDT",
+        "ETHUSDT",
+    ]
+    assert [request["timeframe"] for request in ohlcv_requests] == ["1d", "1h", "1d", "1h"]
+    assert all(request["source"] == "binance" for request in ohlcv_requests)
+
+    run_dirs = sorted((tmp_path / "runs").iterdir())
+    assert len(run_dirs) == 1
+    run_dir = run_dirs[0]
+    expected_artifacts = [
+        "raw/market.json",
+        "raw/text_events.json",
+        "raw/market_data_views.json",
+        "analysis/market_strategy_signals.json",
+        "analysis/market_signals.json",
+        "analysis/market_signal_material.md",
+        "analysis/market_material.md",
+        "analysis/text_material.md",
+        "analysis/research_context.md",
+        "codex_context/context.md",
+        "codex_context/prompt.md",
+        "report/report.md",
+        "run_manifest.json",
+    ]
+    for artifact in expected_artifacts:
+        assert (run_dir / artifact).is_file()
+    assert (tmp_path / "data" / "market" / "metadata" / "ohlcv_schema.json").is_file()
+    assert (tmp_path / "data" / "market" / "metadata" / "ohlcv_sync_state.json").is_file()
+
+    market_raw = json.loads((run_dir / "raw/market.json").read_text(encoding="utf-8"))
+    assert market_raw["source"]["name"] == "binance"
+    assert [item["symbol"] for item in market_raw["items"]] == ["BTCUSDT", "ETHUSDT"]
+    assert market_raw["errors"] == []
+
+    text_raw = json.loads((run_dir / "raw/text_events.json").read_text(encoding="utf-8"))
+    assert text_raw["sources"][0]["url"] == "https://example.com/feed.xml"
+    assert len(text_raw["items"]) == 1
+    assert text_raw["errors"] == []
+
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["status"] == "succeeded"
+    assert manifest["ohlcv_sync"]["status"] == "succeeded"
+    assert manifest["counts"]["ohlcv_sync_items"] == 4
+    assert manifest["counts"]["market_data_views"] == 4
+    assert manifest["counts"]["market_data_views_insufficient_data"] == 0
+    assert manifest["counts"]["market_strategy_signals"] == 16
+    assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 0
+    assert manifest["counts"]["market_signals"] == 16
+    assert manifest["counts"]["market_signals_insufficient_data"] == 0
+    assert manifest["counts"]["market_signal_material_records"] == 16
+    assert manifest["codex"]["status"] == "succeeded"
+    assert manifest["codex"]["exit_code"] == 0
+    assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
+    assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
+    assert manifest["artifacts"]["market_signals"] == "analysis/market_signals.json"
+    assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
+    assert manifest["artifacts"]["report"] == "report/report.md"
+
+    market_data_views = json.loads((run_dir / "raw/market_data_views.json").read_text(encoding="utf-8"))
+    assert len(market_data_views["views"]) == 4
+    assert all("records" not in view for view in market_data_views["views"])
+    assert all(view["row_count"] == 4 for view in market_data_views["views"])
+
+    strategy_signals = json.loads(
+        (run_dir / "analysis/market_strategy_signals.json").read_text(encoding="utf-8")
+    )
+    market_signals = json.loads(
+        (run_dir / "analysis/market_signals.json").read_text(encoding="utf-8")
+    )
+    assert len(strategy_signals["signals"]) == 16
+    assert len(market_signals["signals"]) == 16
+    assert sorted({signal["strategy_name"] for signal in market_signals["signals"]}) == [
+        "momentum",
+        "trend",
+        "volatility",
+        "volume_anomaly",
+    ]
+    assert all(signal["evidence"] for signal in market_signals["signals"])
+    assert all(signal["uncertainty"] for signal in market_signals["signals"])
+    assert all("strategy_signal_id" not in signal for signal in market_signals["signals"])
+
+    signal_material = (run_dir / "analysis/market_signal_material.md").read_text(encoding="utf-8")
+    assert "artifact_type: analysis_market_signal_material" in signal_material
+    assert "record_type: market_signal" in signal_material
+    assert "key_values:" in signal_material
+    assert "evidence:" in signal_material
+    assert "uncertainty:" in signal_material
+    assert "raw_ohlcv_history_embedded: false" in signal_material
+    assert "open_time:" not in signal_material
+
+    context = (run_dir / "codex_context/context.md").read_text(encoding="utf-8")
+    prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
+    assert "artifact_type: analysis_market_signal_material" in context
+    assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert "raw_ohlcv_history_embedded: false" in context
+    assert "open_time:" not in context
+    assert "Quantitative signal conclusions" in prompt
+    assert "Evidence near each signal conclusion" in prompt
+    assert "Watch points" in prompt
+    assert "Risk notes" in prompt
+    assert "Do not calculate new quantitative signals from raw OHLCV history" in prompt
+    assert codex_calls[0]["input"] == prompt
+    assert codex_calls[0]["cwd"] == run_dir
+
+    report = (run_dir / "report/report.md").read_text(encoding="utf-8")
+    assert "## 量化信号结论" in report
+    assert "趋势信号" in report
+    assert "证据" in report
+    assert "## 观察要点" in report
+    assert "## 风险提示" in report
+    assert "不构成投资建议" in report
+    assert "tests/fixtures" not in config_path.read_text(encoding="utf-8")
+
+
 def _write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -168,6 +349,59 @@ codex:
     return config_path
 
 
+def _write_m1_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 4
+      1h: 4
+quant:
+  enabled: true
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
+text:
+  enabled: true
+  max_items: 1
+  sources:
+    - name: coindesk
+      type: rss
+      url: https://example.com/feed.xml
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: true
+  command: codex
+  args:
+    - exec
+    - --sandbox
+    - read-only
+    - "-"
+  timeout_seconds: 300
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _market_payload(symbol: str) -> dict:
     price = "68000.00" if symbol == "BTCUSDT" else "3600.00"
     return {
@@ -178,6 +412,37 @@ def _market_payload(symbol: str) -> dict:
         "quoteVolume": "8394600.00",
         "closeTime": _millis(datetime(2026, 6, 5, 0, 30, tzinfo=timezone.utc)),
     }
+
+
+def _ohlcv_records(*, symbol: str, timeframe: str, limit: int) -> list[dict]:
+    base_close = 100.0 if symbol == "BTCUSDT" else 50.0
+    base_volume = 10.0 if timeframe == "1d" else 20.0
+    records = []
+    for index in range(limit):
+        close = base_close + index
+        records.append(
+            {
+                "source": "binance",
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "open_time": _ohlcv_open_time(timeframe, index),
+                "open": close - 1,
+                "high": close + 2,
+                "low": close - 2,
+                "close": close,
+                "volume": base_volume + index * 5,
+                "fetched_at": "2026-06-05T00:30:00Z",
+            }
+        )
+    return records
+
+
+def _ohlcv_open_time(timeframe: str, index: int) -> str:
+    if timeframe == "1d":
+        day = 1 + index
+        return f"2026-06-{day:02d}T00:00:00Z"
+    hour = index
+    return f"2026-06-05T{hour:02d}:00:00Z"
 
 
 def _rss_payload() -> bytes:
@@ -220,6 +485,45 @@ def _report_stdout() -> str:
             "## 观察要点",
             "",
             "- 继续观察公开来源。",
+            "",
+            "## 风险提示",
+            "",
+            "本内容仅供个人研究，不构成投资建议。",
+            "",
+        ]
+    )
+
+
+def _m1_report_stdout() -> str:
+    return "\n".join(
+        [
+            "# 每日市场情报简报",
+            "",
+            "## 核心摘要",
+            "",
+            "本报告使用了本地量化信号材料和公开文本事件。",
+            "",
+            "## 市场概览",
+            "",
+            "binance 市场数据和本地 OHLCV 信号材料已进入报告上下文。",
+            "",
+            "## 量化信号结论",
+            "",
+            "- 趋势信号显示 BTCUSDT 与 ETHUSDT 的样本窗口偏强。",
+            "- 证据：报告上下文包含 trend、momentum、volatility 和 volume_anomaly 信号记录。",
+            "- 不确定性：这些信号仅基于 OHLCV 窗口，不包含文本事件信号。",
+            "",
+            "## 文本事件",
+            "",
+            "coindesk 提供了公开文本事件。",
+            "",
+            "## 综合判断",
+            "",
+            "量化信号结论和文本材料共同构成本地研究上下文。",
+            "",
+            "## 观察要点",
+            "",
+            "- 继续观察趋势、动量、波动和成交量异常信号的变化。",
             "",
             "## 风险提示",
             "",
