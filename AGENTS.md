@@ -161,6 +161,19 @@ Current bias:
 * Do not silently rewrite source material into conclusions.
 * Generated analysis must distinguish facts, assumptions, and judgment.
 
+## Artifact Expectations
+
+* Product runs preserve raw market and text artifacts.
+* Shared OHLCV history lives outside per-run report directories.
+* Shared OHLCV history is reusable input data, not AI context.
+* `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
+* `analysis/market_strategy_signals.json` records evaluator outputs.
+* `analysis/market_signals.json` records normalized report-facing market signals.
+* `analysis/market_signal_material.md` is bounded AI-readable signal material.
+* Codex context may include signal material, not shared OHLCV history.
+* Reports come from Codex stdout, not placeholder text.
+* Fake market data, fake signals, and fake Codex output stay test-only.
+
 ## Docs
 
 * Docs match current repo state.

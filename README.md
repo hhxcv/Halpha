@@ -88,6 +88,33 @@ market:
 
 Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
 
+## Quantitative Signal Report Path
+
+When `market.ohlcv` is configured and `quant.enabled` is true, the implemented run command extends the report loop with quantitative market signal material:
+
+```text
+configured public market source
+-> finalized OHLCV sync
+-> shared local OHLCV history
+-> deterministic current-run OHLCV data views
+-> trend, momentum, volatility, and volume anomaly signal evaluation
+-> normalized market signal artifacts
+-> AI-readable market signal material
+-> research context and Codex prompt
+-> Simplified Chinese Markdown report
+```
+
+The shared OHLCV store is reusable local input history. It is not AI context. Current-run data views record deterministic input windows and storage references, not full raw OHLCV history. Codex receives market signal material with bounded input-window metadata, key values, evidence, and uncertainty.
+
+Implemented quantitative signal behavior:
+
+- `trend`: compares the latest close and short moving average with the long moving average.
+- `momentum`: compares the latest close with the first and previous closes in the selected window.
+- `volatility`: measures close-to-close variation and candle range risk.
+- `volume_anomaly`: compares latest volume with the previous-window average volume.
+
+Signal artifacts preserve source, symbol, timeframe, input window, direction, strength, confidence, key values, evidence, uncertainty, source artifacts, and insufficient-data state where applicable. Quantitative signals are personal research material. They are not trades, positions, backtest results, forecasts, or financial advice.
+
 Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, and `analysis/market_signal_material.md`. If collection, OHLCV sync, data view creation, strategy signal evaluation, market signal material generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 Output artifact roles:
