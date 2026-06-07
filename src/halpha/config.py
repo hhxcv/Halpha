@@ -9,6 +9,8 @@ CONFIG_SECTIONS = {"codex", "market", "quant", "report", "run", "text"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_QUANT_SIGNALS = {"trend", "momentum", "volatility", "volume_anomaly"}
+SUPPORTED_QUANT_ENGINES = {"vectorbt"}
+SUPPORTED_QUANT_STRATEGIES = {"tsmom_vol_scaled"}
 
 
 class ConfigError(Exception):
@@ -63,9 +65,7 @@ def validate_config(config: dict[str, Any]) -> None:
     if quant is not None:
         quant_enabled = _require_bool(quant, "enabled", "quant.enabled")
         if quant_enabled:
-            _require_non_empty_string_list(quant, "signals", "quant.signals")
-            for index, signal in enumerate(quant["signals"]):
-                _require_supported_value(signal, f"quant.signals[{index}]", SUPPORTED_QUANT_SIGNALS)
+            _validate_quant_config(quant)
 
     if quant_enabled and not market_enabled:
         raise ConfigError("quant.enabled requires market.enabled to be true.")
@@ -173,6 +173,41 @@ def _validate_ohlcv_config(config: dict[str, Any], market: dict[str, Any], *, qu
         raise ConfigError("market.ohlcv.lookback must be a mapping.")
     for timeframe in timeframes:
         _require_positive_int(lookback, timeframe, f"market.ohlcv.lookback.{timeframe}")
+
+
+def _validate_quant_config(quant: dict[str, Any]) -> None:
+    has_signals = "signals" in quant
+    has_strategies = "strategies" in quant
+    if not has_signals and not has_strategies:
+        raise ConfigError("quant.enabled requires quant.signals or quant.strategies.")
+
+    if "engine" in quant:
+        engine = _require_non_empty_string(quant, "engine", "quant.engine")
+        _require_supported_value(engine, "quant.engine", SUPPORTED_QUANT_ENGINES)
+
+    if has_signals:
+        _require_non_empty_string_list(quant, "signals", "quant.signals")
+        for index, signal in enumerate(quant["signals"]):
+            _require_supported_value(signal, f"quant.signals[{index}]", SUPPORTED_QUANT_SIGNALS)
+
+    if has_strategies:
+        strategies = _require_non_empty_list(quant, "strategies", "quant.strategies")
+        for index, strategy in enumerate(strategies):
+            path = f"quant.strategies[{index}]"
+            if not isinstance(strategy, dict):
+                raise ConfigError(f"{path} must be a mapping.")
+            name = _require_non_empty_string(strategy, "name", f"{path}.name")
+            _require_supported_value(name, f"{path}.name", SUPPORTED_QUANT_STRATEGIES)
+            if "enabled" in strategy:
+                _require_bool(strategy, "enabled", f"{path}.enabled")
+            if "params" in strategy and not isinstance(strategy["params"], dict):
+                raise ConfigError(f"{path}.params must be a mapping.")
+            if "backtest" in strategy:
+                backtest = strategy["backtest"]
+                if not isinstance(backtest, dict):
+                    raise ConfigError(f"{path}.backtest must be a mapping.")
+                if "enabled" in backtest:
+                    _require_bool(backtest, "enabled", f"{path}.backtest.enabled")
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:

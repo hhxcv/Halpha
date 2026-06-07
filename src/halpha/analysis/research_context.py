@@ -120,6 +120,7 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         index.update(
             {
                 "market_data_views": artifacts.get("market_data_views"),
+                "quant_strategy_runs": artifacts.get("quant_strategy_runs"),
                 "market_strategy_signals": artifacts.get("market_strategy_signals"),
                 "market_signals": artifacts.get("market_signals"),
             }

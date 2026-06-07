@@ -131,6 +131,46 @@ def test_load_config_accepts_existing_report_config_without_quant_section(tmp_pa
     assert "ohlcv" not in config["market"]
 
 
+def test_load_config_accepts_quant_strategy_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            """
+quant:
+  enabled: true
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
+""",
+            """
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
+      backtest:
+        enabled: true
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+""",
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["quant"]["engine"] == "vectorbt"
+    assert config["quant"]["strategies"][0]["name"] == "tsmom_vol_scaled"
+
+
 def test_load_config_accepts_market_proxy_config(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
@@ -300,6 +340,11 @@ def test_load_config_rejects_quant_enabled_without_ohlcv_config(tmp_path: Path) 
         ("quant:\n  enabled: true", "quant:\n  enabled: \"yes\"", "quant.enabled"),
         (
             "  signals:\n    - trend\n    - momentum\n    - volatility\n    - volume_anomaly",
+            "",
+            "quant.enabled requires quant.signals or quant.strategies",
+        ),
+        (
+            "  signals:\n    - trend\n    - momentum\n    - volatility\n    - volume_anomaly",
             "  signals: []",
             "quant.signals",
         ),
@@ -313,6 +358,55 @@ def test_load_config_rejects_invalid_quant_config(
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace(old, new),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("replacement", "expected"),
+    [
+        ("  engine: unsupported\n  strategies:\n    - name: tsmom_vol_scaled", "quant.engine"),
+        ("  engine: vectorbt\n  strategies: []", "quant.strategies"),
+        ("  engine: vectorbt\n  strategies:\n    - name: unsupported", r"quant\.strategies\[0\]\.name"),
+        ("  engine: vectorbt\n  strategies:\n    - name: 123", r"quant\.strategies\[0\]\.name"),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      enabled: \"yes\"",
+            r"quant\.strategies\[0\]\.enabled",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params: invalid",
+            r"quant\.strategies\[0\]\.params",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest: invalid",
+            r"quant\.strategies\[0\]\.backtest",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        enabled: \"yes\"",
+            r"quant\.strategies\[0\]\.backtest\.enabled",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_quant_strategy_config(
+    tmp_path: Path,
+    replacement: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            """
+  signals:
+    - trend
+    - momentum
+    - volatility
+    - volume_anomaly
+""",
+            f"\n{replacement}\n",
+        ),
         encoding="utf-8",
     )
 
