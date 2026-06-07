@@ -103,6 +103,8 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
     return {
         "raw_market": artifacts.get("raw_market"),
         "raw_text_events": artifacts.get("raw_text_events"),
+        "market_signals": artifacts.get("market_signals"),
+        "market_signal_material": artifacts.get("market_signal_material"),
         "market_material": artifacts.get("market_material"),
         "text_material": artifacts.get("text_material"),
         "research_context": artifacts.get("research_context"),

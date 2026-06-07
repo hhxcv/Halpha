@@ -765,7 +765,8 @@ Artifact keys:
     "market_strategy_signals": 16,
     "market_strategy_signals_insufficient_data": 0,
     "market_signals": 16,
-    "market_signals_insufficient_data": 0
+    "market_signals_insufficient_data": 0,
+    "market_signal_material_records": 16
   }
 }
 ```

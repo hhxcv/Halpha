@@ -29,6 +29,8 @@ Implemented now:
 - `raw/market_data_views.json` artifact creation when `market.ohlcv` is configured.
 - Initial trend, momentum, volatility/range risk, and volume anomaly signal evaluation from OHLCV data views.
 - `analysis/market_strategy_signals.json` artifact creation when `quant.enabled` is true.
+- `analysis/market_signals.json` normalized market signal artifact creation when `quant.enabled` is true.
+- `analysis/market_signal_material.md` AI-readable market signal material creation when `quant.enabled` is true.
 - AI-readable market material generation.
 - `analysis/market_material.md` artifact creation from `raw/market.json`.
 - AI-readable text material generation.
@@ -85,7 +87,7 @@ market:
 
 Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
 
-Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`. If collection, OHLCV sync, data view creation, strategy signal evaluation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
+Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, and `analysis/market_signal_material.md`. If collection, OHLCV sync, data view creation, strategy signal evaluation, market signal material generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 Output artifact roles:
 
@@ -96,6 +98,8 @@ Output artifact roles:
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV storage schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
 - `analysis/market_strategy_signals.json`: source-aware quantitative strategy signal output with evidence and uncertainty.
+- `analysis/market_signals.json`: normalized market signal records for report generation.
+- `analysis/market_signal_material.md`: AI-readable quantitative signal material with bounded input-window context.
 - `analysis/market_material.md`: AI-readable market material derived from raw market data.
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.
