@@ -27,7 +27,7 @@ Implemented now:
 - OHLCV sync status, counts, stored ranges, warnings, and errors in `run_manifest.json`.
 - Deterministic OHLCV data view selection for configured lookback windows.
 - `raw/market_data_views.json` artifact creation when `market.ohlcv` is configured.
-- Initial quantitative strategy signal evaluation from OHLCV data views.
+- Initial trend, momentum, volatility/range risk, and volume anomaly signal evaluation from OHLCV data views.
 - `analysis/market_strategy_signals.json` artifact creation when `quant.enabled` is true.
 - AI-readable market material generation.
 - `analysis/market_material.md` artifact creation from `raw/market.json`.
@@ -95,7 +95,7 @@ Output artifact roles:
 - `data/market/ohlcv/`: shared finalized OHLCV history when configured.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV storage schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
-- `analysis/market_strategy_signals.json`: initial source-aware quantitative strategy signal output.
+- `analysis/market_strategy_signals.json`: source-aware quantitative strategy signal output with evidence and uncertainty.
 - `analysis/market_material.md`: AI-readable market material derived from raw market data.
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.

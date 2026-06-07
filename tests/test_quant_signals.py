@@ -96,6 +96,112 @@ def test_quant_signals_emit_all_configured_initial_signal_types(tmp_path: Path) 
     _assert_no_trading_language(artifact)
 
 
+def test_quant_signals_record_risk_and_activity_values(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        signals=["volatility", "volume_anomaly"],
+        lookback=4,
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(
+                open_time="2026-06-01T00:00:00Z",
+                close=100,
+                high=101,
+                low=99,
+                volume=10,
+            ),
+            _record(
+                open_time="2026-06-02T00:00:00Z",
+                close=100,
+                high=102,
+                low=98,
+                volume=10,
+            ),
+            _record(
+                open_time="2026-06-03T00:00:00Z",
+                close=100,
+                high=103,
+                low=97,
+                volume=10,
+            ),
+            _record(
+                open_time="2026-06-04T00:00:00Z",
+                close=100,
+                high=104,
+                low=96,
+                volume=30,
+            ),
+        ]
+    )
+
+    result = _run_pipeline_with_signals(config, config_path)
+
+    artifact = _strategy_signals(result)
+    signals = artifact["signals"]
+    volatility = _signal(signals, "volatility")
+    volume_anomaly = _signal(signals, "volume_anomaly")
+    assert [signal["strategy_name"] for signal in signals] == ["volatility", "volume_anomaly"]
+    assert volatility["source"] == "binance"
+    assert volatility["symbol"] == "BTCUSDT"
+    assert volatility["timeframe"] == "1d"
+    assert volatility["input_window_start"] == "2026-06-01T00:00:00Z"
+    assert volatility["input_window_end"] == "2026-06-04T00:00:00Z"
+    assert volatility["latest_candle_time"] == "2026-06-04T00:00:00Z"
+    assert volatility["key_values"]["return_std_pct"] == 0.0
+    assert volatility["key_values"]["latest_range_pct"] == 8.0
+    assert volatility["key_values"]["average_range_pct"] == 5.0
+    assert volatility["key_values"]["max_range_pct"] == 8.0
+    assert "latest_range_pct" in "\n".join(volatility["evidence"])
+    assert volatility["confidence"] == "medium"
+    assert volatility["uncertainty"]
+    assert volume_anomaly["key_values"]["volume_ratio"] == 3.0
+    assert volume_anomaly["key_values"]["volume_change_pct"] == 200.0
+    assert "volume_change_pct" in "\n".join(volume_anomaly["evidence"])
+    assert volume_anomaly["direction"] == "unknown"
+    assert volume_anomaly["strength"] == "high"
+    assert volume_anomaly["uncertainty"]
+    _assert_no_trading_language(artifact)
+
+
+def test_quant_signals_record_unsupported_configured_signal_without_fabrication(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path, signals=["trend"], lookback=2)
+    config = load_config(config_path)
+    config["quant"]["signals"] = ["future_signal"]
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+        ]
+    )
+
+    result = _run_pipeline_with_signals(config, config_path)
+
+    artifact = _strategy_signals(result)
+    signal = artifact["signals"][0]
+    manifest = _manifest(result)
+    assert signal["strategy_name"] == "future_signal"
+    assert signal["direction"] == "unknown"
+    assert signal["strength"] == "unknown"
+    assert signal["confidence"] == "low"
+    assert signal["insufficient_data"] is True
+    assert signal["key_values"] == {"requested_lookback": 2, "row_count": 2}
+    assert signal["evidence"] == [
+        "input view has 2 OHLCV rows for requested_lookback 2."
+    ]
+    assert signal["uncertainty"] == [
+        "future_signal is configured but not implemented in the initial evaluator set."
+    ]
+    assert manifest["counts"]["market_strategy_signals"] == 1
+    assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 1
+    _assert_no_trading_language(artifact)
+
+
 def test_quant_signals_record_insufficient_data_signal(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, signals=["trend", "momentum"], lookback=3)
     config = load_config(config_path)
@@ -257,13 +363,22 @@ def _noop_stage(config, run) -> list[str]:
 def _assert_no_trading_language(artifact: dict[str, Any]) -> None:
     text = json.dumps(artifact, ensure_ascii=False).lower()
     forbidden = [
+        "backtest",
         "buy",
+        "calmar",
+        "drawdown",
+        "expected return",
         "sell",
         "order",
+        "pnl",
+        "portfolio",
         "position",
+        "sharpe",
+        "sortino",
         "entry",
         "exit",
         "investment recommendation",
+        "win rate",
     ]
     assert not any(word in text for word in forbidden)
 
@@ -276,6 +391,8 @@ def _record(
     open_time: str,
     close: float,
     volume: float,
+    high: float | None = None,
+    low: float | None = None,
 ) -> dict[str, object]:
     return {
         "source": source,
@@ -283,8 +400,8 @@ def _record(
         "timeframe": timeframe,
         "open_time": open_time,
         "open": close - 1,
-        "high": close + 1,
-        "low": close - 2,
+        "high": close + 1 if high is None else high,
+        "low": close - 2 if low is None else low,
         "close": close,
         "volume": volume,
         "fetched_at": "2026-06-05T00:00:00Z",

@@ -459,10 +459,22 @@ high
 unknown
 ```
 
+Supported strategy signal names are explicit and narrow:
+
+```text
+trend
+momentum
+volatility
+volume_anomaly
+```
+
 Rules:
 
 - Evidence must refer to calculated values or actual input-window facts.
 - Uncertainty must be explicit when data is thin, stale, missing, or method-limited.
+- Volatility signals should include close-to-close variation and candle range values where OHLCV high/low data is available.
+- Volume anomaly signals should compare the latest volume with the previous input-window average.
+- If an unimplemented strategy request reaches signal evaluation, emit an explicit low-confidence `insufficient_data: true` record instead of fabricating values or silently dropping it.
 - A strategy signal must not include trade entries, exits, position sizing, expected returns, or backtest performance.
 - `insufficient_data: true` is a valid evaluator output and must not be hidden.
 
@@ -781,4 +793,4 @@ Failure rules:
 - Strategy inputs use raw OHLCV-style data; AI context uses signal conclusions and bounded market context.
 - Quant signals are research material, not trades, positions, or backtest performance claims.
 - This document states initial adoption scope without making the contract milestone-only.
-- This document does not describe quant behavior as currently implemented.
+- This document separates current signal contracts from not-yet-implemented extensions.

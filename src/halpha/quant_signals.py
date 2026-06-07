@@ -182,6 +182,10 @@ def _volatility_signal(view: dict[str, Any], rows: list[dict[str, Any]], created
     returns_pct = frame["close"].pct_change().dropna() * 100
     volatility_pct = float(returns_pct.std(ddof=0))
     average_abs_return_pct = float(returns_pct.abs().mean())
+    range_pct_values = _range_pct_values(frame)
+    latest_range_pct = range_pct_values[-1]
+    average_range_pct = sum(range_pct_values) / len(range_pct_values)
+    max_range_pct = max(range_pct_values)
 
     return _signal_record(
         strategy="volatility",
@@ -193,13 +197,20 @@ def _volatility_signal(view: dict[str, Any], rows: list[dict[str, Any]], created
         key_values={
             "return_std_pct": _round(volatility_pct),
             "average_abs_return_pct": _round(average_abs_return_pct),
+            "latest_range_pct": _round(latest_range_pct),
+            "average_range_pct": _round(average_range_pct),
+            "max_range_pct": _round(max_range_pct),
             "row_count": len(rows),
         },
         evidence=[
             f"return_std_pct is {_round(volatility_pct)}% over the selected OHLCV window.",
             f"average_abs_return_pct is {_round(average_abs_return_pct)}% over the selected OHLCV window.",
+            f"latest_range_pct is {_round(latest_range_pct)}% for the latest candle.",
+            f"average_range_pct is {_round(average_range_pct)}% over the selected OHLCV window.",
         ],
-        uncertainty=["Volatility describes price variation only and does not provide directional evidence."],
+        uncertainty=[
+            "Volatility describes price variation and candle ranges only and does not provide directional evidence."
+        ],
         insufficient_data=False,
     )
 
@@ -213,6 +224,7 @@ def _volume_anomaly_signal(
     latest_volume = float(frame["volume"].iloc[-1])
     previous_average_volume = float(frame["volume"].iloc[:-1].mean())
     volume_ratio = latest_volume / previous_average_volume if previous_average_volume else 0.0
+    volume_change_pct = _pct_change(latest_volume, previous_average_volume)
 
     return _signal_record(
         strategy="volume_anomaly",
@@ -225,10 +237,12 @@ def _volume_anomaly_signal(
             "latest_volume": _round(latest_volume),
             "previous_average_volume": _round(previous_average_volume),
             "volume_ratio": _round(volume_ratio),
+            "volume_change_pct": _round(volume_change_pct),
             "row_count": len(rows),
         },
         evidence=[
-            f"latest_volume is {_round(volume_ratio)} times the previous-window average volume."
+            f"latest_volume is {_round(volume_ratio)} times the previous-window average volume.",
+            f"volume_change_pct is {_round(volume_change_pct)}% against the previous-window average volume.",
         ],
         uncertainty=["Volume anomaly describes activity level only and does not provide directional evidence."],
         insufficient_data=False,
@@ -324,8 +338,7 @@ def _insufficient_uncertainty(view: dict[str, Any], rows: list[dict[str, Any]]) 
 
 
 def _configured_strategies(quant: dict[str, Any]) -> list[str]:
-    configured = [str(signal) for signal in quant.get("signals", [])]
-    return [signal for signal in configured if signal in INITIAL_STRATEGIES]
+    return [str(signal) for signal in quant.get("signals", [])]
 
 
 def _frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -333,6 +346,17 @@ def _frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
     for column in ("open", "high", "low", "close", "volume"):
         frame[column] = frame[column].astype(float)
     return frame
+
+
+def _range_pct_values(frame: pd.DataFrame) -> list[float]:
+    values = []
+    for row in frame.itertuples(index=False):
+        close = float(row.close)
+        if close == 0:
+            values.append(0.0)
+        else:
+            values.append(((float(row.high) - float(row.low)) / close) * 100)
+    return values
 
 
 def _storage_dir(config: dict[str, Any], config_path: Path) -> Path:
