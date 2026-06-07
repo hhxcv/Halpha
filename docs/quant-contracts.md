@@ -367,6 +367,8 @@ Rules:
 - The view artifact records windows and storage references, not full OHLCV history.
 - `input_window_start`, `input_window_end`, and `latest_candle_time` must come from actual stored rows.
 - `row_count` must reflect rows available to the evaluator.
+- Configured lookback defines the current-run data view window, not the shared storage retention policy.
+- Shared storage may retain more historical rows than the configured lookback so later runs can reuse history.
 - If data is insufficient, record `insufficient_data: true` and an actionable warning.
 
 ## Market Strategy Signal Artifact Contract
@@ -719,6 +721,20 @@ OHLCV sync rules:
 - Merge writes must keep shared history deduplicated and deterministically ordered.
 - Sync failures must leave existing shared history inspectable and record actionable errors.
 - Product sync must not emit fake OHLCV records.
+
+When data views are created, `run_manifest.json` should record them:
+
+```json
+{
+  "artifacts": {
+    "market_data_views": "raw/market_data_views.json"
+  },
+  "counts": {
+    "market_data_views": 4,
+    "market_data_views_insufficient_data": 0
+  }
+}
+```
 
 When implementation creates signal artifacts, `run_manifest.json` should record them.
 
