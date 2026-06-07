@@ -12,6 +12,7 @@ STAGE_ORDER = (
     "collect_market_data",
     "collect_text_events",
     "sync_ohlcv",
+    "build_market_data_views",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -80,6 +81,7 @@ def run_pipeline(
     handlers["collect_market_data"] = _collect_market_data
     handlers["collect_text_events"] = _collect_text_events
     handlers["sync_ohlcv"] = _sync_ohlcv
+    handlers["build_market_data_views"] = _build_market_data_views
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -203,6 +205,12 @@ def _sync_ohlcv(config: dict[str, Any], run: RunContext) -> list[str] | None:
     from .ohlcv_sync import sync_ohlcv_history
 
     return sync_ohlcv_history(config, run)
+
+
+def _build_market_data_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .market_data_views import build_market_data_views
+
+    return build_market_data_views(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

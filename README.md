@@ -25,6 +25,8 @@ Implemented now:
 - Incremental public OHLCV history sync for configured symbols and timeframes.
 - Shared Parquet OHLCV history storage outside per-run report directories.
 - OHLCV sync status, counts, stored ranges, warnings, and errors in `run_manifest.json`.
+- Deterministic OHLCV data view selection for configured lookback windows.
+- `raw/market_data_views.json` artifact creation when `market.ohlcv` is configured.
 - AI-readable market material generation.
 - `analysis/market_material.md` artifact creation from `raw/market.json`.
 - AI-readable text material generation.
@@ -81,12 +83,13 @@ market:
 
 Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
 
-Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location. If collection, OHLCV sync, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
+Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. If collection, OHLCV sync, data view creation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 Output artifact roles:
 
 - `raw/market.json`: inspectable market observations from configured public market sources.
 - `raw/text_events.json`: inspectable public text events from configured RSS sources.
+- `raw/market_data_views.json`: deterministic OHLCV view metadata for current-run signal inputs.
 - `data/market/ohlcv/`: shared finalized OHLCV history when configured.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV storage schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
