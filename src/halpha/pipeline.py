@@ -11,6 +11,7 @@ from .storage import ensure_directory, write_json
 STAGE_ORDER = (
     "collect_market_data",
     "collect_text_events",
+    "sync_ohlcv",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -51,6 +52,7 @@ class RunContext:
     codex_context_dir: Path
     report_dir: Path
     manifest_path: Path
+    config_path: Path
     manifest: dict[str, Any]
 
 
@@ -77,6 +79,7 @@ def run_pipeline(
     handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
     handlers["collect_market_data"] = _collect_market_data
     handlers["collect_text_events"] = _collect_text_events
+    handlers["sync_ohlcv"] = _sync_ohlcv
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -172,6 +175,7 @@ def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datet
         codex_context_dir=codex_context_dir,
         report_dir=report_dir,
         manifest_path=run_dir / "run_manifest.json",
+        config_path=config_path,
         manifest=manifest,
     )
 
@@ -193,6 +197,12 @@ def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] |
     from .collectors.text import collect_text_events
 
     return collect_text_events(config, run)
+
+
+def _sync_ohlcv(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .ohlcv_sync import sync_ohlcv_history
+
+    return sync_ohlcv_history(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

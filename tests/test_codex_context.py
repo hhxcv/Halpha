@@ -57,14 +57,14 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
-    assert manifest["stages"][4]["name"] == "build_codex_context"
-    assert manifest["stages"][4]["status"] == "succeeded"
-    assert manifest["stages"][4]["artifacts"] == [
+    codex_context_stage = _stage(manifest, "build_codex_context")
+    report_stage = _stage(manifest, "run_codex_report")
+    assert codex_context_stage["status"] == "succeeded"
+    assert codex_context_stage["artifacts"] == [
         "codex_context/context.md",
         "codex_context/prompt.md",
     ]
-    assert manifest["stages"][5]["name"] == "run_codex_report"
-    assert manifest["stages"][5]["status"] == "succeeded"
+    assert report_stage["status"] == "succeeded"
 
 
 def test_codex_context_fails_when_research_context_is_missing(tmp_path: Path) -> None:
@@ -88,8 +88,7 @@ def test_codex_context_fails_when_research_context_is_missing(tmp_path: Path) ->
     assert not (result.run.codex_context_dir / "prompt.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    assert manifest["stages"][4]["name"] == "build_codex_context"
-    assert manifest["stages"][4]["status"] == "failed"
+    assert _stage(manifest, "build_codex_context")["status"] == "failed"
     assert manifest["errors"] == [
         {
             "stage": "build_codex_context",
@@ -218,3 +217,7 @@ def _skip_research_context(config, run) -> list[str]:
 
 def _skip_codex_report(config, run) -> list[str]:
     return []
+
+
+def _stage(manifest: dict, name: str) -> dict:
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)

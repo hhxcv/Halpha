@@ -647,6 +647,79 @@ Codex prompt rules:
 
 ## Run Manifest Contract Additions
 
+When OHLCV sync runs, `run_manifest.json` records the sync result.
+
+OHLCV sync keys:
+
+```json
+{
+  "artifacts": {
+    "ohlcv_schema": "data/market/metadata/ohlcv_schema.json",
+    "ohlcv_sync_state": "data/market/metadata/ohlcv_sync_state.json"
+  },
+  "counts": {
+    "ohlcv_sync_items": 4,
+    "ohlcv_records_fetched": 12,
+    "ohlcv_records_stored": 8,
+    "ohlcv_records_skipped": 4,
+    "ohlcv_sync_errors": 0
+  },
+  "ohlcv_sync": {
+    "schema_version": 1,
+    "artifact_type": "ohlcv_sync",
+    "status": "succeeded",
+    "source": "binance",
+    "storage_dir": "data/market/ohlcv",
+    "metadata": {
+      "ohlcv_schema": "data/market/metadata/ohlcv_schema.json",
+      "ohlcv_sync_state": "data/market/metadata/ohlcv_sync_state.json"
+    },
+    "items": [
+      {
+        "status": "succeeded",
+        "mode": "incremental",
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "configured_lookback": 500,
+        "existing_count": 499,
+        "requested_since_open_time": "2026-06-05T00:00:00Z",
+        "requested_limit": 501,
+        "fetched_count": 1,
+        "stored_count": 1,
+        "skipped_count": 0,
+        "stored_range": {
+          "earliest_open_time": "2025-01-22T00:00:00Z",
+          "latest_open_time": "2026-06-05T00:00:00Z",
+          "row_count": 500
+        },
+        "latest_closed_candle": "2026-06-05T00:00:00Z",
+        "warnings": [],
+        "errors": []
+      }
+    ],
+    "totals": {
+      "items": 4,
+      "fetched_count": 12,
+      "stored_count": 8,
+      "skipped_count": 4,
+      "error_count": 0
+    },
+    "warnings": [],
+    "errors": []
+  }
+}
+```
+
+OHLCV sync rules:
+
+- Omit network OHLCV fetching when `market.ohlcv` is not configured.
+- Initial backfill stores only finalized candles and trims to the configured lookback.
+- Incremental sync requests from the next missing candle when existing shared history is present.
+- Merge writes must keep shared history deduplicated and deterministically ordered.
+- Sync failures must leave existing shared history inspectable and record actionable errors.
+- Product sync must not emit fake OHLCV records.
+
 When implementation creates signal artifacts, `run_manifest.json` should record them.
 
 Artifact keys:

@@ -73,6 +73,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert manifest["status"] == "succeeded"
     assert manifest["counts"]["market_items"] == 2
     assert manifest["counts"]["text_event_items"] == 1
+    assert manifest["ohlcv_sync"]["status"] == "skipped"
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"] == {
@@ -88,6 +89,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert [(stage["name"], stage["status"]) for stage in manifest["stages"]] == [
         ("collect_market_data", "succeeded"),
         ("collect_text_events", "succeeded"),
+        ("sync_ohlcv", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
