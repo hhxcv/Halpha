@@ -39,6 +39,14 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "financial_advice: false" in context
     assert "## generation_constraints" in context
     assert "do_not_invent_prices_events_links_sources: true" in context
+    assert "quant_signal_requirements:" in context
+    assert "include_signal_conclusions: true" in context
+    assert "include_evidence_near_conclusions: true" in context
+    assert "include_uncertainty_near_conclusions: true" in context
+    assert "include_watch_points: true" in context
+    assert "include_risk_notes: true" in context
+    assert "do_not_calculate_signals_from_raw_ohlcv_history: true" in context
+    assert "do_not_inspect_shared_ohlcv_storage: true" in context
     assert "required_sections:" in context
     assert "- 核心摘要" in context
     assert "- market_overview" not in context
@@ -110,6 +118,9 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert '<embed path="analysis/market_signal_material.md">' in context
     assert "artifact_type: analysis_market_signal_material" in context
     assert "raw_ohlcv_history_embedded: false" in context
+    assert "include_signal_conclusions: true" in context
+    assert "include_evidence_near_conclusions: true" in context
+    assert "include_uncertainty_near_conclusions: true" in context
     assert "record_type: market_signal" in context
     assert "signal_id: market_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
     assert "open_time:" not in context

@@ -39,6 +39,7 @@ Implemented now:
 - `analysis/research_context.md` artifact creation from analysis materials.
 - Codex context artifact generation.
 - `codex_context/context.md` and `codex_context/prompt.md` artifact creation.
+- Codex prompt requirements for quantitative signal conclusions, evidence, watch points, and risk notes when market signal material exists.
 - Codex CLI report generation from persisted prompt context.
 - `report/report.md` artifact creation from Codex stdout when Codex CLI succeeds.
 - Codex execution status, exit code, and failure summary recording in `run_manifest.json`.
@@ -104,7 +105,7 @@ Output artifact roles:
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.
 - `codex_context/context.md`: Codex-readable context artifact with artifact index and embedded research context.
-- `codex_context/prompt.md`: prompt sent to Codex CLI through stdin.
+- `codex_context/prompt.md`: prompt sent to Codex CLI through stdin, including quantitative signal report requirements when signal material exists.
 - `report/report.md`: Simplified Chinese Markdown report generated from Codex stdout.
 - `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
 

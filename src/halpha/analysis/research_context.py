@@ -174,6 +174,16 @@ def _generation_constraints() -> dict[str, Any]:
         "use_only_embedded_context": True,
         "do_not_invent_prices_events_links_sources": True,
         "include_risk_notice": True,
+        "quant_signal_requirements": {
+            "include_when_market_signal_material_exists": True,
+            "include_signal_conclusions": True,
+            "include_evidence_near_conclusions": True,
+            "include_uncertainty_near_conclusions": True,
+            "include_watch_points": True,
+            "include_risk_notes": True,
+            "do_not_calculate_signals_from_raw_ohlcv_history": True,
+            "do_not_inspect_shared_ohlcv_storage": True,
+        },
         "required_sections": [
             "标题",
             "核心摘要",
