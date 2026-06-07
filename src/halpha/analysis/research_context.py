@@ -9,6 +9,7 @@ from halpha.pipeline import PipelineError, RunContext
 STAGE_NAME = "build_research_context"
 RESEARCH_CONTEXT_ARTIFACT = "analysis/research_context.md"
 MARKET_MATERIAL_ARTIFACT = "analysis/market_material.md"
+MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 
 
@@ -26,6 +27,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=bool(config.get("text", {}).get("enabled")),
         producer_stage="build_analysis_materials",
     )
+    market_signal_material = _read_material(
+        run.analysis_dir / "market_signal_material.md",
+        MARKET_SIGNAL_MATERIAL_ARTIFACT,
+        enabled=_quant_enabled(config),
+        producer_stage="build_market_signal_material",
+    )
 
     output_path = run.analysis_dir / "research_context.md"
     output_path.write_text(
@@ -34,6 +41,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
             run=run,
             artifact_index=artifact_index,
             market_material=market_material,
+            market_signal_material=market_signal_material,
             text_material=text_material,
         ),
         encoding="utf-8",
@@ -48,6 +56,7 @@ def render_research_context(
     run: RunContext,
     artifact_index: dict[str, Any],
     market_material: str | None,
+    market_signal_material: str | None,
     text_material: str | None,
 ) -> str:
     source_artifacts = [value for value in artifact_index.values() if value is not None]
@@ -91,6 +100,8 @@ def render_research_context(
         "",
     ]
     lines.extend(_embedded_material(MARKET_MATERIAL_ARTIFACT, market_material))
+    lines.extend(["", "## market_signal_material", ""])
+    lines.extend(_embedded_material(MARKET_SIGNAL_MATERIAL_ARTIFACT, market_signal_material))
     lines.extend(["", "## text_material", ""])
     lines.extend(_embedded_material(TEXT_MATERIAL_ARTIFACT, text_material))
     return "\n".join(lines)
@@ -98,12 +109,22 @@ def render_research_context(
 
 def _artifact_index(run: RunContext) -> dict[str, Any]:
     artifacts = run.manifest.get("artifacts", {})
-    return {
+    index = {
         "raw_market": artifacts.get("raw_market"),
         "raw_text_events": artifacts.get("raw_text_events"),
+        "market_signal_material": artifacts.get("market_signal_material"),
         "market_material": artifacts.get("market_material"),
         "text_material": artifacts.get("text_material"),
     }
+    if artifacts.get("market_signal_material"):
+        index.update(
+            {
+                "market_data_views": artifacts.get("market_data_views"),
+                "market_strategy_signals": artifacts.get("market_strategy_signals"),
+                "market_signals": artifacts.get("market_signals"),
+            }
+        )
+    return index
 
 
 def _read_material(path: Path, artifact: str, *, enabled: bool, producer_stage: str) -> str | None:
@@ -128,13 +149,20 @@ def _run_summary(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
     }
 
 
+def _quant_enabled(config: dict[str, Any]) -> bool:
+    quant = config.get("quant")
+    return isinstance(quant, dict) and quant.get("enabled") is True
+
+
 def _source_policy() -> dict[str, Any]:
     return {
         "allowed_sources_only": True,
         "fabricate_missing_sources": False,
         "fabricate_missing_facts": False,
+        "fabricate_missing_signals": False,
         "missing_url_label": "source_url_not_provided",
         "distinguish_facts_assumptions_uncertainties_judgment": True,
+        "raw_ohlcv_history_embedded": False,
         "financial_advice": False,
     }
 

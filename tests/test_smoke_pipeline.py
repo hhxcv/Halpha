@@ -92,6 +92,8 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("sync_ohlcv", "succeeded"),
         ("build_market_data_views", "succeeded"),
         ("evaluate_market_strategy_signals", "succeeded"),
+        ("build_market_signals", "succeeded"),
+        ("build_market_signal_material", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),

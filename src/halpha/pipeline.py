@@ -14,6 +14,8 @@ STAGE_ORDER = (
     "sync_ohlcv",
     "build_market_data_views",
     "evaluate_market_strategy_signals",
+    "build_market_signals",
+    "build_market_signal_material",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -84,6 +86,8 @@ def run_pipeline(
     handlers["sync_ohlcv"] = _sync_ohlcv
     handlers["build_market_data_views"] = _build_market_data_views
     handlers["evaluate_market_strategy_signals"] = _evaluate_market_strategy_signals
+    handlers["build_market_signals"] = _build_market_signals
+    handlers["build_market_signal_material"] = _build_market_signal_material
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -219,6 +223,18 @@ def _evaluate_market_strategy_signals(config: dict[str, Any], run: RunContext) -
     from .quant_signals import evaluate_market_strategy_signals
 
     return evaluate_market_strategy_signals(config, run)
+
+
+def _build_market_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .market_signals import build_market_signals
+
+    return build_market_signals(config, run)
+
+
+def _build_market_signal_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .market_signals import build_market_signal_material
+
+    return build_market_signal_material(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

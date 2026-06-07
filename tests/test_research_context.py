@@ -83,6 +83,40 @@ def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path
     assert "status: not_generated" in context
 
 
+def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, quant_enabled=True, text_enabled=False)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={
+            "collect_market_data": _write_market_raw,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _write_market_data_views,
+            "evaluate_market_strategy_signals": _write_strategy_signals,
+            "run_codex_report": _skip_codex_report,
+        },
+    )
+
+    assert result.succeeded is True
+    context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert "market_data_views: raw/market_data_views.json" in context
+    assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
+    assert "market_signals: analysis/market_signals.json" in context
+    assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert '<embed path="analysis/market_signal_material.md">' in context
+    assert "artifact_type: analysis_market_signal_material" in context
+    assert "raw_ohlcv_history_embedded: false" in context
+    assert "record_type: market_signal" in context
+    assert "signal_id: market_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
+    assert "open_time:" not in context
+    assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
+    assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
+
+
 def test_research_context_fails_when_enabled_material_is_missing(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -112,7 +146,12 @@ def test_research_context_fails_when_enabled_material_is_missing(tmp_path: Path)
     ]
 
 
-def _write_config(tmp_path: Path, *, text_enabled: bool = True) -> Path:
+def _write_config(
+    tmp_path: Path,
+    *,
+    text_enabled: bool = True,
+    quant_enabled: bool = False,
+) -> Path:
     config_path = tmp_path / "config.yaml"
     text_block = (
         """
@@ -130,6 +169,28 @@ text:
   enabled: false
 """
     )
+    ohlcv_block = (
+        """
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: 3
+"""
+        if quant_enabled
+        else ""
+    )
+    quant_block = (
+        """
+quant:
+  enabled: true
+  signals:
+    - trend
+"""
+        if quant_enabled
+        else ""
+    )
     config_path.write_text(
         f"""
 run:
@@ -140,7 +201,9 @@ market:
   source: binance
   symbols:
     - BTCUSDT
+{ohlcv_block.rstrip()}
 {text_block.rstrip()}
+{quant_block.rstrip()}
 report:
   title: Daily Market Brief
   language: zh-CN
@@ -236,7 +299,86 @@ def _write_text_raw(config, run) -> list[str]:
     return ["raw/text_events.json"]
 
 
+def _write_market_data_views(config, run) -> list[str]:
+    write_json(
+        run.raw_dir / "market_data_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "market_data_views",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["data/market/metadata/ohlcv_sync_state.json"],
+            "views": [
+                {
+                    "view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "requested_lookback": 3,
+                    "input_window_start": "2026-06-01T00:00:00Z",
+                    "input_window_end": "2026-06-03T00:00:00Z",
+                    "latest_candle_time": "2026-06-03T00:00:00Z",
+                    "row_count": 3,
+                    "storage_ref": "data/market/ohlcv/source=binance/symbol=BTCUSDT/timeframe=1d",
+                    "included_columns": ["open_time", "open", "high", "low", "close", "volume"],
+                    "insufficient_data": False,
+                    "warnings": [],
+                }
+            ],
+        },
+    )
+    run.manifest["artifacts"]["market_data_views"] = "raw/market_data_views.json"
+    run.manifest["counts"]["market_data_views"] = 1
+    run.manifest["counts"]["market_data_views_insufficient_data"] = 0
+    return ["raw/market_data_views.json"]
+
+
+def _write_strategy_signals(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "market_strategy_signals.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "market_strategy_signals",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["raw/market_data_views.json"],
+            "signals": [
+                {
+                    "strategy_signal_id": (
+                        "strategy_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z"
+                    ),
+                    "strategy_name": "trend",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+                    "input_window_start": "2026-06-01T00:00:00Z",
+                    "input_window_end": "2026-06-03T00:00:00Z",
+                    "latest_candle_time": "2026-06-03T00:00:00Z",
+                    "direction": "bullish",
+                    "strength": "medium",
+                    "confidence": "medium",
+                    "key_values": {"latest_close": 106.0, "row_count": 3},
+                    "evidence": ["latest_close is above moving_average_long."],
+                    "uncertainty": [
+                        "Trend uses OHLCV close prices only and excludes text events."
+                    ],
+                    "insufficient_data": False,
+                    "source_artifacts": ["raw/market_data_views.json"],
+                    "created_at": "2026-06-05T00:00:00Z",
+                }
+            ],
+        },
+    )
+    run.manifest["artifacts"]["market_strategy_signals"] = "analysis/market_strategy_signals.json"
+    run.manifest["counts"]["market_strategy_signals"] = 1
+    run.manifest["counts"]["market_strategy_signals_insufficient_data"] = 0
+    return ["analysis/market_strategy_signals.json"]
+
+
 def _skip_analysis_materials(config, run) -> list[str]:
+    return []
+
+
+def _noop_stage(config, run) -> list[str]:
     return []
 
 
