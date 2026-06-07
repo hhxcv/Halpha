@@ -189,6 +189,11 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     exit_code = main(["run", "--config", str(config_path)])
 
     assert exit_code == 0
+    assert requested_urls == [
+        "https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT",
+        "https://data-api.binance.vision/api/v3/ticker/24hr?symbol=ETHUSDT",
+        "https://example.com/feed.xml",
+    ]
     assert [request["symbol"] for request in ohlcv_requests] == [
         "BTCUSDT",
         "BTCUSDT",
@@ -220,6 +225,16 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
         assert (run_dir / artifact).is_file()
     assert (tmp_path / "data" / "market" / "metadata" / "ohlcv_schema.json").is_file()
     assert (tmp_path / "data" / "market" / "metadata" / "ohlcv_sync_state.json").is_file()
+
+    market_raw = json.loads((run_dir / "raw/market.json").read_text(encoding="utf-8"))
+    assert market_raw["source"]["name"] == "binance"
+    assert [item["symbol"] for item in market_raw["items"]] == ["BTCUSDT", "ETHUSDT"]
+    assert market_raw["errors"] == []
+
+    text_raw = json.loads((run_dir / "raw/text_events.json").read_text(encoding="utf-8"))
+    assert text_raw["sources"][0]["url"] == "https://example.com/feed.xml"
+    assert len(text_raw["items"]) == 1
+    assert text_raw["errors"] == []
 
     manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "succeeded"
