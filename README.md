@@ -67,6 +67,17 @@ Required local environment:
 - Codex CLI authentication configured outside this repository.
 - Permission for Codex CLI to receive the generated local prompt through stdin.
 
+If a local proxy is needed for public market access, keep it in a gitignored local config file and enable `market.proxy` there:
+
+```yaml
+market:
+  proxy:
+    enabled: true
+    url: http://proxy.example:8080
+```
+
+Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
+
 Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. If collection or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 Output artifact roles:

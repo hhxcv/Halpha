@@ -109,6 +109,8 @@ Contract shape:
 market:
   enabled: true
   source: binance
+  proxy:
+    enabled: false
   symbols:
     - BTCUSDT
     - ETHUSDT
@@ -135,6 +137,11 @@ Validation contract:
 - `market.enabled` is required.
 - `market.source` is required when `market.enabled` is true.
 - `market.source` must be a supported OHLCV market source when `market.ohlcv` exists or `quant.enabled` is true.
+- `market.proxy` may be omitted when direct public source access works.
+- `market.proxy.enabled` is required when `market.proxy` exists.
+- `market.proxy.url` is required when `market.proxy.enabled` is true.
+- `market.proxy.url` must be an `http` or `https` proxy URL without embedded credentials.
+- Machine-local proxy values must stay in gitignored local config files, not committed examples or docs.
 - `market.symbols` must be a non-empty list when `market.enabled` is true.
 - `market.ohlcv` may be omitted when quant is not configured.
 - `market.ohlcv.storage_dir` is required when `market.ohlcv` exists or `quant.enabled` is true.
@@ -146,6 +153,32 @@ Validation contract:
 - `quant.signals` must be a non-empty list when `quant.enabled` is true.
 - Supported signal names are narrow and explicit. Unknown signal names fail with an actionable error.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.
+
+Proxy configuration:
+
+Public examples should leave proxy access disabled:
+
+```yaml
+market:
+  proxy:
+    enabled: false
+```
+
+Local-only configs may enable proxy access when direct public source access is unavailable:
+
+```yaml
+market:
+  proxy:
+    enabled: true
+    url: http://proxy.example:8080
+```
+
+Rules:
+
+- Keep real local proxy URLs, ports, hostnames, and private endpoints in gitignored local config files.
+- Use placeholder proxy values in docs, tests, issues, PRs, comments, and examples.
+- Do not embed proxy credentials in `market.proxy.url`.
+- Omit `market.proxy` or set `market.proxy.enabled: false` when direct public source access works.
 
 Initial adoption:
 

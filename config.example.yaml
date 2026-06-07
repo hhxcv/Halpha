@@ -5,6 +5,8 @@ run:
 market:
   enabled: true
   source: binance
+  proxy:
+    enabled: false
   symbols:
     - BTCUSDT
     - ETHUSDT

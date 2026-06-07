@@ -55,6 +55,8 @@ def validate_config(config: dict[str, Any]) -> None:
     if market_enabled:
         _require_non_empty_string(market, "source", "market.source")
         _require_non_empty_string_list(market, "symbols", "market.symbols")
+        if "proxy" in market:
+            _validate_market_proxy_config(market)
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -171,6 +173,25 @@ def _validate_ohlcv_config(config: dict[str, Any], market: dict[str, Any], *, qu
         raise ConfigError("market.ohlcv.lookback must be a mapping.")
     for timeframe in timeframes:
         _require_positive_int(lookback, timeframe, f"market.ohlcv.lookback.{timeframe}")
+
+
+def _validate_market_proxy_config(market: dict[str, Any]) -> None:
+    proxy = market.get("proxy")
+    if not isinstance(proxy, dict):
+        raise ConfigError("market.proxy must be a mapping.")
+    proxy_enabled = _require_bool(proxy, "enabled", "market.proxy.enabled")
+    if proxy_enabled:
+        _require_proxy_url(proxy, "url", "market.proxy.url")
+    elif "url" in proxy:
+        _require_proxy_url(proxy, "url", "market.proxy.url")
+
+
+def _require_proxy_url(data: dict[str, Any], key: str, path: str) -> str:
+    value = _require_http_url(data, key, path)
+    parsed = urlparse(value)
+    if parsed.username or parsed.password:
+        raise ConfigError(f"{path} must not include credentials.")
+    return value
 
 
 def _require_outside_run_output_dir(storage_dir: str, config: dict[str, Any]) -> None:

@@ -10,6 +10,7 @@ def test_config_example_loads_successfully() -> None:
 
     assert config["run"]["output_dir"] == "runs"
     assert config["market"]["source"] == "binance"
+    assert config["market"]["proxy"] == {"enabled": False}
     assert config["market"]["symbols"] == ["BTCUSDT", "ETHUSDT"]
     assert config["market"]["ohlcv"]["storage_dir"] == "data/market/ohlcv"
     assert config["market"]["ohlcv"]["timeframes"] == ["1d", "1h"]
@@ -128,6 +129,53 @@ def test_load_config_accepts_existing_report_config_without_quant_section(tmp_pa
 
     assert "quant" not in config
     assert "ohlcv" not in config["market"]
+
+
+def test_load_config_accepts_market_proxy_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "  source: binance",
+            "  source: binance\n  proxy:\n    enabled: true\n    url: http://proxy.example:8080",
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["market"]["proxy"] == {
+        "enabled": True,
+        "url": "http://proxy.example:8080",
+    }
+
+
+@pytest.mark.parametrize(
+    ("proxy_block", "expected"),
+    [
+        ("  proxy: invalid", "market.proxy must be a mapping"),
+        ("  proxy:\n    enabled: \"yes\"", "market.proxy.enabled"),
+        ("  proxy:\n    enabled: true", "market.proxy.url"),
+        ("  proxy:\n    enabled: true\n    url: socks5://proxy.example:1080", "market.proxy.url"),
+        (
+            "  proxy:\n    enabled: true\n    url: http://user:secret@proxy.example:8080",
+            "market.proxy.url must not include credentials",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_market_proxy_config(
+    tmp_path: Path, proxy_block: str, expected: str
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "  source: binance",
+            f"  source: binance\n{proxy_block}",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
 
 
 @pytest.mark.parametrize(
