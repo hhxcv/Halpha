@@ -1081,6 +1081,119 @@ allowed_basis:
   - uncertainty
 ```
 
+## quant_overview
+
+```yaml
+material_scope: quant_strategy_signal_summary
+normalized_market_signal_artifact: analysis/market_signals.json
+quant_strategy_runs_artifact: analysis/quant_strategy_runs.json
+signal_count: 4
+strategy_count: 3
+strategies:
+  - breakout_atr_trend
+  - bollinger_rsi_reversion
+  - tsmom_vol_scaled
+direction_counts:
+  bullish: 2
+  bearish: 1
+  unknown: 1
+confidence_counts:
+  high: 1
+  low: 1
+  medium: 1
+  unknown: 1
+insufficient_data_count: 1
+strategy_run_status_counts:
+  succeeded: 3
+  insufficient_data: 1
+raw_ohlcv_history_embedded: false
+source_artifacts:
+  - analysis/market_signals.json
+  - analysis/quant_strategy_runs.json
+```
+
+## strategy_matrix
+
+```yaml
+columns:
+  - strategy_name
+  - source
+  - symbol
+  - timeframe
+  - direction
+  - strength
+  - confidence
+  - latest_regime
+  - diagnostics
+  - insufficient_data
+signals:
+  - strategy_name: tsmom_vol_scaled
+    source: binance
+    symbol: BTCUSDT
+    timeframe: 1d
+    direction: bullish
+    strength: medium
+    confidence: high
+    latest_regime: risk_on_momentum
+    diagnostics:
+      backtest_diagnostic_status: succeeded
+      parameter_stability: stable
+    insufficient_data: false
+```
+
+## confluence_and_conflict
+
+```yaml
+group_count: 2
+confluence_group_count: 1
+conflict_group_count: 1
+groups:
+  - group: binance:BTCUSDT:1d
+    strategies:
+      - tsmom_vol_scaled
+      - bollinger_rsi_reversion
+    direction_counts:
+      bullish: 1
+      bearish: 1
+    confluence_direction: none
+    conflict: true
+    insufficient_data: false
+    report_note: Strategies disagree for this market window; describe the conflict before synthesis.
+```
+
+## risk_and_uncertainty
+
+```yaml
+low_confidence_signals:
+  - market_signal:bollinger_rsi_reversion:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
+insufficient_data_signals:
+  - market_signal:breakout_atr_trend:binance:SOLUSDT:1d:2026-06-05T00:00:00Z
+conflicting_groups:
+  - binance:BTCUSDT:1d
+uncertainty_notes:
+  - Strategy uses OHLCV close prices only and excludes text events.
+diagnostic_policy:
+  backtest_summaries_are_forecasts: false
+  parameter_diagnostics_are_optimization: false
+raw_ohlcv_history_embedded: false
+```
+
+## report_guidance
+
+```yaml
+high_confidence_signals:
+  - Use as quantitative evidence when direction is clear and no same-market conflict is present.
+low_confidence_signals:
+  - Use cautious language and explain why confidence is low.
+conflicting_signals:
+  - Describe disagreement across strategies before giving any synthesis.
+insufficient_data_signals:
+  - State that the strategy conclusion is unavailable for the affected market window.
+source_rules:
+  - Reference normalized market signals and quant strategy run artifacts.
+  - Do not calculate new quantitative signals from raw OHLCV history.
+```
+
 ## record: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
 
 ```yaml
@@ -1131,6 +1244,7 @@ parameter_diagnostic_policy: bounded_sensitivity_context_only_not_optimization
 Rules:
 
 - Include signal conclusions, key values, evidence, input-window metadata, and uncertainty.
+- Include `quant_overview`, `strategy_matrix`, `confluence_and_conflict`, `risk_and_uncertainty`, and `report_guidance` before per-signal records.
 - Include strategy conclusions, diagnostics summaries, conflict notes, risk notes, and warnings when strategy run artifacts exist.
 - Do not embed large OHLCV history.
 - Do not embed vectorbt objects.

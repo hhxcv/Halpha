@@ -72,6 +72,49 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
     _assert_no_trading_language(market_signals, material)
 
 
+def test_market_signal_material_includes_quant_overview_matrix_conflicts_and_guidance(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_pipeline_with_representative_strategy_runs(config, config_path)
+
+    material = (result.run.analysis_dir / "market_signal_material.md").read_text(encoding="utf-8")
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert "## quant_overview" in material
+    assert "normalized_market_signal_artifact: analysis/market_signals.json" in material
+    assert "quant_strategy_runs_artifact: analysis/quant_strategy_runs.json" in material
+    assert "strategy_run_status_counts:" in material
+    assert "succeeded: 4" in material
+    assert "insufficient_data: 1" in material
+    assert "## strategy_matrix" in material
+    assert "strategy_name: tsmom_vol_scaled" in material
+    assert "strategy_name: bollinger_rsi_reversion" in material
+    assert "strategy_name: breakout_atr_trend" in material
+    assert "## confluence_and_conflict" in material
+    assert "confluence_group_count: 1" in material
+    assert "conflict_group_count: 1" in material
+    assert "group: binance:BTCUSDT:1d" in material
+    assert "group: binance:ETHUSDT:1d" in material
+    assert "## risk_and_uncertainty" in material
+    assert "low_confidence_signals:" in material
+    assert "insufficient_data_signals:" in material
+    assert "## report_guidance" in material
+    assert "high_confidence_signals:" in material
+    assert "conflicting_signals:" in material
+    assert "insufficient_data_signals:" in material
+    assert "analysis/quant_strategy_runs.json" in material
+    assert "analysis/market_signals.json" in material
+    assert "raw_ohlcv_history_embedded: false" in material
+    assert "open_time:" not in material
+    assert "records:" not in material
+    assert manifest["counts"]["market_signal_material_records"] == 5
+    _assert_no_trading_language(material)
+
+
 def test_market_signals_preserve_insufficient_signal_state(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -182,6 +225,25 @@ def _run_pipeline_with_strategy_outputs(
     )
 
 
+def _run_pipeline_with_representative_strategy_runs(config: dict[str, Any], config_path: Path):
+    return run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={
+            "collect_market_data": _noop_stage,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _write_market_data_views,
+            "evaluate_quant_strategies": _write_representative_quant_strategy_runs,
+            "evaluate_market_strategy_signals": _write_representative_strategy_signals,
+            "build_analysis_materials": _noop_stage,
+            "build_research_context": _noop_stage,
+            "build_codex_context": _noop_stage,
+            "run_codex_report": _noop_stage,
+        },
+    )
+
+
 def _write_config(tmp_path: Path, *, quant_enabled: bool = True) -> Path:
     ohlcv_block = (
         """
@@ -268,6 +330,71 @@ def _write_market_data_views(config, run) -> list[str]:
     return ["raw/market_data_views.json"]
 
 
+def _write_representative_quant_strategy_runs(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "quant_strategy_runs.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "quant_strategy_runs",
+            "created_at": "2026-06-05T00:00:00Z",
+            "engine": {"name": "vectorbt", "version": "0.28.0", "objects_exposed": False},
+            "source_artifacts": ["raw/market_data_views.json"],
+            "runs": [
+                _strategy_run("tsmom_vol_scaled", "BTCUSDT", "succeeded", "bullish", "high"),
+                _strategy_run("bollinger_rsi_reversion", "BTCUSDT", "succeeded", "bearish", "low"),
+                _strategy_run("tsmom_vol_scaled", "ETHUSDT", "succeeded", "bullish", "high"),
+                _strategy_run("breakout_atr_trend", "ETHUSDT", "succeeded", "bullish", "medium"),
+                _strategy_run("breakout_atr_trend", "SOLUSDT", "insufficient_data", "unknown", "low"),
+            ],
+        },
+    )
+    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["counts"]["quant_strategy_runs"] = 5
+    run.manifest["counts"]["quant_strategy_runs_succeeded"] = 4
+    run.manifest["counts"]["quant_strategy_runs_insufficient_data"] = 1
+    return ["analysis/quant_strategy_runs.json"]
+
+
+def _write_representative_strategy_signals(config, run) -> list[str]:
+    signals = [
+        _strategy_signal("tsmom_vol_scaled", "BTCUSDT", "bullish", "high", "risk_on_momentum"),
+        _strategy_signal(
+            "bollinger_rsi_reversion",
+            "BTCUSDT",
+            "bearish",
+            "low",
+            "overbought_reversion_watch",
+        ),
+        _strategy_signal("tsmom_vol_scaled", "ETHUSDT", "bullish", "high", "risk_on_momentum"),
+        _strategy_signal("breakout_atr_trend", "ETHUSDT", "bullish", "medium", "confirmed_breakout"),
+        _strategy_signal(
+            "breakout_atr_trend",
+            "SOLUSDT",
+            "unknown",
+            "low",
+            None,
+            insufficient=True,
+        ),
+    ]
+    write_json(
+        run.analysis_dir / "market_strategy_signals.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "market_strategy_signals",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": [
+                "analysis/quant_strategy_runs.json",
+                "raw/market_data_views.json",
+            ],
+            "signals": signals,
+        },
+    )
+    run.manifest["artifacts"]["market_strategy_signals"] = "analysis/market_strategy_signals.json"
+    run.manifest["counts"]["market_strategy_signals"] = len(signals)
+    run.manifest["counts"]["market_strategy_signals_insufficient_data"] = 1
+    return ["analysis/market_strategy_signals.json"]
+
+
 def _write_strategy_signals(config, run, *, insufficient: bool) -> list[str]:
     key_values = (
         {"requested_lookback": 3, "row_count": 1}
@@ -316,6 +443,82 @@ def _write_strategy_signals(config, run, *, insufficient: bool) -> list[str]:
     run.manifest["counts"]["market_strategy_signals"] = 1
     run.manifest["counts"]["market_strategy_signals_insufficient_data"] = int(insufficient)
     return ["analysis/market_strategy_signals.json"]
+
+
+def _strategy_run(
+    strategy_name: str,
+    symbol: str,
+    status: str,
+    direction: str,
+    confidence: str,
+) -> dict[str, Any]:
+    return {
+        "strategy_run_id": f"quant_strategy_run:{strategy_name}:binance:{symbol}:1d:2026-06-03T00:00:00Z",
+        "status": status,
+        "strategy_name": strategy_name,
+        "source": "binance",
+        "symbol": symbol,
+        "timeframe": "1d",
+        "input_view_id": f"ohlcv_view:binance:{symbol}:1d:2026-06-03T00:00:00Z",
+        "input_window_start": "2026-06-01T00:00:00Z",
+        "input_window_end": "2026-06-03T00:00:00Z",
+        "latest_candle_time": "2026-06-03T00:00:00Z",
+        "assessment": {
+            "direction": direction,
+            "strength": "medium" if direction != "unknown" else "unknown",
+            "confidence": confidence,
+            "evidence": [f"{strategy_name} evidence summary for {symbol}."],
+            "uncertainty": [f"{strategy_name} uncertainty summary for {symbol}."],
+        },
+        "warnings": [],
+        "source_artifacts": ["raw/market_data_views.json"],
+        "created_at": "2026-06-05T00:00:00Z",
+    }
+
+
+def _strategy_signal(
+    strategy_name: str,
+    symbol: str,
+    direction: str,
+    confidence: str,
+    latest_regime: str | None,
+    *,
+    insufficient: bool = False,
+) -> dict[str, Any]:
+    key_values = {"row_count": 3}
+    if latest_regime:
+        key_values["latest_regime"] = latest_regime
+    if strategy_name == "tsmom_vol_scaled":
+        key_values["return_window_pct"] = 6.0
+    if strategy_name == "bollinger_rsi_reversion":
+        key_values["rsi"] = 82.0
+    if insufficient:
+        key_values = {"requested_lookback": 3, "row_count": 1}
+    return {
+        "strategy_signal_id": (
+            f"strategy_signal:{strategy_name}:binance:{symbol}:1d:2026-06-03T00:00:00Z"
+        ),
+        "strategy_name": strategy_name,
+        "source": "binance",
+        "symbol": symbol,
+        "timeframe": "1d",
+        "input_view_id": f"ohlcv_view:binance:{symbol}:1d:2026-06-03T00:00:00Z",
+        "input_window_start": "2026-06-01T00:00:00Z",
+        "input_window_end": "2026-06-03T00:00:00Z",
+        "latest_candle_time": "2026-06-03T00:00:00Z",
+        "direction": direction,
+        "strength": "medium" if direction != "unknown" else "unknown",
+        "confidence": confidence,
+        "key_values": key_values,
+        "evidence": [f"{strategy_name} evidence summary for {symbol}."],
+        "uncertainty": [f"{strategy_name} uncertainty summary for {symbol}."],
+        "insufficient_data": insufficient,
+        "source_artifacts": [
+            "analysis/quant_strategy_runs.json",
+            "raw/market_data_views.json",
+        ],
+        "created_at": "2026-06-05T00:00:00Z",
+    }
 
 
 def _market_signals(result) -> dict[str, Any]:
