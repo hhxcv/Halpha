@@ -15,7 +15,7 @@ class StrategyDefinition:
     failed_params: StrategyParams
 
 
-SUPPORTED_STRATEGY_NAMES = {"breakout_atr_trend", "tsmom_vol_scaled"}
+SUPPORTED_STRATEGY_NAMES = {"bollinger_rsi_reversion", "breakout_atr_trend", "tsmom_vol_scaled"}
 
 
 def get_strategy_definition(name: str) -> StrategyDefinition | None:
@@ -34,5 +34,13 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             name=breakout_atr_trend.NAME,
             run=breakout_atr_trend.run,
             failed_params=breakout_atr_trend.failed_params,
+        )
+    if name == "bollinger_rsi_reversion":
+        from .strategies import bollinger_rsi_reversion
+
+        return StrategyDefinition(
+            name=bollinger_rsi_reversion.NAME,
+            run=bollinger_rsi_reversion.run,
+            failed_params=bollinger_rsi_reversion.failed_params,
         )
     return None

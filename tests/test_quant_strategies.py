@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
@@ -13,6 +15,7 @@ from halpha.quant.registry import get_strategy_definition
 def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     definition = get_strategy_definition("tsmom_vol_scaled")
     breakout = get_strategy_definition("breakout_atr_trend")
+    reversion = get_strategy_definition("bollinger_rsi_reversion")
 
     assert definition is not None
     assert definition.name == "tsmom_vol_scaled"
@@ -20,6 +23,9 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert breakout is not None
     assert breakout.name == "breakout_atr_trend"
     assert breakout.run.__module__ == "halpha.quant.strategies.breakout_atr_trend"
+    assert reversion is not None
+    assert reversion.name == "bollinger_rsi_reversion"
+    assert reversion.run.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
     assert get_strategy_definition("missing") is None
 
 
@@ -392,6 +398,214 @@ def test_quant_strategy_runner_records_breakout_insufficient_data(tmp_path: Path
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 2
 
 
+def test_quant_strategy_runner_writes_bollinger_rsi_oversold_artifacts(tmp_path: Path) -> None:
+    config_path = _write_reversion_strategy_config(tmp_path, lookback=6)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=101, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=100, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=99, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=90, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    market_signal = _market_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["strategy_name"] == "bollinger_rsi_reversion"
+    assert strategy_run["params"] == {
+        "bollinger_window": 3,
+        "band_std": 1.0,
+        "rsi_window": 3,
+        "rsi_oversold": 35.0,
+        "rsi_overbought": 65.0,
+        "trend_window": 3,
+        "trend_filter_pct": 50.0,
+    }
+    assert strategy_run["indicators"]["calculation_backend"] == "vectorbt.IndicatorFactory"
+    assert strategy_run["indicators"]["latest_close"] == 90.0
+    assert strategy_run["indicators"]["bollinger_lower"] > strategy_run["indicators"]["latest_close"]
+    assert strategy_run["indicators"]["rsi"] == 0.0
+    assert strategy_run["indicators"]["trend_window_pct"] == pytest.approx(-10.891089, abs=0.000001)
+    assert strategy_run["signals"]["latest_regime"] == "oversold_reversion_watch"
+    assert strategy_run["signals"]["entry_count"] == 1
+    assert strategy_run["signals"]["latest_signal_active"] is True
+    assert strategy_run["signals"]["latest_oversold"] is True
+    assert strategy_run["signals"]["latest_overbought"] is False
+    assert strategy_run["signals"]["trend_filter_active"] is False
+    assert strategy_run["assessment"]["direction"] == "bullish"
+    assert strategy_run["assessment"]["strength"] == "high"
+    assert strategy_run["assessment"]["evidence"]
+    assert strategy_run["assessment"]["uncertainty"]
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["error"] is None
+
+    assert strategy_signal["strategy_name"] == "bollinger_rsi_reversion"
+    assert strategy_signal["direction"] == "bullish"
+    assert strategy_signal["key_values"]["latest_regime"] == "oversold_reversion_watch"
+    assert strategy_signal["key_values"]["bollinger_lower"] > strategy_signal["key_values"]["latest_close"]
+    assert strategy_signal["key_values"]["rsi"] == 0.0
+    assert strategy_signal["key_values"]["latest_oversold"] is True
+    assert strategy_signal["key_values"]["trend_filter_active"] is False
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "succeeded"
+    assert market_signal["strategy_name"] == "bollinger_rsi_reversion"
+    assert market_signal["key_values"]["latest_regime"] == "oversold_reversion_watch"
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    assert manifest["quant_strategies"]["enabled"] == ["bollinger_rsi_reversion"]
+
+
+def test_quant_strategy_runner_records_bollinger_rsi_overbought_state(tmp_path: Path) -> None:
+    config_path = _write_reversion_strategy_config(tmp_path, lookback=6, backtest_enabled=False)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=98, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=99, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=100, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=101, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["signals"]["latest_regime"] == "overbought_reversion_watch"
+    assert strategy_run["signals"]["latest_signal_active"] is False
+    assert strategy_run["signals"]["latest_oversold"] is False
+    assert strategy_run["signals"]["latest_overbought"] is True
+    assert strategy_run["assessment"]["direction"] == "bearish"
+    assert strategy_run["assessment"]["strength"] == "high"
+    assert strategy_run["backtest_diagnostic"] == {"enabled": False, "status": "disabled"}
+    assert strategy_signal["direction"] == "bearish"
+    assert strategy_signal["key_values"]["latest_regime"] == "overbought_reversion_watch"
+    assert strategy_signal["key_values"]["bollinger_upper"] < strategy_signal["key_values"]["latest_close"]
+    assert strategy_signal["key_values"]["rsi"] == 100.0
+    assert strategy_signal["key_values"]["latest_overbought"] is True
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "disabled"
+
+
+def test_quant_strategy_runner_records_bollinger_rsi_neutral_state(tmp_path: Path) -> None:
+    config_path = _write_reversion_strategy_config(tmp_path, lookback=6, backtest_enabled=False)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=100, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=101, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=100, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=101, volume=15),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["signals"]["latest_regime"] == "neutral_range"
+    assert strategy_run["signals"]["entry_count"] == 0
+    assert strategy_run["signals"]["exit_count"] == 0
+    assert strategy_run["signals"]["latest_signal_active"] is False
+    assert strategy_run["signals"]["latest_oversold"] is False
+    assert strategy_run["signals"]["latest_overbought"] is False
+    assert strategy_run["assessment"]["direction"] == "neutral"
+    assert strategy_run["assessment"]["strength"] == "low"
+    assert strategy_signal["direction"] == "neutral"
+    assert strategy_signal["key_values"]["latest_regime"] == "neutral_range"
+    assert strategy_signal["key_values"]["latest_signal_active"] is False
+
+
+def test_quant_strategy_runner_records_bollinger_rsi_strong_trend_warning(tmp_path: Path) -> None:
+    config_path = _write_reversion_strategy_config(
+        tmp_path,
+        lookback=6,
+        backtest_enabled=False,
+        trend_filter_pct=5.0,
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=98, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=99, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=100, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=101, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["signals"]["latest_regime"] == "overbought_reversion_risk_strong_uptrend"
+    assert strategy_run["signals"]["trend_filter_active"] is True
+    assert strategy_run["signals"]["strong_trend_direction"] == "up"
+    assert strategy_run["assessment"]["direction"] == "mixed"
+    assert strategy_run["assessment"]["confidence"] == "low"
+    assert strategy_run["warnings"][0]["code"] == "strong_uptrend_reversion_filter"
+    assert strategy_signal["direction"] == "mixed"
+    assert strategy_signal["key_values"]["trend_filter_active"] is True
+    assert strategy_signal["key_values"]["strong_trend_direction"] == "up"
+    assert any("strong uptrend" in item for item in strategy_signal["uncertainty"])
+
+
+def test_quant_strategy_runner_records_bollinger_rsi_insufficient_data(tmp_path: Path) -> None:
+    config_path = _write_reversion_strategy_config(tmp_path, lookback=2)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-05T00:00:00Z", close=100, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=90, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "insufficient_data"
+    assert strategy_run["data_quality"]["row_count"] == 2
+    assert strategy_run["data_quality"]["minimum_required_rows"] == 4
+    assert strategy_run["indicators"] == {}
+    assert strategy_run["signals"] == {}
+    assert strategy_run["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    assert strategy_signal["direction"] == "unknown"
+    assert strategy_signal["insufficient_data"] is True
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "skipped"
+    assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
+    assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 2
+
+
 def _run_pipeline_with_strategies(config: dict[str, Any], config_path: Path):
     return run_pipeline(
         config,
@@ -493,6 +707,63 @@ quant:
         breakout_window: 3
         exit_window: 2
         atr_window: 3
+      backtest:
+        enabled: {"true" if backtest_enabled else "false"}
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_reversion_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+    backtest_enabled: bool = True,
+    trend_filter_pct: float = 50.0,
+) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: {lookback}
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: bollinger_rsi_reversion
+      enabled: true
+      params:
+        bollinger_window: 3
+        band_std: 1.0
+        rsi_window: 3
+        rsi_oversold: 35
+        rsi_overbought: 65
+        trend_window: 3
+        trend_filter_pct: {trend_filter_pct}
       backtest:
         enabled: {"true" if backtest_enabled else "false"}
         initial_cash: 10000
