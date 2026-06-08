@@ -12,6 +12,7 @@ from .storage import write_json
 BUILD_MARKET_SIGNALS_STAGE = "build_market_signals"
 BUILD_MARKET_SIGNAL_MATERIAL_STAGE = "build_market_signal_material"
 MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
+QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
 MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
 MARKET_DATA_VIEWS_ARTIFACT = "raw/market_data_views.json"
@@ -44,7 +45,7 @@ def build_market_signals(
         "schema_version": MARKET_SIGNALS_SCHEMA_VERSION,
         "artifact_type": "market_signals",
         "created_at": created_at,
-        "source_artifacts": [MARKET_STRATEGY_SIGNALS_ARTIFACT],
+        "source_artifacts": _market_signal_source_artifacts(strategy_artifact),
         "signals": signals,
     }
     write_json(run.analysis_dir / "market_signals.json", artifact)
@@ -144,6 +145,14 @@ def _normalize_signal(signal: dict[str, Any], *, created_at: str) -> dict[str, A
         ),
         "created_at": signal.get("created_at") or created_at,
     }
+
+
+def _market_signal_source_artifacts(strategy_artifact: dict[str, Any]) -> list[str]:
+    source_artifacts = [MARKET_STRATEGY_SIGNALS_ARTIFACT]
+    upstream = _string_list(strategy_artifact.get("source_artifacts"))
+    if QUANT_STRATEGY_RUNS_ARTIFACT in upstream:
+        source_artifacts.append(QUANT_STRATEGY_RUNS_ARTIFACT)
+    return source_artifacts
 
 
 def _material_record(signal: dict[str, Any]) -> dict[str, Any]:

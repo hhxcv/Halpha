@@ -114,6 +114,8 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `duckdb` | Local query and cropping layer over stored OHLCV data. | In-process local querying only. No database service assumption. |
 | `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation while persisting only Halpha-owned summary fields.
+
 ## Configuration Contract
 
 Quant configuration extends the existing source-based config. The product command remains:
@@ -690,6 +692,7 @@ Parameter diagnostic rules:
 Strategy names:
 
 - Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
+- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`.
 - The M1 demo signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are retired from the strategy-centered product path.
 - Retired demo names are not migrated into strategy aliases.
 - If an old demo name is requested after strategy adoption, config validation should fail with an actionable error.
