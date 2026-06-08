@@ -29,7 +29,7 @@ Implemented now:
 - `raw/market_data_views.json` artifact creation when `market.ohlcv` is configured.
 - `analysis/market_strategy_signals.json` artifact creation when `quant.enabled` is true.
 - `analysis/market_signals.json` normalized market signal artifact creation when `quant.enabled` is true.
-- `analysis/market_signal_material.md` AI-readable market signal material creation when `quant.enabled` is true.
+- `analysis/market_signal_material.md` quant-aware AI-readable market signal material creation when `quant.enabled` is true.
 - Strategy-oriented quant config support through `quant.strategies` for `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
 - Optional bounded strategy parameter diagnostics through `quant.parameter_diagnostics`.
 - `analysis/quant_strategy_runs.json` artifact creation when `quant.strategies` is configured.
@@ -134,7 +134,7 @@ Output artifact roles:
 - `analysis/market_strategy_signals.json`: source-aware quantitative strategy signal output with evidence and uncertainty.
 - `analysis/quant_strategy_runs.json`: source-aware strategy run artifact with params, input window, data quality, indicators, signals, assessment, optional bounded backtest and parameter diagnostic summaries, warnings, and failure or insufficient-data state.
 - `analysis/market_signals.json`: normalized market signal records for report generation.
-- `analysis/market_signal_material.md`: AI-readable quantitative signal material with bounded input-window context.
+- `analysis/market_signal_material.md`: AI-readable quantitative signal material with overview, strategy matrix, confluence and conflict notes, risk and uncertainty notes, report guidance, and bounded input-window context.
 - `analysis/market_material.md`: AI-readable market material derived from raw market data.
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.
