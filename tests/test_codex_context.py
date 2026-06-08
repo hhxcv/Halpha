@@ -106,8 +106,17 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Watch points" in prompt
     assert "Risk notes" in prompt
     assert "When market signal material is present" in prompt
+    assert "Quantitative strategy material rules:" in prompt
+    assert "include upstream strategy conclusions from the provided material" in prompt
+    assert "Keep strategy assumptions, evidence, and uncertainty adjacent" in prompt
+    assert "When strategy signals disagree, describe the conflict" in prompt
+    assert "Treat backtest diagnostics as historical research material only" in prompt
+    assert "Do not fabricate strategy signals, strategy conclusions" in prompt
+    assert "return promises" in prompt
+    assert "M2" not in prompt
     assert "Do not calculate new quantitative signals from raw OHLCV history" in prompt
     assert "position sizing" in prompt
+    assert "account actions" in prompt
     assert "Do not invent prices, events, links, sources, or certainty." in prompt
     assert "Preserve source awareness." in prompt
     assert "Include a risk notice." in prompt
