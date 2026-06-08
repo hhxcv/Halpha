@@ -193,6 +193,11 @@ def _record_manifest_summary(
         "engine": engine,
         "enabled": [str(strategy["name"]) for strategy in enabled],
         "disabled": disabled,
+        "backtest_diagnostics_enabled": any(
+            isinstance(strategy.get("backtest"), dict) and strategy["backtest"].get("enabled") is True
+            for strategy in enabled
+        ),
+        "parameter_diagnostics_enabled": False,
         "failures": [
             {
                 "strategy_name": item.get("strategy_name"),

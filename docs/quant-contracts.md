@@ -114,7 +114,7 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `duckdb` | Local query and cropping layer over stored OHLCV data. | In-process local querying only. No database service assumption. |
 | `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
-Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation while persisting only Halpha-owned summary fields.
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. When configured, it also uses vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
 
 ## Configuration Contract
 
@@ -188,6 +188,9 @@ Validation contract:
 - Supported strategy names are narrow and explicit. Unknown names fail with an actionable error.
 - Strategy records may include per-strategy `params`, `backtest`, and enabled state.
 - Strategy-level `backtest` and global `parameter_diagnostics` are optional, bounded research diagnostics, not trading or return-forecast settings.
+- Strategy-level `backtest.initial_cash` must be a positive number when present.
+- Strategy-level `backtest.fees_bps` and `backtest.slippage_bps` must be non-negative numbers when present.
+- Strategy-level `backtest.mode` must be one of `long_flat` or `long_only` when present.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.
 
 Proxy configuration:
@@ -492,9 +495,11 @@ Run record contract:
     "enabled": true,
     "status": "succeeded",
     "assumptions": {
+      "initial_cash": 10000.0,
       "fees_bps": 10,
       "slippage_bps": 5,
       "mode": "long_flat",
+      "direction": "long_only",
       "price_source": "close",
       "execution_timing": "research_close_to_close"
     },
@@ -504,6 +509,7 @@ Run record contract:
       "rows": 500
     },
     "metrics": {
+      "calculation_backend": "vectorbt.Portfolio.from_signals",
       "total_return_pct": 12.4,
       "max_drawdown_pct": -18.2,
       "trade_count": 23,
@@ -664,7 +670,7 @@ Bounded backtest diagnostic rules:
 
 - Backtest diagnostics are historical research material, not return forecasts.
 - Diagnostics must record assumptions before metrics.
-- Required assumptions include fees, slippage, mode, price source, execution timing, and input data window.
+- Required assumptions include initial cash, fees, slippage, mode, direction, price source, execution timing, and input data window.
 - Metrics must stay narrow and reviewable. Suggested metrics are `total_return_pct`, `max_drawdown_pct`, `trade_count`, `exposure_pct`, and `final_equity`.
 - Diagnostics must not emit trading instructions, live orders, position sizing, account actions, or guaranteed outcomes.
 - Diagnostics may be `disabled`, `skipped`, `succeeded`, or `failed`.
@@ -950,12 +956,13 @@ signal_material_is_financial_advice: false
 trading_instructions_allowed: false
 raw_ohlcv_history_embedded: false
 vectorbt_objects_embedded: false
+backtest_diagnostics_are_historical_research_material: true
 backtest_diagnostics_are_forecasts: false
 allowed_basis:
   - quant_strategy_runs
   - normalized_market_signals
   - bounded_input_window_metadata
-  - bounded_diagnostic_summaries
+  - bounded_backtest_diagnostic_summaries
   - key_values
   - evidence
   - uncertainty
@@ -982,15 +989,23 @@ key_values:
   realized_volatility_pct: 31.4
   volatility_scaled_exposure: 0.64
   latest_regime: risk_limited_momentum
+  backtest_diagnostic_status: succeeded
+  backtest_total_return_pct: 12.4
+  backtest_max_drawdown_pct: -18.2
+  backtest_trade_count: 23
+  backtest_exposure_pct: 56.0
+  backtest_final_equity: 11240.0
 evidence:
   - return_window_pct is 6.2% over the configured return window.
   - realized_volatility_pct is 31.4% against target_volatility_pct 20.0%.
 uncertainty:
   - Strategy uses OHLCV close prices only and excludes text events.
+  - Historical backtest diagnostic is research material, not a forecast.
 insufficient_data: false
 source_artifacts:
   - analysis/market_signals.json
   - raw/market_data_views.json
+backtest_diagnostic_policy: historical_research_material_only_not_forecast
 ```
 ````
 

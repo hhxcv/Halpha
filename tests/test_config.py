@@ -405,6 +405,22 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
             "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        enabled: \"yes\"",
             r"quant\.strategies\[0\]\.backtest\.enabled",
         ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        initial_cash: 0",
+            r"quant\.strategies\[0\]\.backtest\.initial_cash must be a positive number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        fees_bps: -1",
+            r"quant\.strategies\[0\]\.backtest\.fees_bps must be a non-negative number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        slippage_bps: false",
+            r"quant\.strategies\[0\]\.backtest\.slippage_bps must be a non-negative number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        mode: short",
+            r"quant\.strategies\[0\]\.backtest\.mode must be one of: long_flat, long_only",
+        ),
     ],
 )
 def test_load_config_rejects_invalid_quant_strategy_config(

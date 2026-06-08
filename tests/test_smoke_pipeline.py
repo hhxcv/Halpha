@@ -14,6 +14,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     config_path = _write_config(tmp_path)
     requested_urls: list[str] = []
     codex_calls: list[dict] = []
+    real_subprocess_run = subprocess.run
 
     def fake_market_urlopen(request, timeout):
         requested_urls.append(request.full_url)
@@ -24,17 +25,19 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         requested_urls.append(request.full_url)
         return _BytesResponse(_rss_payload())
 
-    def fake_codex_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+    def fake_codex_run(command, *args, **kwargs):
+        if kwargs.get("capture_output") is not True or "input" not in kwargs:
+            return real_subprocess_run(command, *args, **kwargs)
         codex_calls.append(
             {
                 "command": command,
-                "input": input,
-                "text": text,
-                "encoding": encoding,
-                "errors": errors,
-                "capture_output": capture_output,
-                "timeout": timeout,
-                "cwd": cwd,
+                "input": kwargs["input"],
+                "text": kwargs["text"],
+                "encoding": kwargs["encoding"],
+                "errors": kwargs["errors"],
+                "capture_output": kwargs["capture_output"],
+                "timeout": kwargs["timeout"],
+                "cwd": kwargs["cwd"],
             }
         )
         return subprocess.CompletedProcess(command, 0, stdout=_report_stdout(), stderr="")
@@ -138,6 +141,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     requested_urls: list[str] = []
     ohlcv_requests: list[dict] = []
     codex_calls: list[dict] = []
+    real_subprocess_run = subprocess.run
 
     def fake_market_urlopen(request, timeout):
         requested_urls.append(request.full_url)
@@ -167,17 +171,19 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
             )
             return _ohlcv_records(symbol=symbol, timeframe=timeframe, limit=limit or 4)
 
-    def fake_codex_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+    def fake_codex_run(command, *args, **kwargs):
+        if kwargs.get("capture_output") is not True or "input" not in kwargs:
+            return real_subprocess_run(command, *args, **kwargs)
         codex_calls.append(
             {
                 "command": command,
-                "input": input,
-                "text": text,
-                "encoding": encoding,
-                "errors": errors,
-                "capture_output": capture_output,
-                "timeout": timeout,
-                "cwd": cwd,
+                "input": kwargs["input"],
+                "text": kwargs["text"],
+                "encoding": kwargs["encoding"],
+                "errors": kwargs["errors"],
+                "capture_output": kwargs["capture_output"],
+                "timeout": kwargs["timeout"],
+                "cwd": kwargs["cwd"],
             }
         )
         return subprocess.CompletedProcess(command, 0, stdout=_m1_report_stdout(), stderr="")

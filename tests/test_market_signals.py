@@ -47,6 +47,8 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
     assert "strategy_signal_id" not in signal
     assert "artifact_type: analysis_market_signal_material" in material
     assert "raw_ohlcv_history_embedded: false" in material
+    assert "backtest_diagnostics_are_historical_research_material: true" in material
+    assert "backtest_diagnostics_are_forecasts: false" in material
     assert "record_type: market_signal" in material
     assert "signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in material
     assert "input_window_start: '2026-06-01T00:00:00Z'" in material
@@ -335,7 +337,6 @@ def _noop_stage(config, run) -> list[str]:
 def _assert_no_trading_language(*artifacts: Any) -> None:
     text = json.dumps(artifacts, ensure_ascii=False).lower()
     forbidden = [
-        "backtest",
         "buy",
         "calmar",
         "drawdown",

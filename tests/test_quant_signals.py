@@ -66,12 +66,18 @@ def test_quant_signals_build_from_strategy_run_artifact(tmp_path: Path) -> None:
         "entry_count": 1,
         "exit_count": 0,
         "latest_signal_active": True,
-        "backtest_diagnostic_status": "skipped",
+        "backtest_diagnostic_status": "succeeded",
+        "backtest_total_return_pct": 3.2,
+        "backtest_max_drawdown_pct": -1.1,
+        "backtest_trade_count": 1,
+        "backtest_exposure_pct": 66.666667,
+        "backtest_final_equity": 10320.0,
     }
     assert signal["evidence"] == ["return_window_pct is 6.0% over the configured return window."]
     assert signal["uncertainty"] == [
         "Strategy uses OHLCV close prices only and excludes text events.",
         "Realized volatility is elevated relative to the target volatility assumption.",
+        "Historical backtest diagnostic is research material, not a forecast.",
     ]
     assert signal["insufficient_data"] is False
     assert signal["source_artifacts"] == [
@@ -257,7 +263,16 @@ def _strategy_run() -> dict[str, Any]:
         },
         "backtest_diagnostic": {
             "enabled": True,
-            "status": "skipped",
+            "status": "succeeded",
+            "metrics": {
+                "calculation_backend": "vectorbt.Portfolio.from_signals",
+                "total_return_pct": 3.2,
+                "max_drawdown_pct": -1.1,
+                "trade_count": 1,
+                "exposure_pct": 66.666667,
+                "final_equity": 10320.0,
+            },
+            "warnings": ["Historical backtest diagnostic is research material, not a forecast."],
         },
         "parameter_diagnostic": {
             "enabled": False,

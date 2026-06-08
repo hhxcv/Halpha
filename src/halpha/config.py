@@ -13,6 +13,7 @@ SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
+SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
 
 
 class ConfigError(Exception):
@@ -169,6 +170,18 @@ def _require_positive_number(data: dict[str, Any], key: str, path: str) -> float
     return float(value)
 
 
+def _require_non_negative_number(data: dict[str, Any], key: str, path: str) -> float:
+    value = data.get(key)
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) < 0
+    ):
+        raise ConfigError(f"{path} must be a non-negative number.")
+    return float(value)
+
+
 def _validate_ohlcv_config(config: dict[str, Any], market: dict[str, Any], *, quant_enabled: bool) -> None:
     if quant_enabled and not isinstance(market.get("ohlcv"), dict):
         raise ConfigError("market.ohlcv must be a mapping when quant.enabled is true.")
@@ -219,8 +232,7 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
                 backtest = strategy["backtest"]
                 if not isinstance(backtest, dict):
                     raise ConfigError(f"{path}.backtest must be a mapping.")
-                if "enabled" in backtest:
-                    _require_bool(backtest, "enabled", f"{path}.backtest.enabled")
+                _validate_quant_strategy_backtest(backtest, f"{path}.backtest")
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
@@ -232,6 +244,20 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
         _require_positive_int(params, "volatility_window", f"{path}.volatility_window")
     if "target_volatility" in params:
         _require_positive_number(params, "target_volatility", f"{path}.target_volatility")
+
+
+def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> None:
+    if "enabled" in backtest:
+        _require_bool(backtest, "enabled", f"{path}.enabled")
+    if "initial_cash" in backtest:
+        _require_positive_number(backtest, "initial_cash", f"{path}.initial_cash")
+    if "fees_bps" in backtest:
+        _require_non_negative_number(backtest, "fees_bps", f"{path}.fees_bps")
+    if "slippage_bps" in backtest:
+        _require_non_negative_number(backtest, "slippage_bps", f"{path}.slippage_bps")
+    if "mode" in backtest:
+        mode = _require_non_empty_string(backtest, "mode", f"{path}.mode")
+        _require_supported_value(mode, f"{path}.mode", SUPPORTED_BACKTEST_MODES)
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:

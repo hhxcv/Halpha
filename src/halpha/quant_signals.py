@@ -93,9 +93,15 @@ def _strategy_run_signal(strategy_run: dict[str, Any], created_at: str) -> dict[
     )
     warnings = _warning_messages(strategy_run.get("warnings"))
     error = strategy_run.get("error") if isinstance(strategy_run.get("error"), dict) else None
+    backtest = (
+        strategy_run.get("backtest_diagnostic")
+        if isinstance(strategy_run.get("backtest_diagnostic"), dict)
+        else {}
+    )
     uncertainty = [
         *_string_list(assessment.get("uncertainty")),
         *warnings,
+        *_warning_messages(backtest.get("warnings")),
     ]
     if error and isinstance(error.get("message"), str):
         uncertainty.append(error["message"])
@@ -148,6 +154,16 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
             result[key] = signals[key]
     if "status" in backtest:
         result["backtest_diagnostic_status"] = backtest["status"]
+    metrics = backtest.get("metrics") if isinstance(backtest.get("metrics"), dict) else {}
+    for key in (
+        "total_return_pct",
+        "max_drawdown_pct",
+        "trade_count",
+        "exposure_pct",
+        "final_equity",
+    ):
+        if key in metrics:
+            result[f"backtest_{key}"] = metrics[key]
     return result
 
 
