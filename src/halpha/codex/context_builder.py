@@ -74,7 +74,7 @@ def render_prompt(context: str) -> str:
             "14. Do not provide trading instructions, position sizing, account actions, or investment recommendations.",
             "15. Do not fabricate strategy signals, strategy conclusions, backtest results, return promises, or unsupported certainty.",
             "",
-            "M2 quantitative strategy material rules:",
+            "Quantitative strategy material rules:",
             "",
             "- When strategy material exists, include upstream strategy conclusions from the provided material.",
             "- Keep strategy assumptions, evidence, and uncertainty adjacent to each cited strategy conclusion.",
