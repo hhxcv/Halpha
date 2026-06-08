@@ -20,6 +20,8 @@ def test_config_example_loads_successfully() -> None:
     assert config["quant"]["strategies"][0]["name"] == "tsmom_vol_scaled"
     assert config["quant"]["strategies"][1]["name"] == "breakout_atr_trend"
     assert config["quant"]["strategies"][1]["enabled"] is False
+    assert config["quant"]["strategies"][2]["name"] == "bollinger_rsi_reversion"
+    assert config["quant"]["strategies"][2]["enabled"] is False
     assert config["text"]["sources"][0]["type"] == "rss"
     assert config["report"]["language"] == "zh-CN"
 
@@ -434,6 +436,41 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: breakout_atr_trend\n      params:\n        atr_window: false",
             r"quant\.strategies\[0\]\.params\.atr_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        bollinger_window: 0",
+            r"quant\.strategies\[0\]\.params\.bollinger_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        band_std: false",
+            r"quant\.strategies\[0\]\.params\.band_std must be a positive number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        rsi_window: \"14\"",
+            r"quant\.strategies\[0\]\.params\.rsi_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        rsi_oversold: 0",
+            r"quant\.strategies\[0\]\.params\.rsi_oversold must be a number greater than 0 and lower than 100",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        rsi_overbought: 100",
+            r"quant\.strategies\[0\]\.params\.rsi_overbought must be a number greater than 0 and lower than 100",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        rsi_oversold: 80\n        rsi_overbought: 70",
+            (
+                r"quant\.strategies\[0\]\.params\.rsi_oversold must be lower than "
+                r"quant\.strategies\[0\]\.params\.rsi_overbought"
+            ),
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        trend_window: false",
+            r"quant\.strategies\[0\]\.params\.trend_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        trend_filter_pct: 0",
+            r"quant\.strategies\[0\]\.params\.trend_filter_pct must be a positive number",
         ),
     ],
 )

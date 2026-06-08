@@ -39,6 +39,18 @@ quant:
         atr_window: 14
       backtest:
         enabled: false
+    - name: bollinger_rsi_reversion
+      enabled: false
+      params:
+        bollinger_window: 20
+        band_std: 2.0
+        rsi_window: 14
+        rsi_oversold: 30
+        rsi_overbought: 70
+        trend_window: 50
+        trend_filter_pct: 8.0
+      backtest:
+        enabled: false
 
 text:
   enabled: true

@@ -250,6 +250,48 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
             _require_positive_int(params, "exit_window", f"{path}.exit_window")
         if "atr_window" in params:
             _require_positive_int(params, "atr_window", f"{path}.atr_window")
+    if name == "bollinger_rsi_reversion":
+        if "bollinger_window" in params:
+            _require_positive_int(params, "bollinger_window", f"{path}.bollinger_window")
+        if "band_std" in params:
+            _require_positive_number(params, "band_std", f"{path}.band_std")
+        if "rsi_window" in params:
+            _require_positive_int(params, "rsi_window", f"{path}.rsi_window")
+        if "trend_window" in params:
+            _require_positive_int(params, "trend_window", f"{path}.trend_window")
+        if "trend_filter_pct" in params:
+            _require_positive_number(params, "trend_filter_pct", f"{path}.trend_filter_pct")
+        _validate_bollinger_rsi_thresholds(params, path)
+
+
+def _validate_bollinger_rsi_thresholds(params: dict[str, Any], path: str) -> None:
+    effective = {
+        "rsi_oversold": 30.0,
+        "rsi_overbought": 70.0,
+    }
+    effective.update(params)
+    if "rsi_oversold" in params:
+        _require_rsi_threshold(effective, "rsi_oversold", f"{path}.rsi_oversold")
+    if "rsi_overbought" in params:
+        _require_rsi_threshold(effective, "rsi_overbought", f"{path}.rsi_overbought")
+    if "rsi_oversold" in params or "rsi_overbought" in params:
+        oversold = _require_rsi_threshold(effective, "rsi_oversold", f"{path}.rsi_oversold")
+        overbought = _require_rsi_threshold(effective, "rsi_overbought", f"{path}.rsi_overbought")
+        if oversold >= overbought:
+            raise ConfigError(f"{path}.rsi_oversold must be lower than {path}.rsi_overbought.")
+
+
+def _require_rsi_threshold(data: dict[str, Any], key: str, path: str) -> float:
+    value = data.get(key)
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) <= 0
+        or float(value) >= 100
+    ):
+        raise ConfigError(f"{path} must be a number greater than 0 and lower than 100.")
+    return float(value)
 
 
 def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> None:

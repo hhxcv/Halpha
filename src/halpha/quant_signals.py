@@ -153,10 +153,29 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
         "atr_pct",
         "range_width_pct",
         "breakout_distance_atr",
+        "bollinger_middle",
+        "bollinger_upper",
+        "bollinger_lower",
+        "bollinger_band_width_pct",
+        "bollinger_percent_b",
+        "rsi",
+        "rsi_oversold_threshold",
+        "rsi_overbought_threshold",
+        "trend_window_pct",
+        "trend_filter_pct",
         "row_count",
     )
     result = {key: indicators[key] for key in keys if key in indicators}
-    for key in ("latest_regime", "entry_count", "exit_count", "latest_signal_active"):
+    for key in (
+        "latest_regime",
+        "entry_count",
+        "exit_count",
+        "latest_signal_active",
+        "latest_oversold",
+        "latest_overbought",
+        "trend_filter_active",
+        "strong_trend_direction",
+    ):
         if key in signals:
             result[key] = signals[key]
     if "status" in backtest:
