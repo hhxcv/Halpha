@@ -7,6 +7,7 @@ from typing import Any
 
 from .market_data_views import MARKET_DATA_VIEWS_ARTIFACT, load_market_data_view_records
 from .pipeline import PipelineError, RunContext
+from .quant.parameter_diagnostics import bounded_parameter_diagnostic, parameter_diagnostic_config
 from .quant.registry import get_strategy_definition
 from .quant.strategy_records import failed_strategy_run
 from .quant.vectorbt_engine import engine_metadata
@@ -34,12 +35,22 @@ def evaluate_quant_strategies(
     created_at = _format_utc(now)
     enabled, disabled = _configured_strategies(quant)
     engine = engine_metadata()
+    parameter_config = parameter_diagnostic_config(quant)
     runs = []
 
     for view in views_artifact.get("views", []):
         rows = load_market_data_view_records(view, storage_dir=storage_dir)
         for strategy in enabled:
-            runs.append(_run_strategy(strategy, view, rows, engine=engine, created_at=created_at))
+            runs.append(
+                _run_strategy(
+                    strategy,
+                    view,
+                    rows,
+                    engine=engine,
+                    created_at=created_at,
+                    parameter_config=parameter_config,
+                )
+            )
 
     artifact = {
         "schema_version": SCHEMA_VERSION,
@@ -55,7 +66,14 @@ def evaluate_quant_strategies(
     write_json(run.analysis_dir / "quant_strategy_runs.json", artifact)
     run.manifest["artifacts"]["quant_strategy_runs"] = QUANT_STRATEGY_RUNS_ARTIFACT
     _record_manifest_counts(run, runs)
-    _record_manifest_summary(run, engine=engine, enabled=enabled, disabled=disabled, runs=runs)
+    _record_manifest_summary(
+        run,
+        engine=engine,
+        enabled=enabled,
+        disabled=disabled,
+        parameter_config=parameter_config,
+        runs=runs,
+    )
     return [QUANT_STRATEGY_RUNS_ARTIFACT]
 
 
@@ -82,6 +100,7 @@ def _run_strategy(
     *,
     engine: dict[str, str],
     created_at: str,
+    parameter_config: dict[str, Any],
 ) -> dict[str, Any]:
     name = str(strategy["name"])
     definition = get_strategy_definition(name)
@@ -96,7 +115,18 @@ def _run_strategy(
             message=f"{name} is not implemented.",
         )
     try:
-        return definition.run(strategy, view, rows, engine=engine, created_at=created_at)
+        strategy_run = definition.run(strategy, view, rows, engine=engine, created_at=created_at)
+        strategy_run["parameter_diagnostic"] = bounded_parameter_diagnostic(
+            strategy,
+            view,
+            rows,
+            base_run=strategy_run,
+            definition=definition,
+            config=parameter_config,
+            engine=engine,
+            created_at=created_at,
+        )
+        return strategy_run
     except Exception as exc:
         return _failed_run(
             strategy,
@@ -187,6 +217,7 @@ def _record_manifest_summary(
     engine: dict[str, str],
     enabled: list[dict[str, Any]],
     disabled: list[str],
+    parameter_config: dict[str, Any],
     runs: list[dict[str, Any]],
 ) -> None:
     run.manifest["quant_strategies"] = {
@@ -197,7 +228,7 @@ def _record_manifest_summary(
             isinstance(strategy.get("backtest"), dict) and strategy["backtest"].get("enabled") is True
             for strategy in enabled
         ),
-        "parameter_diagnostics_enabled": False,
+        "parameter_diagnostics_enabled": parameter_config.get("enabled") is True,
         "failures": [
             {
                 "strategy_name": item.get("strategy_name"),

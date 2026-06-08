@@ -14,6 +14,19 @@ SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
+SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
+    "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
+    "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
+    "bollinger_rsi_reversion": {
+        "bollinger_window",
+        "band_std",
+        "rsi_window",
+        "rsi_oversold",
+        "rsi_overbought",
+        "trend_window",
+        "trend_filter_pct",
+    },
+}
 
 
 class ConfigError(Exception):
@@ -233,6 +246,11 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
                 if not isinstance(backtest, dict):
                     raise ConfigError(f"{path}.backtest must be a mapping.")
                 _validate_quant_strategy_backtest(backtest, f"{path}.backtest")
+    if "parameter_diagnostics" in quant:
+        diagnostics = quant["parameter_diagnostics"]
+        if not isinstance(diagnostics, dict):
+            raise ConfigError("quant.parameter_diagnostics must be a mapping.")
+        _validate_quant_parameter_diagnostics(diagnostics, "quant.parameter_diagnostics")
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
@@ -306,6 +324,93 @@ def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> No
     if "mode" in backtest:
         mode = _require_non_empty_string(backtest, "mode", f"{path}.mode")
         _require_supported_value(mode, f"{path}.mode", SUPPORTED_BACKTEST_MODES)
+
+
+def _validate_quant_parameter_diagnostics(diagnostics: dict[str, Any], path: str) -> None:
+    enabled = _require_bool(diagnostics, "enabled", f"{path}.enabled")
+    max_combinations = None
+    if "max_combinations" in diagnostics:
+        max_combinations = _require_positive_int(diagnostics, "max_combinations", f"{path}.max_combinations")
+    elif enabled:
+        raise ConfigError(f"{path}.max_combinations must be a positive integer.")
+
+    if not enabled:
+        return
+
+    grids = diagnostics.get("grids")
+    if not isinstance(grids, dict) or not grids:
+        raise ConfigError(f"{path}.grids must be a non-empty mapping when parameter diagnostics are enabled.")
+    for name, grid in grids.items():
+        strategy_path = f"{path}.grids.{name}"
+        if not isinstance(name, str) or not name.strip():
+            raise ConfigError(f"{path}.grids keys must be strategy names.")
+        _require_supported_value(name, strategy_path, SUPPORTED_QUANT_STRATEGIES)
+        if not isinstance(grid, dict) or not grid:
+            raise ConfigError(f"{strategy_path} must be a non-empty mapping.")
+        _validate_quant_parameter_grid(name, grid, strategy_path, max_combinations=max_combinations)
+
+
+def _validate_quant_parameter_grid(
+    name: str,
+    grid: dict[str, Any],
+    path: str,
+    *,
+    max_combinations: int | None,
+) -> None:
+    combination_count = 1
+    for param_name, values in grid.items():
+        param_path = f"{path}.{param_name}"
+        if not isinstance(param_name, str) or param_name not in SUPPORTED_QUANT_STRATEGY_PARAM_NAMES[name]:
+            supported = ", ".join(sorted(SUPPORTED_QUANT_STRATEGY_PARAM_NAMES[name]))
+            raise ConfigError(f"{param_path} is not supported for {name}. Supported params: {supported}.")
+        if not isinstance(values, list) or not values:
+            raise ConfigError(f"{param_path} must be a non-empty list.")
+        combination_count *= len(values)
+        for index, value in enumerate(values):
+            _validate_quant_parameter_grid_value(name, param_name, value, f"{param_path}[{index}]")
+    if max_combinations is not None and combination_count > max_combinations:
+        raise ConfigError(f"{path} has {combination_count} combinations; max_combinations is {max_combinations}.")
+
+
+def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any, path: str) -> None:
+    if name == "tsmom_vol_scaled":
+        if param_name in {"return_window", "volatility_window"}:
+            _require_positive_int_value(value, path)
+        if param_name == "target_volatility":
+            _require_positive_number_value(value, path)
+    if name == "breakout_atr_trend":
+        _require_positive_int_value(value, path)
+    if name == "bollinger_rsi_reversion":
+        if param_name in {"bollinger_window", "rsi_window", "trend_window"}:
+            _require_positive_int_value(value, path)
+        if param_name in {"band_std", "trend_filter_pct"}:
+            _require_positive_number_value(value, path)
+        if param_name in {"rsi_oversold", "rsi_overbought"}:
+            _require_rsi_threshold_value(value, path)
+
+
+def _require_positive_int_value(value: Any, path: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ConfigError(f"{path} must be a positive integer.")
+    return value
+
+
+def _require_positive_number_value(value: Any, path: str) -> float:
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) <= 0
+    ):
+        raise ConfigError(f"{path} must be a positive number.")
+    return float(value)
+
+
+def _require_rsi_threshold_value(value: Any, path: str) -> float:
+    number = _require_positive_number_value(value, path)
+    if number >= 100:
+        raise ConfigError(f"{path} must be a number greater than 0 and lower than 100.")
+    return number
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:

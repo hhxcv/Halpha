@@ -208,6 +208,14 @@ Validation contract:
 - Supported strategy names are narrow and explicit. Unknown names fail with an actionable error.
 - Strategy records may include per-strategy `params`, `backtest`, and enabled state.
 - Strategy-level `backtest` and global `parameter_diagnostics` are optional, bounded research diagnostics, not trading or return-forecast settings.
+- `quant.parameter_diagnostics` may be omitted. If present, `quant.parameter_diagnostics.enabled` must be a boolean.
+- `quant.parameter_diagnostics.max_combinations` must be a positive integer when present and is required when parameter diagnostics are enabled.
+- `quant.parameter_diagnostics.grids` must be a non-empty mapping when parameter diagnostics are enabled.
+- `quant.parameter_diagnostics.grids.<strategy_name>` keys must be supported strategy names.
+- Parameter grid field names must be supported params for that strategy.
+- Parameter grid field values must be non-empty lists, and each item must pass the same scalar type and value checks as strategy params.
+- The product of grid value counts for each configured strategy must be less than or equal to `quant.parameter_diagnostics.max_combinations`.
+- Parameter diagnostics may record runtime-invalid combinations, such as combinations with insufficient input data, without failing the whole strategy run.
 - Strategy-level `backtest.initial_cash` must be a positive number when present.
 - Strategy-level `backtest.fees_bps` and `backtest.slippage_bps` must be non-negative numbers when present.
 - Strategy-level `backtest.mode` must be one of `long_flat` or `long_only` when present.
@@ -573,6 +581,81 @@ Run record contract:
   "created_at": "2026-06-06T00:00:00Z"
 }
 ```
+
+Enabled parameter diagnostic contract:
+
+```json
+{
+  "enabled": true,
+  "status": "succeeded",
+  "assumptions": {
+    "max_combinations": 3,
+    "grid_source": "quant.parameter_diagnostics.grids.tsmom_vol_scaled",
+    "metric_scope": "latest_state_and_bounded_backtest_summary",
+    "selection_policy": "diagnostic_only_no_best_parameter_selection",
+    "strategy_backtest_enabled": true
+  },
+  "grid": {
+    "return_window": [10, 20, 30],
+    "volatility_window": [20],
+    "target_volatility": [0.2]
+  },
+  "tested_combinations": 3,
+  "valid_combinations": 2,
+  "invalid_combinations": 1,
+  "stability": "sensitive",
+  "summary_metrics": {
+    "direction_counts": {
+      "bullish": 1,
+      "bearish": 1
+    },
+    "latest_regime_counts": {
+      "risk_on_momentum": 1,
+      "risk_off_negative_momentum": 1
+    }
+  },
+  "combinations": [
+    {
+      "combination_index": 1,
+      "params": {
+        "return_window": 10,
+        "volatility_window": 20,
+        "target_volatility": 0.2
+      },
+      "status": "succeeded",
+      "metrics": {
+        "direction": "bullish",
+        "strength": "medium",
+        "confidence": "medium",
+        "latest_regime": "risk_on_momentum",
+        "entry_count": 4,
+        "exit_count": 3
+      },
+      "error": null
+    }
+  ],
+  "notes": [
+    "Parameter diagnostics compare configured nearby values and do not choose trading parameters."
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "parameter_direction_sensitivity",
+      "message": "tsmom_vol_scaled parameter grid produced multiple assessment directions.",
+      "source": "parameter_diagnostic"
+    }
+  ]
+}
+```
+
+Parameter diagnostic rules:
+
+- Disabled or omitted diagnostics must record `{"enabled": false, "status": "disabled"}`.
+- Enabled diagnostics must preserve configured grid ranges and max-combination assumptions.
+- `tested_combinations`, `valid_combinations`, and `invalid_combinations` must be explicit.
+- `combinations` records must contain bounded params, status, selected summary metrics, and a bounded error summary when unavailable.
+- `summary_metrics`, `notes`, and `warnings` should describe stability or sensitivity. Do not report only a best historical result.
+- Parameter diagnostics are sensitivity context only. They must not select trading parameters, rank strategies, or make return promises.
 
 Required run fields:
 
@@ -952,6 +1035,7 @@ Strategy-centered material rules:
 - Include normalized market signals from `analysis/market_signals.json`.
 - Include strategy name, version, params summary, input window, latest candle, direction, strength, confidence, key evidence, warnings, and uncertainty when available.
 - Include bounded backtest diagnostic summaries only with assumptions and research-material disclaimers.
+- Include bounded parameter diagnostic summaries only as sensitivity context, never as best-parameter selection.
 - Identify confluence when multiple strategies support the same direction for the same source, symbol, and timeframe.
 - Identify conflicts when strategies disagree, when confidence is low, when diagnostics conflict with latest-state signals, or when data is insufficient.
 - Identify risk and uncertainty near the related strategy conclusion.
@@ -985,11 +1069,13 @@ raw_ohlcv_history_embedded: false
 vectorbt_objects_embedded: false
 backtest_diagnostics_are_historical_research_material: true
 backtest_diagnostics_are_forecasts: false
+parameter_diagnostics_are_optimization: false
 allowed_basis:
   - quant_strategy_runs
   - normalized_market_signals
   - bounded_input_window_metadata
   - bounded_backtest_diagnostic_summaries
+  - bounded_parameter_diagnostic_summaries
   - key_values
   - evidence
   - uncertainty
@@ -1022,6 +1108,11 @@ key_values:
   backtest_trade_count: 23
   backtest_exposure_pct: 56.0
   backtest_final_equity: 11240.0
+  parameter_diagnostic_status: succeeded
+  parameter_tested_combinations: 3
+  parameter_valid_combinations: 2
+  parameter_invalid_combinations: 1
+  parameter_stability: sensitive
 evidence:
   - return_window_pct is 6.2% over the configured return window.
   - realized_volatility_pct is 31.4% against target_volatility_pct 20.0%.
@@ -1033,6 +1124,7 @@ source_artifacts:
   - analysis/market_signals.json
   - raw/market_data_views.json
 backtest_diagnostic_policy: historical_research_material_only_not_forecast
+parameter_diagnostic_policy: bounded_sensitivity_context_only_not_optimization
 ```
 ````
 
@@ -1205,7 +1297,7 @@ Artifact keys:
     ],
     "disabled": [],
     "backtest_diagnostics_enabled": true,
-    "parameter_diagnostics_enabled": false,
+    "parameter_diagnostics_enabled": true,
     "failures": [
       {
         "strategy_name": "tsmom_vol_scaled",
