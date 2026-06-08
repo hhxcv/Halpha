@@ -83,8 +83,36 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert strategy_run["assessment"]["strength"] == "medium"
     assert strategy_run["assessment"]["evidence"]
     assert strategy_run["assessment"]["uncertainty"]
-    assert strategy_run["backtest_diagnostic"]["enabled"] is True
-    assert strategy_run["backtest_diagnostic"]["status"] == "skipped"
+    backtest = strategy_run["backtest_diagnostic"]
+    assert backtest["enabled"] is True
+    assert backtest["status"] == "succeeded"
+    assert backtest["assumptions"] == {
+        "initial_cash": 10000.0,
+        "fees_bps": 10.0,
+        "slippage_bps": 5.0,
+        "mode": "long_flat",
+        "direction": "long_only",
+        "price_source": "close",
+        "execution_timing": "research_close_to_close",
+    }
+    assert backtest["window"] == {
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-06-05T00:00:00Z",
+        "rows": 5,
+    }
+    assert backtest["metrics"]["calculation_backend"] == "vectorbt.Portfolio.from_signals"
+    assert backtest["metrics"]["trade_count"] >= 1
+    assert backtest["metrics"]["exposure_pct"] > 0
+    assert backtest["metrics"]["final_equity"] > 0
+    assert set(backtest["metrics"]) == {
+        "calculation_backend",
+        "total_return_pct",
+        "max_drawdown_pct",
+        "trade_count",
+        "exposure_pct",
+        "final_equity",
+    }
+    assert "Historical backtest diagnostic is research material" in backtest["warnings"][0]
     assert strategy_run["parameter_diagnostic"] == {"enabled": False, "status": "disabled"}
     assert strategy_run["error"] is None
 
@@ -96,7 +124,9 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert strategy_signal["direction"] == "bullish"
     assert strategy_signal["key_values"]["return_window_pct"] == 4.807692
     assert strategy_signal["key_values"]["entry_count"] == 1
-    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "skipped"
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "succeeded"
+    assert strategy_signal["key_values"]["backtest_trade_count"] >= 1
+    assert strategy_signal["key_values"]["backtest_final_equity"] > 0
     assert strategy_signal["source_artifacts"] == [
         "analysis/quant_strategy_runs.json",
         "raw/market_data_views.json",
@@ -107,6 +137,8 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     ]
     assert market_signals["signals"][0]["strategy_name"] == "tsmom_vol_scaled"
     assert "analysis/quant_strategy_runs.json" in material
+    assert "backtest_diagnostics_are_historical_research_material: true" in material
+    assert "backtest_diagnostic_policy: historical_research_material_only_not_forecast" in material
 
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
     assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
@@ -116,6 +148,8 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 0
     assert manifest["counts"]["market_strategy_signals"] == 1
     assert manifest["quant_strategies"]["enabled"] == ["tsmom_vol_scaled"]
+    assert manifest["quant_strategies"]["backtest_diagnostics_enabled"] is True
+    assert manifest["quant_strategies"]["parameter_diagnostics_enabled"] is False
     assert manifest["quant_strategies"]["failures"] == []
     assert manifest["quant_strategies"]["insufficient_data"] == []
     assert _stage(manifest, "evaluate_quant_strategies")["artifacts"] == [
@@ -154,6 +188,34 @@ def test_quant_strategy_runner_records_insufficient_data_without_fabrication(tmp
     assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
     assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 1
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 1
+
+
+def test_quant_strategy_runner_records_disabled_backtest_diagnostic(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(tmp_path, lookback=5, backtest_enabled=False)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=106, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=109, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["backtest_diagnostic"] == {"enabled": False, "status": "disabled"}
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "disabled"
+    assert "backtest_total_return_pct" not in strategy_signal["key_values"]
+    assert manifest["quant_strategies"]["backtest_diagnostics_enabled"] is False
 
 
 def test_quant_strategy_runner_records_failed_run_for_invalid_runtime_params(tmp_path: Path) -> None:
@@ -213,7 +275,12 @@ def _run_pipeline_with_strategies(config: dict[str, Any], config_path: Path):
     )
 
 
-def _write_strategy_config(tmp_path: Path, *, lookback: int) -> Path:
+def _write_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+    backtest_enabled: bool = True,
+) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -242,7 +309,8 @@ quant:
         volatility_window: 2
         target_volatility: 0.2
       backtest:
-        enabled: true
+        enabled: {"true" if backtest_enabled else "false"}
+        initial_cash: 10000
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat

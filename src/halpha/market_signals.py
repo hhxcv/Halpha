@@ -156,7 +156,7 @@ def _market_signal_source_artifacts(strategy_artifact: dict[str, Any]) -> list[s
 
 
 def _material_record(signal: dict[str, Any]) -> dict[str, Any]:
-    return {
+    record = {
         "record_type": "market_signal",
         "signal_id": signal["signal_id"],
         "strategy_name": signal["strategy_name"],
@@ -175,6 +175,9 @@ def _material_record(signal: dict[str, Any]) -> dict[str, Any]:
         "insufficient_data": signal["insufficient_data"],
         "source_artifacts": signal["source_artifacts"],
     }
+    if _has_backtest_diagnostic_summary(signal["key_values"]):
+        record["backtest_diagnostic_policy"] = "historical_research_material_only_not_forecast"
+    return record
 
 
 def _read_json_artifact(path, artifact: str, *, producer_stage: str, stage: str) -> dict[str, Any]:
@@ -253,10 +256,14 @@ def _source_policy() -> dict[str, Any]:
         "signal_material_is_financial_advice": False,
         "trading_instructions_allowed": False,
         "raw_ohlcv_history_embedded": False,
+        "vectorbt_objects_embedded": False,
+        "backtest_diagnostics_are_historical_research_material": True,
+        "backtest_diagnostics_are_forecasts": False,
         "fabricate_missing_signals": False,
         "allowed_basis": [
             "normalized_market_signals",
             "bounded_input_window_metadata",
+            "bounded_backtest_diagnostic_summaries",
             "key_values",
             "evidence",
             "uncertainty",
@@ -273,6 +280,10 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, str) and item.strip()]
+
+
+def _has_backtest_diagnostic_summary(key_values: dict[str, Any]) -> bool:
+    return any(key.startswith("backtest_") for key in key_values)
 
 
 def _unique_ordered(values: list[str]) -> list[str]:

@@ -111,9 +111,9 @@ The M1 `quant.signals` product path is retired. Use `quant.strategies`; the curr
 
 Implemented strategy behavior:
 
-- `tsmom_vol_scaled`: uses vectorbt `IndicatorFactory` to calculate time-series momentum return and active signals over a configured return window, then records realized volatility, target volatility, volatility-scaled exposure, latest regime, signal counts, assessment, warnings, and bounded diagnostics metadata.
+- `tsmom_vol_scaled`: uses vectorbt `IndicatorFactory` to calculate time-series momentum return and active signals over a configured return window, then records realized volatility, target volatility, volatility-scaled exposure, latest regime, signal counts, assessment, warnings, and optional bounded vectorbt `Portfolio.from_signals` backtest diagnostics when enabled.
 
-Strategy run artifacts preserve strategy name, version, engine metadata, params, source, symbol, timeframe, input window, data quality, indicators, signals, assessment, diagnostics metadata, warnings, source artifacts, and insufficient-data or failure state. Vectorbt objects are internal implementation details and are not written into Halpha artifacts or Codex context.
+Strategy run artifacts preserve strategy name, version, engine metadata, params, source, symbol, timeframe, input window, data quality, indicators, signals, assessment, bounded diagnostic assumptions and scalar metrics, warnings, source artifacts, and insufficient-data or failure state. Vectorbt objects are internal implementation details and are not written into Halpha artifacts or Codex context. Backtest diagnostics are historical research material only, not forecasts, trading instructions, or investment advice.
 
 Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, and `analysis/market_signal_material.md`. When `quant.strategies` is configured, the run also writes `analysis/quant_strategy_runs.json` before downstream market signal artifacts. If collection, OHLCV sync, data view creation, strategy run evaluation, strategy signal evaluation, market signal material generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
@@ -126,7 +126,7 @@ Output artifact roles:
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV storage schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
 - `analysis/market_strategy_signals.json`: source-aware quantitative strategy signal output with evidence and uncertainty.
-- `analysis/quant_strategy_runs.json`: source-aware strategy run artifact with params, input window, data quality, indicators, signals, assessment, diagnostics metadata, warnings, and failure or insufficient-data state.
+- `analysis/quant_strategy_runs.json`: source-aware strategy run artifact with params, input window, data quality, indicators, signals, assessment, optional bounded backtest diagnostic assumptions and scalar metrics, warnings, and failure or insufficient-data state.
 - `analysis/market_signals.json`: normalized market signal records for report generation.
 - `analysis/market_signal_material.md`: AI-readable quantitative signal material with bounded input-window context.
 - `analysis/market_material.md`: AI-readable market material derived from raw market data.

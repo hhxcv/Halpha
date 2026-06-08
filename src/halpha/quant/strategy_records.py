@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ..market_data_views import MARKET_DATA_VIEWS_ARTIFACT
 
 
 STRATEGY_VERSION = 1
+DEFAULT_BACKTEST_INITIAL_CASH = 10000.0
+SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
 
 
 def strategy_run_record(
@@ -118,6 +121,8 @@ def backtest_diagnostic(
     rows: list[dict[str, Any]],
     *,
     status: str,
+    metrics: dict[str, Any] | None = None,
+    warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     backtest = strategy.get("backtest") if isinstance(strategy.get("backtest"), dict) else {}
     enabled = bool(backtest.get("enabled", False))
@@ -129,23 +134,37 @@ def backtest_diagnostic(
     return {
         "enabled": True,
         "status": status,
-        "assumptions": {
-            "fees_bps": backtest.get("fees_bps"),
-            "slippage_bps": backtest.get("slippage_bps"),
-            "mode": backtest.get("mode", "long_flat"),
-            "price_source": "close",
-            "execution_timing": "research_close_to_close",
-        },
+        "assumptions": backtest_assumptions(strategy),
         "window": {
             "start": view.get("input_window_start"),
             "end": view.get("input_window_end"),
             "rows": len(rows),
         },
-        "metrics": {},
-        "warnings": [
-            "Bounded backtest diagnostics are intentionally deferred to a later M2 task.",
-            "Historical diagnostics are research material, not return forecasts.",
+        "metrics": metrics or {},
+        "warnings": warnings
+        or [
+            "Backtest diagnostic skipped before portfolio-style metric calculation.",
+            "Historical backtest diagnostic is research material, not a forecast.",
         ],
+    }
+
+
+def backtest_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
+    backtest = strategy.get("backtest") if isinstance(strategy.get("backtest"), dict) else {}
+    mode = backtest.get("mode", "long_flat")
+    if mode not in SUPPORTED_BACKTEST_MODES:
+        mode = "long_flat"
+    return {
+        "initial_cash": _positive_number_or_default(
+            backtest.get("initial_cash"),
+            DEFAULT_BACKTEST_INITIAL_CASH,
+        ),
+        "fees_bps": _non_negative_number_or_default(backtest.get("fees_bps"), 0.0),
+        "slippage_bps": _non_negative_number_or_default(backtest.get("slippage_bps"), 0.0),
+        "mode": mode,
+        "direction": "long_only",
+        "price_source": "close",
+        "execution_timing": "research_close_to_close",
     }
 
 
@@ -163,3 +182,25 @@ def warning(code: str, message: str, *, source: str) -> dict[str, Any]:
         "message": message,
         "source": source,
     }
+
+
+def _positive_number_or_default(value: Any, default: float) -> float:
+    number = _finite_number_or_none(value)
+    if number is None or number <= 0:
+        return default
+    return number
+
+
+def _non_negative_number_or_default(value: Any, default: float) -> float:
+    number = _finite_number_or_none(value)
+    if number is None or number < 0:
+        return default
+    return number
+
+
+def _finite_number_or_none(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if not math.isfinite(float(value)):
+        return None
+    return float(value)
