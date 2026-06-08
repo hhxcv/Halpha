@@ -11,7 +11,6 @@ from .quant.registry import SUPPORTED_STRATEGY_NAMES
 CONFIG_SECTIONS = {"codex", "market", "quant", "report", "run", "text"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
-SUPPORTED_QUANT_SIGNALS = {"trend", "momentum", "volatility", "volume_anomaly"}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 
@@ -191,19 +190,16 @@ def _validate_ohlcv_config(config: dict[str, Any], market: dict[str, Any], *, qu
 
 
 def _validate_quant_config(quant: dict[str, Any]) -> None:
-    has_signals = "signals" in quant
     has_strategies = "strategies" in quant
-    if not has_signals and not has_strategies:
-        raise ConfigError("quant.enabled requires quant.signals or quant.strategies.")
+    if "signals" in quant:
+        supported = ", ".join(sorted(SUPPORTED_QUANT_STRATEGIES))
+        raise ConfigError(f"quant.signals is retired; use quant.strategies with: {supported}.")
+    if not has_strategies:
+        raise ConfigError("quant.enabled requires quant.strategies.")
 
     if "engine" in quant:
         engine = _require_non_empty_string(quant, "engine", "quant.engine")
         _require_supported_value(engine, "quant.engine", SUPPORTED_QUANT_ENGINES)
-
-    if has_signals:
-        _require_non_empty_string_list(quant, "signals", "quant.signals")
-        for index, signal in enumerate(quant["signals"]):
-            _require_supported_value(signal, f"quant.signals[{index}]", SUPPORTED_QUANT_SIGNALS)
 
     if has_strategies:
         strategies = _require_non_empty_list(quant, "strategies", "quant.strategies")

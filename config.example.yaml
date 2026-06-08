@@ -21,11 +21,16 @@ market:
 
 quant:
   enabled: true
-  signals:
-    - trend
-    - momentum
-    - volatility
-    - volume_anomaly
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 20
+        volatility_window: 20
+        target_volatility: 0.2
+      backtest:
+        enabled: false
 
 text:
   enabled: true

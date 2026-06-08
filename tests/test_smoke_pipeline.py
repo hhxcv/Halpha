@@ -243,14 +243,17 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["counts"]["ohlcv_sync_items"] == 4
     assert manifest["counts"]["market_data_views"] == 4
     assert manifest["counts"]["market_data_views_insufficient_data"] == 0
-    assert manifest["counts"]["market_strategy_signals"] == 16
+    assert manifest["counts"]["quant_strategy_runs"] == 4
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 4
+    assert manifest["counts"]["market_strategy_signals"] == 4
     assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 0
-    assert manifest["counts"]["market_signals"] == 16
+    assert manifest["counts"]["market_signals"] == 4
     assert manifest["counts"]["market_signals_insufficient_data"] == 0
-    assert manifest["counts"]["market_signal_material_records"] == 16
+    assert manifest["counts"]["market_signal_material_records"] == 4
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
+    assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
     assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["artifacts"]["market_signals"] == "analysis/market_signals.json"
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
@@ -267,14 +270,11 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     market_signals = json.loads(
         (run_dir / "analysis/market_signals.json").read_text(encoding="utf-8")
     )
-    assert len(strategy_signals["signals"]) == 16
-    assert len(market_signals["signals"]) == 16
-    assert sorted({signal["strategy_name"] for signal in market_signals["signals"]}) == [
-        "momentum",
-        "trend",
-        "volatility",
-        "volume_anomaly",
-    ]
+    strategy_runs = json.loads((run_dir / "analysis/quant_strategy_runs.json").read_text(encoding="utf-8"))
+    assert len(strategy_runs["runs"]) == 4
+    assert len(strategy_signals["signals"]) == 4
+    assert len(market_signals["signals"]) == 4
+    assert sorted({signal["strategy_name"] for signal in market_signals["signals"]}) == ["tsmom_vol_scaled"]
     assert all(signal["evidence"] for signal in market_signals["signals"])
     assert all(signal["uncertainty"] for signal in market_signals["signals"])
     assert all("strategy_signal_id" not in signal for signal in market_signals["signals"])
@@ -373,11 +373,14 @@ market:
       1h: 4
 quant:
   enabled: true
-  signals:
-    - trend
-    - momentum
-    - volatility
-    - volume_anomaly
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
 text:
   enabled: true
   max_items: 1
@@ -511,7 +514,7 @@ def _m1_report_stdout() -> str:
             "## 量化信号结论",
             "",
             "- 趋势信号显示 BTCUSDT 与 ETHUSDT 的样本窗口偏强。",
-            "- 证据：报告上下文包含 trend、momentum、volatility 和 volume_anomaly 信号记录。",
+            "- 证据：报告上下文包含 tsmom_vol_scaled 策略信号记录。",
             "- 不确定性：这些信号仅基于 OHLCV 窗口，不包含文本事件信号。",
             "",
             "## 文本事件",
