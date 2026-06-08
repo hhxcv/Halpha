@@ -7,6 +7,16 @@ from typing import Any
 from halpha.config import load_config
 from halpha.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
+from halpha.quant.registry import get_strategy_definition
+
+
+def test_quant_strategy_registry_resolves_tsmom_module() -> None:
+    definition = get_strategy_definition("tsmom_vol_scaled")
+
+    assert definition is not None
+    assert definition.name == "tsmom_vol_scaled"
+    assert definition.run.__module__ == "halpha.quant.strategies.tsmom_vol_scaled"
+    assert get_strategy_definition("missing") is None
 
 
 def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -> None:
@@ -57,10 +67,12 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert strategy_run["data_quality"]["row_count"] == 5
     assert strategy_run["data_quality"]["minimum_required_rows"] == 3
     assert strategy_run["data_quality"]["sufficient_data"] is True
+    assert strategy_run["indicators"]["calculation_backend"] == "vectorbt.IndicatorFactory"
     assert strategy_run["indicators"]["latest_close"] == 109.0
     assert strategy_run["indicators"]["baseline_close"] == 104.0
     assert strategy_run["indicators"]["return_window_pct"] == 4.807692
     assert strategy_run["indicators"]["row_count"] == 5
+    assert strategy_run["signals"]["calculation_backend"] == "vectorbt.IndicatorFactory"
     assert strategy_run["signals"]["latest_regime"] in {
         "risk_limited_momentum",
         "risk_on_momentum",

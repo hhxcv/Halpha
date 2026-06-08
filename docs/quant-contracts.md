@@ -114,6 +114,8 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `duckdb` | Local query and cropping layer over stored OHLCV data. | In-process local querying only. No database service assumption. |
 | `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation while persisting only Halpha-owned summary fields.
+
 ## Configuration Contract
 
 Quant configuration extends the existing source-based config. The product command remains:

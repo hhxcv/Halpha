@@ -1,0 +1,1 @@
+"""Quant strategy implementation helpers."""

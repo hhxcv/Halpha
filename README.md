@@ -135,7 +135,7 @@ configured public market source
 
 Implemented strategy behavior:
 
-- `tsmom_vol_scaled`: evaluates time-series momentum over a configured return window and records realized volatility, target volatility, volatility-scaled exposure, latest regime, signal counts, assessment, warnings, and bounded diagnostics metadata.
+- `tsmom_vol_scaled`: uses vectorbt `IndicatorFactory` to calculate time-series momentum return and active signals over a configured return window, then records realized volatility, target volatility, volatility-scaled exposure, latest regime, signal counts, assessment, warnings, and bounded diagnostics metadata.
 
 Strategy run artifacts preserve strategy name, version, engine metadata, params, source, symbol, timeframe, input window, data quality, indicators, signals, assessment, diagnostics metadata, warnings, source artifacts, and insufficient-data or failure state. Vectorbt objects are internal implementation details and are not written into Halpha artifacts or Codex context.
 

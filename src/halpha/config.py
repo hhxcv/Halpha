@@ -5,13 +5,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from .quant.registry import SUPPORTED_STRATEGY_NAMES
+
 
 CONFIG_SECTIONS = {"codex", "market", "quant", "report", "run", "text"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_QUANT_SIGNALS = {"trend", "momentum", "volatility", "volume_anomaly"}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
-SUPPORTED_QUANT_STRATEGIES = {"tsmom_vol_scaled"}
+SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 
 
 class ConfigError(Exception):
