@@ -23,8 +23,8 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
     assert market_signals["artifact_type"] == "market_signals"
     assert market_signals["source_artifacts"] == ["analysis/market_strategy_signals.json"]
     assert signal == {
-        "signal_id": "market_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
-        "strategy_name": "trend",
+        "signal_id": "market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+        "strategy_name": "tsmom_vol_scaled",
         "source": "binance",
         "symbol": "BTCUSDT",
         "timeframe": "1d",
@@ -35,8 +35,8 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
         "strength": "medium",
         "confidence": "medium",
         "key_values": {"latest_close": 106.0, "row_count": 3},
-        "evidence": ["latest_close is above moving_average_long."],
-        "uncertainty": ["Trend uses OHLCV close prices only and excludes text events."],
+        "evidence": ["return_window_pct is 6.0% over the configured return window."],
+        "uncertainty": ["Strategy uses OHLCV close prices only and excludes text events."],
         "insufficient_data": False,
         "source_artifacts": [
             "analysis/market_strategy_signals.json",
@@ -48,11 +48,11 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
     assert "artifact_type: analysis_market_signal_material" in material
     assert "raw_ohlcv_history_embedded: false" in material
     assert "record_type: market_signal" in material
-    assert "signal_id: market_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in material
+    assert "signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in material
     assert "input_window_start: '2026-06-01T00:00:00Z'" in material
     assert "latest_close: 106.0" in material
-    assert "latest_close is above moving_average_long." in material
-    assert "Trend uses OHLCV close prices only and excludes text events." in material
+    assert "return_window_pct is 6.0% over the configured return window." in material
+    assert "Strategy uses OHLCV close prices only and excludes text events." in material
     assert "raw/market_data_views.json" in material
     assert "open_time:" not in material
     assert "records:" not in material
@@ -197,8 +197,9 @@ def _write_config(tmp_path: Path, *, quant_enabled: bool = True) -> Path:
         """
 quant:
   enabled: true
-  signals:
-    - trend
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
 """
         if quant_enabled
         else """
@@ -272,8 +273,8 @@ def _write_strategy_signals(config, run, *, insufficient: bool) -> list[str]:
         else {"latest_close": 106.0, "row_count": 3}
     )
     signal = {
-        "strategy_signal_id": "strategy_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
-        "strategy_name": "trend",
+        "strategy_signal_id": "strategy_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+        "strategy_name": "tsmom_vol_scaled",
         "source": "binance",
         "symbol": "BTCUSDT",
         "timeframe": "1d",
@@ -288,12 +289,12 @@ def _write_strategy_signals(config, run, *, insufficient: bool) -> list[str]:
         "evidence": (
             ["input view has 1 OHLCV rows for requested_lookback 3."]
             if insufficient
-            else ["latest_close is above moving_average_long."]
+            else ["return_window_pct is 6.0% over the configured return window."]
         ),
         "uncertainty": (
             ["binance BTCUSDT 1d has insufficient OHLCV rows."]
             if insufficient
-            else ["Trend uses OHLCV close prices only and excludes text events."]
+            else ["Strategy uses OHLCV close prices only and excludes text events."]
         ),
         "insufficient_data": insufficient,
         "source_artifacts": ["raw/market_data_views.json"],

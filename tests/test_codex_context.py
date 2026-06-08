@@ -94,10 +94,10 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "artifact_type: analysis_market_signal_material" in context
     assert "record_type: market_signal" in context
-    assert "signal_id: market_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
+    assert "signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
     assert "latest_close: 106.0" in context
-    assert "latest_close is above moving_average_long." in context
-    assert "Trend uses OHLCV close prices only and excludes text events." in context
+    assert "return_window_pct is 6.0% over the configured return window." in context
+    assert "Strategy uses OHLCV close prices only and excludes text events." in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "open_time:" not in context
     assert "Quantitative signal conclusions" in prompt
@@ -184,8 +184,9 @@ text:
         """
 quant:
   enabled: true
-  signals:
-    - trend
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
 """
         if quant_enabled
         else ""
@@ -343,9 +344,9 @@ def _write_strategy_signals(config, run) -> list[str]:
             "signals": [
                 {
                     "strategy_signal_id": (
-                        "strategy_signal:trend:binance:BTCUSDT:1d:2026-06-03T00:00:00Z"
+                        "strategy_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z"
                     ),
-                    "strategy_name": "trend",
+                    "strategy_name": "tsmom_vol_scaled",
                     "source": "binance",
                     "symbol": "BTCUSDT",
                     "timeframe": "1d",
@@ -357,9 +358,9 @@ def _write_strategy_signals(config, run) -> list[str]:
                     "strength": "medium",
                     "confidence": "medium",
                     "key_values": {"latest_close": 106.0, "row_count": 3},
-                    "evidence": ["latest_close is above moving_average_long."],
+                    "evidence": ["return_window_pct is 6.0% over the configured return window."],
                     "uncertainty": [
-                        "Trend uses OHLCV close prices only and excludes text events."
+                        "Strategy uses OHLCV close prices only and excludes text events."
                     ],
                     "insufficient_data": False,
                     "source_artifacts": ["raw/market_data_views.json"],

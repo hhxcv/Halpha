@@ -27,7 +27,6 @@ Implemented now:
 - OHLCV sync status, counts, stored ranges, warnings, and errors in `run_manifest.json`.
 - Deterministic OHLCV data view selection for configured lookback windows.
 - `raw/market_data_views.json` artifact creation when `market.ohlcv` is configured.
-- Initial trend, momentum, volatility/range risk, and volume anomaly signal evaluation from OHLCV data views.
 - `analysis/market_strategy_signals.json` artifact creation when `quant.enabled` is true.
 - `analysis/market_signals.json` normalized market signal artifact creation when `quant.enabled` is true.
 - `analysis/market_signal_material.md` AI-readable market signal material creation when `quant.enabled` is true.
@@ -91,34 +90,7 @@ market:
 
 Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
 
-## Quantitative Signal Report Path
-
-When `market.ohlcv` is configured and `quant.enabled` is true, the implemented run command extends the report loop with quantitative market signal material:
-
-```text
-configured public market source
--> finalized OHLCV sync
--> shared local OHLCV history
--> deterministic current-run OHLCV data views
--> trend, momentum, volatility, and volume anomaly signal evaluation
--> normalized market signal artifacts
--> AI-readable market signal material
--> research context and Codex prompt
--> Simplified Chinese Markdown report
-```
-
-The shared OHLCV store is reusable local input history. It is not AI context. Current-run data views record deterministic input windows and storage references, not full raw OHLCV history. Codex receives market signal material with bounded input-window metadata, key values, evidence, and uncertainty.
-
-Implemented quantitative signal behavior:
-
-- `trend`: compares the latest close and short moving average with the long moving average.
-- `momentum`: compares the latest close with the first and previous closes in the selected window.
-- `volatility`: measures close-to-close variation and candle range risk.
-- `volume_anomaly`: compares latest volume with the previous-window average volume.
-
-Signal artifacts preserve source, symbol, timeframe, input window, direction, strength, confidence, key values, evidence, uncertainty, source artifacts, and insufficient-data state where applicable. Quantitative signals are personal research material. They are not trades, positions, backtest results, forecasts, or financial advice.
-
-## Quant Strategy Foundation Path
+## Quant Strategy Report Path
 
 When `market.ohlcv` is configured and `quant.enabled` uses `quant.strategies`, the implemented run command can run the first M2 strategy path:
 
@@ -132,6 +104,10 @@ configured public market source
 -> downstream market strategy signal artifacts
 -> existing market signal material and report context
 ```
+
+The shared OHLCV store is reusable local input history. It is not AI context. Current-run data views record deterministic input windows and storage references, not full raw OHLCV history. Codex receives market signal material with bounded input-window metadata, key values, evidence, and uncertainty.
+
+The M1 `quant.signals` product path is retired. Use `quant.strategies`; the current built-in strategy is `tsmom_vol_scaled`.
 
 Implemented strategy behavior:
 

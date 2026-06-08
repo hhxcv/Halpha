@@ -124,7 +124,7 @@ Quant configuration extends the existing source-based config. The product comman
 python -m halpha run --config config.example.yaml
 ```
 
-Current shipped signal config shape:
+Current shipped strategy config shape:
 
 ```yaml
 market:
@@ -144,18 +144,6 @@ market:
       1d: 500
       1h: 720
 
-quant:
-  enabled: true
-  signals:
-    - trend
-    - momentum
-    - volatility
-    - volume_anomaly
-```
-
-Strategy config contract:
-
-```yaml
 quant:
   enabled: true
   engine: vectorbt
@@ -192,13 +180,12 @@ Validation contract:
 - `market.ohlcv.storage_dir` must be outside `run.output_dir`.
 - `market.ohlcv.timeframes` must be a non-empty list when `market.ohlcv` exists or `quant.enabled` is true.
 - `market.ohlcv.lookback` must define a positive integer for each configured timeframe when `market.ohlcv` exists or `quant.enabled` is true.
-- `quant` may be omitted when the report path does not use quant signals.
+- `quant` may be omitted when the report path does not use quant strategies.
 - `quant.enabled` is required when `quant` exists.
-- Current shipped signal config uses `quant.signals`.
-- Strategy adoption uses `quant.strategies`.
-- `quant.signals` must be a non-empty list when current shipped quant signal config is enabled.
-- `quant.strategies` must be a non-empty list when strategy config is enabled.
-- Supported signal and strategy names are narrow and explicit. Unknown names fail with an actionable error.
+- Current shipped quant config uses `quant.strategies`.
+- `quant.signals` is retired and must fail with an actionable validation error when `quant.enabled` is true.
+- `quant.strategies` must be a non-empty list when quant is enabled.
+- Supported strategy names are narrow and explicit. Unknown names fail with an actionable error.
 - Strategy records may include per-strategy `params`, `backtest`, and enabled state.
 - Strategy-level `backtest` and global `parameter_diagnostics` are optional, bounded research diagnostics, not trading or return-forecast settings.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.
@@ -712,7 +699,7 @@ Downstream consumers:
 
 Strategy signal artifacts store quantitative output before report-loop normalization.
 
-Current shipped signal flow writes these records directly from initial evaluators. Strategy-centered flow writes these records from `analysis/quant_strategy_runs.json` assessments.
+Current shipped signal flow writes these records from `analysis/quant_strategy_runs.json` assessments.
 
 Artifact:
 
@@ -739,8 +726,8 @@ Signal record contract:
 
 ```json
 {
-  "strategy_signal_id": "strategy_signal:trend:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
-  "strategy_name": "trend",
+  "strategy_signal_id": "strategy_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+  "strategy_name": "tsmom_vol_scaled",
   "source": "binance",
   "symbol": "BTCUSDT",
   "timeframe": "1d",
@@ -753,15 +740,17 @@ Signal record contract:
   "confidence": "medium",
   "key_values": {
     "latest_close": 104000.0,
-    "moving_average_short": 101000.0,
-    "moving_average_long": 97000.0
+    "return_window_pct": 6.2,
+    "realized_volatility_pct": 31.4,
+    "volatility_scaled_exposure": 0.64,
+    "latest_regime": "risk_limited_momentum"
   },
   "evidence": [
-    "latest_close is above moving_average_short",
-    "moving_average_short is above moving_average_long"
+    "return_window_pct is 6.2% over the configured return window.",
+    "realized_volatility_pct is 31.4% against target_volatility_pct 20.0%."
   ],
   "uncertainty": [
-    "Signal uses price history only and does not include text events."
+    "Strategy uses OHLCV close prices only and excludes text events."
   ],
   "insufficient_data": false,
   "source_artifacts": [
@@ -788,7 +777,6 @@ Strategy run mapping rules:
 
 Mapping rules:
 
-- Current shipped direct evaluator flow may use `raw/market_data_views.json` as the only source artifact.
 - Strategy-centered flow must include `analysis/quant_strategy_runs.json` and `raw/market_data_views.json` as source artifacts.
 - Do not expose vectorbt objects or raw indicator series.
 - Do not convert backtest metrics into forecasts.
@@ -824,15 +812,6 @@ high
 unknown
 ```
 
-Current shipped initial signal names are explicit and narrow:
-
-```text
-trend
-momentum
-volatility
-volume_anomaly
-```
-
 Strategy-centered signal names are produced from strategy run names. Initial strategy contract names include:
 
 ```text
@@ -845,11 +824,9 @@ Rules:
 
 - Evidence must refer to calculated values or actual input-window facts.
 - Uncertainty must be explicit when data is thin, stale, missing, or method-limited.
-- Volatility signals should include close-to-close variation and candle range values where OHLCV high/low data is available.
-- Volume anomaly signals should compare the latest volume with the previous input-window average.
-- If an unimplemented strategy request reaches signal evaluation, emit an explicit low-confidence `insufficient_data: true` record instead of fabricating values or silently dropping it.
+- Retired M1 signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are not valid product strategy names.
 - A strategy signal must not include trade entries, exits, position sizing, expected returns, or backtest performance.
-- `insufficient_data: true` is a valid evaluator output and must not be hidden.
+- `insufficient_data: true` is a valid strategy-run-derived output and must not be hidden.
 
 ## Normalized Market Signal Artifact Contract
 
@@ -882,8 +859,8 @@ Signal record contract:
 
 ```json
 {
-  "signal_id": "market_signal:trend:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
-  "strategy_name": "trend",
+  "signal_id": "market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+  "strategy_name": "tsmom_vol_scaled",
   "source": "binance",
   "symbol": "BTCUSDT",
   "timeframe": "1d",
@@ -895,15 +872,17 @@ Signal record contract:
   "confidence": "medium",
   "key_values": {
     "latest_close": 104000.0,
-    "moving_average_short": 101000.0,
-    "moving_average_long": 97000.0
+    "return_window_pct": 6.2,
+    "realized_volatility_pct": 31.4,
+    "volatility_scaled_exposure": 0.64,
+    "latest_regime": "risk_limited_momentum"
   },
   "evidence": [
-    "latest_close is above moving_average_short",
-    "moving_average_short is above moving_average_long"
+    "return_window_pct is 6.2% over the configured return window.",
+    "realized_volatility_pct is 31.4% against target_volatility_pct 20.0%."
   ],
   "uncertainty": [
-    "Signal uses price history only and does not include text events."
+    "Strategy uses OHLCV close prices only and excludes text events."
   ],
   "insufficient_data": false,
   "source_artifacts": [
@@ -982,12 +961,12 @@ allowed_basis:
   - uncertainty
 ```
 
-## record: market_signal:trend:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
+## record: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
 
 ```yaml
 record_type: market_signal
-signal_id: market_signal:trend:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
-strategy_name: trend
+signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
+strategy_name: tsmom_vol_scaled
 source: binance
 symbol: BTCUSDT
 timeframe: 1d
@@ -999,13 +978,15 @@ strength: medium
 confidence: medium
 key_values:
   latest_close: 104000.0
-  moving_average_short: 101000.0
-  moving_average_long: 97000.0
+  return_window_pct: 6.2
+  realized_volatility_pct: 31.4
+  volatility_scaled_exposure: 0.64
+  latest_regime: risk_limited_momentum
 evidence:
-  - latest_close is above moving_average_short
-  - moving_average_short is above moving_average_long
+  - return_window_pct is 6.2% over the configured return window.
+  - realized_volatility_pct is 31.4% against target_volatility_pct 20.0%.
 uncertainty:
-  - Signal uses price history only and does not include text events.
+  - Strategy uses OHLCV close prices only and excludes text events.
 insufficient_data: false
 source_artifacts:
   - analysis/market_signals.json
