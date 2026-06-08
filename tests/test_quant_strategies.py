@@ -342,6 +342,75 @@ def test_quant_strategy_runner_records_failed_run_for_invalid_runtime_params(tmp
     assert _stage(manifest, "evaluate_quant_strategies")["status"] == "succeeded"
 
 
+def test_quant_strategy_runner_records_manifest_diagnostics_for_mixed_strategy_states(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_manifest_diagnostics_strategy_config(tmp_path)
+    config = load_config(config_path)
+    config["quant"]["strategies"][2]["params"]["rsi_window"] = 0
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=106, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=109, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_runs = _strategy_runs(result)
+    manifest = _manifest(result)
+    failure = manifest["quant_strategies"]["failures"][0]
+    insufficient = manifest["quant_strategies"]["insufficient_data"][0]
+
+    assert result.succeeded is True
+    assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
+    assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
+    assert manifest["counts"]["quant_strategy_runs"] == 3
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    assert manifest["counts"]["quant_strategy_runs_failed"] == 1
+    assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
+    assert manifest["counts"]["quant_strategy_runs_disabled"] == 0
+    assert manifest["counts"]["quant_strategies_enabled"] == 3
+    assert manifest["counts"]["quant_strategies_disabled"] == 1
+    assert manifest["counts"]["market_strategy_signals"] == 3
+    assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 1
+    assert manifest["quant_strategies"]["engine"]["name"] == "vectorbt"
+    assert "version" in manifest["quant_strategies"]["engine"]
+    assert manifest["quant_strategies"]["enabled"] == [
+        "tsmom_vol_scaled",
+        "breakout_atr_trend",
+        "bollinger_rsi_reversion",
+    ]
+    assert manifest["quant_strategies"]["disabled"] == ["tsmom_vol_scaled"]
+    assert failure == {
+        "strategy_name": "bollinger_rsi_reversion",
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+        "error_type": "ValueError",
+        "message": "rsi_window must be a positive integer.",
+    }
+    assert insufficient == {
+        "strategy_name": "breakout_atr_trend",
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+        "row_count": 5,
+        "minimum_required_rows": 11,
+    }
+    assert sorted(item["status"] for item in strategy_runs["runs"]) == [
+        "failed",
+        "insufficient_data",
+        "succeeded",
+    ]
+
+
 def test_quant_strategy_runner_writes_breakout_atr_trend_artifacts(tmp_path: Path) -> None:
     config_path = _write_breakout_strategy_config(tmp_path, lookback=6)
     config = load_config(config_path)
@@ -760,6 +829,69 @@ quant:
         slippage_bps: 5
         mode: long_flat
 {parameter_diagnostics_yaml}
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_manifest_diagnostics_strategy_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: 5
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
+    - name: breakout_atr_trend
+      enabled: true
+      params:
+        breakout_window: 10
+        exit_window: 2
+        atr_window: 3
+    - name: bollinger_rsi_reversion
+      enabled: true
+      params:
+        bollinger_window: 3
+        band_std: 1.0
+        rsi_window: 3
+        rsi_oversold: 35
+        rsi_overbought: 65
+        trend_window: 3
+        trend_filter_pct: 50
+    - name: tsmom_vol_scaled
+      enabled: false
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
 text:
   enabled: false
 report:

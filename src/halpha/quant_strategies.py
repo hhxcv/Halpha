@@ -65,7 +65,7 @@ def evaluate_quant_strategies(
     }
     write_json(run.analysis_dir / "quant_strategy_runs.json", artifact)
     run.manifest["artifacts"]["quant_strategy_runs"] = QUANT_STRATEGY_RUNS_ARTIFACT
-    _record_manifest_counts(run, runs)
+    _record_manifest_counts(run, runs, enabled=enabled, disabled=disabled)
     _record_manifest_summary(
         run,
         engine=engine,
@@ -201,14 +201,24 @@ def _record_zero_counts(run: RunContext) -> None:
     run.manifest["counts"]["quant_strategy_runs_insufficient_data"] = 0
     run.manifest["counts"]["quant_strategy_runs_skipped"] = 0
     run.manifest["counts"]["quant_strategy_runs_disabled"] = 0
+    run.manifest["counts"]["quant_strategies_enabled"] = 0
+    run.manifest["counts"]["quant_strategies_disabled"] = 0
 
 
-def _record_manifest_counts(run: RunContext, runs: list[dict[str, Any]]) -> None:
+def _record_manifest_counts(
+    run: RunContext,
+    runs: list[dict[str, Any]],
+    *,
+    enabled: list[dict[str, Any]],
+    disabled: list[str],
+) -> None:
     run.manifest["counts"]["quant_strategy_runs"] = len(runs)
     for status in ("succeeded", "failed", "insufficient_data", "skipped", "disabled"):
         run.manifest["counts"][f"quant_strategy_runs_{status}"] = sum(
             1 for item in runs if item.get("status") == status
         )
+    run.manifest["counts"]["quant_strategies_enabled"] = len(enabled)
+    run.manifest["counts"]["quant_strategies_disabled"] = len(disabled)
 
 
 def _record_manifest_summary(
@@ -229,18 +239,7 @@ def _record_manifest_summary(
             for strategy in enabled
         ),
         "parameter_diagnostics_enabled": parameter_config.get("enabled") is True,
-        "failures": [
-            {
-                "strategy_name": item.get("strategy_name"),
-                "source": item.get("source"),
-                "symbol": item.get("symbol"),
-                "timeframe": item.get("timeframe"),
-                "input_view_id": item.get("input_view_id"),
-                "message": (item.get("error") or {}).get("message"),
-            }
-            for item in runs
-            if item.get("status") == "failed"
-        ],
+        "failures": [_failure_summary(item) for item in runs if item.get("status") == "failed"],
         "insufficient_data": [
             {
                 "strategy_name": item.get("strategy_name"),
@@ -254,6 +253,19 @@ def _record_manifest_summary(
             for item in runs
             if item.get("status") == "insufficient_data"
         ],
+    }
+
+
+def _failure_summary(item: dict[str, Any]) -> dict[str, Any]:
+    error = item.get("error") if isinstance(item.get("error"), dict) else {}
+    return {
+        "strategy_name": item.get("strategy_name"),
+        "source": item.get("source"),
+        "symbol": item.get("symbol"),
+        "timeframe": item.get("timeframe"),
+        "input_view_id": item.get("input_view_id"),
+        "error_type": error.get("error_type"),
+        "message": error.get("message"),
     }
 
 

@@ -1399,7 +1399,9 @@ Artifact keys:
     "quant_strategy_runs_failed": 1,
     "quant_strategy_runs_insufficient_data": 1,
     "quant_strategy_runs_skipped": 0,
-    "quant_strategy_runs_disabled": 0
+    "quant_strategy_runs_disabled": 0,
+    "quant_strategies_enabled": 1,
+    "quant_strategies_disabled": 0
   },
   "quant_strategies": {
     "engine": {
@@ -1419,6 +1421,7 @@ Artifact keys:
         "symbol": "BTCUSDT",
         "timeframe": "1d",
         "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+        "error_type": "ValueError",
         "message": "return_window must be lower than available row count."
       }
     ],
@@ -1441,9 +1444,10 @@ Manifest strategy rules:
 
 - Record artifact paths and counts without embedding the full strategy run artifact.
 - Count insufficient-data runs separately from failed runs.
+- Count configured enabled and disabled strategies separately from actual strategy run statuses.
 - Record enabled and disabled strategy names.
 - Record bounded engine metadata when available.
-- Record failure summaries with strategy name, source, symbol, timeframe, input view, and actionable message.
+- Record failure summaries with strategy name, source, symbol, timeframe, input view, error type, and actionable message.
 - Do not record stack traces, secrets, local proxy values, local paths outside repo artifacts, credentials, tokens, cookies, account IDs, or private endpoints.
 
 When implementation creates signal artifacts, `run_manifest.json` should record them.
