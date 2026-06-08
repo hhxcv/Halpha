@@ -51,6 +51,9 @@ quant:
         trend_filter_pct: 8.0
       backtest:
         enabled: false
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
 
 text:
   enabled: true

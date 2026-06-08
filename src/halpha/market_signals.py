@@ -177,6 +177,8 @@ def _material_record(signal: dict[str, Any]) -> dict[str, Any]:
     }
     if _has_backtest_diagnostic_summary(signal["key_values"]):
         record["backtest_diagnostic_policy"] = "historical_research_material_only_not_forecast"
+    if _has_parameter_diagnostic_summary(signal["key_values"]):
+        record["parameter_diagnostic_policy"] = "bounded_sensitivity_context_only_not_optimization"
     return record
 
 
@@ -259,11 +261,13 @@ def _source_policy() -> dict[str, Any]:
         "vectorbt_objects_embedded": False,
         "backtest_diagnostics_are_historical_research_material": True,
         "backtest_diagnostics_are_forecasts": False,
+        "parameter_diagnostics_are_optimization": False,
         "fabricate_missing_signals": False,
         "allowed_basis": [
             "normalized_market_signals",
             "bounded_input_window_metadata",
             "bounded_backtest_diagnostic_summaries",
+            "bounded_parameter_diagnostic_summaries",
             "key_values",
             "evidence",
             "uncertainty",
@@ -284,6 +288,10 @@ def _string_list(value: Any) -> list[str]:
 
 def _has_backtest_diagnostic_summary(key_values: dict[str, Any]) -> bool:
     return any(key.startswith("backtest_") for key in key_values)
+
+
+def _has_parameter_diagnostic_summary(key_values: dict[str, Any]) -> bool:
+    return any(key.startswith("parameter_") for key in key_values)
 
 
 def _unique_ordered(values: list[str]) -> list[str]:

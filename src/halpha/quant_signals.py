@@ -98,10 +98,17 @@ def _strategy_run_signal(strategy_run: dict[str, Any], created_at: str) -> dict[
         if isinstance(strategy_run.get("backtest_diagnostic"), dict)
         else {}
     )
+    parameter = (
+        strategy_run.get("parameter_diagnostic")
+        if isinstance(strategy_run.get("parameter_diagnostic"), dict)
+        else {}
+    )
     uncertainty = [
         *_string_list(assessment.get("uncertainty")),
         *warnings,
         *_warning_messages(backtest.get("warnings")),
+        *_string_list(parameter.get("notes")),
+        *_warning_messages(parameter.get("warnings")),
     ]
     if error and isinstance(error.get("message"), str):
         uncertainty.append(error["message"])
@@ -137,6 +144,11 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
     backtest = (
         strategy_run.get("backtest_diagnostic")
         if isinstance(strategy_run.get("backtest_diagnostic"), dict)
+        else {}
+    )
+    parameter = (
+        strategy_run.get("parameter_diagnostic")
+        if isinstance(strategy_run.get("parameter_diagnostic"), dict)
         else {}
     )
     keys = (
@@ -190,6 +202,11 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
     ):
         if key in metrics:
             result[f"backtest_{key}"] = metrics[key]
+    if parameter.get("enabled") is True and "status" in parameter:
+        result["parameter_diagnostic_status"] = parameter["status"]
+        for key in ("tested_combinations", "valid_combinations", "invalid_combinations", "stability"):
+            if key in parameter:
+                result[f"parameter_{key}"] = parameter[key]
     return result
 
 

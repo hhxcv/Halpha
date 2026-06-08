@@ -228,6 +228,79 @@ def test_quant_strategy_runner_records_disabled_backtest_diagnostic(tmp_path: Pa
     assert manifest["quant_strategies"]["backtest_diagnostics_enabled"] is False
 
 
+def test_quant_strategy_runner_records_enabled_parameter_diagnostic(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(
+        tmp_path,
+        lookback=5,
+        parameter_diagnostics_enabled=True,
+        parameter_grid_return_windows=[1, 2, 10],
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=110, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=105, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    market_signal = _market_signals(result)["signals"][0]
+    material = (result.run.analysis_dir / "market_signal_material.md").read_text(encoding="utf-8")
+    manifest = _manifest(result)
+    diagnostic = strategy_run["parameter_diagnostic"]
+
+    assert result.succeeded is True
+    assert diagnostic["enabled"] is True
+    assert diagnostic["status"] == "succeeded"
+    assert diagnostic["assumptions"] == {
+        "max_combinations": 3,
+        "grid_source": "quant.parameter_diagnostics.grids.tsmom_vol_scaled",
+        "metric_scope": "latest_state_and_bounded_backtest_summary",
+        "selection_policy": "diagnostic_only_no_best_parameter_selection",
+        "strategy_backtest_enabled": True,
+    }
+    assert diagnostic["grid"] == {
+        "return_window": [1, 2, 10],
+        "volatility_window": [2],
+        "target_volatility": [0.2],
+    }
+    assert diagnostic["tested_combinations"] == 3
+    assert diagnostic["valid_combinations"] == 2
+    assert diagnostic["invalid_combinations"] == 1
+    assert diagnostic["stability"] == "sensitive"
+    assert diagnostic["summary_metrics"]["direction_counts"] == {"bearish": 1, "bullish": 1}
+    assert diagnostic["combinations"][0]["params"]["return_window"] == 1
+    assert diagnostic["combinations"][0]["status"] == "succeeded"
+    assert diagnostic["combinations"][0]["metrics"]["direction"] == "bearish"
+    assert diagnostic["combinations"][1]["params"]["return_window"] == 2
+    assert diagnostic["combinations"][1]["status"] == "succeeded"
+    assert diagnostic["combinations"][1]["metrics"]["direction"] == "bullish"
+    assert diagnostic["combinations"][2]["params"]["return_window"] == 10
+    assert diagnostic["combinations"][2]["status"] == "insufficient_data"
+    assert diagnostic["combinations"][2]["error"]["error_type"] == "InsufficientData"
+    assert diagnostic["warnings"][0]["code"] == "parameter_direction_sensitivity"
+    assert any(item["code"] == "parameter_invalid_combinations" for item in diagnostic["warnings"])
+    assert "do not choose trading parameters" in diagnostic["notes"][0]
+
+    assert strategy_signal["key_values"]["parameter_diagnostic_status"] == "succeeded"
+    assert strategy_signal["key_values"]["parameter_tested_combinations"] == 3
+    assert strategy_signal["key_values"]["parameter_valid_combinations"] == 2
+    assert strategy_signal["key_values"]["parameter_invalid_combinations"] == 1
+    assert strategy_signal["key_values"]["parameter_stability"] == "sensitive"
+    assert any("multiple assessment directions" in item for item in strategy_signal["uncertainty"])
+    assert market_signal["key_values"]["parameter_stability"] == "sensitive"
+    assert "parameter_diagnostic_policy: bounded_sensitivity_context_only_not_optimization" in material
+    assert "bounded_parameter_diagnostic_summaries" in material
+    assert manifest["quant_strategies"]["parameter_diagnostics_enabled"] is True
+
+
 def test_quant_strategy_runner_records_failed_run_for_invalid_runtime_params(tmp_path: Path) -> None:
     config_path = _write_strategy_config(tmp_path, lookback=5)
     config = load_config(config_path)
@@ -627,8 +700,33 @@ def _write_strategy_config(
     *,
     lookback: int,
     backtest_enabled: bool = True,
+    parameter_diagnostics_enabled: bool = False,
+    parameter_grid_return_windows: list[int] | None = None,
 ) -> Path:
     config_path = tmp_path / "config.yaml"
+    return_windows = parameter_grid_return_windows or [2]
+    grid_return_window_yaml = "\n".join(f"          - {item}" for item in return_windows)
+    parameter_diagnostics_yaml = (
+        f"""
+  parameter_diagnostics:
+    enabled: {"true" if parameter_diagnostics_enabled else "false"}
+    max_combinations: {len(return_windows)}
+    grids:
+      tsmom_vol_scaled:
+        return_window:
+{grid_return_window_yaml}
+        volatility_window:
+          - 2
+        target_volatility:
+          - 0.2
+"""
+        if parameter_diagnostics_enabled
+        else """
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
+"""
+    ).rstrip()
     config_path.write_text(
         f"""
 run:
@@ -661,6 +759,7 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+{parameter_diagnostics_yaml}
 text:
   enabled: false
 report:

@@ -22,6 +22,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["quant"]["strategies"][1]["enabled"] is False
     assert config["quant"]["strategies"][2]["name"] == "bollinger_rsi_reversion"
     assert config["quant"]["strategies"][2]["enabled"] is False
+    assert config["quant"]["parameter_diagnostics"] == {"enabled": False, "max_combinations": 50}
     assert config["text"]["sources"][0]["type"] == "rss"
     assert config["report"]["language"] == "zh-CN"
 
@@ -146,6 +147,37 @@ def test_load_config_accepts_quant_strategy_config(tmp_path: Path) -> None:
 
     assert config["quant"]["engine"] == "vectorbt"
     assert config["quant"]["strategies"][0]["name"] == "tsmom_vol_scaled"
+
+
+def test_load_config_accepts_enabled_parameter_diagnostics_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            (
+                "        target_volatility: 0.2\n"
+                "  parameter_diagnostics:\n"
+                "    enabled: true\n"
+                "    max_combinations: 4\n"
+                "    grids:\n"
+                "      tsmom_vol_scaled:\n"
+                "        return_window:\n"
+                "          - 10\n"
+                "          - 20\n"
+                "        volatility_window:\n"
+                "          - 20\n"
+                "        target_volatility:\n"
+                "          - 0.2"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["quant"]["parameter_diagnostics"]["enabled"] is True
+    assert config["quant"]["parameter_diagnostics"]["max_combinations"] == 4
+    assert config["quant"]["parameter_diagnostics"]["grids"]["tsmom_vol_scaled"]["return_window"] == [10, 20]
 
 
 def test_load_config_accepts_market_proxy_config(tmp_path: Path) -> None:
@@ -471,6 +503,70 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        trend_filter_pct: 0",
             r"quant\.strategies\[0\]\.params\.trend_filter_pct must be a positive number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n  parameter_diagnostics: invalid",
+            r"quant\.parameter_diagnostics must be a mapping",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n  parameter_diagnostics:\n    enabled: \"yes\"",
+            r"quant\.parameter_diagnostics\.enabled",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n  parameter_diagnostics:\n    enabled: true",
+            r"quant\.parameter_diagnostics\.max_combinations must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n  parameter_diagnostics:\n    enabled: true\n    max_combinations: 0",
+            r"quant\.parameter_diagnostics\.max_combinations must be a positive integer",
+        ),
+        (
+            (
+                "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n"
+                "  parameter_diagnostics:\n    enabled: true\n    max_combinations: 4"
+            ),
+            r"quant\.parameter_diagnostics\.grids must be a non-empty mapping",
+        ),
+        (
+            (
+                "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n"
+                "  parameter_diagnostics:\n    enabled: true\n    max_combinations: 4\n"
+                "    grids:\n      unsupported:\n        return_window:\n          - 10"
+            ),
+            r"quant\.parameter_diagnostics\.grids\.unsupported must be one of:",
+        ),
+        (
+            (
+                "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n"
+                "  parameter_diagnostics:\n    enabled: true\n    max_combinations: 4\n"
+                "    grids:\n      tsmom_vol_scaled:\n        breakout_window:\n          - 10"
+            ),
+            r"quant\.parameter_diagnostics\.grids\.tsmom_vol_scaled\.breakout_window is not supported",
+        ),
+        (
+            (
+                "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n"
+                "  parameter_diagnostics:\n    enabled: true\n    max_combinations: 4\n"
+                "    grids:\n      tsmom_vol_scaled:\n        return_window: 10"
+            ),
+            r"quant\.parameter_diagnostics\.grids\.tsmom_vol_scaled\.return_window must be a non-empty list",
+        ),
+        (
+            (
+                "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n"
+                "  parameter_diagnostics:\n    enabled: true\n    max_combinations: 4\n"
+                "    grids:\n      tsmom_vol_scaled:\n        return_window:\n          - \"10\""
+            ),
+            r"quant\.parameter_diagnostics\.grids\.tsmom_vol_scaled\.return_window\[0\] must be a positive integer",
+        ),
+        (
+            (
+                "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n"
+                "  parameter_diagnostics:\n    enabled: true\n    max_combinations: 2\n"
+                "    grids:\n      tsmom_vol_scaled:\n        return_window:\n          - 10\n          - 20\n"
+                "        volatility_window:\n          - 10\n          - 20"
+            ),
+            r"quant\.parameter_diagnostics\.grids\.tsmom_vol_scaled has 4 combinations; max_combinations is 2",
         ),
     ],
 )
