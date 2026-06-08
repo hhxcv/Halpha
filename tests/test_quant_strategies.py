@@ -144,6 +144,47 @@ def test_quant_strategy_runner_records_insufficient_data_without_fabrication(tmp
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 1
 
 
+def test_quant_strategy_runner_records_failed_run_for_invalid_runtime_params(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(tmp_path, lookback=5)
+    config = load_config(config_path)
+    config["quant"]["strategies"][0]["params"]["return_window"] = 0
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=106, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=109, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "failed"
+    assert strategy_run["params"]["return_window"] == 0
+    assert strategy_run["indicators"] == {}
+    assert strategy_run["signals"] == {}
+    assert strategy_run["error"] == {
+        "error_type": "ValueError",
+        "message": "return_window must be a positive integer.",
+        "stage": "evaluate_quant_strategies",
+    }
+    assert strategy_signal["direction"] == "unknown"
+    assert "return_window must be a positive integer." in strategy_signal["uncertainty"]
+    assert manifest["counts"]["quant_strategy_runs"] == 1
+    assert manifest["counts"]["quant_strategy_runs_failed"] == 1
+    assert manifest["quant_strategies"]["failures"][0]["message"] == (
+        "return_window must be a positive integer."
+    )
+    assert _stage(manifest, "evaluate_quant_strategies")["status"] == "succeeded"
+
+
 def _run_pipeline_with_strategies(config: dict[str, Any], config_path: Path):
     return run_pipeline(
         config,

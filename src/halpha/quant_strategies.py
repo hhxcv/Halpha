@@ -316,14 +316,13 @@ def _failed_run(
     error_type: str,
     message: str,
 ) -> dict[str, Any]:
-    params = _tsmom_params(strategy.get("params")) if strategy.get("name") == "tsmom_vol_scaled" else {}
     return _strategy_run_record(
         strategy=strategy,
         view=view,
         engine=engine,
         created_at=created_at,
         status="failed",
-        params=params,
+        params=_failed_params(strategy),
         data_quality=_data_quality(view, [], minimum_rows=0, sufficient=False),
         indicators={},
         signals={},
@@ -344,6 +343,16 @@ def _failed_run(
             "stage": STAGE_NAME,
         },
     )
+
+
+def _failed_params(strategy: dict[str, Any]) -> dict[str, Any]:
+    if strategy.get("name") != "tsmom_vol_scaled":
+        return {}
+    params = dict(DEFAULT_TSMOM_PARAMS)
+    raw = strategy.get("params")
+    if isinstance(raw, dict):
+        params.update(raw)
+    return params
 
 
 def _tsmom_params(raw: Any) -> dict[str, Any]:
@@ -367,7 +376,12 @@ def _positive_int(value: Any, name: str) -> int:
 
 
 def _positive_number(value: Any, name: str) -> float:
-    if not isinstance(value, (int, float)) or isinstance(value, bool) or float(value) <= 0:
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) <= 0
+    ):
         raise ValueError(f"{name} must be a positive number.")
     return float(value)
 

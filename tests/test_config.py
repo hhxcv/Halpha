@@ -381,6 +381,26 @@ def test_load_config_rejects_invalid_quant_config(
             r"quant\.strategies\[0\]\.params",
         ),
         (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params:\n        return_window: 0",
+            r"quant\.strategies\[0\]\.params\.return_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params:\n        return_window: \"20\"",
+            r"quant\.strategies\[0\]\.params\.return_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params:\n        volatility_window: \"20\"",
+            r"quant\.strategies\[0\]\.params\.volatility_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params:\n        target_volatility: 0",
+            r"quant\.strategies\[0\]\.params\.target_volatility must be a positive number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params:\n        target_volatility: \"0.2\"",
+            r"quant\.strategies\[0\]\.params\.target_volatility must be a positive number",
+        ),
+        (
             "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest: invalid",
             r"quant\.strategies\[0\]\.backtest",
         ),

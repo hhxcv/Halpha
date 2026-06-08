@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -155,6 +156,18 @@ def _require_positive_int(data: dict[str, Any], key: str, path: str) -> int:
     return value
 
 
+def _require_positive_number(data: dict[str, Any], key: str, path: str) -> float:
+    value = data.get(key)
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) <= 0
+    ):
+        raise ConfigError(f"{path} must be a positive number.")
+    return float(value)
+
+
 def _validate_ohlcv_config(config: dict[str, Any], market: dict[str, Any], *, quant_enabled: bool) -> None:
     if quant_enabled and not isinstance(market.get("ohlcv"), dict):
         raise ConfigError("market.ohlcv must be a mapping when quant.enabled is true.")
@@ -202,12 +215,25 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
                 _require_bool(strategy, "enabled", f"{path}.enabled")
             if "params" in strategy and not isinstance(strategy["params"], dict):
                 raise ConfigError(f"{path}.params must be a mapping.")
+            if isinstance(strategy.get("params"), dict):
+                _validate_quant_strategy_params(name, strategy["params"], f"{path}.params")
             if "backtest" in strategy:
                 backtest = strategy["backtest"]
                 if not isinstance(backtest, dict):
                     raise ConfigError(f"{path}.backtest must be a mapping.")
                 if "enabled" in backtest:
                     _require_bool(backtest, "enabled", f"{path}.backtest.enabled")
+
+
+def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
+    if name != "tsmom_vol_scaled":
+        return
+    if "return_window" in params:
+        _require_positive_int(params, "return_window", f"{path}.return_window")
+    if "volatility_window" in params:
+        _require_positive_int(params, "volatility_window", f"{path}.volatility_window")
+    if "target_volatility" in params:
+        _require_positive_number(params, "target_volatility", f"{path}.target_volatility")
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:
