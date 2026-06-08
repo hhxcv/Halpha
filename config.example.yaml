@@ -31,6 +31,14 @@ quant:
         target_volatility: 0.2
       backtest:
         enabled: false
+    - name: breakout_atr_trend
+      enabled: false
+      params:
+        breakout_window: 20
+        exit_window: 10
+        atr_window: 14
+      backtest:
+        enabled: false
 
 text:
   enabled: true

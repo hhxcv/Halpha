@@ -18,6 +18,8 @@ def test_config_example_loads_successfully() -> None:
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
     assert config["quant"]["strategies"][0]["name"] == "tsmom_vol_scaled"
+    assert config["quant"]["strategies"][1]["name"] == "breakout_atr_trend"
+    assert config["quant"]["strategies"][1]["enabled"] is False
     assert config["text"]["sources"][0]["type"] == "rss"
     assert config["report"]["language"] == "zh-CN"
 
@@ -420,6 +422,18 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest:\n        mode: short",
             r"quant\.strategies\[0\]\.backtest\.mode must be one of: long_flat, long_only",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: breakout_atr_trend\n      params:\n        breakout_window: 0",
+            r"quant\.strategies\[0\]\.params\.breakout_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: breakout_atr_trend\n      params:\n        exit_window: \"10\"",
+            r"quant\.strategies\[0\]\.params\.exit_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: breakout_atr_trend\n      params:\n        atr_window: false",
+            r"quant\.strategies\[0\]\.params\.atr_window must be a positive integer",
         ),
     ],
 )

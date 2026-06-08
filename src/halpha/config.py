@@ -236,14 +236,20 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
-    if name != "tsmom_vol_scaled":
-        return
-    if "return_window" in params:
-        _require_positive_int(params, "return_window", f"{path}.return_window")
-    if "volatility_window" in params:
-        _require_positive_int(params, "volatility_window", f"{path}.volatility_window")
-    if "target_volatility" in params:
-        _require_positive_number(params, "target_volatility", f"{path}.target_volatility")
+    if name == "tsmom_vol_scaled":
+        if "return_window" in params:
+            _require_positive_int(params, "return_window", f"{path}.return_window")
+        if "volatility_window" in params:
+            _require_positive_int(params, "volatility_window", f"{path}.volatility_window")
+        if "target_volatility" in params:
+            _require_positive_number(params, "target_volatility", f"{path}.target_volatility")
+    if name == "breakout_atr_trend":
+        if "breakout_window" in params:
+            _require_positive_int(params, "breakout_window", f"{path}.breakout_window")
+        if "exit_window" in params:
+            _require_positive_int(params, "exit_window", f"{path}.exit_window")
+        if "atr_window" in params:
+            _require_positive_int(params, "atr_window", f"{path}.atr_window")
 
 
 def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> None:
