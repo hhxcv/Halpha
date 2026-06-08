@@ -30,7 +30,7 @@ Implemented now:
 - `analysis/market_strategy_signals.json` artifact creation when `quant.enabled` is true.
 - `analysis/market_signals.json` normalized market signal artifact creation when `quant.enabled` is true.
 - `analysis/market_signal_material.md` AI-readable market signal material creation when `quant.enabled` is true.
-- Strategy-oriented quant config support through `quant.strategies` for `tsmom_vol_scaled`.
+- Strategy-oriented quant config support through `quant.strategies` for `tsmom_vol_scaled` and `breakout_atr_trend`.
 - `analysis/quant_strategy_runs.json` artifact creation when `quant.strategies` is configured.
 - Downstream `analysis/market_strategy_signals.json` generation from strategy run results when `quant.strategies` is configured.
 - AI-readable market material generation.
@@ -99,7 +99,7 @@ configured public market source
 -> finalized OHLCV sync
 -> shared local OHLCV history
 -> deterministic current-run OHLCV data views
--> tsmom_vol_scaled strategy run evaluation
+-> configured strategy run evaluation
 -> quant_strategy_runs artifact
 -> downstream market strategy signal artifacts
 -> existing market signal material and report context
@@ -107,11 +107,12 @@ configured public market source
 
 The shared OHLCV store is reusable local input history. It is not AI context. Current-run data views record deterministic input windows and storage references, not full raw OHLCV history. Codex receives market signal material with bounded input-window metadata, key values, evidence, and uncertainty.
 
-The M1 `quant.signals` product path is retired. Use `quant.strategies`; the current built-in strategy is `tsmom_vol_scaled`.
+The M1 `quant.signals` product path is retired. Use `quant.strategies`; the current built-in strategies are `tsmom_vol_scaled` and `breakout_atr_trend`.
 
 Implemented strategy behavior:
 
 - `tsmom_vol_scaled`: uses vectorbt `IndicatorFactory` to calculate time-series momentum return and active signals over a configured return window, then records realized volatility, target volatility, volatility-scaled exposure, latest regime, signal counts, assessment, warnings, and optional bounded vectorbt `Portfolio.from_signals` backtest diagnostics when enabled.
+- `breakout_atr_trend`: uses vectorbt `IndicatorFactory` to calculate recent range breakout levels and ATR context, then records breakout state, ATR risk context, latest regime, entries, exits, assessment, warnings, and optional bounded vectorbt `Portfolio.from_signals` backtest diagnostics when enabled.
 
 Strategy run artifacts preserve strategy name, version, engine metadata, params, source, symbol, timeframe, input window, data quality, indicators, signals, assessment, bounded diagnostic assumptions and scalar metrics, warnings, source artifacts, and insufficient-data or failure state. Vectorbt objects are internal implementation details and are not written into Halpha artifacts or Codex context. Backtest diagnostics are historical research material only, not forecasts, trading instructions, or investment advice.
 

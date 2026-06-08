@@ -15,7 +15,7 @@ class StrategyDefinition:
     failed_params: StrategyParams
 
 
-SUPPORTED_STRATEGY_NAMES = {"tsmom_vol_scaled"}
+SUPPORTED_STRATEGY_NAMES = {"breakout_atr_trend", "tsmom_vol_scaled"}
 
 
 def get_strategy_definition(name: str) -> StrategyDefinition | None:
@@ -26,5 +26,13 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             name=tsmom_vol_scaled.NAME,
             run=tsmom_vol_scaled.run,
             failed_params=tsmom_vol_scaled.failed_params,
+        )
+    if name == "breakout_atr_trend":
+        from .strategies import breakout_atr_trend
+
+        return StrategyDefinition(
+            name=breakout_atr_trend.NAME,
+            run=breakout_atr_trend.run,
+            failed_params=breakout_atr_trend.failed_params,
         )
     return None

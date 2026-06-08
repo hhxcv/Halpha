@@ -114,7 +114,7 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `duckdb` | Local query and cropping layer over stored OHLCV data. | In-process local querying only. No database service assumption. |
 | `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
-Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. When configured, it also uses vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. When configured, both strategies may use vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
 
 ## Configuration Contract
 
@@ -159,6 +159,14 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+    - name: breakout_atr_trend
+      enabled: false
+      params:
+        breakout_window: 20
+        exit_window: 10
+        atr_window: 14
+      backtest:
+        enabled: false
   parameter_diagnostics:
     enabled: false
     max_combinations: 50
@@ -191,6 +199,9 @@ Validation contract:
 - Strategy-level `backtest.initial_cash` must be a positive number when present.
 - Strategy-level `backtest.fees_bps` and `backtest.slippage_bps` must be non-negative numbers when present.
 - Strategy-level `backtest.mode` must be one of `long_flat` or `long_only` when present.
+- `tsmom_vol_scaled` params `return_window` and `volatility_window` must be positive integers when present.
+- `tsmom_vol_scaled` param `target_volatility` must be a positive number when present.
+- `breakout_atr_trend` params `breakout_window`, `exit_window`, and `atr_window` must be positive integers when present.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.
 
 Proxy configuration:
@@ -685,7 +696,7 @@ Parameter diagnostic rules:
 Strategy names:
 
 - Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
-- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`.
+- Initial implemented strategy-centered flow supports `tsmom_vol_scaled` and `breakout_atr_trend`.
 - The M1 demo signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are retired from the strategy-centered product path.
 - Retired demo names are not migrated into strategy aliases.
 - If an old demo name is requested after strategy adoption, config validation should fail with an actionable error.

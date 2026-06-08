@@ -10,12 +10,16 @@ from halpha.pipeline import run_pipeline
 from halpha.quant.registry import get_strategy_definition
 
 
-def test_quant_strategy_registry_resolves_tsmom_module() -> None:
+def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     definition = get_strategy_definition("tsmom_vol_scaled")
+    breakout = get_strategy_definition("breakout_atr_trend")
 
     assert definition is not None
     assert definition.name == "tsmom_vol_scaled"
     assert definition.run.__module__ == "halpha.quant.strategies.tsmom_vol_scaled"
+    assert breakout is not None
+    assert breakout.name == "breakout_atr_trend"
+    assert breakout.run.__module__ == "halpha.quant.strategies.breakout_atr_trend"
     assert get_strategy_definition("missing") is None
 
 
@@ -259,6 +263,135 @@ def test_quant_strategy_runner_records_failed_run_for_invalid_runtime_params(tmp
     assert _stage(manifest, "evaluate_quant_strategies")["status"] == "succeeded"
 
 
+def test_quant_strategy_runner_writes_breakout_atr_trend_artifacts(tmp_path: Path) -> None:
+    config_path = _write_breakout_strategy_config(tmp_path, lookback=6)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=103, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=104, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    market_signal = _market_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["strategy_name"] == "breakout_atr_trend"
+    assert strategy_run["params"] == {
+        "breakout_window": 3,
+        "exit_window": 2,
+        "atr_window": 3,
+    }
+    assert strategy_run["indicators"]["calculation_backend"] == "vectorbt.IndicatorFactory"
+    assert strategy_run["indicators"]["latest_close"] == 110.0
+    assert strategy_run["indicators"]["breakout_window_high"] == 106.0
+    assert strategy_run["indicators"]["breakout_window_low"] == 100.0
+    assert strategy_run["indicators"]["exit_window_low"] == 101.0
+    assert strategy_run["indicators"]["atr"] == 5.333333
+    assert strategy_run["indicators"]["atr_pct"] == 4.848485
+    assert strategy_run["indicators"]["range_width_pct"] == 5.454545
+    assert strategy_run["indicators"]["breakout_distance_atr"] == 0.75
+    assert strategy_run["signals"]["latest_regime"] == "confirmed_breakout"
+    assert strategy_run["signals"]["entry_count"] == 1
+    assert strategy_run["signals"]["exit_count"] == 0
+    assert strategy_run["signals"]["latest_entry"] is True
+    assert strategy_run["signals"]["latest_signal_active"] is True
+    assert strategy_run["assessment"]["direction"] == "bullish"
+    assert strategy_run["assessment"]["strength"] == "medium"
+    assert strategy_run["assessment"]["evidence"]
+    assert strategy_run["assessment"]["uncertainty"]
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["error"] is None
+
+    assert strategy_signal["strategy_name"] == "breakout_atr_trend"
+    assert strategy_signal["direction"] == "bullish"
+    assert strategy_signal["key_values"]["breakout_window_high"] == 106.0
+    assert strategy_signal["key_values"]["atr_pct"] == 4.848485
+    assert strategy_signal["key_values"]["breakout_distance_atr"] == 0.75
+    assert strategy_signal["key_values"]["latest_regime"] == "confirmed_breakout"
+    assert strategy_signal["key_values"]["entry_count"] == 1
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "succeeded"
+    assert market_signal["strategy_name"] == "breakout_atr_trend"
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    assert manifest["quant_strategies"]["enabled"] == ["breakout_atr_trend"]
+
+
+def test_quant_strategy_runner_records_breakout_non_breakout_state(tmp_path: Path) -> None:
+    config_path = _write_breakout_strategy_config(tmp_path, lookback=6, backtest_enabled=False)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=103, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=104, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=105, volume=15),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["signals"]["latest_regime"] == "range_bound"
+    assert strategy_run["signals"]["entry_count"] == 0
+    assert strategy_run["signals"]["latest_signal_active"] is False
+    assert strategy_run["assessment"]["direction"] == "neutral"
+    assert strategy_run["assessment"]["strength"] == "low"
+    assert strategy_run["backtest_diagnostic"] == {"enabled": False, "status": "disabled"}
+    assert strategy_signal["direction"] == "neutral"
+    assert strategy_signal["key_values"]["breakout_window_high"] == 106.0
+    assert strategy_signal["key_values"]["latest_signal_active"] is False
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "disabled"
+
+
+def test_quant_strategy_runner_records_breakout_insufficient_data(tmp_path: Path) -> None:
+    config_path = _write_breakout_strategy_config(tmp_path, lookback=2)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-05T00:00:00Z", close=104, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "insufficient_data"
+    assert strategy_run["data_quality"]["row_count"] == 2
+    assert strategy_run["data_quality"]["minimum_required_rows"] == 4
+    assert strategy_run["indicators"] == {}
+    assert strategy_run["signals"] == {}
+    assert strategy_run["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    assert strategy_signal["direction"] == "unknown"
+    assert strategy_signal["insufficient_data"] is True
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "skipped"
+    assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
+    assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 2
+
+
 def _run_pipeline_with_strategies(config: dict[str, Any], config_path: Path):
     return run_pipeline(
         config,
@@ -327,6 +460,58 @@ codex:
     return config_path
 
 
+def _write_breakout_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+    backtest_enabled: bool = True,
+) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: {lookback}
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: breakout_atr_trend
+      enabled: true
+      params:
+        breakout_window: 3
+        exit_window: 2
+        atr_window: 3
+      backtest:
+        enabled: {"true" if backtest_enabled else "false"}
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _strategy_runs(result) -> dict[str, Any]:
     return json.loads((result.run.analysis_dir / "quant_strategy_runs.json").read_text(encoding="utf-8"))
 
@@ -359,15 +544,18 @@ def _record(
     open_time: str,
     close: float,
     volume: float,
+    open_: float | None = None,
+    high: float | None = None,
+    low: float | None = None,
 ) -> dict[str, object]:
     return {
         "source": source,
         "symbol": symbol,
         "timeframe": timeframe,
         "open_time": open_time,
-        "open": close - 1,
-        "high": close + 2,
-        "low": close - 2,
+        "open": close - 1 if open_ is None else open_,
+        "high": close + 2 if high is None else high,
+        "low": close - 2 if low is None else low,
         "close": close,
         "volume": volume,
         "fetched_at": "2026-06-05T00:00:00Z",

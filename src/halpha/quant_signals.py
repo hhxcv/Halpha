@@ -146,6 +146,13 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
         "realized_volatility_pct",
         "target_volatility_pct",
         "volatility_scaled_exposure",
+        "breakout_window_high",
+        "breakout_window_low",
+        "exit_window_low",
+        "atr",
+        "atr_pct",
+        "range_width_pct",
+        "breakout_distance_atr",
         "row_count",
     )
     result = {key: indicators[key] for key in keys if key in indicators}
