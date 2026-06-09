@@ -11,13 +11,33 @@ from .storage import write_json
 
 BUILD_MARKET_REGIME_ASSESSMENT_STAGE = "build_market_regime_assessment"
 BUILD_RISK_ASSESSMENT_STAGE = "build_risk_assessment"
+BUILD_DECISION_RECOMMENDATIONS_STAGE = "build_decision_recommendations"
 MARKET_REGIME_ASSESSMENT_ARTIFACT = "analysis/market_regime_assessment.json"
 RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
+DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
 MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
 MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_DATA_VIEWS_ARTIFACT = "raw/market_data_views.json"
 SCHEMA_VERSION = 1
+ACTION_TAXONOMY = (
+    "STRONG_DO",
+    "DO",
+    "TRY_SMALL",
+    "WATCH",
+    "AVOID",
+    "EXIT_OR_REDUCE",
+    "HEDGE_OR_PROTECT",
+    "NO_ACTION",
+)
+ACTIONABLE_ACTION_LEVELS = {
+    "STRONG_DO",
+    "DO",
+    "TRY_SMALL",
+    "AVOID",
+    "EXIT_OR_REDUCE",
+    "HEDGE_OR_PROTECT",
+}
 
 
 def build_market_regime_assessment(
@@ -140,6 +160,92 @@ def build_risk_assessment(
         1 for record in records if record["blocking_risks"]
     )
     return [RISK_ASSESSMENT_ARTIFACT]
+
+
+def build_decision_recommendations(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> list[str]:
+    if not _quant_enabled(config):
+        _record_zero_decision_recommendation_counts(run)
+        return []
+
+    market_signals = _read_json_artifact(
+        run.analysis_dir / "market_signals.json",
+        MARKET_SIGNALS_ARTIFACT,
+        producer_stage="build_market_signals",
+        stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+    )
+    market_regime = _read_json_artifact(
+        run.analysis_dir / "market_regime_assessment.json",
+        MARKET_REGIME_ASSESSMENT_ARTIFACT,
+        producer_stage=BUILD_MARKET_REGIME_ASSESSMENT_STAGE,
+        stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+    )
+    risk_assessment = _read_json_artifact(
+        run.analysis_dir / "risk_assessment.json",
+        RISK_ASSESSMENT_ARTIFACT,
+        producer_stage=BUILD_RISK_ASSESSMENT_STAGE,
+        stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+    )
+    signals = _signals_from_artifact(market_signals, stage=BUILD_DECISION_RECOMMENDATIONS_STAGE)
+    regime_records = _records_from_artifact(
+        market_regime,
+        MARKET_REGIME_ASSESSMENT_ARTIFACT,
+        stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+    )
+    risk_records = _records_from_artifact(
+        risk_assessment,
+        RISK_ASSESSMENT_ARTIFACT,
+        stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+    )
+    strategy_artifact, strategy_warnings = _read_optional_strategy_artifact(
+        run,
+        market_signals,
+        stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+    )
+    created_at = _created_at(risk_assessment, now)
+    signal_groups = _signals_by_tuple(signals)
+    regime_groups = _regime_by_tuple(regime_records)
+    risk_groups = _risk_by_tuple(risk_records)
+    records = [
+        _decision_recommendation_record(
+            key,
+            signal_groups.get(key, []),
+            regime_groups.get(key),
+            risk_groups.get(key),
+        )
+        for key in _decision_group_keys(signals, regime_records, risk_records)
+    ]
+
+    artifact = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_type": "decision_recommendations",
+        "run_id": run.run_id,
+        "created_at": created_at,
+        "action_taxonomy": list(ACTION_TAXONOMY),
+        "source_artifacts": _decision_source_artifacts(market_signals, market_regime, risk_assessment, strategy_artifact),
+        "records": records,
+        "warnings": _decision_artifact_warnings(records, strategy_warnings),
+        "errors": [],
+    }
+    write_json(run.analysis_dir / "decision_recommendations.json", artifact)
+    run.manifest["artifacts"]["decision_recommendations"] = DECISION_RECOMMENDATIONS_ARTIFACT
+    run.manifest["counts"]["decision_recommendation_records"] = len(records)
+    run.manifest["counts"]["decision_recommendation_actionable_records"] = sum(
+        1 for record in records if record["action_level"] in ACTIONABLE_ACTION_LEVELS
+    )
+    run.manifest["counts"]["decision_recommendation_non_actionable_records"] = sum(
+        1 for record in records if record["action_level"] not in ACTIONABLE_ACTION_LEVELS
+    )
+    run.manifest["counts"]["decision_recommendation_risk_blocked_records"] = sum(
+        1
+        for record in records
+        if any(condition.startswith(("risk_level=high", "risk_level=extreme")) for condition in record["risk_conditions"])
+    )
+    return [DECISION_RECOMMENDATIONS_ARTIFACT]
 
 
 def _regime_record(signals: list[dict[str, Any]]) -> dict[str, Any]:
@@ -311,6 +417,463 @@ def _risk_record(
         "errors": [],
         "source_artifacts": _risk_record_source_artifacts(signals, regime, strategy_runs),
     }
+
+
+def _decision_recommendation_record(
+    key: tuple[str, str, str],
+    signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> dict[str, Any]:
+    source, symbol, timeframe = key
+    latest = _latest_decision_candle_time(signals, regime, risk)
+    usable_signals = [signal for signal in signals if _has_usable_signal_evidence(signal)]
+    conflicts = _decision_conflicts(usable_signals, regime, risk)
+    risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback="unknown")
+    risk_status = _clean_text(risk.get("status") if risk else None, fallback="unknown")
+    regime_value = _clean_text(regime.get("regime") if regime else None, fallback="unknown")
+    has_evidence = _has_decision_evidence(usable_signals, regime, risk)
+
+    action_level = _base_action_level(
+        usable_signals,
+        regime,
+        risk,
+        conflicts=conflicts,
+        has_evidence=has_evidence,
+    )
+    action_level = _apply_decision_gates(action_level, risk, conflicts=conflicts, has_evidence=has_evidence)
+    evidence = _decision_evidence(usable_signals, regime, risk)
+    invalidation_conditions = _decision_invalidation_conditions(
+        action_level,
+        symbol=symbol,
+        regime_value=regime_value,
+        risk_level=risk_level,
+        conflicts=conflicts,
+        has_evidence=has_evidence,
+    )
+    warnings = _decision_warnings(
+        action_level,
+        risk_level=risk_level,
+        risk_status=risk_status,
+        regime_value=regime_value,
+        conflicts=conflicts,
+        has_evidence=has_evidence,
+        risk=risk,
+    )
+    if action_level in ACTIONABLE_ACTION_LEVELS and (not evidence or not invalidation_conditions):
+        action_level = "WATCH"
+        invalidation_conditions = []
+        warnings = _unique_ordered(
+            [
+                *warnings,
+                "Actionable recommendation was downgraded because evidence or invalidation conditions were incomplete.",
+            ]
+        )
+
+    return {
+        "record_id": f"decision_recommendation:{source}:{symbol}:{timeframe}:{latest}",
+        "source": source,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "latest_candle_time": None if latest == "missing" else latest,
+        "action_level": action_level,
+        "decision_bias": _decision_bias(action_level, risk_level, conflicts, has_evidence),
+        "confidence": _decision_confidence(action_level, usable_signals, regime, risk, conflicts, has_evidence),
+        "status": _decision_status(action_level, risk_level, risk_status, conflicts, has_evidence),
+        "recommended_actions": _recommended_actions(action_level, symbol=symbol, conflicts=conflicts, risk_level=risk_level),
+        "do_not_do": _do_not_do_guidance(action_level, risk_level=risk_level, conflicts=conflicts, has_evidence=has_evidence),
+        "risk_conditions": _risk_conditions(risk),
+        "invalidation_conditions": invalidation_conditions,
+        "evidence": evidence,
+        "conflicts": conflicts,
+        "warnings": warnings,
+        "source_artifacts": _decision_record_source_artifacts(signals, regime, risk),
+    }
+
+
+def _base_action_level(
+    usable_signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+    *,
+    conflicts: list[str],
+    has_evidence: bool,
+) -> str:
+    risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback="unknown")
+    risk_status = _clean_text(risk.get("status") if risk else None, fallback="unknown")
+    regime_value = _clean_text(regime.get("regime") if regime else None, fallback="unknown")
+    if not has_evidence or risk_status == "insufficient_data" or risk_level == "unknown":
+        return "NO_ACTION"
+    if risk_level == "extreme":
+        return "NO_ACTION"
+    if conflicts:
+        return "WATCH"
+    if risk_level == "high":
+        return "WATCH"
+
+    direction_counts = _direction_counts(usable_signals)
+    bullish = direction_counts.get("bullish", 0)
+    bearish = direction_counts.get("bearish", 0)
+    high_confidence = _count_by_clean_text(usable_signals, "confidence").get("high", 0)
+
+    if bearish and not bullish:
+        return "AVOID"
+    if regime_value == "trend_down":
+        return "AVOID"
+    if bullish and regime_value == "trend_up":
+        if risk_level == "medium":
+            return "TRY_SMALL"
+        if high_confidence >= 2 and _clean_text(regime.get("confidence") if regime else None, fallback="unknown") == "high":
+            return "DO"
+        return "TRY_SMALL"
+    if bullish and risk_level == "medium":
+        return "TRY_SMALL"
+    return "WATCH"
+
+
+def _apply_decision_gates(
+    action_level: str,
+    risk: dict[str, Any] | None,
+    *,
+    conflicts: list[str],
+    has_evidence: bool,
+) -> str:
+    if not has_evidence:
+        return "NO_ACTION"
+    if conflicts and action_level in ACTIONABLE_ACTION_LEVELS:
+        return "WATCH"
+    gates = _mapping(risk.get("gates") if risk else None)
+    cap = _clean_text(gates.get("cap_action_level"), fallback="")
+    if cap == "NO_ACTION" and action_level not in {"AVOID", "NO_ACTION"}:
+        return "NO_ACTION"
+    if cap == "WATCH" and action_level not in {"AVOID", "WATCH", "NO_ACTION"}:
+        return "WATCH"
+    if cap == "TRY_SMALL" and action_level in {"STRONG_DO", "DO"}:
+        return "TRY_SMALL"
+    return action_level
+
+
+def _decision_status(
+    action_level: str,
+    risk_level: str,
+    risk_status: str,
+    conflicts: list[str],
+    has_evidence: bool,
+) -> str:
+    if not has_evidence or risk_status == "insufficient_data":
+        return "insufficient_data"
+    if risk_level in {"high", "extreme"} and action_level == "NO_ACTION":
+        return "risk_blocked"
+    if action_level == "WATCH":
+        return "watch"
+    if action_level == "NO_ACTION":
+        return "no_action"
+    if conflicts:
+        return "watch"
+    return "actionable"
+
+
+def _decision_bias(action_level: str, risk_level: str, conflicts: list[str], has_evidence: bool) -> str:
+    if not has_evidence:
+        return "insufficient_evidence"
+    if risk_level == "extreme" or (risk_level == "high" and action_level == "NO_ACTION"):
+        return "risk_blocked"
+    if conflicts:
+        return "wait_for_conflict_resolution"
+    if action_level == "DO":
+        return "constructive"
+    if action_level == "TRY_SMALL":
+        return "tentative_constructive"
+    if action_level == "AVOID":
+        return "defensive_avoid"
+    if action_level == "WATCH":
+        return "wait_for_confirmation"
+    return "no_action"
+
+
+def _decision_confidence(
+    action_level: str,
+    usable_signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+    conflicts: list[str],
+    has_evidence: bool,
+) -> str:
+    if not has_evidence or action_level == "NO_ACTION":
+        return "low"
+    risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback="unknown")
+    if risk_level in {"high", "extreme", "unknown"} or conflicts:
+        return "low"
+    regime_confidence = _clean_text(regime.get("confidence") if regime else None, fallback="unknown")
+    high_signals = _count_by_clean_text(usable_signals, "confidence").get("high", 0)
+    if action_level == "DO" and regime_confidence == "high" and high_signals >= 2:
+        return "high"
+    if action_level in {"DO", "TRY_SMALL", "AVOID"}:
+        return "medium"
+    return "low"
+
+
+def _recommended_actions(action_level: str, *, symbol: str, conflicts: list[str], risk_level: str) -> list[str]:
+    if action_level == "DO":
+        return [f"Use {symbol} as a constructive research bias while current evidence remains aligned."]
+    if action_level == "TRY_SMALL":
+        return [f"Treat {symbol} as a tentative research opportunity and require confirmation before escalation."]
+    if action_level == "WATCH":
+        if conflicts:
+            return [f"Wait for {symbol} signal conflict to resolve before using a directional decision bias."]
+        if risk_level in {"high", "unknown"}:
+            return [f"Wait for {symbol} risk conditions to improve before using a stronger decision bias."]
+        return [f"Watch {symbol} for confirmation before using an actionable decision bias."]
+    if action_level == "AVOID":
+        return [f"Avoid treating {symbol} as a constructive setup until adverse evidence clears."]
+    return []
+
+
+def _do_not_do_guidance(action_level: str, *, risk_level: str, conflicts: list[str], has_evidence: bool) -> list[str]:
+    guidance = ["Do not treat this record as an order, position sizing instruction, account action, or return promise."]
+    if not has_evidence:
+        guidance.append("Do not act on insufficient upstream evidence.")
+    if risk_level in {"high", "extreme", "unknown"}:
+        guidance.append(f"Do not upgrade to DO or TRY_SMALL while risk_level={risk_level}.")
+    if conflicts:
+        guidance.append("Do not treat conflicting signals as confirmed directional evidence.")
+    if action_level in ACTIONABLE_ACTION_LEVELS:
+        guidance.append("Do not keep the actionable bias if any invalidation condition is met.")
+    return _unique_ordered(guidance)
+
+
+def _risk_conditions(risk: dict[str, Any] | None) -> list[str]:
+    if risk is None:
+        return ["risk_assessment=missing."]
+    gates = _mapping(risk.get("gates"))
+    conditions = [
+        f"risk_level={_clean_text(risk.get('risk_level'), fallback='unknown')}; "
+        f"status={_clean_text(risk.get('status'), fallback='unknown')}.",
+    ]
+    cap = gates.get("cap_action_level")
+    if isinstance(cap, str) and cap.strip():
+        conditions.append(f"cap_action_level={cap.strip()}.")
+    for label, field in (
+        ("rising_risk", "rising_risks"),
+        ("blocking_risk", "blocking_risks"),
+        ("data_quality_risk", "data_quality_risks"),
+        ("signal_conflict_risk", "signal_conflict_risks"),
+    ):
+        for item in _string_list(risk.get(field))[:4]:
+            conditions.append(f"{label}: {item}")
+    return _unique_ordered(conditions)
+
+
+def _decision_invalidation_conditions(
+    action_level: str,
+    *,
+    symbol: str,
+    regime_value: str,
+    risk_level: str,
+    conflicts: list[str],
+    has_evidence: bool,
+) -> list[str]:
+    if not has_evidence or action_level in {"WATCH", "NO_ACTION"}:
+        return []
+    if action_level in {"DO", "TRY_SMALL"}:
+        return [
+            f"{symbol} risk_level rises to high or extreme.",
+            f"{symbol} market regime changes from {regime_value} to mixed, trend_down, high_volatility, or unknown.",
+            f"{symbol} upstream market signals no longer show a bullish majority.",
+            f"{symbol} blocking risks appear in risk_assessment.",
+        ]
+    if action_level == "AVOID":
+        return [
+            f"{symbol} market regime is no longer trend_down or bearish.",
+            f"{symbol} upstream market signals regain a bullish majority without material conflict.",
+            f"{symbol} risk conditions are low and no blocking risks remain.",
+        ]
+    if action_level in {"EXIT_OR_REDUCE", "HEDGE_OR_PROTECT"}:
+        return [
+            f"{symbol} elevated risk pressure clears.",
+            f"{symbol} market regime and upstream signals realign without material conflict.",
+        ]
+    if conflicts:
+        return [f"{symbol} conflicts resolve and no blocking risk remains."]
+    if risk_level in {"high", "extreme"}:
+        return [f"{symbol} risk_level falls below {risk_level}."]
+    return []
+
+
+def _decision_evidence(
+    usable_signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> list[str]:
+    evidence = [
+        _counts_evidence("direction_counts", _direction_counts(usable_signals)),
+    ]
+    if regime is None:
+        evidence.append("No matching market regime assessment record was available.")
+    else:
+        evidence.append(
+            "market_regime="
+            f"{_clean_text(regime.get('regime'), fallback='unknown')}; "
+            f"confidence={_clean_text(regime.get('confidence'), fallback='unknown')}; "
+            f"status={_clean_text(regime.get('status'), fallback='unknown')}."
+        )
+        evidence.extend(_string_list(regime.get("evidence"))[:3])
+    if risk is None:
+        evidence.append("No matching risk assessment record was available.")
+    else:
+        evidence.append(
+            "risk_level="
+            f"{_clean_text(risk.get('risk_level'), fallback='unknown')}; "
+            f"status={_clean_text(risk.get('status'), fallback='unknown')}."
+        )
+        evidence.extend(_string_list(risk.get("evidence"))[:3])
+    evidence.extend(_bounded_signal_evidence(usable_signals))
+    return _unique_ordered(evidence)
+
+
+def _decision_warnings(
+    action_level: str,
+    *,
+    risk_level: str,
+    risk_status: str,
+    regime_value: str,
+    conflicts: list[str],
+    has_evidence: bool,
+    risk: dict[str, Any] | None,
+) -> list[str]:
+    warnings = []
+    if not has_evidence or risk_status == "insufficient_data" or regime_value == "unknown":
+        warnings.append("Insufficient upstream evidence prevents an actionable decision recommendation.")
+    if conflicts:
+        warnings.append("Major upstream signal conflict caps action strength at WATCH.")
+    if risk_level in {"high", "unknown"} and action_level == "WATCH":
+        warnings.append(f"risk_level={risk_level} caps stronger action levels.")
+    if risk_level == "extreme":
+        warnings.append("risk_level=extreme blocks stronger action levels.")
+    if risk is None:
+        warnings.append("No matching risk assessment record was available.")
+    else:
+        warnings.extend(_string_list(risk.get("warnings")))
+    return _unique_ordered(warnings)
+
+
+def _decision_conflicts(
+    usable_signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> list[str]:
+    conflicts = []
+    direction_conflicts = _direction_conflicts(_direction_counts(usable_signals), usable_signals)
+    conflicts.extend(direction_conflicts)
+    if regime:
+        conflicts.extend(_string_list(regime.get("conflicts")))
+        if _clean_text(regime.get("regime"), fallback="unknown") == "mixed":
+            conflicts.append("Market regime assessment is mixed.")
+    if risk:
+        conflicts.extend(_string_list(risk.get("signal_conflict_risks")))
+    return _unique_ordered(conflicts)
+
+
+def _has_decision_evidence(
+    usable_signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> bool:
+    if usable_signals:
+        return True
+    if regime and _clean_text(regime.get("status"), fallback="unknown") not in {"insufficient_data", "unknown"}:
+        return bool(_string_list(regime.get("evidence")))
+    if risk and _clean_text(risk.get("status"), fallback="unknown") not in {"insufficient_data", "unknown"}:
+        return bool(_string_list(risk.get("evidence")))
+    return False
+
+
+def _decision_group_keys(
+    signals: list[dict[str, Any]],
+    regime_records: list[dict[str, Any]],
+    risk_records: list[dict[str, Any]],
+) -> list[tuple[str, str, str]]:
+    return sorted(
+        {
+            *[_tuple_key(item) for item in signals],
+            *[_tuple_key(item) for item in regime_records],
+            *[_tuple_key(item) for item in risk_records],
+        }
+    )
+
+
+def _latest_decision_candle_time(
+    signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> str:
+    values = [
+        *[_clean_text(signal.get("latest_candle_time"), fallback="") for signal in signals],
+        *([_clean_text(regime.get("latest_candle_time"), fallback="")] if regime else []),
+        *([_clean_text(risk.get("latest_candle_time"), fallback="")] if risk else []),
+    ]
+    clean = sorted(value for value in values if value)
+    return clean[-1] if clean else "missing"
+
+
+def _risk_by_tuple(records: list[dict[str, Any]]) -> dict[tuple[str, str, str], dict[str, Any]]:
+    return {_tuple_key(record): record for record in records}
+
+
+def _decision_record_source_artifacts(
+    signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> list[str]:
+    return _unique_ordered(
+        [
+            RISK_ASSESSMENT_ARTIFACT,
+            MARKET_REGIME_ASSESSMENT_ARTIFACT,
+            MARKET_SIGNALS_ARTIFACT,
+            *(_string_list(risk.get("source_artifacts")) if risk else []),
+            *(_string_list(regime.get("source_artifacts")) if regime else []),
+            *[
+                artifact
+                for signal in signals
+                for artifact in _string_list(signal.get("source_artifacts"))
+            ],
+            MARKET_STRATEGY_SIGNALS_ARTIFACT,
+            QUANT_STRATEGY_RUNS_ARTIFACT,
+            MARKET_DATA_VIEWS_ARTIFACT,
+        ]
+    )
+
+
+def _decision_source_artifacts(
+    market_signals: dict[str, Any],
+    market_regime: dict[str, Any],
+    risk_assessment: dict[str, Any],
+    strategy_artifact: dict[str, Any] | None,
+) -> list[str]:
+    return _unique_ordered(
+        [
+            RISK_ASSESSMENT_ARTIFACT,
+            MARKET_REGIME_ASSESSMENT_ARTIFACT,
+            MARKET_SIGNALS_ARTIFACT,
+            *_string_list(risk_assessment.get("source_artifacts")),
+            *_string_list(market_regime.get("source_artifacts")),
+            *_string_list(market_signals.get("source_artifacts")),
+            *([QUANT_STRATEGY_RUNS_ARTIFACT] if strategy_artifact is not None else []),
+            *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
+            MARKET_STRATEGY_SIGNALS_ARTIFACT,
+            QUANT_STRATEGY_RUNS_ARTIFACT,
+            MARKET_DATA_VIEWS_ARTIFACT,
+        ]
+    )
+
+
+def _decision_artifact_warnings(records: list[dict[str, Any]], artifact_warnings: list[str]) -> list[str]:
+    warnings = list(artifact_warnings)
+    if not records:
+        warnings.append("No market, regime, or risk records were available for decision recommendations.")
+    for record in records:
+        warnings.extend(_string_list(record.get("warnings")))
+    return _unique_ordered(warnings)
 
 
 def _read_json_artifact(path, artifact: str, *, producer_stage: str, stage: str) -> dict[str, Any]:
@@ -1026,6 +1589,13 @@ def _record_zero_risk_counts(run: RunContext) -> None:
     run.manifest["counts"]["risk_assessment_unknown_records"] = 0
     run.manifest["counts"]["risk_assessment_high_or_extreme_records"] = 0
     run.manifest["counts"]["risk_assessment_blocking_records"] = 0
+
+
+def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
+    run.manifest["counts"]["decision_recommendation_records"] = 0
+    run.manifest["counts"]["decision_recommendation_actionable_records"] = 0
+    run.manifest["counts"]["decision_recommendation_non_actionable_records"] = 0
+    run.manifest["counts"]["decision_recommendation_risk_blocked_records"] = 0
 
 
 def _count_by_clean_text(signals: list[dict[str, Any]], field: str) -> dict[str, int]:
