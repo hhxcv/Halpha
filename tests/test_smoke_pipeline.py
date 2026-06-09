@@ -300,10 +300,14 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "open_time:" not in context
-    assert "Quantitative signal conclusions" in prompt
-    assert "Evidence near each signal conclusion" in prompt
+    assert "Quantitative conclusions" in prompt
+    assert "Use Markdown tables for market data" in prompt
+    assert "organize each main section with symbol-level subheadings" in prompt
+    assert "do not recreate the full strategy run table" in prompt
+    assert "do not restate every strategy run row or numeric field" in prompt
     assert "Watch points" in prompt
     assert "Risk notes" in prompt
+    assert "Do not include fixed boilerplate" in prompt
     assert "Do not calculate new quantitative signals from raw OHLCV history" in prompt
     assert codex_calls[0]["input"] == prompt
     assert codex_calls[0]["cwd"] == run_dir
@@ -314,7 +318,8 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert "证据" in report
     assert "## 观察要点" in report
     assert "## 风险提示" in report
-    assert "不构成投资建议" in report
+    assert "不构成投资建议" not in report
+    assert "样本窗口较短" in report
     assert "tests/fixtures" not in config_path.read_text(encoding="utf-8")
 
 
@@ -498,7 +503,7 @@ def _report_stdout() -> str:
             "",
             "## 风险提示",
             "",
-            "本内容仅供个人研究，不构成投资建议。",
+            "公开来源较少，后续事件可能改变当前观察。",
             "",
         ]
     )
@@ -537,7 +542,7 @@ def _m1_report_stdout() -> str:
             "",
             "## 风险提示",
             "",
-            "本内容仅供个人研究，不构成投资建议。",
+            "样本窗口较短，趋势和波动信号可能随新增 OHLCV 数据快速变化。",
             "",
         ]
     )

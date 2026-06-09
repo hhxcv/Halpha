@@ -39,6 +39,12 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "financial_advice: false" in context
     assert "## generation_constraints" in context
     assert "do_not_invent_prices_events_links_sources: true" in context
+    assert "include_context_specific_risk_notes: true" in context
+    assert "avoid_generic_disclaimers: true" in context
+    assert "prefer_tables_for_comparable_data: true" in context
+    assert "group_multi_symbol_sections_by_symbol: true" in context
+    assert "title_is_h1_not_section: true" in context
+    assert "synthesis_should_not_repeat_prior_sections: true" in context
     assert "quant_signal_requirements:" in context
     assert "include_signal_conclusions: true" in context
     assert "include_evidence_near_conclusions: true" in context
@@ -49,6 +55,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "do_not_inspect_shared_ohlcv_storage: true" in context
     assert "required_sections:" in context
     assert "- 核心摘要" in context
+    assert "- 标题" not in context
     assert "- market_overview" not in context
     assert '<embed path="analysis/market_material.md">' in context
     assert "artifact_type: analysis_market_material" in context

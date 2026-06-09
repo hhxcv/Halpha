@@ -174,7 +174,12 @@ def _generation_constraints() -> dict[str, Any]:
         "output_format": "Markdown",
         "use_only_embedded_context": True,
         "do_not_invent_prices_events_links_sources": True,
-        "include_risk_notice": True,
+        "include_context_specific_risk_notes": True,
+        "avoid_generic_disclaimers": True,
+        "prefer_tables_for_comparable_data": True,
+        "group_multi_symbol_sections_by_symbol": True,
+        "title_is_h1_not_section": True,
+        "synthesis_should_not_repeat_prior_sections": True,
         "quant_signal_requirements": {
             "include_when_market_signal_material_exists": True,
             "include_signal_conclusions": True,
@@ -186,7 +191,6 @@ def _generation_constraints() -> dict[str, Any]:
             "do_not_inspect_shared_ohlcv_storage": True,
         },
         "required_sections": [
-            "标题",
             "核心摘要",
             "市场概览",
             "文本事件",

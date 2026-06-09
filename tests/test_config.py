@@ -17,12 +17,39 @@ def test_config_example_loads_successfully() -> None:
     assert config["market"]["ohlcv"]["lookback"] == {"1d": 500, "1h": 720}
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
-    assert config["quant"]["strategies"][0]["name"] == "tsmom_vol_scaled"
-    assert config["quant"]["strategies"][1]["name"] == "breakout_atr_trend"
-    assert config["quant"]["strategies"][1]["enabled"] is False
-    assert config["quant"]["strategies"][2]["name"] == "bollinger_rsi_reversion"
-    assert config["quant"]["strategies"][2]["enabled"] is False
-    assert config["quant"]["parameter_diagnostics"] == {"enabled": False, "max_combinations": 50}
+    assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
+        "tsmom_vol_scaled",
+        "breakout_atr_trend",
+        "bollinger_rsi_reversion",
+    ]
+    assert all(strategy["enabled"] is True for strategy in config["quant"]["strategies"])
+    assert all(strategy["backtest"]["enabled"] is True for strategy in config["quant"]["strategies"])
+    assert config["quant"]["strategies"][0]["params"] == {
+        "return_window": 30,
+        "volatility_window": 30,
+        "target_volatility": 0.2,
+    }
+    assert config["quant"]["strategies"][1]["params"] == {
+        "breakout_window": 55,
+        "exit_window": 20,
+        "atr_window": 14,
+    }
+    assert config["quant"]["strategies"][2]["params"] == {
+        "bollinger_window": 20,
+        "band_std": 2.0,
+        "rsi_window": 14,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70,
+        "trend_window": 100,
+        "trend_filter_pct": 10.0,
+    }
+    assert config["quant"]["parameter_diagnostics"]["enabled"] is True
+    assert config["quant"]["parameter_diagnostics"]["max_combinations"] == 16
+    assert sorted(config["quant"]["parameter_diagnostics"]["grids"]) == [
+        "bollinger_rsi_reversion",
+        "breakout_atr_trend",
+        "tsmom_vol_scaled",
+    ]
     assert config["text"]["sources"][0]["type"] == "rss"
     assert config["report"]["language"] == "zh-CN"
 

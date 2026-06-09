@@ -262,7 +262,7 @@ def _fake_codex_run(command, input, text, encoding, errors, capture_output, time
     return subprocess.CompletedProcess(
         command,
         0,
-        stdout="# 每日市场简报\n\n## 风险提示\n本内容仅供个人研究，不构成投资建议。\n",
+        stdout="# 每日市场简报\n\n## 风险提示\n公开来源较少，后续事件可能改变当前观察。\n",
         stderr="",
     )
 

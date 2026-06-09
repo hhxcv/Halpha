@@ -5,6 +5,7 @@ import shutil
 import subprocess
 from typing import Any
 
+from halpha.codex.report_postprocess import inject_quant_strategy_table
 from halpha.pipeline import PipelineError, RunContext
 
 
@@ -84,8 +85,9 @@ def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
             error_details=_error_details(exit_code=completed.returncode, stderr_summary=stderr_summary),
         )
 
+    report = inject_quant_strategy_table(completed.stdout, run)
     report_path = run.report_dir / "report.md"
-    report_path.write_text(completed.stdout, encoding="utf-8")
+    report_path.write_text(report, encoding="utf-8")
     run.manifest["artifacts"]["report"] = REPORT_ARTIFACT
     return [REPORT_ARTIFACT]
 
@@ -148,7 +150,7 @@ def _report_validation_error(report: str) -> str | None:
     if not report.lstrip().startswith("#"):
         return "Codex stdout did not start with a Markdown heading; report/report.md was not written."
     if "风险" not in report:
-        return "Codex stdout did not include a risk notice; report/report.md was not written."
+        return "Codex stdout did not include a risk section; report/report.md was not written."
     return None
 
 
