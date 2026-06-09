@@ -92,6 +92,8 @@ market:
 
 Do not commit machine-local proxy values, credentials, hostnames, ports, or paths.
 
+Local config files used for real-source validation should preserve the same functional settings as `config.example.yaml` and differ only in machine-local privacy values such as proxy configuration.
+
 ## Quant Strategy Report Path
 
 When `market.ohlcv` is configured and `quant.enabled` uses `quant.strategies`, the implemented run command can run the M2 strategy path:
@@ -123,6 +125,8 @@ Strategy run artifacts preserve strategy name, version, engine metadata, params,
 Optional `quant.parameter_diagnostics` runs bounded configured parameter grids and records tested combinations, valid and invalid combinations, sensitivity notes, warnings, and summary metrics. It does not choose best parameters and is not an optimization platform.
 
 Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, and `analysis/market_signal_material.md`. When `quant.strategies` is configured, the run also writes `analysis/quant_strategy_runs.json` before downstream market signal artifacts. If collection, OHLCV sync, data view creation, strategy run evaluation, strategy signal evaluation, market signal material generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
+
+With the current public example strategy configuration, a successful full quant run evaluates three enabled strategies across two symbols and two timeframes. The expected quant run shape is 4 current-run OHLCV data views, 12 strategy run records, 12 downstream market strategy signal records, and a final report with a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json`. These counts follow the configured symbols, timeframes, and enabled strategies.
 
 Output artifact roles:
 
