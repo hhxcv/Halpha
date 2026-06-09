@@ -157,6 +157,151 @@ def test_cli_run_returns_codex_failure_exit_code(tmp_path: Path, capsys, monkeyp
     assert not list(tmp_path.glob("runs/*/report/report.md"))
 
 
+def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsys, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+
+    def fail_if_codex_runs(*args, **kwargs):
+        raise AssertionError("Codex should not run in --no-codex mode.")
+
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fail_if_codex_runs)
+
+    exit_code = main(["run", "--config", str(config_path), "--no-codex"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Halpha run succeeded." in captured.out
+    assert "codex: skipped" in captured.out
+    assert "report:" not in captured.out
+
+    run_dir = _single_run_dir(tmp_path)
+    manifest = _manifest(run_dir)
+    assert manifest["status"] == "succeeded"
+    assert manifest["validation"] == {
+        "mode": "run",
+        "skip_codex": True,
+        "until_stage": None,
+    }
+    assert manifest["codex"]["status"] == "skipped"
+    assert manifest["codex"]["exit_code"] is None
+    assert manifest["codex"]["skip_reason"] == "--no-codex requested"
+    assert manifest["stages"][-1]["name"] == "run_codex_report"
+    assert manifest["stages"][-1]["status"] == "skipped"
+    assert manifest["stages"][-1]["artifacts"] == []
+    assert (run_dir / "codex_context" / "prompt.md").is_file()
+    assert not (run_dir / "report" / "report.md").exists()
+    assert "report" not in manifest["artifacts"]
+
+
+def test_cli_run_until_marks_later_stages_not_run(tmp_path: Path, capsys, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+
+    def fail_if_codex_runs(*args, **kwargs):
+        raise AssertionError("Codex should not run after --until build_research_context.")
+
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fail_if_codex_runs)
+
+    exit_code = main(["run", "--config", str(config_path), "--until", "build_research_context"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Halpha run succeeded." in captured.out
+    assert "report:" not in captured.out
+
+    run_dir = _single_run_dir(tmp_path)
+    manifest = _manifest(run_dir)
+    assert manifest["validation"] == {
+        "mode": "run",
+        "skip_codex": False,
+        "until_stage": "build_research_context",
+    }
+    assert _stage(manifest, "build_research_context")["status"] == "succeeded"
+    codex_context = _stage(manifest, "build_codex_context")
+    codex_report = _stage(manifest, "run_codex_report")
+    assert codex_context["status"] == "not_run"
+    assert codex_context["reason"] == "--until build_research_context requested"
+    assert codex_report["status"] == "not_run"
+    assert codex_report["reason"] == "--until build_research_context requested"
+    assert manifest["codex"]["status"] == "not_run"
+    assert manifest["codex"]["skip_reason"] == "--until build_research_context requested"
+    assert (run_dir / "analysis" / "research_context.md").is_file()
+    assert not (run_dir / "codex_context" / "prompt.md").exists()
+    assert not (run_dir / "report" / "report.md").exists()
+
+
+def test_cli_stage_runs_single_stage_against_existing_run_dir(tmp_path: Path, capsys, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+
+    assert main(["run", "--config", str(config_path), "--until", "build_analysis_materials"]) == 0
+    run_dir = _single_run_dir(tmp_path)
+    assert not (run_dir / "analysis" / "research_context.md").exists()
+
+    exit_code = main(
+        [
+            "stage",
+            "build_research_context",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Halpha stage succeeded." in captured.out
+    assert "stage: build_research_context" in captured.out
+    assert (run_dir / "analysis" / "research_context.md").is_file()
+
+    manifest = _manifest(run_dir)
+    assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
+    assert manifest["single_stage_validation"]["stage"] == "build_research_context"
+    single_stage = manifest["stages"][-1]
+    assert single_stage["name"] == "build_research_context"
+    assert single_stage["mode"] == "single_stage"
+    assert single_stage["status"] == "succeeded"
+    assert single_stage["artifacts"] == ["analysis/research_context.md"]
+
+
+def test_cli_validation_stage_names_are_actionable_and_do_not_create_runs(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path)
+
+    run_exit = main(["run", "--config", str(config_path), "--until", "missing_stage"])
+    run_output = capsys.readouterr().out
+    assert run_exit == 2
+    assert "Halpha run failed." in run_output
+    assert "stage: cli" in run_output
+    assert "--until must be one of:" in run_output
+    assert not (tmp_path / "runs").exists()
+
+    run_dir = tmp_path / "existing-run"
+    run_dir.mkdir()
+    stage_exit = main(
+        [
+            "stage",
+            "missing_stage",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            str(run_dir),
+        ]
+    )
+    stage_output = capsys.readouterr().out
+    assert stage_exit == 2
+    assert "Halpha stage failed." in stage_output
+    assert "stage: cli" in stage_output
+    assert "stage must be one of:" in stage_output
+    assert not (run_dir / "run_manifest.json").exists()
+
+
 def _write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -192,6 +337,20 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _single_run_dir(tmp_path: Path) -> Path:
+    run_dirs = sorted((tmp_path / "runs").iterdir())
+    assert len(run_dirs) == 1
+    return run_dirs[0]
+
+
+def _manifest(run_dir: Path) -> dict:
+    return json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+
+
+def _stage(manifest: dict, name: str) -> dict:
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)
 
 
 def _assert_manifest_timeline(manifest: dict) -> None:
