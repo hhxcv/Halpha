@@ -12,9 +12,11 @@ from .storage import write_json
 BUILD_MARKET_REGIME_ASSESSMENT_STAGE = "build_market_regime_assessment"
 BUILD_RISK_ASSESSMENT_STAGE = "build_risk_assessment"
 BUILD_DECISION_RECOMMENDATIONS_STAGE = "build_decision_recommendations"
+BUILD_WATCH_TRIGGERS_STAGE = "build_watch_triggers"
 MARKET_REGIME_ASSESSMENT_ARTIFACT = "analysis/market_regime_assessment.json"
 RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
+WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
 MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
 MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
@@ -38,6 +40,14 @@ ACTIONABLE_ACTION_LEVELS = {
     "EXIT_OR_REDUCE",
     "HEDGE_OR_PROTECT",
 }
+TRIGGER_TYPES = (
+    "confirmation",
+    "invalidation",
+    "risk_escalation",
+    "risk_relief",
+    "wait_condition",
+    "recheck_next_run",
+)
 
 
 def build_market_regime_assessment(
@@ -246,6 +256,94 @@ def build_decision_recommendations(
         if any(condition.startswith(("risk_level=high", "risk_level=extreme")) for condition in record["risk_conditions"])
     )
     return [DECISION_RECOMMENDATIONS_ARTIFACT]
+
+
+def build_watch_triggers(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> list[str]:
+    if not _quant_enabled(config):
+        _record_zero_watch_trigger_counts(run)
+        return []
+
+    market_signals = _read_json_artifact(
+        run.analysis_dir / "market_signals.json",
+        MARKET_SIGNALS_ARTIFACT,
+        producer_stage="build_market_signals",
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+    market_regime = _read_json_artifact(
+        run.analysis_dir / "market_regime_assessment.json",
+        MARKET_REGIME_ASSESSMENT_ARTIFACT,
+        producer_stage=BUILD_MARKET_REGIME_ASSESSMENT_STAGE,
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+    risk_assessment = _read_json_artifact(
+        run.analysis_dir / "risk_assessment.json",
+        RISK_ASSESSMENT_ARTIFACT,
+        producer_stage=BUILD_RISK_ASSESSMENT_STAGE,
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+    decision_recommendations = _read_json_artifact(
+        run.analysis_dir / "decision_recommendations.json",
+        DECISION_RECOMMENDATIONS_ARTIFACT,
+        producer_stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+    signals = _signals_from_artifact(market_signals, stage=BUILD_WATCH_TRIGGERS_STAGE)
+    regime_records = _records_from_artifact(
+        market_regime,
+        MARKET_REGIME_ASSESSMENT_ARTIFACT,
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+    risk_records = _records_from_artifact(
+        risk_assessment,
+        RISK_ASSESSMENT_ARTIFACT,
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+    decision_records = _records_from_artifact(
+        decision_recommendations,
+        DECISION_RECOMMENDATIONS_ARTIFACT,
+        stage=BUILD_WATCH_TRIGGERS_STAGE,
+    )
+
+    created_at = _created_at(decision_recommendations, now)
+    signal_groups = _signals_by_tuple(signals)
+    regime_groups = _regime_by_tuple(regime_records)
+    risk_groups = _risk_by_tuple(risk_records)
+    records = [
+        trigger
+        for decision in decision_records
+        for trigger in _watch_trigger_records(
+            decision,
+            signal_groups.get(_tuple_key(decision), []),
+            regime_groups.get(_tuple_key(decision)),
+            risk_groups.get(_tuple_key(decision)),
+        )
+    ]
+
+    artifact = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_type": "watch_triggers",
+        "run_id": run.run_id,
+        "created_at": created_at,
+        "trigger_types": list(TRIGGER_TYPES),
+        "source_artifacts": _watch_source_artifacts(
+            market_signals,
+            market_regime,
+            risk_assessment,
+            decision_recommendations,
+        ),
+        "records": records,
+        "warnings": _watch_artifact_warnings(decision_records, records),
+        "errors": [],
+    }
+    write_json(run.analysis_dir / "watch_triggers.json", artifact)
+    run.manifest["artifacts"]["watch_triggers"] = WATCH_TRIGGERS_ARTIFACT
+    _record_watch_trigger_counts(run, records)
+    return [WATCH_TRIGGERS_ARTIFACT]
 
 
 def _regime_record(signals: list[dict[str, Any]]) -> dict[str, Any]:
@@ -842,6 +940,339 @@ def _decision_record_source_artifacts(
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
     )
+
+
+def _watch_trigger_records(
+    decision: dict[str, Any],
+    signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    evidence = _watch_evidence(decision, signals, regime, risk)
+    if not evidence:
+        return []
+
+    records: list[dict[str, Any]] = []
+    source = _clean_text(decision.get("source"), fallback="missing")
+    symbol = _clean_text(decision.get("symbol"), fallback="missing")
+    timeframe = _clean_text(decision.get("timeframe"), fallback="missing")
+    latest = _clean_text(decision.get("latest_candle_time"), fallback="missing")
+    action_level = _clean_text(decision.get("action_level"), fallback="NO_ACTION")
+    status = _clean_text(decision.get("status"), fallback="unknown")
+    risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback=_risk_level_from_decision(decision))
+    source_artifacts = _watch_record_source_artifacts(decision, signals, regime, risk)
+
+    if action_level in ACTIONABLE_ACTION_LEVELS:
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="confirmation",
+                condition=_confirmation_condition(decision, regime),
+                priority="medium",
+                expected_decision_impact=_confirmation_impact(action_level),
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=[],
+                source_artifacts=source_artifacts,
+            )
+        )
+        for index, condition in enumerate(_string_list(decision.get("invalidation_conditions"))[:2], start=1):
+            records.append(
+                _watch_trigger_record(
+                    source=source,
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    latest=latest,
+                    trigger_type="invalidation",
+                    condition=condition,
+                    priority="high",
+                    expected_decision_impact="would_downgrade_or_invalidate_current_action",
+                    linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                    evidence=evidence,
+                    warnings=[],
+                    source_artifacts=source_artifacts,
+                    sequence=index,
+                )
+            )
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="risk_escalation",
+                condition=f"{symbol} risk assessment adds high or extreme risk, blocking risks, or material signal conflict.",
+                priority="high",
+                expected_decision_impact="could_downgrade_to_watch_or_no_action",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=[],
+                source_artifacts=source_artifacts,
+            )
+        )
+
+    if action_level == "WATCH":
+        if _string_list(decision.get("conflicts")):
+            records.append(
+                _watch_trigger_record(
+                    source=source,
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    latest=latest,
+                    trigger_type="confirmation",
+                    condition=f"{symbol} signal conflict resolves and the next decision record has aligned evidence.",
+                    priority="medium",
+                    expected_decision_impact="could_upgrade_watch_to_try_small",
+                    linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                    evidence=evidence,
+                    warnings=[],
+                    source_artifacts=source_artifacts,
+                )
+            )
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="wait_condition",
+                condition=_wait_condition(decision, symbol=symbol),
+                priority="medium",
+                expected_decision_impact="keeps_watch_until_confirmation_or_relief",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(decision.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+            )
+        )
+
+    if _needs_risk_relief(action_level, risk_level, decision):
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="risk_relief",
+                condition=f"{symbol} risk_level falls below {risk_level} and blocking risk conditions clear.",
+                priority="medium" if risk_level != "extreme" else "high",
+                expected_decision_impact=_risk_relief_impact(action_level),
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(decision.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+            )
+        )
+
+    if action_level == "NO_ACTION" or status in {"insufficient_data", "risk_blocked"}:
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="wait_condition",
+                condition=_no_action_wait_condition(decision, symbol=symbol),
+                priority="low" if status == "insufficient_data" else "medium",
+                expected_decision_impact="keeps_no_action_until_evidence_or_risk_improves",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(decision.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+            )
+        )
+
+    records.append(
+        _watch_trigger_record(
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+            latest=latest,
+            trigger_type="recheck_next_run",
+            condition=f"Re-run Halpha for {symbol} {timeframe} and compare decision, regime, risk, and signal records.",
+            priority="low",
+            expected_decision_impact="refreshes_current_decision_view",
+            linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+            evidence=evidence,
+            warnings=[],
+            source_artifacts=source_artifacts,
+        )
+    )
+    return records
+
+
+def _watch_trigger_record(
+    *,
+    source: str,
+    symbol: str,
+    timeframe: str,
+    latest: str,
+    trigger_type: str,
+    condition: str,
+    priority: str,
+    expected_decision_impact: str,
+    linked_decision_record_id: str,
+    evidence: list[str],
+    warnings: list[str],
+    source_artifacts: list[str],
+    sequence: int | None = None,
+) -> dict[str, Any]:
+    suffix = f":{sequence}" if sequence is not None else ""
+    return {
+        "trigger_id": f"watch_trigger:{source}:{symbol}:{timeframe}:{trigger_type}:{latest}{suffix}",
+        "source": source,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "type": trigger_type,
+        "condition": condition,
+        "priority": priority,
+        "expected_decision_impact": expected_decision_impact,
+        "linked_decision_record_id": linked_decision_record_id,
+        "evidence": evidence,
+        "warnings": _unique_ordered(warnings),
+        "source_artifacts": source_artifacts,
+    }
+
+
+def _confirmation_condition(decision: dict[str, Any], regime: dict[str, Any] | None) -> str:
+    symbol = _clean_text(decision.get("symbol"), fallback="missing")
+    action_level = _clean_text(decision.get("action_level"), fallback="NO_ACTION")
+    regime_value = _clean_text(regime.get("regime") if regime else None, fallback="unknown")
+    if action_level == "AVOID":
+        return f"{symbol} bearish or defensive evidence remains aligned and regime remains {regime_value}."
+    return f"{symbol} evidence remains aligned and market regime remains {regime_value}."
+
+
+def _confirmation_impact(action_level: str) -> str:
+    if action_level == "DO":
+        return "could_maintain_constructive_bias"
+    if action_level == "TRY_SMALL":
+        return "could_upgrade_try_small_to_do"
+    if action_level == "AVOID":
+        return "could_maintain_defensive_avoid_bias"
+    return "could_confirm_current_decision_view"
+
+
+def _wait_condition(decision: dict[str, Any], *, symbol: str) -> str:
+    recommended = _string_list(decision.get("recommended_actions"))
+    if recommended:
+        return recommended[0]
+    return f"Wait for {symbol} confirmation before using a stronger decision bias."
+
+
+def _no_action_wait_condition(decision: dict[str, Any], *, symbol: str) -> str:
+    warnings = " ".join(_string_list(decision.get("warnings"))).lower()
+    if "insufficient" in warnings or _clean_text(decision.get("status"), fallback="") == "insufficient_data":
+        return f"Wait for {symbol} to have enough upstream evidence for a supported decision view."
+    return f"Wait for {symbol} risk and decision records to move out of NO_ACTION."
+
+
+def _needs_risk_relief(action_level: str, risk_level: str, decision: dict[str, Any]) -> bool:
+    if risk_level in {"high", "extreme", "unknown"}:
+        return True
+    risk_conditions = " ".join(_string_list(decision.get("risk_conditions"))).lower()
+    return action_level == "WATCH" and "cap_action_level" in risk_conditions
+
+
+def _risk_relief_impact(action_level: str) -> str:
+    if action_level == "WATCH":
+        return "could_upgrade_watch_to_try_small"
+    if action_level == "NO_ACTION":
+        return "could_move_no_action_to_watch"
+    return "could_reduce_risk_pressure"
+
+
+def _risk_level_from_decision(decision: dict[str, Any]) -> str:
+    for condition in _string_list(decision.get("risk_conditions")):
+        if condition.startswith("risk_level="):
+            value = condition.split("=", 1)[1].split(";", 1)[0].strip()
+            if value:
+                return value
+    return "unknown"
+
+
+def _watch_evidence(
+    decision: dict[str, Any],
+    signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> list[str]:
+    evidence = [
+        *(_string_list(decision.get("evidence"))[:5]),
+        *(_string_list(risk.get("evidence") if risk else None)[:2]),
+        *(_string_list(regime.get("evidence") if regime else None)[:2]),
+        *_bounded_signal_evidence([signal for signal in signals if _has_usable_signal_evidence(signal)]),
+    ]
+    return _unique_ordered(evidence)[:10]
+
+
+def _watch_record_source_artifacts(
+    decision: dict[str, Any],
+    signals: list[dict[str, Any]],
+    regime: dict[str, Any] | None,
+    risk: dict[str, Any] | None,
+) -> list[str]:
+    return _unique_ordered(
+        [
+            DECISION_RECOMMENDATIONS_ARTIFACT,
+            RISK_ASSESSMENT_ARTIFACT,
+            MARKET_REGIME_ASSESSMENT_ARTIFACT,
+            MARKET_SIGNALS_ARTIFACT,
+            *_string_list(decision.get("source_artifacts")),
+            *(_string_list(risk.get("source_artifacts")) if risk else []),
+            *(_string_list(regime.get("source_artifacts")) if regime else []),
+            *[
+                artifact
+                for signal in signals
+                for artifact in _string_list(signal.get("source_artifacts"))
+            ],
+            MARKET_STRATEGY_SIGNALS_ARTIFACT,
+            QUANT_STRATEGY_RUNS_ARTIFACT,
+            MARKET_DATA_VIEWS_ARTIFACT,
+        ]
+    )
+
+
+def _watch_source_artifacts(
+    market_signals: dict[str, Any],
+    market_regime: dict[str, Any],
+    risk_assessment: dict[str, Any],
+    decision_recommendations: dict[str, Any],
+) -> list[str]:
+    return _unique_ordered(
+        [
+            DECISION_RECOMMENDATIONS_ARTIFACT,
+            RISK_ASSESSMENT_ARTIFACT,
+            MARKET_REGIME_ASSESSMENT_ARTIFACT,
+            MARKET_SIGNALS_ARTIFACT,
+            *_string_list(decision_recommendations.get("source_artifacts")),
+            *_string_list(risk_assessment.get("source_artifacts")),
+            *_string_list(market_regime.get("source_artifacts")),
+            *_string_list(market_signals.get("source_artifacts")),
+            MARKET_STRATEGY_SIGNALS_ARTIFACT,
+            QUANT_STRATEGY_RUNS_ARTIFACT,
+            MARKET_DATA_VIEWS_ARTIFACT,
+        ]
+    )
+
+
+def _watch_artifact_warnings(decisions: list[dict[str, Any]], records: list[dict[str, Any]]) -> list[str]:
+    warnings = []
+    if not decisions:
+        warnings.append("No decision recommendation records were available for watch trigger generation.")
+    linked = {
+        _clean_text(record.get("linked_decision_record_id"), fallback="")
+        for record in records
+    }
+    for decision in decisions:
+        record_id = _clean_text(decision.get("record_id"), fallback="missing")
+        if record_id not in linked:
+            warnings.append(f"No usable evidence was available for {record_id}; no watch triggers were generated.")
+        warnings.extend(_string_list(decision.get("warnings"))[:2])
+    return _unique_ordered(warnings)
 
 
 def _decision_source_artifacts(
@@ -1596,6 +2027,24 @@ def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
     run.manifest["counts"]["decision_recommendation_actionable_records"] = 0
     run.manifest["counts"]["decision_recommendation_non_actionable_records"] = 0
     run.manifest["counts"]["decision_recommendation_risk_blocked_records"] = 0
+
+
+def _record_watch_trigger_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
+    run.manifest["counts"]["watch_trigger_records"] = len(records)
+    run.manifest["counts"]["watch_trigger_linked_records"] = sum(
+        1 for record in records if _clean_text(record.get("linked_decision_record_id"), fallback="") != "missing"
+    )
+    for trigger_type in TRIGGER_TYPES:
+        run.manifest["counts"][f"watch_trigger_{trigger_type}_records"] = sum(
+            1 for record in records if record["type"] == trigger_type
+        )
+
+
+def _record_zero_watch_trigger_counts(run: RunContext) -> None:
+    run.manifest["counts"]["watch_trigger_records"] = 0
+    run.manifest["counts"]["watch_trigger_linked_records"] = 0
+    for trigger_type in TRIGGER_TYPES:
+        run.manifest["counts"][f"watch_trigger_{trigger_type}_records"] = 0
 
 
 def _count_by_clean_text(signals: list[dict[str, Any]], field: str) -> dict[str, int]:
