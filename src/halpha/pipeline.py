@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +51,10 @@ class StageNotImplementedError(PipelineError):
         super().__init__(f"stage {stage} is not implemented", stage=stage, exit_code=3)
 
 
+class StageSelectionError(Exception):
+    """Raised when a requested validation stage is not known."""
+
+
 @dataclass(frozen=True)
 class RunContext:
     run_id: str
@@ -78,28 +83,16 @@ def run_pipeline(
     config_path: Path,
     stage_handlers: dict[str, StageHandler] | None = None,
     now: datetime | None = None,
+    until_stage: str | None = None,
+    skip_codex: bool = False,
 ) -> RunResult:
+    _validate_optional_stage(until_stage, option_name="--until")
     clock = _clock(now)
     run = _create_run_context(config, config_path=config_path, now=clock())
+    _record_validation_mode(run, until_stage=until_stage, skip_codex=skip_codex)
     _write_manifest(run)
 
-    handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
-    handlers["collect_market_data"] = _collect_market_data
-    handlers["collect_text_events"] = _collect_text_events
-    handlers["sync_ohlcv"] = _sync_ohlcv
-    handlers["build_market_data_views"] = _build_market_data_views
-    handlers["evaluate_quant_strategies"] = _evaluate_quant_strategies
-    handlers["evaluate_market_strategy_signals"] = _evaluate_market_strategy_signals
-    handlers["build_market_signals"] = _build_market_signals
-    handlers["build_market_signal_material"] = _build_market_signal_material
-    handlers["build_market_regime_assessment"] = _build_market_regime_assessment
-    handlers["build_risk_assessment"] = _build_risk_assessment
-    handlers["build_analysis_materials"] = _build_analysis_materials
-    handlers["build_research_context"] = _build_research_context
-    handlers["build_codex_context"] = _build_codex_context
-    handlers["run_codex_report"] = _run_codex_report
-    if stage_handlers:
-        handlers.update(stage_handlers)
+    handlers = _stage_handlers(stage_handlers)
 
     for stage in STAGE_ORDER:
         stage_record: dict[str, Any] = {
@@ -113,34 +106,83 @@ def run_pipeline(
         _set_codex_status(run, stage=stage, status="running")
         _write_manifest(run)
 
-        try:
-            artifacts = handlers[stage](config, run)
-        except PipelineError as exc:
-            failed_stage = exc.stage or stage
-            reason = str(exc)
-            error = _error_summary(failed_stage, reason, details=exc.error_details)
-            stage_record["status"] = "failed"
-            stage_record["finished_at"] = _utc_timestamp(clock())
-            stage_record["artifacts"] = exc.artifacts
-            stage_record["error"] = error
-            _set_codex_status(run, stage=stage, status="failed")
-            _finish_manifest(run, status="failed", error=error, finished_at=_utc_timestamp(clock()))
-            return RunResult(False, run, exc.exit_code, failed_stage, reason)
-        except Exception as exc:
-            reason = f"stage {stage} failed: {exc}"
-            error = _error_summary(stage, reason)
-            stage_record["status"] = "failed"
-            stage_record["finished_at"] = _utc_timestamp(clock())
-            stage_record["error"] = error
-            _set_codex_status(run, stage=stage, status="failed")
-            _finish_manifest(run, status="failed", error=error, finished_at=_utc_timestamp(clock()))
-            return RunResult(False, run, 1, stage, reason)
+        if skip_codex and stage == "run_codex_report":
+            _skip_stage(
+                run,
+                stage_record,
+                stage=stage,
+                reason="--no-codex requested",
+                finished_at=_utc_timestamp(clock()),
+            )
+        else:
+            failure = _run_stage_handler(
+                config,
+                run,
+                handlers[stage],
+                stage=stage,
+                stage_record=stage_record,
+                finished_at=_utc_timestamp(clock()),
+            )
+            if failure:
+                return failure
 
-        stage_record["status"] = "succeeded"
-        stage_record["finished_at"] = _utc_timestamp(clock())
-        stage_record["artifacts"] = artifacts or []
-        _set_codex_status(run, stage=stage, status="succeeded")
         _write_manifest(run)
+        if stage == until_stage:
+            _record_not_run_stages(
+                run,
+                _stages_after(stage),
+                reason=f"--until {stage} requested",
+            )
+            break
+
+    run.manifest["status"] = "succeeded"
+    run.manifest["finished_at"] = _utc_timestamp(clock())
+    _write_manifest(run)
+    return RunResult(True, run, 0, None, None)
+
+
+def run_pipeline_stage(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_dir: Path,
+    stage: str,
+    stage_handlers: dict[str, StageHandler] | None = None,
+    now: datetime | None = None,
+) -> RunResult:
+    _validate_stage(stage, option_name="stage")
+    clock = _clock(now)
+    run = _load_run_context(config, config_path=config_path, run_dir=run_dir)
+    run.manifest["status"] = "running"
+    run.manifest["single_stage_validation"] = {
+        "stage": stage,
+        "requested_at": _utc_timestamp(clock()),
+    }
+    _write_manifest(run)
+
+    stage_record: dict[str, Any] = {
+        "name": stage,
+        "status": "running",
+        "started_at": _utc_timestamp(clock()),
+        "finished_at": None,
+        "artifacts": [],
+        "mode": "single_stage",
+    }
+    run.manifest["stages"].append(stage_record)
+    _set_codex_status(run, stage=stage, status="running")
+    _write_manifest(run)
+
+    handlers = _stage_handlers(stage_handlers)
+    failure = _run_stage_handler(
+        config,
+        run,
+        handlers[stage],
+        stage=stage,
+        stage_record=stage_record,
+        finished_at=_utc_timestamp(clock()),
+    )
+    if failure:
+        return failure
 
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
@@ -192,6 +234,181 @@ def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datet
         config_path=config_path,
         manifest=manifest,
     )
+
+
+def _load_run_context(config: dict[str, Any], *, config_path: Path, run_dir: Path) -> RunContext:
+    manifest_path = run_dir / "run_manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(
+            "run_manifest.json was not found in the requested run directory.",
+            stage="stage",
+            exit_code=3,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"run_manifest.json is not valid JSON: {exc.msg}.",
+            stage="stage",
+            exit_code=3,
+        ) from exc
+    if not isinstance(manifest, dict):
+        raise PipelineError(
+            "run_manifest.json must be a JSON object.",
+            stage="stage",
+            exit_code=3,
+        )
+
+    raw_dir = run_dir / "raw"
+    analysis_dir = run_dir / "analysis"
+    codex_context_dir = run_dir / "codex_context"
+    report_dir = run_dir / "report"
+    for directory in (raw_dir, analysis_dir, codex_context_dir, report_dir):
+        ensure_directory(directory)
+    manifest.setdefault("schema_version", 1)
+    manifest.setdefault("run_id", run_dir.name)
+    manifest.setdefault("config_path", _path_for_manifest(config_path))
+    manifest.setdefault("sources", _source_summary(config))
+    manifest.setdefault("artifacts", {})
+    manifest.setdefault("counts", {})
+    manifest.setdefault("stage_order", list(STAGE_ORDER))
+    manifest.setdefault("stages", [])
+    manifest.setdefault("codex", _codex_summary(config))
+    manifest.setdefault("errors", [])
+
+    return RunContext(
+        run_id=str(manifest.get("run_id") or run_dir.name),
+        run_dir=run_dir,
+        raw_dir=raw_dir,
+        analysis_dir=analysis_dir,
+        codex_context_dir=codex_context_dir,
+        report_dir=report_dir,
+        manifest_path=manifest_path,
+        config_path=config_path,
+        manifest=manifest,
+    )
+
+
+def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[str, StageHandler]:
+    handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
+    handlers["collect_market_data"] = _collect_market_data
+    handlers["collect_text_events"] = _collect_text_events
+    handlers["sync_ohlcv"] = _sync_ohlcv
+    handlers["build_market_data_views"] = _build_market_data_views
+    handlers["evaluate_quant_strategies"] = _evaluate_quant_strategies
+    handlers["evaluate_market_strategy_signals"] = _evaluate_market_strategy_signals
+    handlers["build_market_signals"] = _build_market_signals
+    handlers["build_market_signal_material"] = _build_market_signal_material
+    handlers["build_market_regime_assessment"] = _build_market_regime_assessment
+    handlers["build_risk_assessment"] = _build_risk_assessment
+    handlers["build_analysis_materials"] = _build_analysis_materials
+    handlers["build_research_context"] = _build_research_context
+    handlers["build_codex_context"] = _build_codex_context
+    handlers["run_codex_report"] = _run_codex_report
+    if overrides:
+        handlers.update(overrides)
+    return handlers
+
+
+def _run_stage_handler(
+    config: dict[str, Any],
+    run: RunContext,
+    handler: StageHandler,
+    *,
+    stage: str,
+    stage_record: dict[str, Any],
+    finished_at: str,
+) -> RunResult | None:
+    try:
+        artifacts = handler(config, run)
+    except PipelineError as exc:
+        failed_stage = exc.stage or stage
+        reason = str(exc)
+        error = _error_summary(failed_stage, reason, details=exc.error_details)
+        stage_record["status"] = "failed"
+        stage_record["finished_at"] = finished_at
+        stage_record["artifacts"] = exc.artifacts
+        stage_record["error"] = error
+        _set_codex_status(run, stage=stage, status="failed")
+        _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
+        return RunResult(False, run, exc.exit_code, failed_stage, reason)
+    except Exception as exc:
+        reason = f"stage {stage} failed: {exc}"
+        error = _error_summary(stage, reason)
+        stage_record["status"] = "failed"
+        stage_record["finished_at"] = finished_at
+        stage_record["error"] = error
+        _set_codex_status(run, stage=stage, status="failed")
+        _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
+        return RunResult(False, run, 1, stage, reason)
+
+    stage_record["status"] = "succeeded"
+    stage_record["finished_at"] = finished_at
+    stage_record["artifacts"] = artifacts or []
+    _set_codex_status(run, stage=stage, status="succeeded")
+    return None
+
+
+def _skip_stage(
+    run: RunContext,
+    stage_record: dict[str, Any],
+    *,
+    stage: str,
+    reason: str,
+    finished_at: str,
+) -> None:
+    stage_record["status"] = "skipped"
+    stage_record["finished_at"] = finished_at
+    stage_record["artifacts"] = []
+    stage_record["reason"] = reason
+    if stage == "run_codex_report":
+        run.manifest["codex"]["status"] = "skipped"
+        run.manifest["codex"]["exit_code"] = None
+        run.manifest["codex"]["skip_reason"] = reason
+
+
+def _record_not_run_stages(run: RunContext, stages: list[str], *, reason: str) -> None:
+    for stage in stages:
+        record: dict[str, Any] = {
+            "name": stage,
+            "status": "not_run",
+            "started_at": None,
+            "finished_at": None,
+            "artifacts": [],
+            "reason": reason,
+        }
+        run.manifest["stages"].append(record)
+        if stage == "run_codex_report":
+            run.manifest["codex"]["status"] = "not_run"
+            run.manifest["codex"]["exit_code"] = None
+            run.manifest["codex"]["skip_reason"] = reason
+
+
+def _stages_after(stage: str) -> list[str]:
+    index = STAGE_ORDER.index(stage)
+    return list(STAGE_ORDER[index + 1 :])
+
+
+def _validate_optional_stage(stage: str | None, *, option_name: str) -> None:
+    if stage is None:
+        return
+    _validate_stage(stage, option_name=option_name)
+
+
+def _validate_stage(stage: str, *, option_name: str) -> None:
+    if stage not in STAGE_ORDER:
+        supported = ", ".join(STAGE_ORDER)
+        raise StageSelectionError(f"{option_name} must be one of: {supported}.")
+
+
+def _record_validation_mode(run: RunContext, *, until_stage: str | None, skip_codex: bool) -> None:
+    if until_stage is None and not skip_codex:
+        return
+    run.manifest["validation"] = {
+        "mode": "run",
+        "until_stage": until_stage,
+        "skip_codex": skip_codex,
+    }
 
 
 def _unimplemented_handler(stage: str) -> StageHandler:

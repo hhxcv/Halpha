@@ -212,11 +212,24 @@ Implemented commands:
 ```bash
 python -m pytest
 python -m halpha run --config config.example.yaml
+python -m halpha run --config config.example.yaml --no-codex
+python -m halpha run --config config.example.yaml --until <stage_name>
+python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
 ```
 
 The run command is the implemented product path.
 
-It requires public network access, configured public sources, and a working Codex CLI.
+The `--no-codex`, `--until`, and `stage` commands are validation helpers.
+
+They must not fabricate skipped artifacts.
+
+`--no-codex` requires public network access and configured public sources, but not Codex CLI execution.
+
+`--until` runs through the named stage and records later stages as not run.
+
+`stage` runs one named stage against an existing run directory.
+
+Full report runs require public network access, configured public sources, and a working Codex CLI.
 
 Do not claim success without running the relevant command.
 
@@ -226,6 +239,9 @@ Do not claim success without running the relevant command.
 * Prefer tests for changed behavior.
 * Use smoke checks for early scaffolding.
 * Use `python -m pytest` for automated validation.
+* Use `python -m halpha run --config config.example.yaml --no-codex` for real-source product acceptance when Codex CLI use is not needed.
+* Use `python -m halpha run --config config.example.yaml --until <stage_name>` for bounded stage-through acceptance.
+* Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
 * Use `python -m halpha run --config config.example.yaml` for real-source product acceptance when the user permits Codex CLI use.
 * State before a real Codex CLI run that generated local research context will be sent to Codex CLI.
 * Do not treat fixtures, mocked HTTP responses, or fake Codex subprocesses as product acceptance.

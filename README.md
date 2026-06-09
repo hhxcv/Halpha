@@ -16,6 +16,9 @@ Implemented now:
 
 - Python package skeleton.
 - `python -m halpha run --config config.example.yaml` entrypoint.
+- `python -m halpha run --config config.example.yaml --no-codex` validation mode.
+- `python -m halpha run --config config.example.yaml --until <stage_name>` validation mode.
+- `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` single-stage validation command.
 - Run directory creation.
 - `run_manifest.json` lifecycle.
 - Narrow public Binance market collector.
@@ -69,6 +72,43 @@ Run the report loop:
 python -m halpha run --config config.example.yaml
 ```
 
+Run all pre-Codex stages and skip final Codex report generation:
+
+```bash
+python -m halpha run --config config.example.yaml --no-codex
+```
+
+Run through a named stage and mark later stages as not run:
+
+```bash
+python -m halpha run --config config.example.yaml --until build_research_context
+```
+
+Run one stage against an existing run directory:
+
+```bash
+python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
+```
+
+Supported stage names:
+
+```text
+collect_market_data
+collect_text_events
+sync_ohlcv
+build_market_data_views
+evaluate_quant_strategies
+evaluate_market_strategy_signals
+build_market_signals
+build_market_signal_material
+build_market_regime_assessment
+build_risk_assessment
+build_analysis_materials
+build_research_context
+build_codex_context
+run_codex_report
+```
+
 `config.example.yaml` uses public source configuration:
 
 - Binance public market data for configured symbols.
@@ -79,9 +119,9 @@ python -m halpha run --config config.example.yaml
 Required local environment:
 
 - Public network access for configured market and RSS sources.
-- A working Codex CLI on `PATH`.
-- Codex CLI authentication configured outside this repository.
-- Permission for Codex CLI to receive the generated local prompt through stdin.
+- A working Codex CLI on `PATH` when the run reaches `run_codex_report`.
+- Codex CLI authentication configured outside this repository when the run reaches `run_codex_report`.
+- Permission for Codex CLI to receive the generated local prompt through stdin when the run reaches `run_codex_report`.
 
 If a local proxy is needed for public market access, keep it in a gitignored local config file and enable `market.proxy` there:
 
