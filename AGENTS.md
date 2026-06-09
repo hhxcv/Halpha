@@ -167,10 +167,13 @@ Current bias:
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
+* `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
 * Codex context may include signal material, not shared OHLCV history.
+* Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
+* Codex prompt should not ask Codex to recreate the complete strategy run table.
 * Reports come from Codex stdout, not placeholder text.
 * Fake market data, fake signals, and fake Codex output stay test-only.
 
