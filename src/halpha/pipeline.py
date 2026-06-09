@@ -17,6 +17,7 @@ STAGE_ORDER = (
     "evaluate_market_strategy_signals",
     "build_market_signals",
     "build_market_signal_material",
+    "build_market_regime_assessment",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -90,6 +91,7 @@ def run_pipeline(
     handlers["evaluate_market_strategy_signals"] = _evaluate_market_strategy_signals
     handlers["build_market_signals"] = _build_market_signals
     handlers["build_market_signal_material"] = _build_market_signal_material
+    handlers["build_market_regime_assessment"] = _build_market_regime_assessment
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -243,6 +245,12 @@ def _build_market_signal_material(config: dict[str, Any], run: RunContext) -> li
     from .market_signals import build_market_signal_material
 
     return build_market_signal_material(config, run)
+
+
+def _build_market_regime_assessment(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .decision_intelligence import build_market_regime_assessment
+
+    return build_market_regime_assessment(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:
