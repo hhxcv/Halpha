@@ -100,6 +100,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_market_signal_material", "succeeded"),
         ("build_market_regime_assessment", "succeeded"),
         ("build_risk_assessment", "succeeded"),
+        ("build_decision_recommendations", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -224,6 +225,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
         "analysis/market_signal_material.md",
         "analysis/market_regime_assessment.json",
         "analysis/risk_assessment.json",
+        "analysis/decision_recommendations.json",
         "analysis/market_material.md",
         "analysis/text_material.md",
         "analysis/research_context.md",
@@ -266,6 +268,10 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["counts"]["risk_assessment_unknown_records"] == 0
     assert manifest["counts"]["risk_assessment_high_or_extreme_records"] == 0
     assert manifest["counts"]["risk_assessment_blocking_records"] == 0
+    assert manifest["counts"]["decision_recommendation_records"] == 4
+    assert manifest["counts"]["decision_recommendation_actionable_records"] == 4
+    assert manifest["counts"]["decision_recommendation_non_actionable_records"] == 0
+    assert manifest["counts"]["decision_recommendation_risk_blocked_records"] == 0
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
@@ -275,6 +281,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
     assert manifest["artifacts"]["market_regime_assessment"] == "analysis/market_regime_assessment.json"
     assert manifest["artifacts"]["risk_assessment"] == "analysis/risk_assessment.json"
+    assert manifest["artifacts"]["decision_recommendations"] == "analysis/decision_recommendations.json"
     assert manifest["artifacts"]["report"] == "report/report.md"
 
     market_data_views = json.loads((run_dir / "raw/market_data_views.json").read_text(encoding="utf-8"))
@@ -294,6 +301,9 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     risk_assessment = json.loads(
         (run_dir / "analysis/risk_assessment.json").read_text(encoding="utf-8")
     )
+    decision_recommendations = json.loads(
+        (run_dir / "analysis/decision_recommendations.json").read_text(encoding="utf-8")
+    )
     strategy_runs = json.loads((run_dir / "analysis/quant_strategy_runs.json").read_text(encoding="utf-8"))
     assert len(strategy_runs["runs"]) == 4
     assert len(strategy_signals["signals"]) == 4
@@ -308,6 +318,11 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert risk_assessment["artifact_type"] == "risk_assessment"
     assert len(risk_assessment["records"]) == 4
     assert all(record["risk_level"] == "low" for record in risk_assessment["records"])
+    assert decision_recommendations["artifact_type"] == "decision_recommendations"
+    assert len(decision_recommendations["records"]) == 4
+    assert all(record["action_level"] == "TRY_SMALL" for record in decision_recommendations["records"])
+    assert all(record["evidence"] for record in decision_recommendations["records"])
+    assert all(record["invalidation_conditions"] for record in decision_recommendations["records"])
 
     signal_material = (run_dir / "analysis/market_signal_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_market_signal_material" in signal_material

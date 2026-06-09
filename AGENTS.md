@@ -171,6 +171,9 @@ Current bias:
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
+* `analysis/market_regime_assessment.json` records deterministic market-state assessment.
+* `analysis/risk_assessment.json` records deterministic risk-state assessment.
+* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, not trading instructions.
 * Codex context may include signal material, not shared OHLCV history.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.

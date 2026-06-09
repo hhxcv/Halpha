@@ -20,6 +20,7 @@ STAGE_ORDER = (
     "build_market_signal_material",
     "build_market_regime_assessment",
     "build_risk_assessment",
+    "build_decision_recommendations",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -301,6 +302,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_market_signal_material"] = _build_market_signal_material
     handlers["build_market_regime_assessment"] = _build_market_regime_assessment
     handlers["build_risk_assessment"] = _build_risk_assessment
+    handlers["build_decision_recommendations"] = _build_decision_recommendations
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -476,6 +478,12 @@ def _build_risk_assessment(config: dict[str, Any], run: RunContext) -> list[str]
     from .decision_intelligence import build_risk_assessment
 
     return build_risk_assessment(config, run)
+
+
+def _build_decision_recommendations(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .decision_intelligence import build_decision_recommendations
+
+    return build_decision_recommendations(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:
