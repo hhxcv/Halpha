@@ -44,6 +44,8 @@ Strategy inputs use raw OHLCV-style data. AI context uses strategy conclusions, 
 
 Quant strategy outputs and signals are personal research material. They are not trades, positions, portfolio advice, return forecasts, or financial advice.
 
+Decision-intelligence contracts live in `docs/decision-intelligence-contracts.md`. That layer consumes the quant artifacts defined here as upstream evidence and must not replace or rename them.
+
 ## Contract Status
 
 This file separates stable direction from shipped behavior.
