@@ -969,10 +969,16 @@ def _looks_like_risk_note(value: str) -> bool:
         phrase in lowered
         for phrase in (
             "not position sizing",
+            "position sizing instruction",
             "not a forecast",
+            "return forecast",
             "research material",
             "research assumption",
             "not trading advice",
+            "bounded sensitivity context",
+            "not optimization output",
+            "historical volatility context",
+            "not a live stop",
         )
     ):
         return False
