@@ -42,7 +42,7 @@ Implemented now:
 - `analysis/research_context.md` artifact creation from analysis materials.
 - Codex context artifact generation.
 - `codex_context/context.md` and `codex_context/prompt.md` artifact creation.
-- Codex prompt requirements for quantitative signal conclusions, evidence, watch points, and risk notes when market signal material exists.
+- Codex prompt requirements for concise report structure, H1 title generation time, table-first data display, quantitative signal conclusions, evidence, watch points, and context-specific risk notes when market signal material exists.
 - Codex CLI report generation from persisted prompt context.
 - `report/report.md` artifact creation from Codex stdout when Codex CLI succeeds.
 - Codex execution status, exit code, and failure summary recording in `run_manifest.json`.
@@ -71,6 +71,7 @@ python -m halpha run --config config.example.yaml
 
 - Binance public market data for configured symbols.
 - RSS feeds for configured public text sources.
+- Full built-in quant strategy configuration with bounded backtest and parameter diagnostics enabled.
 - Codex CLI command and arguments for final report generation.
 
 Required local environment:
@@ -139,8 +140,8 @@ Output artifact roles:
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.
 - `codex_context/context.md`: Codex-readable context artifact with artifact index and embedded research context.
-- `codex_context/prompt.md`: prompt sent to Codex CLI through stdin, including quantitative signal report requirements when signal material exists.
-- `report/report.md`: Simplified Chinese Markdown report generated from Codex stdout.
+- `codex_context/prompt.md`: prompt sent to Codex CLI through stdin, including the fixed run timestamp for the report title and quantitative signal report requirements when signal material exists.
+- `report/report.md`: Simplified Chinese Markdown report generated from Codex stdout, with a deterministic quant strategy output table inserted when strategy run artifacts exist.
 - `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
 
 Automated tests use mocks, fixtures, or fake Codex subprocesses only as test behavior. They are not product inputs and are not accepted as proof of a real-source product run.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from halpha.config import load_config
@@ -15,6 +16,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     result = run_pipeline(
         config,
         config_path=config_path,
+        now=datetime(2026, 6, 5, 0, 30, tzinfo=timezone.utc),
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_text_raw,
@@ -45,13 +47,24 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Preserve source awareness." in prompt
     assert "Distinguish facts, assumptions, uncertainties, and judgment." in prompt
     assert "Use cautious language for market interpretation." in prompt
-    assert "Include a risk notice." in prompt
-    assert "not financial advice" in prompt
+    assert "The first line must be a single H1 title" in prompt
+    assert "# Daily Market Brief（生成时间：2026-06-05 08:30:00 UTC+08:00）" in prompt
+    assert "Do not create a separate title section." in prompt
+    assert "Do not calculate or rewrite the generation time" in prompt
+    assert "Avoid filler, generic disclaimers" in prompt
+    assert "Use Markdown tables for market data" in prompt
+    assert "other comparable non-strategy data" in prompt
+    assert "Halpha inserts the complete quant strategy run table after Codex output" in prompt
+    assert "do not recreate the full strategy run table" in prompt
+    assert "organize each main section with symbol-level subheadings" in prompt
+    assert "Do not include fixed boilerplate" in prompt
+    assert "not financial advice" not in prompt
     assert "Do not modify repository files" in prompt
     assert "<context>" in prompt
     assert "# codex_context" in prompt
     assert "artifact_type: research_context" in prompt
     assert "- 核心摘要" in prompt
+    assert "- 标题" not in prompt
     assert "- Market Overview" not in prompt
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
@@ -100,14 +113,15 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Strategy uses OHLCV close prices only and excludes text events." in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "open_time:" not in context
-    assert "Quantitative signal conclusions" in prompt
-    assert "Evidence near each signal conclusion" in prompt
-    assert "Uncertainty near each signal conclusion" in prompt
-    assert "Watch points" in prompt
-    assert "Risk notes" in prompt
+    assert "Quantitative conclusions" in prompt
+    assert "Keep quantitative signal evidence and uncertainty near" in prompt
+    assert "explain upstream strategy conclusions from the provided material only as needed" in prompt
+    assert "Do not list every strategy/source/symbol/timeframe row" in prompt
+    assert "do not restate every strategy run row or numeric field" in prompt
+    assert "Watch points:" in prompt
+    assert "Risk notes:" in prompt
     assert "When market signal material is present" in prompt
     assert "Quantitative strategy material rules:" in prompt
-    assert "include upstream strategy conclusions from the provided material" in prompt
     assert "Keep strategy assumptions, evidence, and uncertainty adjacent" in prompt
     assert "When strategy signals disagree, describe the conflict" in prompt
     assert "Treat backtest diagnostics as historical research material only" in prompt
@@ -119,7 +133,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "account actions" in prompt
     assert "Do not invent prices, events, links, sources, or certainty." in prompt
     assert "Preserve source awareness." in prompt
-    assert "Include a risk notice." in prompt
+    assert "Do not include fixed boilerplate" in prompt
     assert "Simplified Chinese Markdown" in prompt
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"

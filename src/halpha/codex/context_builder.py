@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from halpha.pipeline import PipelineError, RunContext
@@ -15,7 +16,11 @@ def build_codex_context(config: dict[str, Any], run: RunContext) -> list[str]:
     research_context = _read_research_context(run)
     artifact_index = _artifact_index(run)
     context = render_context(artifact_index=artifact_index, research_context=research_context)
-    prompt = render_prompt(context)
+    prompt = render_prompt(
+        context,
+        report_title=_report_title(config),
+        generated_at=_report_generated_at(run),
+    )
 
     context_path = run.codex_context_dir / "context.md"
     prompt_path = run.codex_context_dir / "prompt.md"
@@ -48,13 +53,19 @@ def render_context(*, artifact_index: dict[str, Any], research_context: str) -> 
     )
 
 
-def render_prompt(context: str) -> str:
+def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
     return "\n".join(
         [
             "You are the report-generation step for Halpha.",
             "",
             "Generate a Simplified Chinese Markdown market intelligence report from the local context below.",
             "Use Chinese section headings only. Do not include English section names in headings.",
+            "",
+            "Title:",
+            "",
+            f"- The first line must be a single H1 title: # {report_title}（生成时间：{generated_at}）",
+            "- Do not create a separate title section.",
+            "- Do not calculate or rewrite the generation time; use the exact time above.",
             "",
             "Rules:",
             "",
@@ -64,36 +75,41 @@ def render_prompt(context: str) -> str:
             "4. If a source URL is missing, say that the source URL was not provided.",
             "5. Distinguish facts, assumptions, uncertainties, and judgment.",
             "6. Use cautious language for market interpretation.",
-            "7. Include a risk notice.",
-            "8. The report is personal research material and is not financial advice.",
-            "9. Do not modify repository files or execute actions; write the report content only.",
-            "10. When market signal material is present, include quantitative signal conclusions in the report.",
-            "11. Keep quantitative signal evidence and uncertainty near the related signal conclusions.",
-            "12. Derive quantitative watch points and risk notes only from provided market signal material.",
-            "13. Do not calculate new quantitative signals from raw OHLCV history or inspect shared OHLCV storage.",
-            "14. Do not provide trading instructions, position sizing, account actions, or investment recommendations.",
-            "15. Do not fabricate strategy signals, strategy conclusions, backtest results, return promises, or unsupported certainty.",
+            "7. Write compactly. Avoid filler, generic disclaimers, repeated definitions, and repeated conclusions.",
+            "8. Use Markdown tables for market data, event calendars, and other comparable non-strategy data when practical.",
+            "9. When multiple symbols or coins appear, organize each main section with symbol-level subheadings such as ### BTCUSDT and ### ETHUSDT.",
+            "10. Do not modify repository files or execute actions; write the report content only.",
+            "11. When market signal material is present, include quantitative signal conclusions in the report.",
+            "12. Keep quantitative signal evidence and uncertainty near the related signal conclusions.",
+            "13. Derive quantitative watch points and risk notes only from provided market signal material.",
+            "14. Do not calculate new quantitative signals from raw OHLCV history or inspect shared OHLCV storage.",
+            "15. Do not provide trading instructions, position sizing, account actions, or investment recommendations.",
+            "16. Do not fabricate strategy signals, strategy conclusions, backtest results, return promises, or unsupported certainty.",
+            "17. Halpha inserts the complete quant strategy run table after Codex output; do not recreate the full strategy run table.",
             "",
             "Quantitative strategy material rules:",
             "",
-            "- When strategy material exists, include upstream strategy conclusions from the provided material.",
+            "- When strategy material exists, explain upstream strategy conclusions from the provided material only as needed for interpretation.",
             "- Keep strategy assumptions, evidence, and uncertainty adjacent to each cited strategy conclusion.",
+            "- Do not list every strategy/source/symbol/timeframe row; use the post-processed strategy table as the complete row-level display.",
             "- When strategy signals disagree, describe the conflict and related risk notes before synthesis.",
             "- Treat backtest diagnostics as historical research material only; do not describe them as forecasts, expected returns, or proof of future performance.",
             "- Do not derive new quantitative conclusions from raw OHLCV, shared OHLCV storage, or unstated calculations.",
             "- Do not give trading instructions, position sizing, account actions, return promises, or investment recommendations.",
             "",
-            "Required quantitative content when market signal material exists:",
+            "Report style:",
             "",
-            "- Quantitative signal conclusions",
-            "- Evidence near each signal conclusion",
-            "- Uncertainty near each signal conclusion",
-            "- Watch points",
-            "- Risk notes",
+            "- Core summary: 3-5 bullets maximum. Each bullet should add a distinct takeaway.",
+            "- Market overview: prefer a compact table for source, symbol, price, change, volume, and timestamp.",
+            "- Text events: group by symbol or theme; use tables for event lists when possible.",
+            "- Quantitative conclusions: interpret signal direction, conflict, confidence, and uncertainty; do not restate every strategy run row or numeric field.",
+            "- Synthesis: explain cross-source implications, conflicts, and what would change the assessment. Do not repeat the post-processed strategy table or earlier event summaries.",
+            "- Watch points: focus on observable upcoming events, threshold changes, conflicting-signal resolution, and source-confirmed catalysts.",
+            "- Risk notes: include only context-specific risks from the provided materials, such as upcoming macro events, conflicting signals, volatility, data limitations, source gaps, or source-specific uncertainty.",
+            "- Do not include fixed boilerplate such as generic financial-advice disclaimers in the risk section.",
             "",
             "Required sections:",
             "",
-            "- 标题",
             "- 核心摘要",
             "- 市场概览",
             "- 文本事件",
@@ -135,6 +151,40 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "codex_context": CODEX_CONTEXT_ARTIFACT,
         "codex_prompt": CODEX_PROMPT_ARTIFACT,
     }
+
+
+def _report_title(config: dict[str, Any]) -> str:
+    report = config.get("report", {})
+    title = report.get("title") if isinstance(report, dict) else None
+    if isinstance(title, str) and title.strip():
+        return title.strip()
+    return "每日市场情报简报"
+
+
+def _report_generated_at(run: RunContext) -> str:
+    value = run.manifest.get("started_at")
+    if not isinstance(value, str) or not value.strip():
+        raise PipelineError(
+            "run_manifest.started_at must exist before building Codex context.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise PipelineError(
+            "run_manifest.started_at must be an ISO 8601 UTC timestamp.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if parsed.tzinfo is None:
+        raise PipelineError(
+            "run_manifest.started_at must include a UTC offset.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    timestamp = parsed.astimezone(timezone(timedelta(hours=8)))
+    return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC+08:00")
 
 
 def _yaml_block(data: dict[str, Any]) -> str:
