@@ -31,6 +31,7 @@ def test_quant_signals_build_from_strategy_run_artifact(tmp_path: Path) -> None:
             "build_market_signals": _noop_stage,
             "build_market_signal_material": _noop_stage,
             "build_market_regime_assessment": _noop_stage,
+            "build_risk_assessment": _noop_stage,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
