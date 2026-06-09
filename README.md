@@ -37,6 +37,7 @@ Implemented now:
 - `analysis/risk_assessment.json` deterministic risk assessment artifact creation when `quant.enabled` is true.
 - `analysis/decision_recommendations.json` deterministic decision recommendation artifact creation when `quant.enabled` is true.
 - `analysis/watch_triggers.json` deterministic watch trigger artifact creation when `quant.enabled` is true.
+- `analysis/decision_intelligence_delta.json` previous-run decision-intelligence delta creation when `quant.enabled` is true.
 - Strategy-oriented quant config support through `quant.strategies` for `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
 - Optional bounded strategy parameter diagnostics through `quant.parameter_diagnostics`.
 - `analysis/quant_strategy_runs.json` artifact creation when `quant.strategies` is configured.
@@ -107,6 +108,7 @@ build_market_regime_assessment
 build_risk_assessment
 build_decision_recommendations
 build_watch_triggers
+build_decision_intelligence_delta
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -170,9 +172,9 @@ Strategy run artifacts preserve strategy name, version, engine metadata, params,
 
 Optional `quant.parameter_diagnostics` runs bounded configured parameter grids and records tested combinations, valid and invalid combinations, sensitivity notes, warnings, and summary metrics. It does not choose best parameters and is not an optimization platform.
 
-Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, `analysis/market_signal_material.md`, `analysis/market_regime_assessment.json`, `analysis/risk_assessment.json`, `analysis/decision_recommendations.json`, and `analysis/watch_triggers.json`. When `quant.strategies` is configured, the run also writes `analysis/quant_strategy_runs.json` before downstream market signal artifacts. If collection, OHLCV sync, data view creation, strategy run evaluation, strategy signal evaluation, market signal material generation, market regime assessment, risk assessment, decision recommendation generation, watch trigger generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
+Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, `analysis/market_signal_material.md`, `analysis/market_regime_assessment.json`, `analysis/risk_assessment.json`, `analysis/decision_recommendations.json`, `analysis/watch_triggers.json`, and `analysis/decision_intelligence_delta.json`. When `quant.strategies` is configured, the run also writes `analysis/quant_strategy_runs.json` before downstream market signal artifacts. If collection, OHLCV sync, data view creation, strategy run evaluation, strategy signal evaluation, market signal material generation, market regime assessment, risk assessment, decision recommendation generation, watch trigger generation, decision delta generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
-With the current public example strategy configuration, a successful full quant run evaluates three enabled strategies across two symbols and two timeframes. The expected quant run shape is 4 current-run OHLCV data views, 12 strategy run records, 12 downstream market strategy signal records, 4 market regime assessment records, 4 risk assessment records, 4 decision recommendation records, and watch trigger records derived from those decisions. The final report includes a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json`. These counts follow the configured symbols, timeframes, and enabled strategies.
+With the current public example strategy configuration, a successful full quant run evaluates three enabled strategies across two symbols and two timeframes. The expected quant run shape is 4 current-run OHLCV data views, 12 strategy run records, 12 downstream market strategy signal records, 4 market regime assessment records, 4 risk assessment records, 4 decision recommendation records, watch trigger records derived from those decisions, and previous-run delta changes when a usable previous successful decision-intelligence run exists. The final report includes a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json`. These counts follow the configured symbols, timeframes, and enabled strategies.
 
 Output artifact roles:
 
@@ -190,6 +192,7 @@ Output artifact roles:
 - `analysis/risk_assessment.json`: deterministic risk-state assessment derived from current M2 and market regime artifacts, with risk level, rising risks, blocking risks, data-quality risks, signal-conflict risks, gating fields, evidence, warnings, errors, and source artifacts.
 - `analysis/decision_recommendations.json`: deterministic decision-support recommendations derived from current M2, regime, and risk artifacts, with action level, decision bias, confidence, evidence, conflicts, risk conditions, invalidation conditions, do-not-do guidance, warnings, and source artifacts.
 - `analysis/watch_triggers.json`: deterministic watch triggers derived from current decision, risk, regime, and M2 signal artifacts, with trigger type, condition, priority, expected decision impact, linked decision record, evidence, warnings, and source artifacts.
+- `analysis/decision_intelligence_delta.json`: previous-run comparison over current and prior decision-intelligence JSON artifacts, with comparison status, previous run reference, changed fields, warnings, errors, and source artifacts.
 - `analysis/market_material.md`: AI-readable market material derived from raw market data.
 - `analysis/text_material.md`: AI-readable text material derived from raw text events.
 - `analysis/research_context.md`: structured local research context for report generation.
