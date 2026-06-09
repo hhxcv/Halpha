@@ -20,9 +20,62 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M2 — Quant Strategy Foundation
+### M3 — Decision Intelligence Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Improve report value by converting M2 strategy research artifacts into a first deterministic decision-intelligence layer that produces market regime, risk state, action recommendations, do-not-do guidance, invalidation conditions, watch triggers, previous-run deltas, and AI-readable decision material for the Simplified Chinese Markdown report.
+```
+
+The loop is complete when Halpha can:
+
+* preserve M2 strategy research artifacts as the upstream quantitative evidence layer instead of replacing or removing them;
+* generate `analysis/market_regime_assessment.json` from M2 strategy and market signal artifacts using deterministic, explainable rules;
+* generate `analysis/risk_assessment.json` that identifies risk level, rising risks, blocking risks, data-quality risks, and signal-conflict risks;
+* generate `analysis/decision_recommendations.json` with deterministic action levels, recommended actions, do-not-do guidance, confidence, evidence, conflicts, risk conditions, and invalidation conditions;
+* generate `analysis/watch_triggers.json` with confirmation, invalidation, risk-escalation, risk-relief, and wait-condition triggers derived from the current strategy, regime, risk, and decision artifacts;
+* generate `analysis/decision_intelligence_delta.json` that compares current decision-intelligence artifacts with the previous successful run when available;
+* generate `analysis/decision_intelligence_material.md` as AI-readable decision material that summarizes regime, risk, action recommendations, prohibited actions, invalidation conditions, watch triggers, deltas, evidence, and uncertainty;
+* integrate decision-intelligence material into `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md` without removing the M2 quant material from the report chain;
+* produce a Simplified Chinese Markdown report that visibly includes current decision bias, what to do, what not to do, tentative opportunities, watch/wait conditions, risk state, invalidation conditions, and changes versus the previous successful run when supported by artifacts;
+* record decision-intelligence artifact paths, counts, warnings, errors, and previous-run comparison status in `run_manifest.json`;
+* keep the M3 product path covered by tests and verified by the main real-source run.
+
+M3 favors:
+
+* additive decision-intelligence artifacts derived from M2 artifacts over replacing M2 artifacts;
+* Halpha-owned JSON and Markdown artifact contracts over third-party framework objects or hidden AI state;
+* deterministic rules, scoring, and gating over LLM-generated action advice;
+* conservative action recommendations with explicit evidence, uncertainty, risks, and invalidation conditions;
+* small, inspectable artifacts that are easy to review and consume downstream;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`;
+* report value improvements that help the user understand what to do, what not to do, when to wait, what would invalidate the view, and what changed since the previous run.
+
+M3 does not require:
+
+* removing or replacing `analysis/quant_strategy_runs.json`;
+* removing or replacing `analysis/market_strategy_signals.json`;
+* removing or replacing `analysis/market_signals.json`;
+* removing or replacing `analysis/market_signal_material.md`;
+* adding new exchange or market data sources;
+* adding real-time market monitoring;
+* adding scheduler, daemon, websocket, or alert delivery runtime;
+* adding event intelligence or text event signal generation;
+* adding user profiles, user positions, account connection, or exchange account operations;
+* adding automatic trading, order placement, position sizing, or portfolio management;
+* adding machine learning prediction or ML-based regime classification;
+* adding a dashboard or workbench UI;
+* adding a database service, state store redesign, microservices, Kafka, Redis, or Celery;
+* making Codex or another LLM the source of action recommendations.
+
+## Completed Milestones
+
+### M2 — Quant Strategy Foundation
+
+Status: completed.
 
 Goal:
 
@@ -75,8 +128,6 @@ M2 does not require:
 * dashboard UI;
 * hosted service design;
 * multi-user features.
-
-## Completed Milestones
 
 ### M1 — Quant Signal Report
 
