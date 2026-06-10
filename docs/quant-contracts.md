@@ -1088,8 +1088,35 @@ Record contract:
   "params": {},
   "single_window": {},
   "walk_forward": {
-    "enabled": false,
-    "status": "disabled"
+    "enabled": true,
+    "status": "succeeded",
+    "method": {
+      "name": "bounded_chronological_walk_forward_fixed_params",
+      "params_optimized_per_window": false,
+      "state_carryover_between_windows": false,
+      "window_overlap": false
+    },
+    "window_policy": {
+      "calibration_rows": 60,
+      "window_rows": 60,
+      "min_window_rows": 20,
+      "min_windows": 3
+    },
+    "summary": {
+      "window_count": 7,
+      "succeeded_windows": 7,
+      "mean_net_return_pct": 1.2,
+      "median_net_return_pct": 0.8,
+      "positive_net_return_window_pct": 57.1,
+      "mean_excess_return_vs_buy_and_hold_pct": 0.3,
+      "positive_excess_return_window_pct": 42.9,
+      "worst_max_drawdown_pct": -9.4,
+      "mean_turnover": 3.0,
+      "mean_cost_drag_pct": 0.4,
+      "net_return_range_pct": 16.1,
+      "result_stability": "stable"
+    },
+    "windows": []
   },
   "parameter_stability": {
     "enabled": false,
@@ -1106,7 +1133,11 @@ Record contract:
       "trade_count: 23.",
       "exposure_pct: 56.0.",
       "cost_drag_pct: 2.6.",
-      "excess_return_vs_buy_and_hold_pct: 2.7."
+      "excess_return_vs_buy_and_hold_pct: 2.7.",
+      "walk_forward_status: succeeded.",
+      "walk_forward_succeeded_windows: 7.",
+      "walk_forward_mean_net_return_pct: 1.2.",
+      "walk_forward_positive_net_return_window_pct: 57.1."
     ],
     "uncertainty": []
   },
@@ -1128,6 +1159,11 @@ Pipeline evaluation rules:
 - Pipeline evaluation must not run Codex.
 - Pipeline evaluation must not fabricate evaluation records for skipped, failed, or insufficient upstream states.
 - Failed or insufficient strategy runs may produce skipped or insufficient evaluation records so downstream reports can explain missing evidence.
+- Walk-forward evaluation uses fixed configured strategy params and must not optimize per window.
+- Walk-forward windows are sequential and non-overlapping, with an initial calibration context and no state carryover between evaluation windows.
+- Walk-forward `status` is `insufficient_data` when too few successful windows exist; partial window records may be preserved as evidence but must not be presented as a successful walk-forward result.
+- Walk-forward warnings include too few windows, insufficient history, short samples, unstable results, and regime-dependent outcomes.
+- Report-facing assessment must distinguish full-window single-window metrics from walk-forward evidence.
 
 Standalone strategy evaluation output:
 
@@ -1217,15 +1253,17 @@ Manifest contract:
     "strategy_evaluation_failed": 0,
     "strategy_evaluation_insufficient_data": 0,
     "strategy_evaluation_skipped": 0,
-    "strategy_evaluation_walk_forward_records": 0,
+    "strategy_evaluation_walk_forward_records": 28,
     "strategy_evaluation_parameter_stability_records": 0
   },
   "strategy_evaluation": {
     "status": "succeeded",
     "coverage": {
-      "strategy_runs": 4,
-      "evaluated": 4,
-      "skipped": 0
+      "quant_strategy_runs": 4,
+      "evaluation_records": 4,
+      "records_with_single_window": 4,
+      "walk_forward_windows": 28,
+      "records_with_walk_forward": 4
     },
     "warnings": [],
     "errors": []

@@ -8,7 +8,11 @@ from typing import Any
 from .market_data_views import MARKET_DATA_VIEWS_ARTIFACT, load_market_data_view_records
 from .pipeline import PipelineError, RunContext
 from .quant.registry import get_strategy_definition
-from .quant.strategy_evaluation import HIGH_COST_DRAG_PCT_THRESHOLD, evaluate_single_window_backtest
+from .quant.strategy_evaluation import (
+    HIGH_COST_DRAG_PCT_THRESHOLD,
+    evaluate_single_window_backtest,
+    evaluate_walk_forward_backtest,
+)
 from .quant.strategy_records import STRATEGY_VERSION, warning
 from .storage import write_json
 
@@ -111,6 +115,17 @@ def _evaluation_record(
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
         )
+        walk_forward = evaluate_walk_forward_backtest(
+            strategy=strategy,
+            market_identity={
+                "source": strategy_run.get("source"),
+                "symbol": strategy_run.get("symbol"),
+                "timeframe": strategy_run.get("timeframe"),
+            },
+            ohlcv_rows=rows,
+            signal_records=signals,
+            cost_assumptions=_cost_assumptions(strategy),
+        )
     except Exception as exc:
         return _failed_record(
             strategy_run,
@@ -125,8 +140,9 @@ def _evaluation_record(
         status=record_status,
         created_at=created_at,
         single_window=single_window,
-        assessment=_assessment(single_window),
-        warnings=_record_warnings(single_window),
+        walk_forward=walk_forward,
+        assessment=_assessment(single_window, walk_forward),
+        warnings=_record_warnings(single_window, walk_forward),
         error=_record_error(single_window),
     )
 
@@ -155,6 +171,7 @@ def _upstream_unavailable_record(
             "reason": message,
             "strategy_run_status": status,
         },
+        walk_forward=_skipped_walk_forward(message),
         assessment=_empty_assessment(message),
         warnings=[item],
         error=None if status == "insufficient_data" else strategy_run.get("error"),
@@ -182,6 +199,7 @@ def _failed_record(
                 }
             ],
         },
+        walk_forward=_skipped_walk_forward("Strategy evaluation failed before walk-forward evidence was available."),
         assessment=_empty_assessment("Strategy evaluation failed before metrics were available."),
         warnings=[],
         error={
@@ -198,6 +216,7 @@ def _base_record(
     status: str,
     created_at: str,
     single_window: dict[str, Any],
+    walk_forward: dict[str, Any],
     assessment: dict[str, Any],
     warnings: list[dict[str, Any]],
     error: dict[str, Any] | None,
@@ -222,10 +241,7 @@ def _base_record(
         "latest_candle_time": strategy_run.get("latest_candle_time"),
         "params": strategy_run.get("params") if isinstance(strategy_run.get("params"), dict) else {},
         "single_window": single_window,
-        "walk_forward": {
-            "enabled": False,
-            "status": "disabled",
-        },
+        "walk_forward": walk_forward,
         "parameter_stability": {
             "enabled": False,
             "status": "disabled",
@@ -265,7 +281,7 @@ def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _assessment(single_window: dict[str, Any]) -> dict[str, Any]:
+def _assessment(single_window: dict[str, Any], walk_forward: dict[str, Any]) -> dict[str, Any]:
     status = single_window.get("status")
     if status != "succeeded":
         return _empty_assessment("Strategy evaluation has not produced enough evidence for reliability judgment.")
@@ -278,10 +294,20 @@ def _assessment(single_window: dict[str, Any]) -> dict[str, Any]:
     rows = int(sample.get("rows") or 0)
     reliability = "medium" if trade_count >= 3 and rows >= 60 else "low"
     sample_quality = "sufficient" if rows >= 100 else "limited"
+    walk_summary = (
+        walk_forward.get("summary")
+        if isinstance(walk_forward.get("summary"), dict)
+        else {}
+    )
+    walk_status = str(walk_forward.get("status") or "unknown")
+    if walk_status != "succeeded":
+        reliability = "low"
     summary = (
         "Single-window strategy evaluation completed with "
         f"net_return_pct {metrics.get('net_return_pct')} and "
-        f"max_drawdown_pct {metrics.get('max_drawdown_pct')}."
+        f"max_drawdown_pct {metrics.get('max_drawdown_pct')}; "
+        f"walk_forward_status is {walk_status} with "
+        f"{walk_summary.get('succeeded_windows')} successful windows."
     )
     return {
         "reliability": reliability,
@@ -295,10 +321,18 @@ def _assessment(single_window: dict[str, Any]) -> dict[str, Any]:
             f"exposure_pct: {trade.get('exposure_pct')}.",
             f"cost_drag_pct: {metrics.get('cost_drag_pct')}.",
             f"excess_return_vs_buy_and_hold_pct: {relative.get('excess_return_vs_buy_and_hold_pct')}.",
+            f"walk_forward_status: {walk_status}.",
+            f"walk_forward_succeeded_windows: {walk_summary.get('succeeded_windows')}.",
+            f"walk_forward_mean_net_return_pct: {walk_summary.get('mean_net_return_pct')}.",
+            (
+                "walk_forward_positive_net_return_window_pct: "
+                f"{walk_summary.get('positive_net_return_window_pct')}."
+            ),
         ],
         "uncertainty": [
             "Single-window backtest is historical research material, not a forecast.",
-            "Walk-forward and parameter stability diagnostics are not implemented yet.",
+            "Walk-forward evidence is bounded and uses fixed strategy params, not optimization.",
+            "Parameter stability diagnostics are not implemented yet.",
         ],
     }
 
@@ -326,9 +360,47 @@ def _empty_assessment(summary: str) -> dict[str, Any]:
     }
 
 
-def _record_warnings(single_window: dict[str, Any]) -> list[dict[str, Any]]:
-    warnings = single_window.get("warnings")
-    return [item for item in warnings if isinstance(item, dict)] if isinstance(warnings, list) else []
+def _skipped_walk_forward(reason: str) -> dict[str, Any]:
+    return {
+        "enabled": True,
+        "status": "skipped",
+        "reason": reason,
+        "summary": {},
+        "windows": [],
+        "warnings": [
+            warning(
+                "walk_forward_skipped",
+                reason,
+                source="strategy_evaluation",
+            )
+        ],
+        "errors": [],
+    }
+
+
+def _record_warnings(single_window: dict[str, Any], walk_forward: dict[str, Any]) -> list[dict[str, Any]]:
+    return _unique_warnings(
+        [
+            *_warning_items(single_window.get("warnings")),
+            *_warning_items(walk_forward.get("warnings")),
+        ]
+    )
+
+
+def _warning_items(value: Any) -> list[dict[str, Any]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _unique_warnings(warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    seen = set()
+    for item in warnings:
+        key = (item.get("code"), item.get("message"), item.get("source"))
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result
 
 
 def _record_error(single_window: dict[str, Any]) -> dict[str, Any] | None:
@@ -423,6 +495,7 @@ def _record_zero_counts(run: RunContext) -> None:
     run.manifest["counts"]["strategy_evaluation_failed"] = 0
     run.manifest["counts"]["strategy_evaluation_insufficient_data"] = 0
     run.manifest["counts"]["strategy_evaluation_skipped"] = 0
+    run.manifest["counts"]["strategy_evaluation_walk_forward_records"] = 0
     run.manifest["strategy_evaluation"] = {
         "enabled": False,
         "records": 0,
@@ -437,6 +510,9 @@ def _record_manifest_counts(run: RunContext, records: list[dict[str, Any]]) -> N
         run.manifest["counts"][f"strategy_evaluation_{status}"] = sum(
             1 for record in records if record.get("status") == status
         )
+    run.manifest["counts"]["strategy_evaluation_walk_forward_records"] = sum(
+        len(_walk_forward_windows(record)) for record in records
+    )
 
 
 def _record_manifest_summary(
@@ -457,6 +533,13 @@ def _record_manifest_summary(
             "quant_strategy_runs": len(records),
             "evaluation_records": len(records),
             "records_with_single_window": sum(1 for record in records if isinstance(record.get("single_window"), dict)),
+            "walk_forward_windows": sum(len(_walk_forward_windows(record)) for record in records),
+            "records_with_walk_forward": sum(
+                1
+                for record in records
+                if isinstance(record.get("walk_forward"), dict)
+                and record["walk_forward"].get("status") == "succeeded"
+            ),
         },
         "source_artifacts": [QUANT_STRATEGY_RUNS_ARTIFACT, MARKET_DATA_VIEWS_ARTIFACT],
         "warnings": [_warning_summary(item) for item in warnings],
@@ -470,6 +553,14 @@ def _warning_summary(item: dict[str, Any]) -> dict[str, Any]:
         "message": item.get("message"),
         "source": item.get("source"),
     }
+
+
+def _walk_forward_windows(record: dict[str, Any]) -> list[Any]:
+    walk_forward = record.get("walk_forward")
+    if not isinstance(walk_forward, dict):
+        return []
+    windows = walk_forward.get("windows")
+    return windows if isinstance(windows, list) else []
 
 
 def _created_at(strategy_artifact: dict[str, Any], now: datetime | str | None) -> str:

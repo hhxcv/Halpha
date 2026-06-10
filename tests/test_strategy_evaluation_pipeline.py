@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +48,9 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert "cash" in record["single_window"]["baseline_metrics"]
     assert "excess_return_vs_buy_and_hold_pct" in record["single_window"]["relative_metrics"]
     assert record["single_window"]["equity_curve"]
-    assert record["walk_forward"] == {"enabled": False, "status": "disabled"}
+    assert record["walk_forward"]["enabled"] is True
+    assert record["walk_forward"]["status"] == "insufficient_data"
+    assert record["walk_forward"]["windows"] == []
     assert record["parameter_stability"] == {"enabled": False, "status": "disabled"}
     assert record["assessment"]["reliability"] in {"low", "medium"}
     assert record["assessment"]["cost_sensitivity"] in {"low", "medium", "high"}
@@ -66,6 +69,8 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
         "quant_strategy_runs": 1,
         "evaluation_records": 1,
         "records_with_single_window": 1,
+        "walk_forward_windows": 0,
+        "records_with_walk_forward": 0,
     }
     assert _stage(manifest, "evaluate_strategy_evaluation")["artifacts"] == [
         "analysis/strategy_evaluation_summary.json"
@@ -77,6 +82,37 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert stage_names.index("evaluate_strategy_evaluation") < stage_names.index(
         "evaluate_market_strategy_signals"
     )
+
+
+def test_pipeline_writes_walk_forward_windows_when_history_is_sufficient(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(tmp_path, lookback=240)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(_walk_forward_records())
+
+    result = _run_pipeline(config, config_path)
+
+    artifact = _strategy_evaluation(result)
+    manifest = _manifest(result)
+    record = artifact["records"][0]
+    walk_forward = record["walk_forward"]
+
+    assert result.succeeded is True
+    assert walk_forward["status"] == "succeeded"
+    assert walk_forward["method"]["params_optimized_per_window"] is False
+    assert walk_forward["summary"]["window_count"] == 3
+    assert walk_forward["summary"]["succeeded_windows"] == 3
+    assert len(walk_forward["windows"]) == 3
+    assert walk_forward["windows"][0]["calibration_window"]["rows"] == 60
+    assert walk_forward["windows"][0]["evaluation_window"]["rows"] == 60
+    assert record["assessment"]["summary"].find("walk_forward_status is succeeded") >= 0
+    assert any(
+        item.startswith("walk_forward_succeeded_windows:")
+        for item in record["assessment"]["evidence"]
+    )
+    assert manifest["counts"]["strategy_evaluation_walk_forward_records"] == 3
+    assert manifest["strategy_evaluation"]["coverage"]["walk_forward_windows"] == 3
+    assert manifest["strategy_evaluation"]["coverage"]["records_with_walk_forward"] == 1
 
 
 def test_pipeline_records_strategy_evaluation_for_insufficient_upstream_data(tmp_path: Path) -> None:
@@ -99,6 +135,7 @@ def test_pipeline_records_strategy_evaluation_for_insufficient_upstream_data(tmp
     assert manifest["counts"]["strategy_evaluation_records"] == 1
     assert manifest["counts"]["strategy_evaluation_insufficient_data"] == 1
     assert manifest["strategy_evaluation"]["insufficient_data"] == 1
+    assert manifest["counts"]["strategy_evaluation_walk_forward_records"] == 0
 
 
 def test_pipeline_skips_strategy_evaluation_when_quant_disabled(tmp_path: Path) -> None:
@@ -234,3 +271,21 @@ def _record(*, open_time: str, close: float) -> dict[str, object]:
         "volume": 10,
         "fetched_at": "2026-06-05T00:00:00Z",
     }
+
+
+def _walk_forward_records() -> list[dict[str, object]]:
+    closes = (
+        [100.0 for _index in range(60)]
+        + [100.0 + index for index in range(60)]
+        + [160.0 - index for index in range(60)]
+        + [100.0 + index for index in range(60)]
+    )
+    return [
+        _record(open_time=_open_time_for_index(index), close=close)
+        for index, close in enumerate(closes)
+    ]
+
+
+def _open_time_for_index(index: int) -> str:
+    value = date(2026, 1, 1) + timedelta(days=index)
+    return f"{value.isoformat()}T00:00:00Z"
