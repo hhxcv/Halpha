@@ -445,7 +445,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     report = (run_dir / "report/report.md").read_text(encoding="utf-8")
     assert "## " + "\u51b3\u7b56\u652f\u6301" in report
     assert "action_level=TRY_SMALL" in report
-    assert "decision_bias=try_small_when_trend_and_risk_align" in report
+    assert "decision_bias=tentative_constructive" in report
     assert "risk_level=low" in report
     assert "no_previous_run" in report
     assert "confirmation" in report
@@ -669,7 +669,7 @@ def _m3_report_stdout() -> str:
             "",
             "## 决策支持",
             "",
-            "- 当前决策视图：action_level=TRY_SMALL; decision_bias=try_small_when_trend_and_risk_align.",
+            "- 当前决策视图：action_level=TRY_SMALL; decision_bias=tentative_constructive.",
             "- 可以做：仅把 TRY_SMALL 理解为研究决策支持语言，继续跟踪证据是否维持。",
             "- 不要做：不要把该材料解释为仓位、账户动作、自动交易或收益承诺。",
             "- 等待/观察：关注 confirmation、invalidation、risk_escalation 和 recheck_next_run 触发条件。",
