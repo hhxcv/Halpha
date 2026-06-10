@@ -87,6 +87,41 @@ def test_single_window_backtest_golden_entry_exit_path_is_hand_verifiable() -> N
     json.dumps(result)
 
 
+def test_single_window_backtest_matches_independent_reference_path() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 104),
+        _record("2026-06-03T00:00:00Z", 98.8),
+        _record("2026-06-04T00:00:00Z", 103.74),
+        _record("2026-06-05T00:00:00Z", 101.6652),
+        _record("2026-06-06T00:00:00Z", 106.74846),
+    ]
+    targets = [0.0, 1.0, 0.5, 0.5, 0.0, 1.0]
+    costs = {"fees_bps": 7.5, "slippage_bps": 2.5}
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, targets),
+        cost_assumptions=costs,
+    )
+    reference = _independent_single_window_reference(rows, targets, costs)
+
+    # This validation path is intentionally test-only: product artifacts remain Halpha-owned.
+    # Tolerance is bounded to Halpha's six-decimal artifact rounding; semantic execution rules
+    # mirrored here are close-to-close returns, next-bar positions, and one-way turnover costs.
+    assert result["status"] == "succeeded"
+    _assert_nested_close(result["strategy_metrics"], reference["strategy_metrics"])
+    _assert_nested_close(result["baseline_metrics"], reference["baseline_metrics"])
+    _assert_nested_close(result["relative_metrics"], reference["relative_metrics"])
+    _assert_nested_close(result["trade_summary"], reference["trade_summary"])
+    _assert_nested_close(result["drawdown_summary"], reference["drawdown_summary"])
+    _assert_nested_close(result["equity_curve"], reference["equity_curve"])
+    _assert_nested_close(result["drawdown_curve"], reference["drawdown_curve"])
+    json.dumps(result)
+
+
 def test_single_window_backtest_no_position_records_flat_equity() -> None:
     rows = [
         _record("2026-06-01T00:00:00Z", 100),
@@ -401,6 +436,261 @@ def _signal_records(rows: list[dict[str, Any]], targets: list[float]) -> dict[st
 
 def _curve_values(result: dict[str, Any], field: str) -> list[Any]:
     return [item[field] for item in result["equity_curve"]]
+
+
+def _independent_single_window_reference(
+    rows: list[dict[str, Any]],
+    targets: list[float],
+    costs: dict[str, float],
+) -> dict[str, Any]:
+    closes = [float(row["close"]) for row in rows]
+    cost_rate = (float(costs["fees_bps"]) + float(costs["slippage_bps"])) / 10000
+    gross_equity = 1.0
+    net_equity = 1.0
+    equity_curve = [
+        {
+            "open_time": rows[0]["open_time"],
+            "gross_equity": 1.0,
+            "net_equity": 1.0,
+            "position": 0.0,
+            "turnover": 0.0,
+            "period_gross_return_pct": None,
+            "period_net_return_pct": None,
+            "cost_pct": 0.0,
+        }
+    ]
+    period_net_returns: list[float] = []
+    positions: list[float] = []
+    turnovers: list[float] = []
+    cost_returns: list[float] = []
+
+    for index in range(1, len(rows)):
+        close_return = closes[index] / closes[index - 1] - 1
+        exposure = float(targets[index - 1])
+        previous_exposure = float(targets[index - 2]) if index >= 2 else 0.0
+        turnover = abs(exposure - previous_exposure)
+        cost_return = turnover * cost_rate
+        gross_return = exposure * close_return
+        net_return = gross_return - cost_return
+
+        gross_equity *= 1 + gross_return
+        net_equity *= 1 + net_return
+        period_net_returns.append(net_return)
+        positions.append(exposure)
+        turnovers.append(turnover)
+        cost_returns.append(cost_return)
+        equity_curve.append(
+            {
+                "open_time": rows[index]["open_time"],
+                "gross_equity": _artifact_round(gross_equity),
+                "net_equity": _artifact_round(net_equity),
+                "position": _artifact_round(exposure),
+                "turnover": _artifact_round(turnover),
+                "period_gross_return_pct": _artifact_pct(gross_return),
+                "period_net_return_pct": _artifact_pct(net_return),
+                "cost_pct": _artifact_pct(cost_return),
+            }
+        )
+
+    drawdown_curve, drawdown_summary = _independent_drawdowns(equity_curve)
+    baseline = _independent_buy_and_hold(closes, cost_rate)
+    strategy_metrics = {
+        "gross_return_pct": _artifact_pct(gross_equity - 1),
+        "net_return_pct": _artifact_pct(net_equity - 1),
+        "total_cost_pct": _artifact_pct(sum(cost_returns)),
+        "cost_drag_pct": _artifact_round(_artifact_pct(gross_equity - 1) - _artifact_pct(net_equity - 1)),
+        "max_drawdown_pct": drawdown_summary["max_drawdown_pct"],
+        "volatility_pct": _artifact_pct(_population_stddev(period_net_returns) * math.sqrt(365)),
+        "sharpe": _independent_sharpe(period_net_returns),
+        "sortino": _independent_sortino(period_net_returns),
+        "final_equity": _artifact_round(net_equity),
+    }
+    return {
+        "strategy_metrics": strategy_metrics,
+        "baseline_metrics": {
+            "buy_and_hold": baseline,
+            "cash": {
+                "net_return_pct": 0.0,
+                "max_drawdown_pct": 0.0,
+                "volatility_pct": 0.0,
+                "final_equity": 1.0,
+            },
+        },
+        "relative_metrics": {
+            "excess_return_vs_buy_and_hold_pct": _artifact_round(
+                strategy_metrics["net_return_pct"] - baseline["net_return_pct"]
+            ),
+            "drawdown_delta_vs_buy_and_hold_pct": _artifact_round(
+                strategy_metrics["max_drawdown_pct"] - baseline["max_drawdown_pct"]
+            ),
+        },
+        "trade_summary": _independent_trade_summary(positions, period_net_returns, turnovers),
+        "drawdown_summary": drawdown_summary,
+        "equity_curve": equity_curve,
+        "drawdown_curve": drawdown_curve,
+    }
+
+
+def _independent_buy_and_hold(closes: list[float], cost_rate: float) -> dict[str, float]:
+    equity = 1.0
+    equity_values = [equity]
+    period_returns = []
+    for index in range(1, len(closes)):
+        close_return = closes[index] / closes[index - 1] - 1
+        cost_return = cost_rate if index == 1 else 0.0
+        net_return = close_return - cost_return
+        period_returns.append(net_return)
+        equity *= 1 + net_return
+        equity_values.append(equity)
+    return {
+        "net_return_pct": _artifact_pct(equity - 1),
+        "max_drawdown_pct": _artifact_pct(_independent_max_drawdown(equity_values)),
+        "volatility_pct": _artifact_pct(_population_stddev(period_returns) * math.sqrt(365)),
+        "final_equity": _artifact_round(equity),
+    }
+
+
+def _independent_trade_summary(
+    positions: list[float],
+    period_net_returns: list[float],
+    turnovers: list[float],
+) -> dict[str, Any]:
+    trade_count = 0
+    completed_returns = []
+    holding_bars = []
+    open_multiplier: float | None = None
+    current_holding_bars = 0
+    previous_position = 0.0
+
+    for position, period_return in zip(positions, period_net_returns, strict=True):
+        if position > 0 and previous_position <= 0:
+            trade_count += 1
+            open_multiplier = 1.0
+            current_holding_bars = 0
+        if open_multiplier is not None:
+            open_multiplier *= 1 + period_return
+            if position > 0:
+                current_holding_bars += 1
+        if position <= 0 and previous_position > 0 and open_multiplier is not None:
+            completed_returns.append(open_multiplier - 1)
+            holding_bars.append(current_holding_bars)
+            open_multiplier = None
+            current_holding_bars = 0
+        previous_position = position
+
+    if open_multiplier is not None:
+        holding_bars.append(current_holding_bars)
+
+    hit_rate = None
+    if completed_returns:
+        hit_rate = sum(1 for value in completed_returns if value > 0) / len(completed_returns) * 100
+    average_holding = sum(holding_bars) / len(holding_bars) if holding_bars else None
+    return {
+        "trade_count": trade_count,
+        "completed_trade_count": len(completed_returns),
+        "open_trade_count": 1 if open_multiplier is not None else 0,
+        "hit_rate_pct": _artifact_round(hit_rate) if hit_rate is not None else None,
+        "turnover": _artifact_round(sum(turnovers)),
+        "exposure_pct": _artifact_round(
+            sum(1 for position in positions if position > 0) / len(positions) * 100
+        ),
+        "average_holding_bars": _artifact_round(average_holding) if average_holding is not None else None,
+    }
+
+
+def _independent_drawdowns(
+    equity_curve: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    peak = 0.0
+    peak_time = None
+    max_drawdown = 0.0
+    max_start = None
+    max_end = None
+    records = []
+    for point in equity_curve:
+        equity = float(point["net_equity"])
+        if equity >= peak:
+            peak = equity
+            peak_time = point["open_time"]
+        drawdown = 0.0 if peak <= 0 else equity / peak - 1
+        if drawdown < max_drawdown:
+            max_drawdown = drawdown
+            max_start = peak_time
+            max_end = point["open_time"]
+        records.append(
+            {
+                "open_time": point["open_time"],
+                "net_drawdown_pct": _artifact_pct(drawdown),
+            }
+        )
+    return records, {
+        "max_drawdown_pct": _artifact_pct(max_drawdown),
+        "max_drawdown_start": max_start,
+        "max_drawdown_end": max_end,
+    }
+
+
+def _independent_max_drawdown(equity_values: list[float]) -> float:
+    peak = 0.0
+    max_drawdown = 0.0
+    for equity in equity_values:
+        if equity >= peak:
+            peak = equity
+        drawdown = 0.0 if peak <= 0 else equity / peak - 1
+        max_drawdown = min(max_drawdown, drawdown)
+    return max_drawdown
+
+
+def _independent_sharpe(period_returns: list[float]) -> float:
+    volatility = _population_stddev(period_returns)
+    if len(period_returns) < 2 or volatility == 0:
+        return 0.0
+    return _artifact_round((sum(period_returns) / len(period_returns) * 365) / (volatility * math.sqrt(365)))
+
+
+def _independent_sortino(period_returns: list[float]) -> float:
+    downside_returns = [value for value in period_returns if value < 0]
+    downside_volatility = _population_stddev(downside_returns)
+    if len(period_returns) < 2 or not downside_returns or downside_volatility == 0:
+        return 0.0
+    return _artifact_round(
+        (sum(period_returns) / len(period_returns) * 365) / (downside_volatility * math.sqrt(365))
+    )
+
+
+def _population_stddev(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    value_mean = sum(values) / len(values)
+    return math.sqrt(sum((value - value_mean) ** 2 for value in values) / len(values))
+
+
+def _assert_nested_close(actual: Any, expected: Any) -> None:
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert set(actual) == set(expected)
+        for key, expected_value in expected.items():
+            _assert_nested_close(actual[key], expected_value)
+        return
+    if isinstance(expected, list):
+        assert isinstance(actual, list)
+        assert len(actual) == len(expected)
+        for actual_value, expected_value in zip(actual, expected, strict=True):
+            _assert_nested_close(actual_value, expected_value)
+        return
+    if isinstance(expected, float):
+        assert isinstance(actual, (int, float))
+        assert math.isclose(float(actual), expected, abs_tol=0.000001)
+        return
+    assert actual == expected
+
+
+def _artifact_pct(value: float) -> float:
+    return _artifact_round(value * 100)
+
+
+def _artifact_round(value: float) -> float:
+    return round(float(value), 6)
 
 
 def _walk_forward_rows() -> list[dict[str, Any]]:
