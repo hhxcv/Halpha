@@ -1119,14 +1119,41 @@ Record contract:
     "windows": []
   },
   "parameter_stability": {
-    "enabled": false,
-    "status": "disabled"
+    "enabled": true,
+    "status": "stable",
+    "diagnostic_status": "succeeded",
+    "selection_policy": "diagnostic_only_no_best_parameter_selection",
+    "tested_combinations": 4,
+    "valid_combinations": 4,
+    "invalid_combinations": 0,
+    "stability": "stable",
+    "region_counts": {
+      "stable": 4,
+      "fragile": 0,
+      "inconsistent": 0,
+      "insufficient_data": 0
+    },
+    "regions": [],
+    "warnings": []
+  },
+  "overfitting_risk": {
+    "status": "low",
+    "selection_policy": "diagnostic_only_no_best_parameter_selection",
+    "evidence": [
+      "tested_combinations: 4.",
+      "sample rows: 500.",
+      "trade_count: 23.",
+      "cost_drag_pct: 2.6.",
+      "parameter_stability_status: stable.",
+      "walk_forward_result_stability: stable."
+    ],
+    "warnings": []
   },
   "assessment": {
     "reliability": "unknown",
     "sample_quality": "unknown",
     "cost_sensitivity": "low",
-    "overfitting_risk": "unknown",
+    "overfitting_risk": "low",
     "summary": "Strategy evaluation has not produced enough evidence for reliability judgment.",
     "evidence": [
       "sample rows: 500.",
@@ -1137,7 +1164,10 @@ Record contract:
       "walk_forward_status: succeeded.",
       "walk_forward_succeeded_windows: 7.",
       "walk_forward_mean_net_return_pct: 1.2.",
-      "walk_forward_positive_net_return_window_pct: 57.1."
+      "walk_forward_positive_net_return_window_pct: 57.1.",
+      "parameter_stability_status: stable.",
+      "parameter_tested_combinations: 4.",
+      "overfitting_risk_status: low."
     ],
     "uncertainty": []
   },
@@ -1164,6 +1194,11 @@ Pipeline evaluation rules:
 - Walk-forward `status` is `insufficient_data` when too few successful windows exist; partial window records may be preserved as evidence but must not be presented as a successful walk-forward result.
 - Walk-forward warnings include too few windows, insufficient history, short samples, unstable results, and regime-dependent outcomes.
 - Report-facing assessment must distinguish full-window single-window metrics from walk-forward evidence.
+- Parameter stability must consume existing bounded parameter diagnostics when configured.
+- Parameter stability statuses are `stable`, `fragile`, `inconsistent`, `insufficient_data`, and `disabled`.
+- Parameter regions summarize configured diagnostic combinations as stable, fragile, inconsistent, or insufficient-data evidence without ranking or selecting a best parameter set.
+- Overfitting risk warnings must be first-class record warnings when triggered by high trial count, short samples, unstable parameter regions, cost sensitivity, low trade count, or unstable walk-forward results.
+- Overfitting risk is research context only and must not become automatic parameter selection.
 
 Standalone strategy evaluation output:
 
@@ -1254,7 +1289,7 @@ Manifest contract:
     "strategy_evaluation_insufficient_data": 0,
     "strategy_evaluation_skipped": 0,
     "strategy_evaluation_walk_forward_records": 28,
-    "strategy_evaluation_parameter_stability_records": 0
+    "strategy_evaluation_parameter_stability_records": 4
   },
   "strategy_evaluation": {
     "status": "succeeded",
@@ -1263,7 +1298,8 @@ Manifest contract:
       "evaluation_records": 4,
       "records_with_single_window": 4,
       "walk_forward_windows": 28,
-      "records_with_walk_forward": 4
+      "records_with_walk_forward": 4,
+      "records_with_parameter_stability": 4
     },
     "warnings": [],
     "errors": []
