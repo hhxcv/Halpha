@@ -94,6 +94,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("collect_text_events", "succeeded"),
         ("sync_ohlcv", "succeeded"),
         ("build_market_data_views", "succeeded"),
+        ("build_strategy_benchmark_suite", "succeeded"),
         ("evaluate_quant_strategies", "succeeded"),
         ("evaluate_strategy_evaluation", "succeeded"),
         ("evaluate_market_strategy_signals", "succeeded"),
@@ -224,6 +225,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "raw/market.json",
         "raw/text_events.json",
         "raw/market_data_views.json",
+        "analysis/strategy_benchmark_suite.json",
         "analysis/quant_strategy_runs.json",
         "analysis/strategy_evaluation_summary.json",
         "analysis/strategy_evaluation_material.md",
@@ -265,6 +267,10 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["ohlcv_sync_items"] == 4
     assert manifest["counts"]["market_data_views"] == 4
     assert manifest["counts"]["market_data_views_insufficient_data"] == 0
+    assert manifest["counts"]["strategy_benchmark_records"] == 4
+    assert manifest["counts"]["strategy_benchmark_succeeded"] == 4
+    assert manifest["counts"]["strategy_benchmark_insufficient_data"] == 0
+    assert manifest["counts"]["strategy_benchmark_failed"] == 0
     assert manifest["counts"]["quant_strategy_runs"] == 4
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 4
     assert manifest["counts"]["strategy_evaluation_records"] == 4
@@ -295,6 +301,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
+    assert manifest["artifacts"]["strategy_benchmark_suite"] == "analysis/strategy_benchmark_suite.json"
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
     assert manifest["artifacts"]["strategy_evaluation_summary"] == "analysis/strategy_evaluation_summary.json"
     assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
@@ -337,9 +344,15 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     }
 
     market_data_views = json.loads((run_dir / "raw/market_data_views.json").read_text(encoding="utf-8"))
+    strategy_benchmarks = json.loads(
+        (run_dir / "analysis/strategy_benchmark_suite.json").read_text(encoding="utf-8")
+    )
     assert len(market_data_views["views"]) == 4
     assert all("records" not in view for view in market_data_views["views"])
     assert all(view["row_count"] == 4 for view in market_data_views["views"])
+    assert len(strategy_benchmarks["benchmarks"]) == 4
+    assert all("records" not in record for record in strategy_benchmarks["benchmarks"])
+    assert all(record["status"] == "succeeded" for record in strategy_benchmarks["benchmarks"])
 
     strategy_signals = json.loads(
         (run_dir / "analysis/market_strategy_signals.json").read_text(encoding="utf-8")

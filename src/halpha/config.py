@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import math
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
+SUPPORTED_BENCHMARK_WINDOW_SELECTIONS = {"configured_lookback", "latest_lookback", "date_window"}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
@@ -258,6 +260,11 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
         if not isinstance(diagnostics, dict):
             raise ConfigError("quant.parameter_diagnostics must be a mapping.")
         _validate_quant_parameter_diagnostics(diagnostics, "quant.parameter_diagnostics")
+    if "benchmark_suite" in quant:
+        suite = quant["benchmark_suite"]
+        if not isinstance(suite, dict):
+            raise ConfigError("quant.benchmark_suite must be a mapping.")
+        _validate_quant_benchmark_suite(suite, "quant.benchmark_suite")
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
@@ -396,6 +403,33 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
             _require_rsi_threshold_value(value, path)
 
 
+def _validate_quant_benchmark_suite(suite: dict[str, Any], path: str) -> None:
+    if "enabled" in suite:
+        _require_bool(suite, "enabled", f"{path}.enabled")
+    if "windows" not in suite:
+        return
+
+    windows = _require_non_empty_list(suite, "windows", f"{path}.windows")
+    names = set()
+    for index, window in enumerate(windows):
+        window_path = f"{path}.windows[{index}]"
+        if not isinstance(window, dict):
+            raise ConfigError(f"{window_path} must be a mapping.")
+        name = _require_non_empty_string(window, "name", f"{window_path}.name")
+        if name in names:
+            raise ConfigError(f"{window_path}.name must be unique.")
+        names.add(name)
+        selection = str(window.get("selection") or "configured_lookback")
+        _require_supported_value(selection, f"{window_path}.selection", SUPPORTED_BENCHMARK_WINDOW_SELECTIONS)
+        if selection == "latest_lookback":
+            _require_positive_int(window, "lookback", f"{window_path}.lookback")
+        if selection == "date_window":
+            _require_iso8601_utc_value(window, "start", f"{window_path}.start")
+            _require_iso8601_utc_value(window, "end", f"{window_path}.end")
+            if "minimum_rows" in window:
+                _require_positive_int(window, "minimum_rows", f"{window_path}.minimum_rows")
+
+
 def _require_positive_int_value(value: Any, path: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ConfigError(f"{path} must be a positive integer.")
@@ -418,6 +452,17 @@ def _require_rsi_threshold_value(value: Any, path: str) -> float:
     if number >= 100:
         raise ConfigError(f"{path} must be a number greater than 0 and lower than 100.")
     return number
+
+
+def _require_iso8601_utc_value(data: dict[str, Any], key: str, path: str) -> None:
+    value = data.get(key)
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            raise ConfigError(f"{path} must include a UTC offset.")
+        return
+    if isinstance(value, str) and value.strip():
+        return
+    raise ConfigError(f"{path} must be an ISO 8601 UTC string.")
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:

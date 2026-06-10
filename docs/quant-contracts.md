@@ -523,6 +523,85 @@ Rules:
 - Shared storage may retain more historical rows than the configured lookback so later runs can reuse history.
 - If data is insufficient, record `insufficient_data: true` and an actionable warning.
 
+## Strategy Benchmark Suite Contract
+
+Each run may record fixed strategy benchmark windows from shared local OHLCV history. The benchmark suite is a window inventory for strategy experiments; it does not run strategies or embed raw OHLCV rows.
+
+Artifact:
+
+```text
+runs/<run_id>/analysis/strategy_benchmark_suite.json
+```
+
+Top-level contract:
+
+```json
+{
+  "schema_version": 1,
+  "artifact_type": "strategy_benchmark_suite",
+  "created_at": "2026-06-06T00:00:00Z",
+  "selection_policy": {
+    "source": "configured_symbols_timeframes_and_windows",
+    "raw_ohlcv_history_embedded": false,
+    "supported_window_selections": [
+      "configured_lookback",
+      "date_window",
+      "latest_lookback"
+    ]
+  },
+  "source_artifacts": [
+    "data/market/metadata/ohlcv_sync_state.json"
+  ],
+  "coverage": {},
+  "benchmarks": [],
+  "warnings": [],
+  "errors": []
+}
+```
+
+Benchmark record contract:
+
+```json
+{
+  "benchmark_id": "strategy_benchmark:binance:BTCUSDT:1d:configured_lookback:2025-01-22T00:00:00Z:2026-06-05T00:00:00Z",
+  "status": "succeeded",
+  "source": "binance",
+  "symbol": "BTCUSDT",
+  "timeframe": "1d",
+  "window_identity": "configured_lookback",
+  "window_selection": "configured_lookback",
+  "requested_lookback": 500,
+  "minimum_rows": 500,
+  "input_window_start": "2025-01-22T00:00:00Z",
+  "input_window_end": "2026-06-05T00:00:00Z",
+  "latest_candle_time": "2026-06-05T00:00:00Z",
+  "row_count": 500,
+  "history_row_count": 500,
+  "storage_ref": "data/market/ohlcv/source=binance/symbol=BTCUSDT/timeframe=1d",
+  "included_columns": [
+    "open_time",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume"
+  ],
+  "source_artifacts": [
+    "data/market/metadata/ohlcv_sync_state.json"
+  ],
+  "warnings": [],
+  "errors": []
+}
+```
+
+Rules:
+
+- Benchmark records are metadata and storage references, not full OHLCV history.
+- Ordering must be deterministic by source, symbol, timeframe, and window identity.
+- Supported window selections are configured lookback, explicit latest lookback, and explicit date window.
+- Missing or too-short local history must produce `insufficient_data` with warnings, not fake success.
+- Benchmark output remains Halpha-owned JSON. Strategy experiments may consume it later without exposing third-party portfolio objects.
+
 ## Strategy Research Run Artifact Contract
 
 Strategy run artifacts are the primary quantitative research output for strategy-centered quant flow.
@@ -1944,6 +2023,35 @@ When data views are created, `run_manifest.json` should record them:
 }
 ```
 
+When strategy benchmark suites are created, `run_manifest.json` should record them:
+
+```json
+{
+  "artifacts": {
+    "strategy_benchmark_suite": "analysis/strategy_benchmark_suite.json"
+  },
+  "counts": {
+    "strategy_benchmark_records": 4,
+    "strategy_benchmark_succeeded": 4,
+    "strategy_benchmark_insufficient_data": 0,
+    "strategy_benchmark_failed": 0
+  },
+  "strategy_benchmark_suite": {
+    "enabled": true,
+    "records": 4,
+    "succeeded": 4,
+    "insufficient_data": 0,
+    "failed": 0,
+    "missing_history": 0,
+    "source_artifacts": [
+      "data/market/metadata/ohlcv_sync_state.json"
+    ],
+    "warnings": [],
+    "errors": []
+  }
+}
+```
+
 When strategy runs are created, `run_manifest.json` should record them.
 
 Artifact keys:
@@ -2018,6 +2126,7 @@ Artifact keys:
 {
   "artifacts": {
     "market_data_views": "raw/market_data_views.json",
+    "strategy_benchmark_suite": "analysis/strategy_benchmark_suite.json",
     "quant_strategy_runs": "analysis/quant_strategy_runs.json",
     "strategy_evaluation_summary": "analysis/strategy_evaluation_summary.json",
     "strategy_evaluation_material": "analysis/strategy_evaluation_material.md",
@@ -2027,6 +2136,10 @@ Artifact keys:
   },
   "counts": {
     "market_data_views": 4,
+    "strategy_benchmark_records": 4,
+    "strategy_benchmark_succeeded": 4,
+    "strategy_benchmark_insufficient_data": 0,
+    "strategy_benchmark_failed": 0,
     "quant_strategy_runs": 16,
     "quant_strategy_runs_succeeded": 16,
     "strategy_evaluation_records": 16,
@@ -2049,11 +2162,14 @@ Pipeline stage names:
 ```text
 sync_ohlcv
 build_market_data_views
+build_strategy_benchmark_suite
 evaluate_quant_strategies
 evaluate_market_strategy_signals
 build_market_signals
 build_market_signal_material
 ```
+
+The implemented benchmark suite stage is `build_strategy_benchmark_suite`. It sits after `build_market_data_views` and before `evaluate_quant_strategies`.
 
 The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before downstream market strategy signal interpretation.
 
