@@ -40,6 +40,24 @@ configured market source
   -> Simplified Chinese Markdown report
 ```
 
+Strategy evaluation flow contract:
+
+```text
+configured market source
+  -> historical OHLCV sync
+  -> reusable local OHLCV store
+  -> deterministic OHLCV data views
+  -> strategy run evaluation
+  -> quant strategy run artifacts
+  -> strategy evaluation
+  -> strategy evaluation summary artifact
+  -> AI-readable strategy evaluation material
+  -> market signal and decision-intelligence interpretation
+  -> research context
+  -> Codex context + prompt
+  -> Simplified Chinese Markdown report
+```
+
 Strategy inputs use raw OHLCV-style data. AI context uses strategy conclusions, normalized signal conclusions, key evidence, bounded input-window context, diagnostics summaries, warnings, and uncertainty notes.
 
 Quant strategy outputs and signals are personal research material. They are not trades, positions, portfolio advice, return forecasts, or financial advice.
@@ -66,6 +84,8 @@ Define contracts for:
 - Strategy data view records.
 - Strategy research run artifacts.
 - Bounded strategy diagnostics.
+- Strategy evaluation artifacts.
+- AI-readable strategy evaluation material.
 - Market strategy signal artifacts.
 - Normalized market signal artifacts.
 - AI-readable market signal material.
@@ -82,8 +102,8 @@ Define contracts for:
 - Order simulation.
 - Position records.
 - Portfolio automation.
-- Backtesting product flow.
-- Strategy parameter optimization.
+- Automatic strategy parameter optimization.
+- Best-parameter selection.
 - Machine learning prediction.
 - Text event signal processing.
 - Real-time market monitoring.
@@ -98,6 +118,7 @@ Selected tools are implementation aids, not product architecture boundaries.
 | --- | --- |
 | Market data access | CCXT may be used only for public OHLCV data. No authenticated endpoints, account state, balances, orders, or trading operations. |
 | Strategy calculation | vectorbt may be used for indicators, signal calculation, and bounded research diagnostics. Vectorbt objects are internal implementation details and must not be persisted as stable Halpha artifacts or embedded into AI context. |
+| Strategy evaluation | Halpha-owned evaluation records are the stable interface for backtest summaries, baseline comparison, walk-forward evidence, and evaluation warnings. |
 | History storage | Hive-style partitioned Parquet may be used as the reusable OHLCV fact store. It is not AI context. |
 | Query and cropping | Current-run OHLCV windows are selected from the local Parquet-backed store. No database service is used. |
 | Report interface | Halpha-owned strategy run, signal JSON, and Markdown contracts are the stable report-loop interface. |
@@ -849,6 +870,348 @@ Strategy names:
 - Retired demo names are not migrated into strategy aliases.
 - If an old demo name is requested after strategy adoption, config validation should fail with an actionable error.
 
+## Strategy Evaluation Contract
+
+Status: not implemented yet.
+
+Strategy evaluation is the reusable backtest and robustness layer for strategy research. It must be usable from the product pipeline and from a standalone research path without duplicating strategy logic.
+
+Reusable evaluation core boundary:
+
+- Inputs must be explicit data, config, and strategy records.
+- Outputs must be Halpha-owned JSON-serializable records.
+- The core must not depend on `RunContext`.
+- The core must not read or write `runs/` by itself.
+- The core must not call Codex.
+- The core must not expose vectorbt objects, raw portfolio objects, or dependency internals.
+- Pipeline and standalone runners are adapters around the same reusable evaluation core.
+
+Reusable core input contract:
+
+```json
+{
+  "strategy": {
+    "name": "tsmom_vol_scaled",
+    "params": {
+      "return_window": 30,
+      "volatility_window": 30,
+      "target_volatility": 0.2
+    }
+  },
+  "market_identity": {
+    "source": "binance",
+    "symbol": "BTCUSDT",
+    "timeframe": "1d"
+  },
+  "ohlcv_rows": [],
+  "signal_records": [],
+  "cost_assumptions": {
+    "fees_bps": 10.0,
+    "slippage_bps": 5.0
+  },
+  "execution_model": {
+    "price_source": "close",
+    "signal_timing": "signal_at_bar_close",
+    "position_timing": "next_bar",
+    "lookahead_policy": "no_same_bar_execution"
+  },
+  "evaluation_window": {
+    "start": "2025-01-22T00:00:00Z",
+    "end": "2026-06-05T00:00:00Z",
+    "rows": 500
+  }
+}
+```
+
+Reusable core output contract:
+
+```json
+{
+  "status": "succeeded",
+  "strategy_name": "tsmom_vol_scaled",
+  "source": "binance",
+  "symbol": "BTCUSDT",
+  "timeframe": "1d",
+  "params": {
+    "return_window": 30,
+    "volatility_window": 30,
+    "target_volatility": 0.2
+  },
+  "sample": {
+    "start": "2025-01-22T00:00:00Z",
+    "end": "2026-06-05T00:00:00Z",
+    "rows": 500
+  },
+  "execution_model": {
+    "price_source": "close",
+    "signal_timing": "signal_at_bar_close",
+    "position_timing": "next_bar",
+    "lookahead_policy": "no_same_bar_execution"
+  },
+  "cost_assumptions": {
+    "fees_bps": 10.0,
+    "slippage_bps": 5.0
+  },
+  "strategy_metrics": {
+    "gross_return_pct": 12.4,
+    "net_return_pct": 9.8,
+    "total_cost_pct": 2.6,
+    "max_drawdown_pct": -18.2,
+    "volatility_pct": 31.4,
+    "sharpe": 0.42,
+    "sortino": 0.58
+  },
+  "baseline_metrics": {
+    "buy_and_hold": {
+      "net_return_pct": 7.1,
+      "max_drawdown_pct": -24.0
+    },
+    "cash": {
+      "net_return_pct": 0.0,
+      "max_drawdown_pct": 0.0
+    }
+  },
+  "relative_metrics": {
+    "excess_return_vs_buy_and_hold_pct": 2.7,
+    "drawdown_delta_vs_buy_and_hold_pct": 5.8
+  },
+  "trade_summary": {
+    "trade_count": 23,
+    "hit_rate_pct": 48.0,
+    "turnover": 12.0,
+    "exposure_pct": 56.0,
+    "average_holding_bars": 18.0
+  },
+  "drawdown_summary": {
+    "max_drawdown_pct": -18.2,
+    "max_drawdown_start": "2025-03-01T00:00:00Z",
+    "max_drawdown_end": "2025-04-15T00:00:00Z"
+  },
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "historical_research_only",
+      "message": "Backtest evaluation is historical research material, not a forecast.",
+      "source": "strategy_evaluation"
+    }
+  ],
+  "errors": []
+}
+```
+
+Allowed evaluation statuses:
+
+```text
+succeeded
+skipped
+insufficient_data
+failed
+```
+
+Evaluation status rules:
+
+- `succeeded`: evaluation metrics were calculated from sufficient real OHLCV rows and strategy signal records.
+- `skipped`: evaluation was disabled or upstream strategy runs were not configured.
+- `insufficient_data`: input rows, signal records, or evaluation windows are too short for meaningful metrics.
+- `failed`: evaluation raised an actionable error. Preserve strategy name, market identity, params, and a bounded error summary.
+
+Execution model rules:
+
+- The default research execution model is close-to-close with no same-bar execution.
+- A signal known at bar `t` may affect position from bar `t+1`.
+- Evaluation must record fees and slippage assumptions before net metrics.
+- Gross and net metrics must be separate.
+- Backtest evaluation remains research material, not a forecast, trading instruction, or return promise.
+
+Pipeline strategy evaluation artifact:
+
+```text
+runs/<run_id>/analysis/strategy_evaluation_summary.json
+```
+
+Top-level contract:
+
+```json
+{
+  "schema_version": 1,
+  "artifact_type": "strategy_evaluation_summary",
+  "created_at": "2026-06-06T00:00:00Z",
+  "source_artifacts": [
+    "analysis/quant_strategy_runs.json",
+    "raw/market_data_views.json"
+  ],
+  "records": [],
+  "warnings": [],
+  "errors": []
+}
+```
+
+Record contract:
+
+```json
+{
+  "evaluation_id": "strategy_evaluation:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+  "status": "succeeded",
+  "strategy_run_id": "quant_strategy_run:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+  "strategy_name": "tsmom_vol_scaled",
+  "strategy_version": 1,
+  "source": "binance",
+  "symbol": "BTCUSDT",
+  "timeframe": "1d",
+  "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+  "input_window_start": "2025-01-22T00:00:00Z",
+  "input_window_end": "2026-06-05T00:00:00Z",
+  "latest_candle_time": "2026-06-05T00:00:00Z",
+  "params": {},
+  "single_window": {},
+  "walk_forward": {
+    "enabled": false,
+    "status": "disabled"
+  },
+  "parameter_stability": {
+    "enabled": false,
+    "status": "disabled"
+  },
+  "assessment": {
+    "reliability": "unknown",
+    "sample_quality": "unknown",
+    "cost_sensitivity": "unknown",
+    "overfitting_risk": "unknown",
+    "summary": "Strategy evaluation has not produced enough evidence for reliability judgment.",
+    "evidence": [],
+    "uncertainty": []
+  },
+  "warnings": [],
+  "error": null,
+  "source_artifacts": [
+    "analysis/quant_strategy_runs.json",
+    "raw/market_data_views.json"
+  ],
+  "created_at": "2026-06-06T00:00:00Z"
+}
+```
+
+Pipeline evaluation rules:
+
+- The pipeline adapter must call the reusable evaluation core.
+- Pipeline evaluation must consume existing strategy run records and real OHLCV history.
+- Pipeline evaluation must not recalculate market data collection.
+- Pipeline evaluation must not run Codex.
+- Pipeline evaluation must not fabricate evaluation records for skipped, failed, or insufficient upstream states.
+- Failed or insufficient strategy runs may produce skipped or insufficient evaluation records so downstream reports can explain missing evidence.
+
+Standalone strategy evaluation output:
+
+Standalone evaluation is a research path for one or more explicitly selected strategy, source, symbol, timeframe, and parameter inputs. It must use the same reusable evaluation core and the same output record contract as pipeline evaluation.
+
+Standalone output rules:
+
+- Standalone evaluation must read configured shared OHLCV history or an explicit local input allowed by the implemented command contract.
+- Standalone evaluation must write inspectable local artifacts.
+- Standalone evaluation must not run the full report pipeline.
+- Standalone evaluation must not execute Codex.
+- Standalone evaluation must not mutate shared OHLCV history unless the implemented command explicitly performs a sync step.
+- Standalone output must preserve cost assumptions, execution model, sample window, warnings, and errors.
+- The standalone command name and exact CLI shape are not part of this contract until implemented.
+
+AI-readable strategy evaluation material:
+
+```text
+runs/<run_id>/analysis/strategy_evaluation_material.md
+```
+
+Material rules:
+
+- Summarize strategy reliability, sample quality, baseline comparison, cost assumptions, drawdown, turnover, exposure, trade count, walk-forward status, parameter stability, and overfitting risk.
+- Keep metrics bounded and report-facing.
+- Include source artifact references.
+- Do not embed full equity curves, full OHLCV history, or raw trade-by-trade logs in AI context.
+- Do not upgrade historical evaluation into recommendations, position sizing, or return forecasts.
+- Preserve warnings near the strategy they affect.
+
+Recommended material format:
+
+````markdown
+---
+artifact_type: analysis_strategy_evaluation_material
+schema_version: 1
+audience: ai
+source_artifacts:
+  - analysis/strategy_evaluation_summary.json
+---
+
+# strategy_evaluation_material
+
+## overview
+
+```yaml
+records: 4
+succeeded: 4
+insufficient_data: 0
+failed: 0
+```
+
+## record: strategy_evaluation:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
+
+```yaml
+strategy_name: tsmom_vol_scaled
+source: binance
+symbol: BTCUSDT
+timeframe: 1d
+assessment:
+  reliability: medium
+  overfitting_risk: elevated
+single_window:
+  net_return_pct: 9.8
+  max_drawdown_pct: -18.2
+baseline:
+  buy_and_hold_net_return_pct: 7.1
+warnings:
+  - Historical evaluation is research material, not a forecast.
+```
+````
+
+Manifest contract:
+
+```json
+{
+  "artifacts": {
+    "strategy_evaluation_summary": "analysis/strategy_evaluation_summary.json",
+    "strategy_evaluation_material": "analysis/strategy_evaluation_material.md"
+  },
+  "counts": {
+    "strategy_evaluation_records": 4,
+    "strategy_evaluation_succeeded": 4,
+    "strategy_evaluation_failed": 0,
+    "strategy_evaluation_insufficient_data": 0,
+    "strategy_evaluation_skipped": 0,
+    "strategy_evaluation_walk_forward_records": 0,
+    "strategy_evaluation_parameter_stability_records": 0
+  },
+  "strategy_evaluation": {
+    "status": "succeeded",
+    "coverage": {
+      "strategy_runs": 4,
+      "evaluated": 4,
+      "skipped": 0
+    },
+    "warnings": [],
+    "errors": []
+  }
+}
+```
+
+Downstream evaluation consumers:
+
+| Consumer | Input | Rule |
+| --- | --- | --- |
+| `analysis/market_strategy_signals.json` | Strategy evaluation summary when available | May incorporate reliability and evaluation warnings without converting backtest performance into direction. |
+| `analysis/market_signal_material.md` | Strategy evaluation material when available | Summarizes reliability, costs, sample limits, and uncertainty near strategy conclusions. |
+| Decision-intelligence artifacts | Strategy evaluation warnings when available | May use reliability and risk warnings as evidence, but must not create action levels from backtest returns alone. |
+| `analysis/research_context.md` | AI-readable strategy evaluation material | Adds bounded evaluation context for report generation. |
+| `codex_context/context.md` and `codex_context/prompt.md` | Research context and prompt rules | Require Codex CLI to treat evaluation as historical research material, not as a forecast. |
+| `run_manifest.json` | Strategy evaluation artifacts and pipeline statuses | Records artifact paths, counts, coverage, warnings, and errors. |
+
 Downstream consumers:
 
 | Consumer | Input | Rule |
@@ -1516,7 +1879,7 @@ Manifest strategy rules:
 - Record failure summaries with strategy name, source, symbol, timeframe, input view, error type, and actionable message.
 - Do not record stack traces, secrets, local proxy values, local paths outside repo artifacts, credentials, tokens, cookies, account IDs, or private endpoints.
 
-When implementation creates signal artifacts, `run_manifest.json` should record them.
+When implementation creates strategy evaluation or signal artifacts, `run_manifest.json` should record them.
 
 Artifact keys:
 
@@ -1525,6 +1888,8 @@ Artifact keys:
   "artifacts": {
     "market_data_views": "raw/market_data_views.json",
     "quant_strategy_runs": "analysis/quant_strategy_runs.json",
+    "strategy_evaluation_summary": "analysis/strategy_evaluation_summary.json",
+    "strategy_evaluation_material": "analysis/strategy_evaluation_material.md",
     "market_strategy_signals": "analysis/market_strategy_signals.json",
     "market_signals": "analysis/market_signals.json",
     "market_signal_material": "analysis/market_signal_material.md"
@@ -1533,6 +1898,11 @@ Artifact keys:
     "market_data_views": 4,
     "quant_strategy_runs": 16,
     "quant_strategy_runs_succeeded": 16,
+    "strategy_evaluation_records": 16,
+    "strategy_evaluation_succeeded": 16,
+    "strategy_evaluation_failed": 0,
+    "strategy_evaluation_insufficient_data": 0,
+    "strategy_evaluation_skipped": 0,
     "market_strategy_signals": 16,
     "market_strategy_signals_insufficient_data": 0,
     "market_signals": 16,
@@ -1553,6 +1923,8 @@ build_market_signals
 build_market_signal_material
 ```
 
+Strategy evaluation is not implemented yet. When implemented, the strategy evaluation stage must sit after `evaluate_quant_strategies` and before downstream market strategy signal interpretation. The exact stage name belongs to the implementation issue that adds the stage.
+
 Failure rules:
 
 - Preserve artifacts from completed pipeline stages.
@@ -1562,12 +1934,13 @@ Failure rules:
 ## Acceptance Trace
 
 - A focused quant contract document exists: this file.
-- Config, OHLCV, data view, strategy run, strategy signal, market signal, and AI-readable material contracts are defined above.
+- Config, OHLCV, data view, strategy run, strategy evaluation, strategy signal, market signal, and AI-readable material contracts are defined above.
 - Strategy inputs use raw OHLCV-style data; AI context uses strategy conclusions, normalized signal conclusions, diagnostics summaries, warnings, and bounded market context.
 - Quant signals and strategy diagnostics are research material, not trades, positions, return forecasts, or financial advice.
 - `analysis/quant_strategy_runs.json` fields and downstream consumers are defined above.
+- Reusable strategy evaluation input, output, pipeline artifact, standalone output, material, and manifest contracts are defined above.
 - Vectorbt objects are internal implementation details and are not stable artifact fields or AI context.
-- Backtest diagnostics are bounded historical research material, not return forecasts.
+- Backtest diagnostics and strategy evaluation outputs are bounded historical research material, not return forecasts.
 - Insufficient data, strategy failure, and warnings have explicit artifact representation rules.
 - M1 demo signal names are retired from strategy-centered flow instead of migrated into strategy aliases.
 - This document states initial adoption scope without making the contract milestone-only.
