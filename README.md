@@ -96,6 +96,7 @@ build_market_data_views
 build_strategy_benchmark_suite
 evaluate_quant_strategies
 evaluate_strategy_evaluation
+build_strategy_experiment_material
 evaluate_market_strategy_signals
 build_market_signals
 build_market_signal_material
@@ -155,6 +156,9 @@ A successful configured run can write:
 - `analysis/quant_strategy_runs.json`: configured strategy run outputs.
 - `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.
 - `analysis/strategy_evaluation_material.md`: AI-readable strategy evaluation material.
+- `analysis/strategy_experiment.json`: current-run strategy experiment output.
+- `analysis/strategy_effectiveness_gates.json`: deterministic strategy gate output.
+- `analysis/strategy_experiment_material.md`: AI-readable strategy experiment and gate material.
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
@@ -200,7 +204,10 @@ experiments without embedding raw OHLCV history in AI-readable context.
 Standalone strategy experiments evaluate configured strategy candidates across
 those windows using the same single-window strategy evaluation semantics as the
 main pipeline, add bounded walk-forward summaries, and classify candidates with
-deterministic effectiveness gates.
+deterministic effectiveness gates. Product runs also write bounded strategy
+experiment material into the report context so the final report can discuss
+effective, watchlisted, rejected, or insufficient-evidence candidates without
+asking Codex to generate gate outcomes.
 AI-readable strategy evaluation material carries those deterministic evaluation
 fields into research context and report generation without asking Codex to
 calculate new metrics.
@@ -213,7 +220,9 @@ Those are produced deterministically before report generation.
 
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
-validation so Codex does not need to recreate every row.
+validation so Codex does not need to recreate every row. When strategy gate
+artifacts are available, Halpha also inserts a deterministic strategy
+effectiveness table from `analysis/strategy_effectiveness_gates.json`.
 
 ## Validation
 

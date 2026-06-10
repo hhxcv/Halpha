@@ -171,6 +171,9 @@ Current bias:
 * `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
 * `analysis/strategy_evaluation_summary.json` records pipeline strategy evaluation outputs from configured strategy runs and current-run OHLCV views.
 * `analysis/strategy_evaluation_material.md` records AI-readable strategy evaluation material from strategy evaluation summaries.
+* `analysis/strategy_experiment.json` records current-run strategy experiment outputs for configured candidates.
+* `analysis/strategy_effectiveness_gates.json` records deterministic current-run strategy gate outcomes.
+* `analysis/strategy_experiment_material.md` records AI-readable strategy experiment and gate material.
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
@@ -183,9 +186,10 @@ Current bias:
 * `run_manifest.json` records decision-intelligence enabled/status, produced artifacts, counts, previous-run comparison status, warnings, and errors.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include signal and decision material, not shared OHLCV history.
+* Codex context may include signal, strategy evaluation, strategy experiment, and decision material, not shared OHLCV history.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
+* Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.
 * Reports come from Codex stdout, not placeholder text.
 * Fake market data, fake signals, and fake Codex output stay test-only.

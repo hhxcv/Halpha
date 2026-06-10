@@ -17,6 +17,7 @@ STAGE_ORDER = (
     "build_strategy_benchmark_suite",
     "evaluate_quant_strategies",
     "evaluate_strategy_evaluation",
+    "build_strategy_experiment_material",
     "evaluate_market_strategy_signals",
     "build_market_signals",
     "build_market_signal_material",
@@ -312,6 +313,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_strategy_benchmark_suite"] = _build_strategy_benchmark_suite
     handlers["evaluate_quant_strategies"] = _evaluate_quant_strategies
     handlers["evaluate_strategy_evaluation"] = _evaluate_strategy_evaluation
+    handlers["build_strategy_experiment_material"] = _build_strategy_experiment_material
     handlers["evaluate_market_strategy_signals"] = _evaluate_market_strategy_signals
     handlers["build_market_signals"] = _build_market_signals
     handlers["build_market_signal_material"] = _build_market_signal_material
@@ -499,6 +501,12 @@ def _evaluate_strategy_evaluation(config: dict[str, Any], run: RunContext) -> li
     from .strategy_evaluation_summary import build_strategy_evaluation_summary
 
     return build_strategy_evaluation_summary(config, run)
+
+
+def _build_strategy_experiment_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .strategy_experiment import build_strategy_experiment_material
+
+    return build_strategy_experiment_material(config, run)
 
 
 def _evaluate_market_strategy_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:

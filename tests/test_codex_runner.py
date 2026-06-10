@@ -111,9 +111,12 @@ def test_codex_runner_injects_quant_strategy_markdown_table_after_codex_stdout(
     assert result.succeeded is True
     report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
     table_heading = "## \u91cf\u5316\u7b56\u7565\u8f93\u51fa\u8868"
+    gate_heading = "## \u7b56\u7565\u6709\u6548\u6027\u95e8\u69db\u8868"
     synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
     assert table_heading in report
+    assert gate_heading in report
     assert report.index(table_heading) < report.index(synthesis_heading)
+    assert report.index(gate_heading) < report.index(synthesis_heading)
     assert (
         "| \u7b56\u7565 | \u6765\u6e90 | \u6807\u7684 | \u5468\u671f | "
         "\u8f93\u5165\u7a97\u53e3 | \u72b6\u6001 | \u65b9\u5411 | \u5f3a\u5ea6 | "
@@ -128,6 +131,16 @@ def test_codex_runner_injects_quant_strategy_markdown_table_after_codex_stdout(
         "| breakout_atr_trend | binance | BTCUSDT | 1h | "
         "2026-06-05T00:00:00Z to 2026-06-05T04:00:00Z | "
         "\u6570\u636e\u4e0d\u8db3 | unknown | unknown | low | Strategy result is unavailable because input data is insufficient. |"
+    ) in report
+    assert (
+        "| \u7b56\u7565 | \u72b6\u6001 | \u57fa\u51c6\u8986\u76d6 | \u51c0\u6536\u76ca | "
+        "\u76f8\u5bf9\u57fa\u51c6 | \u6210\u672c\u62d6\u7d2f | \u6837\u672c | "
+        "Walk-forward | \u8fc7\u62df\u5408\u98ce\u9669 | \u5173\u952e\u539f\u56e0 |"
+    ) in report
+    assert (
+        "| tsmom_vol_scaled | \u6709\u6548 | 4/4 (100%) | 6.5%; positive 75% | "
+        "20%; positive 100% | 0.4% | rows 500-720 | stable; windows 12; positive 66.6667% | "
+        "low | parameter_stability_unavailable |"
     ) in report
 
 
@@ -382,8 +395,72 @@ def _write_prompt_and_quant_strategy_runs(config, run) -> list[str]:
             ],
         },
     )
+    write_json(
+        run.analysis_dir / "strategy_effectiveness_gates.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_effectiveness_gates",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["analysis/strategy_experiment.json"],
+            "coverage": {
+                "strategy_candidates": 1,
+                "effective": 1,
+                "watchlisted": 0,
+                "rejected": 0,
+                "insufficient_evidence": 0,
+            },
+            "records": [
+                {
+                    "gate_id": "strategy_effectiveness_gate:tsmom_vol_scaled",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "effective",
+                    "params": {"return_window": 120},
+                    "gate_inputs": {
+                        "benchmark_coverage": {
+                            "benchmark_records": 4,
+                            "succeeded": 4,
+                            "success_rate_pct": 100.0,
+                        },
+                        "net_performance": {
+                            "mean_net_return_pct": 6.5,
+                            "positive_net_return_benchmark_pct": 75.0,
+                        },
+                        "baseline_comparison": {
+                            "mean_excess_return_vs_buy_and_hold_pct": 20.0,
+                            "positive_excess_return_benchmark_pct": 100.0,
+                        },
+                        "cost_drag": {"max_cost_drag_pct": 0.4},
+                        "sample_quality": {"min_sample_rows": 500, "max_sample_rows": 720},
+                        "walk_forward_stability": {
+                            "result_stability": "stable",
+                            "succeeded_windows": 12,
+                            "min_positive_net_return_window_pct": 66.666667,
+                        },
+                        "overfitting_risk": {"status": "low"},
+                    },
+                    "reasons": [
+                        {
+                            "code": "parameter_stability_unavailable",
+                            "severity": "info",
+                            "value": "unavailable",
+                            "threshold": "stable",
+                            "message": "Parameter-stability evidence is unavailable.",
+                        }
+                    ],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": ["analysis/strategy_experiment.json"],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
     run.manifest["artifacts"]["codex_prompt"] = "codex_context/prompt.md"
     run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["artifacts"]["strategy_effectiveness_gates"] = (
+        "analysis/strategy_effectiveness_gates.json"
+    )
     return ["codex_context/prompt.md"]
 
 

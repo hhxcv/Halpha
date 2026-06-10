@@ -34,11 +34,20 @@ def build_strategy_effectiveness_gates(
     config: dict[str, Any],
     *,
     created_at: datetime | str | None = None,
+    source_artifacts: list[str] | None = None,
 ) -> dict[str, Any]:
     timestamp = _created_at(experiment_artifact, created_at)
     thresholds = effectiveness_gate_thresholds(config)
     candidates = _dict_list(experiment_artifact.get("candidates"))
-    records = [_gate_record(candidate, thresholds=thresholds) for candidate in candidates]
+    gate_source_artifacts = source_artifacts or ["strategy_experiment.json"]
+    records = [
+        _gate_record(
+            candidate,
+            thresholds=thresholds,
+            source_artifacts=gate_source_artifacts,
+        )
+        for candidate in candidates
+    ]
     warnings = _artifact_warnings(records)
     errors = [
         error
@@ -57,7 +66,7 @@ def build_strategy_effectiveness_gates(
             "automatic_parameter_optimization": False,
             "historical_research_material": True,
         },
-        "source_artifacts": ["strategy_experiment.json"],
+        "source_artifacts": gate_source_artifacts,
         "coverage": _coverage(records),
         "records": records,
         "warnings": warnings,
@@ -138,7 +147,12 @@ def effectiveness_gate_thresholds(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _gate_record(candidate: dict[str, Any], *, thresholds: dict[str, Any]) -> dict[str, Any]:
+def _gate_record(
+    candidate: dict[str, Any],
+    *,
+    thresholds: dict[str, Any],
+    source_artifacts: list[str],
+) -> dict[str, Any]:
     inputs = _gate_inputs(candidate, thresholds=thresholds)
     reasons = _gate_reasons(inputs, thresholds=thresholds)
     status = _gate_status(reasons)
@@ -161,7 +175,7 @@ def _gate_record(candidate: dict[str, Any], *, thresholds: dict[str, Any]) -> di
         "reasons": reasons,
         "warnings": _unique_items(warnings),
         "errors": errors,
-        "source_artifacts": ["strategy_experiment.json"],
+        "source_artifacts": source_artifacts,
     }
 
 

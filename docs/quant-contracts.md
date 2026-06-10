@@ -1443,9 +1443,34 @@ runs/strategy_experiments/<id>/manifest.json
 Manifest rules:
 
 - Record command inputs, artifact paths, evaluation counts, gate counts, skipped or insufficient benchmarks, failures, warnings, and errors.
-- Keep experiment outputs outside per-run report directories unless a later integration stage explicitly consumes them.
+- Standalone experiment outputs stay outside per-run report directories.
+- Product runs may generate current-run experiment, gate, and material artifacts under `analysis/` for report context integration.
 - Do not run Codex, generate reports, select best parameters, promote strategies, place orders, or claim future performance.
 - Failed, skipped, and insufficient benchmark evaluations must remain visible in JSON instead of being dropped.
+
+Pipeline strategy experiment artifacts:
+
+```text
+runs/<run_id>/analysis/strategy_experiment.json
+runs/<run_id>/analysis/strategy_effectiveness_gates.json
+runs/<run_id>/analysis/strategy_experiment_material.md
+```
+
+Pipeline strategy experiment rules:
+
+- Use the current run's `analysis/strategy_benchmark_suite.json` as benchmark input.
+- Use the same strategy experiment and gate semantics as the standalone command.
+- Write current-run source artifacts with `analysis/` paths.
+- Record experiment, gate, warning, error, and material counts in `run_manifest.json`.
+- Do not select best parameters, place trades, generate action levels, or claim future performance.
+
+AI-readable strategy experiment material rules:
+
+- Summarize candidate gate statuses, benchmark coverage, net performance, baseline comparison, cost drag, sample quality, bounded walk-forward evidence, parameter-stability status, overfitting risk, reasons, warnings, and errors.
+- Identify `effective`, `watchlisted`, `rejected`, and `insufficient_evidence` statuses as Halpha-generated deterministic gate outcomes.
+- Keep rejected, watchlisted, unstable, or insufficient-evidence candidates visible and conservative.
+- Do not embed full OHLCV history, full equity curves, or raw trade-by-trade logs.
+- Do not ask Codex CLI to generate gate statuses, metrics, promotion decisions, trading instructions, or return forecasts.
 
 AI-readable strategy evaluation material:
 
@@ -1568,6 +1593,9 @@ Downstream evaluation consumers:
 | --- | --- | --- |
 | `analysis/market_strategy_signals.json` | `analysis/quant_strategy_runs.json` | Keeps signal direction separate from backtest evaluation; it must not convert backtest performance into direction. |
 | `analysis/market_signal_material.md` | Normalized market signals | Remains signal-facing material; report context carries strategy evaluation material separately. |
+| `analysis/strategy_experiment.json` | `analysis/strategy_benchmark_suite.json` | Evaluates configured strategy candidates against fixed benchmark records for the current run. |
+| `analysis/strategy_effectiveness_gates.json` | `analysis/strategy_experiment.json` | Classifies candidates as effective, watchlisted, rejected, or insufficient-evidence with deterministic gate reasons. |
+| `analysis/strategy_experiment_material.md` | `analysis/strategy_experiment.json`, `analysis/strategy_effectiveness_gates.json` | Converts candidate gate outcomes into bounded report-facing material. |
 | Decision-intelligence artifacts | Deterministic regime, risk, signal, and delta artifacts | Remain decision-facing material; they must not create action levels from backtest returns alone. |
 | `analysis/research_context.md` | AI-readable strategy evaluation material | Adds bounded evaluation context beside signal and decision material for report generation. |
 | `codex_context/context.md` and `codex_context/prompt.md` | Research context and prompt rules | Require Codex CLI to treat evaluation as historical research material, not as a forecast. |
@@ -2034,6 +2062,9 @@ Quant signal material may be added to the existing report context when signal ar
 
 ```yaml
 quant_strategy_runs: analysis/quant_strategy_runs.json
+strategy_experiment: analysis/strategy_experiment.json
+strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json
+strategy_experiment_material: analysis/strategy_experiment_material.md
 market_signal_material: analysis/market_signal_material.md
 market_signals: analysis/market_signals.json
 market_data_views: raw/market_data_views.json
@@ -2046,12 +2077,16 @@ Research context rules:
 - Keep the source policy explicit.
 - State that market signals are bounded research material derived from the provided context.
 - State that strategy diagnostics are historical research material, not forecasts.
+- State that strategy experiment gates are deterministic research candidate statuses, not trading approvals.
 - State when quantitative signals do not include text-event signal processing.
 
 `codex_context/context.md` contract additions:
 
 ```yaml
 quant_strategy_runs: analysis/quant_strategy_runs.json
+strategy_experiment: analysis/strategy_experiment.json
+strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json
+strategy_experiment_material: analysis/strategy_experiment_material.md
 market_signal_material: analysis/market_signal_material.md
 market_signals: analysis/market_signals.json
 market_data_views: raw/market_data_views.json
@@ -2072,7 +2107,11 @@ Codex prompt rules:
 - Do not ask Codex CLI to include fixed boilerplate risk disclaimers.
 - Require synthesis to explain cross-source implications, conflicts, and assessment-changing conditions instead of repeating prior tables or summaries.
 - Require backtest diagnostics to be described as historical research material when cited.
+- Require strategy experiment gate statuses to be used as Halpha-generated statuses only.
+- Require effective, watchlisted, rejected, and insufficient-evidence candidates to be identified when strategy experiment material exists.
+- Require benchmark coverage, costs, sample limits, walk-forward evidence, overfitting checks, and uncertainty near strategy effectiveness statements.
 - Forbid fabricated prices, sources, strategy conclusions, signals, or certainty.
+- Forbid LLM-generated strategy gate statuses, reasons, metrics, or promotion decisions.
 - Forbid trading instructions, position sizing, account actions, and investment recommendations.
 - Forbid return promises or deterministic investment claims.
 - Do not direct Codex CLI to inspect shared OHLCV storage.
@@ -2085,6 +2124,11 @@ Final report post-processing:
 - Include strategy name, source, symbol, timeframe, input window, status, direction, strength, confidence, and conclusion summary.
 - Insert the table before the `综合判断` section when present; otherwise before `风险提示`; otherwise append it to the report.
 - Codex CLI should explain and synthesize quantitative conclusions around this table, not reproduce the complete row-level strategy run display.
+- When `analysis/strategy_effectiveness_gates.json` exists, insert a deterministic strategy effectiveness table into `report/report.md` after Codex stdout validation.
+- The gate table is generated by Halpha from gate artifacts, not by Codex CLI.
+- One row represents one strategy candidate gate record.
+- Include strategy name, gate status, benchmark coverage, net performance, baseline comparison, cost drag, sample quality, walk-forward summary, overfitting risk, and key reasons.
+- Codex CLI should explain and synthesize strategy effectiveness around this table, not invent or revise gate outcomes.
 
 ## Run Manifest Contract Additions
 
@@ -2282,6 +2326,9 @@ Artifact keys:
     "quant_strategy_runs": "analysis/quant_strategy_runs.json",
     "strategy_evaluation_summary": "analysis/strategy_evaluation_summary.json",
     "strategy_evaluation_material": "analysis/strategy_evaluation_material.md",
+    "strategy_experiment": "analysis/strategy_experiment.json",
+    "strategy_effectiveness_gates": "analysis/strategy_effectiveness_gates.json",
+    "strategy_experiment_material": "analysis/strategy_experiment_material.md",
     "market_strategy_signals": "analysis/market_strategy_signals.json",
     "market_signals": "analysis/market_signals.json",
     "market_signal_material": "analysis/market_signal_material.md"
@@ -2300,6 +2347,15 @@ Artifact keys:
     "strategy_evaluation_insufficient_data": 0,
     "strategy_evaluation_skipped": 0,
     "strategy_evaluation_material_records": 16,
+    "strategy_experiment_candidates": 4,
+    "strategy_experiment_evaluations": 16,
+    "strategy_experiment_evaluations_succeeded": 16,
+    "strategy_gate_candidates": 4,
+    "strategy_gate_effective": 3,
+    "strategy_gate_watchlisted": 0,
+    "strategy_gate_rejected": 1,
+    "strategy_gate_insufficient_evidence": 0,
+    "strategy_experiment_material_records": 4,
     "market_strategy_signals": 16,
     "market_strategy_signals_insufficient_data": 0,
     "market_signals": 16,
@@ -2316,6 +2372,8 @@ sync_ohlcv
 build_market_data_views
 build_strategy_benchmark_suite
 evaluate_quant_strategies
+evaluate_strategy_evaluation
+build_strategy_experiment_material
 evaluate_market_strategy_signals
 build_market_signals
 build_market_signal_material
@@ -2323,7 +2381,9 @@ build_market_signal_material
 
 The implemented benchmark suite stage is `build_strategy_benchmark_suite`. It sits after `build_market_data_views` and before `evaluate_quant_strategies`.
 
-The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before downstream market strategy signal interpretation.
+The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before current-run strategy experiment material.
+
+The implemented strategy experiment material stage is `build_strategy_experiment_material`. It sits after `evaluate_strategy_evaluation` and before downstream market strategy signal interpretation.
 
 Failure rules:
 
