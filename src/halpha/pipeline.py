@@ -29,6 +29,14 @@ STAGE_ORDER = (
     "build_codex_context",
     "run_codex_report",
 )
+DECISION_INTELLIGENCE_STAGES = {
+    "build_market_regime_assessment",
+    "build_risk_assessment",
+    "build_decision_recommendations",
+    "build_watch_triggers",
+    "build_decision_intelligence_delta",
+    "build_decision_intelligence_material",
+}
 
 StageHandler = Callable[[dict[str, Any], "RunContext"], list[str] | None]
 
@@ -339,6 +347,7 @@ def _run_stage_handler(
         stage_record["artifacts"] = exc.artifacts
         stage_record["error"] = error
         _set_codex_status(run, stage=stage, status="failed")
+        _record_stage_failure_context(config, run, stage=stage, error=error)
         _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
         return RunResult(False, run, exc.exit_code, failed_stage, reason)
     except Exception as exc:
@@ -349,6 +358,7 @@ def _run_stage_handler(
         stage_record["finished_at"] = finished_at
         stage_record["error"] = error
         _set_codex_status(run, stage=stage, status="failed")
+        _record_stage_failure_context(config, run, stage=stage, error=error)
         _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
         return RunResult(False, run, 1, stage, reason)
 
@@ -376,6 +386,22 @@ def _skip_stage(
         run.manifest["codex"]["status"] = "skipped"
         run.manifest["codex"]["exit_code"] = None
         run.manifest["codex"]["skip_reason"] = reason
+
+
+def _record_stage_failure_context(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    stage: str,
+    error: dict[str, Any],
+) -> None:
+    failed_stage = str(error.get("stage") or stage)
+    if stage not in DECISION_INTELLIGENCE_STAGES and failed_stage not in DECISION_INTELLIGENCE_STAGES:
+        return
+    from .decision_intelligence import record_decision_intelligence_failure
+
+    message = str(error.get("message") or f"stage {failed_stage} failed")
+    record_decision_intelligence_failure(config, run, stage=failed_stage, message=message)
 
 
 def _record_not_run_stages(run: RunContext, stages: list[str], *, reason: str) -> None:

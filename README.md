@@ -39,6 +39,7 @@ Implemented now:
 - `analysis/watch_triggers.json` deterministic watch trigger artifact creation when `quant.enabled` is true.
 - `analysis/decision_intelligence_delta.json` previous-run decision-intelligence delta creation when `quant.enabled` is true.
 - `analysis/decision_intelligence_material.md` AI-readable decision intelligence material creation when `quant.enabled` is true.
+- `run_manifest.json` `decision_intelligence` section with enabled/status, produced artifact paths, counts, previous-run comparison status, warnings, and errors.
 - Strategy-oriented quant config support through `quant.strategies` for `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
 - Optional bounded strategy parameter diagnostics through `quant.parameter_diagnostics`.
 - `analysis/quant_strategy_runs.json` artifact creation when `quant.strategies` is configured.
@@ -202,7 +203,7 @@ Output artifact roles:
 - `codex_context/context.md`: Codex-readable context artifact with artifact index and embedded research context, including decision-intelligence material when generated.
 - `codex_context/prompt.md`: prompt sent to Codex CLI through stdin, including the fixed run timestamp for the report title, quantitative signal report requirements when signal material exists, and decision-intelligence reporting requirements when decision material exists.
 - `report/report.md`: Simplified Chinese Markdown report generated from Codex stdout, with decision-intelligence sections when supported by context and a deterministic quant strategy output table inserted when strategy run artifacts exist.
-- `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
+- `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, decision-intelligence status, and errors.
 
 Automated tests use mocks, fixtures, or fake Codex subprocesses only as test behavior. They are not product inputs and are not accepted as proof of a real-source product run.
 

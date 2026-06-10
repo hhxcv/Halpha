@@ -468,6 +468,27 @@ def build_decision_intelligence_material(config: dict[str, Any], run: RunContext
     return [DECISION_INTELLIGENCE_MATERIAL_ARTIFACT]
 
 
+def record_decision_intelligence_failure(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    stage: str,
+    message: str,
+) -> None:
+    existing = _mapping(run.manifest.get("decision_intelligence"))
+    previous_run = _mapping(existing.get("previous_run")) or _previous_run_summary("not_checked")
+    warnings = _string_list(existing.get("warnings"))
+    errors = _unique_ordered([*_string_list(existing.get("errors")), f"{stage}: {message}"])
+    _record_decision_intelligence_manifest(
+        run,
+        enabled=_quant_enabled(config),
+        status="failed",
+        previous_run=previous_run,
+        warnings=warnings,
+        errors=errors,
+    )
+
+
 def render_decision_intelligence_material(
     artifacts: dict[str, dict[str, Any]],
     *,
@@ -1574,19 +1595,9 @@ def _record_decision_intelligence_manifest(
     errors: list[str],
     reason: str | None = None,
 ) -> None:
-    artifact_keys = [
-        "market_regime_assessment",
-        "risk_assessment",
-        "decision_recommendations",
-        "watch_triggers",
-        "decision_intelligence_delta",
-        "decision_intelligence_material",
-    ]
-    artifacts = {
-        key: run.manifest["artifacts"][key]
-        for key in artifact_keys
-        if key in run.manifest["artifacts"]
-    }
+    artifacts = _decision_intelligence_manifest_artifacts(run)
+    warnings = _unique_ordered([*warnings, *_decision_manifest_artifact_messages(run, field="warnings")])
+    errors = _unique_ordered([*errors, *_decision_manifest_artifact_messages(run, field="errors")])
     section: dict[str, Any] = {
         "enabled": enabled,
         "status": status,
@@ -1606,6 +1617,43 @@ def _record_decision_intelligence_manifest(
     if reason is not None:
         section["reason"] = reason
     run.manifest["decision_intelligence"] = section
+
+
+def _decision_intelligence_manifest_artifacts(run: RunContext) -> dict[str, str]:
+    artifact_keys = [
+        "market_regime_assessment",
+        "risk_assessment",
+        "decision_recommendations",
+        "watch_triggers",
+        "decision_intelligence_delta",
+        "decision_intelligence_material",
+    ]
+    return {
+        key: run.manifest["artifacts"][key]
+        for key in artifact_keys
+        if key in run.manifest["artifacts"]
+    }
+
+
+def _decision_manifest_artifact_messages(run: RunContext, *, field: str) -> list[str]:
+    messages: list[str] = []
+    for artifact in _decision_intelligence_manifest_artifacts(run).values():
+        if not artifact.endswith(".json"):
+            continue
+        path = run.run_dir / artifact
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            if field == "errors":
+                messages.append(f"{artifact} was listed in the manifest but was not found.")
+            continue
+        except JSONDecodeError as exc:
+            if field == "errors":
+                messages.append(f"{artifact} is not valid JSON: {exc.msg}.")
+            continue
+        if isinstance(loaded, dict):
+            messages.extend(_string_list(loaded.get(field)))
+    return messages
 
 
 def _regime_record(signals: list[dict[str, Any]]) -> dict[str, Any]:
