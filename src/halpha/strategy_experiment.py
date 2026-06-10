@@ -9,7 +9,11 @@ from typing import Any
 from .ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from .pipeline import PipelineError
 from .quant.registry import get_strategy_definition
-from .quant.strategy_evaluation import evaluate_single_window_backtest
+from .quant.strategy_evaluation import evaluate_single_window_backtest, evaluate_walk_forward_backtest
+from .strategy_effectiveness_gates import (
+    STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
+    build_strategy_effectiveness_gates,
+)
 from .strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
 from .storage import display_path, ensure_directory, write_json
 
@@ -35,6 +39,7 @@ class StrategyExperimentResult:
     output_dir: Path
     artifact_path: Path
     benchmark_suite_path: Path
+    gates_path: Path
     manifest_path: Path
 
 
@@ -107,6 +112,14 @@ def run_strategy_experiment(
     artifact_path = target_dir / STRATEGY_EXPERIMENT_ARTIFACT
     write_json(artifact_path, artifact)
 
+    gates = build_strategy_effectiveness_gates(
+        artifact,
+        config,
+        created_at=_format_utc(clock_value),
+    )
+    gates_path = target_dir / STRATEGY_EFFECTIVENESS_GATES_ARTIFACT
+    write_json(gates_path, gates)
+
     manifest_path = target_dir / STRATEGY_EXPERIMENT_MANIFEST_ARTIFACT
     manifest = _manifest(
         config_path=config_path,
@@ -114,9 +127,11 @@ def run_strategy_experiment(
         strategy_names=[str(strategy.get("name")) for strategy in strategies],
         benchmark_suite=benchmark_suite,
         artifact=artifact,
+        gates=gates,
         output_dir=target_dir,
         artifact_path=artifact_path,
         benchmark_suite_path=benchmark_suite_path,
+        gates_path=gates_path,
         manifest_path=manifest_path,
     )
     write_json(manifest_path, manifest)
@@ -129,6 +144,7 @@ def run_strategy_experiment(
         output_dir=target_dir,
         artifact_path=artifact_path,
         benchmark_suite_path=benchmark_suite_path,
+        gates_path=gates_path,
         manifest_path=manifest_path,
     )
 
@@ -204,6 +220,7 @@ def _evaluation_record(
             "benchmark_status": benchmark.get("status"),
             "metrics": {},
             "single_window": {},
+            "walk_forward": {},
             "warnings": [
                 _warning(
                     "benchmark_not_succeeded",
@@ -236,6 +253,17 @@ def _evaluation_record(
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
         )
+        walk_forward = evaluate_walk_forward_backtest(
+            strategy=strategy,
+            market_identity={
+                "source": benchmark.get("source"),
+                "symbol": benchmark.get("symbol"),
+                "timeframe": benchmark.get("timeframe"),
+            },
+            ohlcv_rows=rows,
+            signal_records=signals,
+            cost_assumptions=_cost_assumptions(strategy),
+        )
     except (OHLCVStoreError, KeyError, TypeError, ValueError) as exc:
         return _failed_record(identity, type(exc).__name__, str(exc))
 
@@ -245,8 +273,17 @@ def _evaluation_record(
         "benchmark_status": benchmark.get("status"),
         "metrics": _metrics(evaluation),
         "single_window": evaluation,
-        "warnings": _warning_items(evaluation.get("warnings")),
-        "errors": _error_items(evaluation.get("errors")),
+        "walk_forward": _bounded_walk_forward(walk_forward),
+        "warnings": _unique_items(
+            [
+                *_warning_items(evaluation.get("warnings")),
+                *_warning_items(walk_forward.get("warnings")),
+            ]
+        ),
+        "errors": [
+            *_error_items(evaluation.get("errors")),
+            *_error_items(walk_forward.get("errors")),
+        ],
     }
 
 
@@ -319,6 +356,7 @@ def _insufficient_record(
         "benchmark_status": benchmark.get("status"),
         "metrics": {},
         "single_window": {},
+        "walk_forward": {},
         "warnings": [_warning("benchmark_row_mismatch", message)],
         "errors": [],
     }
@@ -331,6 +369,7 @@ def _failed_record(identity: dict[str, Any], error_type: str, message: str) -> d
         "benchmark_status": "succeeded",
         "metrics": {},
         "single_window": {},
+        "walk_forward": {},
         "warnings": [],
         "errors": [
             {
@@ -348,6 +387,20 @@ def _metrics(evaluation: dict[str, Any]) -> dict[str, Any]:
         "baseline": evaluation.get("baseline_metrics") if isinstance(evaluation.get("baseline_metrics"), dict) else {},
         "relative": evaluation.get("relative_metrics") if isinstance(evaluation.get("relative_metrics"), dict) else {},
         "trade": evaluation.get("trade_summary") if isinstance(evaluation.get("trade_summary"), dict) else {},
+    }
+
+
+def _bounded_walk_forward(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "enabled": value.get("enabled") is True,
+        "status": value.get("status"),
+        "method": value.get("method") if isinstance(value.get("method"), dict) else {},
+        "sample": value.get("sample") if isinstance(value.get("sample"), dict) else {},
+        "window_policy": value.get("window_policy") if isinstance(value.get("window_policy"), dict) else {},
+        "summary": value.get("summary") if isinstance(value.get("summary"), dict) else {},
+        "window_count": len(value.get("windows")) if isinstance(value.get("windows"), list) else 0,
+        "warnings": _warning_items(value.get("warnings")),
+        "errors": _error_items(value.get("errors")),
     }
 
 
@@ -399,12 +452,15 @@ def _manifest(
     strategy_names: list[str],
     benchmark_suite: dict[str, Any],
     artifact: dict[str, Any],
+    gates: dict[str, Any],
     output_dir: Path,
     artifact_path: Path,
     benchmark_suite_path: Path,
+    gates_path: Path,
     manifest_path: Path,
 ) -> dict[str, Any]:
     coverage = artifact["coverage"]
+    gate_coverage = gates["coverage"] if isinstance(gates.get("coverage"), dict) else {}
     return {
         "schema_version": 1,
         "artifact_type": "strategy_experiment_manifest",
@@ -419,12 +475,28 @@ def _manifest(
         "artifacts": {
             "strategy_experiment": display_path(artifact_path, base=manifest_path.parent),
             "strategy_benchmark_suite": display_path(benchmark_suite_path, base=manifest_path.parent),
+            "strategy_effectiveness_gates": display_path(gates_path, base=manifest_path.parent),
             "manifest": display_path(manifest_path, base=manifest_path.parent),
         },
-        "counts": coverage,
+        "counts": {
+            **coverage,
+            "strategy_gate_candidates": int(gate_coverage.get("strategy_candidates") or 0),
+            "strategy_gate_effective": int(gate_coverage.get("effective") or 0),
+            "strategy_gate_watchlisted": int(gate_coverage.get("watchlisted") or 0),
+            "strategy_gate_rejected": int(gate_coverage.get("rejected") or 0),
+            "strategy_gate_insufficient_evidence": int(gate_coverage.get("insufficient_evidence") or 0),
+        },
         "failures": _failure_summaries(artifact),
-        "warnings": artifact.get("warnings", []),
-        "errors": artifact.get("errors", []),
+        "warnings": _unique_items(
+            [
+                *_warning_items(artifact.get("warnings")),
+                *_warning_items(gates.get("warnings")),
+            ]
+        ),
+        "errors": [
+            *_error_items(artifact.get("errors")),
+            *_error_items(gates.get("errors")),
+        ],
     }
 
 

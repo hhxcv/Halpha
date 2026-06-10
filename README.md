@@ -17,7 +17,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds fixed strategy benchmark window suites from shared local OHLCV history.
 - Evaluates configured quantitative strategies with bounded diagnostics.
 - Runs standalone single-strategy backtests from shared local OHLCV history.
-- Runs standalone strategy experiments against fixed benchmark suites.
+- Runs standalone strategy experiments against fixed benchmark suites and deterministic effectiveness gates.
 - Writes pipeline strategy evaluation summaries with single-window, bounded walk-forward, parameter-stability, and overfitting-risk evidence.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
@@ -121,6 +121,7 @@ run_codex_report
 - Built-in quantitative strategies:
   `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
 - Bounded backtest and parameter diagnostics.
+- Optional deterministic strategy effectiveness gate thresholds.
 - Codex CLI command and arguments for final report generation.
 
 Full report runs require public network access, configured public sources, a
@@ -173,6 +174,7 @@ A successful configured run can write:
 - `runs/strategy_backtests/<id>/manifest.json`: standalone backtest manifest.
 - `runs/strategy_experiments/<id>/strategy_experiment.json`: standalone strategy experiment output.
 - `runs/strategy_experiments/<id>/strategy_benchmark_suite.json`: benchmark suite used by a standalone experiment.
+- `runs/strategy_experiments/<id>/strategy_effectiveness_gates.json`: deterministic strategy gate output.
 - `runs/strategy_experiments/<id>/manifest.json`: standalone strategy experiment manifest.
 
 Failed runs preserve artifacts created before the failure and record errors in
@@ -196,7 +198,8 @@ Strategy benchmark suites define reusable OHLCV windows for later strategy
 experiments without embedding raw OHLCV history in AI-readable context.
 Standalone strategy experiments evaluate configured strategy candidates across
 those windows using the same single-window strategy evaluation semantics as the
-main pipeline.
+main pipeline, add bounded walk-forward summaries, and classify candidates with
+deterministic effectiveness gates.
 AI-readable strategy evaluation material carries those deterministic evaluation
 fields into research context and report generation without asking Codex to
 calculate new metrics.

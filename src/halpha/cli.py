@@ -251,10 +251,12 @@ def _experiment(
 
     artifact = display_path(result.artifact_path)
     benchmark_suite = display_path(result.benchmark_suite_path)
+    gates = display_path(result.gates_path)
     manifest = display_path(result.manifest_path)
     print("Halpha experiment succeeded.")
     print(f"status: {result.status}")
     print(f"strategy_experiment: {artifact}")
     print(f"strategy_benchmark_suite: {benchmark_suite}")
+    print(f"strategy_effectiveness_gates: {gates}")
     print(f"manifest: {manifest}")
     return result.exit_code

@@ -16,6 +16,23 @@ SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
 SUPPORTED_BENCHMARK_WINDOW_SELECTIONS = {"configured_lookback", "latest_lookback", "date_window"}
+SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
+    "elevated_overfitting_blocks_effective",
+    "max_abs_drawdown_pct",
+    "max_cost_drag_pct",
+    "min_benchmark_success_rate_pct",
+    "min_mean_excess_return_vs_buy_and_hold_pct",
+    "min_mean_net_return_pct",
+    "min_min_sample_rows",
+    "min_positive_excess_return_benchmark_pct",
+    "min_positive_net_return_benchmark_pct",
+    "min_succeeded_benchmarks",
+    "min_total_trade_count",
+    "min_walk_forward_positive_net_return_window_pct",
+    "min_walk_forward_succeeded_windows",
+    "require_parameter_stability",
+    "require_walk_forward_stable",
+}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
@@ -265,6 +282,11 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
         if not isinstance(suite, dict):
             raise ConfigError("quant.benchmark_suite must be a mapping.")
         _validate_quant_benchmark_suite(suite, "quant.benchmark_suite")
+    if "effectiveness_gates" in quant:
+        gates = quant["effectiveness_gates"]
+        if not isinstance(gates, dict):
+            raise ConfigError("quant.effectiveness_gates must be a mapping.")
+        _validate_quant_effectiveness_gates(gates, "quant.effectiveness_gates")
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
@@ -463,6 +485,42 @@ def _require_iso8601_utc_value(data: dict[str, Any], key: str, path: str) -> Non
     if isinstance(value, str) and value.strip():
         return
     raise ConfigError(f"{path} must be an ISO 8601 UTC string.")
+
+
+def _validate_quant_effectiveness_gates(gates: dict[str, Any], path: str) -> None:
+    unsupported = sorted(set(gates) - SUPPORTED_EFFECTIVENESS_GATE_FIELDS)
+    if unsupported:
+        supported = ", ".join(sorted(SUPPORTED_EFFECTIVENESS_GATE_FIELDS))
+        names = ", ".join(unsupported)
+        raise ConfigError(f"unsupported {path} field(s): {names}. Supported fields: {supported}.")
+
+    positive_int_fields = {
+        "min_min_sample_rows",
+        "min_succeeded_benchmarks",
+        "min_total_trade_count",
+        "min_walk_forward_succeeded_windows",
+    }
+    non_negative_number_fields = {
+        "max_abs_drawdown_pct",
+        "max_cost_drag_pct",
+        "min_benchmark_success_rate_pct",
+        "min_mean_excess_return_vs_buy_and_hold_pct",
+        "min_mean_net_return_pct",
+        "min_positive_excess_return_benchmark_pct",
+        "min_positive_net_return_benchmark_pct",
+        "min_walk_forward_positive_net_return_window_pct",
+    }
+    bool_fields = {
+        "elevated_overfitting_blocks_effective",
+        "require_parameter_stability",
+        "require_walk_forward_stable",
+    }
+    for key in sorted(positive_int_fields & set(gates)):
+        _require_positive_int(gates, key, f"{path}.{key}")
+    for key in sorted(non_negative_number_fields & set(gates)):
+        _require_non_negative_number(gates, key, f"{path}.{key}")
+    for key in sorted(bool_fields & set(gates)):
+        _require_bool(gates, key, f"{path}.{key}")
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:
