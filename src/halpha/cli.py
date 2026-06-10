@@ -8,6 +8,7 @@ from .config import ConfigError, load_config
 from .pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipeline_stage
 from .standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
 from .storage import display_path
+from .strategy_experiment import StrategyExperimentError, run_strategy_experiment
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,6 +39,15 @@ def build_parser() -> argparse.ArgumentParser:
     backtest_parser.add_argument("--timeframe", required=True, help="Configured OHLCV timeframe to evaluate.")
     backtest_parser.add_argument("--output-dir", help="Directory for standalone backtest output artifacts.")
 
+    experiment_parser = subparsers.add_parser("experiment", help="Run standalone strategy experiments.")
+    experiment_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    experiment_parser.add_argument(
+        "--strategy",
+        action="append",
+        help="Configured strategy name to include. May be repeated. Defaults to all enabled strategies.",
+    )
+    experiment_parser.add_argument("--output-dir", help="Directory for strategy experiment output artifacts.")
+
     return parser
 
 
@@ -57,6 +67,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             strategy_name=args.strategy,
             symbol=args.symbol,
             timeframe=args.timeframe,
+            output_dir=args.output_dir,
+        )
+
+    if args.command == "experiment":
+        return _experiment(
+            args.config,
+            strategy_names=args.strategy,
             output_dir=args.output_dir,
         )
 
@@ -199,5 +216,45 @@ def _backtest(
     print(f"status: {result.status}")
     print(f"reason: {result.reason}")
     print(f"strategy_backtest: {artifact}")
+    print(f"manifest: {manifest}")
+    return result.exit_code
+
+
+def _experiment(
+    config_arg: str,
+    *,
+    strategy_names: list[str] | None,
+    output_dir: str | None,
+) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha experiment failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    try:
+        result = run_strategy_experiment(
+            config,
+            config_path=config_path,
+            strategy_names=strategy_names,
+            output_dir=Path(output_dir) if output_dir else None,
+        )
+    except StrategyExperimentError as exc:
+        print("Halpha experiment failed.")
+        print("stage: experiment")
+        print(f"reason: {exc}")
+        return exc.exit_code
+
+    artifact = display_path(result.artifact_path)
+    benchmark_suite = display_path(result.benchmark_suite_path)
+    manifest = display_path(result.manifest_path)
+    print("Halpha experiment succeeded.")
+    print(f"status: {result.status}")
+    print(f"strategy_experiment: {artifact}")
+    print(f"strategy_benchmark_suite: {benchmark_suite}")
     print(f"manifest: {manifest}")
     return result.exit_code

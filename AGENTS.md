@@ -182,6 +182,7 @@ Current bias:
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from M3 JSON artifacts.
 * `run_manifest.json` records decision-intelligence enabled/status, produced artifacts, counts, previous-run comparison status, warnings, and errors.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
+* Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, and `manifest.json` under a local experiment output directory.
 * Codex context may include signal and decision material, not shared OHLCV history.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
@@ -228,6 +229,7 @@ python -m halpha run --config config.example.yaml --no-codex
 python -m halpha run --config config.example.yaml --until <stage_name>
 python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>
+python -m halpha experiment --config config.example.yaml
 ```
 
 The run command is the implemented product path.
@@ -246,6 +248,10 @@ They must not fabricate skipped artifacts.
 
 `backtest` does not run the full report pipeline or Codex CLI.
 
+`experiment` runs configured strategy candidates against fixed benchmark suite windows from shared local OHLCV history.
+
+`experiment` does not run the full report pipeline or Codex CLI.
+
 Full report runs require public network access, configured public sources, and a working Codex CLI.
 
 Do not claim success without running the relevant command.
@@ -260,6 +266,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha run --config config.example.yaml --until <stage_name>` for bounded stage-through acceptance.
 * Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
+* Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment artifacts when shared OHLCV history exists.
 * Use `python -m halpha run --config config.example.yaml` for real-source product acceptance when the user permits Codex CLI use.
 * State before a real Codex CLI run that generated local research context will be sent to Codex CLI.
 * Do not treat fixtures, mocked HTTP responses, or fake Codex subprocesses as product acceptance.

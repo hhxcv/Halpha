@@ -23,25 +23,49 @@ def build_strategy_benchmark_suite(
     *,
     now: datetime | str | None = None,
 ) -> list[str]:
+    if not _benchmark_suite_enabled(config):
+        _record_disabled(run)
+        return []
+
+    artifact = create_strategy_benchmark_suite_artifact(
+        config,
+        config_path=run.config_path,
+        run_output_dir=run.run_dir.parent,
+        manifest_artifacts=run.manifest.get("artifacts"),
+        now=now,
+    )
+    records = artifact["benchmarks"]
+    coverage = artifact["coverage"]
+    warnings = artifact["warnings"]
+    errors = artifact["errors"]
+    write_json(run.analysis_dir / "strategy_benchmark_suite.json", artifact)
+    run.manifest["artifacts"]["strategy_benchmark_suite"] = STRATEGY_BENCHMARK_SUITE_ARTIFACT
+    _record_manifest_summary(run, records, coverage=coverage, warnings=warnings, errors=errors)
+    return [STRATEGY_BENCHMARK_SUITE_ARTIFACT]
+
+
+def create_strategy_benchmark_suite_artifact(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_output_dir: Path,
+    manifest_artifacts: dict[str, Any] | None = None,
+    now: datetime | str | None = None,
+) -> dict[str, Any]:
     quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
     market = config.get("market") if isinstance(config.get("market"), dict) else {}
     ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
     suite_config = quant.get("benchmark_suite") if isinstance(quant.get("benchmark_suite"), dict) else {}
 
-    if (
-        quant.get("enabled") is not True
-        or market.get("enabled") is not True
-        or not isinstance(ohlcv, dict)
-        or suite_config.get("enabled") is False
-    ):
-        _record_disabled(run)
-        return []
-
     source = str(market["source"])
-    storage_dir = _storage_dir(ohlcv, run.config_path)
-    source_artifact = _sync_state_artifact(storage_dir, run)
+    storage_dir = _storage_dir(ohlcv, config_path)
+    source_artifact = _sync_state_artifact(
+        storage_dir,
+        config_path=config_path,
+        manifest_artifacts=manifest_artifacts,
+    )
     windows = _window_specs(suite_config)
-    store = OHLCVParquetStore(storage_dir, run_output_dir=run.run_dir.parent)
+    store = OHLCVParquetStore(storage_dir, run_output_dir=run_output_dir)
 
     records = []
     try:
@@ -52,7 +76,7 @@ def build_strategy_benchmark_suite(
                         _benchmark_record(
                             store=store,
                             storage_dir=storage_dir,
-                            config_base=run.config_path.parent,
+                            config_base=config_path.parent,
                             source=source,
                             symbol=symbol,
                             timeframe=timeframe,
@@ -97,10 +121,20 @@ def build_strategy_benchmark_suite(
         "warnings": warnings,
         "errors": errors,
     }
-    write_json(run.analysis_dir / "strategy_benchmark_suite.json", artifact)
-    run.manifest["artifacts"]["strategy_benchmark_suite"] = STRATEGY_BENCHMARK_SUITE_ARTIFACT
-    _record_manifest_summary(run, records, coverage=coverage, warnings=warnings, errors=errors)
-    return [STRATEGY_BENCHMARK_SUITE_ARTIFACT]
+    return artifact
+
+
+def _benchmark_suite_enabled(config: dict[str, Any]) -> bool:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+    suite_config = quant.get("benchmark_suite") if isinstance(quant.get("benchmark_suite"), dict) else {}
+    return (
+        quant.get("enabled") is True
+        and market.get("enabled") is True
+        and isinstance(ohlcv, dict)
+        and suite_config.get("enabled") is not False
+    )
 
 
 def _benchmark_record(
@@ -386,11 +420,16 @@ def _storage_ref(
     return display_path(group_dir, base=config_base)
 
 
-def _sync_state_artifact(storage_dir: Path, run: RunContext) -> str:
-    artifact = run.manifest.get("artifacts", {}).get("ohlcv_sync_state")
+def _sync_state_artifact(
+    storage_dir: Path,
+    *,
+    config_path: Path,
+    manifest_artifacts: dict[str, Any] | None,
+) -> str:
+    artifact = manifest_artifacts.get("ohlcv_sync_state") if isinstance(manifest_artifacts, dict) else None
     if isinstance(artifact, str) and artifact:
         return artifact
-    return display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=run.config_path.parent)
+    return display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=config_path.parent)
 
 
 def _benchmark_id(
