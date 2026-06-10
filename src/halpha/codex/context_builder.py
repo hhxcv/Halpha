@@ -86,6 +86,10 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "15. Do not provide trading instructions, position sizing, account actions, or investment recommendations.",
             "16. Do not fabricate strategy signals, strategy conclusions, backtest results, return promises, or unsupported certainty.",
             "17. Halpha inserts the complete quant strategy run table after Codex output; do not recreate the full strategy run table.",
+            "18. When decision intelligence material is present, use it for action-facing decision language and use quantitative material as upstream evidence.",
+            "19. Include supported decision coverage for current decision view, what to do, what not to do, tentative opportunities, wait/watch conditions, risk state, invalidation conditions, changes versus previous run, uncertainty, and method limits.",
+            "20. Do not invent action levels, signals, prices, strategy conclusions, unsupported trading instructions, or stronger advice than the decision material supports.",
+            "21. Do not upgrade WATCH, NO_ACTION, low-confidence, high-risk, conflicting, or insufficient-evidence material into stronger action language.",
             "",
             "Quantitative strategy material rules:",
             "",
@@ -96,6 +100,15 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "- Treat backtest diagnostics as historical research material only; do not describe them as forecasts, expected returns, or proof of future performance.",
             "- Do not derive new quantitative conclusions from raw OHLCV, shared OHLCV storage, or unstated calculations.",
             "- Do not give trading instructions, position sizing, account actions, return promises, or investment recommendations.",
+            "",
+            "Decision intelligence material rules:",
+            "",
+            "- Use decision intelligence material for deterministic decision synthesis; use quantitative material as evidence.",
+            "- Cover current decision view, what to do, what not to do, tentative opportunities, wait/watch conditions, risk state, invalidation conditions, changes versus previous run, uncertainty, and method limits when the material exists.",
+            "- Keep evidence, risk conditions, confidence, conflicts, and uncertainty near each decision statement.",
+            "- Treat WATCH, NO_ACTION, low confidence, high risk, conflicts, or insufficient evidence conservatively.",
+            "- When previous-run delta status is no_previous_run, state that no previous successful decision-intelligence run was available instead of fabricating changes.",
+            "- Do not invent action levels, signals, prices, strategy conclusions, unsupported trading instructions, position sizing, account actions, return promises, or investment recommendations.",
             "",
             "Report style:",
             "",
@@ -139,7 +152,7 @@ def _read_research_context(run: RunContext) -> str:
 
 def _artifact_index(run: RunContext) -> dict[str, Any]:
     artifacts = run.manifest.get("artifacts", {})
-    return {
+    index = {
         "raw_market": artifacts.get("raw_market"),
         "raw_text_events": artifacts.get("raw_text_events"),
         "quant_strategy_runs": artifacts.get("quant_strategy_runs"),
@@ -151,6 +164,18 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "codex_context": CODEX_CONTEXT_ARTIFACT,
         "codex_prompt": CODEX_PROMPT_ARTIFACT,
     }
+    if artifacts.get("decision_intelligence_material"):
+        index.update(
+            {
+                "market_regime_assessment": artifacts.get("market_regime_assessment"),
+                "risk_assessment": artifacts.get("risk_assessment"),
+                "decision_recommendations": artifacts.get("decision_recommendations"),
+                "watch_triggers": artifacts.get("watch_triggers"),
+                "decision_intelligence_delta": artifacts.get("decision_intelligence_delta"),
+                "decision_intelligence_material": artifacts.get("decision_intelligence_material"),
+            }
+        )
+    return index
 
 
 def _report_title(config: dict[str, Any]) -> str:

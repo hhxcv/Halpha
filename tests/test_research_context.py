@@ -122,8 +122,22 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
+    assert "risk_assessment: analysis/risk_assessment.json" in context
+    assert "decision_recommendations: analysis/decision_recommendations.json" in context
+    assert "watch_triggers: analysis/watch_triggers.json" in context
+    assert "decision_intelligence_delta: analysis/decision_intelligence_delta.json" in context
+    assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
     assert '<embed path="analysis/market_signal_material.md">' in context
     assert "artifact_type: analysis_market_signal_material" in context
+    assert '<embed path="analysis/decision_intelligence_material.md">' in context
+    assert "artifact_type: analysis_decision_intelligence_material" in context
+    assert "research_decision_support_only: true" in context
+    assert "decision_intelligence_requirements:" in context
+    assert "use_decision_material_for_decision_language: true" in context
+    assert "use_quant_material_as_upstream_evidence: true" in context
+    assert "do_not_invent_action_levels: true" in context
+    assert "do_not_upgrade_low_confidence_or_unsupported_material: true" in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "include_signal_conclusions: true" in context
     assert "include_evidence_near_conclusions: true" in context
@@ -132,7 +146,48 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
     assert "open_time:" not in context
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
+    assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
+
+
+def test_research_context_fails_when_decision_material_is_missing_for_quant_enabled(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path, quant_enabled=True, text_enabled=False)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={
+            "collect_market_data": _write_market_raw,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _write_market_data_views,
+            "evaluate_market_strategy_signals": _write_strategy_signals,
+            "build_decision_intelligence_material": _noop_stage,
+        },
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_research_context"
+    assert result.reason == (
+        "analysis/decision_intelligence_material.md was not found; "
+        "build_decision_intelligence_material must run first."
+    )
+    assert not (result.run.analysis_dir / "research_context.md").exists()
+
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert _stage(manifest, "build_research_context")["status"] == "failed"
+    assert manifest["errors"] == [
+        {
+            "stage": "build_research_context",
+            "message": (
+                "analysis/decision_intelligence_material.md was not found; "
+                "build_decision_intelligence_material must run first."
+            ),
+        }
+    ]
 
 
 def test_research_context_fails_when_enabled_material_is_missing(tmp_path: Path) -> None:
