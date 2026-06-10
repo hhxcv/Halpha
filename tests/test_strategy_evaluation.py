@@ -1,10 +1,90 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import date, timedelta
 from typing import Any
 
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest, evaluate_walk_forward_backtest
+
+
+def test_single_window_backtest_golden_entry_exit_path_is_hand_verifiable() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 110),
+        _record("2026-06-03T00:00:00Z", 99),
+        _record("2026-06-04T00:00:00Z", 108.9),
+        _record("2026-06-05T00:00:00Z", 108.9),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, [0, 1, 1, 0, 1]),
+        cost_assumptions={"fees_bps": 10, "slippage_bps": 5},
+    )
+
+    # Hand check:
+    # close returns: +10%, -10%, +10%, 0%
+    # next-bar positions from prior signals: 0, 1, 1, 0
+    # turnovers: 0, 1, 0, 1
+    # cost rate: (10 + 5) / 10000 = 0.0015 per one-way turnover
+    # gross returns: 0%, -10%, +10%, 0%
+    # net returns: 0%, -10.15%, +10%, -0.15%
+    # gross equity: 1.0 * 1.0 * 0.9 * 1.1 * 1.0 = 0.99
+    # net equity: 1.0 * 1.0 * 0.8985 * 1.1 * 0.9985 = 0.986867475
+    assert result["status"] == "succeeded"
+    assert result["execution_model"]["lookahead_policy"] == "no_same_bar_execution"
+    assert result["cost_assumptions"] == {
+        "fees_bps": 10.0,
+        "slippage_bps": 5.0,
+        "total_one_way_bps": 15.0,
+    }
+    assert _curve_values(result, "position") == [0.0, 0.0, 1.0, 1.0, 0.0]
+    assert _curve_values(result, "turnover") == [0.0, 0.0, 1.0, 0.0, 1.0]
+    assert _curve_values(result, "period_gross_return_pct") == [None, 0.0, -10.0, 10.0, 0.0]
+    assert _curve_values(result, "period_net_return_pct") == [None, 0.0, -10.15, 10.0, -0.15]
+    assert _curve_values(result, "cost_pct") == [0.0, 0.0, 0.15, 0.0, 0.15]
+    assert _curve_values(result, "gross_equity") == [1.0, 1.0, 0.9, 0.99, 0.99]
+    assert _curve_values(result, "net_equity") == [1.0, 1.0, 0.8985, 0.98835, 0.986867]
+    assert result["strategy_metrics"]["gross_return_pct"] == -1.0
+    assert result["strategy_metrics"]["net_return_pct"] == -1.313252
+    assert result["strategy_metrics"]["total_cost_pct"] == 0.3
+    assert result["strategy_metrics"]["cost_drag_pct"] == 0.313252
+    assert result["strategy_metrics"]["max_drawdown_pct"] == -10.15
+    assert result["strategy_metrics"]["final_equity"] == 0.986867
+    assert result["drawdown_summary"] == {
+        "max_drawdown_pct": -10.15,
+        "max_drawdown_start": "2026-06-02T00:00:00Z",
+        "max_drawdown_end": "2026-06-03T00:00:00Z",
+    }
+    assert result["trade_summary"] == {
+        "trade_count": 1,
+        "completed_trade_count": 1,
+        "open_trade_count": 0,
+        "hit_rate_pct": 0.0,
+        "turnover": 2.0,
+        "exposure_pct": 50.0,
+        "average_holding_bars": 2.0,
+    }
+    assert result["baseline_metrics"]["buy_and_hold"]["net_return_pct"] == 8.7515
+    assert result["baseline_metrics"]["buy_and_hold"]["max_drawdown_pct"] == -10.0
+    assert result["baseline_metrics"]["buy_and_hold"]["final_equity"] == 1.087515
+    assert result["baseline_metrics"]["cash"] == {
+        "net_return_pct": 0.0,
+        "max_drawdown_pct": 0.0,
+        "volatility_pct": 0.0,
+        "final_equity": 1.0,
+    }
+    assert result["relative_metrics"] == {
+        "excess_return_vs_buy_and_hold_pct": -10.064752,
+        "drawdown_delta_vs_buy_and_hold_pct": -0.15,
+    }
+    assert math.isclose(result["strategy_metrics"]["volatility_pct"], 136.109526, abs_tol=0.0001)
+    assert math.isclose(result["strategy_metrics"]["sharpe"], -0.201125, abs_tol=0.0001)
+    assert math.isclose(result["strategy_metrics"]["sortino"], -0.286575, abs_tol=0.0001)
+    json.dumps(result)
 
 
 def test_single_window_backtest_no_position_records_flat_equity() -> None:
@@ -165,6 +245,55 @@ def test_single_window_backtest_requires_signal_for_each_ohlcv_row() -> None:
     json.dumps(result)
 
 
+def test_single_window_backtest_requires_at_least_two_ohlcv_rows() -> None:
+    rows = [_record("2026-06-01T00:00:00Z", 100)]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, [1]),
+    )
+
+    assert result["status"] == "insufficient_data"
+    assert [item["code"] for item in result["warnings"]] == [
+        "insufficient_ohlcv_rows",
+        "historical_research_only",
+    ]
+    assert result["strategy_metrics"] == {}
+    assert result["baseline_metrics"] == {}
+    assert result["equity_curve"] == []
+    assert result["errors"] == []
+    json.dumps(result)
+
+
+def test_single_window_backtest_rejects_non_positive_close_without_fake_success() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 0),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, [1, 1]),
+    )
+
+    assert result["status"] == "failed"
+    assert result["strategy_metrics"] == {}
+    assert result["equity_curve"] == []
+    assert result["warnings"][0]["code"] == "historical_research_only"
+    assert result["errors"] == [
+        {
+            "error_type": "ValueError",
+            "message": "close must be a positive number for strategy evaluation.",
+            "stage": "strategy_evaluation.single_window",
+        }
+    ]
+    json.dumps(result)
+
+
 def test_walk_forward_backtest_records_sequential_windows_and_instability_warnings() -> None:
     rows = _walk_forward_rows()
 
@@ -268,6 +397,10 @@ def _signal_records(rows: list[dict[str, Any]], targets: list[float]) -> dict[st
             for row, target in zip(rows, targets, strict=True)
         ],
     }
+
+
+def _curve_values(result: dict[str, Any], field: str) -> list[Any]:
+    return [item[field] for item in result["equity_curve"]]
 
 
 def _walk_forward_rows() -> list[dict[str, Any]]:
