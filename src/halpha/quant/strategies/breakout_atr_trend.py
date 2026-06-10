@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 
 from ..backtest import bounded_backtest_diagnostic
+from ..signal_records import insufficient_strategy_signal_records, strategy_signal_records
 from ..strategy_records import (
     backtest_diagnostic,
     data_quality,
@@ -35,7 +36,7 @@ def run(
     created_at: str,
 ) -> dict[str, Any]:
     params = _params(strategy.get("params"))
-    minimum_rows = max(params["breakout_window"], params["exit_window"], params["atr_window"]) + 1
+    minimum_rows = _minimum_rows(params)
     if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
         return _insufficient_run(
             strategy,
@@ -47,25 +48,17 @@ def run(
             minimum_rows=minimum_rows,
         )
 
-    frame = _frame(rows)
-    high = frame["high"]
-    low = frame["low"]
-    close = frame["close"]
-    latest_close = float(close.iloc[-1])
-    breakout_high, breakout_low, exit_low, atr = _vectorbt_breakout_atr(
-        high,
-        low,
-        close,
-        params,
-    )
-    latest_breakout_high = float(breakout_high.iloc[-1])
-    latest_breakout_low = float(breakout_low.iloc[-1])
-    latest_exit_low = float(exit_low.iloc[-1])
-    latest_atr = float(atr.iloc[-1])
-    atr_pct = _pct(latest_atr, latest_close)
-    range_width_pct = _pct(latest_breakout_high - latest_breakout_low, latest_close)
-    breakout_distance_atr = _breakout_distance_atr(latest_close, latest_breakout_high, latest_atr)
-    signal_series = _active_breakout_state(close, breakout_high, exit_low)
+    state = _signal_state(strategy, view, rows, params=params)
+    close = state["close"]
+    signal_series = state["signal_series"]
+    latest_close = state["latest_close"]
+    latest_breakout_high = state["latest_breakout_high"]
+    latest_breakout_low = state["latest_breakout_low"]
+    latest_exit_low = state["latest_exit_low"]
+    latest_atr = state["latest_atr"]
+    atr_pct = state["atr_pct"]
+    range_width_pct = state["range_width_pct"]
+    breakout_distance_atr = state["breakout_distance_atr"]
     entry_count = _transition_count(signal_series, from_value=False, to_value=True)
     exit_count = _transition_count(signal_series, from_value=True, to_value=False)
     latest_signal = bool(signal_series.iloc[-1])
@@ -154,6 +147,24 @@ def failed_params(strategy: dict[str, Any]) -> dict[str, Any]:
     return params
 
 
+def signal_records(
+    strategy: dict[str, Any],
+    view: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    params = _params(strategy.get("params"))
+    minimum_rows = _minimum_rows(params)
+    if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
+        return insufficient_strategy_signal_records(
+            strategy,
+            view,
+            rows,
+            params=params,
+            minimum_rows=minimum_rows,
+        )
+    return _signal_state(strategy, view, rows, params=params)["signal_records"]
+
+
 def _insufficient_run(
     strategy: dict[str, Any],
     view: dict[str, Any],
@@ -206,6 +217,102 @@ def _params(raw: Any) -> dict[str, Any]:
         "exit_window": _positive_int(params["exit_window"], "exit_window"),
         "atr_window": _positive_int(params["atr_window"], "atr_window"),
     }
+
+
+def _minimum_rows(params: dict[str, int]) -> int:
+    return max(params["breakout_window"], params["exit_window"], params["atr_window"]) + 1
+
+
+def _signal_state(
+    strategy: dict[str, Any],
+    view: dict[str, Any],
+    rows: list[dict[str, Any]],
+    *,
+    params: dict[str, int],
+) -> dict[str, Any]:
+    frame = _frame(rows)
+    high = frame["high"]
+    low = frame["low"]
+    close = frame["close"]
+    breakout_high, breakout_low, exit_low, atr = _vectorbt_breakout_atr(
+        high,
+        low,
+        close,
+        params,
+    )
+    latest_close = float(close.iloc[-1])
+    latest_breakout_high = float(breakout_high.iloc[-1])
+    latest_breakout_low = float(breakout_low.iloc[-1])
+    latest_exit_low = float(exit_low.iloc[-1])
+    latest_atr = float(atr.iloc[-1])
+    signal_series = _active_breakout_state(close, breakout_high, exit_low)
+    indicator_contexts = _signal_indicator_contexts(
+        close,
+        breakout_high,
+        breakout_low,
+        exit_low,
+        atr,
+    )
+    return {
+        "frame": frame,
+        "close": close,
+        "signal_series": signal_series,
+        "latest_close": latest_close,
+        "latest_breakout_high": latest_breakout_high,
+        "latest_breakout_low": latest_breakout_low,
+        "latest_exit_low": latest_exit_low,
+        "latest_atr": latest_atr,
+        "atr_pct": _pct(latest_atr, latest_close),
+        "range_width_pct": _pct(latest_breakout_high - latest_breakout_low, latest_close),
+        "breakout_distance_atr": _breakout_distance_atr(
+            latest_close,
+            latest_breakout_high,
+            latest_atr,
+        ),
+        "signal_records": strategy_signal_records(
+            strategy,
+            view,
+            rows,
+            params=params,
+            frame=frame,
+            close=close,
+            signal_series=signal_series,
+            indicator_contexts=indicator_contexts,
+        ),
+    }
+
+
+def _signal_indicator_contexts(
+    close: pd.Series,
+    breakout_high: pd.Series,
+    breakout_low: pd.Series,
+    exit_low: pd.Series,
+    atr: pd.Series,
+) -> list[dict[str, Any]]:
+    contexts = []
+    for position in range(len(close)):
+        latest_close = float(close.iloc[position])
+        high_level = float(breakout_high.iloc[position])
+        low_level = float(breakout_low.iloc[position])
+        exit_level = float(exit_low.iloc[position])
+        latest_atr = float(atr.iloc[position])
+        contexts.append(
+            {
+                "calculation_backend": VECTORBT_BACKEND,
+                "breakout_window_high": high_level,
+                "breakout_window_low": low_level,
+                "exit_window_low": exit_level,
+                "atr": latest_atr,
+                "atr_pct": _pct(latest_atr, latest_close),
+                "range_width_pct": _pct(high_level - low_level, latest_close),
+                "breakout_distance_atr": _breakout_distance_atr(
+                    latest_close,
+                    high_level,
+                    latest_atr,
+                ),
+            }
+        )
+    return contexts
 
 
 def _positive_int(value: Any, name: str) -> int:
