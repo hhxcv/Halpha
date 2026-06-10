@@ -14,6 +14,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Collects public RSS text events from configured sources.
 - Syncs reusable OHLCV history into a shared local Parquet store.
 - Builds deterministic current-run OHLCV data views.
+- Builds fixed strategy benchmark window suites from shared local OHLCV history.
 - Evaluates configured quantitative strategies with bounded diagnostics.
 - Runs standalone single-strategy backtests from shared local OHLCV history.
 - Writes pipeline strategy evaluation summaries with single-window, bounded walk-forward, parameter-stability, and overfitting-risk evidence.
@@ -80,6 +81,7 @@ collect_market_data
 collect_text_events
 sync_ohlcv
 build_market_data_views
+build_strategy_benchmark_suite
 evaluate_quant_strategies
 evaluate_strategy_evaluation
 evaluate_market_strategy_signals
@@ -135,6 +137,7 @@ A successful configured run can write:
 - `data/market/ohlcv/`: shared finalized OHLCV history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
+- `analysis/strategy_benchmark_suite.json`: fixed strategy benchmark window metadata.
 - `analysis/quant_strategy_runs.json`: configured strategy run outputs.
 - `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.
 - `analysis/strategy_evaluation_material.md`: AI-readable strategy evaluation material.
@@ -174,6 +177,8 @@ forecasts, trading instructions, investment advice, or performance guarantees.
 Strategy evaluation summaries include cost assumptions, gross and net metrics,
 baseline comparison, relative metrics, bounded walk-forward summaries, and
 research limitation, parameter-stability, and overfitting-risk warnings.
+Strategy benchmark suites define reusable OHLCV windows for later strategy
+experiments without embedding raw OHLCV history in AI-readable context.
 AI-readable strategy evaluation material carries those deterministic evaluation
 fields into research context and report generation without asking Codex to
 calculate new metrics.
