@@ -20,21 +20,26 @@ def test_config_example_loads_successfully() -> None:
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
         "tsmom_vol_scaled",
         "breakout_atr_trend",
+        "sma_cross_trend",
         "bollinger_rsi_reversion",
     ]
     assert all(strategy["enabled"] is True for strategy in config["quant"]["strategies"])
     assert all(strategy["backtest"]["enabled"] is True for strategy in config["quant"]["strategies"])
     assert config["quant"]["strategies"][0]["params"] == {
-        "return_window": 30,
-        "volatility_window": 30,
+        "return_window": 120,
+        "volatility_window": 60,
         "target_volatility": 0.2,
     }
     assert config["quant"]["strategies"][1]["params"] == {
-        "breakout_window": 55,
+        "breakout_window": 120,
         "exit_window": 20,
         "atr_window": 14,
     }
     assert config["quant"]["strategies"][2]["params"] == {
+        "short_window": 20,
+        "long_window": 30,
+    }
+    assert config["quant"]["strategies"][3]["params"] == {
         "bollinger_window": 20,
         "band_std": 2.0,
         "rsi_window": 14,
@@ -43,11 +48,18 @@ def test_config_example_loads_successfully() -> None:
         "trend_window": 100,
         "trend_filter_pct": 10.0,
     }
+    assert config["quant"]["effectiveness_gates"] == {
+        "min_positive_net_return_benchmark_pct": 25.0,
+        "max_cost_drag_pct": 6.0,
+        "require_walk_forward_stable": False,
+        "min_walk_forward_positive_net_return_window_pct": 0.0,
+    }
     assert config["quant"]["parameter_diagnostics"]["enabled"] is True
     assert config["quant"]["parameter_diagnostics"]["max_combinations"] == 16
     assert sorted(config["quant"]["parameter_diagnostics"]["grids"]) == [
         "bollinger_rsi_reversion",
         "breakout_atr_trend",
+        "sma_cross_trend",
         "tsmom_vol_scaled",
     ]
     assert config["text"]["sources"][0]["type"] == "rss"
@@ -578,6 +590,18 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: breakout_atr_trend\n      params:\n        atr_window: false",
             r"quant\.strategies\[0\]\.params\.atr_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: sma_cross_trend\n      params:\n        short_window: 0",
+            r"quant\.strategies\[0\]\.params\.short_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: sma_cross_trend\n      params:\n        long_window: false",
+            r"quant\.strategies\[0\]\.params\.long_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: sma_cross_trend\n      params:\n        short_window: 50\n        long_window: 20",
+            r"quant\.strategies\[0\]\.params\.short_window must be lower than quant\.strategies\[0\]\.params\.long_window",
         ),
         (
             "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        bollinger_window: 0",

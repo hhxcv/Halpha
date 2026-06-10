@@ -17,7 +17,12 @@ class StrategyDefinition:
     signal_records: StrategySignalRecords
 
 
-SUPPORTED_STRATEGY_NAMES = {"bollinger_rsi_reversion", "breakout_atr_trend", "tsmom_vol_scaled"}
+SUPPORTED_STRATEGY_NAMES = {
+    "bollinger_rsi_reversion",
+    "breakout_atr_trend",
+    "sma_cross_trend",
+    "tsmom_vol_scaled",
+}
 
 
 def get_strategy_definition(name: str) -> StrategyDefinition | None:
@@ -47,5 +52,14 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             run=bollinger_rsi_reversion.run,
             failed_params=bollinger_rsi_reversion.failed_params,
             signal_records=bollinger_rsi_reversion.signal_records,
+        )
+    if name == "sma_cross_trend":
+        from .strategies import sma_cross_trend
+
+        return StrategyDefinition(
+            name=sma_cross_trend.NAME,
+            run=sma_cross_trend.run,
+            failed_params=sma_cross_trend.failed_params,
+            signal_records=sma_cross_trend.signal_records,
         )
     return None

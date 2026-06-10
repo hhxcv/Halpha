@@ -119,7 +119,8 @@ run_codex_report
 - Public RSS text sources.
 - Shared OHLCV history storage under `data/market/`.
 - Built-in quantitative strategies:
-  `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
+  `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and
+  `bollinger_rsi_reversion`.
 - Bounded backtest and parameter diagnostics.
 - Optional deterministic strategy effectiveness gate thresholds.
 - Codex CLI command and arguments for final report generation.

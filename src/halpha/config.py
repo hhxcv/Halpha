@@ -34,6 +34,7 @@ SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "require_walk_forward_stable",
 }
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
+    "sma_cross_trend": {"short_window", "long_window"},
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
     "bollinger_rsi_reversion": {
@@ -316,6 +317,12 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
         if "trend_filter_pct" in params:
             _require_positive_number(params, "trend_filter_pct", f"{path}.trend_filter_pct")
         _validate_bollinger_rsi_thresholds(params, path)
+    if name == "sma_cross_trend":
+        if "short_window" in params:
+            _require_positive_int(params, "short_window", f"{path}.short_window")
+        if "long_window" in params:
+            _require_positive_int(params, "long_window", f"{path}.long_window")
+        _validate_sma_cross_windows(params, path)
 
 
 def _validate_bollinger_rsi_thresholds(params: dict[str, Any], path: str) -> None:
@@ -346,6 +353,18 @@ def _require_rsi_threshold(data: dict[str, Any], key: str, path: str) -> float:
     ):
         raise ConfigError(f"{path} must be a number greater than 0 and lower than 100.")
     return float(value)
+
+
+def _validate_sma_cross_windows(params: dict[str, Any], path: str) -> None:
+    effective = {
+        "short_window": 20,
+        "long_window": 50,
+    }
+    effective.update(params)
+    short_window = _require_positive_int(effective, "short_window", f"{path}.short_window")
+    long_window = _require_positive_int(effective, "long_window", f"{path}.long_window")
+    if short_window >= long_window:
+        raise ConfigError(f"{path}.short_window must be lower than {path}.long_window.")
 
 
 def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> None:
@@ -423,6 +442,9 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
             _require_positive_number_value(value, path)
         if param_name in {"rsi_oversold", "rsi_overbought"}:
             _require_rsi_threshold_value(value, path)
+    if name == "sma_cross_trend":
+        if param_name in {"short_window", "long_window"}:
+            _require_positive_int_value(value, path)
 
 
 def _validate_quant_benchmark_suite(suite: dict[str, Any], path: str) -> None:
