@@ -5,7 +5,10 @@ import shutil
 import subprocess
 from typing import Any
 
-from halpha.codex.report_postprocess import inject_quant_strategy_table
+from halpha.codex.report_postprocess import (
+    inject_quant_strategy_table,
+    inject_strategy_effectiveness_table,
+)
 from halpha.pipeline import PipelineError, RunContext
 
 
@@ -86,6 +89,7 @@ def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
         )
 
     report = inject_quant_strategy_table(completed.stdout, run)
+    report = inject_strategy_effectiveness_table(report, run)
     report_path = run.report_dir / "report.md"
     report_path.write_text(report, encoding="utf-8")
     run.manifest["artifacts"]["report"] = REPORT_ARTIFACT

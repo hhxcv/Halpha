@@ -97,6 +97,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_strategy_benchmark_suite", "succeeded"),
         ("evaluate_quant_strategies", "succeeded"),
         ("evaluate_strategy_evaluation", "succeeded"),
+        ("build_strategy_experiment_material", "succeeded"),
         ("evaluate_market_strategy_signals", "succeeded"),
         ("build_market_signals", "succeeded"),
         ("build_market_signal_material", "succeeded"),
@@ -229,6 +230,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/quant_strategy_runs.json",
         "analysis/strategy_evaluation_summary.json",
         "analysis/strategy_evaluation_material.md",
+        "analysis/strategy_experiment.json",
+        "analysis/strategy_effectiveness_gates.json",
+        "analysis/strategy_experiment_material.md",
         "analysis/market_strategy_signals.json",
         "analysis/market_signals.json",
         "analysis/market_signal_material.md",
@@ -279,6 +283,13 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["strategy_evaluation_insufficient_data"] == 0
     assert manifest["counts"]["strategy_evaluation_walk_forward_records"] == 0
     assert manifest["counts"]["strategy_evaluation_material_records"] == 4
+    assert manifest["counts"]["strategy_experiment_candidates"] == 1
+    assert manifest["counts"]["strategy_experiment_evaluations"] == 4
+    assert manifest["counts"]["strategy_experiment_evaluations_succeeded"] == 4
+    assert manifest["counts"]["strategy_experiment_evaluations_failed"] == 0
+    assert manifest["counts"]["strategy_experiment_evaluations_insufficient_data"] == 0
+    assert manifest["counts"]["strategy_gate_candidates"] == 1
+    assert manifest["counts"]["strategy_experiment_material_records"] == 1
     assert manifest["counts"]["market_strategy_signals"] == 4
     assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 0
     assert manifest["counts"]["market_signals"] == 4
@@ -305,6 +316,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
     assert manifest["artifacts"]["strategy_evaluation_summary"] == "analysis/strategy_evaluation_summary.json"
     assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
+    assert manifest["artifacts"]["strategy_experiment"] == "analysis/strategy_experiment.json"
+    assert manifest["artifacts"]["strategy_effectiveness_gates"] == "analysis/strategy_effectiveness_gates.json"
+    assert manifest["artifacts"]["strategy_experiment_material"] == "analysis/strategy_experiment_material.md"
     assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["artifacts"]["market_signals"] == "analysis/market_signals.json"
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
@@ -381,14 +395,28 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     strategy_evaluation_material = (
         run_dir / "analysis/strategy_evaluation_material.md"
     ).read_text(encoding="utf-8")
+    strategy_experiment = json.loads((run_dir / "analysis/strategy_experiment.json").read_text(encoding="utf-8"))
+    strategy_gates = json.loads(
+        (run_dir / "analysis/strategy_effectiveness_gates.json").read_text(encoding="utf-8")
+    )
+    strategy_experiment_material = (
+        run_dir / "analysis/strategy_experiment_material.md"
+    ).read_text(encoding="utf-8")
     assert len(strategy_runs["runs"]) == 4
     assert len(strategy_evaluation["records"]) == 4
+    assert strategy_experiment["coverage"]["strategy_candidates"] == 1
+    assert strategy_experiment["coverage"]["evaluations"] == 4
+    assert strategy_gates["coverage"]["strategy_candidates"] == 1
     assert "artifact_type: analysis_strategy_evaluation_material" in strategy_evaluation_material
     assert "cost_assumptions:" in strategy_evaluation_material
     assert "baseline_comparison:" in strategy_evaluation_material
     assert "sample_limits:" in strategy_evaluation_material
     assert "reliability:" in strategy_evaluation_material
     assert "codex_may_generate_metrics: false" in strategy_evaluation_material
+    assert "artifact_type: analysis_strategy_experiment_material" in strategy_experiment_material
+    assert "record_type: strategy_effectiveness_gate" in strategy_experiment_material
+    assert "codex_may_generate_gate_outcomes: false" in strategy_experiment_material
+    assert "benchmark_coverage:" in strategy_experiment_material
     assert len(strategy_signals["signals"]) == 4
     assert len(market_signals["signals"]) == 4
     assert sorted({signal["strategy_name"] for signal in market_signals["signals"]}) == ["tsmom_vol_scaled"]
@@ -446,17 +474,23 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in research_context
     assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in research_context
     assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in research_context
+    assert "strategy_experiment: analysis/strategy_experiment.json" in research_context
+    assert "strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json" in research_context
+    assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in research_context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in research_context
     assert "market_signals: analysis/market_signals.json" in research_context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
     assert "artifact_type: analysis_market_signal_material" in research_context
     assert "artifact_type: analysis_strategy_evaluation_material" in research_context
+    assert "artifact_type: analysis_strategy_experiment_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
     assert "artifact_type: analysis_market_signal_material" in context
     assert "artifact_type: analysis_strategy_evaluation_material" in context
+    assert "artifact_type: analysis_strategy_experiment_material" in context
     assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in context
     assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
     assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
+    assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
@@ -468,6 +502,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "open_time:" not in context
     assert "Quantitative conclusions" in prompt
     assert "Strategy evaluation material rules:" in prompt
+    assert "Strategy experiment gate material rules:" in prompt
+    assert "Use Halpha-generated effectiveness gate statuses only" in prompt
+    assert "Do not generate or revise strategy gate statuses" in prompt
     assert "cost assumptions, baseline comparison, sample limits" in prompt
     assert "Use Halpha-generated evaluation metrics only" in prompt
     assert "Decision intelligence material rules:" in prompt
@@ -503,6 +540,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "risk_escalation" in report
     assert "recheck_next_run" in report
     assert "## 量化信号结论" in report
+    assert "## \u7b56\u7565\u6709\u6548\u6027\u95e8\u69db\u8868" in report
+    assert "\u8bc1\u636e\u4e0d\u8db3" in report
     assert "趋势信号" in report
     assert "证据" in report
     assert "## 观察要点" in report

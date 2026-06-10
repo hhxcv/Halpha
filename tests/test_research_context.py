@@ -111,6 +111,7 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
             "evaluate_market_strategy_signals": _write_strategy_signals,
+            "build_strategy_experiment_material": _write_strategy_experiment_material,
             "run_codex_report": _skip_codex_report,
         },
     )
@@ -122,6 +123,9 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
     assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
+    assert "strategy_experiment: analysis/strategy_experiment.json" in context
+    assert "strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json" in context
+    assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
@@ -134,6 +138,8 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "artifact_type: analysis_market_signal_material" in context
     assert '<embed path="analysis/strategy_evaluation_material.md">' in context
     assert "artifact_type: analysis_strategy_evaluation_material" in context
+    assert '<embed path="analysis/strategy_experiment_material.md">' in context
+    assert "artifact_type: analysis_strategy_experiment_material" in context
     assert '<embed path="analysis/decision_intelligence_material.md">' in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "research_decision_support_only: true" in context
@@ -149,6 +155,10 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "include_reliability_and_uncertainty: true" in context
     assert "do_not_generate_metrics: true" in context
     assert "do_not_upgrade_weak_or_unstable_evidence: true" in context
+    assert "strategy_experiment_gate_requirements:" in context
+    assert "use_halpha_gate_statuses_only: true" in context
+    assert "identify_effective_watchlisted_rejected_and_insufficient_evidence: true" in context
+    assert "do_not_generate_gate_outcomes: true" in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "include_signal_conclusions: true" in context
     assert "include_evidence_near_conclusions: true" in context
@@ -159,6 +169,7 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
     assert manifest["artifacts"]["strategy_evaluation_summary"] == "analysis/strategy_evaluation_summary.json"
     assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
+    assert manifest["artifacts"]["strategy_experiment_material"] == "analysis/strategy_experiment_material.md"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
 
@@ -459,6 +470,68 @@ def _write_strategy_signals(config, run) -> list[str]:
     run.manifest["counts"]["market_strategy_signals"] = 1
     run.manifest["counts"]["market_strategy_signals_insufficient_data"] = 0
     return ["analysis/market_strategy_signals.json"]
+
+
+def _write_strategy_experiment_material(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "strategy_experiment.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_experiment",
+            "created_at": "2026-06-05T00:00:00Z",
+            "experiment_id": "test_strategy_experiment",
+            "source_artifacts": ["analysis/strategy_benchmark_suite.json"],
+            "coverage": {"strategy_candidates": 1, "evaluations": 1},
+            "candidates": [],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "strategy_effectiveness_gates.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_effectiveness_gates",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["analysis/strategy_experiment.json"],
+            "coverage": {
+                "strategy_candidates": 1,
+                "effective": 1,
+                "watchlisted": 0,
+                "rejected": 0,
+                "insufficient_evidence": 0,
+            },
+            "records": [],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    (run.analysis_dir / "strategy_experiment_material.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "artifact_type: analysis_strategy_experiment_material",
+                "schema_version: 1",
+                "---",
+                "",
+                "# strategy_experiment_material",
+                "",
+                "record_type: strategy_effectiveness_gate",
+                "strategy_name: tsmom_vol_scaled",
+                "status: effective",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    run.manifest["artifacts"]["strategy_experiment"] = "analysis/strategy_experiment.json"
+    run.manifest["artifacts"]["strategy_effectiveness_gates"] = "analysis/strategy_effectiveness_gates.json"
+    run.manifest["artifacts"]["strategy_experiment_material"] = "analysis/strategy_experiment_material.md"
+    run.manifest["counts"]["strategy_experiment_material_records"] = 1
+    return [
+        "analysis/strategy_experiment.json",
+        "analysis/strategy_effectiveness_gates.json",
+        "analysis/strategy_experiment_material.md",
+    ]
 
 
 def _skip_analysis_materials(config, run) -> list[str]:

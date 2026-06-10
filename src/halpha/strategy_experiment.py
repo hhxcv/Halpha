@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -7,17 +8,24 @@ from statistics import mean
 from typing import Any
 
 from .ohlcv_store import OHLCVParquetStore, OHLCVStoreError
-from .pipeline import PipelineError
+from .pipeline import PipelineError, RunContext
 from .quant.registry import get_strategy_definition
 from .quant.strategy_evaluation import evaluate_single_window_backtest, evaluate_walk_forward_backtest
 from .strategy_effectiveness_gates import (
     STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
     build_strategy_effectiveness_gates,
 )
+from .strategy_experiment_material import (
+    STRATEGY_EFFECTIVENESS_GATES_ARTIFACT as PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
+    STRATEGY_EXPERIMENT_ARTIFACT as PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT,
+    STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
+    render_strategy_experiment_material,
+)
 from .strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
 from .storage import display_path, ensure_directory, write_json
 
 
+PIPELINE_STAGE_NAME = "build_strategy_experiment_material"
 STRATEGY_EXPERIMENT_ARTIFACT = "strategy_experiment.json"
 STRATEGY_EXPERIMENT_MANIFEST_ARTIFACT = "manifest.json"
 STRATEGY_EXPERIMENT_BENCHMARK_ARTIFACT = "strategy_benchmark_suite.json"
@@ -41,6 +49,92 @@ class StrategyExperimentResult:
     benchmark_suite_path: Path
     gates_path: Path
     manifest_path: Path
+
+
+def build_strategy_experiment_material(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | None = None,
+) -> list[str]:
+    if not _pipeline_experiment_enabled(config):
+        _record_pipeline_skipped(run, reason="quant or benchmark suite disabled")
+        return []
+
+    benchmark_suite = _read_pipeline_benchmark_suite(run)
+    if benchmark_suite is None:
+        _record_pipeline_skipped(run, reason="analysis/strategy_benchmark_suite.json not generated")
+        return []
+
+    try:
+        clock_value = _utc_now(now)
+        strategies = _configured_strategies(config, strategy_names=None)
+        market = _market_config(config)
+        ohlcv = _ohlcv_config(market)
+        _require_benchmark_suite_enabled(config)
+        storage_dir = _storage_dir(ohlcv, run.config_path)
+    except StrategyExperimentError as exc:
+        raise PipelineError(str(exc), stage=PIPELINE_STAGE_NAME, exit_code=exc.exit_code) from exc
+
+    candidates = [
+        _candidate_record(
+            strategy=strategy,
+            benchmarks=benchmark_suite["benchmarks"],
+            storage_dir=storage_dir,
+        )
+        for strategy in strategies
+    ]
+    coverage = _coverage(candidates, benchmark_suite)
+    warnings = _unique_items(
+        item
+        for candidate in candidates
+        for item in candidate.get("warnings", [])
+        if isinstance(item, dict)
+    )
+    errors = [
+        error
+        for candidate in candidates
+        for error in candidate.get("errors", [])
+        if isinstance(error, dict)
+    ]
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "strategy_experiment",
+        "created_at": _format_utc(clock_value),
+        "experiment_id": f"{run.run_id}_strategy_experiment",
+        "inputs": {
+            "candidate_source": "configured_quant_strategies",
+            "strategy_names": [str(strategy.get("name")) for strategy in strategies],
+            "benchmark_suite_artifact": "analysis/strategy_benchmark_suite.json",
+        },
+        "source_artifacts": ["analysis/strategy_benchmark_suite.json"],
+        "coverage": coverage,
+        "candidates": candidates,
+        "warnings": warnings,
+        "errors": errors,
+    }
+    gates = build_strategy_effectiveness_gates(
+        artifact,
+        config,
+        created_at=_format_utc(clock_value),
+        source_artifacts=[PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT],
+    )
+    material = render_strategy_experiment_material(artifact, gates)
+
+    write_json(run.analysis_dir / "strategy_experiment.json", artifact)
+    write_json(run.analysis_dir / "strategy_effectiveness_gates.json", gates)
+    (run.analysis_dir / "strategy_experiment_material.md").write_text(material, encoding="utf-8")
+    run.manifest["artifacts"]["strategy_experiment"] = PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT
+    run.manifest["artifacts"]["strategy_effectiveness_gates"] = (
+        PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT
+    )
+    run.manifest["artifacts"]["strategy_experiment_material"] = STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT
+    _record_pipeline_summary(run, artifact=artifact, gates=gates)
+    return [
+        PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT,
+        PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
+        STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
+    ]
 
 
 def run_strategy_experiment(
@@ -147,6 +241,137 @@ def run_strategy_experiment(
         gates_path=gates_path,
         manifest_path=manifest_path,
     )
+
+
+def _pipeline_experiment_enabled(config: dict[str, Any]) -> bool:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+    suite_config = quant.get("benchmark_suite") if isinstance(quant.get("benchmark_suite"), dict) else {}
+    return (
+        quant.get("enabled") is True
+        and market.get("enabled") is True
+        and isinstance(ohlcv, dict)
+        and suite_config.get("enabled") is not False
+    )
+
+
+def _read_pipeline_benchmark_suite(run: RunContext) -> dict[str, Any] | None:
+    path = run.analysis_dir / "strategy_benchmark_suite.json"
+    if not path.exists():
+        return None
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            "analysis/strategy_benchmark_suite.json is not valid JSON: "
+            f"{exc.msg}.",
+            stage=PIPELINE_STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict):
+        raise PipelineError(
+            "analysis/strategy_benchmark_suite.json must be a mapping.",
+            stage=PIPELINE_STAGE_NAME,
+            exit_code=3,
+        )
+    benchmarks = artifact.get("benchmarks")
+    if not isinstance(benchmarks, list):
+        raise PipelineError(
+            "analysis/strategy_benchmark_suite.json must contain a benchmarks list.",
+            stage=PIPELINE_STAGE_NAME,
+            exit_code=3,
+        )
+    return artifact
+
+
+def _record_pipeline_skipped(run: RunContext, *, reason: str) -> None:
+    run.manifest["counts"]["strategy_experiment_candidates"] = 0
+    run.manifest["counts"]["strategy_experiment_evaluations"] = 0
+    run.manifest["counts"]["strategy_experiment_evaluations_succeeded"] = 0
+    run.manifest["counts"]["strategy_experiment_evaluations_failed"] = 0
+    run.manifest["counts"]["strategy_experiment_evaluations_insufficient_data"] = 0
+    run.manifest["counts"]["strategy_gate_candidates"] = 0
+    run.manifest["counts"]["strategy_gate_effective"] = 0
+    run.manifest["counts"]["strategy_gate_watchlisted"] = 0
+    run.manifest["counts"]["strategy_gate_rejected"] = 0
+    run.manifest["counts"]["strategy_gate_insufficient_evidence"] = 0
+    run.manifest["counts"]["strategy_experiment_material_records"] = 0
+    run.manifest["strategy_experiment"] = {
+        "enabled": False,
+        "status": "skipped",
+        "reason": reason,
+        "artifacts": {},
+        "counts": {},
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _record_pipeline_summary(
+    run: RunContext,
+    *,
+    artifact: dict[str, Any],
+    gates: dict[str, Any],
+) -> None:
+    coverage = artifact["coverage"]
+    gate_coverage = gates["coverage"] if isinstance(gates.get("coverage"), dict) else {}
+    run.manifest["counts"]["strategy_experiment_candidates"] = int(
+        coverage.get("strategy_candidates") or 0
+    )
+    run.manifest["counts"]["strategy_experiment_evaluations"] = int(coverage.get("evaluations") or 0)
+    run.manifest["counts"]["strategy_experiment_evaluations_succeeded"] = int(
+        coverage.get("evaluations_succeeded") or 0
+    )
+    run.manifest["counts"]["strategy_experiment_evaluations_failed"] = int(
+        coverage.get("evaluations_failed") or 0
+    )
+    run.manifest["counts"]["strategy_experiment_evaluations_insufficient_data"] = int(
+        coverage.get("evaluations_insufficient_data") or 0
+    )
+    run.manifest["counts"]["strategy_gate_candidates"] = int(
+        gate_coverage.get("strategy_candidates") or 0
+    )
+    run.manifest["counts"]["strategy_gate_effective"] = int(gate_coverage.get("effective") or 0)
+    run.manifest["counts"]["strategy_gate_watchlisted"] = int(
+        gate_coverage.get("watchlisted") or 0
+    )
+    run.manifest["counts"]["strategy_gate_rejected"] = int(gate_coverage.get("rejected") or 0)
+    run.manifest["counts"]["strategy_gate_insufficient_evidence"] = int(
+        gate_coverage.get("insufficient_evidence") or 0
+    )
+    run.manifest["counts"]["strategy_experiment_material_records"] = len(
+        _dict_list(gates.get("records"))
+    )
+    run.manifest["strategy_experiment"] = {
+        "enabled": True,
+        "status": "succeeded",
+        "artifacts": {
+            "strategy_experiment": PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT,
+            "strategy_effectiveness_gates": PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
+            "strategy_experiment_material": STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
+        },
+        "counts": {
+            "strategy_candidates": run.manifest["counts"]["strategy_experiment_candidates"],
+            "evaluations": run.manifest["counts"]["strategy_experiment_evaluations"],
+            "gate_effective": run.manifest["counts"]["strategy_gate_effective"],
+            "gate_watchlisted": run.manifest["counts"]["strategy_gate_watchlisted"],
+            "gate_rejected": run.manifest["counts"]["strategy_gate_rejected"],
+            "gate_insufficient_evidence": run.manifest["counts"][
+                "strategy_gate_insufficient_evidence"
+            ],
+        },
+        "warnings": _unique_items(
+            [
+                *_warning_items(artifact.get("warnings")),
+                *_warning_items(gates.get("warnings")),
+            ]
+        ),
+        "errors": [
+            *_error_items(artifact.get("errors")),
+            *_error_items(gates.get("errors")),
+        ],
+    }
 
 
 def _candidate_record(
@@ -661,6 +886,10 @@ def _warning_items(value: Any) -> list[dict[str, Any]]:
 
 
 def _error_items(value: Any) -> list[dict[str, Any]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _dict_list(value: Any) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
