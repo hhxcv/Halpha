@@ -24,7 +24,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds AI-readable decision material from deterministic JSON artifacts.
 - Builds research context and Codex prompt artifacts.
 - Runs Codex CLI to generate a Simplified Chinese report.
-- Inserts a deterministic strategy output table into the final report.
+- Inserts deterministic strategy output and strategy effectiveness tables into the final report.
 - Records lifecycle status, artifacts, counts, warnings, errors, and Codex status in `run_manifest.json`.
 
 Halpha does not implement account access, exchange trading, order placement,
@@ -237,6 +237,26 @@ Run real-source product acceptance without Codex CLI:
 ```bash
 python -m halpha run --config config.example.yaml --no-codex
 ```
+
+Run standalone strategy experiment acceptance:
+
+```bash
+python -m halpha experiment --config config.example.yaml
+```
+
+Inspect the generated `runs/strategy_experiments/<id>/manifest.json` and
+`strategy_effectiveness_gates.json` files for benchmark, experiment, and gate
+counts. The portable example config is expected to produce at least three
+`effective` research candidates under the deterministic gate policy.
+
+Run full report acceptance when Codex CLI use is intended:
+
+```bash
+python -m halpha run --config config.example.yaml
+```
+
+This sends generated local research context to Codex CLI through stdin and
+writes the final report to `report/report.md`.
 
 Mocks, fixtures, and fake Codex subprocesses are useful for automated tests, but
 they are not proof of a real-source product run.

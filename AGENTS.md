@@ -271,6 +271,8 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
 * Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment and gate artifacts when shared OHLCV history exists.
+* For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
+* For current default strategy acceptance, expect at least three `effective` research candidates under deterministic gates.
 * Use `python -m halpha run --config config.example.yaml` for real-source product acceptance when the user permits Codex CLI use.
 * State before a real Codex CLI run that generated local research context will be sent to Codex CLI.
 * Do not treat fixtures, mocked HTTP responses, or fake Codex subprocesses as product acceptance.
