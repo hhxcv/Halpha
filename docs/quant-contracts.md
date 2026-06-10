@@ -872,7 +872,7 @@ Strategy names:
 
 ## Strategy Evaluation Contract
 
-Status: not implemented yet.
+Status: reusable single-window core implemented; pipeline and standalone adapters are not implemented yet.
 
 Strategy evaluation is the reusable backtest and robustness layer for strategy research. It must be usable from the product pipeline and from a standalone research path without duplicating strategy logic.
 
@@ -913,7 +913,8 @@ Reusable core input contract:
     "price_source": "close",
     "signal_timing": "signal_at_bar_close",
     "position_timing": "next_bar",
-    "lookahead_policy": "no_same_bar_execution"
+    "lookahead_policy": "no_same_bar_execution",
+    "execution_timing": "research_close_to_close"
   },
   "evaluation_window": {
     "start": "2025-01-22T00:00:00Z",
@@ -950,7 +951,8 @@ Reusable core output contract:
   },
   "cost_assumptions": {
     "fees_bps": 10.0,
-    "slippage_bps": 5.0
+    "slippage_bps": 5.0,
+    "total_one_way_bps": 15.0
   },
   "strategy_metrics": {
     "gross_return_pct": 12.4,
@@ -959,7 +961,8 @@ Reusable core output contract:
     "max_drawdown_pct": -18.2,
     "volatility_pct": 31.4,
     "sharpe": 0.42,
-    "sortino": 0.58
+    "sortino": 0.58,
+    "final_equity": 1.098
   },
   "baseline_metrics": {
     "buy_and_hold": {
@@ -977,6 +980,8 @@ Reusable core output contract:
   },
   "trade_summary": {
     "trade_count": 23,
+    "completed_trade_count": 22,
+    "open_trade_count": 1,
     "hit_rate_pct": 48.0,
     "turnover": 12.0,
     "exposure_pct": 56.0,
@@ -987,6 +992,8 @@ Reusable core output contract:
     "max_drawdown_start": "2025-03-01T00:00:00Z",
     "max_drawdown_end": "2025-04-15T00:00:00Z"
   },
+  "equity_curve": [],
+  "drawdown_curve": [],
   "warnings": [
     {
       "severity": "warning",
