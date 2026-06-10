@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 
 from ..backtest import bounded_backtest_diagnostic
+from ..signal_records import insufficient_strategy_signal_records, strategy_signal_records
 from ..strategy_records import (
     backtest_diagnostic,
     data_quality,
@@ -35,7 +36,7 @@ def run(
     created_at: str,
 ) -> dict[str, Any]:
     params = _params(strategy.get("params"))
-    minimum_rows = max(params["return_window"], params["volatility_window"]) + 1
+    minimum_rows = _minimum_rows(params)
     if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
         return _insufficient_run(
             strategy,
@@ -47,24 +48,17 @@ def run(
             minimum_rows=minimum_rows,
         )
 
-    frame = _frame(rows)
-    close = frame["close"]
-    returns = close.pct_change()
-    return_window = int(params["return_window"])
-    volatility_window = int(params["volatility_window"])
-    target_volatility = float(params["target_volatility"])
-    momentum_return = _vectorbt_momentum_return(close, return_window)
-    latest_close = float(close.iloc[-1])
-    baseline_close = float(close.iloc[-return_window - 1])
-    return_window_pct = float(momentum_return.iloc[-1]) * 100
-    latest_return_pct = _pct_change(float(close.iloc[-1]), float(close.iloc[-2]))
-    realized_volatility = _annualized_volatility(
-        returns.tail(volatility_window),
-        timeframe=str(view.get("timeframe")),
-    )
-    realized_volatility_pct = realized_volatility * 100
-    exposure = _volatility_scaled_exposure(target_volatility, realized_volatility)
-    signal_series = momentum_return > 0
+    state = _signal_state(strategy, view, rows, params=params)
+    close = state["close"]
+    signal_series = state["signal_series"]
+    latest_close = state["latest_close"]
+    baseline_close = state["baseline_close"]
+    return_window_pct = state["return_window_pct"]
+    latest_return_pct = state["latest_return_pct"]
+    realized_volatility = state["realized_volatility"]
+    realized_volatility_pct = state["realized_volatility_pct"]
+    exposure = state["exposure"]
+    target_volatility = state["target_volatility"]
     entry_count = _transition_count(signal_series, from_value=False, to_value=True)
     exit_count = _transition_count(signal_series, from_value=True, to_value=False)
     latest_signal = bool(signal_series.iloc[-1])
@@ -148,6 +142,24 @@ def failed_params(strategy: dict[str, Any]) -> dict[str, Any]:
     return params
 
 
+def signal_records(
+    strategy: dict[str, Any],
+    view: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    params = _params(strategy.get("params"))
+    minimum_rows = _minimum_rows(params)
+    if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
+        return insufficient_strategy_signal_records(
+            strategy,
+            view,
+            rows,
+            params=params,
+            minimum_rows=minimum_rows,
+        )
+    return _signal_state(strategy, view, rows, params=params)["signal_records"]
+
+
 def _insufficient_run(
     strategy: dict[str, Any],
     view: dict[str, Any],
@@ -203,6 +215,95 @@ def _params(raw: Any) -> dict[str, Any]:
         "volatility_window": volatility_window,
         "target_volatility": target_volatility,
     }
+
+
+def _minimum_rows(params: dict[str, Any]) -> int:
+    return max(params["return_window"], params["volatility_window"]) + 1
+
+
+def _signal_state(
+    strategy: dict[str, Any],
+    view: dict[str, Any],
+    rows: list[dict[str, Any]],
+    *,
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    frame = _frame(rows)
+    close = frame["close"]
+    returns = close.pct_change()
+    return_window = int(params["return_window"])
+    volatility_window = int(params["volatility_window"])
+    target_volatility = float(params["target_volatility"])
+    momentum_return = _vectorbt_momentum_return(close, return_window)
+    latest_close = float(close.iloc[-1])
+    baseline_close = float(close.iloc[-return_window - 1])
+    return_window_pct = float(momentum_return.iloc[-1]) * 100
+    latest_return_pct = _pct_change(float(close.iloc[-1]), float(close.iloc[-2]))
+    realized_volatility = _annualized_volatility(
+        returns.tail(volatility_window),
+        timeframe=str(view.get("timeframe")),
+    )
+    signal_series = momentum_return > 0
+    indicator_contexts = _signal_indicator_contexts(
+        close,
+        returns,
+        momentum_return,
+        view,
+        volatility_window=volatility_window,
+        target_volatility=target_volatility,
+    )
+    return {
+        "frame": frame,
+        "close": close,
+        "signal_series": signal_series,
+        "latest_close": latest_close,
+        "baseline_close": baseline_close,
+        "return_window_pct": return_window_pct,
+        "latest_return_pct": latest_return_pct,
+        "realized_volatility": realized_volatility,
+        "realized_volatility_pct": realized_volatility * 100,
+        "exposure": _volatility_scaled_exposure(target_volatility, realized_volatility),
+        "target_volatility": target_volatility,
+        "signal_records": strategy_signal_records(
+            strategy,
+            view,
+            rows,
+            params=params,
+            frame=frame,
+            close=close,
+            signal_series=signal_series,
+            indicator_contexts=indicator_contexts,
+        ),
+    }
+
+
+def _signal_indicator_contexts(
+    close: pd.Series,
+    returns: pd.Series,
+    momentum_return: pd.Series,
+    view: dict[str, Any],
+    *,
+    volatility_window: int,
+    target_volatility: float,
+) -> list[dict[str, Any]]:
+    contexts = []
+    timeframe = str(view.get("timeframe"))
+    for position in range(len(close)):
+        window_returns = returns.iloc[max(0, position - volatility_window + 1) : position + 1]
+        realized_volatility = _annualized_volatility(window_returns, timeframe=timeframe)
+        contexts.append(
+            {
+                "calculation_backend": VECTORBT_BACKEND,
+                "return_window_pct": float(momentum_return.iloc[position]) * 100,
+                "realized_volatility_pct": realized_volatility * 100,
+                "target_volatility_pct": target_volatility * 100,
+                "volatility_scaled_exposure": _volatility_scaled_exposure(
+                    target_volatility,
+                    realized_volatility,
+                ),
+            }
+        )
+    return contexts
 
 
 def _positive_int(value: Any, name: str) -> int:

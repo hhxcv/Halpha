@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 
 from ..backtest import bounded_backtest_diagnostic
+from ..signal_records import insufficient_strategy_signal_records, strategy_signal_records
 from ..strategy_records import (
     backtest_diagnostic,
     data_quality,
@@ -39,11 +40,7 @@ def run(
     created_at: str,
 ) -> dict[str, Any]:
     params = _params(strategy.get("params"))
-    minimum_rows = max(
-        params["bollinger_window"],
-        params["rsi_window"] + 1,
-        params["trend_window"] + 1,
-    )
+    minimum_rows = _minimum_rows(params)
     if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
         return _insufficient_run(
             strategy,
@@ -55,31 +52,22 @@ def run(
             minimum_rows=minimum_rows,
         )
 
-    frame = _frame(rows)
-    close = frame["close"]
-    middle, upper, lower, rsi, trend_return = _vectorbt_bollinger_rsi(close, params)
-    latest_close = float(close.iloc[-1])
-    latest_middle = float(middle.iloc[-1])
-    latest_upper = float(upper.iloc[-1])
-    latest_lower = float(lower.iloc[-1])
-    latest_rsi = float(rsi.iloc[-1])
-    latest_trend_window_pct = float(trend_return.iloc[-1])
-    band_width_pct = _pct(latest_upper - latest_lower, latest_close)
-    percent_b = _percent_b(latest_close, latest_lower, latest_upper)
-    latest_oversold = latest_close <= latest_lower and latest_rsi <= params["rsi_oversold"]
-    latest_overbought = latest_close >= latest_upper and latest_rsi >= params["rsi_overbought"]
-    strong_downtrend = latest_trend_window_pct <= -params["trend_filter_pct"]
-    strong_uptrend = latest_trend_window_pct >= params["trend_filter_pct"]
-    trend_filter_active = (latest_oversold and strong_downtrend) or (latest_overbought and strong_uptrend)
-    signal_series = _active_reversion_state(
-        close,
-        middle,
-        upper,
-        lower,
-        rsi,
-        trend_return,
-        params,
-    )
+    state = _signal_state(strategy, view, rows, params=params)
+    close = state["close"]
+    signal_series = state["signal_series"]
+    latest_close = state["latest_close"]
+    latest_middle = state["latest_middle"]
+    latest_upper = state["latest_upper"]
+    latest_lower = state["latest_lower"]
+    latest_rsi = state["latest_rsi"]
+    latest_trend_window_pct = state["latest_trend_window_pct"]
+    band_width_pct = state["band_width_pct"]
+    percent_b = state["percent_b"]
+    latest_oversold = state["latest_oversold"]
+    latest_overbought = state["latest_overbought"]
+    strong_downtrend = state["strong_downtrend"]
+    strong_uptrend = state["strong_uptrend"]
+    trend_filter_active = state["trend_filter_active"]
     entry_count = _transition_count(signal_series, from_value=False, to_value=True)
     exit_count = _transition_count(signal_series, from_value=True, to_value=False)
     latest_signal = bool(signal_series.iloc[-1])
@@ -198,6 +186,24 @@ def failed_params(strategy: dict[str, Any]) -> dict[str, Any]:
     return params
 
 
+def signal_records(
+    strategy: dict[str, Any],
+    view: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    params = _params(strategy.get("params"))
+    minimum_rows = _minimum_rows(params)
+    if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
+        return insufficient_strategy_signal_records(
+            strategy,
+            view,
+            rows,
+            params=params,
+            minimum_rows=minimum_rows,
+        )
+    return _signal_state(strategy, view, rows, params=params)["signal_records"]
+
+
 def _insufficient_run(
     strategy: dict[str, Any],
     view: dict[str, Any],
@@ -263,6 +269,124 @@ def _params(raw: Any) -> dict[str, Any]:
         "trend_window": trend_window,
         "trend_filter_pct": trend_filter_pct,
     }
+
+
+def _minimum_rows(params: dict[str, Any]) -> int:
+    return max(
+        params["bollinger_window"],
+        params["rsi_window"] + 1,
+        params["trend_window"] + 1,
+    )
+
+
+def _signal_state(
+    strategy: dict[str, Any],
+    view: dict[str, Any],
+    rows: list[dict[str, Any]],
+    *,
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    frame = _frame(rows)
+    close = frame["close"]
+    middle, upper, lower, rsi, trend_return = _vectorbt_bollinger_rsi(close, params)
+    latest_close = float(close.iloc[-1])
+    latest_middle = float(middle.iloc[-1])
+    latest_upper = float(upper.iloc[-1])
+    latest_lower = float(lower.iloc[-1])
+    latest_rsi = float(rsi.iloc[-1])
+    latest_trend_window_pct = float(trend_return.iloc[-1])
+    latest_oversold = latest_close <= latest_lower and latest_rsi <= params["rsi_oversold"]
+    latest_overbought = latest_close >= latest_upper and latest_rsi >= params["rsi_overbought"]
+    strong_downtrend = latest_trend_window_pct <= -params["trend_filter_pct"]
+    strong_uptrend = latest_trend_window_pct >= params["trend_filter_pct"]
+    signal_series = _active_reversion_state(
+        close,
+        middle,
+        upper,
+        lower,
+        rsi,
+        trend_return,
+        params,
+    )
+    indicator_contexts = _signal_indicator_contexts(
+        close,
+        middle,
+        upper,
+        lower,
+        rsi,
+        trend_return,
+        params,
+    )
+    return {
+        "frame": frame,
+        "close": close,
+        "signal_series": signal_series,
+        "latest_close": latest_close,
+        "latest_middle": latest_middle,
+        "latest_upper": latest_upper,
+        "latest_lower": latest_lower,
+        "latest_rsi": latest_rsi,
+        "latest_trend_window_pct": latest_trend_window_pct,
+        "band_width_pct": _pct(latest_upper - latest_lower, latest_close),
+        "percent_b": _percent_b(latest_close, latest_lower, latest_upper),
+        "latest_oversold": latest_oversold,
+        "latest_overbought": latest_overbought,
+        "strong_downtrend": strong_downtrend,
+        "strong_uptrend": strong_uptrend,
+        "trend_filter_active": (latest_oversold and strong_downtrend)
+        or (latest_overbought and strong_uptrend),
+        "signal_records": strategy_signal_records(
+            strategy,
+            view,
+            rows,
+            params=params,
+            frame=frame,
+            close=close,
+            signal_series=signal_series,
+            indicator_contexts=indicator_contexts,
+        ),
+    }
+
+
+def _signal_indicator_contexts(
+    close: pd.Series,
+    middle: pd.Series,
+    upper: pd.Series,
+    lower: pd.Series,
+    rsi: pd.Series,
+    trend_return: pd.Series,
+    params: dict[str, Any],
+) -> list[dict[str, Any]]:
+    contexts = []
+    for position in range(len(close)):
+        latest_close = float(close.iloc[position])
+        latest_middle = float(middle.iloc[position])
+        latest_upper = float(upper.iloc[position])
+        latest_lower = float(lower.iloc[position])
+        latest_rsi = float(rsi.iloc[position])
+        latest_trend_window_pct = float(trend_return.iloc[position])
+        latest_oversold = latest_close <= latest_lower and latest_rsi <= params["rsi_oversold"]
+        latest_overbought = latest_close >= latest_upper and latest_rsi >= params["rsi_overbought"]
+        strong_downtrend = latest_trend_window_pct <= -params["trend_filter_pct"]
+        strong_uptrend = latest_trend_window_pct >= params["trend_filter_pct"]
+        contexts.append(
+            {
+                "calculation_backend": VECTORBT_BACKEND,
+                "bollinger_middle": latest_middle,
+                "bollinger_upper": latest_upper,
+                "bollinger_lower": latest_lower,
+                "bollinger_band_width_pct": _pct(latest_upper - latest_lower, latest_close),
+                "bollinger_percent_b": _percent_b(latest_close, latest_lower, latest_upper),
+                "rsi": latest_rsi,
+                "trend_window_pct": latest_trend_window_pct,
+                "latest_oversold": latest_oversold,
+                "latest_overbought": latest_overbought,
+                "trend_filter_active": (latest_oversold and strong_downtrend)
+                or (latest_overbought and strong_uptrend),
+                "strong_trend_direction": _strong_trend_direction(strong_downtrend, strong_uptrend),
+            }
+        )
+    return contexts
 
 
 def _positive_int(value: Any, name: str) -> int:

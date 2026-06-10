@@ -20,12 +20,15 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert definition is not None
     assert definition.name == "tsmom_vol_scaled"
     assert definition.run.__module__ == "halpha.quant.strategies.tsmom_vol_scaled"
+    assert definition.signal_records.__module__ == "halpha.quant.strategies.tsmom_vol_scaled"
     assert breakout is not None
     assert breakout.name == "breakout_atr_trend"
     assert breakout.run.__module__ == "halpha.quant.strategies.breakout_atr_trend"
+    assert breakout.signal_records.__module__ == "halpha.quant.strategies.breakout_atr_trend"
     assert reversion is not None
     assert reversion.name == "bollinger_rsi_reversion"
     assert reversion.run.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
+    assert reversion.signal_records.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
     assert get_strategy_definition("missing") is None
 
 
@@ -748,6 +751,125 @@ def test_quant_strategy_runner_records_bollinger_rsi_insufficient_data(tmp_path:
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 2
 
 
+def test_strategy_signal_records_align_with_tsmom_run_transitions() -> None:
+    definition = get_strategy_definition("tsmom_vol_scaled")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=99, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=102, volume=13),
+    ]
+    strategy = {
+        "name": "tsmom_vol_scaled",
+        "params": {
+            "return_window": 1,
+            "volatility_window": 1,
+            "target_volatility": 0.2,
+        },
+        "backtest": {"enabled": False},
+    }
+    view = _view(rows)
+
+    signal_records = definition.signal_records(strategy, view, rows)
+    strategy_run = definition.run(
+        strategy,
+        view,
+        rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert signal_records["status"] == "succeeded"
+    assert signal_records["position_policy"] == "research_long_flat_target_exposure"
+    assert signal_records["entry_count"] == strategy_run["signals"]["entry_count"] == 2
+    assert signal_records["exit_count"] == strategy_run["signals"]["exit_count"] == 1
+    assert signal_records["latest_record"]["signal"]["active"] is strategy_run["signals"][
+        "latest_signal_active"
+    ]
+    assert [item["signal"]["active"] for item in signal_records["records"]] == [
+        False,
+        True,
+        False,
+        True,
+    ]
+    assert [item["entry"] for item in signal_records["records"]] == [False, True, False, True]
+    assert [item["exit"] for item in signal_records["records"]] == [False, False, True, False]
+    assert [item["position"]["target_exposure"] for item in signal_records["records"]] == [
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+    ]
+    assert signal_records["records"][1]["indicator_context"]["return_window_pct"] == 1.0
+    json.dumps(signal_records)
+
+
+def test_strategy_signal_records_cover_no_signal_state() -> None:
+    definition = get_strategy_definition("bollinger_rsi_reversion")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=100, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=101, volume=13),
+        _record(open_time="2026-06-05T00:00:00Z", close=100, volume=14),
+        _record(open_time="2026-06-06T00:00:00Z", close=101, volume=15),
+    ]
+    strategy = {
+        "name": "bollinger_rsi_reversion",
+        "params": {
+            "bollinger_window": 3,
+            "band_std": 1.0,
+            "rsi_window": 3,
+            "rsi_oversold": 35,
+            "rsi_overbought": 65,
+            "trend_window": 3,
+            "trend_filter_pct": 50,
+        },
+    }
+
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert signal_records["status"] == "succeeded"
+    assert signal_records["active_count"] == 0
+    assert signal_records["entry_count"] == 0
+    assert signal_records["exit_count"] == 0
+    assert all(item["signal"]["active"] is False for item in signal_records["records"])
+    assert signal_records["latest_record"]["indicator_context"]["strong_trend_direction"] == "none"
+    assert "bollinger_middle" in signal_records["latest_record"]["indicator_context"]
+    assert "rsi" in signal_records["latest_record"]["indicator_context"]
+    json.dumps(signal_records)
+
+
+def test_strategy_signal_records_cover_insufficient_data() -> None:
+    definition = get_strategy_definition("breakout_atr_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-05T00:00:00Z", close=104, volume=14),
+        _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+    ]
+    strategy = {
+        "name": "breakout_atr_trend",
+        "params": {
+            "breakout_window": 3,
+            "exit_window": 2,
+            "atr_window": 3,
+        },
+    }
+
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert signal_records["status"] == "insufficient_data"
+    assert signal_records["records"] == []
+    assert signal_records["latest_record"] is None
+    assert signal_records["entry_count"] == 0
+    assert signal_records["exit_count"] == 0
+    assert signal_records["active_count"] == 0
+    assert signal_records["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    json.dumps(signal_records)
+
+
 def _run_pipeline_with_strategies(config: dict[str, Any], config_path: Path):
     return run_pipeline(
         config,
@@ -1036,6 +1158,29 @@ def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
 
 def _noop_stage(config, run) -> list[str]:
     return []
+
+
+def _engine() -> dict[str, Any]:
+    return {
+        "name": "vectorbt",
+        "version": "test",
+        "objects_exposed": False,
+    }
+
+
+def _view(rows: list[dict[str, object]]) -> dict[str, object]:
+    first = rows[0]["open_time"]
+    latest = rows[-1]["open_time"]
+    return {
+        "view_id": f"ohlcv_view:binance:BTCUSDT:1d:{latest}",
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "requested_lookback": len(rows),
+        "input_window_start": first,
+        "input_window_end": latest,
+        "latest_candle_time": latest,
+    }
 
 
 def _record(
