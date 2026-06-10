@@ -15,6 +15,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Syncs reusable OHLCV history into a shared local Parquet store.
 - Builds deterministic current-run OHLCV data views.
 - Evaluates configured quantitative strategies with bounded diagnostics.
+- Runs standalone single-strategy backtests from shared local OHLCV history.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
 - Builds AI-readable decision material from deterministic JSON artifacts.
@@ -59,6 +60,17 @@ Run one stage against an existing run directory:
 ```bash
 python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
 ```
+
+Run one configured strategy backtest from shared local OHLCV history:
+
+```bash
+python -m halpha backtest --config config.example.yaml --strategy tsmom_vol_scaled --symbol BTCUSDT --timeframe 1d
+```
+
+Standalone backtests write inspectable artifacts under
+`runs/strategy_backtests/` by default. Use `--output-dir <dir>` to choose a
+different local output directory. This command does not run the report pipeline
+or Codex CLI.
 
 Supported stage names:
 
@@ -138,6 +150,8 @@ A successful configured run can write:
 - `codex_context/prompt.md`: prompt sent to Codex CLI.
 - `report/report.md`: Simplified Chinese Markdown report from Codex stdout.
 - `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
+- `runs/strategy_backtests/<id>/strategy_backtest.json`: standalone strategy backtest output.
+- `runs/strategy_backtests/<id>/manifest.json`: standalone backtest manifest.
 
 Failed runs preserve artifacts created before the failure and record errors in
 `run_manifest.json`. The product command must not emit fake raw data, fake

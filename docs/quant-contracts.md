@@ -1119,7 +1119,10 @@ Standalone output rules:
 - Standalone evaluation must not execute Codex.
 - Standalone evaluation must not mutate shared OHLCV history unless the implemented command explicitly performs a sync step.
 - Standalone output must preserve cost assumptions, execution model, sample window, warnings, and errors.
-- The standalone command name and exact CLI shape are not part of this contract until implemented.
+- Implemented standalone command:
+  `python -m halpha backtest --config <config> --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>`.
+- The optional `--output-dir <dir>` argument overrides the default `runs/strategy_backtests/` output directory.
+- Each standalone command run writes `strategy_backtest.json` with the reusable core output contract and `manifest.json` with command inputs, artifact paths, warnings, and errors.
 
 AI-readable strategy evaluation material:
 
