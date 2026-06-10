@@ -8,7 +8,7 @@ from typing import Any
 from .market_data_views import MARKET_DATA_VIEWS_ARTIFACT, load_market_data_view_records
 from .pipeline import PipelineError, RunContext
 from .quant.registry import get_strategy_definition
-from .quant.strategy_evaluation import evaluate_single_window_backtest
+from .quant.strategy_evaluation import HIGH_COST_DRAG_PCT_THRESHOLD, evaluate_single_window_backtest
 from .quant.strategy_records import STRATEGY_VERSION, warning
 from .storage import write_json
 
@@ -271,6 +271,7 @@ def _assessment(single_window: dict[str, Any]) -> dict[str, Any]:
         return _empty_assessment("Strategy evaluation has not produced enough evidence for reliability judgment.")
 
     metrics = single_window.get("strategy_metrics") if isinstance(single_window.get("strategy_metrics"), dict) else {}
+    relative = single_window.get("relative_metrics") if isinstance(single_window.get("relative_metrics"), dict) else {}
     trade = single_window.get("trade_summary") if isinstance(single_window.get("trade_summary"), dict) else {}
     sample = single_window.get("sample") if isinstance(single_window.get("sample"), dict) else {}
     trade_count = int(trade.get("trade_count") or 0)
@@ -285,19 +286,32 @@ def _assessment(single_window: dict[str, Any]) -> dict[str, Any]:
     return {
         "reliability": reliability,
         "sample_quality": sample_quality,
-        "cost_sensitivity": "unknown",
+        "cost_sensitivity": _cost_sensitivity(metrics),
         "overfitting_risk": "unknown",
         "summary": summary,
         "evidence": [
             f"sample rows: {rows}.",
             f"trade_count: {trade_count}.",
             f"exposure_pct: {trade.get('exposure_pct')}.",
+            f"cost_drag_pct: {metrics.get('cost_drag_pct')}.",
+            f"excess_return_vs_buy_and_hold_pct: {relative.get('excess_return_vs_buy_and_hold_pct')}.",
         ],
         "uncertainty": [
             "Single-window backtest is historical research material, not a forecast.",
             "Walk-forward and parameter stability diagnostics are not implemented yet.",
         ],
     }
+
+
+def _cost_sensitivity(metrics: dict[str, Any]) -> str:
+    cost_drag_pct = metrics.get("cost_drag_pct")
+    if isinstance(cost_drag_pct, bool) or not isinstance(cost_drag_pct, (int, float)):
+        return "unknown"
+    if cost_drag_pct >= HIGH_COST_DRAG_PCT_THRESHOLD:
+        return "high"
+    if cost_drag_pct > 0:
+        return "medium"
+    return "low"
 
 
 def _empty_assessment(summary: str) -> dict[str, Any]:

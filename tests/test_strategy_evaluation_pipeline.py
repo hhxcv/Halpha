@@ -41,10 +41,20 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert record["single_window"]["status"] == "succeeded"
     assert record["single_window"]["execution_model"]["lookahead_policy"] == "no_same_bar_execution"
     assert record["single_window"]["cost_assumptions"]["fees_bps"] == 10.0
+    assert record["single_window"]["cost_assumptions"]["total_one_way_bps"] == 15.0
+    assert "cost_drag_pct" in record["single_window"]["strategy_metrics"]
+    assert "buy_and_hold" in record["single_window"]["baseline_metrics"]
+    assert "cash" in record["single_window"]["baseline_metrics"]
+    assert "excess_return_vs_buy_and_hold_pct" in record["single_window"]["relative_metrics"]
     assert record["single_window"]["equity_curve"]
     assert record["walk_forward"] == {"enabled": False, "status": "disabled"}
     assert record["parameter_stability"] == {"enabled": False, "status": "disabled"}
     assert record["assessment"]["reliability"] in {"low", "medium"}
+    assert record["assessment"]["cost_sensitivity"] in {"low", "medium", "high"}
+    assert any(item.startswith("cost_drag_pct:") for item in record["assessment"]["evidence"])
+    warning_codes = {item["code"] for item in record["warnings"]}
+    assert "historical_research_only" in warning_codes
+    assert "insufficient_sample_length" in warning_codes
     assert manifest["artifacts"]["strategy_evaluation_summary"] == (
         "analysis/strategy_evaluation_summary.json"
     )

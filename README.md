@@ -170,6 +170,8 @@ diagnostic assumptions, scalar metrics, warnings, and source artifacts.
 
 Backtest diagnostics are historical research material only. They are not
 forecasts, trading instructions, investment advice, or performance guarantees.
+Strategy evaluation summaries include cost assumptions, gross and net metrics,
+baseline comparison, relative metrics, and research limitation warnings.
 
 ## Codex Report Generation
 
