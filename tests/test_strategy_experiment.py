@@ -30,9 +30,11 @@ def test_cli_experiment_runs_candidates_against_benchmark_suite(
     run_dirs = list(output_dir.iterdir())
     experiment_path = run_dirs[0] / "strategy_experiment.json"
     benchmark_path = run_dirs[0] / "strategy_benchmark_suite.json"
+    gates_path = run_dirs[0] / "strategy_effectiveness_gates.json"
     manifest_path = run_dirs[0] / "manifest.json"
     experiment = json.loads(experiment_path.read_text(encoding="utf-8"))
     benchmark_suite = json.loads(benchmark_path.read_text(encoding="utf-8"))
+    gates = json.loads(gates_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     candidate = experiment["candidates"][0]
     succeeded = candidate["evaluations"][0]
@@ -42,10 +44,12 @@ def test_cli_experiment_runs_candidates_against_benchmark_suite(
     assert "Halpha experiment succeeded." in output
     assert "strategy_experiment:" in output
     assert "strategy_benchmark_suite:" in output
+    assert "strategy_effectiveness_gates:" in output
     assert "manifest:" in output
     assert len(run_dirs) == 1
     assert experiment_path.is_file()
     assert benchmark_path.is_file()
+    assert gates_path.is_file()
     assert manifest_path.is_file()
     assert benchmark_suite["coverage"] == {
         "benchmark_records": 2,
@@ -80,20 +84,42 @@ def test_cli_experiment_runs_candidates_against_benchmark_suite(
     assert succeeded["status"] == "succeeded"
     assert succeeded["benchmark_status"] == "succeeded"
     assert succeeded["single_window"]["execution_model"]["lookahead_policy"] == "no_same_bar_execution"
+    assert succeeded["walk_forward"]["status"] == "insufficient_data"
+    assert succeeded["walk_forward"]["window_count"] == 0
     assert succeeded["metrics"]["strategy"]["final_equity"] > 0
     assert insufficient["status"] == "insufficient_data"
     assert insufficient["benchmark_status"] == "insufficient_data"
     assert insufficient["metrics"] == {}
     assert insufficient["single_window"] == {}
+    assert insufficient["walk_forward"] == {}
     assert insufficient["warnings"][0]["code"] == "benchmark_not_succeeded"
+    assert gates["artifact_type"] == "strategy_effectiveness_gates"
+    assert gates["source_artifacts"] == ["strategy_experiment.json"]
+    assert gates["coverage"] == {
+        "strategy_candidates": 1,
+        "effective": 0,
+        "watchlisted": 0,
+        "rejected": 0,
+        "insufficient_evidence": 1,
+    }
+    assert gates["records"][0]["strategy_name"] == "tsmom_vol_scaled"
+    assert gates["records"][0]["status"] == "insufficient_evidence"
     assert manifest["artifact_type"] == "strategy_experiment_manifest"
     assert manifest["status"] == "succeeded"
     assert manifest["artifacts"] == {
         "manifest": "manifest.json",
         "strategy_benchmark_suite": "strategy_benchmark_suite.json",
+        "strategy_effectiveness_gates": "strategy_effectiveness_gates.json",
         "strategy_experiment": "strategy_experiment.json",
     }
-    assert manifest["counts"] == experiment["coverage"]
+    assert manifest["counts"] == {
+        **experiment["coverage"],
+        "strategy_gate_candidates": 1,
+        "strategy_gate_effective": 0,
+        "strategy_gate_watchlisted": 0,
+        "strategy_gate_rejected": 0,
+        "strategy_gate_insufficient_evidence": 1,
+    }
     assert manifest["failures"] == []
 
 

@@ -207,6 +207,72 @@ def test_load_config_accepts_enabled_parameter_diagnostics_config(tmp_path: Path
     assert config["quant"]["parameter_diagnostics"]["grids"]["tsmom_vol_scaled"]["return_window"] == [10, 20]
 
 
+def test_load_config_accepts_effectiveness_gate_thresholds(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            (
+                "        target_volatility: 0.2\n"
+                "  effectiveness_gates:\n"
+                "    min_succeeded_benchmarks: 3\n"
+                "    min_benchmark_success_rate_pct: 75.0\n"
+                "    max_cost_drag_pct: 1.5\n"
+                "    require_parameter_stability: true"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["quant"]["effectiveness_gates"] == {
+        "min_succeeded_benchmarks": 3,
+        "min_benchmark_success_rate_pct": 75.0,
+        "max_cost_drag_pct": 1.5,
+        "require_parameter_stability": True,
+    }
+
+
+@pytest.mark.parametrize(
+    ("gate_block", "expected"),
+    [
+        (
+            "  effectiveness_gates:\n    unsupported_threshold: 1",
+            r"unsupported quant\.effectiveness_gates field",
+        ),
+        (
+            "  effectiveness_gates:\n    min_succeeded_benchmarks: 0",
+            r"quant\.effectiveness_gates\.min_succeeded_benchmarks",
+        ),
+        (
+            "  effectiveness_gates:\n    max_cost_drag_pct: -1",
+            r"quant\.effectiveness_gates\.max_cost_drag_pct",
+        ),
+        (
+            "  effectiveness_gates:\n    require_walk_forward_stable: \"yes\"",
+            r"quant\.effectiveness_gates\.require_walk_forward_stable",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_effectiveness_gate_thresholds(
+    tmp_path: Path,
+    gate_block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            f"        target_volatility: 0.2\n{gate_block}",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
 def test_load_config_accepts_market_proxy_config(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
