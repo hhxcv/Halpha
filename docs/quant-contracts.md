@@ -1448,6 +1448,13 @@ Manifest rules:
 - Do not run Codex, generate reports, select best parameters, promote strategies, place orders, or claim future performance.
 - Failed, skipped, and insufficient benchmark evaluations must remain visible in JSON instead of being dropped.
 
+Standalone experiment acceptance:
+
+- Run `python -m halpha experiment --config <config>` after shared OHLCV history is available.
+- Inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, warning, error, and gate counts.
+- Current default strategy acceptance expects at least three `effective` research candidates under deterministic gates.
+- `effective` means a research candidate passed the configured historical evidence gates; it is not a trading approval, return forecast, position instruction, or portfolio allocation.
+
 Pipeline strategy experiment artifacts:
 
 ```text
