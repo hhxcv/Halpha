@@ -125,7 +125,7 @@ def run_pipeline(
                 handlers[stage],
                 stage=stage,
                 stage_record=stage_record,
-                finished_at=_utc_timestamp(clock()),
+                clock=clock,
             )
             if failure:
                 return failure
@@ -183,7 +183,7 @@ def run_pipeline_stage(
         handlers[stage],
         stage=stage,
         stage_record=stage_record,
-        finished_at=_utc_timestamp(clock()),
+        clock=clock,
     )
     if failure:
         return failure
@@ -325,11 +325,12 @@ def _run_stage_handler(
     *,
     stage: str,
     stage_record: dict[str, Any],
-    finished_at: str,
+    clock: Callable[[], datetime],
 ) -> RunResult | None:
     try:
         artifacts = handler(config, run)
     except PipelineError as exc:
+        finished_at = _utc_timestamp(clock())
         failed_stage = exc.stage or stage
         reason = str(exc)
         error = _error_summary(failed_stage, reason, details=exc.error_details)
@@ -341,6 +342,7 @@ def _run_stage_handler(
         _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
         return RunResult(False, run, exc.exit_code, failed_stage, reason)
     except Exception as exc:
+        finished_at = _utc_timestamp(clock())
         reason = f"stage {stage} failed: {exc}"
         error = _error_summary(stage, reason)
         stage_record["status"] = "failed"
@@ -350,6 +352,7 @@ def _run_stage_handler(
         _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
         return RunResult(False, run, 1, stage, reason)
 
+    finished_at = _utc_timestamp(clock())
     stage_record["status"] = "succeeded"
     stage_record["finished_at"] = finished_at
     stage_record["artifacts"] = artifacts or []

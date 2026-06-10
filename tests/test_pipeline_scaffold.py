@@ -7,7 +7,7 @@ from pathlib import Path
 
 from halpha.cli import main
 from halpha.config import load_config
-from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline
+from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline, run_pipeline_stage
 
 
 def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) -> None:
@@ -97,6 +97,101 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
     assert not (result.run.raw_dir / "text_events.json").exists()
     assert not (result.run.report_dir / "report.md").exists()
     _assert_manifest_timeline(manifest)
+
+
+def test_pipeline_records_finished_at_after_stage_handler_returns(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    current = [datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc)]
+
+    def fake_clock(now):
+        return lambda: current[0]
+
+    def collect_market_data(config, run) -> list[str]:
+        current[0] = current[0] + timedelta(minutes=5)
+        return []
+
+    monkeypatch.setattr("halpha.pipeline._clock", fake_clock)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_market_data",
+        stage_handlers={"collect_market_data": collect_market_data},
+    )
+
+    assert result.succeeded is True
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["stages"][0]["started_at"] == "2026-06-05T00:00:00Z"
+    assert manifest["stages"][0]["finished_at"] == "2026-06-05T00:05:00Z"
+    assert manifest["finished_at"] == "2026-06-05T00:05:00Z"
+
+
+def test_pipeline_records_finished_at_after_stage_handler_failure(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    current = [datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc)]
+
+    def fake_clock(now):
+        return lambda: current[0]
+
+    def collect_market_data(config, run) -> None:
+        current[0] = current[0] + timedelta(minutes=3)
+        raise PipelineError("stage collect_market_data failed", stage="collect_market_data", exit_code=3)
+
+    monkeypatch.setattr("halpha.pipeline._clock", fake_clock)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_market_data": collect_market_data},
+    )
+
+    assert result.succeeded is False
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["stages"][0]["started_at"] == "2026-06-05T00:00:00Z"
+    assert manifest["stages"][0]["finished_at"] == "2026-06-05T00:03:00Z"
+    assert manifest["finished_at"] == "2026-06-05T00:03:00Z"
+    _assert_manifest_timeline(manifest)
+
+
+def test_single_stage_records_finished_at_after_handler_returns(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    initial = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_market_data",
+        stage_handlers={"collect_market_data": lambda config, run: []},
+        now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
+    )
+    current = [datetime(2026, 6, 5, 1, 0, tzinfo=timezone.utc)]
+
+    def fake_clock(now):
+        return lambda: current[0]
+
+    def collect_text_events(config, run) -> list[str]:
+        current[0] = current[0] + timedelta(minutes=7)
+        return []
+
+    monkeypatch.setattr("halpha.pipeline._clock", fake_clock)
+
+    result = run_pipeline_stage(
+        config,
+        config_path=config_path,
+        run_dir=initial.run.run_dir,
+        stage="collect_text_events",
+        stage_handlers={"collect_text_events": collect_text_events},
+    )
+
+    assert result.succeeded is True
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    single_stage = manifest["stages"][-1]
+    assert single_stage["name"] == "collect_text_events"
+    assert single_stage["mode"] == "single_stage"
+    assert single_stage["started_at"] == "2026-06-05T01:00:00Z"
+    assert single_stage["finished_at"] == "2026-06-05T01:07:00Z"
+    assert manifest["finished_at"] == "2026-06-05T01:07:00Z"
 
 
 def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_path: Path) -> None:
