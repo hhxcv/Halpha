@@ -17,6 +17,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds fixed strategy benchmark window suites from shared local OHLCV history.
 - Evaluates configured quantitative strategies with bounded diagnostics.
 - Runs standalone single-strategy backtests from shared local OHLCV history.
+- Runs standalone strategy experiments against fixed benchmark suites.
 - Writes pipeline strategy evaluation summaries with single-window, bounded walk-forward, parameter-stability, and overfitting-risk evidence.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
@@ -73,6 +74,17 @@ Standalone backtests write inspectable artifacts under
 `runs/strategy_backtests/` by default. Use `--output-dir <dir>` to choose a
 different local output directory. This command does not run the report pipeline
 or Codex CLI.
+
+Run enabled strategy candidates against the fixed benchmark suite:
+
+```bash
+python -m halpha experiment --config config.example.yaml
+```
+
+Use `--strategy <strategy_name>` one or more times to limit candidates, and
+`--output-dir <dir>` to choose a different local output directory. Standalone
+experiments write inspectable artifacts under `runs/strategy_experiments/` by
+default and do not run the report pipeline or Codex CLI.
 
 Supported stage names:
 
@@ -159,6 +171,9 @@ A successful configured run can write:
 - `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
 - `runs/strategy_backtests/<id>/strategy_backtest.json`: standalone strategy backtest output.
 - `runs/strategy_backtests/<id>/manifest.json`: standalone backtest manifest.
+- `runs/strategy_experiments/<id>/strategy_experiment.json`: standalone strategy experiment output.
+- `runs/strategy_experiments/<id>/strategy_benchmark_suite.json`: benchmark suite used by a standalone experiment.
+- `runs/strategy_experiments/<id>/manifest.json`: standalone strategy experiment manifest.
 
 Failed runs preserve artifacts created before the failure and record errors in
 `run_manifest.json`. The product command must not emit fake raw data, fake
@@ -179,6 +194,9 @@ baseline comparison, relative metrics, bounded walk-forward summaries, and
 research limitation, parameter-stability, and overfitting-risk warnings.
 Strategy benchmark suites define reusable OHLCV windows for later strategy
 experiments without embedding raw OHLCV history in AI-readable context.
+Standalone strategy experiments evaluate configured strategy candidates across
+those windows using the same single-window strategy evaluation semantics as the
+main pipeline.
 AI-readable strategy evaluation material carries those deterministic evaluation
 fields into research context and report generation without asking Codex to
 calculate new metrics.

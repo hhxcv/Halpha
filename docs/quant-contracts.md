@@ -1296,6 +1296,75 @@ Standalone output rules:
 - The optional `--output-dir <dir>` argument overrides the default `runs/strategy_backtests/` output directory.
 - Each standalone command run writes `strategy_backtest.json` with the reusable core output contract and `manifest.json` with command inputs, artifact paths, warnings, and errors.
 
+Standalone strategy experiment output:
+
+Strategy experiments evaluate configured strategy candidates against fixed benchmark suite records outside the main report run. They must use the same single-window evaluation semantics as pipeline strategy evaluation.
+
+Implemented standalone experiment command:
+
+```text
+python -m halpha experiment --config <config>
+```
+
+Optional arguments:
+
+- `--strategy <strategy_name>` limits candidates and may be repeated.
+- `--output-dir <dir>` overrides the default `runs/strategy_experiments/` output directory.
+
+Experiment artifact:
+
+```text
+runs/strategy_experiments/<id>/strategy_experiment.json
+```
+
+Experiment top-level contract:
+
+```json
+{
+  "schema_version": 1,
+  "artifact_type": "strategy_experiment",
+  "created_at": "2026-06-06T00:00:00Z",
+  "experiment_id": "20260606T000000Z_strategy_experiment",
+  "inputs": {
+    "candidate_source": "configured_quant_strategies",
+    "strategy_names": [
+      "tsmom_vol_scaled"
+    ],
+    "benchmark_suite_artifact": "strategy_benchmark_suite.json"
+  },
+  "source_artifacts": [
+    "strategy_benchmark_suite.json"
+  ],
+  "coverage": {
+    "strategy_candidates": 1,
+    "benchmark_records": 4,
+    "benchmark_succeeded": 4,
+    "benchmark_insufficient_data": 0,
+    "evaluations": 4,
+    "evaluations_succeeded": 4,
+    "evaluations_insufficient_data": 0,
+    "evaluations_failed": 0,
+    "evaluations_skipped": 0
+  },
+  "candidates": [],
+  "warnings": [],
+  "errors": []
+}
+```
+
+Experiment manifest:
+
+```text
+runs/strategy_experiments/<id>/manifest.json
+```
+
+Manifest rules:
+
+- Record command inputs, artifact paths, evaluation counts, skipped or insufficient benchmarks, failures, warnings, and errors.
+- Keep experiment outputs outside per-run report directories unless a later integration stage explicitly consumes them.
+- Do not run Codex, generate reports, select best parameters, promote strategies, place orders, or claim future performance.
+- Failed, skipped, and insufficient benchmark evaluations must remain visible in JSON instead of being dropped.
+
 AI-readable strategy evaluation material:
 
 ```text
