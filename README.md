@@ -16,7 +16,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds deterministic current-run OHLCV data views.
 - Evaluates configured quantitative strategies with bounded diagnostics.
 - Runs standalone single-strategy backtests from shared local OHLCV history.
-- Writes pipeline strategy evaluation summaries with single-window and bounded walk-forward evidence.
+- Writes pipeline strategy evaluation summaries with single-window, bounded walk-forward, parameter-stability, and overfitting-risk evidence.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
 - Builds AI-readable decision material from deterministic JSON artifacts.
@@ -172,7 +172,7 @@ Backtest diagnostics are historical research material only. They are not
 forecasts, trading instructions, investment advice, or performance guarantees.
 Strategy evaluation summaries include cost assumptions, gross and net metrics,
 baseline comparison, relative metrics, bounded walk-forward summaries, and
-research limitation warnings.
+research limitation, parameter-stability, and overfitting-risk warnings.
 
 ## Codex Report Generation
 

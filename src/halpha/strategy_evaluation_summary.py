@@ -21,6 +21,10 @@ STAGE_NAME = "evaluate_strategy_evaluation"
 STRATEGY_EVALUATION_ARTIFACT = "analysis/strategy_evaluation_summary.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 SCHEMA_VERSION = 1
+HIGH_PARAMETER_TRIAL_COUNT_THRESHOLD = 8
+OVERFITTING_SHORT_SAMPLE_ROWS = 120
+OVERFITTING_LOW_TRADE_COUNT_THRESHOLD = 3
+PARAMETER_RETURN_RANGE_THRESHOLD_PCT = 10.0
 
 
 def build_strategy_evaluation_summary(
@@ -135,14 +139,23 @@ def _evaluation_record(
         )
 
     record_status = str(single_window.get("status") or "failed")
+    parameter_stability = _parameter_stability(strategy_run)
+    overfitting_risk = _overfitting_risk(
+        strategy_run,
+        single_window,
+        walk_forward,
+        parameter_stability,
+    )
     return _base_record(
         strategy_run,
         status=record_status,
         created_at=created_at,
         single_window=single_window,
         walk_forward=walk_forward,
-        assessment=_assessment(single_window, walk_forward),
-        warnings=_record_warnings(single_window, walk_forward),
+        parameter_stability=parameter_stability,
+        overfitting_risk=overfitting_risk,
+        assessment=_assessment(single_window, walk_forward, parameter_stability, overfitting_risk),
+        warnings=_record_warnings(single_window, walk_forward, parameter_stability, overfitting_risk),
         error=_record_error(single_window),
     )
 
@@ -172,6 +185,8 @@ def _upstream_unavailable_record(
             "strategy_run_status": status,
         },
         walk_forward=_skipped_walk_forward(message),
+        parameter_stability=_parameter_stability(strategy_run),
+        overfitting_risk=_unknown_overfitting_risk(),
         assessment=_empty_assessment(message),
         warnings=[item],
         error=None if status == "insufficient_data" else strategy_run.get("error"),
@@ -200,6 +215,8 @@ def _failed_record(
             ],
         },
         walk_forward=_skipped_walk_forward("Strategy evaluation failed before walk-forward evidence was available."),
+        parameter_stability=_parameter_stability(strategy_run),
+        overfitting_risk=_unknown_overfitting_risk(),
         assessment=_empty_assessment("Strategy evaluation failed before metrics were available."),
         warnings=[],
         error={
@@ -217,6 +234,8 @@ def _base_record(
     created_at: str,
     single_window: dict[str, Any],
     walk_forward: dict[str, Any],
+    parameter_stability: dict[str, Any],
+    overfitting_risk: dict[str, Any],
     assessment: dict[str, Any],
     warnings: list[dict[str, Any]],
     error: dict[str, Any] | None,
@@ -242,10 +261,8 @@ def _base_record(
         "params": strategy_run.get("params") if isinstance(strategy_run.get("params"), dict) else {},
         "single_window": single_window,
         "walk_forward": walk_forward,
-        "parameter_stability": {
-            "enabled": False,
-            "status": "disabled",
-        },
+        "parameter_stability": parameter_stability,
+        "overfitting_risk": overfitting_risk,
         "assessment": assessment,
         "warnings": warnings,
         "error": error,
@@ -281,7 +298,12 @@ def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _assessment(single_window: dict[str, Any], walk_forward: dict[str, Any]) -> dict[str, Any]:
+def _assessment(
+    single_window: dict[str, Any],
+    walk_forward: dict[str, Any],
+    parameter_stability: dict[str, Any],
+    overfitting_risk: dict[str, Any],
+) -> dict[str, Any]:
     status = single_window.get("status")
     if status != "succeeded":
         return _empty_assessment("Strategy evaluation has not produced enough evidence for reliability judgment.")
@@ -307,13 +329,14 @@ def _assessment(single_window: dict[str, Any], walk_forward: dict[str, Any]) -> 
         f"net_return_pct {metrics.get('net_return_pct')} and "
         f"max_drawdown_pct {metrics.get('max_drawdown_pct')}; "
         f"walk_forward_status is {walk_status} with "
-        f"{walk_summary.get('succeeded_windows')} successful windows."
+        f"{walk_summary.get('succeeded_windows')} successful windows; "
+        f"parameter_stability_status is {parameter_stability.get('status')}."
     )
     return {
         "reliability": reliability,
         "sample_quality": sample_quality,
         "cost_sensitivity": _cost_sensitivity(metrics),
-        "overfitting_risk": "unknown",
+        "overfitting_risk": overfitting_risk.get("status", "unknown"),
         "summary": summary,
         "evidence": [
             f"sample rows: {rows}.",
@@ -328,11 +351,14 @@ def _assessment(single_window: dict[str, Any], walk_forward: dict[str, Any]) -> 
                 "walk_forward_positive_net_return_window_pct: "
                 f"{walk_summary.get('positive_net_return_window_pct')}."
             ),
+            f"parameter_stability_status: {parameter_stability.get('status')}.",
+            f"parameter_tested_combinations: {parameter_stability.get('tested_combinations')}.",
+            f"overfitting_risk_status: {overfitting_risk.get('status')}.",
         ],
         "uncertainty": [
             "Single-window backtest is historical research material, not a forecast.",
             "Walk-forward evidence is bounded and uses fixed strategy params, not optimization.",
-            "Parameter stability diagnostics are not implemented yet.",
+            "Parameter diagnostics are bounded sensitivity context, not parameter recommendations.",
         ],
     }
 
@@ -346,6 +372,308 @@ def _cost_sensitivity(metrics: dict[str, Any]) -> str:
     if cost_drag_pct > 0:
         return "medium"
     return "low"
+
+
+def _parameter_stability(strategy_run: dict[str, Any]) -> dict[str, Any]:
+    diagnostic = strategy_run.get("parameter_diagnostic")
+    if not isinstance(diagnostic, dict) or diagnostic.get("enabled") is not True:
+        return {
+            "enabled": False,
+            "status": "disabled",
+        }
+
+    combinations = [
+        item for item in diagnostic.get("combinations", []) if isinstance(item, dict)
+    ] if isinstance(diagnostic.get("combinations"), list) else []
+    base_direction = _base_direction(strategy_run)
+    regions = [_parameter_region(item, base_direction=base_direction) for item in combinations]
+    region_counts = _region_counts(regions)
+    status = _parameter_stability_status(diagnostic, region_counts)
+    warnings = _unique_warnings(
+        [
+            *_warning_items(diagnostic.get("warnings")),
+            *_parameter_stability_warnings(status, region_counts),
+        ]
+    )
+    assumptions = diagnostic.get("assumptions") if isinstance(diagnostic.get("assumptions"), dict) else {}
+    return {
+        "enabled": True,
+        "status": status,
+        "diagnostic_status": diagnostic.get("status"),
+        "selection_policy": assumptions.get("selection_policy"),
+        "tested_combinations": int(diagnostic.get("tested_combinations") or 0),
+        "valid_combinations": int(diagnostic.get("valid_combinations") or 0),
+        "invalid_combinations": int(diagnostic.get("invalid_combinations") or 0),
+        "stability": diagnostic.get("stability"),
+        "region_counts": region_counts,
+        "regions": regions,
+        "summary_metrics": diagnostic.get("summary_metrics")
+        if isinstance(diagnostic.get("summary_metrics"), dict)
+        else {},
+        "evidence": [
+            f"diagnostic_status: {diagnostic.get('status')}.",
+            f"tested_combinations: {int(diagnostic.get('tested_combinations') or 0)}.",
+            f"valid_combinations: {int(diagnostic.get('valid_combinations') or 0)}.",
+            f"invalid_combinations: {int(diagnostic.get('invalid_combinations') or 0)}.",
+            (
+                "parameter_regions: "
+                f"stable={region_counts['stable']}, fragile={region_counts['fragile']}, "
+                f"inconsistent={region_counts['inconsistent']}, "
+                f"insufficient_data={region_counts['insufficient_data']}."
+            ),
+        ],
+        "notes": [item for item in diagnostic.get("notes", []) if isinstance(item, str)]
+        if isinstance(diagnostic.get("notes"), list)
+        else [],
+        "warnings": warnings,
+    }
+
+
+def _parameter_region(combination: dict[str, Any], *, base_direction: str | None) -> dict[str, Any]:
+    metrics = combination.get("metrics") if isinstance(combination.get("metrics"), dict) else {}
+    status = str(combination.get("status") or "unknown")
+    direction = metrics.get("direction") if isinstance(metrics.get("direction"), str) else "unknown"
+    confidence = metrics.get("confidence") if isinstance(metrics.get("confidence"), str) else "unknown"
+    trade_count = _number_or_none(metrics.get("backtest_trade_count"))
+    evidence = []
+    if status != "succeeded":
+        region_status = "insufficient_data"
+        error = combination.get("error") if isinstance(combination.get("error"), dict) else {}
+        evidence.append(str(error.get("message") or f"combination status is {status}."))
+    elif base_direction and direction != "unknown" and direction != base_direction:
+        region_status = "inconsistent"
+        evidence.append(f"direction {direction} differs from base direction {base_direction}.")
+    elif confidence in {"low", "unknown"}:
+        region_status = "fragile"
+        evidence.append("combination has low confidence.")
+    else:
+        region_status = "stable"
+        evidence.append("combination preserved base direction with usable evidence.")
+    return {
+        "combination_index": combination.get("combination_index"),
+        "status": region_status,
+        "diagnostic_status": status,
+        "params": combination.get("params") if isinstance(combination.get("params"), dict) else {},
+        "direction": direction,
+        "confidence": confidence,
+        "backtest_trade_count": trade_count,
+        "backtest_total_return_pct": _number_or_none(metrics.get("backtest_total_return_pct")),
+        "evidence": evidence,
+    }
+
+
+def _region_counts(regions: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {
+        "stable": 0,
+        "fragile": 0,
+        "inconsistent": 0,
+        "insufficient_data": 0,
+    }
+    for region in regions:
+        status = region.get("status")
+        if status in counts:
+            counts[status] += 1
+    return counts
+
+
+def _parameter_stability_status(diagnostic: dict[str, Any], region_counts: dict[str, int]) -> str:
+    diagnostic_status = diagnostic.get("status")
+    if diagnostic_status in {"skipped", "no_valid_combinations"}:
+        return "insufficient_data"
+    if region_counts["inconsistent"] > 0:
+        return "inconsistent"
+    if region_counts["fragile"] > 0 or region_counts["insufficient_data"] > 0:
+        return "fragile"
+    if region_counts["stable"] > 0:
+        return "stable"
+    return "insufficient_data"
+
+
+def _parameter_stability_warnings(status: str, region_counts: dict[str, int]) -> list[dict[str, Any]]:
+    if status == "stable":
+        return []
+    if status == "inconsistent":
+        return [
+            warning(
+                "parameter_stability_inconsistent",
+                "Parameter diagnostics produced inconsistent regions across configured combinations.",
+                source="strategy_evaluation",
+            )
+        ]
+    if status == "fragile":
+        return [
+            warning(
+                "parameter_stability_fragile",
+                (
+                    "Parameter diagnostics include fragile or unavailable regions "
+                    f"({region_counts['fragile']} fragile, "
+                    f"{region_counts['insufficient_data']} insufficient-data)."
+                ),
+                source="strategy_evaluation",
+            )
+        ]
+    return [
+        warning(
+            "parameter_stability_insufficient_data",
+            "Parameter diagnostics did not produce enough valid combinations for stability evidence.",
+            source="strategy_evaluation",
+        )
+    ]
+
+
+def _overfitting_risk(
+    strategy_run: dict[str, Any],
+    single_window: dict[str, Any],
+    walk_forward: dict[str, Any],
+    parameter_stability: dict[str, Any],
+) -> dict[str, Any]:
+    warnings = []
+    evidence = []
+    tested = _int_value(parameter_stability.get("tested_combinations"))
+    if tested >= HIGH_PARAMETER_TRIAL_COUNT_THRESHOLD:
+        warnings.append(
+            warning(
+                "overfitting_high_trial_count",
+                f"Parameter diagnostics tested {tested} combinations; selection risk should stay explicit.",
+                source="strategy_evaluation",
+            )
+        )
+    sample = single_window.get("sample") if isinstance(single_window.get("sample"), dict) else {}
+    rows = _int_value(sample.get("rows"))
+    if 0 < rows < OVERFITTING_SHORT_SAMPLE_ROWS:
+        warnings.append(
+            warning(
+                "overfitting_short_sample",
+                f"Evaluation sample has {rows} rows, which is short for parameter stability claims.",
+                source="strategy_evaluation",
+            )
+        )
+    stability_status = str(parameter_stability.get("status") or "unknown")
+    if stability_status in {"fragile", "inconsistent"}:
+        warnings.append(
+            warning(
+                "overfitting_unstable_parameter_ranking",
+                f"Parameter stability status is {stability_status}; do not infer a best parameter set.",
+                source="strategy_evaluation",
+            )
+        )
+    if stability_status == "insufficient_data":
+        warnings.append(
+            warning(
+                "overfitting_parameter_evidence_insufficient",
+                "Parameter diagnostics are insufficient for overfitting-risk judgment.",
+                source="strategy_evaluation",
+            )
+        )
+    metrics = single_window.get("strategy_metrics") if isinstance(single_window.get("strategy_metrics"), dict) else {}
+    cost_drag_pct = _number_or_none(metrics.get("cost_drag_pct"))
+    if cost_drag_pct is not None and cost_drag_pct >= HIGH_COST_DRAG_PCT_THRESHOLD:
+        warnings.append(
+            warning(
+                "overfitting_cost_sensitivity",
+                f"Cost drag is {cost_drag_pct} percentage points, so gross historical results may overstate quality.",
+                source="strategy_evaluation",
+            )
+        )
+    trade = single_window.get("trade_summary") if isinstance(single_window.get("trade_summary"), dict) else {}
+    trade_count = _int_value(trade.get("trade_count"))
+    if trade_count < OVERFITTING_LOW_TRADE_COUNT_THRESHOLD:
+        warnings.append(
+            warning(
+                "overfitting_low_trade_count",
+                f"Trade count is {trade_count}, which is too low for robust parameter conclusions.",
+                source="strategy_evaluation",
+            )
+        )
+    walk_summary = walk_forward.get("summary") if isinstance(walk_forward.get("summary"), dict) else {}
+    if walk_summary.get("result_stability") == "unstable":
+        warnings.append(
+            warning(
+                "overfitting_walk_forward_instability",
+                "Walk-forward results are unstable across sequential windows.",
+                source="strategy_evaluation",
+            )
+        )
+    return_range = _parameter_return_range(parameter_stability)
+    if return_range is not None and return_range >= PARAMETER_RETURN_RANGE_THRESHOLD_PCT:
+        warnings.append(
+            warning(
+                "overfitting_unstable_parameter_ranking",
+                f"Parameter diagnostic return range is {return_range} percentage points.",
+                source="strategy_evaluation",
+            )
+        )
+    evidence.extend(
+        [
+            f"tested_combinations: {tested}.",
+            f"sample rows: {rows}.",
+            f"trade_count: {trade_count}.",
+            f"cost_drag_pct: {cost_drag_pct}.",
+            f"parameter_stability_status: {stability_status}.",
+            f"walk_forward_result_stability: {walk_summary.get('result_stability')}.",
+        ]
+    )
+    unique_warnings = _unique_warnings(warnings)
+    return {
+        "status": _overfitting_status(unique_warnings, stability_status, parameter_stability),
+        "warnings": unique_warnings,
+        "evidence": evidence,
+        "selection_policy": "diagnostic_only_no_best_parameter_selection",
+    }
+
+
+def _unknown_overfitting_risk() -> dict[str, Any]:
+    return {
+        "status": "unknown",
+        "warnings": [],
+        "evidence": [],
+        "selection_policy": "diagnostic_only_no_best_parameter_selection",
+    }
+
+
+def _overfitting_status(
+    warnings: list[dict[str, Any]],
+    stability_status: str,
+    parameter_stability: dict[str, Any],
+) -> str:
+    if not warnings and parameter_stability.get("enabled") is not True:
+        return "unknown"
+    if stability_status == "inconsistent" or len(warnings) >= 2:
+        return "elevated"
+    if warnings:
+        return "medium"
+    return "low"
+
+
+def _parameter_return_range(parameter_stability: dict[str, Any]) -> float | None:
+    summary = parameter_stability.get("summary_metrics")
+    if not isinstance(summary, dict):
+        return None
+    minimum = _number_or_none(summary.get("backtest_total_return_pct_min"))
+    maximum = _number_or_none(summary.get("backtest_total_return_pct_max"))
+    if minimum is None or maximum is None:
+        return None
+    return round(maximum - minimum, 6)
+
+
+def _base_direction(strategy_run: dict[str, Any]) -> str | None:
+    assessment = strategy_run.get("assessment") if isinstance(strategy_run.get("assessment"), dict) else {}
+    direction = assessment.get("direction")
+    if isinstance(direction, str) and direction.strip() and direction != "unknown":
+        return direction
+    return None
+
+
+def _number_or_none(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _int_value(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0
+    return int(value)
 
 
 def _empty_assessment(summary: str) -> dict[str, Any]:
@@ -378,11 +706,18 @@ def _skipped_walk_forward(reason: str) -> dict[str, Any]:
     }
 
 
-def _record_warnings(single_window: dict[str, Any], walk_forward: dict[str, Any]) -> list[dict[str, Any]]:
+def _record_warnings(
+    single_window: dict[str, Any],
+    walk_forward: dict[str, Any],
+    parameter_stability: dict[str, Any],
+    overfitting_risk: dict[str, Any],
+) -> list[dict[str, Any]]:
     return _unique_warnings(
         [
             *_warning_items(single_window.get("warnings")),
             *_warning_items(walk_forward.get("warnings")),
+            *_warning_items(parameter_stability.get("warnings")),
+            *_warning_items(overfitting_risk.get("warnings")),
         ]
     )
 
@@ -496,6 +831,7 @@ def _record_zero_counts(run: RunContext) -> None:
     run.manifest["counts"]["strategy_evaluation_insufficient_data"] = 0
     run.manifest["counts"]["strategy_evaluation_skipped"] = 0
     run.manifest["counts"]["strategy_evaluation_walk_forward_records"] = 0
+    run.manifest["counts"]["strategy_evaluation_parameter_stability_records"] = 0
     run.manifest["strategy_evaluation"] = {
         "enabled": False,
         "records": 0,
@@ -512,6 +848,12 @@ def _record_manifest_counts(run: RunContext, records: list[dict[str, Any]]) -> N
         )
     run.manifest["counts"]["strategy_evaluation_walk_forward_records"] = sum(
         len(_walk_forward_windows(record)) for record in records
+    )
+    run.manifest["counts"]["strategy_evaluation_parameter_stability_records"] = sum(
+        1
+        for record in records
+        if isinstance(record.get("parameter_stability"), dict)
+        and record["parameter_stability"].get("enabled") is True
     )
 
 
@@ -539,6 +881,12 @@ def _record_manifest_summary(
                 for record in records
                 if isinstance(record.get("walk_forward"), dict)
                 and record["walk_forward"].get("status") == "succeeded"
+            ),
+            "records_with_parameter_stability": sum(
+                1
+                for record in records
+                if isinstance(record.get("parameter_stability"), dict)
+                and record["parameter_stability"].get("enabled") is True
             ),
         },
         "source_artifacts": [QUANT_STRATEGY_RUNS_ARTIFACT, MARKET_DATA_VIEWS_ARTIFACT],

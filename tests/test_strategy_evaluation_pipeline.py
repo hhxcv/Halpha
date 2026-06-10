@@ -52,6 +52,7 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert record["walk_forward"]["status"] == "insufficient_data"
     assert record["walk_forward"]["windows"] == []
     assert record["parameter_stability"] == {"enabled": False, "status": "disabled"}
+    assert record["overfitting_risk"]["status"] in {"medium", "elevated"}
     assert record["assessment"]["reliability"] in {"low", "medium"}
     assert record["assessment"]["cost_sensitivity"] in {"low", "medium", "high"}
     assert any(item.startswith("cost_drag_pct:") for item in record["assessment"]["evidence"])
@@ -71,6 +72,7 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
         "records_with_single_window": 1,
         "walk_forward_windows": 0,
         "records_with_walk_forward": 0,
+        "records_with_parameter_stability": 0,
     }
     assert _stage(manifest, "evaluate_strategy_evaluation")["artifacts"] == [
         "analysis/strategy_evaluation_summary.json"
@@ -113,6 +115,107 @@ def test_pipeline_writes_walk_forward_windows_when_history_is_sufficient(tmp_pat
     assert manifest["counts"]["strategy_evaluation_walk_forward_records"] == 3
     assert manifest["strategy_evaluation"]["coverage"]["walk_forward_windows"] == 3
     assert manifest["strategy_evaluation"]["coverage"]["records_with_walk_forward"] == 1
+    assert manifest["strategy_evaluation"]["coverage"]["records_with_parameter_stability"] == 0
+
+
+def test_pipeline_records_stable_parameter_stability(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(
+        tmp_path,
+        lookback=5,
+        parameter_diagnostics_enabled=True,
+        parameter_grid_return_windows=[2],
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=102),
+            _record(open_time="2026-06-03T00:00:00Z", close=104),
+            _record(open_time="2026-06-04T00:00:00Z", close=106),
+            _record(open_time="2026-06-05T00:00:00Z", close=109),
+        ]
+    )
+
+    result = _run_pipeline(config, config_path)
+
+    record = _strategy_evaluation(result)["records"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert record["parameter_stability"]["enabled"] is True
+    assert record["parameter_stability"]["status"] == "stable"
+    assert record["parameter_stability"]["tested_combinations"] == 1
+    assert record["parameter_stability"]["region_counts"]["stable"] == 1
+    assert record["parameter_stability"]["warnings"] == []
+    assert record["assessment"]["overfitting_risk"] in {"medium", "elevated"}
+    assert manifest["counts"]["strategy_evaluation_parameter_stability_records"] == 1
+    assert manifest["strategy_evaluation"]["coverage"]["records_with_parameter_stability"] == 1
+
+
+def test_pipeline_records_fragile_parameter_stability(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(
+        tmp_path,
+        lookback=5,
+        parameter_diagnostics_enabled=True,
+        parameter_grid_return_windows=[2, 10],
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=102),
+            _record(open_time="2026-06-03T00:00:00Z", close=104),
+            _record(open_time="2026-06-04T00:00:00Z", close=106),
+            _record(open_time="2026-06-05T00:00:00Z", close=109),
+        ]
+    )
+
+    result = _run_pipeline(config, config_path)
+
+    record = _strategy_evaluation(result)["records"][0]
+    warning_codes = {item["code"] for item in record["warnings"]}
+
+    assert result.succeeded is True
+    assert record["parameter_stability"]["status"] == "fragile"
+    assert record["parameter_stability"]["region_counts"]["stable"] == 1
+    assert record["parameter_stability"]["region_counts"]["insufficient_data"] == 1
+    assert "parameter_stability_fragile" in warning_codes
+    assert "overfitting_unstable_parameter_ranking" in warning_codes
+    assert record["overfitting_risk"]["status"] == "elevated"
+
+
+def test_pipeline_records_insufficient_parameter_stability(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(
+        tmp_path,
+        lookback=5,
+        parameter_diagnostics_enabled=True,
+        parameter_grid_return_windows=[10],
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=102),
+            _record(open_time="2026-06-03T00:00:00Z", close=104),
+            _record(open_time="2026-06-04T00:00:00Z", close=106),
+            _record(open_time="2026-06-05T00:00:00Z", close=109),
+        ]
+    )
+
+    result = _run_pipeline(config, config_path)
+
+    record = _strategy_evaluation(result)["records"][0]
+    warning_codes = {item["code"] for item in record["warnings"]}
+
+    assert result.succeeded is True
+    assert record["parameter_stability"]["status"] == "insufficient_data"
+    assert record["parameter_stability"]["diagnostic_status"] == "no_valid_combinations"
+    assert record["parameter_stability"]["region_counts"]["insufficient_data"] == 1
+    assert "parameter_stability_insufficient_data" in warning_codes
+    assert "overfitting_parameter_evidence_insufficient" in warning_codes
 
 
 def test_pipeline_records_strategy_evaluation_for_insufficient_upstream_data(tmp_path: Path) -> None:
@@ -188,10 +291,31 @@ def _write_strategy_config(
     *,
     lookback: int,
     quant_enabled: bool = True,
+    parameter_diagnostics_enabled: bool = False,
+    parameter_grid_return_windows: list[int] | None = None,
 ) -> Path:
     config_path = tmp_path / "config.yaml"
+    return_windows = parameter_grid_return_windows or [2]
+    grid_return_window_yaml = "\n".join(f"          - {item}" for item in return_windows)
+    parameter_diagnostics_yaml = (
+        f"""
+  parameter_diagnostics:
+    enabled: true
+    max_combinations: {len(return_windows)}
+    grids:
+      tsmom_vol_scaled:
+        return_window:
+{grid_return_window_yaml}
+        volatility_window:
+          - 2
+        target_volatility:
+          - 0.2
+"""
+        if parameter_diagnostics_enabled
+        else ""
+    )
     strategies = (
-        """
+        f"""
   strategies:
     - name: tsmom_vol_scaled
       enabled: true
@@ -205,6 +329,7 @@ def _write_strategy_config(
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+{parameter_diagnostics_yaml.rstrip()}
 """
         if quant_enabled
         else ""
