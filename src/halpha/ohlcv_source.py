@@ -10,6 +10,7 @@ import ccxt
 
 
 SUPPORTED_OHLCV_SOURCES = {"binance"}
+BINANCE_SPOT_PUBLIC_API_URL = "https://data-api.binance.vision/api/v3"
 TIMEFRAME_DURATIONS = {
     "1d": timedelta(days=1),
     "1h": timedelta(hours=1),
@@ -152,6 +153,7 @@ def _exchange_options(source: str, *, proxy_url: str | None) -> dict[str, Any]:
     options: dict[str, Any] = {"enableRateLimit": True}
     if source == "binance":
         options["options"] = {"fetchMarkets": {"types": ["spot"]}}
+        options["urls"] = {"api": {"public": BINANCE_SPOT_PUBLIC_API_URL}}
         if proxy_url is not None:
             options["httpsProxy"] = proxy_url
     return options

@@ -140,10 +140,10 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert "tests/fixtures" not in config_path.read_text(encoding="utf-8")
 
 
-def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
+def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test_fakes(
     tmp_path: Path, monkeypatch
 ) -> None:
-    config_path = _write_m1_config(tmp_path)
+    config_path = _write_m3_config(tmp_path)
     requested_urls: list[str] = []
     ohlcv_requests: list[dict] = []
     codex_calls: list[dict] = []
@@ -192,7 +192,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
                 "cwd": kwargs["cwd"],
             }
         )
-        return subprocess.CompletedProcess(command, 0, stdout=_m1_report_stdout(), stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout=_m3_report_stdout(), stderr="")
 
     monkeypatch.setattr("halpha.collectors.market.urlopen", fake_market_urlopen)
     monkeypatch.setattr("halpha.collectors.text.urlopen", fake_text_urlopen)
@@ -223,6 +223,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
         "raw/market.json",
         "raw/text_events.json",
         "raw/market_data_views.json",
+        "analysis/quant_strategy_runs.json",
         "analysis/market_strategy_signals.json",
         "analysis/market_signals.json",
         "analysis/market_signal_material.md",
@@ -383,7 +384,14 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["decision_intelligence"]["previous_run"]["status"] == "no_previous_run"
     assert "artifact_type: analysis_decision_intelligence_material" in decision_material
     assert "research_decision_support_only: true" in decision_material
-    assert "analysis/decision_intelligence_delta.json" in decision_material
+    for artifact in [
+        "analysis/market_regime_assessment.json",
+        "analysis/risk_assessment.json",
+        "analysis/decision_recommendations.json",
+        "analysis/watch_triggers.json",
+        "analysis/decision_intelligence_delta.json",
+    ]:
+        assert artifact in decision_material
     assert "## delta_vs_previous_run" in decision_material
 
     signal_material = (run_dir / "analysis/market_signal_material.md").read_text(encoding="utf-8")
@@ -397,7 +405,17 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
 
     context = (run_dir / "codex_context/context.md").read_text(encoding="utf-8")
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
+    research_context = (run_dir / "analysis/research_context.md").read_text(encoding="utf-8")
+    assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in research_context
+    assert "market_strategy_signals: analysis/market_strategy_signals.json" in research_context
+    assert "market_signals: analysis/market_signals.json" in research_context
+    assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
+    assert "artifact_type: analysis_market_signal_material" in research_context
+    assert "artifact_type: analysis_decision_intelligence_material" in research_context
     assert "artifact_type: analysis_market_signal_material" in context
+    assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in context
+    assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
+    assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
@@ -427,8 +445,13 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     report = (run_dir / "report/report.md").read_text(encoding="utf-8")
     assert "## " + "\u51b3\u7b56\u652f\u6301" in report
     assert "action_level=TRY_SMALL" in report
+    assert "decision_bias=tentative_constructive" in report
     assert "risk_level=low" in report
     assert "no_previous_run" in report
+    assert "confirmation" in report
+    assert "invalidation" in report
+    assert "risk_escalation" in report
+    assert "recheck_next_run" in report
     assert "## 量化信号结论" in report
     assert "趋势信号" in report
     assert "证据" in report
@@ -477,7 +500,7 @@ codex:
     return config_path
 
 
-def _write_m1_config(tmp_path: Path) -> Path:
+def _write_m3_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         """
@@ -625,7 +648,7 @@ def _report_stdout() -> str:
     )
 
 
-def _m1_report_stdout() -> str:
+def _m3_report_stdout() -> str:
     return "\n".join(
         [
             "# 每日市场情报简报",
@@ -646,7 +669,7 @@ def _m1_report_stdout() -> str:
             "",
             "## 决策支持",
             "",
-            "- 当前决策视图：action_level=TRY_SMALL; decision_bias=try_small_when_trend_and_risk_align.",
+            "- 当前决策视图：action_level=TRY_SMALL; decision_bias=tentative_constructive.",
             "- 可以做：仅把 TRY_SMALL 理解为研究决策支持语言，继续跟踪证据是否维持。",
             "- 不要做：不要把该材料解释为仓位、账户动作、自动交易或收益承诺。",
             "- 等待/观察：关注 confirmation、invalidation、risk_escalation 和 recheck_next_run 触发条件。",
