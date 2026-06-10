@@ -22,6 +22,7 @@ STAGE_ORDER = (
     "build_risk_assessment",
     "build_decision_recommendations",
     "build_watch_triggers",
+    "build_decision_intelligence_delta",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -305,6 +306,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_risk_assessment"] = _build_risk_assessment
     handlers["build_decision_recommendations"] = _build_decision_recommendations
     handlers["build_watch_triggers"] = _build_watch_triggers
+    handlers["build_decision_intelligence_delta"] = _build_decision_intelligence_delta
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -492,6 +494,12 @@ def _build_watch_triggers(config: dict[str, Any], run: RunContext) -> list[str] 
     from .decision_intelligence import build_watch_triggers
 
     return build_watch_triggers(config, run)
+
+
+def _build_decision_intelligence_delta(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .decision_intelligence import build_decision_intelligence_delta
+
+    return build_decision_intelligence_delta(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:
