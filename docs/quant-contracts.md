@@ -136,7 +136,7 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `pyarrow` | Parquet read/write support for the shared OHLCV fact store. | File format support only. Not an AI context input. |
 | `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
-Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, these strategies may use vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, these strategies may use vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
 
 ## Configuration Contract
 
@@ -169,12 +169,17 @@ market:
 quant:
   enabled: true
   engine: vectorbt
+  effectiveness_gates:
+    min_positive_net_return_benchmark_pct: 25.0
+    max_cost_drag_pct: 6.0
+    require_walk_forward_stable: false
+    min_walk_forward_positive_net_return_window_pct: 0.0
   strategies:
     - name: tsmom_vol_scaled
       enabled: true
       params:
-        return_window: 30
-        volatility_window: 30
+        return_window: 120
+        volatility_window: 60
         target_volatility: 0.2
       backtest:
         enabled: true
@@ -185,9 +190,20 @@ quant:
     - name: breakout_atr_trend
       enabled: true
       params:
-        breakout_window: 55
+        breakout_window: 120
         exit_window: 20
         atr_window: 14
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+    - name: sma_cross_trend
+      enabled: true
+      params:
+        short_window: 20
+        long_window: 30
       backtest:
         enabled: true
         initial_cash: 10000
@@ -216,23 +232,30 @@ quant:
     grids:
       tsmom_vol_scaled:
         return_window:
-          - 20
-          - 30
+          - 80
+          - 120
         volatility_window:
-          - 20
-          - 30
+          - 60
+          - 120
         target_volatility:
           - 0.15
           - 0.2
       breakout_atr_trend:
         breakout_window:
-          - 20
-          - 55
+          - 80
+          - 120
         exit_window:
           - 10
           - 20
         atr_window:
           - 14
+      sma_cross_trend:
+        short_window:
+          - 10
+          - 20
+        long_window:
+          - 30
+          - 50
       bollinger_rsi_reversion:
         bollinger_window:
           - 20
@@ -295,6 +318,8 @@ Validation contract:
 - `tsmom_vol_scaled` params `return_window` and `volatility_window` must be positive integers when present.
 - `tsmom_vol_scaled` param `target_volatility` must be a positive number when present.
 - `breakout_atr_trend` params `breakout_window`, `exit_window`, and `atr_window` must be positive integers when present.
+- `sma_cross_trend` params `short_window` and `long_window` must be positive integers when present.
+- Effective `sma_cross_trend` `short_window` must be lower than effective `long_window`.
 - `bollinger_rsi_reversion` params `bollinger_window`, `rsi_window`, and `trend_window` must be positive integers when present.
 - `bollinger_rsi_reversion` params `band_std` and `trend_filter_pct` must be positive numbers when present.
 - `bollinger_rsi_reversion` params `rsi_oversold` and `rsi_overbought` must be numbers greater than 0 and lower than 100 when present.
@@ -946,8 +971,8 @@ Parameter diagnostic rules:
 
 Strategy names:
 
-- Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
-- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`, `breakout_atr_trend`, and `bollinger_rsi_reversion`.
+- Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and `bollinger_rsi_reversion`.
+- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and `bollinger_rsi_reversion`.
 - The M1 demo signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are retired from the strategy-centered product path.
 - Retired demo names are not migrated into strategy aliases.
 - If an old demo name is requested after strategy adoption, config validation should fail with an actionable error.
@@ -1681,6 +1706,7 @@ Strategy-centered signal names are produced from strategy run names. Initial str
 ```text
 tsmom_vol_scaled
 breakout_atr_trend
+sma_cross_trend
 bollinger_rsi_reversion
 ```
 

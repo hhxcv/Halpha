@@ -137,6 +137,38 @@ def test_strategy_effectiveness_gate_can_require_parameter_stability() -> None:
     assert "parameter_stability_not_stable" in _reason_codes(record)
 
 
+def test_strategy_effectiveness_gate_can_accept_unstable_walk_forward_when_not_required() -> None:
+    artifact = _artifact(
+        [
+            _candidate(
+                "unstable_allowed",
+                [
+                    _evaluation(net=4.0, excess=2.0, trades=4, walk_forward_stability="unstable"),
+                    _evaluation(net=3.0, excess=1.0, trades=4, walk_forward_stability="unstable"),
+                ],
+            )
+        ]
+    )
+
+    gates = build_strategy_effectiveness_gates(
+        artifact,
+        {
+            "quant": {
+                "effectiveness_gates": {
+                    "require_walk_forward_stable": False,
+                    "min_walk_forward_positive_net_return_window_pct": 0.0,
+                }
+            }
+        },
+    )
+    record = gates["records"][0]
+
+    assert record["status"] == "effective"
+    assert record["gate_inputs"]["walk_forward_stability"]["result_stability"] == "unstable"
+    assert record["gate_inputs"]["overfitting_risk"]["status"] == "low"
+    assert "unstable_walk_forward" not in _reason_codes(record)
+
+
 def _artifact(candidates: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "schema_version": 1,

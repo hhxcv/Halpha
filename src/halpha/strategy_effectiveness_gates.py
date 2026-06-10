@@ -534,7 +534,7 @@ def _overfitting_risk(
         warnings.append(_warning("overfitting_low_trade_count", "Trade count is too low for robust gate evidence."))
     if max_cost_drag is not None and max_cost_drag > thresholds["max_cost_drag_pct"]:
         warnings.append(_warning("overfitting_cost_sensitivity", "Cost drag may dominate historical results."))
-    if walk_forward_stability == "unstable":
+    if thresholds["require_walk_forward_stable"] and walk_forward_stability == "unstable":
         warnings.append(_warning("overfitting_walk_forward_instability", "Walk-forward results are unstable."))
     if parameter_status in {"fragile", "inconsistent"}:
         warnings.append(_warning("overfitting_parameter_instability", "Parameter stability is weak."))

@@ -15,6 +15,7 @@ from halpha.quant.registry import get_strategy_definition
 def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     definition = get_strategy_definition("tsmom_vol_scaled")
     breakout = get_strategy_definition("breakout_atr_trend")
+    sma_cross = get_strategy_definition("sma_cross_trend")
     reversion = get_strategy_definition("bollinger_rsi_reversion")
 
     assert definition is not None
@@ -25,6 +26,10 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert breakout.name == "breakout_atr_trend"
     assert breakout.run.__module__ == "halpha.quant.strategies.breakout_atr_trend"
     assert breakout.signal_records.__module__ == "halpha.quant.strategies.breakout_atr_trend"
+    assert sma_cross is not None
+    assert sma_cross.name == "sma_cross_trend"
+    assert sma_cross.run.__module__ == "halpha.quant.strategies.sma_cross_trend"
+    assert sma_cross.signal_records.__module__ == "halpha.quant.strategies.sma_cross_trend"
     assert reversion is not None
     assert reversion.name == "bollinger_rsi_reversion"
     assert reversion.run.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
@@ -543,6 +548,94 @@ def test_quant_strategy_runner_records_breakout_insufficient_data(tmp_path: Path
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 2
 
 
+def test_quant_strategy_runner_writes_sma_cross_trend_artifacts(tmp_path: Path) -> None:
+    config_path = _write_sma_cross_strategy_config(tmp_path, lookback=6)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=103, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=104, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    market_signal = _market_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["strategy_name"] == "sma_cross_trend"
+    assert strategy_run["params"] == {
+        "short_window": 2,
+        "long_window": 3,
+    }
+    assert strategy_run["indicators"]["calculation_backend"] == "vectorbt.IndicatorFactory"
+    assert strategy_run["indicators"]["latest_close"] == 110.0
+    assert strategy_run["indicators"]["short_sma"] == 107.0
+    assert strategy_run["indicators"]["long_sma"] == 105.666667
+    assert strategy_run["indicators"]["trend_spread_pct"] == 1.212121
+    assert strategy_run["signals"]["latest_regime"] == "sma_uptrend_active"
+    assert strategy_run["signals"]["entry_count"] == 1
+    assert strategy_run["signals"]["exit_count"] == 0
+    assert strategy_run["signals"]["latest_entry"] is False
+    assert strategy_run["signals"]["latest_signal_active"] is True
+    assert strategy_run["assessment"]["direction"] == "bullish"
+    assert strategy_run["assessment"]["strength"] == "medium"
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["error"] is None
+
+    assert strategy_signal["strategy_name"] == "sma_cross_trend"
+    assert strategy_signal["direction"] == "bullish"
+    assert strategy_signal["key_values"]["short_sma"] == 107.0
+    assert strategy_signal["key_values"]["long_sma"] == 105.666667
+    assert strategy_signal["key_values"]["trend_spread_pct"] == 1.212121
+    assert strategy_signal["key_values"]["latest_regime"] == "sma_uptrend_active"
+    assert strategy_signal["key_values"]["entry_count"] == 1
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "succeeded"
+    assert market_signal["strategy_name"] == "sma_cross_trend"
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    assert manifest["quant_strategies"]["enabled"] == ["sma_cross_trend"]
+
+
+def test_quant_strategy_runner_records_sma_cross_insufficient_data(tmp_path: Path) -> None:
+    config_path = _write_sma_cross_strategy_config(tmp_path, lookback=2)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-05T00:00:00Z", close=104, volume=14),
+            _record(open_time="2026-06-06T00:00:00Z", close=110, volume=20),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    strategy_signal = _strategy_signals(result)["signals"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "insufficient_data"
+    assert strategy_run["data_quality"]["row_count"] == 2
+    assert strategy_run["data_quality"]["minimum_required_rows"] == 4
+    assert strategy_run["indicators"] == {}
+    assert strategy_run["signals"] == {}
+    assert strategy_run["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    assert strategy_signal["direction"] == "unknown"
+    assert strategy_signal["insufficient_data"] is True
+    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "skipped"
+    assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
+    assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 2
+
+
 def test_quant_strategy_runner_writes_bollinger_rsi_oversold_artifacts(tmp_path: Path) -> None:
     config_path = _write_reversion_strategy_config(tmp_path, lookback=6)
     config = load_config(config_path)
@@ -805,6 +898,57 @@ def test_strategy_signal_records_align_with_tsmom_run_transitions() -> None:
     json.dumps(signal_records)
 
 
+def test_strategy_signal_records_align_with_sma_cross_transitions() -> None:
+    definition = get_strategy_definition("sma_cross_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=101, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=103, volume=13),
+    ]
+    strategy = {
+        "name": "sma_cross_trend",
+        "params": {
+            "short_window": 1,
+            "long_window": 2,
+        },
+        "backtest": {"enabled": False},
+    }
+    view = _view(rows)
+
+    signal_records = definition.signal_records(strategy, view, rows)
+    strategy_run = definition.run(
+        strategy,
+        view,
+        rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert signal_records["status"] == "succeeded"
+    assert signal_records["entry_count"] == strategy_run["signals"]["entry_count"] == 2
+    assert signal_records["exit_count"] == strategy_run["signals"]["exit_count"] == 1
+    assert signal_records["latest_record"]["signal"]["active"] is strategy_run["signals"][
+        "latest_signal_active"
+    ]
+    assert [item["signal"]["active"] for item in signal_records["records"]] == [
+        False,
+        True,
+        False,
+        True,
+    ]
+    assert [item["entry"] for item in signal_records["records"]] == [False, True, False, True]
+    assert [item["exit"] for item in signal_records["records"]] == [False, False, True, False]
+    assert signal_records["records"][1]["indicator_context"]["short_sma"] == 102.0
+    assert signal_records["records"][1]["indicator_context"]["long_sma"] == 101.0
+    assert signal_records["latest_record"]["indicator_context"]["trend_spread_pct"] == pytest.approx(
+        0.970874,
+        abs=0.000001,
+    )
+    json.dumps(signal_records)
+
+
 def test_strategy_signal_records_cover_no_signal_state() -> None:
     definition = get_strategy_definition("bollinger_rsi_reversion")
     assert definition is not None
@@ -1060,6 +1204,57 @@ quant:
         breakout_window: 3
         exit_window: 2
         atr_window: 3
+      backtest:
+        enabled: {"true" if backtest_enabled else "false"}
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_sma_cross_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+    backtest_enabled: bool = True,
+) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: {lookback}
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: sma_cross_trend
+      enabled: true
+      params:
+        short_window: 2
+        long_window: 3
       backtest:
         enabled: {"true" if backtest_enabled else "false"}
         initial_cash: 10000
