@@ -23,6 +23,7 @@ def test_quant_signals_build_from_strategy_run_artifact(tmp_path: Path) -> None:
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _noop_stage,
             "evaluate_quant_strategies": _write_strategy_runs_stage,
+            "evaluate_strategy_evaluation": _noop_stage,
             "evaluate_market_strategy_signals": lambda config, run: evaluate_market_strategy_signals(
                 config,
                 run,
@@ -108,6 +109,7 @@ def test_quant_signals_skip_when_quant_is_not_enabled(tmp_path: Path) -> None:
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _noop_stage,
             "evaluate_quant_strategies": _noop_stage,
+            "evaluate_strategy_evaluation": _noop_stage,
             "build_market_signals": _noop_stage,
             "build_market_signal_material": _noop_stage,
             "build_analysis_materials": _noop_stage,
@@ -138,6 +140,7 @@ def test_quant_signals_fail_when_strategy_runs_are_missing(tmp_path: Path) -> No
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _noop_stage,
             "evaluate_quant_strategies": _noop_stage,
+            "evaluate_strategy_evaluation": _noop_stage,
             "build_market_signals": _noop_stage,
             "build_market_signal_material": _noop_stage,
             "build_analysis_materials": _noop_stage,

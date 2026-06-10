@@ -16,6 +16,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds deterministic current-run OHLCV data views.
 - Evaluates configured quantitative strategies with bounded diagnostics.
 - Runs standalone single-strategy backtests from shared local OHLCV history.
+- Writes pipeline strategy evaluation summaries from configured strategy runs.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
 - Builds AI-readable decision material from deterministic JSON artifacts.
@@ -80,6 +81,7 @@ collect_text_events
 sync_ohlcv
 build_market_data_views
 evaluate_quant_strategies
+evaluate_strategy_evaluation
 evaluate_market_strategy_signals
 build_market_signals
 build_market_signal_material
@@ -134,6 +136,7 @@ A successful configured run can write:
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
 - `analysis/quant_strategy_runs.json`: configured strategy run outputs.
+- `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.

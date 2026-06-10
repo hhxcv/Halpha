@@ -1,0 +1,487 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from .market_data_views import MARKET_DATA_VIEWS_ARTIFACT, load_market_data_view_records
+from .pipeline import PipelineError, RunContext
+from .quant.registry import get_strategy_definition
+from .quant.strategy_evaluation import evaluate_single_window_backtest
+from .quant.strategy_records import STRATEGY_VERSION, warning
+from .storage import write_json
+
+
+STAGE_NAME = "evaluate_strategy_evaluation"
+STRATEGY_EVALUATION_ARTIFACT = "analysis/strategy_evaluation_summary.json"
+QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
+SCHEMA_VERSION = 1
+
+
+def build_strategy_evaluation_summary(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> list[str]:
+    quant = config.get("quant")
+    if not isinstance(quant, dict) or quant.get("enabled") is not True:
+        _record_zero_counts(run)
+        return []
+
+    strategy_runs_artifact = _read_quant_strategy_runs(run)
+    views_artifact = _read_market_data_views(run)
+    views_by_id = {
+        view.get("view_id"): view for view in views_artifact.get("views", []) if isinstance(view, dict)
+    }
+    storage_dir = _storage_dir(config, run.config_path)
+    created_at = _created_at(strategy_runs_artifact, now)
+    records = [
+        _evaluation_record(
+            config,
+            strategy_run,
+            views_by_id=views_by_id,
+            storage_dir=storage_dir,
+            created_at=created_at,
+        )
+        for strategy_run in strategy_runs_artifact["runs"]
+    ]
+    warnings = _artifact_warnings(records)
+    errors = [record["error"] for record in records if isinstance(record.get("error"), dict)]
+    artifact = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_type": "strategy_evaluation_summary",
+        "created_at": created_at,
+        "source_artifacts": [QUANT_STRATEGY_RUNS_ARTIFACT, MARKET_DATA_VIEWS_ARTIFACT],
+        "records": records,
+        "warnings": warnings,
+        "errors": errors,
+    }
+    write_json(run.analysis_dir / "strategy_evaluation_summary.json", artifact)
+    run.manifest["artifacts"]["strategy_evaluation_summary"] = STRATEGY_EVALUATION_ARTIFACT
+    _record_manifest_counts(run, records)
+    _record_manifest_summary(run, records, warnings=warnings, errors=errors)
+    return [STRATEGY_EVALUATION_ARTIFACT]
+
+
+def _evaluation_record(
+    config: dict[str, Any],
+    strategy_run: dict[str, Any],
+    *,
+    views_by_id: dict[Any, dict[str, Any]],
+    storage_dir: Path,
+    created_at: str,
+) -> dict[str, Any]:
+    status = str(strategy_run.get("status") or "failed")
+    if status != "succeeded":
+        return _upstream_unavailable_record(strategy_run, status=status, created_at=created_at)
+
+    view = views_by_id.get(strategy_run.get("input_view_id"))
+    if view is None:
+        return _failed_record(
+            strategy_run,
+            created_at=created_at,
+            error_type="MissingInputView",
+            message=f"input view was not found: {strategy_run.get('input_view_id')}",
+        )
+
+    name = str(strategy_run.get("strategy_name"))
+    definition = get_strategy_definition(name)
+    if definition is None:
+        return _failed_record(
+            strategy_run,
+            created_at=created_at,
+            error_type="UnsupportedStrategy",
+            message=f"{name} is not implemented.",
+        )
+
+    try:
+        rows = load_market_data_view_records(view, storage_dir=storage_dir)
+        strategy = _strategy_input(config, strategy_run)
+        signals = definition.signal_records(strategy, view, rows)
+        single_window = evaluate_single_window_backtest(
+            strategy=strategy,
+            market_identity={
+                "source": strategy_run.get("source"),
+                "symbol": strategy_run.get("symbol"),
+                "timeframe": strategy_run.get("timeframe"),
+            },
+            ohlcv_rows=rows,
+            signal_records=signals,
+            cost_assumptions=_cost_assumptions(strategy),
+        )
+    except Exception as exc:
+        return _failed_record(
+            strategy_run,
+            created_at=created_at,
+            error_type=type(exc).__name__,
+            message=str(exc),
+        )
+
+    record_status = str(single_window.get("status") or "failed")
+    return _base_record(
+        strategy_run,
+        status=record_status,
+        created_at=created_at,
+        single_window=single_window,
+        assessment=_assessment(single_window),
+        warnings=_record_warnings(single_window),
+        error=_record_error(single_window),
+    )
+
+
+def _upstream_unavailable_record(
+    strategy_run: dict[str, Any],
+    *,
+    status: str,
+    created_at: str,
+) -> dict[str, Any]:
+    if status == "insufficient_data":
+        record_status = "insufficient_data"
+        message = "Strategy evaluation is unavailable because the upstream strategy run has insufficient data."
+        code = "upstream_strategy_insufficient_data"
+    else:
+        record_status = "skipped"
+        message = f"Strategy evaluation skipped because upstream strategy run status is {status}."
+        code = "upstream_strategy_not_succeeded"
+    item = warning(code, message, source="strategy_evaluation")
+    return _base_record(
+        strategy_run,
+        status=record_status,
+        created_at=created_at,
+        single_window={
+            "status": record_status,
+            "reason": message,
+            "strategy_run_status": status,
+        },
+        assessment=_empty_assessment(message),
+        warnings=[item],
+        error=None if status == "insufficient_data" else strategy_run.get("error"),
+    )
+
+
+def _failed_record(
+    strategy_run: dict[str, Any],
+    *,
+    created_at: str,
+    error_type: str,
+    message: str,
+) -> dict[str, Any]:
+    return _base_record(
+        strategy_run,
+        status="failed",
+        created_at=created_at,
+        single_window={
+            "status": "failed",
+            "errors": [
+                {
+                    "error_type": error_type,
+                    "message": message,
+                    "stage": STAGE_NAME,
+                }
+            ],
+        },
+        assessment=_empty_assessment("Strategy evaluation failed before metrics were available."),
+        warnings=[],
+        error={
+            "error_type": error_type,
+            "message": message,
+            "stage": STAGE_NAME,
+        },
+    )
+
+
+def _base_record(
+    strategy_run: dict[str, Any],
+    *,
+    status: str,
+    created_at: str,
+    single_window: dict[str, Any],
+    assessment: dict[str, Any],
+    warnings: list[dict[str, Any]],
+    error: dict[str, Any] | None,
+) -> dict[str, Any]:
+    latest = strategy_run.get("latest_candle_time") or "missing"
+    name = strategy_run.get("strategy_name")
+    source = strategy_run.get("source")
+    symbol = strategy_run.get("symbol")
+    timeframe = strategy_run.get("timeframe")
+    return {
+        "evaluation_id": f"strategy_evaluation:{name}:{source}:{symbol}:{timeframe}:{latest}",
+        "status": status,
+        "strategy_run_id": strategy_run.get("strategy_run_id"),
+        "strategy_name": name,
+        "strategy_version": strategy_run.get("strategy_version", STRATEGY_VERSION),
+        "source": source,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "input_view_id": strategy_run.get("input_view_id"),
+        "input_window_start": strategy_run.get("input_window_start"),
+        "input_window_end": strategy_run.get("input_window_end"),
+        "latest_candle_time": strategy_run.get("latest_candle_time"),
+        "params": strategy_run.get("params") if isinstance(strategy_run.get("params"), dict) else {},
+        "single_window": single_window,
+        "walk_forward": {
+            "enabled": False,
+            "status": "disabled",
+        },
+        "parameter_stability": {
+            "enabled": False,
+            "status": "disabled",
+        },
+        "assessment": assessment,
+        "warnings": warnings,
+        "error": error,
+        "source_artifacts": [QUANT_STRATEGY_RUNS_ARTIFACT, MARKET_DATA_VIEWS_ARTIFACT],
+        "created_at": created_at,
+    }
+
+
+def _strategy_input(config: dict[str, Any], strategy_run: dict[str, Any]) -> dict[str, Any]:
+    name = str(strategy_run.get("strategy_name"))
+    configured = _configured_strategy(config, name)
+    return {
+        "name": name,
+        "params": strategy_run.get("params") if isinstance(strategy_run.get("params"), dict) else {},
+        "backtest": configured.get("backtest") if isinstance(configured.get("backtest"), dict) else {},
+    }
+
+
+def _configured_strategy(config: dict[str, Any], name: str) -> dict[str, Any]:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    strategies = quant.get("strategies") if isinstance(quant.get("strategies"), list) else []
+    for strategy in strategies:
+        if isinstance(strategy, dict) and strategy.get("name") == name and strategy.get("enabled", True) is not False:
+            return strategy
+    return {"name": name}
+
+
+def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
+    backtest = strategy.get("backtest") if isinstance(strategy.get("backtest"), dict) else {}
+    return {
+        "fees_bps": backtest.get("fees_bps", 0.0),
+        "slippage_bps": backtest.get("slippage_bps", 0.0),
+    }
+
+
+def _assessment(single_window: dict[str, Any]) -> dict[str, Any]:
+    status = single_window.get("status")
+    if status != "succeeded":
+        return _empty_assessment("Strategy evaluation has not produced enough evidence for reliability judgment.")
+
+    metrics = single_window.get("strategy_metrics") if isinstance(single_window.get("strategy_metrics"), dict) else {}
+    trade = single_window.get("trade_summary") if isinstance(single_window.get("trade_summary"), dict) else {}
+    sample = single_window.get("sample") if isinstance(single_window.get("sample"), dict) else {}
+    trade_count = int(trade.get("trade_count") or 0)
+    rows = int(sample.get("rows") or 0)
+    reliability = "medium" if trade_count >= 3 and rows >= 60 else "low"
+    sample_quality = "sufficient" if rows >= 100 else "limited"
+    summary = (
+        "Single-window strategy evaluation completed with "
+        f"net_return_pct {metrics.get('net_return_pct')} and "
+        f"max_drawdown_pct {metrics.get('max_drawdown_pct')}."
+    )
+    return {
+        "reliability": reliability,
+        "sample_quality": sample_quality,
+        "cost_sensitivity": "unknown",
+        "overfitting_risk": "unknown",
+        "summary": summary,
+        "evidence": [
+            f"sample rows: {rows}.",
+            f"trade_count: {trade_count}.",
+            f"exposure_pct: {trade.get('exposure_pct')}.",
+        ],
+        "uncertainty": [
+            "Single-window backtest is historical research material, not a forecast.",
+            "Walk-forward and parameter stability diagnostics are not implemented yet.",
+        ],
+    }
+
+
+def _empty_assessment(summary: str) -> dict[str, Any]:
+    return {
+        "reliability": "unknown",
+        "sample_quality": "unknown",
+        "cost_sensitivity": "unknown",
+        "overfitting_risk": "unknown",
+        "summary": summary,
+        "evidence": [],
+        "uncertainty": ["No strategy evaluation conclusion is available."],
+    }
+
+
+def _record_warnings(single_window: dict[str, Any]) -> list[dict[str, Any]]:
+    warnings = single_window.get("warnings")
+    return [item for item in warnings if isinstance(item, dict)] if isinstance(warnings, list) else []
+
+
+def _record_error(single_window: dict[str, Any]) -> dict[str, Any] | None:
+    if single_window.get("status") != "failed":
+        return None
+    errors = single_window.get("errors")
+    if isinstance(errors, list) and errors and isinstance(errors[0], dict):
+        return errors[0]
+    return {
+        "error_type": "StrategyEvaluationFailed",
+        "message": "Strategy evaluation failed without a detailed error.",
+        "stage": STAGE_NAME,
+    }
+
+
+def _artifact_warnings(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    seen = set()
+    for record in records:
+        for item in record.get("warnings", []):
+            if not isinstance(item, dict):
+                continue
+            key = (item.get("code"), item.get("message"), item.get("source"))
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(item)
+    return result
+
+
+def _read_quant_strategy_runs(run: RunContext) -> dict[str, Any]:
+    path = run.analysis_dir / "quant_strategy_runs.json"
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(
+            f"{QUANT_STRATEGY_RUNS_ARTIFACT} was not found; evaluate_quant_strategies must run first.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"{QUANT_STRATEGY_RUNS_ARTIFACT} is not valid JSON: {exc.msg}.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict) or not isinstance(artifact.get("runs"), list):
+        raise PipelineError(
+            f"{QUANT_STRATEGY_RUNS_ARTIFACT} must contain a runs list.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    return artifact
+
+
+def _read_market_data_views(run: RunContext) -> dict[str, Any]:
+    path = run.raw_dir / "market_data_views.json"
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(
+            f"{MARKET_DATA_VIEWS_ARTIFACT} was not found; build_market_data_views must run first.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"{MARKET_DATA_VIEWS_ARTIFACT} is not valid JSON: {exc.msg}.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict) or not isinstance(artifact.get("views"), list):
+        raise PipelineError(
+            f"{MARKET_DATA_VIEWS_ARTIFACT} must contain a views list.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    return artifact
+
+
+def _storage_dir(config: dict[str, Any], config_path: Path) -> Path:
+    ohlcv = config.get("market", {}).get("ohlcv", {})
+    storage_dir = Path(str(ohlcv["storage_dir"]))
+    if storage_dir.is_absolute():
+        return storage_dir
+    return config_path.parent / storage_dir
+
+
+def _record_zero_counts(run: RunContext) -> None:
+    run.manifest["counts"]["strategy_evaluation_records"] = 0
+    run.manifest["counts"]["strategy_evaluation_succeeded"] = 0
+    run.manifest["counts"]["strategy_evaluation_failed"] = 0
+    run.manifest["counts"]["strategy_evaluation_insufficient_data"] = 0
+    run.manifest["counts"]["strategy_evaluation_skipped"] = 0
+    run.manifest["strategy_evaluation"] = {
+        "enabled": False,
+        "records": 0,
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _record_manifest_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
+    run.manifest["counts"]["strategy_evaluation_records"] = len(records)
+    for status in ("succeeded", "failed", "insufficient_data", "skipped"):
+        run.manifest["counts"][f"strategy_evaluation_{status}"] = sum(
+            1 for record in records if record.get("status") == status
+        )
+
+
+def _record_manifest_summary(
+    run: RunContext,
+    records: list[dict[str, Any]],
+    *,
+    warnings: list[dict[str, Any]],
+    errors: list[dict[str, Any]],
+) -> None:
+    run.manifest["strategy_evaluation"] = {
+        "enabled": True,
+        "records": len(records),
+        "succeeded": sum(1 for record in records if record.get("status") == "succeeded"),
+        "failed": sum(1 for record in records if record.get("status") == "failed"),
+        "insufficient_data": sum(1 for record in records if record.get("status") == "insufficient_data"),
+        "skipped": sum(1 for record in records if record.get("status") == "skipped"),
+        "coverage": {
+            "quant_strategy_runs": len(records),
+            "evaluation_records": len(records),
+            "records_with_single_window": sum(1 for record in records if isinstance(record.get("single_window"), dict)),
+        },
+        "source_artifacts": [QUANT_STRATEGY_RUNS_ARTIFACT, MARKET_DATA_VIEWS_ARTIFACT],
+        "warnings": [_warning_summary(item) for item in warnings],
+        "errors": errors,
+    }
+
+
+def _warning_summary(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "code": item.get("code"),
+        "message": item.get("message"),
+        "source": item.get("source"),
+    }
+
+
+def _created_at(strategy_artifact: dict[str, Any], now: datetime | str | None) -> str:
+    if now is not None:
+        return _format_utc(now)
+    created_at = strategy_artifact.get("created_at")
+    if isinstance(created_at, str) and created_at.strip():
+        return _format_utc(created_at)
+    return _format_utc(None)
+
+
+def _format_utc(value: datetime | str | None) -> str:
+    if value is None:
+        timestamp = datetime.now(timezone.utc).replace(microsecond=0)
+    elif isinstance(value, datetime):
+        if value.tzinfo is None:
+            raise PipelineError("created_at must include a UTC offset.", stage=STAGE_NAME, exit_code=3)
+        timestamp = value.astimezone(timezone.utc).replace(microsecond=0)
+    elif isinstance(value, str):
+        try:
+            timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise PipelineError("created_at must be an ISO 8601 UTC string.", stage=STAGE_NAME, exit_code=3) from exc
+        if timestamp.tzinfo is None:
+            raise PipelineError("created_at must include a UTC offset.", stage=STAGE_NAME, exit_code=3)
+        timestamp = timestamp.astimezone(timezone.utc).replace(microsecond=0)
+    else:
+        raise PipelineError("created_at must be a datetime or ISO 8601 UTC string.", stage=STAGE_NAME, exit_code=3)
+    return timestamp.isoformat().replace("+00:00", "Z")

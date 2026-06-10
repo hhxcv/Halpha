@@ -235,6 +235,7 @@ def _run_pipeline_with_representative_strategy_runs(config: dict[str, Any], conf
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
             "evaluate_quant_strategies": _write_representative_quant_strategy_runs,
+            "evaluate_strategy_evaluation": _noop_stage,
             "evaluate_market_strategy_signals": _write_representative_strategy_signals,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
