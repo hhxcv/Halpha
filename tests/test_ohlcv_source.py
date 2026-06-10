@@ -45,6 +45,7 @@ def test_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
     assert captured_options == {
         "enableRateLimit": True,
         "options": {"fetchMarkets": {"types": ["spot"]}},
+        "urls": {"api": {"public": "https://data-api.binance.vision/api/v3"}},
     }
     assert not {"apiKey", "secret", "password", "uid"} & set(captured_options)
     assert exchange.calls == [
@@ -118,6 +119,7 @@ def test_fetch_configured_ohlcv_uses_configured_proxy_without_credentials() -> N
     assert captured_options == {
         "enableRateLimit": True,
         "options": {"fetchMarkets": {"types": ["spot"]}},
+        "urls": {"api": {"public": "https://data-api.binance.vision/api/v3"}},
         "httpsProxy": "http://proxy.example:8080",
     }
     assert not {"apiKey", "secret", "password", "uid"} & set(captured_options)

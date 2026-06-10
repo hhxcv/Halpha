@@ -175,6 +175,31 @@ Strategy run artifacts preserve strategy name, version, engine metadata, params,
 
 Optional `quant.parameter_diagnostics` runs bounded configured parameter grids and records tested combinations, valid and invalid combinations, sensitivity notes, warnings, and summary metrics. It does not choose best parameters and is not an optimization platform.
 
+## Decision Intelligence Report Path
+
+When `quant.enabled` is true, the implemented run command can run the M3 decision-intelligence path:
+
+```text
+M2 quant strategy artifacts
+-> normalized market signal artifacts
+-> market regime assessment
+-> risk assessment
+-> decision recommendations
+-> watch triggers
+-> previous-run decision delta
+-> AI-readable decision material
+-> research context
+-> Codex context and prompt
+-> Simplified Chinese Markdown report
+-> run manifest archive
+```
+
+M3 is additive. It does not remove or replace `analysis/quant_strategy_runs.json`, `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, or `analysis/market_signal_material.md`. Those M2 artifacts remain upstream evidence for the deterministic M3 artifacts and for report interpretation.
+
+The final report uses M3 material for supported decision-language sections such as current decision view, what to do, what not to do, tentative opportunities, wait/watch conditions, risk state, invalidation conditions, previous-run changes, uncertainty, and method limits. Codex consumes the generated decision material for report language only; it does not generate action levels or structured decision artifacts.
+
+M3 does not implement real-time monitoring, event intelligence, dashboards, user profiles, account operations, order placement, position sizing, automatic trading, alert delivery, or outcome tracking.
+
 Expected result in a properly configured online environment: writes `raw/market.json`, `raw/text_events.json`, `analysis/market_material.md`, `analysis/text_material.md`, `analysis/research_context.md`, `codex_context/context.md`, `codex_context/prompt.md`, `report/report.md`, and `run_manifest.json`. When `market.ohlcv` is configured, the run also updates shared OHLCV history and metadata under the configured storage location and writes `raw/market_data_views.json` for the current run. When `quant.enabled` is true, the run writes `analysis/market_strategy_signals.json`, `analysis/market_signals.json`, `analysis/market_signal_material.md`, `analysis/market_regime_assessment.json`, `analysis/risk_assessment.json`, `analysis/decision_recommendations.json`, `analysis/watch_triggers.json`, `analysis/decision_intelligence_delta.json`, and `analysis/decision_intelligence_material.md`. When `quant.strategies` is configured, the run also writes `analysis/quant_strategy_runs.json` before downstream market signal artifacts. If collection, OHLCV sync, data view creation, strategy run evaluation, strategy signal evaluation, market signal material generation, market regime assessment, risk assessment, decision recommendation generation, watch trigger generation, decision delta generation, decision intelligence material generation, or Codex execution fails, artifacts created before the failure and `run_manifest.json` record the failure without fake records or a placeholder report.
 
 With the current public example strategy configuration, a successful full quant run evaluates three enabled strategies across two symbols and two timeframes. The expected quant run shape is 4 current-run OHLCV data views, 12 strategy run records, 12 downstream market strategy signal records, 4 market regime assessment records, 4 risk assessment records, 4 decision recommendation records, watch trigger records derived from those decisions, previous-run delta changes when a usable previous successful decision-intelligence run exists, and 4 AI-readable decision material record summaries. The final report includes a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json`. These counts follow the configured symbols, timeframes, and enabled strategies.

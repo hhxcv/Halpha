@@ -8,7 +8,7 @@ It is a durable implementation contract, not a milestone-only plan and not an im
 
 Decision intelligence turns upstream quantitative research artifacts into deterministic research decision support for the report loop. It does not replace quantitative evidence.
 
-Current intended decision-intelligence flow:
+Current decision-intelligence flow:
 
 ```text
 quant strategy run artifacts
@@ -105,7 +105,7 @@ Rules:
 Initial adoption:
 
 - Decision intelligence starts after `analysis/market_signal_material.md` exists.
-- Decision-intelligence stages are intended to run before `analysis/research_context.md`.
+- Decision-intelligence stages run before `analysis/research_context.md`.
 - When `quant.enabled` is false, skip decision intelligence and do not write fake unknown decision artifacts.
 
 ## Common JSON Artifact Rules
