@@ -372,9 +372,20 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_market_signal_material" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert "artifact_type: analysis_decision_intelligence_material" in context
+    assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
+    assert "analysis/decision_recommendations.json" in context
+    assert "analysis/watch_triggers.json" in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "open_time:" not in context
     assert "Quantitative conclusions" in prompt
+    assert "Decision intelligence material rules:" in prompt
+    assert "current decision view" in prompt
+    assert "what not to do" in prompt
+    assert "wait/watch conditions" in prompt
+    assert "changes versus previous run" in prompt
+    assert "Do not invent action levels" in prompt
+    assert "Do not upgrade WATCH, NO_ACTION" in prompt
     assert "Use Markdown tables for market data" in prompt
     assert "organize each main section with symbol-level subheadings" in prompt
     assert "do not recreate the full strategy run table" in prompt
@@ -387,6 +398,10 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert codex_calls[0]["cwd"] == run_dir
 
     report = (run_dir / "report/report.md").read_text(encoding="utf-8")
+    assert "## " + "\u51b3\u7b56\u652f\u6301" in report
+    assert "action_level=TRY_SMALL" in report
+    assert "risk_level=low" in report
+    assert "no_previous_run" in report
     assert "## 量化信号结论" in report
     assert "趋势信号" in report
     assert "证据" in report
@@ -601,6 +616,17 @@ def _m1_report_stdout() -> str:
             "- 趋势信号显示 BTCUSDT 与 ETHUSDT 的样本窗口偏强。",
             "- 证据：报告上下文包含 tsmom_vol_scaled 策略信号记录。",
             "- 不确定性：这些信号仅基于 OHLCV 窗口，不包含文本事件信号。",
+            "",
+            "## 决策支持",
+            "",
+            "- 当前决策视图：action_level=TRY_SMALL; decision_bias=try_small_when_trend_and_risk_align.",
+            "- 可以做：仅把 TRY_SMALL 理解为研究决策支持语言，继续跟踪证据是否维持。",
+            "- 不要做：不要把该材料解释为仓位、账户动作、自动交易或收益承诺。",
+            "- 等待/观察：关注 confirmation、invalidation、risk_escalation 和 recheck_next_run 触发条件。",
+            "- 风险状态：risk_level=low，但仍受样本窗口和信号更新限制。",
+            "- 失效条件：若趋势信号反转或风险升高，则当前视图失效或降级。",
+            "- 前次变化：no_previous_run，未找到可比较的上一次成功决策智能运行。",
+            "- 不确定性与方法限制：该判断来自本地量化材料和确定性决策规则，不是交易指令。",
             "",
             "## 文本事件",
             "",

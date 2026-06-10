@@ -105,7 +105,18 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
+    assert "risk_assessment: analysis/risk_assessment.json" in context
+    assert "decision_recommendations: analysis/decision_recommendations.json" in context
+    assert "watch_triggers: analysis/watch_triggers.json" in context
+    assert "decision_intelligence_delta: analysis/decision_intelligence_delta.json" in context
+    assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
     assert "artifact_type: analysis_market_signal_material" in context
+    assert "artifact_type: analysis_decision_intelligence_material" in context
+    assert "research_decision_support_only: true" in context
+    assert "action_level:" in context
+    assert "decision_bias:" in context
+    assert "invalidation_conditions:" in context
     assert "record_type: market_signal" in context
     assert "signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
     assert "latest_close: 106.0" in context
@@ -125,9 +136,23 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Keep strategy assumptions, evidence, and uncertainty adjacent" in prompt
     assert "When strategy signals disagree, describe the conflict" in prompt
     assert "Treat backtest diagnostics as historical research material only" in prompt
+    assert "Decision intelligence material rules:" in prompt
+    assert "use it for action-facing decision language" in prompt
+    assert "current decision view" in prompt
+    assert "what to do" in prompt
+    assert "what not to do" in prompt
+    assert "tentative opportunities" in prompt
+    assert "wait/watch conditions" in prompt
+    assert "risk state" in prompt
+    assert "invalidation conditions" in prompt
+    assert "changes versus previous run" in prompt
+    assert "uncertainty, and method limits" in prompt
+    assert "Keep evidence, risk conditions, confidence, conflicts, and uncertainty near" in prompt
+    assert "Do not invent action levels" in prompt
+    assert "Do not upgrade WATCH, NO_ACTION" in prompt
+    assert "no_previous_run" in prompt
     assert "Do not fabricate strategy signals, strategy conclusions" in prompt
     assert "return promises" in prompt
-    assert "M2" not in prompt
     assert "Do not calculate new quantitative signals from raw OHLCV history" in prompt
     assert "position sizing" in prompt
     assert "account actions" in prompt
@@ -137,6 +162,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Simplified Chinese Markdown" in prompt
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
+    assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
 
 
 def test_codex_context_fails_when_research_context_is_missing(tmp_path: Path) -> None:

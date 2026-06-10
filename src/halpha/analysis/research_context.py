@@ -10,6 +10,7 @@ STAGE_NAME = "build_research_context"
 RESEARCH_CONTEXT_ARTIFACT = "analysis/research_context.md"
 MARKET_MATERIAL_ARTIFACT = "analysis/market_material.md"
 MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
+DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 
 
@@ -33,6 +34,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=_quant_enabled(config),
         producer_stage="build_market_signal_material",
     )
+    decision_intelligence_material = _read_material(
+        run.analysis_dir / "decision_intelligence_material.md",
+        DECISION_INTELLIGENCE_MATERIAL_ARTIFACT,
+        enabled=_quant_enabled(config),
+        producer_stage="build_decision_intelligence_material",
+    )
 
     output_path = run.analysis_dir / "research_context.md"
     output_path.write_text(
@@ -42,6 +49,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
             artifact_index=artifact_index,
             market_material=market_material,
             market_signal_material=market_signal_material,
+            decision_intelligence_material=decision_intelligence_material,
             text_material=text_material,
         ),
         encoding="utf-8",
@@ -57,6 +65,7 @@ def render_research_context(
     artifact_index: dict[str, Any],
     market_material: str | None,
     market_signal_material: str | None,
+    decision_intelligence_material: str | None,
     text_material: str | None,
 ) -> str:
     source_artifacts = [value for value in artifact_index.values() if value is not None]
@@ -102,6 +111,8 @@ def render_research_context(
     lines.extend(_embedded_material(MARKET_MATERIAL_ARTIFACT, market_material))
     lines.extend(["", "## market_signal_material", ""])
     lines.extend(_embedded_material(MARKET_SIGNAL_MATERIAL_ARTIFACT, market_signal_material))
+    lines.extend(["", "## decision_intelligence_material", ""])
+    lines.extend(_embedded_material(DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material))
     lines.extend(["", "## text_material", ""])
     lines.extend(_embedded_material(TEXT_MATERIAL_ARTIFACT, text_material))
     return "\n".join(lines)
@@ -123,6 +134,17 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "quant_strategy_runs": artifacts.get("quant_strategy_runs"),
                 "market_strategy_signals": artifacts.get("market_strategy_signals"),
                 "market_signals": artifacts.get("market_signals"),
+            }
+        )
+    if artifacts.get("decision_intelligence_material"):
+        index.update(
+            {
+                "market_regime_assessment": artifacts.get("market_regime_assessment"),
+                "risk_assessment": artifacts.get("risk_assessment"),
+                "decision_recommendations": artifacts.get("decision_recommendations"),
+                "watch_triggers": artifacts.get("watch_triggers"),
+                "decision_intelligence_delta": artifacts.get("decision_intelligence_delta"),
+                "decision_intelligence_material": artifacts.get("decision_intelligence_material"),
             }
         )
     return index
@@ -189,6 +211,23 @@ def _generation_constraints() -> dict[str, Any]:
             "include_risk_notes": True,
             "do_not_calculate_signals_from_raw_ohlcv_history": True,
             "do_not_inspect_shared_ohlcv_storage": True,
+        },
+        "decision_intelligence_requirements": {
+            "include_when_decision_intelligence_material_exists": True,
+            "use_decision_material_for_decision_language": True,
+            "use_quant_material_as_upstream_evidence": True,
+            "include_current_decision_view": True,
+            "include_what_to_do": True,
+            "include_what_not_to_do": True,
+            "include_tentative_opportunities": True,
+            "include_wait_watch_conditions": True,
+            "include_risk_state": True,
+            "include_invalidation_conditions": True,
+            "include_changes_versus_previous_run": True,
+            "include_uncertainty_and_method_limits": True,
+            "do_not_invent_action_levels": True,
+            "do_not_upgrade_low_confidence_or_unsupported_material": True,
+            "do_not_create_trading_instructions": True,
         },
         "required_sections": [
             "核心摘要",
