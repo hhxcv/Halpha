@@ -296,6 +296,33 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["artifacts"]["decision_intelligence_delta"] == "analysis/decision_intelligence_delta.json"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["report"] == "report/report.md"
+    assert manifest["decision_intelligence"] == {
+        "enabled": True,
+        "status": "succeeded",
+        "artifacts": {
+            "market_regime_assessment": "analysis/market_regime_assessment.json",
+            "risk_assessment": "analysis/risk_assessment.json",
+            "decision_recommendations": "analysis/decision_recommendations.json",
+            "watch_triggers": "analysis/watch_triggers.json",
+            "decision_intelligence_delta": "analysis/decision_intelligence_delta.json",
+            "decision_intelligence_material": "analysis/decision_intelligence_material.md",
+        },
+        "counts": {
+            "regime_records": 4,
+            "risk_records": 4,
+            "decision_recommendations": 4,
+            "watch_triggers": 20,
+            "changed_delta_records": 0,
+            "decision_material_records": 4,
+        },
+        "previous_run": {
+            "status": "no_previous_run",
+            "run_id": None,
+            "path": None,
+        },
+        "warnings": ["No previous successful decision-intelligence run found."],
+        "errors": [],
+    }
 
     market_data_views = json.loads((run_dir / "raw/market_data_views.json").read_text(encoding="utf-8"))
     assert len(market_data_views["views"]) == 4

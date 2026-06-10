@@ -549,7 +549,7 @@ Report-level fusion rule:
 
 ## Run Manifest Expectations
 
-When decision intelligence is implemented, `run_manifest.json` should record a `decision_intelligence` section.
+`run_manifest.json` records a `decision_intelligence` section for decision-intelligence status and debugging.
 
 Skipped when quant is disabled:
 

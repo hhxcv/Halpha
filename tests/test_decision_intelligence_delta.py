@@ -161,6 +161,65 @@ def test_decision_intelligence_delta_skips_when_quant_is_not_enabled(tmp_path: P
     assert _stage(manifest, "build_decision_intelligence_delta")["artifacts"] == []
 
 
+def test_decision_intelligence_manifest_records_partial_failure_when_delta_input_is_missing(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    handlers = _stage_handlers_for_current(
+        regime="mixed",
+        risk_level="high",
+        action_level="WATCH",
+        decision_bias="wait_for_conflict_resolution",
+        invalidation_conditions=[],
+        watch_conditions=[],
+    )
+    handlers["build_watch_triggers"] = _noop_stage
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        now=datetime(2026, 6, 5, tzinfo=timezone.utc),
+        stage_handlers=handlers,
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_decision_intelligence_delta"
+    assert result.reason == "analysis/watch_triggers.json was not found; build_watch_triggers must run first."
+
+    manifest = _manifest(result)
+    section = manifest["decision_intelligence"]
+    assert section["enabled"] is True
+    assert section["status"] == "failed"
+    assert section["artifacts"] == {
+        "market_regime_assessment": "analysis/market_regime_assessment.json",
+        "risk_assessment": "analysis/risk_assessment.json",
+        "decision_recommendations": "analysis/decision_recommendations.json",
+    }
+    assert section["counts"] == {
+        "regime_records": 1,
+        "risk_records": 1,
+        "decision_recommendations": 1,
+        "watch_triggers": 0,
+        "changed_delta_records": 0,
+        "decision_material_records": 0,
+    }
+    assert section["previous_run"] == {
+        "status": "not_checked",
+        "run_id": None,
+        "path": None,
+    }
+    assert section["warnings"] == ["Major upstream signal conflict caps action strength at WATCH."]
+    assert section["errors"] == [
+        "build_decision_intelligence_delta: analysis/watch_triggers.json was not found; "
+        "build_watch_triggers must run first."
+    ]
+    assert _stage(manifest, "build_decision_intelligence_delta")["status"] == "failed"
+    assert "decision_intelligence_delta" not in manifest["artifacts"]
+    assert "decision_intelligence_material" not in manifest["artifacts"]
+
+
 def _write_config(tmp_path: Path, *, quant_enabled: bool = True) -> Path:
     ohlcv_block = (
         """
@@ -323,6 +382,7 @@ def _write_market_regime_assessment(run, *, regime: str) -> list[str]:
         },
     )
     run.manifest["artifacts"]["market_regime_assessment"] = "analysis/market_regime_assessment.json"
+    run.manifest["counts"]["market_regime_records"] = 1
     return ["analysis/market_regime_assessment.json"]
 
 
@@ -353,6 +413,7 @@ def _write_risk_assessment(run, *, risk_level: str) -> list[str]:
         },
     )
     run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
+    run.manifest["counts"]["risk_assessment_records"] = 1
     return ["analysis/risk_assessment.json"]
 
 
@@ -388,11 +449,14 @@ def _write_decision_recommendations(
                     "source_artifacts": ["analysis/risk_assessment.json"],
                 }
             ],
-            "warnings": [],
+            "warnings": ["Major upstream signal conflict caps action strength at WATCH."]
+            if action_level == "WATCH"
+            else [],
             "errors": [],
         },
     )
     run.manifest["artifacts"]["decision_recommendations"] = "analysis/decision_recommendations.json"
+    run.manifest["counts"]["decision_recommendation_records"] = 1
     return ["analysis/decision_recommendations.json"]
 
 
@@ -426,6 +490,7 @@ def _write_watch_triggers(run, *, conditions: list[str]) -> list[str]:
         },
     )
     run.manifest["artifacts"]["watch_triggers"] = "analysis/watch_triggers.json"
+    run.manifest["counts"]["watch_trigger_records"] = len(conditions)
     return ["analysis/watch_triggers.json"]
 
 
