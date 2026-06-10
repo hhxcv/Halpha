@@ -103,6 +103,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_decision_recommendations", "succeeded"),
         ("build_watch_triggers", "succeeded"),
         ("build_decision_intelligence_delta", "succeeded"),
+        ("build_decision_intelligence_material", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -230,6 +231,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
         "analysis/decision_recommendations.json",
         "analysis/watch_triggers.json",
         "analysis/decision_intelligence_delta.json",
+        "analysis/decision_intelligence_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
         "analysis/research_context.md",
@@ -279,6 +281,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["counts"]["watch_trigger_records"] == 20
     assert manifest["counts"]["watch_trigger_linked_records"] == 20
     assert manifest["counts"]["decision_delta_changed_records"] == 0
+    assert manifest["counts"]["decision_intelligence_material_records"] == 4
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
@@ -291,6 +294,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert manifest["artifacts"]["decision_recommendations"] == "analysis/decision_recommendations.json"
     assert manifest["artifacts"]["watch_triggers"] == "analysis/watch_triggers.json"
     assert manifest["artifacts"]["decision_intelligence_delta"] == "analysis/decision_intelligence_delta.json"
+    assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["report"] == "report/report.md"
 
     market_data_views = json.loads((run_dir / "raw/market_data_views.json").read_text(encoding="utf-8"))
@@ -317,6 +321,7 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     decision_delta = json.loads(
         (run_dir / "analysis/decision_intelligence_delta.json").read_text(encoding="utf-8")
     )
+    decision_material = (run_dir / "analysis/decision_intelligence_material.md").read_text(encoding="utf-8")
     strategy_runs = json.loads((run_dir / "analysis/quant_strategy_runs.json").read_text(encoding="utf-8"))
     assert len(strategy_runs["runs"]) == 4
     assert len(strategy_signals["signals"]) == 4
@@ -349,6 +354,10 @@ def test_m1_smoke_pipeline_generates_signal_report_artifacts_with_test_fakes(
     assert decision_delta["status"] == "no_previous_run"
     assert decision_delta["changes"] == []
     assert manifest["decision_intelligence"]["previous_run"]["status"] == "no_previous_run"
+    assert "artifact_type: analysis_decision_intelligence_material" in decision_material
+    assert "research_decision_support_only: true" in decision_material
+    assert "analysis/decision_intelligence_delta.json" in decision_material
+    assert "## delta_vs_previous_run" in decision_material
 
     signal_material = (run_dir / "analysis/market_signal_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_market_signal_material" in signal_material

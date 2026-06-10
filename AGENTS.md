@@ -176,6 +176,7 @@ Current bias:
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, not trading instructions.
 * `analysis/watch_triggers.json` records deterministic static watch triggers, not monitoring or alerts.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
+* `analysis/decision_intelligence_material.md` records AI-readable decision material from M3 JSON artifacts.
 * Codex context may include signal material, not shared OHLCV history.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.
