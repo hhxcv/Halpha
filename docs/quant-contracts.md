@@ -958,6 +958,7 @@ Reusable core output contract:
     "gross_return_pct": 12.4,
     "net_return_pct": 9.8,
     "total_cost_pct": 2.6,
+    "cost_drag_pct": 2.6,
     "max_drawdown_pct": -18.2,
     "volatility_pct": 31.4,
     "sharpe": 0.42,
@@ -967,11 +968,15 @@ Reusable core output contract:
   "baseline_metrics": {
     "buy_and_hold": {
       "net_return_pct": 7.1,
-      "max_drawdown_pct": -24.0
+      "max_drawdown_pct": -24.0,
+      "volatility_pct": 28.0,
+      "final_equity": 1.071
     },
     "cash": {
       "net_return_pct": 0.0,
-      "max_drawdown_pct": 0.0
+      "max_drawdown_pct": 0.0,
+      "volatility_pct": 0.0,
+      "final_equity": 1.0
     }
   },
   "relative_metrics": {
@@ -999,6 +1004,12 @@ Reusable core output contract:
       "severity": "warning",
       "code": "historical_research_only",
       "message": "Backtest evaluation is historical research material, not a forecast.",
+      "source": "strategy_evaluation"
+    },
+    {
+      "severity": "warning",
+      "code": "low_trade_count",
+      "message": "Trade count is below the research reliability threshold.",
       "source": "strategy_evaluation"
     }
   ],
@@ -1028,6 +1039,11 @@ Execution model rules:
 - A signal known at bar `t` may affect position from bar `t+1`.
 - Evaluation must record fees and slippage assumptions before net metrics.
 - Gross and net metrics must be separate.
+- Strategy metrics must include gross return, net return, total cost, cost drag, drawdown, volatility, risk-adjusted metrics, and final equity.
+- Trade summaries must include trade count, completed and open trades, hit rate, turnover, exposure, and average holding bars.
+- Baseline metrics must include buy-and-hold and cash or no-position behavior where applicable.
+- Relative metrics must compare net strategy behavior with buy-and-hold baseline behavior.
+- Research limitation warnings must distinguish method or evidence limitations from strategy conclusions. Current warning codes include `historical_research_only`, `insufficient_sample_length`, `low_trade_count`, `no_strategy_exposure`, `high_turnover`, and `high_cost_drag`.
 - Backtest evaluation remains research material, not a forecast, trading instruction, or return promise.
 
 Pipeline strategy evaluation artifact:
@@ -1082,10 +1098,16 @@ Record contract:
   "assessment": {
     "reliability": "unknown",
     "sample_quality": "unknown",
-    "cost_sensitivity": "unknown",
+    "cost_sensitivity": "low",
     "overfitting_risk": "unknown",
     "summary": "Strategy evaluation has not produced enough evidence for reliability judgment.",
-    "evidence": [],
+    "evidence": [
+      "sample rows: 500.",
+      "trade_count: 23.",
+      "exposure_pct: 56.0.",
+      "cost_drag_pct: 2.6.",
+      "excess_return_vs_buy_and_hold_pct: 2.7."
+    ],
     "uncertainty": []
   },
   "warnings": [],

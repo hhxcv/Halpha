@@ -20,6 +20,10 @@ DEFAULT_COST_ASSUMPTIONS = {
 }
 STRATEGY_EVALUATION_SOURCE = "strategy_evaluation"
 HISTORICAL_RESEARCH_WARNING = "Backtest evaluation is historical research material, not a forecast."
+MIN_SAMPLE_ROWS_FOR_RELIABILITY = 60
+LOW_TRADE_COUNT_THRESHOLD = 3
+HIGH_TURNOVER_THRESHOLD = 10.0
+HIGH_COST_DRAG_PCT_THRESHOLD = 1.0
 
 
 def evaluate_single_window_backtest(
@@ -99,21 +103,7 @@ def evaluate_single_window_backtest(
             result["turnovers"],
         )
         baseline_metrics = _baseline_metrics(rows, closes, costs, timeframe=str(market_identity.get("timeframe")))
-        warnings = [
-            warning(
-                "historical_research_only",
-                HISTORICAL_RESEARCH_WARNING,
-                source=STRATEGY_EVALUATION_SOURCE,
-            )
-        ]
-        if trade_summary["trade_count"] == 0:
-            warnings.append(
-                warning(
-                    "no_strategy_exposure",
-                    "Strategy target exposure stayed flat at zero throughout the evaluation window.",
-                    source=STRATEGY_EVALUATION_SOURCE,
-                )
-            )
+        warnings = _research_warnings(sample, strategy_metrics, trade_summary)
 
         return _base_record(
             strategy,
@@ -218,16 +208,89 @@ def _strategy_metrics(
     max_drawdown_pct: float,
     timeframe: str,
 ) -> dict[str, Any]:
+    gross_return_pct = _pct(gross_equity - 1)
+    net_return_pct = _pct(net_equity - 1)
     return {
-        "gross_return_pct": _pct(gross_equity - 1),
-        "net_return_pct": _pct(net_equity - 1),
+        "gross_return_pct": gross_return_pct,
+        "net_return_pct": net_return_pct,
         "total_cost_pct": _pct(sum(cost_returns)),
+        "cost_drag_pct": _round(gross_return_pct - net_return_pct),
         "max_drawdown_pct": max_drawdown_pct,
         "volatility_pct": _annualized_volatility_pct(period_net_returns, timeframe=timeframe),
         "sharpe": _sharpe(period_net_returns, timeframe=timeframe),
         "sortino": _sortino(period_net_returns, timeframe=timeframe),
         "final_equity": _round(net_equity),
     }
+
+
+def _research_warnings(
+    sample: dict[str, Any],
+    strategy_metrics: dict[str, Any],
+    trade_summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    warnings = [
+        warning(
+            "historical_research_only",
+            HISTORICAL_RESEARCH_WARNING,
+            source=STRATEGY_EVALUATION_SOURCE,
+        )
+    ]
+    rows = int(sample.get("rows") or 0)
+    trade_count = int(trade_summary.get("trade_count") or 0)
+    turnover = float(trade_summary.get("turnover") or 0.0)
+    cost_drag_pct = float(strategy_metrics.get("cost_drag_pct") or 0.0)
+    if rows < MIN_SAMPLE_ROWS_FOR_RELIABILITY:
+        warnings.append(
+            warning(
+                "insufficient_sample_length",
+                (
+                    f"Evaluation sample has {rows} rows, below the "
+                    f"{MIN_SAMPLE_ROWS_FOR_RELIABILITY}-row research reliability threshold."
+                ),
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        )
+    if trade_count == 0:
+        warnings.append(
+            warning(
+                "no_strategy_exposure",
+                "Strategy target exposure stayed flat at zero throughout the evaluation window.",
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        )
+    if trade_count < LOW_TRADE_COUNT_THRESHOLD:
+        warnings.append(
+            warning(
+                "low_trade_count",
+                (
+                    f"Trade count is {trade_count}, below the "
+                    f"{LOW_TRADE_COUNT_THRESHOLD}-trade research reliability threshold."
+                ),
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        )
+    if turnover >= HIGH_TURNOVER_THRESHOLD:
+        warnings.append(
+            warning(
+                "high_turnover",
+                (
+                    f"Turnover is {turnover}; cost and execution assumptions may dominate net results."
+                ),
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        )
+    if cost_drag_pct >= HIGH_COST_DRAG_PCT_THRESHOLD:
+        warnings.append(
+            warning(
+                "high_cost_drag",
+                (
+                    f"Cost drag is {cost_drag_pct} percentage points; compare gross and net returns "
+                    "before interpreting strategy quality."
+                ),
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        )
+    return warnings
 
 
 def _baseline_metrics(
