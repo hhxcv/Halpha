@@ -169,6 +169,7 @@ Current bias:
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
 * `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
 * `analysis/strategy_evaluation_summary.json` records pipeline strategy evaluation outputs from configured strategy runs and current-run OHLCV views.
+* `analysis/strategy_evaluation_material.md` records AI-readable strategy evaluation material from strategy evaluation summaries.
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.

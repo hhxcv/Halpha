@@ -137,6 +137,7 @@ A successful configured run can write:
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
 - `analysis/quant_strategy_runs.json`: configured strategy run outputs.
 - `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.
+- `analysis/strategy_evaluation_material.md`: AI-readable strategy evaluation material.
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
@@ -173,6 +174,9 @@ forecasts, trading instructions, investment advice, or performance guarantees.
 Strategy evaluation summaries include cost assumptions, gross and net metrics,
 baseline comparison, relative metrics, bounded walk-forward summaries, and
 research limitation, parameter-stability, and overfitting-risk warnings.
+AI-readable strategy evaluation material carries those deterministic evaluation
+fields into research context and report generation without asking Codex to
+calculate new metrics.
 
 ## Codex Report Generation
 

@@ -872,7 +872,7 @@ Strategy names:
 
 ## Strategy Evaluation Contract
 
-Status: reusable single-window core, standalone command, and pipeline adapter implemented; downstream material and report integration are not implemented yet.
+Status: reusable single-window core, standalone command, pipeline adapter, AI-readable material, and report-context integration implemented.
 
 Strategy evaluation is the reusable backtest and robustness layer for strategy research. It must be usable from the product pipeline and from a standalone research path without duplicating strategy logic.
 
@@ -1245,13 +1245,31 @@ source_artifacts:
 
 # strategy_evaluation_material
 
-## overview
+## evaluation_overview
 
 ```yaml
-records: 4
-succeeded: 4
-insufficient_data: 0
-failed: 0
+material_scope: strategy_evaluation_summary
+evaluation_record_count: 4
+status_counts:
+  succeeded: 4
+reliability_counts:
+  low: 2
+  medium: 2
+```
+
+## report_guidance
+
+```yaml
+cost_assumptions:
+  - Mention fees and slippage assumptions before interpreting net performance.
+baseline_comparison:
+  - Compare strategy net behavior with buy-and-hold and cash baselines.
+sample_limits:
+  - Keep sample limits close to any reliability statement.
+reliability:
+  - Do not upgrade weak, fragile, unstable, or insufficient evidence into stronger action language.
+forbidden:
+  - Do not generate new metrics.
 ```
 
 ## record: strategy_evaluation:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z
@@ -1267,8 +1285,14 @@ assessment:
 single_window:
   net_return_pct: 9.8
   max_drawdown_pct: -18.2
-baseline:
+baseline_comparison:
   buy_and_hold_net_return_pct: 7.1
+walk_forward:
+  status: insufficient_data
+parameter_stability:
+  status: disabled
+overfitting_risk:
+  status: elevated
 warnings:
   - Historical evaluation is research material, not a forecast.
 ```
@@ -1289,7 +1313,8 @@ Manifest contract:
     "strategy_evaluation_insufficient_data": 0,
     "strategy_evaluation_skipped": 0,
     "strategy_evaluation_walk_forward_records": 28,
-    "strategy_evaluation_parameter_stability_records": 4
+    "strategy_evaluation_parameter_stability_records": 4,
+    "strategy_evaluation_material_records": 4
   },
   "strategy_evaluation": {
     "status": "succeeded",
@@ -1311,10 +1336,10 @@ Downstream evaluation consumers:
 
 | Consumer | Input | Rule |
 | --- | --- | --- |
-| `analysis/market_strategy_signals.json` | Strategy evaluation summary when available | May incorporate reliability and evaluation warnings without converting backtest performance into direction. |
-| `analysis/market_signal_material.md` | Strategy evaluation material when available | Summarizes reliability, costs, sample limits, and uncertainty near strategy conclusions. |
-| Decision-intelligence artifacts | Strategy evaluation warnings when available | May use reliability and risk warnings as evidence, but must not create action levels from backtest returns alone. |
-| `analysis/research_context.md` | AI-readable strategy evaluation material | Adds bounded evaluation context for report generation. |
+| `analysis/market_strategy_signals.json` | `analysis/quant_strategy_runs.json` | Keeps signal direction separate from backtest evaluation; it must not convert backtest performance into direction. |
+| `analysis/market_signal_material.md` | Normalized market signals | Remains signal-facing material; report context carries strategy evaluation material separately. |
+| Decision-intelligence artifacts | Deterministic regime, risk, signal, and delta artifacts | Remain decision-facing material; they must not create action levels from backtest returns alone. |
+| `analysis/research_context.md` | AI-readable strategy evaluation material | Adds bounded evaluation context beside signal and decision material for report generation. |
 | `codex_context/context.md` and `codex_context/prompt.md` | Research context and prompt rules | Require Codex CLI to treat evaluation as historical research material, not as a forecast. |
 | `run_manifest.json` | Strategy evaluation artifacts and pipeline statuses | Records artifact paths, counts, coverage, warnings, and errors. |
 
@@ -2009,6 +2034,7 @@ Artifact keys:
     "strategy_evaluation_failed": 0,
     "strategy_evaluation_insufficient_data": 0,
     "strategy_evaluation_skipped": 0,
+    "strategy_evaluation_material_records": 16,
     "market_strategy_signals": 16,
     "market_strategy_signals_insufficient_data": 0,
     "market_signals": 16,

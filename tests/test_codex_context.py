@@ -104,6 +104,8 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     prompt = (result.run.codex_context_dir / "prompt.md").read_text(encoding="utf-8")
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_signals: analysis/market_signals.json" in context
+    assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
+    assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
     assert "risk_assessment: analysis/risk_assessment.json" in context
@@ -112,6 +114,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "decision_intelligence_delta: analysis/decision_intelligence_delta.json" in context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
     assert "artifact_type: analysis_market_signal_material" in context
+    assert "artifact_type: analysis_strategy_evaluation_material" in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "research_decision_support_only: true" in context
     assert "action_level:" in context
@@ -136,6 +139,10 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Keep strategy assumptions, evidence, and uncertainty adjacent" in prompt
     assert "When strategy signals disagree, describe the conflict" in prompt
     assert "Treat backtest diagnostics as historical research material only" in prompt
+    assert "Strategy evaluation material rules:" in prompt
+    assert "cost assumptions, baseline comparison, sample limits" in prompt
+    assert "Use Halpha-generated evaluation metrics only" in prompt
+    assert "Do not upgrade weak, fragile, unstable, costly" in prompt
     assert "Decision intelligence material rules:" in prompt
     assert "use it for action-facing decision language" in prompt
     assert "current decision view" in prompt
@@ -162,6 +169,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Simplified Chinese Markdown" in prompt
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
+    assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
 
 

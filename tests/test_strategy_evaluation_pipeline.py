@@ -27,6 +27,7 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     result = _run_pipeline(config, config_path)
 
     artifact = _strategy_evaluation(result)
+    material = _strategy_evaluation_material(result)
     manifest = _manifest(result)
     record = artifact["records"][0]
 
@@ -62,7 +63,11 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert manifest["artifacts"]["strategy_evaluation_summary"] == (
         "analysis/strategy_evaluation_summary.json"
     )
+    assert manifest["artifacts"]["strategy_evaluation_material"] == (
+        "analysis/strategy_evaluation_material.md"
+    )
     assert manifest["counts"]["strategy_evaluation_records"] == 1
+    assert manifest["counts"]["strategy_evaluation_material_records"] == 1
     assert manifest["counts"]["strategy_evaluation_succeeded"] == 1
     assert manifest["counts"]["strategy_evaluation_failed"] == 0
     assert manifest["strategy_evaluation"]["records"] == 1
@@ -75,8 +80,17 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
         "records_with_parameter_stability": 0,
     }
     assert _stage(manifest, "evaluate_strategy_evaluation")["artifacts"] == [
-        "analysis/strategy_evaluation_summary.json"
+        "analysis/strategy_evaluation_summary.json",
+        "analysis/strategy_evaluation_material.md",
     ]
+    assert "artifact_type: analysis_strategy_evaluation_material" in material
+    assert "cost_assumptions:" in material
+    assert "baseline_comparison:" in material
+    assert "walk_forward:" in material
+    assert "parameter_stability:" in material
+    assert "overfitting_risk:" in material
+    assert "codex_may_generate_metrics: false" in material
+    assert "best_parameter_selection_allowed: false" in material
     stage_names = [item["name"] for item in manifest["stages"]]
     assert stage_names.index("evaluate_quant_strategies") < stage_names.index(
         "evaluate_strategy_evaluation"
@@ -260,7 +274,9 @@ def test_pipeline_skips_strategy_evaluation_when_quant_disabled(tmp_path: Path) 
 
     assert result.succeeded is True
     assert not (result.run.analysis_dir / "strategy_evaluation_summary.json").exists()
+    assert not (result.run.analysis_dir / "strategy_evaluation_material.md").exists()
     assert manifest["counts"]["strategy_evaluation_records"] == 0
+    assert manifest["counts"]["strategy_evaluation_material_records"] == 0
     assert manifest["strategy_evaluation"] == {
         "enabled": False,
         "records": 0,
@@ -369,6 +385,10 @@ codex:
 
 def _strategy_evaluation(result) -> dict[str, Any]:
     return json.loads((result.run.analysis_dir / "strategy_evaluation_summary.json").read_text(encoding="utf-8"))
+
+
+def _strategy_evaluation_material(result) -> str:
+    return (result.run.analysis_dir / "strategy_evaluation_material.md").read_text(encoding="utf-8")
 
 
 def _manifest(result) -> dict[str, Any]:
