@@ -872,7 +872,7 @@ Strategy names:
 
 ## Strategy Evaluation Contract
 
-Status: reusable single-window core implemented; pipeline and standalone adapters are not implemented yet.
+Status: reusable single-window core, standalone command, and pipeline adapter implemented; downstream material and report integration are not implemented yet.
 
 Strategy evaluation is the reusable backtest and robustness layer for strategy research. It must be usable from the product pipeline and from a standalone research path without duplicating strategy logic.
 
@@ -1933,7 +1933,7 @@ build_market_signals
 build_market_signal_material
 ```
 
-Strategy evaluation is not implemented yet. When implemented, the strategy evaluation stage must sit after `evaluate_quant_strategies` and before downstream market strategy signal interpretation. The exact stage name belongs to the implementation issue that adds the stage.
+The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before downstream market strategy signal interpretation.
 
 Failure rules:
 

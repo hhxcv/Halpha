@@ -15,6 +15,7 @@ STAGE_ORDER = (
     "sync_ohlcv",
     "build_market_data_views",
     "evaluate_quant_strategies",
+    "evaluate_strategy_evaluation",
     "evaluate_market_strategy_signals",
     "build_market_signals",
     "build_market_signal_material",
@@ -308,6 +309,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["sync_ohlcv"] = _sync_ohlcv
     handlers["build_market_data_views"] = _build_market_data_views
     handlers["evaluate_quant_strategies"] = _evaluate_quant_strategies
+    handlers["evaluate_strategy_evaluation"] = _evaluate_strategy_evaluation
     handlers["evaluate_market_strategy_signals"] = _evaluate_market_strategy_signals
     handlers["build_market_signals"] = _build_market_signals
     handlers["build_market_signal_material"] = _build_market_signal_material
@@ -483,6 +485,12 @@ def _evaluate_quant_strategies(config: dict[str, Any], run: RunContext) -> list[
     from .quant_strategies import evaluate_quant_strategies
 
     return evaluate_quant_strategies(config, run)
+
+
+def _evaluate_strategy_evaluation(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .strategy_evaluation_summary import build_strategy_evaluation_summary
+
+    return build_strategy_evaluation_summary(config, run)
 
 
 def _evaluate_market_strategy_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
