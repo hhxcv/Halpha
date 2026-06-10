@@ -23,7 +23,7 @@ def validate_text_events_raw_artifact(raw: Any, artifact: str) -> None:
         path = f"items[{index}]"
         _required_string(item, "id", artifact, path)
         _required_string(item, "title", artifact, path)
-        _required_string(item, "published_at", artifact, path)
+        _optional_string(item, "published_at", artifact, path)
         _required_source_name(item, artifact, path)
         _required_string(item, "content_text", artifact, path)
 
@@ -43,6 +43,17 @@ def _required_string(item: Any, key: str, artifact: str, path: str) -> str:
     value = item.get(key)
     if not isinstance(value, str) or not value.strip():
         raise RawArtifactError(f"{artifact} is invalid: {path}.{key} is required.")
+    return value
+
+
+def _optional_string(item: Any, key: str, artifact: str, path: str) -> str | None:
+    if not isinstance(item, dict):
+        raise RawArtifactError(f"{artifact} is invalid: {path} must be a JSON object.")
+    value = item.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise RawArtifactError(f"{artifact} is invalid: {path}.{key} must be a string or null.")
     return value
 
 

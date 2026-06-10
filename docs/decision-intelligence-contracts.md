@@ -565,7 +565,8 @@ Skipped when quant is disabled:
       "risk_records": 0,
       "decision_recommendations": 0,
       "watch_triggers": 0,
-      "changed_delta_records": 0
+      "changed_delta_records": 0,
+      "decision_material_records": 0
     },
     "previous_run": {
       "status": "not_checked",
@@ -598,7 +599,8 @@ Succeeded or partially succeeded:
       "risk_records": 4,
       "decision_recommendations": 4,
       "watch_triggers": 12,
-      "changed_delta_records": 3
+      "changed_delta_records": 3,
+      "decision_material_records": 4
     },
     "previous_run": {
       "status": "compared",
@@ -615,7 +617,7 @@ Rules:
 
 - Record enabled and status fields.
 - Record all produced decision-intelligence artifact paths.
-- Record counts for regime records, risk records, decision recommendations, watch triggers, and changed delta records.
+- Record counts for regime records, risk records, decision recommendations, watch triggers, changed delta records, and decision material records.
 - Record previous-run comparison status and previous run id or path when available.
 - Record warnings and errors.
 - Handle partial failure without silently reporting success.

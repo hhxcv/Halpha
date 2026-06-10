@@ -347,6 +347,23 @@ def test_load_config_rejects_invalid_ohlcv_config(
         load_config(config_path)
 
 
+def test_load_config_rejects_absolute_ohlcv_storage_inside_relative_run_output(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    storage_dir = (tmp_path / "runs" / "ohlcv").resolve().as_posix()
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "    storage_dir: data/market/ohlcv",
+            f"    storage_dir: {storage_dir}",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="market.ohlcv.storage_dir"):
+        load_config(config_path)
+
+
 def test_load_config_rejects_quant_enabled_without_ohlcv_config(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(

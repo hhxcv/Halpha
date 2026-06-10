@@ -101,14 +101,14 @@ def test_raw_validation_rejects_missing_items_list() -> None:
         validate_text_events_raw_artifact({"items": {}}, "raw/text_events.json")
 
 
-def test_text_raw_validation_allows_explicit_null_source_url() -> None:
+def test_text_raw_validation_allows_explicit_null_optional_source_values() -> None:
     validate_text_events_raw_artifact(
         {
             "items": [
                 {
                     "id": "text:source:item",
                     "title": "Market event",
-                    "published_at": "2026-06-05T00:30:00Z",
+                    "published_at": None,
                     "source": {"name": "source", "url": None},
                     "content_text": "Source-provided text.",
                 }
@@ -116,6 +116,24 @@ def test_text_raw_validation_allows_explicit_null_source_url() -> None:
         },
         "raw/text_events.json",
     )
+
+
+def test_text_raw_validation_rejects_blank_optional_published_at() -> None:
+    with pytest.raises(RawArtifactError, match="items\\[0\\]\\.published_at must be a string or null"):
+        validate_text_events_raw_artifact(
+            {
+                "items": [
+                    {
+                        "id": "text:source:item",
+                        "title": "Market event",
+                        "published_at": "",
+                        "source": {"name": "source", "url": None},
+                        "content_text": "Source-provided text.",
+                    }
+                ]
+            },
+            "raw/text_events.json",
+        )
 
 
 def _write_config(tmp_path: Path) -> Path:

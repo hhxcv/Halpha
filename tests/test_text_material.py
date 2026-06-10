@@ -71,9 +71,13 @@ def test_text_material_marks_missing_optional_source_values_explicitly(tmp_path:
     material = (result.run.analysis_dir / "text_material.md").read_text(encoding="utf-8")
     assert "url: null" in material
     assert "link: null" in material
+    assert "published_at: null" in material
     assert "derived_summary: null" in material
     assert "source.url is missing from raw/text_events.json." in material
     assert "link is missing from raw/text_events.json." in material
+    assert "published_at is missing from raw/text_events.json." in material
+    assert 'coindesk published item "Bitcoin market event" without a source-provided published_at' in material
+    assert "timestamp." in material
 
 
 def test_text_material_uses_artifact_source_url_when_item_url_is_missing(tmp_path: Path) -> None:
@@ -344,7 +348,7 @@ def _minimum_item() -> dict:
         "id": "text:coindesk:event-1",
         "type": "rss_item",
         "title": "Bitcoin market event",
-        "published_at": "2026-06-05T00:30:00Z",
+        "published_at": None,
         "source": {
             "name": "coindesk",
             "url": None,

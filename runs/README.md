@@ -12,6 +12,5 @@ Intended per-run layout:
 - `report/`: Simplified Chinese Markdown report.
 - `run_manifest.json`: run status, stages, sources, artifacts, counts, and errors.
 
-Current scaffold creates the directories and manifest.
-
-Collection, analysis, and report artifacts are not implemented yet.
+The product run command writes per-run raw inputs, deterministic analysis material,
+Codex context, report output, and `run_manifest.json` here.

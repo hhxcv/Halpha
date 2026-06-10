@@ -4,7 +4,6 @@ from importlib import metadata, util
 def test_quant_runtime_dependencies_are_installed() -> None:
     packages = {
         "ccxt": "ccxt",
-        "duckdb": "duckdb",
         "pandas": "pandas",
         "pyarrow": "pyarrow",
         "vectorbt": "vectorbt",
@@ -17,15 +16,11 @@ def test_quant_runtime_dependencies_are_installed() -> None:
 
 def test_quant_runtime_dependencies_basic_local_capabilities() -> None:
     import ccxt
-    import duckdb
     import pandas as pd
     import pyarrow as pa
     import pyarrow.parquet as pq
 
     assert "binance" in ccxt.exchanges
-
-    with duckdb.connect(":memory:") as connection:
-        assert connection.execute("select 1").fetchone() == (1,)
 
     frame = pd.DataFrame(
         [

@@ -91,6 +91,49 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     assert manifest["stages"][1]["artifacts"] == ["raw/text_events.json"]
 
 
+def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fake_urlopen(request, timeout):
+        return _FakeResponse(
+            b"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Bitcoin market event</title>
+      <link>https://example.com/bitcoin-event</link>
+      <guid>event-1</guid>
+      <description>Source-provided event text.</description>
+    </item>
+  </channel>
+</rss>
+"""
+        )
+
+    monkeypatch.setattr("halpha.collectors.text.urlopen", fake_urlopen)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_market_data": _collect_market_data},
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_analysis_materials"
+
+    raw = json.loads((result.run.raw_dir / "text_events.json").read_text(encoding="utf-8"))
+    assert raw["errors"] == []
+    assert raw["items"][0]["published_at"] is None
+
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["counts"]["text_event_items"] == 1
+    assert manifest["stages"][1]["status"] == "succeeded"
+
+
 def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_records(
     tmp_path: Path, monkeypatch
 ) -> None:

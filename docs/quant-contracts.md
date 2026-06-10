@@ -99,7 +99,7 @@ Selected tools are implementation aids, not product architecture boundaries.
 | Market data access | CCXT may be used only for public OHLCV data. No authenticated endpoints, account state, balances, orders, or trading operations. |
 | Strategy calculation | vectorbt may be used for indicators, signal calculation, and bounded research diagnostics. Vectorbt objects are internal implementation details and must not be persisted as stable Halpha artifacts or embedded into AI context. |
 | History storage | Hive-style partitioned Parquet may be used as the reusable OHLCV fact store. It is not AI context. |
-| Query and cropping | DuckDB may be used to read and crop local Parquet windows. It is not a database service or hosted dependency. |
+| Query and cropping | Current-run OHLCV windows are selected from the local Parquet-backed store. No database service is used. |
 | Report interface | Halpha-owned strategy run, signal JSON, and Markdown contracts are the stable report-loop interface. |
 
 Do not add a dependency until the current implementation step requires it.
@@ -113,7 +113,6 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `ccxt` | Public OHLCV market data access. | Public market endpoints only. No credentials, balances, orders, or trading operations. |
 | `pandas` | In-memory OHLCV data frames for strategy inputs. | Local tabular preparation only. No hidden network or persistence role. |
 | `pyarrow` | Parquet read/write support for the shared OHLCV fact store. | File format support only. Not an AI context input. |
-| `duckdb` | Local query and cropping layer over stored OHLCV data. | In-process local querying only. No database service assumption. |
 | `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
 Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, these strategies may use vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.

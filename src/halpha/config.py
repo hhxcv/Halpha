@@ -56,11 +56,12 @@ def load_config(path: Path | str) -> dict[str, Any]:
     if not isinstance(loaded, dict):
         raise ConfigError("config root must be a mapping.")
 
-    validate_config(loaded)
+    validate_config(loaded, config_path=config_path)
     return loaded
 
 
-def validate_config(config: dict[str, Any]) -> None:
+def validate_config(config: dict[str, Any], *, config_path: Path | str | None = None) -> None:
+    config_base = Path(config_path).parent if config_path is not None else Path.cwd()
     _validate_config_sections(config)
 
     run = _require_mapping(config, "run")
@@ -90,7 +91,7 @@ def validate_config(config: dict[str, Any]) -> None:
             raise ConfigError("market.ohlcv requires market.enabled to be true.")
         market_source = _require_non_empty_string(market, "source", "market.source")
         _require_supported_value(market_source, "market.source", SUPPORTED_OHLCV_MARKET_SOURCES)
-        _validate_ohlcv_config(config, market, quant_enabled=quant_enabled)
+        _validate_ohlcv_config(config, market, quant_enabled=quant_enabled, config_base=config_base)
 
     text = _require_mapping(config, "text")
     text_enabled = _require_bool(text, "enabled", "text.enabled")
@@ -195,14 +196,20 @@ def _require_non_negative_number(data: dict[str, Any], key: str, path: str) -> f
     return float(value)
 
 
-def _validate_ohlcv_config(config: dict[str, Any], market: dict[str, Any], *, quant_enabled: bool) -> None:
+def _validate_ohlcv_config(
+    config: dict[str, Any],
+    market: dict[str, Any],
+    *,
+    quant_enabled: bool,
+    config_base: Path,
+) -> None:
     if quant_enabled and not isinstance(market.get("ohlcv"), dict):
         raise ConfigError("market.ohlcv must be a mapping when quant.enabled is true.")
     ohlcv = market.get("ohlcv")
     if not isinstance(ohlcv, dict):
         raise ConfigError("market.ohlcv must be a mapping.")
     storage_dir = _require_non_empty_string(ohlcv, "storage_dir", "market.ohlcv.storage_dir")
-    _require_outside_run_output_dir(storage_dir, config)
+    _require_outside_run_output_dir(storage_dir, config, config_base=config_base)
 
     timeframes = _require_non_empty_string_list(ohlcv, "timeframes", "market.ohlcv.timeframes")
     for index, timeframe in enumerate(timeframes):
@@ -432,15 +439,27 @@ def _require_proxy_url(data: dict[str, Any], key: str, path: str) -> str:
     return value
 
 
-def _require_outside_run_output_dir(storage_dir: str, config: dict[str, Any]) -> None:
+def _require_outside_run_output_dir(
+    storage_dir: str,
+    config: dict[str, Any],
+    *,
+    config_base: Path,
+) -> None:
     run_output_dir = config.get("run", {}).get("output_dir")
     if not isinstance(run_output_dir, str) or not run_output_dir.strip():
         return
 
-    storage_path = Path(storage_dir)
-    run_path = Path(run_output_dir)
+    storage_path = _resolve_config_path(storage_dir, config_base)
+    run_path = _resolve_config_path(run_output_dir, config_base)
     if storage_path == run_path or run_path in storage_path.parents:
         raise ConfigError("market.ohlcv.storage_dir must be outside run.output_dir.")
+
+
+def _resolve_config_path(value: str, config_base: Path) -> Path:
+    path = Path(value)
+    if not path.is_absolute():
+        path = config_base / path
+    return path.resolve()
 
 
 def _require_supported_value(value: str, path: str, supported_values: set[str]) -> None:

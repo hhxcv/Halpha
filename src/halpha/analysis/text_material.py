@@ -81,19 +81,25 @@ def _record_from_item(item: dict[str, Any], sources: Any) -> dict[str, Any]:
     source, source_uncertainties = _source_from_item(item, sources)
     link, link_uncertainties = _link_from_item(item)
     input_type, input_type_uncertainties = _input_type_from_item(item)
-    uncertainties = source_uncertainties + link_uncertainties + input_type_uncertainties
+    published_at, published_at_uncertainties = _published_at_from_item(item)
+    uncertainties = (
+        source_uncertainties
+        + link_uncertainties
+        + input_type_uncertainties
+        + published_at_uncertainties
+    )
 
     return {
         "record_type": "text_event",
         "id": item["id"],
         "input_type": input_type,
         "title": item["title"],
-        "published_at": item["published_at"],
+        "published_at": published_at,
         "source": source,
         "link": link,
         "content_text": item["content_text"],
         "derived_summary": None,
-        "facts": _facts_from_item(item, source, link),
+        "facts": _facts_from_item(item, source, link, published_at),
         "derived_observations": [],
         "assumptions": [],
         "uncertainties": uncertainties,
@@ -142,12 +148,28 @@ def _input_type_from_item(item: dict[str, Any]) -> tuple[Any, list[str]]:
     return input_type, []
 
 
-def _facts_from_item(item: dict[str, Any], source: dict[str, Any], link: Any) -> list[str]:
+def _published_at_from_item(item: dict[str, Any]) -> tuple[Any, list[str]]:
+    published_at = _explicit_value(item.get("published_at"))
+    if published_at is None:
+        return None, [f"published_at is missing from {TEXT_RAW_ARTIFACT}."]
+    return published_at, []
+
+
+def _facts_from_item(
+    item: dict[str, Any],
+    source: dict[str, Any],
+    link: Any,
+    published_at: Any,
+) -> list[str]:
     source_name = source["name"]
-    facts = [
-        f'{source_name} published item "{item["title"]}" at {item["published_at"]}.',
-        f"{source_name} provided content_text for item {item['id']}.",
-    ]
+    if published_at is None:
+        published_fact = (
+            f'{source_name} published item "{item["title"]}" '
+            "without a source-provided published_at timestamp."
+        )
+    else:
+        published_fact = f'{source_name} published item "{item["title"]}" at {published_at}.'
+    facts = [published_fact, f"{source_name} provided content_text for item {item['id']}."]
     if link is not None:
         facts.append(f"The item link is {link}.")
     return facts
