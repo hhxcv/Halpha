@@ -20,9 +20,63 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M3 — Decision Intelligence Foundation
+### M4 - Strategy Evaluation Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Improve quantitative research credibility by adding a professional strategy evaluation layer over the existing strategy run artifacts, with cost-aware backtest summaries, benchmark comparison, out-of-sample or walk-forward evaluation, parameter stability diagnostics, overfitting risk notes, and AI-readable evaluation material for the Simplified Chinese Markdown report.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the existing strategy, signal, decision-intelligence, Codex context, and report path instead of replacing it;
+* generate Halpha-owned strategy evaluation artifacts from `analysis/quant_strategy_runs.json`, current-run OHLCV views, and shared OHLCV history;
+* evaluate each configured strategy against simple baselines such as buy-and-hold and no-position cash behavior where applicable;
+* record cost-aware backtest metrics including gross return, net return, fees, slippage assumptions, turnover, exposure, trade count, hit rate, volatility, drawdown, and risk-adjusted performance;
+* produce equity-curve and drawdown summaries as inspectable research artifacts without turning Halpha into a full trading platform;
+* run bounded out-of-sample or walk-forward evaluation that separates training or calibration windows from evaluation windows;
+* record parameter sensitivity diagnostics that show stability or fragility across configured parameter ranges without selecting "best" parameters automatically;
+* identify overfitting, short-sample, regime-dependence, low-trade-count, high-turnover, and cost-sensitivity warnings as first-class evaluation output;
+* integrate strategy evaluation material into downstream market signal material, decision-intelligence material, Codex context, and the final report where it improves interpretation;
+* produce a Simplified Chinese Markdown report that explains not only current strategy direction, but also strategy reliability, sample limits, cost assumptions, baseline comparison, and evaluation uncertainty;
+* record strategy evaluation artifact paths, counts, warnings, errors, and evaluation coverage in `run_manifest.json`;
+* keep the M4 product path covered by tests and verified by a real-source run.
+
+M4 favors:
+
+* evaluation quality over strategy count;
+* professional research discipline over complex-looking strategy logic;
+* net, cost-aware, baseline-aware diagnostics over headline gross returns;
+* out-of-sample and walk-forward evidence over single-window in-sample conclusions;
+* parameter stability and robustness notes over parameter optimization;
+* simple, inspectable Halpha-owned JSON and Markdown artifacts over hidden framework objects;
+* conservative report language that separates evidence, assumptions, uncertainty, and judgment;
+* reusable evaluation contracts that can later support more strategies without redesigning the report chain;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M4 does not require:
+
+* adding many new strategies;
+* making existing strategies more complex before their evaluation quality is visible;
+* machine learning prediction, ML-based regime classification, or feature-store design;
+* automatic parameter optimization or best-parameter selection;
+* portfolio allocation optimization;
+* trading execution, order placement, position sizing, or exchange account operations;
+* real-time market monitoring, scheduler, websocket, daemon, or alert delivery runtime;
+* new exchange or market data sources;
+* text event signal generation or event-intelligence scoring;
+* dashboard UI or hosted service design;
+* database service, state store redesign, microservices, Kafka, Redis, or Celery;
+* making Codex or another LLM the source of strategy evaluation results.
+
+## Completed Milestones
+
+### M3 - Decision Intelligence Foundation
+
+Status: completed.
 
 Goal:
 
@@ -71,9 +125,7 @@ M3 does not require:
 * adding a database service, state store redesign, microservices, Kafka, Redis, or Celery;
 * making Codex or another LLM the source of action recommendations.
 
-## Completed Milestones
-
-### M2 — Quant Strategy Foundation
+### M2 - Quant Strategy Foundation
 
 Status: completed.
 
@@ -129,7 +181,7 @@ M2 does not require:
 * hosted service design;
 * multi-user features.
 
-### M1 — Quant Signal Report
+### M1 - Quant Signal Report
 
 Status: completed.
 
@@ -188,7 +240,7 @@ M1 does not require:
 * hosted service design;
 * multi-user features.
 
-### M0 — Core Report Loop
+### M0 - Core Report Loop
 
 Status: completed.
 
