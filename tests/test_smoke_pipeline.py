@@ -225,6 +225,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "raw/text_events.json",
         "raw/market_data_views.json",
         "analysis/quant_strategy_runs.json",
+        "analysis/strategy_evaluation_summary.json",
+        "analysis/strategy_evaluation_material.md",
         "analysis/market_strategy_signals.json",
         "analysis/market_signals.json",
         "analysis/market_signal_material.md",
@@ -265,6 +267,12 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["market_data_views_insufficient_data"] == 0
     assert manifest["counts"]["quant_strategy_runs"] == 4
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 4
+    assert manifest["counts"]["strategy_evaluation_records"] == 4
+    assert manifest["counts"]["strategy_evaluation_succeeded"] == 4
+    assert manifest["counts"]["strategy_evaluation_failed"] == 0
+    assert manifest["counts"]["strategy_evaluation_insufficient_data"] == 0
+    assert manifest["counts"]["strategy_evaluation_walk_forward_records"] == 0
+    assert manifest["counts"]["strategy_evaluation_material_records"] == 4
     assert manifest["counts"]["market_strategy_signals"] == 4
     assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 0
     assert manifest["counts"]["market_signals"] == 4
@@ -288,6 +296,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
+    assert manifest["artifacts"]["strategy_evaluation_summary"] == "analysis/strategy_evaluation_summary.json"
+    assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
     assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["artifacts"]["market_signals"] == "analysis/market_signals.json"
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
@@ -352,7 +362,20 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     )
     decision_material = (run_dir / "analysis/decision_intelligence_material.md").read_text(encoding="utf-8")
     strategy_runs = json.loads((run_dir / "analysis/quant_strategy_runs.json").read_text(encoding="utf-8"))
+    strategy_evaluation = json.loads(
+        (run_dir / "analysis/strategy_evaluation_summary.json").read_text(encoding="utf-8")
+    )
+    strategy_evaluation_material = (
+        run_dir / "analysis/strategy_evaluation_material.md"
+    ).read_text(encoding="utf-8")
     assert len(strategy_runs["runs"]) == 4
+    assert len(strategy_evaluation["records"]) == 4
+    assert "artifact_type: analysis_strategy_evaluation_material" in strategy_evaluation_material
+    assert "cost_assumptions:" in strategy_evaluation_material
+    assert "baseline_comparison:" in strategy_evaluation_material
+    assert "sample_limits:" in strategy_evaluation_material
+    assert "reliability:" in strategy_evaluation_material
+    assert "codex_may_generate_metrics: false" in strategy_evaluation_material
     assert len(strategy_signals["signals"]) == 4
     assert len(market_signals["signals"]) == 4
     assert sorted({signal["strategy_name"] for signal in market_signals["signals"]}) == ["tsmom_vol_scaled"]
@@ -408,13 +431,19 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     research_context = (run_dir / "analysis/research_context.md").read_text(encoding="utf-8")
     assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in research_context
+    assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in research_context
+    assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in research_context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in research_context
     assert "market_signals: analysis/market_signals.json" in research_context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
     assert "artifact_type: analysis_market_signal_material" in research_context
+    assert "artifact_type: analysis_strategy_evaluation_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
     assert "artifact_type: analysis_market_signal_material" in context
+    assert "artifact_type: analysis_strategy_evaluation_material" in context
     assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in context
+    assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
+    assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
@@ -425,6 +454,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "raw_ohlcv_history_embedded: false" in context
     assert "open_time:" not in context
     assert "Quantitative conclusions" in prompt
+    assert "Strategy evaluation material rules:" in prompt
+    assert "cost assumptions, baseline comparison, sample limits" in prompt
+    assert "Use Halpha-generated evaluation metrics only" in prompt
     assert "Decision intelligence material rules:" in prompt
     assert "current decision view" in prompt
     assert "what not to do" in prompt
@@ -447,6 +479,10 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "## " + "\u51b3\u7b56\u652f\u6301" in report
     assert "action_level=TRY_SMALL" in report
     assert "decision_bias=tentative_constructive" in report
+    assert "cost_assumptions" in report
+    assert "baseline_comparison" in report
+    assert "sample_limits=short_window" in report
+    assert "reliability=low" in report
     assert "risk_level=low" in report
     assert "no_previous_run" in report
     assert "confirmation" in report
@@ -671,6 +707,8 @@ def _m3_report_stdout() -> str:
             "## 决策支持",
             "",
             "- 当前决策视图：action_level=TRY_SMALL; decision_bias=tentative_constructive.",
+            "- strategy_evaluation: cost_assumptions=fees_bps+slippage_bps; baseline_comparison=buy_and_hold/cash.",
+            "- reliability=low; sample_limits=short_window; evaluation_uncertainty=insufficient_walk_forward.",
             "- 可以做：仅把 TRY_SMALL 理解为研究决策支持语言，继续跟踪证据是否维持。",
             "- 不要做：不要把该材料解释为仓位、账户动作、自动交易或收益承诺。",
             "- 等待/观察：关注 confirmation、invalidation、risk_escalation 和 recheck_next_run 触发条件。",

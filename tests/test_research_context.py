@@ -120,6 +120,8 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_data_views: raw/market_data_views.json" in context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
+    assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
+    assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
@@ -130,6 +132,8 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
     assert '<embed path="analysis/market_signal_material.md">' in context
     assert "artifact_type: analysis_market_signal_material" in context
+    assert '<embed path="analysis/strategy_evaluation_material.md">' in context
+    assert "artifact_type: analysis_strategy_evaluation_material" in context
     assert '<embed path="analysis/decision_intelligence_material.md">' in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "research_decision_support_only: true" in context
@@ -138,6 +142,13 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "use_quant_material_as_upstream_evidence: true" in context
     assert "do_not_invent_action_levels: true" in context
     assert "do_not_upgrade_low_confidence_or_unsupported_material: true" in context
+    assert "strategy_evaluation_requirements:" in context
+    assert "include_cost_assumptions: true" in context
+    assert "include_baseline_comparison: true" in context
+    assert "include_sample_limits: true" in context
+    assert "include_reliability_and_uncertainty: true" in context
+    assert "do_not_generate_metrics: true" in context
+    assert "do_not_upgrade_weak_or_unstable_evidence: true" in context
     assert "raw_ohlcv_history_embedded: false" in context
     assert "include_signal_conclusions: true" in context
     assert "include_evidence_near_conclusions: true" in context
@@ -146,6 +157,8 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert "signal_id: market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z" in context
     assert "open_time:" not in context
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
+    assert manifest["artifacts"]["strategy_evaluation_summary"] == "analysis/strategy_evaluation_summary.json"
+    assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
 

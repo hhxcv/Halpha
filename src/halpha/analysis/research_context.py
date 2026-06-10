@@ -10,6 +10,7 @@ STAGE_NAME = "build_research_context"
 RESEARCH_CONTEXT_ARTIFACT = "analysis/research_context.md"
 MARKET_MATERIAL_ARTIFACT = "analysis/market_material.md"
 MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
+STRATEGY_EVALUATION_MATERIAL_ARTIFACT = "analysis/strategy_evaluation_material.md"
 DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 
@@ -34,6 +35,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=_quant_enabled(config),
         producer_stage="build_market_signal_material",
     )
+    strategy_evaluation_material = _read_material(
+        run.analysis_dir / "strategy_evaluation_material.md",
+        STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("strategy_evaluation_material")),
+        producer_stage="evaluate_strategy_evaluation",
+    )
     decision_intelligence_material = _read_material(
         run.analysis_dir / "decision_intelligence_material.md",
         DECISION_INTELLIGENCE_MATERIAL_ARTIFACT,
@@ -49,6 +56,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
             artifact_index=artifact_index,
             market_material=market_material,
             market_signal_material=market_signal_material,
+            strategy_evaluation_material=strategy_evaluation_material,
             decision_intelligence_material=decision_intelligence_material,
             text_material=text_material,
         ),
@@ -65,6 +73,7 @@ def render_research_context(
     artifact_index: dict[str, Any],
     market_material: str | None,
     market_signal_material: str | None,
+    strategy_evaluation_material: str | None,
     decision_intelligence_material: str | None,
     text_material: str | None,
 ) -> str:
@@ -111,6 +120,8 @@ def render_research_context(
     lines.extend(_embedded_material(MARKET_MATERIAL_ARTIFACT, market_material))
     lines.extend(["", "## market_signal_material", ""])
     lines.extend(_embedded_material(MARKET_SIGNAL_MATERIAL_ARTIFACT, market_signal_material))
+    lines.extend(["", "## strategy_evaluation_material", ""])
+    lines.extend(_embedded_material(STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material))
     lines.extend(["", "## decision_intelligence_material", ""])
     lines.extend(_embedded_material(DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material))
     lines.extend(["", "## text_material", ""])
@@ -132,6 +143,8 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
             {
                 "market_data_views": artifacts.get("market_data_views"),
                 "quant_strategy_runs": artifacts.get("quant_strategy_runs"),
+                "strategy_evaluation_summary": artifacts.get("strategy_evaluation_summary"),
+                "strategy_evaluation_material": artifacts.get("strategy_evaluation_material"),
                 "market_strategy_signals": artifacts.get("market_strategy_signals"),
                 "market_signals": artifacts.get("market_signals"),
             }
@@ -211,6 +224,15 @@ def _generation_constraints() -> dict[str, Any]:
             "include_risk_notes": True,
             "do_not_calculate_signals_from_raw_ohlcv_history": True,
             "do_not_inspect_shared_ohlcv_storage": True,
+        },
+        "strategy_evaluation_requirements": {
+            "include_when_strategy_evaluation_material_exists": True,
+            "include_cost_assumptions": True,
+            "include_baseline_comparison": True,
+            "include_sample_limits": True,
+            "include_reliability_and_uncertainty": True,
+            "do_not_generate_metrics": True,
+            "do_not_upgrade_weak_or_unstable_evidence": True,
         },
         "decision_intelligence_requirements": {
             "include_when_decision_intelligence_material_exists": True,

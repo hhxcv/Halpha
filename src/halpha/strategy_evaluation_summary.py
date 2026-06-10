@@ -14,6 +14,10 @@ from .quant.strategy_evaluation import (
     evaluate_walk_forward_backtest,
 )
 from .quant.strategy_records import STRATEGY_VERSION, warning
+from .strategy_evaluation_material import (
+    STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
+    render_strategy_evaluation_material,
+)
 from .storage import write_json
 
 
@@ -67,10 +71,16 @@ def build_strategy_evaluation_summary(
         "errors": errors,
     }
     write_json(run.analysis_dir / "strategy_evaluation_summary.json", artifact)
+    (run.analysis_dir / "strategy_evaluation_material.md").write_text(
+        render_strategy_evaluation_material(artifact),
+        encoding="utf-8",
+    )
     run.manifest["artifacts"]["strategy_evaluation_summary"] = STRATEGY_EVALUATION_ARTIFACT
+    run.manifest["artifacts"]["strategy_evaluation_material"] = STRATEGY_EVALUATION_MATERIAL_ARTIFACT
+    run.manifest["counts"]["strategy_evaluation_material_records"] = len(records)
     _record_manifest_counts(run, records)
     _record_manifest_summary(run, records, warnings=warnings, errors=errors)
-    return [STRATEGY_EVALUATION_ARTIFACT]
+    return [STRATEGY_EVALUATION_ARTIFACT, STRATEGY_EVALUATION_MATERIAL_ARTIFACT]
 
 
 def _evaluation_record(
@@ -832,6 +842,7 @@ def _record_zero_counts(run: RunContext) -> None:
     run.manifest["counts"]["strategy_evaluation_skipped"] = 0
     run.manifest["counts"]["strategy_evaluation_walk_forward_records"] = 0
     run.manifest["counts"]["strategy_evaluation_parameter_stability_records"] = 0
+    run.manifest["counts"]["strategy_evaluation_material_records"] = 0
     run.manifest["strategy_evaluation"] = {
         "enabled": False,
         "records": 0,
