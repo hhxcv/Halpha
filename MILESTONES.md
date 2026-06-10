@@ -20,9 +20,64 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M4 - Strategy Evaluation Foundation
+### M5 - Strategy Iteration and Validation Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Turn the M4 strategy evaluation layer into a disciplined strategy improvement loop with stronger backtest correctness checks, fixed benchmark evaluation, repeatable strategy experiments, deterministic promotion or rejection gates, and at least three effective strategy research candidates for the main report path.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M4 strategy evaluation, signal, decision-intelligence, Codex context, and report path instead of replacing it;
+* strengthen the self-built backtest calculation layer with deterministic golden cases that cover execution timing, costs, turnover, equity, drawdown, risk-adjusted metrics, baselines, and edge cases;
+* cross-check the Halpha-owned backtest results against an independent mature backtest or numerical calculation path where practical, while keeping Halpha-owned JSON and Markdown artifacts as the stable downstream contract;
+* define a fixed benchmark evaluation suite using shared local OHLCV history for configured symbols, timeframes, and market windows so strategy changes can be compared against the same evidence set;
+* run repeatable strategy experiments outside the main report run and write inspectable experiment artifacts with inputs, benchmark coverage, metrics, warnings, gate outcomes, and source artifacts;
+* support adding or replacing strategy candidates when current strategies fail the benchmark gates, without turning strategy development into automatic parameter optimization;
+* produce deterministic strategy effectiveness gates that mark each candidate as effective, watchlisted, rejected, or insufficient-evidence using net performance, baseline comparison, cost drag, drawdown, walk-forward stability, parameter stability, overfitting risk, trade count, and sample quality;
+* have at least three configured strategy candidates reach effective status under the M5 gate criteria as research candidates, not as trading instructions or return guarantees;
+* keep rejected or weak strategies visible with explicit failure reasons so poor candidates are not silently promoted into the report path;
+* integrate strategy experiment and gate material into research context, Codex context, and the final report where it improves interpretation of current strategy reliability;
+* record benchmark, experiment, gate, strategy candidate, warning, error, and coverage counts in `run_manifest.json` or companion experiment manifests;
+* keep the M5 product path covered by tests and verified by a real-source run.
+
+M5 favors:
+
+* backtest correctness before strategy complexity;
+* golden examples and cross-checks over trust in a single implementation path;
+* fixed benchmark comparability over ad hoc latest-run impressions;
+* strategy replacement and disciplined candidate iteration over preserving weak strategies;
+* deterministic effectiveness gates over automatic best-parameter selection;
+* at least three effective research candidates over a large unfiltered strategy list;
+* net, cost-aware, baseline-aware, walk-forward-aware evaluation over headline gross returns;
+* simple, inspectable Halpha-owned JSON and Markdown artifacts over hidden framework objects;
+* conservative report language that separates evidence, assumptions, uncertainty, and judgment;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M5 does not require:
+
+* machine learning prediction, ML-based regime classification, or feature-store design;
+* automatic parameter optimization or best-parameter selection;
+* a generalized strategy plugin marketplace or public strategy SDK;
+* portfolio allocation optimization;
+* trading execution, order placement, position sizing, or exchange account operations;
+* real-time market monitoring, scheduler, websocket, daemon, or alert delivery runtime;
+* new exchange or market data sources;
+* text event signal generation or event-intelligence scoring;
+* dashboard UI or hosted service design;
+* database service, state store redesign, microservices, Kafka, Redis, or Celery;
+* making Codex or another LLM the source of backtest metrics, strategy gate outcomes, or effective-strategy promotion;
+* claiming that an effective research candidate is profitable, safe, or suitable for live trading.
+
+## Completed Milestones
+
+### M4 - Strategy Evaluation Foundation
+
+Status: completed.
 
 Goal:
 
@@ -71,8 +126,6 @@ M4 does not require:
 * dashboard UI or hosted service design;
 * database service, state store redesign, microservices, Kafka, Redis, or Celery;
 * making Codex or another LLM the source of strategy evaluation results.
-
-## Completed Milestones
 
 ### M3 - Decision Intelligence Foundation
 
