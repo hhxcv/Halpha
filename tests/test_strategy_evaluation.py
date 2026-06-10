@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from typing import Any
 
-from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
+from halpha.quant.strategy_evaluation import evaluate_single_window_backtest, evaluate_walk_forward_backtest
 
 
 def test_single_window_backtest_no_position_records_flat_equity() -> None:
@@ -164,6 +165,65 @@ def test_single_window_backtest_requires_signal_for_each_ohlcv_row() -> None:
     json.dumps(result)
 
 
+def test_walk_forward_backtest_records_sequential_windows_and_instability_warnings() -> None:
+    rows = _walk_forward_rows()
+
+    result = evaluate_walk_forward_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, [1 for _row in rows]),
+    )
+
+    warning_codes = {item["code"] for item in result["warnings"]}
+
+    assert result["status"] == "succeeded"
+    assert result["method"]["params_optimized_per_window"] is False
+    assert result["method"]["state_carryover_between_windows"] is False
+    assert result["window_policy"] == {
+        "calibration_rows": 60,
+        "window_rows": 60,
+        "min_window_rows": 20,
+        "min_windows": 3,
+    }
+    assert result["summary"]["window_count"] == 3
+    assert result["summary"]["succeeded_windows"] == 3
+    assert result["summary"]["positive_net_return_window_pct"] > 0
+    assert result["summary"]["positive_net_return_window_pct"] < 100
+    assert result["summary"]["result_stability"] == "unstable"
+    assert [item["window_index"] for item in result["windows"]] == [1, 2, 3]
+    assert result["windows"][0]["calibration_window"]["rows"] == 60
+    assert result["windows"][0]["evaluation_window"]["rows"] == 60
+    assert result["windows"][0]["strategy_metrics"]["net_return_pct"] > 0
+    assert result["windows"][1]["strategy_metrics"]["net_return_pct"] < 0
+    assert "unstable_walk_forward_results" in warning_codes
+    assert "regime_dependent_walk_forward_outcomes" in warning_codes
+    json.dumps(result)
+
+
+def test_walk_forward_backtest_records_insufficient_history_without_fake_success() -> None:
+    rows = [_record(_open_time_for_index(index), 100 + index) for index in range(80)]
+
+    result = evaluate_walk_forward_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, [1 for _row in rows]),
+    )
+
+    warning_codes = {item["code"] for item in result["warnings"]}
+
+    assert result["status"] == "insufficient_data"
+    assert result["summary"]["window_count"] == 1
+    assert result["summary"]["succeeded_windows"] == 1
+    assert result["windows"][0]["status"] == "succeeded"
+    assert result["windows"][0]["evaluation_window"]["rows"] == 20
+    assert "too_few_walk_forward_windows" in warning_codes
+    assert "insufficient_walk_forward_history" in warning_codes
+    assert "short_walk_forward_samples" in warning_codes
+    json.dumps(result)
+
+
 def _strategy() -> dict[str, Any]:
     return {
         "name": "unit_strategy",
@@ -208,3 +268,21 @@ def _signal_records(rows: list[dict[str, Any]], targets: list[float]) -> dict[st
             for row, target in zip(rows, targets, strict=True)
         ],
     }
+
+
+def _walk_forward_rows() -> list[dict[str, Any]]:
+    closes = (
+        [100.0 for _index in range(60)]
+        + [100.0 + index for index in range(60)]
+        + [160.0 - index for index in range(60)]
+        + [100.0 + index for index in range(60)]
+    )
+    return [
+        _record(_open_time_for_index(index), close)
+        for index, close in enumerate(closes)
+    ]
+
+
+def _open_time_for_index(index: int) -> str:
+    value = date(2026, 1, 1) + timedelta(days=index)
+    return f"{value.isoformat()}T00:00:00Z"
