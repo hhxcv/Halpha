@@ -35,6 +35,7 @@ def test_quant_signals_build_from_strategy_run_artifact(tmp_path: Path) -> None:
             "build_decision_recommendations": _noop_stage,
             "build_watch_triggers": _noop_stage,
             "build_decision_intelligence_delta": _noop_stage,
+            "build_decision_intelligence_material": _noop_stage,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
