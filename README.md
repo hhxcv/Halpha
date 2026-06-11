@@ -78,6 +78,13 @@ Run one stage against an existing run directory:
 python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
 ```
 
+Inspect local research data and data-quality state without collection or Codex:
+
+```bash
+python -m halpha data inspect --config config.example.yaml
+python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
+```
+
 Run one configured strategy backtest from shared local OHLCV history:
 
 ```bash
@@ -322,6 +329,13 @@ Run real-source product acceptance without Codex CLI:
 
 ```bash
 python -m halpha run --config config.example.yaml --no-codex
+```
+
+Inspect local data lake state without collection or Codex CLI:
+
+```bash
+python -m halpha data inspect --config config.example.yaml
+python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
 Run standalone strategy experiment acceptance:

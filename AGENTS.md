@@ -268,6 +268,8 @@ python -m halpha experiment --config config.example.yaml
 python -m halpha text-models prepare --config config.example.yaml
 python -m halpha text-intel --config config.example.yaml
 python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
+python -m halpha data inspect --config config.example.yaml
+python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
 The run command is the implemented product path.
@@ -298,6 +300,10 @@ They must not fabricate skipped artifacts.
 
 `text-intel` does not run the full report pipeline or Codex CLI.
 
+`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, and data-quality summaries.
+
+`data inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
+
 Full report runs require public network access, configured public sources, and a working Codex CLI.
 
 Do not claim success without running the relevant command.
@@ -316,6 +322,8 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
+* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, and latest data-quality state without Codex CLI.
+* Use `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect data-quality state for a specific run.
 * For event-intelligence acceptance, inspect recent text event records, entity evidence, classification evidence, topic grouping, event signals, event-market confluence, and event intelligence material.
 * For alert-decision acceptance, use `python -m halpha run --config config.example.yaml --until build_alert_decision_material` when final Codex output is not needed.
 * For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.

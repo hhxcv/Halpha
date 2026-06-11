@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .config import ConfigError, load_config
+from .data_inspection import DataInspectionError, inspect_local_data
 from .pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipeline_stage
 from .standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
 from .standalone_text_intelligence import run_standalone_text_intelligence
@@ -64,6 +65,16 @@ def build_parser() -> argparse.ArgumentParser:
     text_intel_parser.add_argument("--input", help="Existing raw text events JSON artifact to process.")
     text_intel_parser.add_argument("--output-dir", help="Directory for standalone text intelligence output.")
 
+    data_parser = subparsers.add_parser("data", help="Inspect local research data state.")
+    data_subparsers = data_parser.add_subparsers(dest="data_command", required=True)
+    inspect_parser = data_subparsers.add_parser(
+        "inspect",
+        help="Inspect local stores and data-quality state.",
+        description="Inspect local stores and data-quality state.",
+    )
+    inspect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    inspect_parser.add_argument("--run-dir", help="Optional run directory for data-quality inspection.")
+
     return parser
 
 
@@ -98,6 +109,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "text-intel":
         return _text_intel(args.config, input_path=args.input, output_dir=args.output_dir)
+
+    if args.command == "data" and args.data_command == "inspect":
+        return _data_inspect(args.config, run_dir=args.run_dir)
 
     parser.error(f"unknown command: {args.command}")
     return 1
@@ -355,6 +369,34 @@ def _text_intel(config_arg: str, *, input_path: str | None, output_dir: str | No
     print(f"output_dir: {output}")
     print(f"manifest: {manifest}")
     return result.exit_code
+
+
+def _data_inspect(config_arg: str, *, run_dir: str | None) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha data inspection failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    try:
+        result = inspect_local_data(
+            config,
+            config_path=config_path,
+            run_dir=Path(run_dir) if run_dir else None,
+        )
+    except DataInspectionError as exc:
+        print("Halpha data inspection failed.")
+        print("stage: data_inspect")
+        print(f"reason: {exc}")
+        return exc.exit_code
+
+    for line in result.lines:
+        print(line)
+    return 0
 
 
 def _safe_local_display_path(path: Path) -> str:
