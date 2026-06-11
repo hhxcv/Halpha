@@ -351,6 +351,27 @@ For event-intelligence review, inspect recent `analysis/text_event_records.json`
 outputs should have source references, model or rule evidence, threshold checks,
 and conservative unknown or low-confidence states for ambiguous inputs.
 
+For alert-decision review, run through `build_alert_decision_material` when a
+bounded check is enough:
+
+```bash
+python -m halpha run --config config.example.yaml --until build_alert_decision_material
+```
+
+Inspect `analysis/event_intelligence_assessment.json`,
+`analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and
+`run_manifest.json`. Alert priority, event severity, decision impact, downgrade
+reasons, and no-alert states must come from generated Halpha artifacts. Codex
+may explain those fields in the final report, but must not create or revise
+them.
+
+To rerun only the report-facing alert material after inspecting or regenerating
+upstream artifacts:
+
+```bash
+python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>
+```
+
 Run full report acceptance when Codex CLI use is intended:
 
 ```bash
