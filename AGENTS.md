@@ -234,6 +234,7 @@ python -m halpha run --config config.example.yaml --until <stage_name>
 python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>
 python -m halpha experiment --config config.example.yaml
+python -m halpha text-models prepare --config config.example.yaml
 ```
 
 The run command is the implemented product path.
@@ -256,6 +257,10 @@ They must not fabricate skipped artifacts.
 
 `experiment` does not run the full report pipeline or Codex CLI.
 
+`text-models prepare` explicitly prepares configured local text-intelligence models or records skipped/unavailable model states.
+
+`text-models prepare` must not be treated as permission for hidden model downloads during normal product runs.
+
 Full report runs require public network access, configured public sources, and a working Codex CLI.
 
 Do not claim success without running the relevant command.
@@ -271,6 +276,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
 * Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment and gate artifacts when shared OHLCV history exists.
+* Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
 * For current default strategy acceptance, expect at least three `effective` research candidates under deterministic gates.
 * Use `python -m halpha run --config config.example.yaml` for real-source product acceptance when the user permits Codex CLI use.

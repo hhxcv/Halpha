@@ -16,6 +16,28 @@ SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
 SUPPORTED_BENCHMARK_WINDOW_SELECTIONS = {"configured_lookback", "latest_lookback", "date_window"}
+SUPPORTED_TEXT_INTELLIGENCE_FIELDS = {
+    "allow_model_download",
+    "enabled",
+    "model_cache_dir",
+    "models",
+    "thresholds",
+}
+SUPPORTED_TEXT_INTELLIGENCE_MODEL_FIELDS = {"name", "provider", "revision"}
+SUPPORTED_TEXT_INTELLIGENCE_MODEL_PROVIDERS = {
+    "classifier": "transformers_zero_shot",
+    "embedding": "sentence_transformers",
+    "ner": "gliner",
+    "sentiment": "transformers_text_classification",
+}
+SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS = {
+    "classifier_accept_score",
+    "classifier_top_margin",
+    "duplicate_similarity",
+    "entity_accept_score",
+    "max_topic_window_hours",
+    "same_topic_similarity",
+}
 SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "elevated_overfitting_blocks_effective",
     "max_abs_drawdown_pct",
@@ -115,6 +137,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
 
     text = _require_mapping(config, "text")
     text_enabled = _require_bool(text, "enabled", "text.enabled")
+    if "intelligence" in text:
+        _validate_text_intelligence_config(text, text_enabled=text_enabled)
     if text_enabled:
         if "max_items" in text:
             _require_positive_int(text, "max_items", "text.max_items")
@@ -148,6 +172,93 @@ def _validate_config_sections(config: dict[str, Any]) -> None:
         supported = ", ".join(sorted(CONFIG_SECTIONS))
         names = ", ".join(unsupported)
         raise ConfigError(f"unsupported top-level config section(s): {names}. Supported sections: {supported}.")
+
+
+def _validate_text_intelligence_config(text: dict[str, Any], *, text_enabled: bool) -> None:
+    intelligence = text.get("intelligence")
+    if not isinstance(intelligence, dict):
+        raise ConfigError("text.intelligence must be a mapping.")
+
+    _reject_unsupported_fields(
+        intelligence,
+        path="text.intelligence",
+        supported_fields=SUPPORTED_TEXT_INTELLIGENCE_FIELDS,
+    )
+    enabled = _require_bool(intelligence, "enabled", "text.intelligence.enabled")
+    if enabled and not text_enabled:
+        raise ConfigError("text.intelligence.enabled requires text.enabled to be true.")
+
+    if "model_cache_dir" in intelligence or enabled:
+        _require_non_empty_string(intelligence, "model_cache_dir", "text.intelligence.model_cache_dir")
+    if "allow_model_download" in intelligence or enabled:
+        _require_bool(intelligence, "allow_model_download", "text.intelligence.allow_model_download")
+    if "models" in intelligence or enabled:
+        _validate_text_intelligence_models(intelligence, required=enabled)
+    if "thresholds" in intelligence or enabled:
+        _validate_text_intelligence_thresholds(intelligence, required=enabled)
+
+
+def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:
+    models = intelligence.get("models")
+    if not isinstance(models, dict) or (required and not models):
+        raise ConfigError("text.intelligence.models must be a non-empty mapping.")
+
+    unsupported = sorted(set(models) - set(SUPPORTED_TEXT_INTELLIGENCE_MODEL_PROVIDERS))
+    if unsupported:
+        supported = ", ".join(sorted(SUPPORTED_TEXT_INTELLIGENCE_MODEL_PROVIDERS))
+        names = ", ".join(unsupported)
+        raise ConfigError(
+            f"unsupported text.intelligence.models role(s): {names}. Supported roles: {supported}."
+        )
+
+    if required:
+        missing = sorted(set(SUPPORTED_TEXT_INTELLIGENCE_MODEL_PROVIDERS) - set(models))
+        if missing:
+            names = ", ".join(missing)
+            raise ConfigError(f"text.intelligence.models missing required role(s): {names}.")
+
+    for role, model in sorted(models.items()):
+        path = f"text.intelligence.models.{role}"
+        if not isinstance(model, dict):
+            raise ConfigError(f"{path} must be a mapping.")
+        _reject_unsupported_fields(
+            model,
+            path=path,
+            supported_fields=SUPPORTED_TEXT_INTELLIGENCE_MODEL_FIELDS,
+        )
+        provider = _require_non_empty_string(model, "provider", f"{path}.provider")
+        expected_provider = SUPPORTED_TEXT_INTELLIGENCE_MODEL_PROVIDERS[role]
+        if provider != expected_provider:
+            raise ConfigError(f"{path}.provider must be {expected_provider}.")
+        _require_non_empty_string(model, "name", f"{path}.name")
+        _require_non_empty_string(model, "revision", f"{path}.revision")
+
+
+def _validate_text_intelligence_thresholds(intelligence: dict[str, Any], *, required: bool) -> None:
+    thresholds = intelligence.get("thresholds")
+    if not isinstance(thresholds, dict) or (required and not thresholds):
+        raise ConfigError("text.intelligence.thresholds must be a non-empty mapping.")
+
+    _reject_unsupported_fields(
+        thresholds,
+        path="text.intelligence.thresholds",
+        supported_fields=SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS,
+    )
+    if required:
+        missing = sorted(SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS - set(thresholds))
+        if missing:
+            names = ", ".join(missing)
+            raise ConfigError(f"text.intelligence.thresholds missing required field(s): {names}.")
+
+    for key in sorted(SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS - {"max_topic_window_hours"}):
+        if key in thresholds:
+            _require_unit_interval_number(thresholds, key, f"text.intelligence.thresholds.{key}")
+    if "max_topic_window_hours" in thresholds:
+        _require_positive_int(
+            thresholds,
+            "max_topic_window_hours",
+            "text.intelligence.thresholds.max_topic_window_hours",
+        )
 
 
 def _require_mapping(data: dict[str, Any], key: str) -> dict[str, Any]:
@@ -204,6 +315,19 @@ def _require_positive_number(data: dict[str, Any], key: str, path: str) -> float
     return float(value)
 
 
+def _require_unit_interval_number(data: dict[str, Any], key: str, path: str) -> float:
+    value = data.get(key)
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) < 0
+        or float(value) > 1
+    ):
+        raise ConfigError(f"{path} must be a number between 0 and 1.")
+    return float(value)
+
+
 def _require_non_negative_number(data: dict[str, Any], key: str, path: str) -> float:
     value = data.get(key)
     if (
@@ -214,6 +338,19 @@ def _require_non_negative_number(data: dict[str, Any], key: str, path: str) -> f
     ):
         raise ConfigError(f"{path} must be a non-negative number.")
     return float(value)
+
+
+def _reject_unsupported_fields(
+    data: dict[str, Any],
+    *,
+    path: str,
+    supported_fields: set[str],
+) -> None:
+    unsupported = sorted(set(data) - supported_fields)
+    if unsupported:
+        supported = ", ".join(sorted(supported_fields))
+        names = ", ".join(unsupported)
+        raise ConfigError(f"unsupported {path} field(s): {names}. Supported fields: {supported}.")
 
 
 def _validate_ohlcv_config(

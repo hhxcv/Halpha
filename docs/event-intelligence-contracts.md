@@ -125,6 +125,23 @@ Rules:
 - If a dependency, model, or model file is unavailable, write `skipped` or
   `degraded` state with warnings rather than fabricated evidence.
 
+Initial model preparation command:
+
+```bash
+python -m halpha text-models prepare --config config.example.yaml
+```
+
+Initial adoption rules:
+
+- `text-models prepare` is the explicit local model preparation path.
+- Normal product runs must not use this command implicitly.
+- With `allow_model_download: false`, the command records model metadata and
+  skipped model states without downloading model files.
+- With `allow_model_download: true`, the command may use `huggingface_hub` to
+  download configured model snapshots into the configured local cache.
+- Preparation manifests must not record local model cache paths or resolved
+  download paths.
+
 ## Configuration Contract
 
 Event intelligence extends the existing `text` config.
@@ -689,6 +706,7 @@ Standalone text intelligence is a validation and review path.
 Expected commands:
 
 ```bash
+python -m halpha text-models prepare --config config.example.yaml
 python -m halpha text-intel --config config.example.yaml
 python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
 python -m halpha text-intel --config config.example.yaml --output-dir runs/text_intelligence
