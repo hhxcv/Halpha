@@ -8,6 +8,7 @@ from typing import Any, Protocol
 from .ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, TIMEFRAME_DURATIONS
 from .ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from .pipeline import PipelineError, RunContext
+from .research_data_catalog import write_research_data_catalog
 from .storage import display_path
 
 
@@ -43,7 +44,7 @@ def sync_ohlcv_history(
     ohlcv = market.get("ohlcv")
     if not market.get("enabled") or not isinstance(ohlcv, dict):
         _record_skipped_sync(run, "market.ohlcv is not configured.")
-        return []
+        return write_research_data_catalog(config, run, now=now)
 
     storage_dir = _storage_dir(ohlcv, run.config_path)
     metadata_paths = _metadata_paths(storage_dir)
@@ -74,6 +75,7 @@ def sync_ohlcv_history(
         if metadata_errors:
             _add_summary_errors(summary, metadata_errors)
         _record_sync_summary(run, summary, artifacts)
+        artifacts.update(_catalog_artifacts(config, run, now=now))
         raise _sync_failure(summary["errors"], artifacts) from exc
 
     items = []
@@ -107,6 +109,7 @@ def sync_ohlcv_history(
     if metadata_errors:
         _add_summary_errors(summary, metadata_errors)
     _record_sync_summary(run, summary, artifacts)
+    artifacts.update(_catalog_artifacts(config, run, now=now))
 
     if summary["errors"]:
         raise _sync_failure(summary["errors"], artifacts)
@@ -275,6 +278,16 @@ def _record_sync_summary(run: RunContext, summary: dict[str, Any], artifacts: di
     run.manifest["counts"]["ohlcv_records_stored"] = summary["totals"]["stored_count"]
     run.manifest["counts"]["ohlcv_records_skipped"] = summary["totals"]["skipped_count"]
     run.manifest["counts"]["ohlcv_sync_errors"] = summary["totals"]["error_count"]
+
+
+def _catalog_artifacts(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None,
+) -> dict[str, str]:
+    artifacts = write_research_data_catalog(config, run, now=now)
+    return {"research_data_catalog": artifacts[0]} if artifacts else {}
 
 
 def _write_store_metadata(store: OHLCVParquetStore, *, source: str | None) -> list[dict[str, Any]]:
