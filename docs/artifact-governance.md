@@ -56,9 +56,10 @@ Reusable input data:
 - `data/market/ohlcv/`
 - `data/market/metadata/ohlcv_schema.json`
 - `data/market/metadata/ohlcv_sync_state.json`
+- `data/research/metadata/research_data_catalog.json`
 
-Shared OHLCV history stays outside per-run report directories and must not be
-embedded into Codex input.
+Shared OHLCV history and the research data catalog stay outside per-run report
+directories and must not be embedded into Codex input.
 
 ### Current-Run Data Views
 

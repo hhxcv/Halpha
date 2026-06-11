@@ -209,6 +209,7 @@ A successful configured run can write:
 - `data/market/ohlcv/`: shared finalized OHLCV history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
+- `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
 - `analysis/strategy_benchmark_suite.json`: fixed strategy benchmark window metadata.
 - `analysis/quant_strategy_runs.json`: configured strategy run outputs.
 - `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.

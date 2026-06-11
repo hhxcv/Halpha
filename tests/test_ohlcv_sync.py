@@ -29,7 +29,13 @@ def test_sync_ohlcv_history_skips_when_ohlcv_is_not_configured(tmp_path: Path) -
         "error_count": 0,
     }
     assert "ohlcv_sync_state" not in manifest["artifacts"]
-    assert _stage(manifest, "sync_ohlcv")["artifacts"] == []
+    assert manifest["artifacts"]["research_data_catalog"] == (
+        "data/research/metadata/research_data_catalog.json"
+    )
+    assert manifest["research_data_catalog"]["status"] == "skipped"
+    assert _stage(manifest, "sync_ohlcv")["artifacts"] == [
+        "data/research/metadata/research_data_catalog.json"
+    ]
 
 
 def test_sync_ohlcv_history_initial_backfill_stores_latest_lookback(tmp_path: Path) -> None:
@@ -76,7 +82,13 @@ def test_sync_ohlcv_history_initial_backfill_stores_latest_lookback(tmp_path: Pa
     assert item["latest_closed_candle"] == "2026-06-03T00:00:00Z"
     assert manifest["artifacts"]["ohlcv_schema"] == "data/market/metadata/ohlcv_schema.json"
     assert manifest["artifacts"]["ohlcv_sync_state"] == "data/market/metadata/ohlcv_sync_state.json"
+    assert manifest["artifacts"]["research_data_catalog"] == (
+        "data/research/metadata/research_data_catalog.json"
+    )
+    assert manifest["research_data_catalog"]["status"] == "ok"
+    assert manifest["counts"]["research_data_catalog_stores"] == 1
     assert (tmp_path / "data" / "market" / "metadata" / "ohlcv_sync_state.json").is_file()
+    assert (tmp_path / "data" / "research" / "metadata" / "research_data_catalog.json").is_file()
 
 
 def test_sync_ohlcv_history_incremental_fetches_from_next_missing_candle(tmp_path: Path) -> None:
@@ -154,7 +166,9 @@ def test_sync_ohlcv_history_failure_preserves_existing_history_and_records_error
     assert stage["artifacts"] == [
         "data/market/metadata/ohlcv_schema.json",
         "data/market/metadata/ohlcv_sync_state.json",
+        "data/research/metadata/research_data_catalog.json",
     ]
+    assert manifest["research_data_catalog"]["status"] == "failed"
 
 
 def _run_pipeline_with_sync(config: dict[str, Any], config_path: Path, source) -> Any:
