@@ -25,6 +25,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
 - Builds event-quant confluence records and deterministic event intelligence assessments.
+- Builds deterministic alert decision artifacts for event attention priority.
 - Builds bounded AI-readable event intelligence material.
 - Builds AI-readable decision material from deterministic JSON artifacts.
 - Builds research context and Codex prompt artifacts.
@@ -150,6 +151,7 @@ build_decision_recommendations
 build_watch_triggers
 build_event_market_confluence
 build_event_intelligence_assessment
+build_alert_decisions
 build_event_intelligence_material
 build_decision_intelligence_delta
 build_decision_intelligence_material
@@ -221,6 +223,7 @@ A successful configured run can write:
 - `analysis/watch_triggers.json`: deterministic watch triggers.
 - `analysis/event_market_confluence.json`: deterministic event-quant and event-decision relationship records.
 - `analysis/event_intelligence_assessment.json`: deterministic event relevance, severity, market response, and decision-impact assessment records.
+- `analysis/alert_decisions.json`: deterministic event attention-priority decisions, not alert delivery.
 - `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
@@ -338,7 +341,8 @@ For event-intelligence review, inspect recent `analysis/text_event_records.json`
 `analysis/text_event_classification_evidence.json`,
 `analysis/text_event_topics.json`, `analysis/text_event_signals.json`,
 `analysis/event_market_confluence.json`,
-`analysis/event_intelligence_assessment.json`, and
+`analysis/event_intelligence_assessment.json`,
+`analysis/alert_decisions.json`, and
 `analysis/event_intelligence_material.md` artifacts. High-confidence accepted
 outputs should have source references, model or rule evidence, threshold checks,
 and conservative unknown or low-confidence states for ambiguous inputs.

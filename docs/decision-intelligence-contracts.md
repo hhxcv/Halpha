@@ -396,7 +396,7 @@ Rules:
 
 ## Alert Decisions
 
-Status: contract, not implemented yet.
+Status: implemented.
 
 Artifact:
 
