@@ -13,6 +13,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Collects public Binance ticker data for configured symbols.
 - Collects public RSS text events from configured sources.
 - Normalizes raw text events into source-aware event records for later text intelligence stages.
+- Extracts traceable entity evidence and configured-asset relevance from normalized text events.
 - Validates optional local text-intelligence model settings and explicit model preparation metadata.
 - Syncs reusable OHLCV history into a shared local Parquet store.
 - Builds deterministic current-run OHLCV data views.
@@ -128,6 +129,7 @@ Supported stage names:
 collect_market_data
 collect_text_events
 build_text_event_records
+build_text_entity_evidence
 sync_ohlcv
 build_market_data_views
 build_strategy_benchmark_suite
@@ -187,6 +189,7 @@ A successful configured run can write:
 - `raw/market.json`: public market observations.
 - `raw/text_events.json`: public RSS text events.
 - `analysis/text_event_records.json`: normalized source-aware text event records.
+- `analysis/text_entity_evidence.json`: entity and configured-asset relevance evidence.
 - `raw/market_data_views.json`: current-run OHLCV input window metadata.
 - `data/market/ohlcv/`: shared finalized OHLCV history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
@@ -222,6 +225,7 @@ A successful configured run can write:
 - `runs/strategy_experiments/<id>/manifest.json`: standalone strategy experiment manifest.
 - `runs/text_intelligence/<id>/raw/text_events.json`: standalone text raw artifact.
 - `runs/text_intelligence/<id>/analysis/text_event_records.json`: standalone normalized text event records.
+- `runs/text_intelligence/<id>/analysis/text_entity_evidence.json`: standalone entity and asset relevance evidence.
 - `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
 

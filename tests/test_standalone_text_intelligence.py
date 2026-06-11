@@ -44,16 +44,18 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
     assert manifest["artifacts"] == {
         "manifest": "manifest.json",
         "raw_text_events": "raw/text_events.json",
+        "text_entity_evidence": "analysis/text_entity_evidence.json",
         "text_event_records": "analysis/text_event_records.json",
     }
     assert manifest["counts"]["text_event_items"] == 1
     assert manifest["counts"]["text_event_records"] == 1
-    assert manifest["counts"]["processors_succeeded"] == 2
+    assert manifest["counts"]["processors_succeeded"] == 3
     assert manifest["counts"]["processors_skipped"] == 4
     assert manifest["model_states"] == []
     assert _processor_statuses(manifest) == {
         "load_raw_text_events": "succeeded",
         "build_text_event_records": "succeeded",
+        "build_text_entity_evidence": "succeeded",
         "build_text_event_topics": "skipped",
         "build_text_event_signals": "skipped",
         "build_event_market_confluence": "skipped",
@@ -89,6 +91,7 @@ def test_text_intel_collects_configured_text_sources(tmp_path: Path, capsys, mon
     assert raw["items"][0]["title"] == "Bitcoin market event"
     assert records["records"][0]["normalized_title"] == "bitcoin market event"
     assert _processor_statuses(manifest)["collect_text_events"] == "succeeded"
+    assert _processor_statuses(manifest)["build_text_entity_evidence"] == "succeeded"
     assert _processor_statuses(manifest)["build_text_event_topics"] == "skipped"
 
 

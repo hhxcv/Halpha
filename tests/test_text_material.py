@@ -137,6 +137,7 @@ def test_text_material_rejects_invalid_raw_text_artifact(tmp_path: Path) -> None
         stage_handlers={
             "collect_text_events": _write_invalid_text_raw,
             "build_text_event_records": _skip_text_event_records,
+            "build_text_entity_evidence": _skip_text_entity_evidence,
         },
     )
 
@@ -165,6 +166,7 @@ def test_analysis_stage_records_market_artifact_before_text_material_failure(tmp
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_invalid_text_raw,
             "build_text_event_records": _skip_text_event_records,
+            "build_text_entity_evidence": _skip_text_entity_evidence,
         },
     )
 
@@ -305,6 +307,10 @@ def _skip_codex_report(config, run) -> list[str]:
 
 
 def _skip_text_event_records(config, run) -> list[str]:
+    return []
+
+
+def _skip_text_entity_evidence(config, run) -> list[str]:
     return []
 
 
