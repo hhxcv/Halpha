@@ -48,8 +48,10 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
     assert manifest["artifacts"] == {
         "manifest": "manifest.json",
         "raw_text_events": "raw/text_events.json",
+        "research_data_catalog": "data/research/metadata/research_data_catalog.json",
         "text_event_classification_evidence": "analysis/text_event_classification_evidence.json",
         "text_entity_evidence": "analysis/text_entity_evidence.json",
+        "text_event_history_state": "data/research/metadata/text_event_history_state.json",
         "event_intelligence_material": "analysis/event_intelligence_material.md",
         "text_event_records": "analysis/text_event_records.json",
         "text_event_signals": "analysis/text_event_signals.json",

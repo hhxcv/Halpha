@@ -66,8 +66,14 @@ def test_pipeline_generates_normalized_text_event_records(tmp_path: Path) -> Non
         "errors": 0,
     }
     assert _stage(manifest, "build_text_event_records")["artifacts"] == [
-        "analysis/text_event_records.json"
+        "analysis/text_event_records.json",
+        "data/research/metadata/text_event_history_state.json",
+        "data/research/metadata/research_data_catalog.json",
     ]
+    assert manifest["artifacts"]["text_event_history_state"] == (
+        "data/research/metadata/text_event_history_state.json"
+    )
+    assert manifest["text_event_history"]["status"] == "ok"
 
 
 def test_text_event_records_preserve_missing_optional_fields_as_warnings(tmp_path: Path) -> None:
