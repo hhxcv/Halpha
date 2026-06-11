@@ -24,6 +24,7 @@ configured public text sources or local raw text artifact
   -> duplicate and topic grouping
   -> accepted text event signals
   -> event-market confluence
+  -> event intelligence assessment
   -> AI-readable event intelligence material
   -> research context
   -> Codex context + prompt
@@ -59,6 +60,7 @@ Define contracts for:
 - Duplicate and topic grouping.
 - Text event signals.
 - Event-market confluence artifacts.
+- Event intelligence assessment artifacts.
 - AI-readable event intelligence material.
 - Standalone text-intelligence manifests.
 - Research context, Codex context, and report integration.
@@ -728,6 +730,153 @@ Rules:
 - Missing event evidence should produce `insufficient_event_evidence` or
   `unknown`, not fabricated event support.
 
+## Event Intelligence Assessment
+
+Status: contract, not implemented yet.
+
+Artifact:
+
+```text
+analysis/event_intelligence_assessment.json
+```
+
+Purpose:
+
+- Turn event signals and event-market confluence into deterministic event
+  assessment records that explain event relevance, severity, source reliability,
+  market response, and decision impact before alert priority is assigned.
+
+Artifact type:
+
+```text
+event_intelligence_assessment
+```
+
+Source artifacts may include:
+
+```text
+analysis/text_event_records.json
+analysis/text_entity_evidence.json
+analysis/text_event_classification_evidence.json
+analysis/text_event_topics.json
+analysis/text_event_signals.json
+analysis/event_market_confluence.json
+analysis/market_signals.json
+analysis/strategy_effectiveness_gates.json
+analysis/market_regime_assessment.json
+analysis/risk_assessment.json
+analysis/decision_recommendations.json
+analysis/watch_triggers.json
+```
+
+Record contract:
+
+```json
+{
+  "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:text_event_topic:abc123",
+  "status": "succeeded",
+  "scope": {
+    "symbol": "BTCUSDT",
+    "timeframe": "1d",
+    "topic_id": "text_event_topic:BTCUSDT:abc123"
+  },
+  "event_summary": "A bounded source-aware summary derived from structured event artifacts.",
+  "affected_assets": ["BTCUSDT"],
+  "relevant_timeframes": ["1d"],
+  "source_reliability": "medium",
+  "event_severity": "medium",
+  "market_response_relationship": "independent",
+  "decision_impact": "no_change",
+  "risk_effect": "neutral",
+  "watch_relevance": "none",
+  "confidence": "low",
+  "evidence": [],
+  "downgrade_reasons": [],
+  "uncertainty": [],
+  "warnings": [],
+  "source_artifacts": []
+}
+```
+
+Source reliability taxonomy:
+
+```text
+high
+medium
+low
+unknown
+```
+
+Event severity taxonomy:
+
+```text
+critical
+high
+medium
+low
+noise
+unknown
+```
+
+Market response relationship taxonomy:
+
+```text
+confirmed
+conflicting
+independent
+insufficient_market_evidence
+unknown
+```
+
+Decision impact taxonomy:
+
+```text
+could_invalidate
+could_downgrade
+could_upgrade_attention
+supports_existing_view
+no_change
+insufficient_evidence
+unknown
+```
+
+Risk effect taxonomy:
+
+```text
+risk_up
+risk_down
+neutral
+mixed
+unknown
+```
+
+Watch relevance taxonomy:
+
+```text
+confirmation
+invalidation
+risk_escalation
+risk_relief
+wait_condition
+none
+unknown
+```
+
+Rules:
+
+- Event assessment is a deterministic Halpha artifact, not a Codex-generated
+  interpretation.
+- Assessment records may be topic-scoped, event-scoped, or asset/timeframe
+  scoped, but each record must expose its scope explicitly.
+- Accepted high-severity or critical assessment requires source artifacts,
+  event evidence, and either market, risk, decision, or watch-trigger relevance.
+- Low-confidence, unrelated, stale, duplicate, or insufficient-evidence events
+  should remain visible through downgrade reasons or low-severity records.
+- Event assessment must not assign alert priority, action level, trading advice,
+  position sizing, price targets, or return forecasts.
+- Alert priority is assigned by `analysis/alert_decisions.json`, not by this
+  artifact.
+
 ## Event Intelligence Material
 
 Artifact:
@@ -752,6 +901,7 @@ source_artifacts:
   - analysis/text_event_topics.json
   - analysis/text_event_signals.json
   - analysis/event_market_confluence.json
+  - analysis/event_intelligence_assessment.json
 ```
 
 Expected sections:
@@ -763,6 +913,7 @@ event_overview
 topic_summary
 event_signal_summary
 event_market_confluence
+event_intelligence_assessment
 risk_and_uncertainty
 report_usage_rules
 records
@@ -779,6 +930,8 @@ Rules:
   authority.
 - Do not ask Codex to generate event categories, event impacts, action levels,
   price forecasts, or trading recommendations.
+- When event assessment artifacts exist, material should explain assessment
+  results compactly and should not embed full intermediate JSON records.
 
 ## Standalone Text Intelligence
 
@@ -834,6 +987,7 @@ build_text_event_classification_evidence
 build_text_event_topics
 build_text_event_signals
 build_event_market_confluence
+build_event_intelligence_assessment
 build_event_intelligence_material
 build_analysis_materials
 build_research_context
@@ -848,11 +1002,14 @@ Rules:
 - Event intelligence is additive.
 - `build_event_market_confluence` runs after market, risk, decision, and
   watch-trigger artifacts exist in the full product pipeline.
+- `build_event_intelligence_assessment` runs after event-market confluence and
+  current decision-intelligence artifacts exist.
 - Event intelligence may be skipped when text or text intelligence is disabled.
 - Skipped stages must not fabricate unknown artifacts.
 - Manifest counts should record records, topics, event signals, accepted signals,
-  low-confidence signals, confluence records, model-state counts, warnings, and
-  errors.
+  low-confidence signals, confluence records, assessment records, assessment
+  severity coverage, assessment downgrade coverage, model-state counts,
+  warnings, and errors when those artifacts are implemented.
 
 ## Research Context and Codex Context Integration
 
@@ -867,6 +1024,7 @@ text_event_classification_evidence: analysis/text_event_classification_evidence.
 text_event_topics: analysis/text_event_topics.json
 text_event_signals: analysis/text_event_signals.json
 event_market_confluence: analysis/event_market_confluence.json
+event_intelligence_assessment: analysis/event_intelligence_assessment.json
 event_intelligence_material: analysis/event_intelligence_material.md
 ```
 
@@ -879,6 +1037,7 @@ text_event_classification_evidence: analysis/text_event_classification_evidence.
 text_event_topics: analysis/text_event_topics.json
 text_event_signals: analysis/text_event_signals.json
 event_market_confluence: analysis/event_market_confluence.json
+event_intelligence_assessment: analysis/event_intelligence_assessment.json
 event_intelligence_material: analysis/event_intelligence_material.md
 ```
 
@@ -888,6 +1047,9 @@ Codex prompt rules:
 - Use event intelligence material as Halpha-generated event evidence.
 - Explain event topic grouping, event signals, source coverage, recency, and
   event-quant confluence or conflict when artifacts exist.
+- Explain event assessment severity, source reliability, decision impact,
+  downgrade reasons, and uncertainty only from Halpha-generated assessment
+  material when present.
 - Keep event uncertainty near event conclusions.
 - Do not ask Codex to generate or revise event taxonomy labels, event impacts,
   event-market relationships, action levels, strategy gates, or price forecasts.
@@ -956,6 +1118,9 @@ Checklist:
 - Inspect `analysis/event_market_confluence.json` when present for confluence,
   conflict, independent, or insufficient-event-evidence relationships and for
   decision links.
+- Inspect `analysis/event_intelligence_assessment.json` when present for
+  severity, source reliability, market response relationship, decision impact,
+  downgrade reasons, uncertainty, warnings, and source artifacts.
 - Inspect `analysis/event_intelligence_material.md` for bounded source-aware
   report material and explicit Codex usage boundaries.
 - If a representative misclassification, false merge, missing traceability, or
@@ -970,6 +1135,9 @@ Checklist:
   artifacts.
 - Artifacts must expose source references, model metadata, thresholds, scores,
   acceptance reasons, warnings, and degraded states.
+- Event assessment artifacts, when implemented, must explain event severity,
+  source reliability, decision impact, downgrade reasons, uncertainty, and
+  source artifacts before alert priority is assigned.
 - Standalone text-intelligence validation is required for fast local review.
 - Codex may explain event intelligence; it must not invent structured event
   intelligence outputs.
