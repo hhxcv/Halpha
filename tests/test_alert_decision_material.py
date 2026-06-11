@@ -63,6 +63,43 @@ def test_alert_decision_material_bounds_report_facing_alert_evidence(tmp_path: P
     assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
 
+def test_alert_decision_material_retains_high_priority_and_compresses_no_alert_records(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_alert_decision_material",
+        stage_handlers=_base_handlers(
+            {
+                "build_event_intelligence_assessment": _write_many_assessments,
+                "build_alert_decisions": _write_many_alert_decisions,
+            }
+        ),
+    )
+
+    assert result.succeeded is True
+    material = (result.run.analysis_dir / "alert_decision_material.md").read_text(encoding="utf-8")
+    manifest = _manifest(result)
+
+    assert "## material_budget" in material
+    assert "policy: retain_P0_P1_P2_first_then_sample_low_priority_records" in material
+    assert "selected_records: 9" in material
+    assert "omitted_records: 4" in material
+    assert "low_priority_record_budget_exceeded" in material
+    assert "alert_decision:BTCUSDT:1d:p0-retained" in material
+    assert "alert_decision:BTCUSDT:1d:no-alert-00" in material
+    assert "alert_decision:BTCUSDT:1d:no-alert-11" not in material
+    assert manifest["alert_decision_material"]["material_selection"]["selected_records"] == 9
+    assert manifest["alert_decision_material"]["material_selection"]["omitted_records"] == 4
+    assert manifest["alert_decision_material"]["material_selection"]["omitted_by_priority"] == {
+        "no_alert": 4
+    }
+
+
 def test_alert_decision_material_skips_when_alert_decisions_are_missing(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -184,6 +221,51 @@ def _write_assessment(config, run) -> list[str]:
     return ["analysis/event_intelligence_assessment.json"]
 
 
+def _write_many_assessments(config, run) -> list[str]:
+    records = [
+        {
+            "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:p0-retained",
+            "event_summary": "High-priority retained event.",
+            "event_severity": "high",
+            "source_reliability": "high",
+            "market_response_relationship": "confirmed",
+            "decision_impact": "could_invalidate",
+            "risk_effect": "risk_up",
+            "confidence": "high",
+            "downgrade_reasons": [],
+        }
+    ]
+    records.extend(
+        {
+            "assessment_id": f"event_intelligence_assessment:BTCUSDT:1d:no-alert-{index:02d}",
+            "event_summary": f"No-alert low priority event {index:02d}.",
+            "event_severity": "low",
+            "source_reliability": "low",
+            "market_response_relationship": "insufficient_market_evidence",
+            "decision_impact": "insufficient_evidence",
+            "risk_effect": "unknown",
+            "confidence": "low",
+            "downgrade_reasons": ["event_signal_not_accepted", "insufficient_event_evidence"],
+        }
+        for index in range(12)
+    )
+    write_json(
+        run.analysis_dir / "event_intelligence_assessment.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "event_intelligence_assessment",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["analysis/text_event_signals.json"],
+            "records": records,
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["event_intelligence_assessment"] = "analysis/event_intelligence_assessment.json"
+    return ["analysis/event_intelligence_assessment.json"]
+
+
 def _write_alert_decisions(config, run) -> list[str]:
     write_json(
         run.analysis_dir / "alert_decisions.json",
@@ -247,6 +329,87 @@ def _write_alert_decisions(config, run) -> list[str]:
                     "source_artifacts": ["analysis/event_intelligence_assessment.json"],
                 },
             ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["alert_decisions"] = "analysis/alert_decisions.json"
+    return ["analysis/alert_decisions.json"]
+
+
+def _write_many_alert_decisions(config, run) -> list[str]:
+    records = [
+        {
+            "alert_decision_id": "alert_decision:BTCUSDT:1d:p0-retained",
+            "status": "succeeded",
+            "priority": "P0",
+            "scope": {
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+                "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:p0-retained",
+            },
+            "attention_decision": "interrupt_now",
+            "decision_impact": "could_invalidate",
+            "risk_effect": "risk_up",
+            "watch_trigger_relevance": ["invalidation"],
+            "requires_reassessment": True,
+            "requires_user_attention": True,
+            "reason": "priority=P0; severity=high; evidence_strength=high.",
+            "evidence_strength": "high",
+            "downgrade_reasons": [],
+            "suppression_reasons": [],
+            "uncertainty": ["Alert priority is deterministic."],
+            "warnings": [],
+            "linked_event_assessment_ids": ["event_intelligence_assessment:BTCUSDT:1d:p0-retained"],
+            "linked_decision_record_ids": ["decision_recommendation:BTCUSDT:1d"],
+            "linked_watch_trigger_ids": ["watch_trigger:BTCUSDT:1d:invalidation"],
+            "source_artifacts": ["analysis/event_intelligence_assessment.json"],
+        }
+    ]
+    for index in range(12):
+        records.append(
+            {
+                "alert_decision_id": f"alert_decision:BTCUSDT:1d:no-alert-{index:02d}",
+                "status": "suppressed",
+                "priority": "no_alert",
+                "scope": {
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "assessment_id": f"event_intelligence_assessment:BTCUSDT:1d:no-alert-{index:02d}",
+                },
+                "attention_decision": "no_alert",
+                "decision_impact": "insufficient_evidence",
+                "risk_effect": "unknown",
+                "watch_trigger_relevance": [],
+                "requires_reassessment": False,
+                "requires_user_attention": False,
+                "reason": "priority=no_alert; suppressed_or_downgraded=suppress_as_no_alert.",
+                "evidence_strength": "insufficient",
+                "downgrade_reasons": ["event_signal_not_accepted", "insufficient_event_evidence"],
+                "suppression_reasons": [
+                    "suppress_as_no_alert",
+                    "event_signal_not_accepted",
+                    "insufficient_event_evidence",
+                ],
+                "uncertainty": ["Evidence is insufficient."],
+                "warnings": ["alert_decision_not_user_attention"],
+                "linked_event_assessment_ids": [
+                    f"event_intelligence_assessment:BTCUSDT:1d:no-alert-{index:02d}"
+                ],
+                "linked_decision_record_ids": [],
+                "linked_watch_trigger_ids": [],
+                "source_artifacts": ["analysis/event_intelligence_assessment.json"],
+            }
+        )
+    write_json(
+        run.analysis_dir / "alert_decisions.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "alert_decisions",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["analysis/event_intelligence_assessment.json"],
+            "records": records,
             "warnings": [],
             "errors": [],
         },

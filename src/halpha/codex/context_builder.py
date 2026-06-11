@@ -3,6 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from halpha.codex.input_budget import (
+    CODEX_CONTEXT_MAX_CHARS,
+    CODEX_PROMPT_MAX_CHARS,
+    text_budget_record,
+    update_codex_input_manifest,
+)
 from halpha.pipeline import PipelineError, RunContext
 
 
@@ -29,6 +35,23 @@ def build_codex_context(config: dict[str, Any], run: RunContext) -> list[str]:
 
     run.manifest["artifacts"]["codex_context"] = CODEX_CONTEXT_ARTIFACT
     run.manifest["artifacts"]["codex_prompt"] = CODEX_PROMPT_ARTIFACT
+    update_codex_input_manifest(
+        run.manifest,
+        codex_context=text_budget_record(
+            CODEX_CONTEXT_ARTIFACT,
+            context,
+            status="included",
+            max_chars=CODEX_CONTEXT_MAX_CHARS,
+            role="codex_context",
+        ),
+        codex_prompt=text_budget_record(
+            CODEX_PROMPT_ARTIFACT,
+            prompt,
+            status="sent_to_codex_cli",
+            max_chars=CODEX_PROMPT_MAX_CHARS,
+            role="codex_prompt",
+        ),
+    )
     return [CODEX_CONTEXT_ARTIFACT, CODEX_PROMPT_ARTIFACT]
 
 

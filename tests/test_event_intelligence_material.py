@@ -63,6 +63,46 @@ def test_event_intelligence_material_bounds_report_facing_event_evidence(tmp_pat
     assert manifest["event_intelligence_material"]["status"] == "succeeded"
 
 
+def test_event_intelligence_material_retains_accepted_and_compresses_unknown_signals(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_event_intelligence_material",
+        stage_handlers={
+            "collect_text_events": _noop_stage,
+            "build_text_event_records": _write_event_records,
+            "build_text_entity_evidence": _noop_stage,
+            "build_text_event_classification_evidence": _write_classification,
+            "build_text_event_topics": _write_topics,
+            "build_text_event_signals": _write_many_signals,
+            "build_event_market_confluence": _write_confluence,
+        },
+    )
+
+    assert result.succeeded is True
+    material = (result.run.analysis_dir / "event_intelligence_material.md").read_text(encoding="utf-8")
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+
+    assert "## material_budget" in material
+    assert "policy: retain_accepted_event_signals_then_sample_low_priority_records" in material
+    assert "selected_records: 9" in material
+    assert "omitted_records: 4" in material
+    assert "low_priority_signal_budget_exceeded" in material
+    assert "event_signal_id: text_event_signal:accepted-retained" in material
+    assert "event_signal_id: text_event_signal:unknown-00" in material
+    assert "event_signal_id: text_event_signal:unknown-11" not in material
+    assert manifest["event_intelligence_material"]["material_selection"]["selected_records"] == 9
+    assert manifest["event_intelligence_material"]["material_selection"]["omitted_records"] == 4
+    assert manifest["event_intelligence_material"]["material_selection"]["omitted_by_status"] == {
+        "unknown": 4
+    }
+
+
 def _write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -300,6 +340,90 @@ def _write_signals(config, run) -> list[str]:
                     ],
                 }
             ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["text_event_signals"] = "analysis/text_event_signals.json"
+    return ["analysis/text_event_signals.json"]
+
+
+def _write_many_signals(config, run) -> list[str]:
+    signals = [
+        {
+            "event_signal_id": "text_event_signal:accepted-retained",
+            "status": "accepted",
+            "symbol": "BTCUSDT",
+            "relevance_scope": "symbol",
+            "topic_id": "text_event_topic:btcusdt:abc123",
+            "primary_category": "etf_flows",
+            "event_bias": "supportive",
+            "risk_impact": "neutral",
+            "opportunity_impact": "opportunity_up",
+            "strength": "medium",
+            "confidence": "medium",
+            "recency": "fresh",
+            "evidence": [
+                {
+                    "type": "category_gate",
+                    "state": "accepted",
+                    "primary_category": "etf_flows",
+                    "accepted_by_gate": True,
+                }
+            ],
+            "uncertainty": [
+                "event signal is research context, not a trading signal or price forecast"
+            ],
+            "warnings": [],
+            "source_event_ids": ["text_event:coindesk:abc123"],
+            "source_artifacts": [
+                "analysis/text_event_records.json",
+                "analysis/text_event_topics.json",
+                "analysis/text_event_classification_evidence.json",
+            ],
+        }
+    ]
+    for index in range(12):
+        signals.append(
+            {
+                "event_signal_id": f"text_event_signal:unknown-{index:02d}",
+                "status": "unknown",
+                "symbol": None,
+                "relevance_scope": "market_wide",
+                "topic_id": "text_event_topic:btcusdt:abc123",
+                "primary_category": "unknown",
+                "event_bias": "unknown",
+                "risk_impact": "unknown",
+                "opportunity_impact": "unknown",
+                "strength": "unknown",
+                "confidence": "low",
+                "recency": "unknown",
+                "evidence": [],
+                "uncertainty": ["Unknown event signal remains conservative."],
+                "warnings": ["signal_status_unknown"],
+                "source_event_ids": [],
+                "source_artifacts": [
+                    "analysis/text_event_records.json",
+                    "analysis/text_event_topics.json",
+                    "analysis/text_event_classification_evidence.json",
+                ],
+            }
+        )
+    write_json(
+        run.analysis_dir / "text_event_signals.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "text_event_signals",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:30:00Z",
+            "source_artifacts": [
+                "analysis/text_event_records.json",
+                "analysis/text_event_topics.json",
+                "analysis/text_event_classification_evidence.json",
+            ],
+            "model_states": [],
+            "coverage": {"signals": len(signals), "accepted_signals": 1},
+            "signals": signals,
             "warnings": [],
             "errors": [],
         },

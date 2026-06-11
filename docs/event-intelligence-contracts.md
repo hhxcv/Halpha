@@ -35,6 +35,15 @@ Event-intelligence outputs are personal research material. They are not trades,
 orders, account operations, position sizing, portfolio instructions, return
 promises, price forecasts, or financial advice.
 
+## Related Docs
+
+- `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy,
+  and documentation index.
+- `docs/quant-contracts.md`: upstream market, strategy, evaluation, signal, and
+  event-quant confluence consumers.
+- `docs/decision-intelligence-contracts.md`: downstream risk, decision, watch,
+  and alert-adjacent contracts.
+
 ## Contract Status
 
 This file separates stable direction from shipped behavior.

@@ -290,6 +290,10 @@ generate action levels, strategy signals, structured decision artifacts, event
 categories, event impacts, event-market relationships, or price forecasts.
 Those are produced deterministically before report generation.
 
+Codex input is governed by `docs/artifact-governance.md`: complete evidence
+artifacts stay inspectable on disk, while Codex receives bounded report-facing
+material plus explicit budget metadata in `run_manifest.json`.
+
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
 validation so Codex does not need to recreate every row. When strategy gate
@@ -365,6 +369,12 @@ reasons, and no-alert states must come from generated Halpha artifacts. Codex
 may explain those fields in the final report, but must not create or revise
 them.
 
+For Codex input-budget review, inspect `run_manifest.json` `codex_input`,
+`analysis/research_context.md`, `codex_context/context.md`, and
+`codex_context/prompt.md`. Complete intermediate JSON artifacts should be
+referenced by path and summarized through bounded material, not embedded
+wholesale.
+
 To rerun only the report-facing alert material after inspecting or regenerating
 upstream artifacts:
 
@@ -390,6 +400,10 @@ they are not proof of a real-source product run.
 - `config.example.yaml`: portable public-source configuration.
 - `data/`: shared local market history area; generated contents are ignored by git.
 - `docs/`: durable project documentation and implementation contracts.
+  - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
+  - `docs/quant-contracts.md`: quantitative research contracts.
+  - `docs/event-intelligence-contracts.md`: event intelligence contracts.
+  - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
 - `src/halpha/`: Python package.
 - `tests/`: automated tests.
 - `runs/`: per-run artifact area; generated contents are ignored by git.

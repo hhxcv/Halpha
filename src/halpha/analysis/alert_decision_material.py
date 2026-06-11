@@ -14,8 +14,10 @@ EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 ALERT_DECISION_MATERIAL_ARTIFACT = "analysis/alert_decision_material.md"
 MAX_RECORDS = 30
+MAX_LOW_PRIORITY_RECORDS = 8
 MAX_LIST_ITEMS = 8
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3, "no_alert": 4, "unknown": 5}
+HIGH_PRIORITY_ALERTS = {"P0", "P1", "P2"}
 
 
 def build_alert_decision_material(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -59,7 +61,9 @@ def render_alert_decision_material(
     assessment_artifact: dict[str, Any],
     warnings: list[str],
 ) -> str:
-    records = _sorted_alert_records(_records(alert_artifact, "records"))
+    all_records = _sorted_alert_records(_records(alert_artifact, "records"))
+    selection = _alert_record_selection(all_records)
+    records = selection["records"]
     assessments = _records(assessment_artifact, "records")
     assessment_index = {
         str(record.get("assessment_id")): record
@@ -87,37 +91,43 @@ def render_alert_decision_material(
         "## alert_overview",
         "",
         "```yaml",
-        _yaml_block(_alert_overview(run, records, assessments, warnings=warnings)).rstrip(),
+        _yaml_block(_alert_overview(run, all_records, assessments, warnings=warnings)).rstrip(),
+        "```",
+        "",
+        "## material_budget",
+        "",
+        "```yaml",
+        _yaml_block(selection["summary"]).rstrip(),
         "```",
         "",
         "## priority_summary",
         "",
         "```yaml",
-        _yaml_block(_priority_summary(records)).rstrip(),
+        _yaml_block(_priority_summary(all_records)).rstrip(),
         "```",
         "",
         "## decision_impact",
         "",
         "```yaml",
-        _yaml_block(_decision_impact_summary(records)).rstrip(),
+        _yaml_block(_decision_impact_summary(all_records)).rstrip(),
         "```",
         "",
         "## risk_and_watch_relevance",
         "",
         "```yaml",
-        _yaml_block(_risk_and_watch_summary(records)).rstrip(),
+        _yaml_block(_risk_and_watch_summary(all_records)).rstrip(),
         "```",
         "",
         "## downgrade_and_suppression_summary",
         "",
         "```yaml",
-        _yaml_block(_downgrade_and_suppression_summary(records)).rstrip(),
+        _yaml_block(_downgrade_and_suppression_summary(all_records)).rstrip(),
         "```",
         "",
         "## uncertainty",
         "",
         "```yaml",
-        _yaml_block(_uncertainty_summary(records, warnings=warnings)).rstrip(),
+        _yaml_block(_uncertainty_summary(all_records, warnings=warnings)).rstrip(),
         "```",
         "",
         "## report_usage_rules",
@@ -132,7 +142,7 @@ def render_alert_decision_material(
     if not records:
         lines.extend(["```yaml", _yaml_block({"records": []}).rstrip(), "```", ""])
     else:
-        for record in records[:MAX_RECORDS]:
+        for record in records:
             assessment = assessment_index.get(_first_string(record.get("linked_event_assessment_ids")))
             material_record = _material_record(record, assessment)
             lines.extend(
@@ -145,9 +155,6 @@ def render_alert_decision_material(
                     "",
                 ]
             )
-    omitted = max(0, len(records) - MAX_RECORDS)
-    if omitted:
-        lines.extend(["```yaml", _yaml_block({"omitted_records": omitted}).rstrip(), "```", ""])
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -379,6 +386,36 @@ def _sorted_alert_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]
     )
 
 
+def _alert_record_selection(records: list[dict[str, Any]]) -> dict[str, Any]:
+    high_priority = [record for record in records if str(record.get("priority") or "unknown") in HIGH_PRIORITY_ALERTS]
+    low_priority = [record for record in records if str(record.get("priority") or "unknown") not in HIGH_PRIORITY_ALERTS]
+    selected = high_priority[:MAX_RECORDS]
+    remaining_slots = max(0, MAX_RECORDS - len(selected))
+    low_priority_limit = min(MAX_LOW_PRIORITY_RECORDS, remaining_slots)
+    selected.extend(low_priority[:low_priority_limit])
+    selected_ids = {id(record) for record in selected}
+    omitted = [record for record in records if id(record) not in selected_ids]
+    omission_reasons: list[str] = []
+    if any(str(record.get("priority") or "unknown") in HIGH_PRIORITY_ALERTS for record in omitted):
+        omission_reasons.append("high_priority_record_budget_exceeded")
+    if any(str(record.get("priority") or "unknown") not in HIGH_PRIORITY_ALERTS for record in omitted):
+        omission_reasons.append("low_priority_record_budget_exceeded")
+    return {
+        "records": selected,
+        "summary": {
+            "policy": "retain_P0_P1_P2_first_then_sample_low_priority_records",
+            "max_records": MAX_RECORDS,
+            "max_low_priority_records": MAX_LOW_PRIORITY_RECORDS,
+            "total_records": len(records),
+            "selected_records": len(selected),
+            "omitted_records": len(omitted),
+            "selected_by_priority": _counts(selected, "priority"),
+            "omitted_by_priority": _counts(omitted, "priority"),
+            "omission_reasons": omission_reasons,
+        },
+    }
+
+
 def _source_artifacts(alert_artifact: dict[str, Any], assessment_artifact: dict[str, Any]) -> list[str]:
     artifacts = [
         EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT,
@@ -408,6 +445,7 @@ def _record_manifest_summary(
     errors: list[dict[str, Any]],
     status: str,
 ) -> None:
+    selection_summary = _alert_record_selection(_sorted_alert_records(records))["summary"]
     run.manifest["counts"]["alert_decision_material_records"] = len(records)
     run.manifest["counts"]["alert_decision_material_warning_records"] = sum(
         1 for record in records if _string_list(record.get("warnings"))
@@ -417,6 +455,7 @@ def _record_manifest_summary(
         "artifacts": [ALERT_DECISION_MATERIAL_ARTIFACT] if status == "succeeded" else [],
         "records": len(records),
         "priority": _counts(records, "priority"),
+        "material_selection": selection_summary,
         "warnings": len(warnings),
         "errors": len(errors),
         "degraded": any(

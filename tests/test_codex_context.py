@@ -91,6 +91,15 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
+    assert manifest["codex_input"]["codex_context"]["artifact"] == "codex_context/context.md"
+    assert manifest["codex_input"]["codex_context"]["status"] == "included"
+    assert manifest["codex_input"]["codex_context"]["chars"] == len(context)
+    assert manifest["codex_input"]["codex_context"]["over_budget"] is False
+    assert manifest["codex_input"]["codex_prompt"]["artifact"] == "codex_context/prompt.md"
+    assert manifest["codex_input"]["codex_prompt"]["status"] == "sent_to_codex_cli"
+    assert manifest["codex_input"]["codex_prompt"]["chars"] == len(prompt)
+    assert manifest["codex_input"]["codex_prompt"]["over_budget"] is False
+    assert manifest["codex_input"]["warnings"] == []
     codex_context_stage = _stage(manifest, "build_codex_context")
     report_stage = _stage(manifest, "run_codex_report")
     assert codex_context_stage["status"] == "succeeded"

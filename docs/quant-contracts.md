@@ -64,6 +64,12 @@ Quant strategy outputs and signals are personal research material. They are not 
 
 Decision-intelligence contracts live in `docs/decision-intelligence-contracts.md`. That layer consumes the quant artifacts defined here as upstream evidence and must not replace or rename them.
 
+## Related Docs
+
+- `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
+- `docs/decision-intelligence-contracts.md`: downstream regime, risk, decision, watch trigger, delta, and decision material contracts.
+- `docs/event-intelligence-contracts.md`: event intelligence and event-quant confluence contracts.
+
 ## Contract Status
 
 This file separates stable direction from shipped behavior.
