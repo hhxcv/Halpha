@@ -528,5 +528,7 @@ Automated validation should cover:
 - Codex input boundaries and material budgets.
 
 Real-source validation should use existing product commands and inspect the
-generated artifacts once producers are implemented. Full report validation sends
-generated local research context to Codex CLI.
+generated artifacts once producers are implemented. `python -m halpha outcomes
+inspect --config <config>` provides a read-only outcome validation path without
+collection or Codex CLI. Full report validation sends generated local research
+context to Codex CLI.

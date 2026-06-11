@@ -88,6 +88,14 @@ python -m halpha data inspect --config config.example.yaml
 python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
+Inspect outcome tracking artifacts and shared outcome history state without
+collection or Codex:
+
+```bash
+python -m halpha outcomes inspect --config config.example.yaml
+python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
+```
+
 Run one configured strategy backtest from shared local OHLCV history:
 
 ```bash
@@ -346,6 +354,13 @@ Inspect local data lake state without collection or Codex CLI:
 ```bash
 python -m halpha data inspect --config config.example.yaml
 python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
+```
+
+Inspect outcome tracking state without collection or Codex CLI:
+
+```bash
+python -m halpha outcomes inspect --config config.example.yaml
+python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
 Run standalone strategy experiment acceptance:
