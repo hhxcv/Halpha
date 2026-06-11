@@ -20,9 +20,61 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M6 - Pretrained NLP Event Intelligence Foundation
+### M7 - Alert Decision and Event Reassessment Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Turn structured event intelligence into deterministic event assessment and alert-decision artifacts that explain whether real public events change current decision intelligence, require user attention, or should remain archived low-value noise while preserving local-first artifacts and keeping alert delivery runtime out of scope.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M6 text-event normalization, NLP evidence, topic grouping, event signal, event-market confluence, Codex context, and report path instead of replacing it;
+* preserve the existing strategy benchmark, strategy gate, market signal, regime, risk, decision recommendation, watch trigger, previous-run delta, and report path instead of replacing it;
+* define durable event assessment and alert decision contracts in the existing event-intelligence and decision-intelligence contract documents;
+* generate `analysis/event_intelligence_assessment.json` from current event, market, strategy, regime, risk, decision, and watch-trigger artifacts;
+* record affected assets, relevant timeframes, source reliability, event severity, market response relationship, decision impact, confidence, downgrade reasons, uncertainty, warnings, and source artifacts for every assessed event or topic;
+* generate `analysis/alert_decisions.json` with deterministic P0, P1, P2, P3, or no-alert outcomes, where alert priority is based on evidence strength, event severity, risk escalation, decision impact, and watch or invalidation relevance;
+* keep low-confidence, unrelated, stale, duplicate, or insufficient-evidence events visible as downgraded records instead of silently dropping them or promoting them into alerts;
+* generate bounded AI-readable alert or event brief material from event assessment and alert decision artifacts;
+* connect event assessment and alert decisions into research context, Codex context, and the final Simplified Chinese Markdown report without letting Codex invent event severity, alert priority, decision impact, or action levels;
+* record artifact paths, counts, alert-priority coverage, downgrade coverage, warnings, errors, and degraded states in `run_manifest.json`;
+* support focused validation through the existing run, until-stage, and single-stage command paths without fabricating skipped artifacts;
+* add tests and fixture-based golden cases for high-severity escalation, risk or decision impact, low-confidence downgrade, unrelated event suppression, duplicate or stale event downgrade, missing-upstream behavior, and report-facing material boundaries;
+* verify the M7 product path with automated tests and real-source local runs, including no-Codex validation and full report validation when Codex CLI use is permitted.
+
+M7 favors:
+
+* attention quality and noise suppression over pushing more messages;
+* deterministic event assessment and alert priority gates over AI-generated alert decisions;
+* evidence-linked P0, P1, P2, P3, and no-alert outcomes over unstructured event summaries;
+* explicit downgrade, skipped, stale, duplicate, insufficient-evidence, and degraded states over fabricated urgency;
+* connecting events to existing risk, decision, watch trigger, and strategy evidence before claiming user relevance;
+* small, inspectable Halpha-owned JSON and Markdown artifacts over hidden runtime state;
+* report language that separates event facts, market response, decision impact, uncertainty, and user attention priority;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M7 does not require:
+
+* scheduler, daemon, websocket, streaming, high-frequency polling, or continuous 7x24 monitoring runtime;
+* email, Telegram, Discord, Slack, Feishu, WeCom, mobile push, or any other alert delivery channel;
+* alert cooldown stores, duplicate-delivery suppression across background runs, or monitoring health service;
+* new exchange, derivatives, macro, on-chain, or market-structure data sources;
+* user profiles, user positions, risk preference configuration, account connection, or exchange account operations;
+* dashboard UI, hosted service design, local web service, or workbench;
+* database service, vector database, state store redesign, microservices, Kafka, Redis, Celery, or Prefect;
+* training custom NLP, ML, or LLM models;
+* making Codex or another LLM the source of event assessment, alert priority, decision impact, action recommendations, or price forecasts;
+* claiming that an alert decision predicts price, guarantees a market move, or supports trading execution.
+
+## Completed Milestones
+
+### M6 - Pretrained NLP Event Intelligence Foundation
+
+Status: completed.
 
 Goal:
 
@@ -80,8 +132,6 @@ M6 does not require:
 * database service, vector database, state store redesign, microservices, or feature-store design;
 * making Codex or another LLM the source of event classification, event impact, event-quant confluence, or action recommendations;
 * claiming that an event signal predicts price, guarantees a market move, or supports trading execution.
-
-## Completed Milestones
 
 ### M5 - Strategy Iteration and Validation Foundation
 

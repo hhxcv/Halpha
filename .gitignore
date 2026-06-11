@@ -16,3 +16,4 @@ config.*.local.yml
 data/
 runs/*
 !runs/README.md
+docs/.*
