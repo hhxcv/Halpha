@@ -126,6 +126,18 @@ Codex should consume bounded event and alert material. It may explain
 Halpha-generated event severity, decision impact, alert priority, downgrade
 reasons, and no-alert states, but must not create or revise those fields.
 
+### Data Quality Evidence
+
+Current-run quality artifact:
+
+- `analysis/data_quality_summary.json`
+
+This artifact records deterministic schema, timestamp, duplicate, shared-store,
+partial-collection, degraded, skipped, warning, and failed states. Codex may
+consume bounded quality material or concise research-context summaries after
+they are generated, but must not create quality checks or inspect full shared
+stores directly.
+
 ### Report-Facing Material
 
 Eligible Codex input:

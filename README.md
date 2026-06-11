@@ -157,6 +157,7 @@ build_alert_decision_material
 build_event_intelligence_material
 build_decision_intelligence_delta
 build_decision_intelligence_material
+build_data_quality_summary
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -234,6 +235,7 @@ A successful configured run can write:
 - `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
+- `analysis/data_quality_summary.json`: current-run data quality checks, statuses, warnings, and source artifact references.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.

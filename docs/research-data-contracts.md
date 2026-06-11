@@ -29,7 +29,7 @@ implemented.
 | Research data catalog | Implemented | local data catalog writer | manifest, data inspection, data quality summary |
 | Local run index | Implemented | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
 | Text event history | Implemented | text event history writer | data quality summary, future event/outcome workflows |
-| Data quality summary | Not implemented yet | data quality stage | research context, Codex context, report, manifest |
+| Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
 
 ## Layer Boundary
 
