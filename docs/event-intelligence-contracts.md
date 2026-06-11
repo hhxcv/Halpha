@@ -609,6 +609,7 @@ Signal record contract:
   "event_signal_id": "text_event_signal:BTCUSDT:etf_flows:abcdef123456",
   "status": "accepted",
   "symbol": "BTCUSDT",
+  "relevance_scope": "symbol",
   "topic_id": "text_event_topic:btc:etf_flows:abcdef123456",
   "primary_category": "etf_flows",
   "event_bias": "supportive",

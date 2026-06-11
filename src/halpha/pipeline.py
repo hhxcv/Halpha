@@ -16,6 +16,7 @@ STAGE_ORDER = (
     "build_text_entity_evidence",
     "build_text_event_classification_evidence",
     "build_text_event_topics",
+    "build_text_event_signals",
     "sync_ohlcv",
     "build_market_data_views",
     "build_strategy_benchmark_suite",
@@ -316,6 +317,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
     handlers["build_text_event_classification_evidence"] = _build_text_event_classification_evidence
     handlers["build_text_event_topics"] = _build_text_event_topics
+    handlers["build_text_event_signals"] = _build_text_event_signals
     handlers["sync_ohlcv"] = _sync_ohlcv
     handlers["build_market_data_views"] = _build_market_data_views
     handlers["build_strategy_benchmark_suite"] = _build_strategy_benchmark_suite
@@ -503,6 +505,12 @@ def _build_text_event_topics(config: dict[str, Any], run: RunContext) -> list[st
     from .text_event_topics import build_text_event_topics
 
     return build_text_event_topics(config, run)
+
+
+def _build_text_event_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .text_event_signals import build_text_event_signals
+
+    return build_text_event_signals(config, run)
 
 
 def _sync_ohlcv(config: dict[str, Any], run: RunContext) -> list[str] | None:
