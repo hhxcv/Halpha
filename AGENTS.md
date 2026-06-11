@@ -206,11 +206,11 @@ Current bias:
 * `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
 * `analysis/outcome_targets.json` records deterministic source-linked outcome targets extracted from the latest previous successful run.
 * `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
-* `analysis/outcome_tracking_material.md` is planned in `docs/outcome-tracking-contracts.md`.
+* `analysis/outcome_tracking_material.md` records bounded AI-readable outcome accountability material from targets, evaluations, and outcome history summaries.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, event intelligence, and data quality material, not shared OHLCV history.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history.
 * Codex context must not embed full raw streams, full shared OHLCV history, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
 * Codex input should prioritize high-signal decision, risk, alert, strategy gate, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.

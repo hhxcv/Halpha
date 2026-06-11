@@ -128,6 +128,8 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "34. Do not generate or revise alert priority, event severity, decision impact, action levels, alert delivery, price forecasts, trading advice, position sizing, or account actions.",
             "35. When data quality material is present, explain Halpha-generated quality status only where it affects interpretation.",
             "36. Do not generate or revise data-quality checks, validation results, store contents, catalog contents, run-index contents, raw archive contents, or reusable history records.",
+            "37. When outcome tracking material is present, explain Halpha-generated outcome states only as accountability evidence.",
+            "38. Do not create outcome labels, validate missing histories, infer omitted outcome stores, score prior recommendations independently, or rank strategies from outcomes.",
             "",
             "Quantitative strategy material rules:",
             "",
@@ -192,6 +194,15 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "- Do not generate or revise data-quality checks, validation results, schema conclusions, store contents, or run-index contents.",
             "- If data quality material is absent, do not recreate quality conclusions from raw text, raw market data, or other material.",
             "",
+            "Outcome tracking material rules:",
+            "",
+            "- Use outcome tracking material as Halpha-generated accountability evidence, not as a source for new outcome scoring.",
+            "- Explain confirmed, contradicted, aligned, not_aligned, unresolved, stale, skipped, pending, and insufficient-data states only when supported by outcome material.",
+            "- Keep outcome evidence, source run ids, evaluation run ids, uncertainty, warnings, and data limits near each accountability statement.",
+            "- Treat missing or insufficient later evidence as missing or insufficient, not as proof that a prior view was right or wrong.",
+            "- Do not generate or revise outcome labels, validate missing histories, infer omitted store contents, inspect full outcome history, score prior recommendations independently, rank strategies from outcomes, forecast returns, or provide trading instructions.",
+            "- If outcome tracking material is absent, do not recreate outcome tracking from raw artifacts, run indexes, stores, or other material.",
+            "",
             "Report style:",
             "",
             "- Core summary: 3-5 bullets maximum. Each bullet should add a distinct takeaway.",
@@ -247,12 +258,22 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "market_signal_material": artifacts.get("market_signal_material"),
         "data_quality_summary": artifacts.get("data_quality_summary"),
         "data_quality_material": artifacts.get("data_quality_material"),
+        "outcome_tracking_material": artifacts.get("outcome_tracking_material"),
         "market_material": artifacts.get("market_material"),
         "text_material": artifacts.get("text_material"),
         "research_context": artifacts.get("research_context"),
         "codex_context": CODEX_CONTEXT_ARTIFACT,
         "codex_prompt": CODEX_PROMPT_ARTIFACT,
     }
+    if artifacts.get("outcome_tracking_material"):
+        index.update(
+            {
+                "outcome_targets": artifacts.get("outcome_targets"),
+                "outcome_evaluations": artifacts.get("outcome_evaluations"),
+                "outcome_history_state": artifacts.get("outcome_history_state"),
+                "outcome_tracking_material": artifacts.get("outcome_tracking_material"),
+            }
+        )
     if artifacts.get("decision_intelligence_material"):
         index.update(
             {

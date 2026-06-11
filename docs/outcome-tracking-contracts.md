@@ -36,7 +36,7 @@ promises, price forecasts, or financial advice.
 | Outcome targets | Implemented | outcome target extraction stage | outcome evaluation, outcome material |
 | Outcome evaluations | Implemented | outcome evaluation stage | outcome history, outcome material |
 | Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
-| Outcome tracking material | Planned | outcome material stage | research context, Codex context, report |
+| Outcome tracking material | Implemented | outcome material stage | research context, Codex context, report |
 
 README should describe only user-visible behavior that exists. This file may
 define intended contracts before implementation when they are needed to guide a
@@ -438,7 +438,7 @@ Rules:
 
 ## Outcome Tracking Material
 
-Planned current-run artifact:
+Implemented current-run artifact:
 
 ```text
 analysis/outcome_tracking_material.md
@@ -508,7 +508,7 @@ Codex must not:
 - produce trading instructions, position sizing, or price forecasts.
 
 Codex context may include `analysis/outcome_tracking_material.md` after the
-artifact is implemented. It must not embed full target, evaluation, or reusable
+artifact is generated. It must not embed full target, evaluation, or reusable
 history records by default.
 
 ## Validation Rules

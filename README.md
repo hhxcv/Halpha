@@ -253,6 +253,7 @@ A successful configured run can write:
 - `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
 - `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
 - `analysis/outcome_evaluations.json`: deterministic market, strategy, event, alert, decision, and watch outcome evaluations.
+- `analysis/outcome_tracking_material.md`: AI-readable bounded outcome accountability material.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.

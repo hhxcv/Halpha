@@ -24,6 +24,7 @@ ALERT_DECISION_MATERIAL_ARTIFACT = "analysis/alert_decision_material.md"
 EVENT_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/event_intelligence_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 DATA_QUALITY_MATERIAL_ARTIFACT = "analysis/data_quality_material.md"
+OUTCOME_TRACKING_MATERIAL_ARTIFACT = "analysis/outcome_tracking_material.md"
 
 
 def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -44,6 +45,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         run.analysis_dir / "data_quality_material.md",
         DATA_QUALITY_MATERIAL_ARTIFACT,
         enabled=bool(run.manifest.get("artifacts", {}).get("data_quality_material")),
+        producer_stage="build_analysis_materials",
+    )
+    outcome_tracking_material = _read_material(
+        run.analysis_dir / "outcome_tracking_material.md",
+        OUTCOME_TRACKING_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("outcome_tracking_material")),
         producer_stage="build_analysis_materials",
     )
     market_signal_material = _read_material(
@@ -91,6 +98,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         alert_decision_material=alert_decision_material,
         event_intelligence_material=event_intelligence_material,
         data_quality_material=data_quality_material,
+        outcome_tracking_material=outcome_tracking_material,
         text_material=text_material,
     )
 
@@ -106,6 +114,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         alert_decision_material=material_inputs[ALERT_DECISION_MATERIAL_ARTIFACT]["content"],
         event_intelligence_material=material_inputs[EVENT_INTELLIGENCE_MATERIAL_ARTIFACT]["content"],
         data_quality_material=material_inputs[DATA_QUALITY_MATERIAL_ARTIFACT]["content"],
+        outcome_tracking_material=material_inputs[OUTCOME_TRACKING_MATERIAL_ARTIFACT]["content"],
         text_material=material_inputs[TEXT_MATERIAL_ARTIFACT]["content"],
     )
     output_path = run.analysis_dir / "research_context.md"
@@ -138,6 +147,7 @@ def render_research_context(
     alert_decision_material: str | None,
     event_intelligence_material: str | None,
     data_quality_material: str | None,
+    outcome_tracking_material: str | None,
     text_material: str | None,
 ) -> str:
     source_artifacts = [value for value in artifact_index.values() if value is not None]
@@ -201,6 +211,8 @@ def render_research_context(
     lines.extend(_embedded_material(EVENT_INTELLIGENCE_MATERIAL_ARTIFACT, event_intelligence_material))
     lines.extend(["", "## data_quality_material", ""])
     lines.extend(_embedded_material(DATA_QUALITY_MATERIAL_ARTIFACT, data_quality_material))
+    lines.extend(["", "## outcome_tracking_material", ""])
+    lines.extend(_embedded_material(OUTCOME_TRACKING_MATERIAL_ARTIFACT, outcome_tracking_material))
     lines.extend(["", "## text_material", ""])
     lines.extend(_embedded_material(TEXT_MATERIAL_ARTIFACT, text_material))
     return "\n".join(lines)
@@ -214,9 +226,19 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "market_signal_material": artifacts.get("market_signal_material"),
         "data_quality_summary": artifacts.get("data_quality_summary"),
         "data_quality_material": artifacts.get("data_quality_material"),
+        "outcome_tracking_material": artifacts.get("outcome_tracking_material"),
         "market_material": artifacts.get("market_material"),
         "text_material": artifacts.get("text_material"),
     }
+    if artifacts.get("outcome_tracking_material"):
+        index.update(
+            {
+                "outcome_targets": artifacts.get("outcome_targets"),
+                "outcome_evaluations": artifacts.get("outcome_evaluations"),
+                "outcome_history_state": artifacts.get("outcome_history_state"),
+                "outcome_tracking_material": artifacts.get("outcome_tracking_material"),
+            }
+        )
     if artifacts.get("market_signal_material"):
         index.update(
             {
@@ -303,6 +325,7 @@ def _source_policy() -> dict[str, Any]:
         "raw_ohlcv_history_embedded": False,
         "full_data_quality_json_embedded": False,
         "full_reusable_history_embedded": False,
+        "full_outcome_history_embedded": False,
         "full_catalog_embedded": False,
         "full_run_index_embedded": False,
         "full_intermediate_json_embedded": False,
@@ -412,6 +435,17 @@ def _generation_constraints() -> dict[str, Any]:
             "do_not_inspect_omitted_tables": True,
             "do_not_infer_missing_store_contents": True,
         },
+        "outcome_tracking_requirements": {
+            "include_when_outcome_tracking_material_exists": True,
+            "use_halpha_outcome_states_only": True,
+            "codex_may_explain_outcome_states": True,
+            "do_not_generate_outcome_labels": True,
+            "do_not_validate_missing_histories": True,
+            "do_not_infer_omitted_store_contents": True,
+            "do_not_score_prior_recommendations_independently": True,
+            "do_not_rank_strategies_from_outcomes": True,
+            "full_outcome_history_embedded": False,
+        },
         "required_sections": [
             "核心摘要",
             "市场概览",
@@ -447,6 +481,7 @@ def _prepare_material_inputs(
     alert_decision_material: str | None,
     event_intelligence_material: str | None,
     data_quality_material: str | None,
+    outcome_tracking_material: str | None,
     text_material: str | None,
 ) -> dict[str, dict[str, Any]]:
     materials = [
@@ -458,6 +493,7 @@ def _prepare_material_inputs(
         (ALERT_DECISION_MATERIAL_ARTIFACT, alert_decision_material),
         (EVENT_INTELLIGENCE_MATERIAL_ARTIFACT, event_intelligence_material),
         (DATA_QUALITY_MATERIAL_ARTIFACT, data_quality_material),
+        (OUTCOME_TRACKING_MATERIAL_ARTIFACT, outcome_tracking_material),
         (TEXT_MATERIAL_ARTIFACT, text_material),
     ]
     return {artifact: _prepare_material_input(artifact, content) for artifact, content in materials}
