@@ -43,6 +43,8 @@ promises, price forecasts, or financial advice.
   event-quant confluence consumers.
 - `docs/decision-intelligence-contracts.md`: downstream risk, decision, watch,
   and alert-adjacent contracts.
+- `docs/outcome-tracking-contracts.md`: planned downstream target, evaluation,
+  history, material, and Codex-boundary contracts.
 
 ## Contract Status
 

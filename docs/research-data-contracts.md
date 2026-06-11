@@ -16,6 +16,8 @@ their downstream consumers. It is not a milestone plan.
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
   watch trigger, delta, alert decision, and decision-material contracts.
+- `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation,
+  history, material, and Codex-boundary contracts.
 
 ## Contract Status
 
@@ -31,6 +33,7 @@ implemented.
 | Text event history | Implemented | text event history writer | data quality summary, future event/outcome workflows |
 | Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
 | Data quality material | Implemented | analysis material stage | research context, Codex context, report |
+| Outcome history | Planned | outcome history writer | later runs, data inspection, outcome material |
 
 ## Layer Boundary
 
@@ -332,6 +335,15 @@ When implemented, product runs should record:
 
 `run_manifest.json` remains the per-run lifecycle record. Reusable stores and
 indexes do not replace it.
+
+## Outcome History
+
+Planned outcome history contracts live in
+`docs/outcome-tracking-contracts.md`.
+
+Outcome history is reusable local research data. It should stay outside per-run
+report directories, preserve references to source runs and artifacts, and avoid
+embedding full history into Codex input.
 
 ## Validation Rules
 
