@@ -461,6 +461,7 @@ Source artifacts:
 
 ```text
 analysis/text_event_records.json
+analysis/text_entity_evidence.json
 ```
 
 Topic record contract:
@@ -486,16 +487,16 @@ Topic record contract:
       "relationship": "same_topic",
       "similarity": 0.86,
       "reasons": [
-        "embedding_similarity_met",
+        "embedding_same_topic_similarity_met",
         "asset_overlap_met",
-        "category_overlap_met",
         "time_window_met"
       ]
     }
   ],
   "warnings": [],
   "source_artifacts": [
-    "analysis/text_event_records.json"
+    "analysis/text_event_records.json",
+    "analysis/text_entity_evidence.json"
   ]
 }
 ```

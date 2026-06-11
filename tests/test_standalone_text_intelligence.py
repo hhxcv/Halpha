@@ -33,6 +33,7 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
     assert exit_code == 0
     assert "Halpha text intelligence succeeded." in stdout
     assert "text_event_records: analysis/text_event_records.json" in stdout
+    assert "text_event_topics: analysis/text_event_topics.json" in stdout
     assert (run_dir / "raw" / "text_events.json").is_file()
     assert not (run_dir / "codex_context").exists()
     assert not (run_dir / "report").exists()
@@ -46,17 +47,19 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
         "raw_text_events": "raw/text_events.json",
         "text_entity_evidence": "analysis/text_entity_evidence.json",
         "text_event_records": "analysis/text_event_records.json",
+        "text_event_topics": "analysis/text_event_topics.json",
     }
     assert manifest["counts"]["text_event_items"] == 1
     assert manifest["counts"]["text_event_records"] == 1
-    assert manifest["counts"]["processors_succeeded"] == 3
-    assert manifest["counts"]["processors_skipped"] == 4
+    assert manifest["counts"]["text_event_topics"] == 1
+    assert manifest["counts"]["processors_succeeded"] == 4
+    assert manifest["counts"]["processors_skipped"] == 3
     assert manifest["model_states"] == []
     assert _processor_statuses(manifest) == {
         "load_raw_text_events": "succeeded",
         "build_text_event_records": "succeeded",
         "build_text_entity_evidence": "succeeded",
-        "build_text_event_topics": "skipped",
+        "build_text_event_topics": "succeeded",
         "build_text_event_signals": "skipped",
         "build_event_market_confluence": "skipped",
         "build_event_intelligence_material": "skipped",
@@ -88,11 +91,12 @@ def test_text_intel_collects_configured_text_sources(tmp_path: Path, capsys, mon
     assert manifest["inputs"]["mode"] == "configured_sources"
     assert manifest["counts"]["text_event_items"] == 1
     assert manifest["counts"]["text_event_records"] == 1
+    assert manifest["counts"]["text_event_topics"] == 1
     assert raw["items"][0]["title"] == "Bitcoin market event"
     assert records["records"][0]["normalized_title"] == "bitcoin market event"
     assert _processor_statuses(manifest)["collect_text_events"] == "succeeded"
     assert _processor_statuses(manifest)["build_text_entity_evidence"] == "succeeded"
-    assert _processor_statuses(manifest)["build_text_event_topics"] == "skipped"
+    assert _processor_statuses(manifest)["build_text_event_topics"] == "succeeded"
 
 
 def test_text_intel_rejects_invalid_input_without_fake_downstream_artifacts(
@@ -127,7 +131,7 @@ def test_text_intel_rejects_invalid_input_without_fake_downstream_artifacts(
     assert manifest["status"] == "failed"
     assert manifest["errors"][0]["stage"] == "load_raw_text_events"
     assert manifest["counts"]["processors_succeeded"] == 0
-    assert manifest["counts"]["processors_skipped"] == 4
+    assert manifest["counts"]["processors_skipped"] == 3
     assert "text_event_records" not in manifest["artifacts"]
     assert not (run_dir / "analysis" / "text_event_records.json").exists()
 
