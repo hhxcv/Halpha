@@ -164,6 +164,7 @@ Current bias:
 ## Artifact Expectations
 
 * Artifact map, layer rules, and Codex input policy live in `docs/artifact-governance.md`.
+* Local research data contracts live in `docs/research-data-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
