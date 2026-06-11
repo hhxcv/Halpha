@@ -86,6 +86,48 @@ def test_outcome_targets_extract_supported_previous_run_artifacts(tmp_path: Path
     assert _stage(manifest, "build_outcome_targets")["artifacts"] == ["analysis/outcome_targets.json"]
 
 
+def test_outcome_targets_expand_unscoped_strategy_gates_from_benchmark_evaluations(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    previous = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_strategy_experiment_material",
+        stage_handlers=_handlers_for_until(
+            "build_strategy_experiment_material",
+            {"build_strategy_experiment_material": _write_unscoped_strategy_gate_with_experiment},
+        ),
+        now=datetime(2026, 6, 5, 0, 0, tzinfo=UTC),
+    )
+    assert previous.succeeded is True
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_outcome_targets",
+        stage_handlers=_handlers_for_until("build_outcome_targets"),
+        now=datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
+    )
+
+    artifact = _outcome_targets(result)
+    targets = artifact["targets"]
+
+    assert result.succeeded is True
+    assert artifact["status"] == "ok"
+    assert artifact["previous_run"]["run_id"] == previous.run.run_id
+    assert artifact["counts"]["targets"] == 2
+    assert artifact["counts"]["skipped_records"] == 0
+    assert artifact["counts"]["missing_source_fields"] == 0
+    assert artifact["counts"]["by_kind"] == {"strategy_gate": 2}
+    assert {target["symbol"] for target in targets} == {"BTCUSDT", "ETHUSDT"}
+    assert {target["timeframe"] for target in targets} == {"1d"}
+    assert all(target["source"] == "binance" for target in targets)
+    assert all(target["source_record_id"].startswith("strategy_effectiveness_gate:tsmom_vol_scaled:") for target in targets)
+    assert all("analysis/strategy_experiment.json" in target["source_artifacts"] for target in targets)
+    assert all(target["expected_observation"]["gate_status"] == "effective" for target in targets)
+    assert {target["expected_observation"]["evaluation_status"] for target in targets} == {"succeeded"}
+
+
 def test_outcome_targets_skip_missing_fields_and_duplicate_targets(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -279,6 +321,77 @@ def _write_strategy_effectiveness_gates(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["strategy_effectiveness_gates"] = "analysis/strategy_effectiveness_gates.json"
     return ["analysis/strategy_effectiveness_gates.json"]
+
+
+def _write_unscoped_strategy_gate_with_experiment(config, run) -> list[str]:
+    del config
+    write_json(
+        run.analysis_dir / "strategy_experiment.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_experiment",
+            "created_at": "2026-06-05T00:00:00Z",
+            "candidates": [
+                {
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "succeeded",
+                    "params": {},
+                    "evaluations": [
+                        _strategy_experiment_evaluation("BTCUSDT"),
+                        _strategy_experiment_evaluation("ETHUSDT"),
+                    ],
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["analysis/strategy_benchmark_suite.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "strategy_effectiveness_gates.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_effectiveness_gates",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["analysis/strategy_experiment.json"],
+            "records": [
+                {
+                    "gate_id": "strategy_effectiveness_gate:tsmom_vol_scaled",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "effective",
+                    "gate_inputs": {},
+                    "reasons": [{"code": "benchmark_coverage_met", "severity": "pass"}],
+                    "source_artifacts": ["analysis/strategy_experiment.json"],
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["strategy_experiment"] = "analysis/strategy_experiment.json"
+    run.manifest["artifacts"]["strategy_effectiveness_gates"] = "analysis/strategy_effectiveness_gates.json"
+    return ["analysis/strategy_experiment.json", "analysis/strategy_effectiveness_gates.json"]
+
+
+def _strategy_experiment_evaluation(symbol: str) -> dict[str, Any]:
+    return {
+        "evaluation_id": f"strategy_experiment:tsmom_vol_scaled:binance:{symbol}:1d:2026-06-05T00:00:00Z",
+        "benchmark_id": f"strategy_benchmark:binance:{symbol}:1d:configured_lookback",
+        "benchmark_status": "succeeded",
+        "status": "succeeded",
+        "source": "binance",
+        "symbol": symbol,
+        "timeframe": "1d",
+        "input_window_start": "2026-01-01T00:00:00Z",
+        "input_window_end": "2026-06-05T00:00:00Z",
+        "metrics": {},
+        "warnings": [],
+        "errors": [],
+    }
 
 
 def _write_decision_recommendations(config, run) -> list[str]:

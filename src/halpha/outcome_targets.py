@@ -106,32 +106,41 @@ def build_outcome_targets(
         if not records:
             continue
         for record in records:
-            target, skipped = _target_from_record(
+            record_variants = _record_variants_for_target(
                 record,
                 artifact=artifact,
                 source_run=previous,
-                source_artifact=indexed_path,
                 target_kind=spec["target_kind"],
-                record_type=spec["record_type"],
-                created_at=created_at,
             )
-            if skipped is not None:
-                skipped_records.append(skipped)
-                continue
-            if target is None:
-                continue
-            if target["target_id"] in seen_target_ids:
-                skipped_records.append(
-                    _skip_record(
-                        source_artifact=indexed_path,
-                        record_type=spec["record_type"],
-                        record_id=target["source_record_id"],
-                        reason="duplicate_target_id",
-                    )
+            if not record_variants:
+                record_variants = [record]
+            for record_variant in record_variants:
+                target, skipped = _target_from_record(
+                    record_variant,
+                    artifact=artifact,
+                    source_run=previous,
+                    source_artifact=indexed_path,
+                    target_kind=spec["target_kind"],
+                    record_type=spec["record_type"],
+                    created_at=created_at,
                 )
-                continue
-            seen_target_ids.add(target["target_id"])
-            targets.append(target)
+                if skipped is not None:
+                    skipped_records.append(skipped)
+                    continue
+                if target is None:
+                    continue
+                if target["target_id"] in seen_target_ids:
+                    skipped_records.append(
+                        _skip_record(
+                            source_artifact=indexed_path,
+                            record_type=spec["record_type"],
+                            record_id=target["source_record_id"],
+                            reason="duplicate_target_id",
+                        )
+                    )
+                    continue
+                seen_target_ids.add(target["target_id"])
+                targets.append(target)
 
     warnings.extend(_warning_summary(skipped_records, errors, targets))
     status = _status(targets=targets, warnings=warnings, errors=errors)
@@ -164,6 +173,104 @@ def build_outcome_targets(
         "errors": errors,
     }
     return _write_artifact(run, artifact)
+
+
+def _record_variants_for_target(
+    record: dict[str, Any],
+    *,
+    artifact: dict[str, Any],
+    source_run: PreviousRun,
+    target_kind: str,
+) -> list[dict[str, Any]]:
+    if target_kind != "strategy_gate" or _has_direct_scope(record):
+        return [record]
+    experiment = _strategy_experiment_artifact(record, artifact, source_run)
+    if experiment is None:
+        return [record]
+    candidate = _matching_strategy_candidate(record, experiment)
+    if candidate is None:
+        return [record]
+    variants = []
+    for evaluation in _dict_list(candidate.get("evaluations")):
+        variant = _strategy_gate_variant(record, evaluation)
+        if variant is not None:
+            variants.append(variant)
+    return variants
+
+
+def _has_direct_scope(record: dict[str, Any]) -> bool:
+    return bool(_source(record) and _symbol(record) and _timeframe(record))
+
+
+def _strategy_experiment_artifact(
+    record: dict[str, Any],
+    artifact: dict[str, Any],
+    source_run: PreviousRun,
+) -> dict[str, Any] | None:
+    source_artifacts = [
+        *_string_list(record.get("source_artifacts")),
+        *_string_list(artifact.get("source_artifacts")),
+    ]
+    for source_artifact in source_artifacts:
+        if source_artifact.endswith("strategy_experiment.json"):
+            experiment, error = _read_previous_artifact(source_run, source_artifact)
+            if error is None:
+                return experiment
+    return None
+
+
+def _matching_strategy_candidate(record: dict[str, Any], experiment: dict[str, Any]) -> dict[str, Any] | None:
+    strategy_name = record.get("strategy_name")
+    for candidate in _dict_list(experiment.get("candidates")):
+        if candidate.get("strategy_name") == strategy_name:
+            return candidate
+    return None
+
+
+def _strategy_gate_variant(record: dict[str, Any], evaluation: dict[str, Any]) -> dict[str, Any] | None:
+    source = evaluation.get("source")
+    symbol = evaluation.get("symbol")
+    timeframe = evaluation.get("timeframe")
+    source_as_of = evaluation.get("input_window_end") or evaluation.get("latest_candle_time")
+    if not all(isinstance(value, str) and value for value in (source, symbol, timeframe, source_as_of)):
+        return None
+    gate_id = _optional_str(record.get("gate_id")) or _optional_str(record.get("strategy_name")) or "strategy_gate"
+    evaluation_id = (
+        _optional_str(evaluation.get("evaluation_id"))
+        or _optional_str(evaluation.get("benchmark_id"))
+        or f"{source}:{symbol}:{timeframe}:{source_as_of}"
+    )
+    variant = {**record}
+    variant.update(
+        {
+            "gate_id": f"{gate_id}:{_short_digest(evaluation_id)}",
+            "gate_record_id": gate_id,
+            "gate_scope_id": evaluation_id,
+            "source": source,
+            "symbol": symbol,
+            "asset": symbol,
+            "timeframe": timeframe,
+            "source_as_of": source_as_of,
+            "latest_candle_time": source_as_of,
+            "benchmark_id": evaluation.get("benchmark_id"),
+            "evaluation_id": evaluation.get("evaluation_id"),
+            "benchmark_status": evaluation.get("benchmark_status"),
+            "evaluation_status": evaluation.get("status"),
+            "source_artifacts": _unique(
+                [
+                    *_string_list(record.get("source_artifacts")),
+                    "analysis/strategy_experiment.json",
+                ]
+            ),
+            "warnings": _unique([*_string_list(record.get("warnings")), *_string_list(evaluation.get("warnings"))]),
+            "errors": [*_dict_list(record.get("errors")), *_dict_list(evaluation.get("errors"))],
+        }
+    )
+    return variant
+
+
+def _short_digest(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
 
 
 def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -> tuple[PreviousRun | None, str | None]:
@@ -506,6 +613,12 @@ def _expected_observation(record: dict[str, Any], target_kind: str) -> dict[str,
             "observation_type": "strategy_gate_follow_through",
             "strategy_name": record.get("strategy_name"),
             "gate_status": record.get("status"),
+            "gate_record_id": record.get("gate_record_id") or record.get("gate_id"),
+            "gate_scope_id": record.get("gate_scope_id"),
+            "benchmark_id": record.get("benchmark_id"),
+            "evaluation_id": record.get("evaluation_id"),
+            "benchmark_status": record.get("benchmark_status"),
+            "evaluation_status": record.get("evaluation_status"),
             "reason_codes": [
                 item.get("code")
                 for item in _dict_list(record.get("reasons"))

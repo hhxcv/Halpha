@@ -434,6 +434,7 @@ def _generation_constraints() -> dict[str, Any]:
             "do_not_generate_validation_results": True,
             "do_not_inspect_omitted_tables": True,
             "do_not_infer_missing_store_contents": True,
+            "do_not_report_stage_time_run_index_skip_as_final_missing": True,
         },
         "outcome_tracking_requirements": {
             "include_when_outcome_tracking_material_exists": True,

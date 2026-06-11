@@ -249,6 +249,13 @@ Allowed `target_kind` values:
 such as direction, threshold, category, state change, or follow-through
 condition. It must not contain trading instructions.
 
+Strategy effectiveness gates are candidate-level records. When a gate record
+does not have a single source, symbol, timeframe, or as-of timestamp, outcome
+target extraction must derive scoped strategy-gate targets from the linked
+`analysis/strategy_experiment.json` benchmark evaluations. Each derived target
+must keep the gate record id, benchmark or evaluation id, source, symbol,
+timeframe, source as-of timestamp, gate status, and source artifact references.
+
 Missing previous successful runs produce a `skipped` artifact with
 `previous_run.status` set to `no_previous_run`. Skipped source records must
 preserve source artifact, source record type, source record id when available,

@@ -262,7 +262,19 @@ def _run_index_check(run: RunContext) -> dict[str, Any]:
     artifact = "data/research/index.sqlite"
     summary = run.manifest.get("run_index")
     if not isinstance(summary, dict):
-        return _check("run_index", "shared_data", "skipped", "run index was not produced yet.", [])
+        return _check(
+            "run_index",
+            "shared_data",
+            "skipped",
+            "run index is a terminal artifact written after the data-quality stage; this stage-time skip is expected and must not be reported as a final missing run index.",
+            [artifact],
+            details={
+                "terminal_artifact": True,
+                "written_after_data_quality_stage": True,
+                "stage_time_skip_is_expected": True,
+                "report_as_final_missing": False,
+            },
+        )
     errors = []
     if summary.get("status") == "failed":
         errors.append(str(summary.get("error") or "run index write failed"))

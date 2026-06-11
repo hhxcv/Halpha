@@ -40,6 +40,11 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "raw_text")["status"] == "ok"
     assert _check(summary, "ohlcv_store")["status"] == "skipped"
     assert _check(summary, "text_event_history")["status"] == "ok"
+    run_index = _check(summary, "run_index")
+    assert run_index["status"] == "skipped"
+    assert "terminal artifact written after the data-quality stage" in run_index["summary"]
+    assert run_index["details"]["stage_time_skip_is_expected"] is True
+    assert run_index["details"]["report_as_final_missing"] is False
 
 
 def test_data_quality_summary_flags_schema_drift_future_timestamp_and_duplicates(tmp_path: Path) -> None:
