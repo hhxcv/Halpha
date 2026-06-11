@@ -3,6 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from halpha.codex.input_budget import (
+    CODEX_INPUT_POLICY,
+    DEFAULT_MATERIAL_MAX_CHARS,
+    RESEARCH_CONTEXT_MAX_CHARS,
+    text_budget_record,
+    update_codex_input_manifest,
+)
 from halpha.pipeline import PipelineError, RunContext
 
 
@@ -68,25 +75,44 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=bool(run.manifest.get("artifacts", {}).get("event_intelligence_material")),
         producer_stage="build_event_intelligence_material",
     )
-
-    output_path = run.analysis_dir / "research_context.md"
-    output_path.write_text(
-        render_research_context(
-            config,
-            run=run,
-            artifact_index=artifact_index,
-            market_material=market_material,
-            market_signal_material=market_signal_material,
-            strategy_evaluation_material=strategy_evaluation_material,
-            strategy_experiment_material=strategy_experiment_material,
-            decision_intelligence_material=decision_intelligence_material,
-            alert_decision_material=alert_decision_material,
-            event_intelligence_material=event_intelligence_material,
-            text_material=text_material,
-        ),
-        encoding="utf-8",
+    material_inputs = _prepare_material_inputs(
+        market_material=market_material,
+        market_signal_material=market_signal_material,
+        strategy_evaluation_material=strategy_evaluation_material,
+        strategy_experiment_material=strategy_experiment_material,
+        decision_intelligence_material=decision_intelligence_material,
+        alert_decision_material=alert_decision_material,
+        event_intelligence_material=event_intelligence_material,
+        text_material=text_material,
     )
+
+    context = render_research_context(
+        config,
+        run=run,
+        artifact_index=artifact_index,
+        market_material=material_inputs[MARKET_MATERIAL_ARTIFACT]["content"],
+        market_signal_material=material_inputs[MARKET_SIGNAL_MATERIAL_ARTIFACT]["content"],
+        strategy_evaluation_material=material_inputs[STRATEGY_EVALUATION_MATERIAL_ARTIFACT]["content"],
+        strategy_experiment_material=material_inputs[STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT]["content"],
+        decision_intelligence_material=material_inputs[DECISION_INTELLIGENCE_MATERIAL_ARTIFACT]["content"],
+        alert_decision_material=material_inputs[ALERT_DECISION_MATERIAL_ARTIFACT]["content"],
+        event_intelligence_material=material_inputs[EVENT_INTELLIGENCE_MATERIAL_ARTIFACT]["content"],
+        text_material=material_inputs[TEXT_MATERIAL_ARTIFACT]["content"],
+    )
+    output_path = run.analysis_dir / "research_context.md"
+    output_path.write_text(context, encoding="utf-8")
     run.manifest["artifacts"]["research_context"] = RESEARCH_CONTEXT_ARTIFACT
+    update_codex_input_manifest(
+        run.manifest,
+        materials=[value["budget"] for value in material_inputs.values()],
+        research_context=text_budget_record(
+            RESEARCH_CONTEXT_ARTIFACT,
+            context,
+            status="included",
+            max_chars=RESEARCH_CONTEXT_MAX_CHARS,
+            role="research_context",
+        ),
+    )
     return [RESEARCH_CONTEXT_ARTIFACT]
 
 
@@ -133,6 +159,12 @@ def render_research_context(
         "",
         "```yaml",
         _yaml_block(_source_policy()).rstrip(),
+        "```",
+        "",
+        "## codex_input_policy",
+        "",
+        "```yaml",
+        _yaml_block(_codex_input_policy()).rstrip(),
         "```",
         "",
         "## generation_constraints",
@@ -255,7 +287,18 @@ def _source_policy() -> dict[str, Any]:
         "missing_url_label": "source_url_not_provided",
         "distinguish_facts_assumptions_uncertainties_judgment": True,
         "raw_ohlcv_history_embedded": False,
+        "full_intermediate_json_embedded": False,
+        "full_run_manifest_embedded": False,
+        "bounded_report_facing_material_only": True,
         "financial_advice": False,
+    }
+
+
+def _codex_input_policy() -> dict[str, Any]:
+    return {
+        **CODEX_INPUT_POLICY,
+        "default_material_max_chars": DEFAULT_MATERIAL_MAX_CHARS,
+        "research_context_max_chars": RESEARCH_CONTEXT_MAX_CHARS,
     }
 
 
@@ -364,6 +407,101 @@ def _embedded_material(artifact: str, content: str | None) -> list[str]:
         content.rstrip(),
         "</embed>",
     ]
+
+
+def _prepare_material_inputs(
+    *,
+    market_material: str | None,
+    market_signal_material: str | None,
+    strategy_evaluation_material: str | None,
+    strategy_experiment_material: str | None,
+    decision_intelligence_material: str | None,
+    alert_decision_material: str | None,
+    event_intelligence_material: str | None,
+    text_material: str | None,
+) -> dict[str, dict[str, Any]]:
+    materials = [
+        (MARKET_MATERIAL_ARTIFACT, market_material),
+        (MARKET_SIGNAL_MATERIAL_ARTIFACT, market_signal_material),
+        (STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material),
+        (STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material),
+        (DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material),
+        (ALERT_DECISION_MATERIAL_ARTIFACT, alert_decision_material),
+        (EVENT_INTELLIGENCE_MATERIAL_ARTIFACT, event_intelligence_material),
+        (TEXT_MATERIAL_ARTIFACT, text_material),
+    ]
+    return {artifact: _prepare_material_input(artifact, content) for artifact, content in materials}
+
+
+def _prepare_material_input(artifact: str, content: str | None) -> dict[str, Any]:
+    if content is None:
+        return {
+            "content": None,
+            "budget": text_budget_record(
+                artifact,
+                None,
+                status="not_generated",
+                max_chars=DEFAULT_MATERIAL_MAX_CHARS,
+                role="report_facing_material",
+            ),
+        }
+    if len(content) <= DEFAULT_MATERIAL_MAX_CHARS:
+        return {
+            "content": content,
+            "budget": text_budget_record(
+                artifact,
+                content,
+                status="included",
+                max_chars=DEFAULT_MATERIAL_MAX_CHARS,
+                role="report_facing_material",
+            ),
+        }
+    compressed = _compressed_material(artifact, content, max_chars=DEFAULT_MATERIAL_MAX_CHARS)
+    record = text_budget_record(
+        artifact,
+        compressed,
+        status="compressed",
+        max_chars=DEFAULT_MATERIAL_MAX_CHARS,
+        role="report_facing_material",
+    )
+    record["original_chars"] = len(content)
+    record["omitted_chars"] = max(0, len(content) - len(compressed))
+    record["compression_reason"] = "material_char_budget_exceeded"
+    record["warnings"].append("material_compressed_for_codex_input")
+    return {"content": compressed, "budget": record}
+
+
+def _compressed_material(artifact: str, content: str, *, max_chars: int) -> str:
+    header = "\n".join(
+        [
+            "```yaml",
+            _yaml_block(
+                {
+                    "artifact": artifact,
+                    "status": "compressed_for_codex_input",
+                    "complete_artifact_path": artifact,
+                    "original_chars": len(content),
+                    "max_embedded_chars": max_chars,
+                    "omission_reason": "material_char_budget_exceeded",
+                    "selection_policy": "head_and_tail_excerpt",
+                }
+            ).rstrip(),
+            "```",
+            "",
+            "## compressed_excerpt",
+            "",
+        ]
+    )
+    separator = "\n\n... omitted middle material; inspect the complete artifact path above ...\n\n"
+    footer = "\n\n## omitted_material\n\n```yaml\nstatus: omitted_middle\nreason: material_char_budget_exceeded\n```\n"
+    excerpt_budget = max(0, max_chars - len(header) - len(separator) - len(footer))
+    head_chars = int(excerpt_budget * 0.7)
+    tail_chars = max(0, excerpt_budget - head_chars)
+    tail = content[-tail_chars:].lstrip() if tail_chars else ""
+    compressed = header + content[:head_chars].rstrip() + separator + tail + footer
+    if len(compressed) > max_chars:
+        compressed = compressed[: max_chars - len(footer)].rstrip() + footer
+    return compressed
 
 
 def _yaml_list(values: list[str]) -> list[str]:

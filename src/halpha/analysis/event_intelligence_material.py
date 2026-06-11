@@ -17,14 +17,16 @@ TEXT_EVENT_SIGNALS_ARTIFACT = "analysis/text_event_signals.json"
 EVENT_MARKET_CONFLUENCE_ARTIFACT = "analysis/event_market_confluence.json"
 EVENT_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/event_intelligence_material.md"
 MAX_SECTION_RECORDS = 30
+MAX_LOW_PRIORITY_RECORDS = 8
 MAX_EVIDENCE_ITEMS = 5
 MAX_TEXT_LENGTH = 240
+HIGH_PRIORITY_SIGNAL_STATUSES = {"accepted"}
 
 
 def build_event_intelligence_material(config: dict[str, Any], run: RunContext) -> list[str]:
     text = config.get("text", {})
     if not text.get("enabled"):
-        _record_manifest_summary(run, records=0, warnings=[], errors=[], status="skipped")
+        _record_manifest_summary(run, signals=[], warnings=[], errors=[], status="skipped")
         return []
 
     signals_artifact = _read_optional_artifact(
@@ -33,7 +35,7 @@ def build_event_intelligence_material(config: dict[str, Any], run: RunContext) -
         records_key="signals",
     )
     if signals_artifact is None:
-        _record_manifest_summary(run, records=0, warnings=[], errors=[], status="skipped")
+        _record_manifest_summary(run, signals=[], warnings=[], errors=[], status="skipped")
         return []
 
     records_artifact = _read_required_artifact(
@@ -76,7 +78,7 @@ def build_event_intelligence_material(config: dict[str, Any], run: RunContext) -
 
     signals = _records(signals_artifact, "signals")
     run.manifest["artifacts"]["event_intelligence_material"] = EVENT_INTELLIGENCE_MATERIAL_ARTIFACT
-    _record_manifest_summary(run, records=len(signals), warnings=warnings, errors=errors, status="succeeded")
+    _record_manifest_summary(run, signals=signals, warnings=warnings, errors=errors, status="succeeded")
     return [EVENT_INTELLIGENCE_MATERIAL_ARTIFACT]
 
 
@@ -94,6 +96,8 @@ def render_event_intelligence_material(
     classifications = _records(classification_artifact, "records")
     topics = _records(topics_artifact, "topics")
     signals = _records(signals_artifact, "signals")
+    signal_selection = _event_signal_selection(signals)
+    selected_signals = signal_selection["records"]
     confluence = _records(confluence_artifact, "records")
     event_index = {str(event.get("event_id")): event for event in events if event.get("event_id")}
     classification_index = {
@@ -142,6 +146,12 @@ def render_event_intelligence_material(
         ).rstrip(),
         "```",
         "",
+        "## material_budget",
+        "",
+        "```yaml",
+        _yaml_block(signal_selection["summary"]).rstrip(),
+        "```",
+        "",
         "## topic_summary",
         "",
         "```yaml",
@@ -151,7 +161,7 @@ def render_event_intelligence_material(
         "## event_signal_summary",
         "",
         "```yaml",
-        _yaml_block(_event_signal_summary(signals)).rstrip(),
+        _yaml_block(_event_signal_summary(signals, selected_signals=selected_signals)).rstrip(),
         "```",
         "",
         "## event_market_confluence",
@@ -176,7 +186,7 @@ def render_event_intelligence_material(
         "",
     ]
     record_blocks = _material_records(
-        signals,
+        selected_signals,
         event_index=event_index,
         classification_index=classification_index,
         topic_index=topic_index,
@@ -332,7 +342,13 @@ def _topic_summary(topics: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _event_signal_summary(signals: list[dict[str, Any]]) -> dict[str, Any]:
+def _event_signal_summary(
+    signals: list[dict[str, Any]],
+    *,
+    selected_signals: list[dict[str, Any]],
+) -> dict[str, Any]:
+    selected_ids = {id(selected) for selected in selected_signals}
+    omitted_signals = [signal for signal in signals if id(signal) not in selected_ids]
     return {
         "coverage": {
             "signals": len(signals),
@@ -340,8 +356,9 @@ def _event_signal_summary(signals: list[dict[str, Any]]) -> dict[str, Any]:
             "low_confidence": _signal_status_count(signals, "low_confidence"),
             "unknown": _signal_status_count(signals, "unknown"),
         },
-        "records": [_signal_summary(signal) for signal in signals[:MAX_SECTION_RECORDS]],
-        "omitted_records": max(0, len(signals) - MAX_SECTION_RECORDS),
+        "records": [_signal_summary(signal) for signal in selected_signals],
+        "omitted_records": len(omitted_signals),
+        "omitted_by_status": _status_counts(omitted_signals),
     }
 
 
@@ -655,8 +672,50 @@ def _records(artifact: dict[str, Any] | None, key: str) -> list[dict[str, Any]]:
     return [record for record in artifact.get(key) or [] if isinstance(record, dict)]
 
 
+def _event_signal_selection(signals: list[dict[str, Any]]) -> dict[str, Any]:
+    high_priority = [
+        signal for signal in signals if str(signal.get("status") or "unknown") in HIGH_PRIORITY_SIGNAL_STATUSES
+    ]
+    low_priority = [
+        signal for signal in signals if str(signal.get("status") or "unknown") not in HIGH_PRIORITY_SIGNAL_STATUSES
+    ]
+    selected = high_priority[:MAX_SECTION_RECORDS]
+    remaining_slots = max(0, MAX_SECTION_RECORDS - len(selected))
+    low_priority_limit = min(MAX_LOW_PRIORITY_RECORDS, remaining_slots)
+    selected.extend(low_priority[:low_priority_limit])
+    selected_ids = {id(signal) for signal in selected}
+    omitted = [signal for signal in signals if id(signal) not in selected_ids]
+    omission_reasons: list[str] = []
+    if any(str(signal.get("status") or "unknown") in HIGH_PRIORITY_SIGNAL_STATUSES for signal in omitted):
+        omission_reasons.append("high_priority_signal_budget_exceeded")
+    if any(str(signal.get("status") or "unknown") not in HIGH_PRIORITY_SIGNAL_STATUSES for signal in omitted):
+        omission_reasons.append("low_priority_signal_budget_exceeded")
+    return {
+        "records": selected,
+        "summary": {
+            "policy": "retain_accepted_event_signals_then_sample_low_priority_records",
+            "max_records": MAX_SECTION_RECORDS,
+            "max_low_priority_records": MAX_LOW_PRIORITY_RECORDS,
+            "total_records": len(signals),
+            "selected_records": len(selected),
+            "omitted_records": len(omitted),
+            "selected_by_status": _status_counts(selected),
+            "omitted_by_status": _status_counts(omitted),
+            "omission_reasons": omission_reasons,
+        },
+    }
+
+
 def _signal_status_count(signals: list[dict[str, Any]], status: str) -> int:
     return sum(1 for signal in signals if signal.get("status") == status)
+
+
+def _status_counts(signals: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for signal in signals:
+        status = str(signal.get("status") or "unknown")
+        counts[status] = counts.get(status, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _relationship_count(records: list[dict[str, Any]], relationship: str) -> int:
@@ -666,16 +725,19 @@ def _relationship_count(records: list[dict[str, Any]], relationship: str) -> int
 def _record_manifest_summary(
     run: RunContext,
     *,
-    records: int,
+    signals: list[dict[str, Any]],
     warnings: list[str],
     errors: list[dict[str, Any]],
     status: str,
 ) -> None:
+    selection_summary = _event_signal_selection(signals)["summary"]
+    records = len(signals)
     run.manifest["counts"]["event_intelligence_material_records"] = records
     run.manifest["event_intelligence_material"] = {
         "status": status,
         "artifacts": [EVENT_INTELLIGENCE_MATERIAL_ARTIFACT] if status == "succeeded" else [],
         "records": records,
+        "material_selection": selection_summary,
         "warnings": len(warnings),
         "errors": len(errors),
     }

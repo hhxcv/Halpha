@@ -29,6 +29,12 @@ quant strategy run artifacts
 
 Decision-intelligence outputs are personal research material. They are not trades, orders, account operations, portfolio instructions, position sizing, return promises, or financial advice.
 
+## Related Docs
+
+- `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
+- `docs/quant-contracts.md`: upstream quantitative data, strategy, evaluation, and signal contracts.
+- `docs/event-intelligence-contracts.md`: event evidence, confluence, and alert-adjacent event contracts.
+
 ## Contract Status
 
 This file separates stable direction from shipped behavior.

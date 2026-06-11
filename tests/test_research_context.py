@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from halpha.codex.input_budget import DEFAULT_MATERIAL_MAX_CHARS
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
@@ -42,6 +43,10 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "allowed_sources_only: true" in context
     assert "fabricate_missing_sources: false" in context
     assert "financial_advice: false" in context
+    assert "## codex_input_policy" in context
+    assert "bounded_report_facing_material_only: true" in context
+    assert "full_intermediate_json_embedded: false" in context
+    assert "default_material_max_chars:" in context
     assert "## generation_constraints" in context
     assert "do_not_invent_prices_events_links_sources: true" in context
     assert "include_context_specific_risk_notes: true" in context
@@ -87,6 +92,18 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["event_intelligence_material"] == "analysis/event_intelligence_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
+    assert manifest["codex_input"]["policy"]["bounded_report_facing_material_only"] is True
+    assert manifest["codex_input"]["policy"]["full_intermediate_json_embedded"] is False
+    assert manifest["codex_input"]["research_context"]["artifact"] == "analysis/research_context.md"
+    assert manifest["codex_input"]["research_context"]["status"] == "included"
+    assert manifest["codex_input"]["research_context"]["chars"] == len(context)
+    assert manifest["codex_input"]["research_context"]["over_budget"] is False
+    material_records = {
+        record["artifact"]: record for record in manifest["codex_input"]["materials"]
+    }
+    assert material_records["analysis/alert_decision_material.md"]["status"] == "included"
+    assert material_records["analysis/event_intelligence_material.md"]["status"] == "included"
+    assert material_records["analysis/text_material.md"]["status"] == "included"
     research_stage = _stage(manifest, "build_research_context")
     codex_context_stage = _stage(manifest, "build_codex_context")
     report_stage = _stage(manifest, "run_codex_report")
@@ -114,10 +131,53 @@ def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path
     assert not (result.run.analysis_dir / "text_material.md").exists()
 
     context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: null" in context
     assert "artifact: analysis/text_material.md" in context
     assert "status: not_generated" in context
+    material_records = {
+        record["artifact"]: record for record in manifest["codex_input"]["materials"]
+    }
+    assert material_records["analysis/text_material.md"]["status"] == "not_generated"
+    assert material_records["analysis/text_material.md"]["warnings"] == []
+
+
+def test_research_context_compresses_over_budget_material_for_codex_input(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path, text_enabled=False)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_research_context",
+        stage_handlers={
+            "collect_market_data": _write_market_raw,
+            "collect_text_events": _noop_stage,
+            "build_analysis_materials": _write_large_market_material,
+        },
+    )
+
+    assert result.succeeded is True
+    context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    material_records = {
+        record["artifact"]: record for record in manifest["codex_input"]["materials"]
+    }
+    market_record = material_records["analysis/market_material.md"]
+
+    assert "status: compressed_for_codex_input" in context
+    assert "HIGH_SIGNAL_BEGIN" in context
+    assert "HIGH_SIGNAL_END" in context
+    assert "material_char_budget_exceeded" in context
+    assert market_record["status"] == "compressed"
+    assert market_record["chars"] <= DEFAULT_MATERIAL_MAX_CHARS
+    assert market_record["original_chars"] > market_record["chars"]
+    assert market_record["omitted_chars"] > 0
+    assert "material_compressed_for_codex_input" in market_record["warnings"]
+    assert manifest["codex_input"]["research_context"]["over_budget"] is False
 
 
 def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_path: Path) -> None:
@@ -558,6 +618,26 @@ def _write_strategy_experiment_material(config, run) -> list[str]:
 
 def _skip_analysis_materials(config, run) -> list[str]:
     return []
+
+
+def _write_large_market_material(config, run) -> list[str]:
+    content = "\n".join(
+        [
+            "---",
+            "artifact_type: analysis_market_material",
+            "schema_version: 1",
+            "---",
+            "",
+            "# market_material",
+            "",
+            "HIGH_SIGNAL_BEGIN",
+            *["low priority filler material" for _ in range(1400)],
+            "HIGH_SIGNAL_END",
+        ]
+    )
+    (run.analysis_dir / "market_material.md").write_text(content, encoding="utf-8")
+    run.manifest["artifacts"]["market_material"] = "analysis/market_material.md"
+    return ["analysis/market_material.md"]
 
 
 def _noop_stage(config, run) -> list[str]:

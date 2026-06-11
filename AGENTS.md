@@ -163,6 +163,7 @@ Current bias:
 
 ## Artifact Expectations
 
+* Artifact map, layer rules, and Codex input policy live in `docs/artifact-governance.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
@@ -192,11 +193,14 @@ Current bias:
 * `analysis/alert_decision_material.md` records bounded AI-readable alert priority, downgrade, suppression, and uncertainty material.
 * `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
-* `analysis/decision_intelligence_material.md` records AI-readable decision material from M3 JSON artifacts.
-* `run_manifest.json` records decision-intelligence enabled/status, produced artifacts, counts, previous-run comparison status, warnings, and errors.
+* `analysis/decision_intelligence_material.md` records AI-readable decision material from deterministic decision-intelligence JSON artifacts.
+* `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include signal, strategy evaluation, strategy experiment, decision, and event intelligence material, not shared OHLCV history.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, and event intelligence material, not shared OHLCV history.
+* Codex context must not embed full raw streams, full shared OHLCV history, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
+* Codex input should prioritize high-signal decision, risk, alert, strategy gate, and event evidence over low-priority record dumps.
+* Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
 * Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
@@ -212,6 +216,12 @@ Current bias:
 * README is for humans.
 * AGENTS.md is for AI agents.
 * `docs/` is for durable project documentation and reusable implementation contracts.
+* Documentation index:
+* `docs/artifact-governance.md`: artifact map, artifact layer rules, Codex input policy, and doc index.
+* `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
+* `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
+* `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
+* `runs/README.md`: run artifact directory purpose.
 * Directory descriptions state long-term purpose, not just current file inventory.
 * Prefer stable contract files.
 * Update existing contract files as behavior evolves.
@@ -302,6 +312,8 @@ Do not claim success without running the relevant command.
 * For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.
 * Alert priority, event severity, decision impact, downgrade reasons, and no-alert states must come from generated artifacts, not Codex wording.
 * Use `python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>` to rerun only report-facing alert material against existing upstream artifacts.
+* For Codex input acceptance, inspect `run_manifest.json` `codex_input`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`.
+* For Codex input acceptance, verify full intermediate JSON, raw streams, shared OHLCV history, and full run manifests are referenced by path, not embedded wholesale.
 * Treat critical asset-mapping errors, false duplicate merges, missing traceability, or unsafe event upgrades as regression-fixture candidates.
 * Treat unsafe alert escalation, missing no-alert suppression, or Codex-boundary leakage as regression-fixture candidates.
 * For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
