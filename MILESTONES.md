@@ -20,9 +20,64 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M8 - Local Research Data Lake and Data Quality Foundation
+### M9 - Outcome Tracking and Research Feedback Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Turn prior Halpha signals, event assessments, alert decisions, and decision-support recommendations into deterministic outcome records that show what later happened, improve research accountability, and feed future calibration without turning Halpha into trading execution or a forecasting guarantee.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M8 local research data catalog, run index, text-event history, data-quality summary, Codex context governance, strategy evaluation, decision-intelligence, event assessment, alert decision, and report path instead of replacing them;
+* define durable outcome tracking contracts for outcome targets, source records, as-of timestamps, maturity horizons, evaluation windows, observable metrics, outcome states, warnings, and downstream consumers;
+* identify prior evaluable records from the local run index and per-run artifacts, including market signals, strategy gate outcomes, event intelligence assessments, alert decisions, decision recommendations, watch triggers, and data-quality summaries;
+* create stable outcome target records with source run id, source artifact, source record id, asset, timeframe, source timestamp, target kind, evaluation horizon, maturity status, expected observation, evidence references, and uncertainty notes;
+* evaluate matured market and strategy outcomes from shared OHLCV history using only data after the source timestamp, with explicit no-lookahead rules, data availability checks, return windows, directional alignment, drawdown or adverse excursion where practical, threshold hits, and insufficient-data states;
+* evaluate event, alert, and decision follow-through from later Halpha artifacts and reusable text-event history, using deterministic states such as confirmed, contradicted, unresolved, stale, skipped, or insufficient-data rather than subjective hindsight claims;
+* persist reusable outcome history outside per-run report directories with stable outcome keys, source run ids, evaluation run ids, maturity horizon, status, metrics, warnings, errors, and source artifact references;
+* generate current-run outcome artifacts such as `analysis/outcome_targets.json`, `analysis/outcome_evaluations.json`, and bounded `analysis/outcome_tracking_material.md`;
+* connect outcome tracking references into the local research data catalog, run index summaries, data inspection output, research context, Codex context, and the final Simplified Chinese Markdown report only as bounded accountability evidence;
+* ensure Codex may explain Halpha-generated outcome states but must not create outcome labels, validate missing histories, infer omitted store contents, or score prior recommendations independently;
+* support focused validation through existing run, until-stage, single-stage, and narrow standalone or inspection paths without collecting unnecessary new data or running Codex CLI;
+* add tests and golden cases for no-lookahead windows, pending versus matured targets, insufficient OHLCV data, directional alignment, adverse excursion, event follow-through, alert follow-through, decision follow-through, duplicate outcome keys, manifest references, and Codex input boundaries;
+* verify the M9 product path with automated tests and real-source local runs, including no-Codex validation and full report validation when Codex CLI use is permitted.
+
+M9 favors:
+
+* research feedback loops over more one-off signal generation;
+* post-run evaluation and horizon labeling practices from quantitative research over subjective report grading;
+* as-of timestamps, maturity horizons, and no-lookahead checks over convenient but biased hindsight;
+* append-only, idempotent local outcome history over mutable hidden state;
+* deterministic metrics and state machines over ML-generated correctness scores;
+* local JSON, Markdown, Parquet, and SQLite summaries that fit the existing M8 data lake shape;
+* explicit pending, matured, evaluated, skipped, stale, insufficient-data, warning, degraded, and failed states over silent omissions;
+* bounded Codex context that summarizes outcome evidence instead of embedding full outcome history or raw stores;
+* source-linked accountability language that improves report honesty without claiming predictive certainty;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M9 does not require:
+
+* live trading execution, order placement, position sizing, portfolio automation, broker or exchange account operations, or realized account PnL;
+* judging whether a recommendation was profitable for a user portfolio;
+* automatic strategy promotion, parameter optimization, or model retraining based on outcome scores;
+* machine learning prediction, reinforcement learning, feature-store design, or custom outcome scoring models;
+* new exchange, derivatives, macro, on-chain, market-structure, or public text data sources;
+* scheduler, daemon, websocket, streaming, high-frequency polling, or continuous monitoring runtime;
+* hosted databases, cloud warehouse deployment, distributed processing, Kafka, Spark, Airflow, Prefect, Redis, Celery, dashboards, or notebook workbenches;
+* perfect semantic understanding of event consequences or complete external-world validation;
+* storing full reusable outcome history, raw text archives, SQLite tables, Parquet tables, or local data lake tables in Codex context;
+* making Codex or another LLM the source of outcome labels, correctness judgments, strategy promotion, alert validation, action recommendations, or price forecasts;
+* claiming that favorable historical outcomes guarantee future performance, safe trading, or investment suitability.
+
+## Completed Milestones
+
+### M8 - Local Research Data Lake and Data Quality Foundation
+
+Status: completed.
 
 Goal:
 
@@ -72,8 +127,6 @@ M8 does not require:
 * scheduler, daemon, websocket, streaming, high-frequency polling, or continuous monitoring runtime;
 * trading execution, order placement, position sizing, portfolio automation, account connection, or exchange account operations;
 * claiming that higher data quality guarantees profitable signals, forecasts, or trading outcomes.
-
-## Completed Milestones
 
 ### M7 - Alert Decision and Event Reassessment Foundation
 
