@@ -146,6 +146,7 @@ build_market_regime_assessment
 build_risk_assessment
 build_decision_recommendations
 build_watch_triggers
+build_event_market_confluence
 build_decision_intelligence_delta
 build_decision_intelligence_material
 build_analysis_materials
@@ -214,6 +215,7 @@ A successful configured run can write:
 - `analysis/risk_assessment.json`: deterministic risk assessment.
 - `analysis/decision_recommendations.json`: deterministic decision-support recommendations.
 - `analysis/watch_triggers.json`: deterministic watch triggers.
+- `analysis/event_market_confluence.json`: deterministic event-quant and event-decision relationship records.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
 - `analysis/market_material.md`: AI-readable market material.
