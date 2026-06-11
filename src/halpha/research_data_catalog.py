@@ -49,7 +49,11 @@ def build_research_data_catalog(
     warnings = []
     errors = []
 
-    for store in (_ohlcv_store_record(config, run), _run_index_store_record(run)):
+    for store in (
+        _ohlcv_store_record(config, run),
+        _run_index_store_record(run),
+        _text_event_history_store_record(run),
+    ):
         if store is None:
             continue
         stores.append(store)
@@ -193,6 +197,58 @@ def _run_index_store_record(run: RunContext) -> dict[str, Any] | None:
         "warnings": warnings,
         "errors": errors,
     }
+
+
+def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
+    state_path = run.config_path.parent / "data" / "research" / "metadata" / "text_event_history_state.json"
+    storage_path = run.config_path.parent / "data" / "research" / "text_events"
+    state = _read_json_object(state_path)
+    summary = run.manifest.get("text_event_history")
+    if state is None and not isinstance(summary, dict):
+        return None
+
+    warnings = _string_list(state.get("warnings")) if isinstance(state, dict) else []
+    errors = _error_list(state.get("errors")) if isinstance(state, dict) else []
+    totals = state.get("totals") if isinstance(state, dict) else {}
+    return {
+        "name": "text_event_history",
+        "kind": "text_event_history",
+        "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
+        "format": "parquet",
+        "storage_path": display_path(storage_path, base=run.config_path.parent),
+        "schema_path": None,
+        "state_path": display_path(state_path, base=run.config_path.parent),
+        "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
+        "partition_fields": ["source", "year", "month"],
+        "unique_key_fields": ["stable_event_key"],
+        "source_fields": ["source"],
+        "sources": _history_sources(state),
+        "latest_update_at": state.get("updated_at") if isinstance(state, dict) else None,
+        "record_count": _int(totals.get("records")) if isinstance(totals, dict) else 0,
+        "warning_count": len(warnings),
+        "error_count": len(errors),
+        "consumers": [
+            "data_quality_summary",
+            "future_event_workflows",
+            "future_outcome_workflows",
+        ],
+        "source_artifacts": [display_path(state_path, base=run.config_path.parent)],
+        "warnings": warnings,
+        "errors": errors,
+    }
+
+
+def _history_sources(state: dict[str, Any] | None) -> list[str]:
+    sources = state.get("sources") if isinstance(state, dict) else None
+    if not isinstance(sources, list):
+        return []
+    return sorted(
+        {
+            str(source.get("source"))
+            for source in sources
+            if isinstance(source, dict) and isinstance(source.get("source"), str) and source.get("source")
+        }
+    )
 
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:

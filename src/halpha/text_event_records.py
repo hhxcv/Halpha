@@ -12,7 +12,9 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from .pipeline import PipelineError, RunContext
 from .raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
+from .research_data_catalog import write_research_data_catalog
 from .storage import write_json
+from .text_event_history import write_text_event_history
 
 
 STAGE_NAME = "build_text_event_records"
@@ -60,7 +62,9 @@ def build_text_event_records(config: dict[str, Any], run: RunContext) -> list[st
     write_json(output_path, artifact)
     run.manifest["artifacts"]["text_event_records"] = TEXT_EVENT_RECORDS_ARTIFACT
     _record_manifest_summary(run, records=records, warnings=warnings, errors=errors, status="succeeded")
-    return [TEXT_EVENT_RECORDS_ARTIFACT]
+    history_artifacts = write_text_event_history(config, run, records)
+    catalog_artifacts = write_research_data_catalog(config, run)
+    return [TEXT_EVENT_RECORDS_ARTIFACT, *history_artifacts, *catalog_artifacts]
 
 
 def _read_raw_text_events(run: RunContext) -> dict[str, Any]:
