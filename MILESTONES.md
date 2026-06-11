@@ -20,9 +20,64 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M7 - Alert Decision and Event Reassessment Foundation
+### M8 - Local Research Data Lake and Data Quality Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Make local long-term research data, run indexes, reusable text-event history, and data-quality evidence first-class pipeline inputs for future strategy, event, outcome, and monitoring workflows while preserving inspectable per-run artifacts and bounded Codex inputs.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M7 event assessment, alert decision, artifact governance, decision-intelligence, strategy evaluation, text-event intelligence, Codex context, and report path instead of replacing it;
+* define durable local research data lake, run index, text-event history, and data-quality contracts in stable project documentation;
+* keep shared OHLCV history as reusable local input data outside per-run report directories while making its schema, partitions, source coverage, and update state discoverable through catalog metadata;
+* create a local research data catalog that records implemented stores, schemas, partition rules, unique keys, source identity, latest update status, and downstream consumers without exposing machine-local private paths;
+* create a local run index that records run IDs, stage status, generated artifacts, key counts, warnings, errors, completion status, and latest successful run references using repo-relative or config-relative paths;
+* persist normalized text-event history outside per-run report directories with stable event keys, source identity, canonical URLs, timestamps, content hashes, duplicate grouping, originating run IDs, warnings, and source artifact references;
+* deduplicate reusable text-event history deterministically so repeated public items remain traceable without silently hiding conflicts or source changes;
+* generate `analysis/data_quality_summary.json` for each product run, covering current-run market data, text data, shared store reuse, schema checks, timestamp checks, duplicate checks, stale data, partial collection failure, degraded states, warnings, and source artifacts;
+* connect data-quality summary and local-store references into `run_manifest.json`, research context, Codex context, and the final Simplified Chinese Markdown report only as bounded, decision-relevant evidence;
+* ensure Codex input uses concise quality and store summaries instead of full reusable history, raw text archives, or local data lake tables;
+* support focused validation through existing run, until-stage, single-stage, and narrowly scoped local inspection paths without fabricating skipped artifacts;
+* add tests for catalog records, run index writes, text-event history append and deduplication, quality checks, stale or malformed timestamps, schema drift, partial source failure, manifest references, and Codex input boundaries;
+* verify the M8 product path with automated tests and real-source local runs, including no-Codex validation and full report validation when Codex CLI use is permitted.
+
+M8 favors:
+
+* durable local evidence and quality metadata over per-run-only memory;
+* Parquet-backed reusable tables for appendable analytical history where practical;
+* SQLite for small mutable indexes such as run indexes and latest pointers where plain files become insufficient;
+* JSON manifests and Markdown material as stable Halpha-owned downstream contracts;
+* deterministic schema, timestamp, source, duplicate, and staleness checks over hidden framework validation state;
+* clear separation between raw inputs, reusable local history, current-run views, analysis artifacts, AI-readable material, and final reports;
+* repo-relative or config-relative artifact references over machine-local absolute paths;
+* bounded Codex context that summarizes quality and relevance instead of embedding large historical stores;
+* explicit `ok`, `warning`, `degraded`, `skipped`, and `failed` states over silent data-quality assumptions;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M8 does not require:
+
+* outcome tracking for prior recommendations, strategy signals, or alert decisions;
+* new exchange, derivatives, macro, on-chain, market-structure, or public text data sources;
+* replacing the existing OHLCV store, strategy evaluation layer, text-event intelligence layer, event assessment layer, alert decision layer, or report generation path;
+* broad data lake governance, cloud object storage, remote sync, warehouse deployment, hosted database service, or distributed processing;
+* adopting Apache Iceberg, Delta Lake, Great Expectations, Kafka, Spark, Airflow, Prefect, Redis, Celery, vector databases, or a microservice architecture;
+* making DuckDB, SQL workbenches, dashboards, or ad hoc analytical notebooks part of the required product path;
+* storing full reusable history in Codex context or asking Codex to validate data quality;
+* automatic data repair that rewrites source evidence without traceable warnings;
+* scheduler, daemon, websocket, streaming, high-frequency polling, or continuous monitoring runtime;
+* trading execution, order placement, position sizing, portfolio automation, account connection, or exchange account operations;
+* claiming that higher data quality guarantees profitable signals, forecasts, or trading outcomes.
+
+## Completed Milestones
+
+### M7 - Alert Decision and Event Reassessment Foundation
+
+Status: completed.
 
 Goal:
 
@@ -69,8 +124,6 @@ M7 does not require:
 * training custom NLP, ML, or LLM models;
 * making Codex or another LLM the source of event assessment, alert priority, decision impact, action recommendations, or price forecasts;
 * claiming that an alert decision predicts price, guarantees a market move, or supports trading execution.
-
-## Completed Milestones
 
 ### M6 - Pretrained NLP Event Intelligence Foundation
 
