@@ -49,13 +49,12 @@ def build_research_data_catalog(
     warnings = []
     errors = []
 
-    ohlcv_store = _ohlcv_store_record(config, run)
-    if ohlcv_store is None:
-        warnings.append("market.ohlcv is not configured; no shared OHLCV store is registered.")
-    else:
-        stores.append(ohlcv_store)
-        warnings.extend(ohlcv_store["warnings"])
-        errors.extend(ohlcv_store["errors"])
+    for store in (_ohlcv_store_record(config, run), _run_index_store_record(run)):
+        if store is None:
+            continue
+        stores.append(store)
+        warnings.extend(store["warnings"])
+        errors.extend(store["errors"])
 
     status = _overall_status(stores=stores, warnings=warnings, errors=errors)
     return {
@@ -147,6 +146,51 @@ def _ohlcv_store_record(config: dict[str, Any], run: RunContext) -> dict[str, An
             display_path(state_path, base=run.config_path.parent),
         ],
         "warnings": _unique_sorted(warnings),
+        "errors": errors,
+    }
+
+
+def _run_index_store_record(run: RunContext) -> dict[str, Any] | None:
+    index_summary = run.manifest.get("run_index")
+    if not isinstance(index_summary, dict):
+        return None
+    index_path = run.config_path.parent / "data" / "research" / "index.sqlite"
+    if not index_path.exists() and index_summary.get("status") != "failed":
+        return None
+
+    status = str(index_summary.get("status") or "degraded")
+    warnings = _string_list(index_summary.get("warnings"))
+    errors = []
+    if status == "failed":
+        message = index_summary.get("error")
+        errors.append({"message": str(message or "run index write failed")})
+
+    tables = index_summary.get("tables")
+    runs = _int(tables.get("runs")) if isinstance(tables, dict) else 0
+    return {
+        "name": "run_index",
+        "kind": "run_audit_index",
+        "status": status,
+        "format": "sqlite",
+        "storage_path": display_path(index_path, base=run.config_path.parent),
+        "schema_path": None,
+        "state_path": display_path(index_path, base=run.config_path.parent),
+        "schema_version": index_summary.get("schema_version"),
+        "partition_fields": [],
+        "unique_key_fields": ["run_id"],
+        "source_fields": [],
+        "sources": [],
+        "latest_update_at": index_summary.get("updated_at"),
+        "record_count": runs,
+        "warning_count": len(warnings),
+        "error_count": len(errors),
+        "consumers": [
+            "previous_run_lookup",
+            "data_inspection",
+            "audit",
+        ],
+        "source_artifacts": [display_path(index_path, base=run.config_path.parent)],
+        "warnings": warnings,
         "errors": errors,
     }
 

@@ -76,9 +76,7 @@ def test_research_data_catalog_skips_when_ohlcv_is_not_configured(tmp_path: Path
 
     assert catalog["status"] == "skipped"
     assert catalog["stores"] == []
-    assert catalog["warnings"] == [
-        "market.ohlcv is not configured; no shared OHLCV store is registered."
-    ]
+    assert catalog["warnings"] == []
 
 
 def _write_config(tmp_path: Path) -> Path:

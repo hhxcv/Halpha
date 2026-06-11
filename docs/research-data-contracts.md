@@ -27,7 +27,7 @@ implemented.
 | --- | --- | --- | --- |
 | Shared OHLCV history | Implemented | OHLCV sync stage | market views, strategy evaluation, standalone backtest, experiments |
 | Research data catalog | Implemented | local data catalog writer | manifest, data inspection, data quality summary |
-| Local run index | Not implemented yet | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
+| Local run index | Implemented | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
 | Text event history | Not implemented yet | text event history writer | data quality summary, future event/outcome workflows |
 | Data quality summary | Not implemented yet | data quality stage | research context, Codex context, report, manifest |
 
