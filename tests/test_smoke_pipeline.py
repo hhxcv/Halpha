@@ -68,6 +68,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/text_event_signals.json",
         "analysis/event_intelligence_assessment.json",
         "analysis/alert_decisions.json",
+        "analysis/alert_decision_material.md",
         "analysis/event_intelligence_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -97,6 +98,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "research_context": "analysis/research_context.md",
         "event_intelligence_assessment": "analysis/event_intelligence_assessment.json",
         "alert_decisions": "analysis/alert_decisions.json",
+        "alert_decision_material": "analysis/alert_decision_material.md",
         "event_intelligence_material": "analysis/event_intelligence_material.md",
         "text_event_records": "analysis/text_event_records.json",
         "text_event_classification_evidence": "analysis/text_event_classification_evidence.json",
@@ -129,6 +131,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_event_market_confluence", "succeeded"),
         ("build_event_intelligence_assessment", "succeeded"),
         ("build_alert_decisions", "succeeded"),
+        ("build_alert_decision_material", "succeeded"),
         ("build_event_intelligence_material", "succeeded"),
         ("build_decision_intelligence_delta", "succeeded"),
         ("build_decision_intelligence_material", "succeeded"),
@@ -154,12 +157,16 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert "artifact_type: analysis_market_material" in market_material
     assert "artifact_type: analysis_text_material" in text_material
     event_material = (run_dir / "analysis/event_intelligence_material.md").read_text(encoding="utf-8")
+    alert_material = (run_dir / "analysis/alert_decision_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_event_intelligence_material" in event_material
     assert "codex_may_generate_event_categories: false" in event_material
+    assert "artifact_type: analysis_alert_decision_material" in alert_material
+    assert "codex_may_generate_alert_priority: false" in alert_material
 
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     assert "Use Chinese section headings only." in prompt
     assert "Event intelligence material rules:" in prompt
+    assert "Alert decision material rules:" in prompt
     assert "Source-provided smoke event." in prompt
     assert codex_calls[0]["input"] == prompt
     assert codex_calls[0]["encoding"] == "utf-8"
@@ -272,6 +279,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/event_market_confluence.json",
         "analysis/event_intelligence_assessment.json",
         "analysis/alert_decisions.json",
+        "analysis/alert_decision_material.md",
         "analysis/event_intelligence_material.md",
         "analysis/decision_intelligence_delta.json",
         "analysis/decision_intelligence_material.md",
@@ -368,6 +376,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["alert_decision_no_alert_records"] == 4
     assert manifest["counts"]["alert_decision_p0_records"] == 0
     assert manifest["counts"]["alert_decision_p1_records"] == 0
+    assert manifest["counts"]["alert_decision_material_records"] == 4
     assert manifest["counts"]["event_intelligence_material_records"] == 1
     assert manifest["counts"]["decision_delta_changed_records"] == 0
     assert manifest["counts"]["decision_intelligence_material_records"] == 4
@@ -391,6 +400,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["event_market_confluence"] == "analysis/event_market_confluence.json"
     assert manifest["artifacts"]["event_intelligence_assessment"] == "analysis/event_intelligence_assessment.json"
     assert manifest["artifacts"]["alert_decisions"] == "analysis/alert_decisions.json"
+    assert manifest["artifacts"]["alert_decision_material"] == "analysis/alert_decision_material.md"
     assert manifest["artifacts"]["event_intelligence_material"] == "analysis/event_intelligence_material.md"
     assert manifest["artifacts"]["decision_intelligence_delta"] == "analysis/decision_intelligence_delta.json"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
@@ -461,6 +471,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         (run_dir / "analysis/decision_intelligence_delta.json").read_text(encoding="utf-8")
     )
     decision_material = (run_dir / "analysis/decision_intelligence_material.md").read_text(encoding="utf-8")
+    alert_decision_material = (run_dir / "analysis/alert_decision_material.md").read_text(encoding="utf-8")
     strategy_runs = json.loads((run_dir / "analysis/quant_strategy_runs.json").read_text(encoding="utf-8"))
     strategy_evaluation = json.loads(
         (run_dir / "analysis/strategy_evaluation_summary.json").read_text(encoding="utf-8")
@@ -521,6 +532,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert decision_delta["changes"] == []
     assert manifest["decision_intelligence"]["previous_run"]["status"] == "no_previous_run"
     assert "artifact_type: analysis_decision_intelligence_material" in decision_material
+    assert "artifact_type: analysis_alert_decision_material" in alert_decision_material
+    assert "codex_may_generate_alert_priority: false" in alert_decision_material
     assert "research_decision_support_only: true" in decision_material
     for artifact in [
         "analysis/market_regime_assessment.json",
@@ -553,11 +566,13 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in research_context
     assert "market_signals: analysis/market_signals.json" in research_context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
+    assert "alert_decision_material: analysis/alert_decision_material.md" in research_context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in research_context
     assert "artifact_type: analysis_market_signal_material" in research_context
     assert "artifact_type: analysis_strategy_evaluation_material" in research_context
     assert "artifact_type: analysis_strategy_experiment_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
+    assert "artifact_type: analysis_alert_decision_material" in research_context
     assert "artifact_type: analysis_event_intelligence_material" in research_context
     assert "artifact_type: analysis_market_signal_material" in context
     assert "artifact_type: analysis_strategy_evaluation_material" in context
@@ -571,6 +586,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
+    assert "artifact_type: analysis_alert_decision_material" in context
+    assert "alert_decision_material: analysis/alert_decision_material.md" in context
     assert "artifact_type: analysis_event_intelligence_material" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
     assert "analysis/decision_recommendations.json" in context
@@ -586,6 +603,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "Use Halpha-generated evaluation metrics only" in prompt
     assert "Decision intelligence material rules:" in prompt
     assert "Event intelligence material rules:" in prompt
+    assert "Alert decision material rules:" in prompt
+    assert "Do not generate or revise alert priorities" in prompt
     assert "Do not generate or revise event classifications" in prompt
     assert "event-quant confluence or conflict" in prompt
     assert "current decision view" in prompt

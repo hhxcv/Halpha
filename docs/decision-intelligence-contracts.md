@@ -511,7 +511,7 @@ Rules:
 
 ## Alert Decision Material
 
-Status: contract, not implemented yet.
+Status: implemented.
 
 Artifact:
 

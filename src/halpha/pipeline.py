@@ -33,6 +33,7 @@ STAGE_ORDER = (
     "build_event_market_confluence",
     "build_event_intelligence_assessment",
     "build_alert_decisions",
+    "build_alert_decision_material",
     "build_event_intelligence_material",
     "build_decision_intelligence_delta",
     "build_decision_intelligence_material",
@@ -338,6 +339,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_event_market_confluence"] = _build_event_market_confluence
     handlers["build_event_intelligence_assessment"] = _build_event_intelligence_assessment
     handlers["build_alert_decisions"] = _build_alert_decisions
+    handlers["build_alert_decision_material"] = _build_alert_decision_material
     handlers["build_event_intelligence_material"] = _build_event_intelligence_material
     handlers["build_decision_intelligence_delta"] = _build_decision_intelligence_delta
     handlers["build_decision_intelligence_material"] = _build_decision_intelligence_material
@@ -615,6 +617,12 @@ def _build_alert_decisions(config: dict[str, Any], run: RunContext) -> list[str]
     from .alert_decisions import build_alert_decisions
 
     return build_alert_decisions(config, run)
+
+
+def _build_alert_decision_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .analysis.alert_decision_material import build_alert_decision_material
+
+    return build_alert_decision_material(config, run)
 
 
 def _build_event_intelligence_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
