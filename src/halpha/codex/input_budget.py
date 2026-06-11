@@ -16,6 +16,7 @@ CODEX_INPUT_POLICY = {
     "full_raw_streams_embedded": False,
     "full_intermediate_json_embedded": False,
     "full_shared_ohlcv_history_embedded": False,
+    "full_outcome_history_embedded": False,
     "full_run_manifest_embedded": False,
     "prefer_high_signal_decision_risk_alert_event_strategy_material": True,
     "summarize_or_omit_low_priority_records_with_counts": True,

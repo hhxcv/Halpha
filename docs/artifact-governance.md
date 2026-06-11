@@ -158,9 +158,9 @@ Outcome tracking artifacts:
   state metadata.
 
 These artifacts record prior research targets, later outcome evaluations, and
-reusable outcome history. They are not Codex context by themselves. Once
-implemented, Codex should consume bounded `analysis/outcome_tracking_material.md`
-instead of full target, evaluation, or history records.
+reusable outcome history. They are not Codex context by themselves. Codex should
+consume bounded `analysis/outcome_tracking_material.md` instead of full target,
+evaluation, or history records.
 
 ### Report-Facing Material
 
@@ -175,7 +175,7 @@ Eligible Codex input:
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
 - `analysis/data_quality_material.md`
-- `analysis/outcome_tracking_material.md` when implemented
+- `analysis/outcome_tracking_material.md`
 
 Material files must stay bounded, source-aware, and explicit about what Codex
 may explain versus what Codex must not generate.
@@ -208,8 +208,9 @@ Codex input policy:
 - Do not embed full raw streams.
 - Do not embed full intermediate JSON evidence.
 - Do not embed full shared OHLCV history.
+- Do not embed full reusable outcome history.
 - Do not embed full run manifests.
-- Prefer high-signal decision, risk, alert, event, strategy, gate, and quality evidence.
+- Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:

@@ -12,6 +12,8 @@ from halpha.storage import write_json
 def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
+    _write_outcome_history_state(tmp_path)
+    _write_full_outcome_history_with_sentinel(tmp_path)
 
     result = run_pipeline(
         config,
@@ -28,11 +30,13 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert result.failed_stage is None
 
     context = (result.run.codex_context_dir / "context.md").read_text(encoding="utf-8")
+    research_context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
     assert "# codex_context" in context
     assert "raw_market: raw/market.json" in context
     assert "raw_text_events: raw/text_events.json" in context
     assert "data_quality_summary: analysis/data_quality_summary.json" in context
     assert "data_quality_material: analysis/data_quality_material.md" in context
+    assert "outcome_tracking_material: analysis/outcome_tracking_material.md" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
@@ -46,12 +50,17 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert '<embed path="analysis/research_context.md">' in context
     assert "artifact_type: research_context" in context
     assert "artifact_type: analysis_data_quality_material" in context
+    assert "artifact_type: analysis_outcome_tracking_material" in context
+    assert "outcome_tracking_material: analysis/outcome_tracking_material.md" in research_context
+    assert "artifact_type: analysis_outcome_tracking_material" in research_context
     assert "codex_may_generate_quality_checks: false" in context
     assert "full_reusable_history_embedded: false" in context
     assert "full_catalog_embedded: false" in context
     assert "full_run_index_embedded: false" in context
+    assert "full_outcome_history_embedded: false" in context
     assert "CREATE TABLE" not in context
     assert "stable_event_key:" not in context
+    assert "FULL_OUTCOME_HISTORY_SHOULD_NOT_APPEAR" not in context
     assert "content_text: Source-provided event text." in context
 
     prompt = (result.run.codex_context_dir / "prompt.md").read_text(encoding="utf-8")
@@ -78,8 +87,11 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Event intelligence material rules:" in prompt
     assert "Alert decision material rules:" in prompt
     assert "Data quality material rules:" in prompt
+    assert "Outcome tracking material rules:" in prompt
     assert "When data quality material is present" in prompt
     assert "Do not generate or revise data-quality checks" in prompt
+    assert "Do not create outcome labels" in prompt
+    assert "infer omitted outcome stores" in prompt
     assert "Treat store references as references only" in prompt
     assert "P0, P1, P2, P3, and no-alert" in prompt
     assert "Do not generate or revise alert priorities" in prompt
@@ -95,9 +107,11 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "artifact_type: analysis_event_intelligence_material" in prompt
     assert "artifact_type: analysis_alert_decision_material" in prompt
     assert "artifact_type: analysis_data_quality_material" in prompt
+    assert "artifact_type: analysis_outcome_tracking_material" in prompt
     assert "codex_may_generate_event_categories: false" in prompt
     assert "codex_may_generate_alert_priority: false" in prompt
     assert "codex_may_generate_quality_checks: false" in prompt
+    assert "codex_may_generate_outcome_labels: false" in prompt
     assert "codex_may_generate_price_forecasts: false" in prompt
     assert "- 核心摘要" in prompt
     assert "- 标题" not in prompt
@@ -107,6 +121,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
     assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
+    assert manifest["artifacts"]["outcome_tracking_material"] == "analysis/outcome_tracking_material.md"
     assert manifest["codex_input"]["codex_context"]["artifact"] == "codex_context/context.md"
     assert manifest["codex_input"]["codex_context"]["status"] == "included"
     assert manifest["codex_input"]["codex_context"]["chars"] == len(context)
@@ -120,6 +135,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
         record["artifact"]: record for record in manifest["codex_input"]["materials"]
     }
     assert material_records["analysis/data_quality_material.md"]["status"] == "included"
+    assert material_records["analysis/outcome_tracking_material.md"]["status"] == "included"
     codex_context_stage = _stage(manifest, "build_codex_context")
     report_stage = _stage(manifest, "run_codex_report")
     assert codex_context_stage["status"] == "succeeded"
@@ -421,6 +437,43 @@ def _write_text_raw(config, run) -> list[str]:
     run.manifest["artifacts"]["raw_text_events"] = "raw/text_events.json"
     run.manifest["counts"]["text_event_items"] = 1
     return ["raw/text_events.json"]
+
+
+def _write_outcome_history_state(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "outcome_history_state",
+            "updated_at": "2026-06-05T00:00:00Z",
+            "status": "ok",
+            "storage_path": "data/research/outcomes",
+            "history_path": "data/research/outcomes/outcome_history.json",
+            "state_path": "data/research/metadata/outcome_history_state.json",
+            "totals": {"records": 2, "warning_count": 0, "error_count": 0},
+            "sources": [{"source_run_id": "source-run", "record_count": 2}],
+            "target_kinds": [{"value": "event_assessment", "record_count": 1}],
+            "outcome_states": [{"value": "confirmed", "record_count": 1}],
+            "evaluation_statuses": [{"value": "evaluated", "record_count": 2}],
+            "source_artifacts": ["runs/source-run/analysis/outcome_evaluations.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_full_outcome_history_with_sentinel(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "research" / "outcomes" / "outcome_history.json",
+        {
+            "records": [
+                {
+                    "stable_outcome_key": "FULL_OUTCOME_HISTORY_SHOULD_NOT_APPEAR",
+                    "target_id": "FULL_OUTCOME_HISTORY_SHOULD_NOT_APPEAR",
+                }
+            ]
+        },
+    )
 
 
 def _write_market_data_views(config, run) -> list[str]:
