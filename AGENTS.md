@@ -187,6 +187,7 @@ Current bias:
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, not trading instructions.
 * `analysis/watch_triggers.json` records deterministic static watch triggers, not monitoring or alerts.
 * `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
+* `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, and decision-impact assessment records.
 * `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from M3 JSON artifacts.
