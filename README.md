@@ -12,6 +12,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 
 - Collects public Binance ticker data for configured symbols.
 - Collects public RSS text events from configured sources.
+- Normalizes raw text events into source-aware event records for later text intelligence stages.
 - Validates optional local text-intelligence model settings and explicit model preparation metadata.
 - Syncs reusable OHLCV history into a shared local Parquet store.
 - Builds deterministic current-run OHLCV data views.
@@ -110,6 +111,7 @@ Supported stage names:
 ```text
 collect_market_data
 collect_text_events
+build_text_event_records
 sync_ohlcv
 build_market_data_views
 build_strategy_benchmark_suite
@@ -168,6 +170,7 @@ A successful configured run can write:
 
 - `raw/market.json`: public market observations.
 - `raw/text_events.json`: public RSS text events.
+- `analysis/text_event_records.json`: normalized source-aware text event records.
 - `raw/market_data_views.json`: current-run OHLCV input window metadata.
 - `data/market/ohlcv/`: shared finalized OHLCV history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
