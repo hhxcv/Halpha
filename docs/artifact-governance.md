@@ -10,6 +10,8 @@ milestone plan.
 - `AGENTS.md`: AI-agent rules, artifact expectations, and validation rules.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
+- `docs/research-data-contracts.md`: shared local research data, run index,
+  text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
@@ -30,6 +32,10 @@ bounded report-facing material.
 | Codex prompt | Wrap research context with report-generation rules. | Sent to Codex CLI through stdin. |
 | Final report | Generated Simplified Chinese Markdown plus deterministic post-processing tables. | Output, not upstream input. |
 | Manifest | Record lifecycle, artifacts, counts, warnings, errors, and Codex input budget. | Not embedded in full. Used for audit. |
+
+Shared reusable data contracts are defined in
+`docs/research-data-contracts.md`. This document owns Codex input admission
+rules for those contracts.
 
 ## Flow And Artifacts
 
