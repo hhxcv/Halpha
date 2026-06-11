@@ -27,12 +27,7 @@ def collect_text_events(config: dict[str, Any], run: RunContext) -> list[str]:
         run.manifest["counts"]["text_event_items"] = 0
         return []
 
-    raw = _collect_raw_text_events(text)
-    try:
-        validate_text_events_raw_artifact(raw, TEXT_ARTIFACT)
-    except RawArtifactError as exc:
-        raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=3) from exc
-
+    raw = collect_text_events_raw(text)
     artifact_path = run.raw_dir / "text_events.json"
     write_json(artifact_path, raw)
     run.manifest["artifacts"]["raw_text_events"] = TEXT_ARTIFACT
@@ -47,6 +42,15 @@ def collect_text_events(config: dict[str, Any], run: RunContext) -> list[str]:
         )
 
     return [TEXT_ARTIFACT]
+
+
+def collect_text_events_raw(text: dict[str, Any]) -> dict[str, Any]:
+    raw = _collect_raw_text_events(text)
+    try:
+        validate_text_events_raw_artifact(raw, TEXT_ARTIFACT)
+    except RawArtifactError as exc:
+        raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=3) from exc
+    return raw
 
 
 def _collect_raw_text_events(text: dict[str, Any]) -> dict[str, Any]:
