@@ -100,6 +100,9 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "29. Do not generate or revise event classifications, event impacts, event-market relationships, action levels, price forecasts, trading advice, position sizing, or account actions.",
             "30. Treat unknown, low-confidence, skipped, degraded, conflicting, or insufficient event evidence conservatively.",
             "31. Treat financial tone as event-text evidence only, not as a trading signal or price forecast.",
+            "32. When alert decision material is present, explain Halpha-generated P0, P1, P2, P3, and no-alert states where supported.",
+            "33. Use only Halpha-generated alert priority, event severity, decision impact, downgrade reasons, suppression reasons, and uncertainty from the alert decision material.",
+            "34. Do not generate or revise alert priority, event severity, decision impact, action levels, alert delivery, price forecasts, trading advice, position sizing, or account actions.",
             "",
             "Quantitative strategy material rules:",
             "",
@@ -146,6 +149,14 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "- Do not upgrade unknown, low-confidence, skipped, degraded, conflicting, or insufficient event evidence into stronger conclusions.",
             "- Do not turn event signals, financial tone, or confluence records into trading instructions, position sizing, account actions, or investment recommendations.",
             "- If event intelligence material is absent or degraded, do not recreate it from raw text.",
+            "",
+            "Alert decision material rules:",
+            "",
+            "- Use alert decision material as Halpha-generated attention-priority evidence, not as a source for new alert analysis.",
+            "- Explain P0, P1, P2, P3, and no-alert state only when supported by alert decision material.",
+            "- Keep downgrade reasons, suppression reasons, evidence strength, warnings, and uncertainty near alert-state statements.",
+            "- Do not generate or revise alert priorities, event severity, decision impact, action levels, alert delivery, price forecasts, return promises, trading advice, position sizing, or account actions.",
+            "- If alert decision material is absent, do not recreate alert priorities from raw events or other material.",
             "",
             "Report style:",
             "",
@@ -227,6 +238,14 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "text_event_signals": artifacts.get("text_event_signals"),
                 "event_market_confluence": artifacts.get("event_market_confluence"),
                 "event_intelligence_material": artifacts.get("event_intelligence_material"),
+            }
+        )
+    if artifacts.get("alert_decision_material"):
+        index.update(
+            {
+                "event_intelligence_assessment": artifacts.get("event_intelligence_assessment"),
+                "alert_decisions": artifacts.get("alert_decisions"),
+                "alert_decision_material": artifacts.get("alert_decision_material"),
             }
         )
     return index

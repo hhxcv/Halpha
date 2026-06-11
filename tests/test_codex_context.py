@@ -34,6 +34,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
+    assert "alert_decision_material: analysis/alert_decision_material.md" in context
     assert "text_event_records: analysis/text_event_records.json" in context
     assert "text_event_topics: analysis/text_event_topics.json" in context
     assert "text_event_signals: analysis/text_event_signals.json" in context
@@ -61,9 +62,14 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Halpha inserts the complete quant strategy run table after Codex output" in prompt
     assert "do not recreate the full strategy run table" in prompt
     assert "When event intelligence material is present" in prompt
+    assert "When alert decision material is present" in prompt
     assert "Use only Halpha-generated event categories" in prompt
+    assert "Use only Halpha-generated alert priority" in prompt
     assert "Do not generate or revise event classifications" in prompt
     assert "Event intelligence material rules:" in prompt
+    assert "Alert decision material rules:" in prompt
+    assert "P0, P1, P2, P3, and no-alert" in prompt
+    assert "Do not generate or revise alert priorities" in prompt
     assert "event-quant confluence or conflict" in prompt
     assert "do not recreate it from raw text" in prompt
     assert "organize each main section with symbol-level subheadings" in prompt
@@ -74,7 +80,9 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "# codex_context" in prompt
     assert "artifact_type: research_context" in prompt
     assert "artifact_type: analysis_event_intelligence_material" in prompt
+    assert "artifact_type: analysis_alert_decision_material" in prompt
     assert "codex_may_generate_event_categories: false" in prompt
+    assert "codex_may_generate_alert_priority: false" in prompt
     assert "codex_may_generate_price_forecasts: false" in prompt
     assert "- 核心摘要" in prompt
     assert "- 标题" not in prompt

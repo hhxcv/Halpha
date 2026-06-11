@@ -34,6 +34,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
+    assert "alert_decision_material: analysis/alert_decision_material.md" in context
     assert "text_event_records: analysis/text_event_records.json" in context
     assert "text_event_topics: analysis/text_event_topics.json" in context
     assert "text_event_signals: analysis/text_event_signals.json" in context
@@ -58,6 +59,9 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "do_not_calculate_signals_from_raw_ohlcv_history: true" in context
     assert "do_not_inspect_shared_ohlcv_storage: true" in context
     assert "event_intelligence_requirements:" in context
+    assert "alert_decision_requirements:" in context
+    assert "use_halpha_alert_priorities_only: true" in context
+    assert "do_not_generate_alert_priority: true" in context
     assert "use_halpha_event_categories_only: true" in context
     assert "do_not_generate_event_classification: true" in context
     assert "do_not_generate_event_impacts: true" in context
@@ -72,7 +76,10 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert '<embed path="analysis/text_material.md">' in context
     assert "artifact_type: analysis_text_material" in context
     assert '<embed path="analysis/event_intelligence_material.md">' in context
+    assert '<embed path="analysis/alert_decision_material.md">' in context
     assert "artifact_type: analysis_event_intelligence_material" in context
+    assert "artifact_type: analysis_alert_decision_material" in context
+    assert "codex_may_generate_alert_priority: false" in context
     assert "codex_may_generate_event_categories: false" in context
     assert "codex_may_generate_price_forecasts: false" in context
     assert "content_text: Source-provided event text." in context

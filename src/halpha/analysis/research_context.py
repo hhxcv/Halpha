@@ -13,6 +13,7 @@ MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
 STRATEGY_EVALUATION_MATERIAL_ARTIFACT = "analysis/strategy_evaluation_material.md"
 STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT = "analysis/strategy_experiment_material.md"
 DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
+ALERT_DECISION_MATERIAL_ARTIFACT = "analysis/alert_decision_material.md"
 EVENT_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/event_intelligence_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 
@@ -55,6 +56,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=_quant_enabled(config),
         producer_stage="build_decision_intelligence_material",
     )
+    alert_decision_material = _read_material(
+        run.analysis_dir / "alert_decision_material.md",
+        ALERT_DECISION_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("alert_decision_material")),
+        producer_stage="build_alert_decision_material",
+    )
     event_intelligence_material = _read_material(
         run.analysis_dir / "event_intelligence_material.md",
         EVENT_INTELLIGENCE_MATERIAL_ARTIFACT,
@@ -73,6 +80,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
             strategy_evaluation_material=strategy_evaluation_material,
             strategy_experiment_material=strategy_experiment_material,
             decision_intelligence_material=decision_intelligence_material,
+            alert_decision_material=alert_decision_material,
             event_intelligence_material=event_intelligence_material,
             text_material=text_material,
         ),
@@ -92,6 +100,7 @@ def render_research_context(
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
     decision_intelligence_material: str | None,
+    alert_decision_material: str | None,
     event_intelligence_material: str | None,
     text_material: str | None,
 ) -> str:
@@ -144,6 +153,8 @@ def render_research_context(
     lines.extend(_embedded_material(STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material))
     lines.extend(["", "## decision_intelligence_material", ""])
     lines.extend(_embedded_material(DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material))
+    lines.extend(["", "## alert_decision_material", ""])
+    lines.extend(_embedded_material(ALERT_DECISION_MATERIAL_ARTIFACT, alert_decision_material))
     lines.extend(["", "## event_intelligence_material", ""])
     lines.extend(_embedded_material(EVENT_INTELLIGENCE_MATERIAL_ARTIFACT, event_intelligence_material))
     lines.extend(["", "## text_material", ""])
@@ -195,6 +206,14 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "text_event_signals": artifacts.get("text_event_signals"),
                 "event_market_confluence": artifacts.get("event_market_confluence"),
                 "event_intelligence_material": artifacts.get("event_intelligence_material"),
+            }
+        )
+    if artifacts.get("alert_decision_material"):
+        index.update(
+            {
+                "event_intelligence_assessment": artifacts.get("event_intelligence_assessment"),
+                "alert_decisions": artifacts.get("alert_decisions"),
+                "alert_decision_material": artifacts.get("alert_decision_material"),
             }
         )
     return index
@@ -295,6 +314,18 @@ def _generation_constraints() -> dict[str, Any]:
             "do_not_invent_action_levels": True,
             "do_not_upgrade_low_confidence_or_unsupported_material": True,
             "do_not_create_trading_instructions": True,
+        },
+        "alert_decision_requirements": {
+            "include_when_alert_decision_material_exists": True,
+            "use_halpha_alert_priorities_only": True,
+            "include_p0_p1_p2_p3_and_no_alert_state_when_supported": True,
+            "include_downgrade_and_suppression_reasons": True,
+            "include_uncertainty_near_alert_state": True,
+            "do_not_generate_alert_priority": True,
+            "do_not_generate_event_severity": True,
+            "do_not_generate_decision_impact": True,
+            "do_not_generate_action_levels": True,
+            "do_not_create_alert_delivery_or_trading_instructions": True,
         },
         "event_intelligence_requirements": {
             "include_when_event_intelligence_material_exists": True,
