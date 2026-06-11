@@ -106,6 +106,22 @@ metadata manifest and skips downloads. Actual model downloads require a
 gitignored local config that sets `allow_model_download: true`, explicit model
 revisions, and the optional `nlp` dependencies.
 
+Run standalone text intelligence processing from configured text sources:
+
+```bash
+python -m halpha text-intel --config config.example.yaml
+```
+
+Process an existing raw text artifact without collecting public sources:
+
+```bash
+python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
+```
+
+Use `--output-dir <dir>` to choose the standalone output root. The command
+writes implemented text-intelligence artifacts and a manifest under a unique
+local subdirectory. It does not run the full report pipeline or Codex CLI.
+
 Supported stage names:
 
 ```text
@@ -204,6 +220,9 @@ A successful configured run can write:
 - `runs/strategy_experiments/<id>/strategy_benchmark_suite.json`: benchmark suite used by a standalone experiment.
 - `runs/strategy_experiments/<id>/strategy_effectiveness_gates.json`: deterministic strategy gate output.
 - `runs/strategy_experiments/<id>/manifest.json`: standalone strategy experiment manifest.
+- `runs/text_intelligence/<id>/raw/text_events.json`: standalone text raw artifact.
+- `runs/text_intelligence/<id>/analysis/text_event_records.json`: standalone normalized text event records.
+- `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
 
 Failed runs preserve artifacts created before the failure and record errors in
@@ -277,6 +296,12 @@ Run text model preparation metadata acceptance without downloads:
 
 ```bash
 python -m halpha text-models prepare --config config.example.yaml
+```
+
+Run standalone text intelligence acceptance:
+
+```bash
+python -m halpha text-intel --config config.example.yaml
 ```
 
 Run full report acceptance when Codex CLI use is intended:
