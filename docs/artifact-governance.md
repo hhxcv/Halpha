@@ -145,18 +145,19 @@ raw archives.
 
 ### Outcome Tracking Evidence
 
-Planned outcome tracking artifacts:
+Outcome tracking artifacts:
 
-- `analysis/outcome_targets.json`
-- `analysis/outcome_evaluations.json`
-- `data/research/outcomes/`
-- `data/research/metadata/outcome_history_state.json`
+- `analysis/outcome_targets.json`: implemented source-linked targets from the
+  latest previous successful run.
+- `analysis/outcome_evaluations.json`: planned outcome evaluations.
+- `data/research/outcomes/`: planned reusable outcome history.
+- `data/research/metadata/outcome_history_state.json`: planned outcome history
+  state metadata.
 
-These artifacts are intended to record prior research targets, later outcome
-evaluations, and reusable outcome history. They are not Codex context by
-themselves. Once implemented, Codex should consume bounded
-`analysis/outcome_tracking_material.md` instead of full target, evaluation, or
-history records.
+These artifacts record prior research targets, later outcome evaluations, and
+reusable outcome history. They are not Codex context by themselves. Once
+implemented, Codex should consume bounded `analysis/outcome_tracking_material.md`
+instead of full target, evaluation, or history records.
 
 ### Report-Facing Material
 

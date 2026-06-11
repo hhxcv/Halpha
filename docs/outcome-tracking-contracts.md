@@ -5,9 +5,9 @@ compares earlier research targets with later observable evidence so reports can
 carry accountability evidence. It is a durable implementation contract, not a
 milestone-only plan and not an implementation record.
 
-Outcome tracking is planned. Until producers are implemented, the artifacts and
-stores in this document describe intended contracts and must not be described
-as shipped product behavior.
+Outcome tracking is incremental. Contracts marked planned describe intended
+behavior and must not be described as shipped product behavior until producers
+are implemented.
 
 Outcome tracking outputs are personal research material. They are not trades,
 orders, account operations, portfolio instructions, position sizing, return
@@ -33,7 +33,7 @@ promises, price forecasts, or financial advice.
 
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
-| Outcome targets | Planned | outcome target extraction stage | outcome evaluation, outcome material |
+| Outcome targets | Implemented | outcome target extraction stage | outcome evaluation, outcome material |
 | Outcome evaluations | Planned | outcome evaluation stage | outcome history, outcome material |
 | Outcome history | Planned | outcome history writer | later runs, data inspection, outcome material |
 | Outcome tracking material | Planned | outcome material stage | research context, Codex context, report |
@@ -186,7 +186,7 @@ Maturity status values:
 
 ## Outcome Target Artifact
 
-Planned current-run artifact:
+Implemented current-run artifact:
 
 ```text
 analysis/outcome_targets.json
@@ -205,8 +205,10 @@ Required top-level fields:
 - `run_id`
 - `created_at`
 - `status`
+- `previous_run`
 - `target_policy`
 - `targets`
+- `skipped_records`
 - `counts`
 - `source_artifacts`
 - `warnings`
@@ -220,7 +222,9 @@ Required target fields:
 - `source_artifact`
 - `source_record_id`
 - `source_record_type`
+- `source_created_at`
 - `source_as_of`
+- `source`
 - `asset`
 - `symbol`
 - `timeframe`
@@ -244,6 +248,11 @@ Allowed `target_kind` values:
 `expected_observation` must be descriptive and evaluable. It may include fields
 such as direction, threshold, category, state change, or follow-through
 condition. It must not contain trading instructions.
+
+Missing previous successful runs produce a `skipped` artifact with
+`previous_run.status` set to `no_previous_run`. Skipped source records must
+preserve source artifact, source record type, source record id when available,
+reason, and missing fields when relevant.
 
 ## Outcome Evaluation Artifact
 
@@ -434,10 +443,14 @@ Rules:
 
 ## Manifest And Catalog Rules
 
-When implemented, product runs should record:
+Product runs record:
 
 - `analysis/outcome_targets.json` path, status, target count, warning count,
   and error count;
+- outcome target skipped record count and skipped reason counts;
+
+When implemented, product runs should also record:
+
 - `analysis/outcome_evaluations.json` path, status, evaluated count, pending
   count, insufficient-data count, warning count, and error count;
 - `analysis/outcome_tracking_material.md` path and Codex input budget metadata;

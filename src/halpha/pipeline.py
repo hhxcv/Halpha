@@ -38,6 +38,7 @@ STAGE_ORDER = (
     "build_decision_intelligence_delta",
     "build_decision_intelligence_material",
     "build_data_quality_summary",
+    "build_outcome_targets",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -347,6 +348,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_decision_intelligence_delta"] = _build_decision_intelligence_delta
     handlers["build_decision_intelligence_material"] = _build_decision_intelligence_material
     handlers["build_data_quality_summary"] = _build_data_quality_summary
+    handlers["build_outcome_targets"] = _build_outcome_targets
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -651,6 +653,12 @@ def _build_data_quality_summary(config: dict[str, Any], run: RunContext) -> list
     from .data_quality import build_data_quality_summary
 
     return build_data_quality_summary(config, run)
+
+
+def _build_outcome_targets(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .outcome_targets import build_outcome_targets
+
+    return build_outcome_targets(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

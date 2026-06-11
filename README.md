@@ -29,6 +29,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds bounded AI-readable alert decision material for report generation.
 - Builds bounded AI-readable event intelligence material.
 - Builds AI-readable decision material from deterministic JSON artifacts.
+- Extracts deterministic outcome targets from the latest previous successful run.
 - Builds research context and Codex prompt artifacts.
 - Runs Codex CLI to generate a Simplified Chinese report.
 - Inserts deterministic strategy output and strategy effectiveness tables into the final report.
@@ -165,6 +166,7 @@ build_event_intelligence_material
 build_decision_intelligence_delta
 build_decision_intelligence_material
 build_data_quality_summary
+build_outcome_targets
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -244,6 +246,7 @@ A successful configured run can write:
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
 - `analysis/data_quality_summary.json`: current-run data quality checks, statuses, warnings, and source artifact references.
 - `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
+- `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
