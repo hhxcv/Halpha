@@ -1,0 +1,355 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from dataclasses import dataclass
+from json import JSONDecodeError
+from pathlib import Path
+from typing import Any
+
+from .research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
+from .run_index import RUN_INDEX_ARTIFACT, run_index_path
+
+
+TEXT_EVENT_HISTORY_STATE_ARTIFACT = "data/research/metadata/text_event_history_state.json"
+OHLCV_SCHEMA_ARTIFACT = "data/market/metadata/ohlcv_schema.json"
+OHLCV_SYNC_STATE_ARTIFACT = "data/market/metadata/ohlcv_sync_state.json"
+DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
+
+
+class DataInspectionError(Exception):
+    def __init__(self, message: str, *, exit_code: int = 3) -> None:
+        super().__init__(message)
+        self.exit_code = exit_code
+
+
+@dataclass(frozen=True)
+class DataInspectionResult:
+    status: str
+    lines: list[str]
+
+
+def inspect_local_data(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_dir: Path | None = None,
+) -> DataInspectionResult:
+    base = config_path.parent
+    sections = [
+        _catalog_section(config_path, base=base),
+        _run_index_section(config_path, base=base),
+        _text_event_history_section(config_path, base=base),
+        _ohlcv_section(config, config_path, base=base),
+    ]
+    quality = _quality_section(config_path, run_dir=run_dir, base=base)
+    status = _overall_status([section["status"] for section in sections] + [quality["status"]])
+
+    lines = [
+        "Halpha data inspection succeeded.",
+        f"status: {status}",
+        f"config: {_safe_path(config_path, base=Path.cwd())}",
+        "stores:",
+    ]
+    for section in sections:
+        lines.extend(_section_lines(section))
+    lines.append("quality:")
+    lines.extend(_section_lines(quality))
+    return DataInspectionResult(status=status, lines=lines)
+
+
+def _catalog_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    path = research_data_catalog_path(config_path)
+    data, error = _read_json(path)
+    if error:
+        return _section(
+            "research_data_catalog",
+            "skipped",
+            artifact=CATALOG_ARTIFACT,
+            reason=error,
+        )
+    counts = _dict(data.get("counts"))
+    return _section(
+        "research_data_catalog",
+        str(data.get("status") or "unknown"),
+        artifact=CATALOG_ARTIFACT,
+        fields={
+            "stores": _int(counts.get("stores")),
+            "records": _int(counts.get("records")),
+            "warnings": _int(counts.get("warnings")),
+            "errors": _int(counts.get("errors")),
+        },
+        extra={"store_statuses": _store_statuses(data)},
+    )
+
+
+def _run_index_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    path = run_index_path(config_path)
+    if not path.exists():
+        return _section(
+            "run_index",
+            "skipped",
+            artifact=RUN_INDEX_ARTIFACT,
+            reason="run index was not found.",
+        )
+    try:
+        with sqlite3.connect(path) as connection:
+            counts = {
+                "runs": _table_count(connection, "runs"),
+                "run_stages": _table_count(connection, "run_stages"),
+                "run_artifacts": _table_count(connection, "run_artifacts"),
+                "run_latest": _table_count(connection, "run_latest"),
+            }
+            latest = _latest_run_id(connection)
+    except sqlite3.Error as exc:
+        raise DataInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
+    fields: dict[str, Any] = dict(counts)
+    if latest:
+        fields["latest_successful_run_id"] = latest
+    return _section("run_index", "ok", artifact=RUN_INDEX_ARTIFACT, fields=fields)
+
+
+def _text_event_history_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    path = base / TEXT_EVENT_HISTORY_STATE_ARTIFACT
+    data, error = _read_json(path)
+    if error:
+        return _section(
+            "text_event_history",
+            "skipped",
+            artifact=TEXT_EVENT_HISTORY_STATE_ARTIFACT,
+            reason=error,
+        )
+    totals = _dict(data.get("totals"))
+    return _section(
+        "text_event_history",
+        str(data.get("status") or "unknown"),
+        artifact=TEXT_EVENT_HISTORY_STATE_ARTIFACT,
+        fields={
+            "records": _int(totals.get("records")),
+            "sources": len(_list(data.get("sources"))),
+            "warnings": len(_list(data.get("warnings"))),
+            "errors": len(_list(data.get("errors"))),
+        },
+    )
+
+
+def _ohlcv_section(config: dict[str, Any], config_path: Path, *, base: Path) -> dict[str, Any]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    ohlcv = market.get("ohlcv") if isinstance(market, dict) else None
+    if not isinstance(ohlcv, dict):
+        return _section("ohlcv_history", "skipped", reason="market.ohlcv is not configured.")
+    schema, schema_error = _read_json(base / OHLCV_SCHEMA_ARTIFACT)
+    state, state_error = _read_json(base / OHLCV_SYNC_STATE_ARTIFACT)
+    warnings = [error for error in (schema_error, state_error) if error]
+    items = _list(state.get("items")) if isinstance(state, dict) else []
+    record_count = sum(_int(item.get("row_count")) for item in items if isinstance(item, dict))
+    status = "warning" if warnings else str(state.get("status") or "ok")
+    return _section(
+        "ohlcv_history",
+        status,
+        artifact=OHLCV_SYNC_STATE_ARTIFACT,
+        fields={
+            "records": record_count,
+            "items": len(items),
+            "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
+            "warnings": len(warnings),
+        },
+        reason="; ".join(warnings) if warnings else None,
+    )
+
+
+def _quality_section(config_path: Path, *, run_dir: Path | None, base: Path) -> dict[str, Any]:
+    if run_dir is not None:
+        resolved_run_dir = _resolve_run_dir(run_dir, base=base)
+        return _quality_section_from_run_dir(resolved_run_dir, base=base)
+
+    latest = _latest_run_from_index(config_path)
+    if latest is None:
+        return _section(
+            "data_quality_summary",
+            "skipped",
+            artifact=DATA_QUALITY_SUMMARY_ARTIFACT,
+            reason="no latest run was found in the local run index.",
+        )
+    return _quality_section_from_run_dir(latest, base=base)
+
+
+def _quality_section_from_run_dir(run_dir: Path, *, base: Path) -> dict[str, Any]:
+    manifest_path = run_dir / "run_manifest.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    if manifest_error:
+        raise DataInspectionError(f"run_manifest.json could not be inspected: {manifest_error}")
+    quality_path = run_dir / DATA_QUALITY_SUMMARY_ARTIFACT
+    quality, quality_error = _read_json(quality_path)
+    if quality_error:
+        return _section(
+            "data_quality_summary",
+            "skipped",
+            artifact=_safe_path(quality_path, base=base),
+            reason=quality_error,
+            fields={
+                "run_id": manifest.get("run_id"),
+                "run_status": manifest.get("status"),
+                "manifest": _safe_path(manifest_path, base=base),
+            },
+        )
+    counts = _dict(quality.get("counts"))
+    return _section(
+        "data_quality_summary",
+        str(quality.get("status") or "unknown"),
+        artifact=_safe_path(quality_path, base=base),
+        fields={
+            "run_id": quality.get("run_id") or manifest.get("run_id"),
+            "run_status": manifest.get("status"),
+            "checks": _int(counts.get("checks")),
+            "warnings": _int(counts.get("warnings")),
+            "errors": _int(counts.get("errors")),
+            "degraded": _int(counts.get("degraded")),
+            "failed": _int(counts.get("failed")),
+            "manifest": _safe_path(manifest_path, base=base),
+        },
+    )
+
+
+def _latest_run_from_index(config_path: Path) -> Path | None:
+    path = run_index_path(config_path)
+    if not path.exists():
+        return None
+    try:
+        with sqlite3.connect(path) as connection:
+            run_id = _latest_run_id(connection)
+            if not run_id:
+                return None
+            row = connection.execute("SELECT run_dir FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+    except sqlite3.Error as exc:
+        raise DataInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
+    if row is None or not isinstance(row[0], str) or not row[0]:
+        return None
+    run_dir = Path(row[0])
+    if not run_dir.is_absolute():
+        run_dir = config_path.parent / run_dir
+    return run_dir
+
+
+def _resolve_run_dir(run_dir: Path, *, base: Path) -> Path:
+    path = run_dir
+    if not path.is_absolute():
+        path = base / path
+    if not path.exists():
+        raise DataInspectionError("requested run directory was not found.")
+    if not path.is_dir():
+        raise DataInspectionError("requested run directory is not a directory.")
+    return path
+
+
+def _section(
+    name: str,
+    status: str,
+    *,
+    artifact: str | None = None,
+    reason: str | None = None,
+    fields: dict[str, Any] | None = None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "status": status,
+        "artifact": artifact,
+        "reason": reason,
+        "fields": fields or {},
+        "extra": extra or {},
+    }
+
+
+def _section_lines(section: dict[str, Any]) -> list[str]:
+    fields = section["fields"]
+    parts = [f"  {section['name']}: {section['status']}"]
+    if fields:
+        parts.append(_field_text(fields))
+    if section.get("artifact"):
+        parts.append(f"artifact={section['artifact']}")
+    if section.get("reason"):
+        parts.append(f"reason={section['reason']}")
+    lines = [" ".join(parts)]
+    store_statuses = section.get("extra", {}).get("store_statuses")
+    if store_statuses:
+        lines.append(f"    store_statuses: {store_statuses}")
+    return lines
+
+
+def _field_text(fields: dict[str, Any]) -> str:
+    values = []
+    for key in sorted(fields):
+        value = fields[key]
+        if value is None:
+            continue
+        values.append(f"{key}={value}")
+    return " ".join(values)
+
+
+def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}, f"{path.name} was not found."
+    except JSONDecodeError as exc:
+        return {}, f"{path.name} is not valid JSON: {exc.msg}."
+    if not isinstance(loaded, dict):
+        return {}, f"{path.name} must be a JSON object."
+    return loaded, None
+
+
+def _table_count(connection: sqlite3.Connection, table: str) -> int:
+    return int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+
+
+def _latest_run_id(connection: sqlite3.Connection) -> str | None:
+    for key in ("latest_successful_run", "latest_run"):
+        row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
+        if row and isinstance(row[0], str) and row[0]:
+            return row[0]
+    return None
+
+
+def _store_statuses(catalog: dict[str, Any]) -> str | None:
+    stores = _list(catalog.get("stores"))
+    statuses = []
+    for store in stores:
+        if not isinstance(store, dict):
+            continue
+        name = store.get("name")
+        status = store.get("status")
+        if isinstance(name, str) and name and isinstance(status, str) and status:
+            statuses.append(f"{name}={status}")
+    return ", ".join(sorted(statuses)) if statuses else None
+
+
+def _overall_status(statuses: list[str]) -> str:
+    if "failed" in statuses:
+        return "failed"
+    if "degraded" in statuses:
+        return "degraded"
+    if "warning" in statuses:
+        return "warning"
+    return "ok"
+
+
+def _safe_path(path: Path, *, base: Path) -> str:
+    try:
+        return path.resolve().relative_to(base.resolve()).as_posix()
+    except (OSError, ValueError):
+        return path.name
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    return value if isinstance(value, int) else 0
