@@ -165,6 +165,7 @@ Current bias:
 
 * Artifact map, layer rules, and Codex input policy live in `docs/artifact-governance.md`.
 * Local research data contracts live in `docs/research-data-contracts.md`.
+* Outcome tracking contracts live in `docs/outcome-tracking-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
@@ -201,6 +202,7 @@ Current bias:
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from deterministic decision-intelligence JSON artifacts.
 * `analysis/data_quality_summary.json` records current-run market, text, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
 * `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
+* Planned outcome tracking artifacts are defined in `docs/outcome-tracking-contracts.md`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
@@ -230,6 +232,7 @@ Current bias:
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
+* `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
 * `runs/README.md`: run artifact directory purpose.
 * Directory descriptions state long-term purpose, not just current file inventory.
 * Prefer stable contract files.

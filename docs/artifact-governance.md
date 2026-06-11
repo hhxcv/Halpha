@@ -16,6 +16,8 @@ milestone plan.
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
   watch trigger, delta, alert decision, and decision-material contracts.
+- `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation,
+  history, material, and Codex-boundary contracts.
 
 ## Layer Rules
 
@@ -141,6 +143,21 @@ status, but must not create quality checks, invent validation results, inspect
 full shared stores, read SQLite contents, read Parquet tables, or reconstruct
 raw archives.
 
+### Outcome Tracking Evidence
+
+Planned outcome tracking artifacts:
+
+- `analysis/outcome_targets.json`
+- `analysis/outcome_evaluations.json`
+- `data/research/outcomes/`
+- `data/research/metadata/outcome_history_state.json`
+
+These artifacts are intended to record prior research targets, later outcome
+evaluations, and reusable outcome history. They are not Codex context by
+themselves. Once implemented, Codex should consume bounded
+`analysis/outcome_tracking_material.md` instead of full target, evaluation, or
+history records.
+
 ### Report-Facing Material
 
 Eligible Codex input:
@@ -154,6 +171,7 @@ Eligible Codex input:
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
 - `analysis/data_quality_material.md`
+- `analysis/outcome_tracking_material.md` when implemented
 
 Material files must stay bounded, source-aware, and explicit about what Codex
 may explain versus what Codex must not generate.
