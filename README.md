@@ -324,6 +324,21 @@ Run standalone text intelligence acceptance:
 python -m halpha text-intel --config config.example.yaml
 ```
 
+Run standalone text intelligence from an existing raw text artifact:
+
+```bash
+python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
+```
+
+For event-intelligence review, inspect recent `analysis/text_event_records.json`,
+`analysis/text_entity_evidence.json`,
+`analysis/text_event_classification_evidence.json`,
+`analysis/text_event_topics.json`, `analysis/text_event_signals.json`,
+`analysis/event_market_confluence.json`, and
+`analysis/event_intelligence_material.md` artifacts. High-confidence accepted
+outputs should have source references, model or rule evidence, threshold checks,
+and conservative unknown or low-confidence states for ambiguous inputs.
+
 Run full report acceptance when Codex CLI use is intended:
 
 ```bash
