@@ -298,7 +298,12 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
 * For event-intelligence acceptance, inspect recent text event records, entity evidence, classification evidence, topic grouping, event signals, event-market confluence, and event intelligence material.
+* For alert-decision acceptance, use `python -m halpha run --config config.example.yaml --until build_alert_decision_material` when final Codex output is not needed.
+* For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.
+* Alert priority, event severity, decision impact, downgrade reasons, and no-alert states must come from generated artifacts, not Codex wording.
+* Use `python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>` to rerun only report-facing alert material against existing upstream artifacts.
 * Treat critical asset-mapping errors, false duplicate merges, missing traceability, or unsafe event upgrades as regression-fixture candidates.
+* Treat unsafe alert escalation, missing no-alert suppression, or Codex-boundary leakage as regression-fixture candidates.
 * For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
 * For current default strategy acceptance, expect at least three `effective` research candidates under deterministic gates.
 * Use `python -m halpha run --config config.example.yaml` for real-source product acceptance when the user permits Codex CLI use.

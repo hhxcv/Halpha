@@ -1,0 +1,415 @@
+{
+  "schema_version": 1,
+  "artifact_type": "alert_decision_golden_cases",
+  "description": "Golden cases for deterministic event assessment to alert decision behavior.",
+  "cases": [
+    {
+      "case_id": "high_severity_invalidation",
+      "assessment": {
+        "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:high_severity_invalidation",
+        "status": "succeeded",
+        "scope": {
+          "symbol": "BTCUSDT",
+          "timeframe": "1d",
+          "topic_ids": [
+            "text_event_topic:high_severity_invalidation"
+          ],
+          "event_signal_ids": [
+            "text_event_signal:high_severity_invalidation"
+          ]
+        },
+        "event_summary": "High-confidence event directly challenges the current BTCUSDT view.",
+        "affected_assets": [
+          "BTCUSDT"
+        ],
+        "relevant_timeframes": [
+          "1d"
+        ],
+        "source_reliability": "high",
+        "event_severity": "high",
+        "market_response_relationship": "confirmed",
+        "decision_impact": "could_invalidate",
+        "risk_effect": "risk_up",
+        "watch_relevance": "invalidation",
+        "confidence": "high",
+        "evidence": [
+          {
+            "type": "event_signal",
+            "event_signal_id": "text_event_signal:high_severity_invalidation"
+          }
+        ],
+        "downgrade_reasons": [],
+        "uncertainty": [
+          "Golden case remains research material only."
+        ],
+        "warnings": [],
+        "linked_event_signal_ids": [
+          "text_event_signal:high_severity_invalidation"
+        ],
+        "linked_decision_record_ids": [
+          "decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z"
+        ],
+        "linked_watch_trigger_ids": [
+          "watch_trigger:binance:BTCUSDT:1d:invalidation:2026-06-05T00:00:00Z"
+        ],
+        "source_artifacts": [
+          "analysis/event_intelligence_assessment.json",
+          "analysis/text_event_signals.json",
+          "analysis/decision_recommendations.json",
+          "analysis/watch_triggers.json"
+        ]
+      },
+      "expected": {
+        "priority": "P0",
+        "status": "succeeded",
+        "attention_decision": "interrupt_now",
+        "requires_user_attention": true,
+        "requires_reassessment": true,
+        "evidence_strength": "high",
+        "suppression_reasons": []
+      }
+    },
+    {
+      "case_id": "risk_escalation",
+      "assessment": {
+        "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:risk_escalation",
+        "status": "succeeded",
+        "scope": {
+          "symbol": "BTCUSDT",
+          "timeframe": "1d",
+          "topic_ids": [
+            "text_event_topic:risk_escalation"
+          ],
+          "event_signal_ids": [
+            "text_event_signal:risk_escalation"
+          ]
+        },
+        "event_summary": "Medium-severity event raises risk relevance for BTCUSDT.",
+        "affected_assets": [
+          "BTCUSDT"
+        ],
+        "relevant_timeframes": [
+          "1d"
+        ],
+        "source_reliability": "medium",
+        "event_severity": "medium",
+        "market_response_relationship": "conflicting",
+        "decision_impact": "supports_existing_view",
+        "risk_effect": "risk_up",
+        "watch_relevance": "risk_escalation",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "type": "event_signal",
+            "event_signal_id": "text_event_signal:risk_escalation"
+          }
+        ],
+        "downgrade_reasons": [],
+        "uncertainty": [
+          "Golden case remains research material only."
+        ],
+        "warnings": [],
+        "linked_event_signal_ids": [
+          "text_event_signal:risk_escalation"
+        ],
+        "linked_decision_record_ids": [
+          "decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z"
+        ],
+        "linked_watch_trigger_ids": [
+          "watch_trigger:binance:BTCUSDT:1d:risk_escalation:2026-06-05T00:00:00Z"
+        ],
+        "source_artifacts": [
+          "analysis/event_intelligence_assessment.json",
+          "analysis/text_event_signals.json",
+          "analysis/decision_recommendations.json",
+          "analysis/watch_triggers.json"
+        ]
+      },
+      "expected": {
+        "priority": "P1",
+        "status": "succeeded",
+        "attention_decision": "review_soon",
+        "requires_user_attention": true,
+        "requires_reassessment": true,
+        "evidence_strength": "medium",
+        "suppression_reasons": []
+      }
+    },
+    {
+      "case_id": "supported_context",
+      "assessment": {
+        "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:supported_context",
+        "status": "succeeded",
+        "scope": {
+          "symbol": "BTCUSDT",
+          "timeframe": "1d",
+          "topic_ids": [
+            "text_event_topic:supported_context"
+          ],
+          "event_signal_ids": [
+            "text_event_signal:supported_context"
+          ]
+        },
+        "event_summary": "Event supports the current BTCUSDT view without requiring interruption.",
+        "affected_assets": [
+          "BTCUSDT"
+        ],
+        "relevant_timeframes": [
+          "1d"
+        ],
+        "source_reliability": "medium",
+        "event_severity": "medium",
+        "market_response_relationship": "confirmed",
+        "decision_impact": "supports_existing_view",
+        "risk_effect": "neutral",
+        "watch_relevance": "confirmation",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "type": "event_signal",
+            "event_signal_id": "text_event_signal:supported_context"
+          }
+        ],
+        "downgrade_reasons": [],
+        "uncertainty": [
+          "Golden case remains research material only."
+        ],
+        "warnings": [],
+        "linked_event_signal_ids": [
+          "text_event_signal:supported_context"
+        ],
+        "linked_decision_record_ids": [
+          "decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z"
+        ],
+        "linked_watch_trigger_ids": [
+          "watch_trigger:binance:BTCUSDT:1d:confirmation:2026-06-05T00:00:00Z"
+        ],
+        "source_artifacts": [
+          "analysis/event_intelligence_assessment.json",
+          "analysis/text_event_signals.json",
+          "analysis/decision_recommendations.json",
+          "analysis/watch_triggers.json"
+        ]
+      },
+      "expected": {
+        "priority": "P2",
+        "status": "succeeded",
+        "attention_decision": "record_without_interrupting",
+        "requires_user_attention": false,
+        "requires_reassessment": false,
+        "evidence_strength": "medium",
+        "suppression_reasons": []
+      }
+    },
+    {
+      "case_id": "duplicate_stale_downgrade",
+      "assessment": {
+        "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:duplicate_stale_downgrade",
+        "status": "degraded",
+        "scope": {
+          "symbol": "BTCUSDT",
+          "timeframe": "1d",
+          "topic_ids": [
+            "text_event_topic:duplicate_stale_downgrade"
+          ],
+          "event_signal_ids": [
+            "text_event_signal:duplicate_stale_downgrade"
+          ]
+        },
+        "event_summary": "Event is traceable but duplicate and stale, so it should not become user attention.",
+        "affected_assets": [
+          "BTCUSDT"
+        ],
+        "relevant_timeframes": [
+          "1d"
+        ],
+        "source_reliability": "high",
+        "event_severity": "medium",
+        "market_response_relationship": "confirmed",
+        "decision_impact": "supports_existing_view",
+        "risk_effect": "neutral",
+        "watch_relevance": "confirmation",
+        "confidence": "high",
+        "evidence": [
+          {
+            "type": "event_signal",
+            "event_signal_id": "text_event_signal:duplicate_stale_downgrade"
+          }
+        ],
+        "downgrade_reasons": [
+          "duplicate_event_group",
+          "stale_event"
+        ],
+        "uncertainty": [
+          "Duplicate or stale public reporting can overstate event freshness."
+        ],
+        "warnings": [
+          "event_assessment_downgraded"
+        ],
+        "linked_event_signal_ids": [
+          "text_event_signal:duplicate_stale_downgrade"
+        ],
+        "linked_decision_record_ids": [
+          "decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z"
+        ],
+        "linked_watch_trigger_ids": [
+          "watch_trigger:binance:BTCUSDT:1d:confirmation:2026-06-05T00:00:00Z"
+        ],
+        "source_artifacts": [
+          "analysis/event_intelligence_assessment.json",
+          "analysis/text_event_topics.json",
+          "analysis/text_event_signals.json"
+        ]
+      },
+      "expected": {
+        "priority": "P3",
+        "status": "degraded",
+        "attention_decision": "archive_as_noise",
+        "requires_user_attention": false,
+        "requires_reassessment": false,
+        "evidence_strength": "medium",
+        "suppression_reasons": [
+          "duplicate_event_group",
+          "stale_event"
+        ]
+      }
+    },
+    {
+      "case_id": "unrelated_suppression",
+      "assessment": {
+        "assessment_id": "event_intelligence_assessment:market_wide:event:unrelated_suppression",
+        "status": "degraded",
+        "scope": {
+          "symbol": "market_wide",
+          "timeframe": "event",
+          "topic_ids": [
+            "text_event_topic:unrelated_suppression"
+          ],
+          "event_signal_ids": [
+            "text_event_signal:unrelated_suppression"
+          ]
+        },
+        "event_summary": "Raw text body that should never appear in alert decision material.",
+        "affected_assets": [],
+        "relevant_timeframes": [],
+        "source_reliability": "low",
+        "event_severity": "noise",
+        "market_response_relationship": "insufficient_market_evidence",
+        "decision_impact": "insufficient_evidence",
+        "risk_effect": "unknown",
+        "watch_relevance": "none",
+        "confidence": "low",
+        "evidence": [
+          {
+            "type": "event_signal",
+            "event_signal_id": "text_event_signal:unrelated_suppression"
+          }
+        ],
+        "downgrade_reasons": [
+          "unrelated_event"
+        ],
+        "uncertainty": [
+          "No configured asset relationship is supported."
+        ],
+        "warnings": [
+          "event_assessment_downgraded"
+        ],
+        "linked_event_signal_ids": [
+          "text_event_signal:unrelated_suppression"
+        ],
+        "linked_decision_record_ids": [],
+        "linked_watch_trigger_ids": [],
+        "source_artifacts": [
+          "analysis/event_intelligence_assessment.json",
+          "analysis/text_event_signals.json"
+        ]
+      },
+      "expected": {
+        "priority": "no_alert",
+        "status": "suppressed",
+        "attention_decision": "no_alert",
+        "requires_user_attention": false,
+        "requires_reassessment": false,
+        "evidence_strength": "insufficient",
+        "suppression_reasons": [
+          "suppress_as_no_alert",
+          "noise_event",
+          "unrelated_event"
+        ]
+      }
+    },
+    {
+      "case_id": "low_confidence_insufficient",
+      "assessment": {
+        "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:low_confidence_insufficient",
+        "status": "degraded",
+        "scope": {
+          "symbol": "BTCUSDT",
+          "timeframe": "1d",
+          "topic_ids": [
+            "text_event_topic:low_confidence_insufficient"
+          ],
+          "event_signal_ids": [
+            "text_event_signal:low_confidence_insufficient"
+          ]
+        },
+        "event_summary": "Low-confidence event should remain visible but suppressed.",
+        "affected_assets": [
+          "BTCUSDT"
+        ],
+        "relevant_timeframes": [
+          "1d"
+        ],
+        "source_reliability": "low",
+        "event_severity": "low",
+        "market_response_relationship": "insufficient_market_evidence",
+        "decision_impact": "insufficient_evidence",
+        "risk_effect": "unknown",
+        "watch_relevance": "wait_condition",
+        "confidence": "low",
+        "evidence": [
+          {
+            "type": "event_signal",
+            "event_signal_id": "text_event_signal:low_confidence_insufficient"
+          }
+        ],
+        "downgrade_reasons": [
+          "event_signal_not_accepted",
+          "insufficient_event_evidence",
+          "weak_source_reliability"
+        ],
+        "uncertainty": [
+          "Evidence is insufficient for user attention."
+        ],
+        "warnings": [
+          "event_assessment_downgraded"
+        ],
+        "linked_event_signal_ids": [
+          "text_event_signal:low_confidence_insufficient"
+        ],
+        "linked_decision_record_ids": [],
+        "linked_watch_trigger_ids": [
+          "watch_trigger:binance:BTCUSDT:1d:wait_condition:2026-06-05T00:00:00Z"
+        ],
+        "source_artifacts": [
+          "analysis/event_intelligence_assessment.json",
+          "analysis/text_event_signals.json"
+        ]
+      },
+      "expected": {
+        "priority": "no_alert",
+        "status": "suppressed",
+        "attention_decision": "no_alert",
+        "requires_user_attention": false,
+        "requires_reassessment": false,
+        "evidence_strength": "insufficient",
+        "suppression_reasons": [
+          "suppress_as_no_alert",
+          "event_signal_not_accepted",
+          "insufficient_event_evidence",
+          "weak_source_reliability"
+        ]
+      }
+    }
+  ]
+}
