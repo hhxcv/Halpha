@@ -12,6 +12,7 @@ from .storage import ensure_directory, write_json
 STAGE_ORDER = (
     "collect_market_data",
     "collect_text_events",
+    "build_text_event_records",
     "sync_ohlcv",
     "build_market_data_views",
     "build_strategy_benchmark_suite",
@@ -308,6 +309,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
     handlers["collect_market_data"] = _collect_market_data
     handlers["collect_text_events"] = _collect_text_events
+    handlers["build_text_event_records"] = _build_text_event_records
     handlers["sync_ohlcv"] = _sync_ohlcv
     handlers["build_market_data_views"] = _build_market_data_views
     handlers["build_strategy_benchmark_suite"] = _build_strategy_benchmark_suite
@@ -471,6 +473,12 @@ def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] |
     from .collectors.text import collect_text_events
 
     return collect_text_events(config, run)
+
+
+def _build_text_event_records(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .text_event_records import build_text_event_records
+
+    return build_text_event_records(config, run)
 
 
 def _sync_ohlcv(config: dict[str, Any], run: RunContext) -> list[str] | None:
