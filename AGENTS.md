@@ -171,6 +171,7 @@ Current bias:
 * `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
 * `analysis/text_event_classification_evidence.json` records event taxonomy candidates and financial tone evidence, not trading signals.
 * `analysis/text_event_topics.json` records duplicate, same-topic, related-context, and distinct event grouping evidence.
+* `analysis/text_event_signals.json` records deterministic report-facing text event signals, not trading instructions.
 * `analysis/strategy_benchmark_suite.json` records fixed strategy benchmark window metadata, coverage, storage refs, warnings, errors, and source artifacts, not full raw history.
 * `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
 * `analysis/strategy_evaluation_summary.json` records pipeline strategy evaluation outputs from configured strategy runs and current-run OHLCV views.
