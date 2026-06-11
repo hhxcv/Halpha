@@ -138,6 +138,7 @@ def test_text_material_rejects_invalid_raw_text_artifact(tmp_path: Path) -> None
             "collect_text_events": _write_invalid_text_raw,
             "build_text_event_records": _skip_text_event_records,
             "build_text_entity_evidence": _skip_text_entity_evidence,
+            "build_text_event_classification_evidence": _skip_text_event_classification_evidence,
             "build_text_event_topics": _skip_text_event_topics,
         },
     )
@@ -168,6 +169,7 @@ def test_analysis_stage_records_market_artifact_before_text_material_failure(tmp
             "collect_text_events": _write_invalid_text_raw,
             "build_text_event_records": _skip_text_event_records,
             "build_text_entity_evidence": _skip_text_entity_evidence,
+            "build_text_event_classification_evidence": _skip_text_event_classification_evidence,
             "build_text_event_topics": _skip_text_event_topics,
         },
     )
@@ -313,6 +315,10 @@ def _skip_text_event_records(config, run) -> list[str]:
 
 
 def _skip_text_entity_evidence(config, run) -> list[str]:
+    return []
+
+
+def _skip_text_event_classification_evidence(config, run) -> list[str]:
     return []
 
 

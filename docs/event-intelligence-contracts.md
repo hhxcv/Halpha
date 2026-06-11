@@ -404,12 +404,71 @@ Category candidate evidence contract:
 }
 ```
 
+Category and tone evidence artifact:
+
+```text
+analysis/text_event_classification_evidence.json
+```
+
+Artifact type:
+
+```text
+text_event_classification_evidence
+```
+
+Source artifacts:
+
+```text
+analysis/text_event_records.json
+analysis/text_entity_evidence.json
+```
+
+Record contract:
+
+```json
+{
+  "event_id": "text_event:coindesk:abcdef123456",
+  "raw_item_id": "text:coindesk:abcdef1234567890",
+  "accepted_symbols": [
+    "BTCUSDT"
+  ],
+  "category_evidence": {
+    "state": "accepted",
+    "primary_category": "etf_flows",
+    "confidence": "medium",
+    "threshold_checks": {
+      "classifier_accept_score_met": true,
+      "classifier_top_margin_met": true,
+      "rule_or_entity_evidence_met": true
+    },
+    "candidates": [],
+    "rule_evidence": {},
+    "warnings": []
+  },
+  "financial_tone_evidence": {
+    "state": "accepted",
+    "tone": "positive",
+    "model_score": 0.87,
+    "scope": "event_text_tone_only",
+    "not_trading_signal": true,
+    "warnings": []
+  },
+  "warnings": [],
+  "source_artifacts": [
+    "analysis/text_event_records.json",
+    "analysis/text_entity_evidence.json"
+  ]
+}
+```
+
 Rules:
 
 - Model evidence is not final classification.
 - Every accepted evidence item should include model or rule traceability.
 - Weak or conflicting evidence should be marked `low_confidence`, `unknown`,
   `skipped`, or `degraded` instead of forced into a category.
+- Financial tone is bounded event-text evidence only, not a trading signal,
+  action level, or forecast.
 
 ## Event Taxonomy
 
@@ -540,6 +599,7 @@ Source artifacts:
 ```text
 analysis/text_event_records.json
 analysis/text_event_topics.json
+analysis/text_event_classification_evidence.json
 ```
 
 Signal record contract:
@@ -687,6 +747,7 @@ schema_version: 1
 audience: ai
 source_artifacts:
   - analysis/text_event_records.json
+  - analysis/text_event_classification_evidence.json
   - analysis/text_event_topics.json
   - analysis/text_event_signals.json
   - analysis/event_market_confluence.json
@@ -762,6 +823,7 @@ Target product pipeline order:
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
+build_text_event_classification_evidence
 build_text_event_topics
 build_text_event_signals
 build_event_market_confluence
@@ -792,6 +854,7 @@ Event intelligence may be added to the existing report context when generated.
 ```yaml
 text_event_records: analysis/text_event_records.json
 text_entity_evidence: analysis/text_entity_evidence.json
+text_event_classification_evidence: analysis/text_event_classification_evidence.json
 text_event_topics: analysis/text_event_topics.json
 text_event_signals: analysis/text_event_signals.json
 event_market_confluence: analysis/event_market_confluence.json
@@ -803,6 +866,7 @@ event_intelligence_material: analysis/event_intelligence_material.md
 ```yaml
 text_event_records: analysis/text_event_records.json
 text_entity_evidence: analysis/text_entity_evidence.json
+text_event_classification_evidence: analysis/text_event_classification_evidence.json
 text_event_topics: analysis/text_event_topics.json
 text_event_signals: analysis/text_event_signals.json
 event_market_confluence: analysis/event_market_confluence.json
