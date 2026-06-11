@@ -30,6 +30,7 @@ implemented.
 | Local run index | Implemented | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
 | Text event history | Implemented | text event history writer | data quality summary, future event/outcome workflows |
 | Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
+| Data quality material | Implemented | analysis material stage | research context, Codex context, report |
 
 ## Layer Boundary
 
@@ -263,17 +264,21 @@ Required behavior:
 Target current-run artifact:
 
 - `analysis/data_quality_summary.json`
+- `analysis/data_quality_material.md`
 
 Purpose:
 
 - provide one deterministic quality view for current-run evidence;
 - let downstream stages and reports distinguish reliable, degraded, skipped, and
   failed inputs without inspecting every raw artifact.
+- provide bounded AI-readable quality material for Codex without embedding full
+  local stores, raw archives, SQLite tables, Parquet data, or complete quality
+  JSON.
 
 Required top-level fields:
 
 - `schema_version`
-- `generated_at`
+- `created_at`
 - `status`
 - `checks`
 - `counts`
@@ -311,6 +316,9 @@ Rules:
 - make warnings visible but avoid blocking every degraded run by default;
 - summarize quality in Codex context only through bounded material or concise
   research-context sections.
+- expose Codex-facing quality through `analysis/data_quality_material.md`;
+- allow Codex to explain Halpha-generated quality status, not create or revise
+  validation results.
 
 ## Manifest Rules
 

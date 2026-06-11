@@ -131,12 +131,15 @@ reasons, and no-alert states, but must not create or revise those fields.
 Current-run quality artifact:
 
 - `analysis/data_quality_summary.json`
+- `analysis/data_quality_material.md`
 
-This artifact records deterministic schema, timestamp, duplicate, shared-store,
-partial-collection, degraded, skipped, warning, and failed states. Codex may
-consume bounded quality material or concise research-context summaries after
-they are generated, but must not create quality checks or inspect full shared
-stores directly.
+`analysis/data_quality_summary.json` records deterministic schema, timestamp,
+duplicate, shared-store, partial-collection, degraded, skipped, warning, and
+failed states. `analysis/data_quality_material.md` is the bounded Codex-facing
+summary derived from that JSON. Codex may explain Halpha-generated quality
+status, but must not create quality checks, invent validation results, inspect
+full shared stores, read SQLite contents, read Parquet tables, or reconstruct
+raw archives.
 
 ### Report-Facing Material
 
@@ -150,6 +153,7 @@ Eligible Codex input:
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
+- `analysis/data_quality_material.md`
 
 Material files must stay bounded, source-aware, and explicit about what Codex
 may explain versus what Codex must not generate.
@@ -183,7 +187,7 @@ Codex input policy:
 - Do not embed full intermediate JSON evidence.
 - Do not embed full shared OHLCV history.
 - Do not embed full run manifests.
-- Prefer high-signal decision, risk, alert, event, strategy, and gate evidence.
+- Prefer high-signal decision, risk, alert, event, strategy, gate, and quality evidence.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:

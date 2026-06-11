@@ -32,6 +32,8 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "language_target: zh-CN" in context
     assert "raw_market: raw/market.json" in context
     assert "raw_text_events: raw/text_events.json" in context
+    assert "data_quality_summary: analysis/data_quality_summary.json" in context
+    assert "data_quality_material: analysis/data_quality_material.md" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
@@ -64,6 +66,10 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "do_not_calculate_signals_from_raw_ohlcv_history: true" in context
     assert "do_not_inspect_shared_ohlcv_storage: true" in context
     assert "event_intelligence_requirements:" in context
+    assert "data_quality_requirements:" in context
+    assert "use_halpha_quality_statuses_only: true" in context
+    assert "do_not_generate_quality_checks: true" in context
+    assert "do_not_inspect_omitted_tables: true" in context
     assert "alert_decision_requirements:" in context
     assert "use_halpha_alert_priorities_only: true" in context
     assert "do_not_generate_alert_priority: true" in context
@@ -82,8 +88,14 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "artifact_type: analysis_text_material" in context
     assert '<embed path="analysis/event_intelligence_material.md">' in context
     assert '<embed path="analysis/alert_decision_material.md">' in context
+    assert '<embed path="analysis/data_quality_material.md">' in context
     assert "artifact_type: analysis_event_intelligence_material" in context
     assert "artifact_type: analysis_alert_decision_material" in context
+    assert "artifact_type: analysis_data_quality_material" in context
+    assert "codex_may_generate_quality_checks: false" in context
+    assert "full_reusable_history_embedded: false" in context
+    assert "full_catalog_embedded: false" in context
+    assert "full_run_index_embedded: false" in context
     assert "codex_may_generate_alert_priority: false" in context
     assert "codex_may_generate_event_categories: false" in context
     assert "codex_may_generate_price_forecasts: false" in context
@@ -91,6 +103,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["event_intelligence_material"] == "analysis/event_intelligence_material.md"
+    assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
     assert manifest["codex_input"]["policy"]["bounded_report_facing_material_only"] is True
     assert manifest["codex_input"]["policy"]["full_intermediate_json_embedded"] is False
@@ -103,6 +116,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     }
     assert material_records["analysis/alert_decision_material.md"]["status"] == "included"
     assert material_records["analysis/event_intelligence_material.md"]["status"] == "included"
+    assert material_records["analysis/data_quality_material.md"]["status"] == "included"
     assert material_records["analysis/text_material.md"]["status"] == "included"
     research_stage = _stage(manifest, "build_research_context")
     codex_context_stage = _stage(manifest, "build_codex_context")
@@ -133,6 +147,7 @@ def test_research_context_marks_disabled_text_material_as_not_generated(tmp_path
     context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_material: analysis/market_material.md" in context
+    assert "data_quality_material: analysis/data_quality_material.md" in context
     assert "text_material: null" in context
     assert "artifact: analysis/text_material.md" in context
     assert "status: not_generated" in context
@@ -167,16 +182,24 @@ def test_research_context_compresses_over_budget_material_for_codex_input(
         record["artifact"]: record for record in manifest["codex_input"]["materials"]
     }
     market_record = material_records["analysis/market_material.md"]
+    quality_record = material_records["analysis/data_quality_material.md"]
 
     assert "status: compressed_for_codex_input" in context
     assert "HIGH_SIGNAL_BEGIN" in context
     assert "HIGH_SIGNAL_END" in context
+    assert "QUALITY_SIGNAL_BEGIN" in context
+    assert "QUALITY_SIGNAL_END" in context
     assert "material_char_budget_exceeded" in context
     assert market_record["status"] == "compressed"
     assert market_record["chars"] <= DEFAULT_MATERIAL_MAX_CHARS
     assert market_record["original_chars"] > market_record["chars"]
     assert market_record["omitted_chars"] > 0
     assert "material_compressed_for_codex_input" in market_record["warnings"]
+    assert quality_record["status"] == "compressed"
+    assert quality_record["chars"] <= DEFAULT_MATERIAL_MAX_CHARS
+    assert quality_record["original_chars"] > quality_record["chars"]
+    assert quality_record["omitted_chars"] > 0
+    assert "material_compressed_for_codex_input" in quality_record["warnings"]
     assert manifest["codex_input"]["research_context"]["over_budget"] is False
 
 
@@ -621,7 +644,7 @@ def _skip_analysis_materials(config, run) -> list[str]:
 
 
 def _write_large_market_material(config, run) -> list[str]:
-    content = "\n".join(
+    market_content = "\n".join(
         [
             "---",
             "artifact_type: analysis_market_material",
@@ -635,9 +658,25 @@ def _write_large_market_material(config, run) -> list[str]:
             "HIGH_SIGNAL_END",
         ]
     )
-    (run.analysis_dir / "market_material.md").write_text(content, encoding="utf-8")
+    quality_content = "\n".join(
+        [
+            "---",
+            "artifact_type: analysis_data_quality_material",
+            "schema_version: 1",
+            "---",
+            "",
+            "# data_quality_material",
+            "",
+            "QUALITY_SIGNAL_BEGIN",
+            *["low priority quality filler material" for _ in range(1400)],
+            "QUALITY_SIGNAL_END",
+        ]
+    )
+    (run.analysis_dir / "market_material.md").write_text(market_content, encoding="utf-8")
+    (run.analysis_dir / "data_quality_material.md").write_text(quality_content, encoding="utf-8")
     run.manifest["artifacts"]["market_material"] = "analysis/market_material.md"
-    return ["analysis/market_material.md"]
+    run.manifest["artifacts"]["data_quality_material"] = "analysis/data_quality_material.md"
+    return ["analysis/data_quality_material.md", "analysis/market_material.md"]
 
 
 def _noop_stage(config, run) -> list[str]:

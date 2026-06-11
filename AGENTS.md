@@ -200,16 +200,19 @@ Current bias:
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from deterministic decision-intelligence JSON artifacts.
 * `analysis/data_quality_summary.json` records current-run market, text, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
+* `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, and event intelligence material, not shared OHLCV history.
-* Codex context must not embed full raw streams, full shared OHLCV history, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
-* Codex input should prioritize high-signal decision, risk, alert, strategy gate, and event evidence over low-priority record dumps.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, event intelligence, and data quality material, not shared OHLCV history.
+* Codex context must not embed full raw streams, full shared OHLCV history, full reusable text-event history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
+* Codex input should prioritize high-signal decision, risk, alert, strategy gate, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
+* Codex prompt may ask for data-quality status explanation when data quality material exists.
 * Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
+* Codex prompt must not ask Codex to generate data-quality checks, validation results, catalog contents, run-index contents, or reusable history contents.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.
