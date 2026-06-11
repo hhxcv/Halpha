@@ -34,7 +34,7 @@ promises, price forecasts, or financial advice.
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
 | Outcome targets | Implemented | outcome target extraction stage | outcome evaluation, outcome material |
-| Outcome evaluations | Planned | outcome evaluation stage | outcome history, outcome material |
+| Outcome evaluations | Initial implementation | outcome evaluation stage | outcome history, outcome material |
 | Outcome history | Planned | outcome history writer | later runs, data inspection, outcome material |
 | Outcome tracking material | Planned | outcome material stage | research context, Codex context, report |
 
@@ -256,7 +256,8 @@ reason, and missing fields when relevant.
 
 ## Outcome Evaluation Artifact
 
-Planned current-run artifact:
+Implemented current-run artifact for market and strategy targets. Event, alert,
+and decision follow-through evaluation is planned.
 
 ```text
 analysis/outcome_evaluations.json
@@ -299,6 +300,15 @@ Required evaluation fields:
 - `source_artifacts`
 - `warnings`
 - `errors`
+
+Current implementation rules:
+
+- market and strategy targets are evaluated from shared OHLCV history;
+- observation rows must be strictly after `source_as_of`;
+- the anchor row at or before `source_as_of` is source-state context, not an
+  observation row;
+- event, alert, decision, and watch targets remain visible as `skipped` until
+  their follow-through evaluators are implemented.
 
 Allowed `evaluation_status` values:
 
@@ -448,11 +458,11 @@ Product runs record:
 - `analysis/outcome_targets.json` path, status, target count, warning count,
   and error count;
 - outcome target skipped record count and skipped reason counts;
+- `analysis/outcome_evaluations.json` path, status, evaluated count, pending
+  count, insufficient-data count, warning count, and error count;
 
 When implemented, product runs should also record:
 
-- `analysis/outcome_evaluations.json` path, status, evaluated count, pending
-  count, insufficient-data count, warning count, and error count;
 - `analysis/outcome_tracking_material.md` path and Codex input budget metadata;
 - reusable outcome history state path and write status;
 - run index references for outcome artifacts.
