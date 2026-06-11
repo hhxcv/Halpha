@@ -17,6 +17,17 @@ OUTCOME_TARGETS_ARTIFACT = "analysis/outcome_targets.json"
 OUTCOME_EVALUATIONS_ARTIFACT = "analysis/outcome_evaluations.json"
 SCHEMA_VERSION = 1
 OHLCV_TARGET_KINDS = {"market_signal", "strategy_gate"}
+FOLLOW_THROUGH_TARGET_KINDS = {
+    "event_assessment",
+    "alert_decision",
+    "decision_recommendation",
+    "watch_trigger",
+}
+EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment.json"
+ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
+DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
+WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
+TEXT_EVENT_HISTORY_STATE_ARTIFACT = "data/research/metadata/text_event_history_state.json"
 
 
 def evaluate_outcomes(
@@ -29,6 +40,8 @@ def evaluate_outcomes(
     created_at = _created_at(run, now)
     targets = _target_records(targets_artifact)
     storage_dir, storage_artifact, storage_warning = _ohlcv_storage(config, run)
+    follow_context = _follow_through_context(run)
+    uses_ohlcv = any(str(target.get("target_kind") or "") in OHLCV_TARGET_KINDS for target in targets)
     evaluations = [
         _evaluation_record(
             target,
@@ -37,6 +50,7 @@ def evaluate_outcomes(
             storage_dir=storage_dir,
             storage_artifact=storage_artifact,
             storage_warning=storage_warning,
+            follow_context=follow_context,
         )
         for target in targets
     ]
@@ -59,7 +73,8 @@ def evaluate_outcomes(
             [
                 OUTCOME_TARGETS_ARTIFACT,
                 *(_string_list(targets_artifact.get("source_artifacts"))),
-                *([storage_artifact] if storage_artifact else []),
+                *([storage_artifact] if storage_artifact and uses_ohlcv else []),
+                *follow_context["source_artifacts"],
             ]
         ),
         "warnings": warnings,
@@ -78,21 +93,15 @@ def _evaluation_record(
     storage_dir: Path | None,
     storage_artifact: str | None,
     storage_warning: str | None,
+    follow_context: dict[str, Any],
 ) -> dict[str, Any]:
     target_kind = str(target.get("target_kind") or "unknown")
-    base = _base_evaluation(target, created_at=created_at, run=run, storage_artifact=storage_artifact)
-    if target_kind not in OHLCV_TARGET_KINDS:
-        return {
-            **base,
-            "evaluation_status": "skipped",
-            "outcome_state": "skipped",
-            "observation_window": _empty_window(target, no_lookahead=True),
-            "metrics": {},
-            "evidence": ["Target kind is outside market and strategy OHLCV evaluation scope."],
-            "warnings": ["unsupported_target_kind_for_ohlcv_evaluation"],
-            "errors": [],
-        }
-
+    base = _base_evaluation(
+        target,
+        created_at=created_at,
+        run=run,
+        storage_artifact=storage_artifact if target_kind in OHLCV_TARGET_KINDS else None,
+    )
     pending_reason = _pending_reason(target, created_at=created_at)
     if pending_reason:
         return {
@@ -103,6 +112,21 @@ def _evaluation_record(
             "metrics": {},
             "evidence": [pending_reason],
             "warnings": [pending_reason],
+            "errors": [],
+        }
+
+    if target_kind in FOLLOW_THROUGH_TARGET_KINDS:
+        return _follow_through_record(base, target, follow_context=follow_context)
+
+    if target_kind not in OHLCV_TARGET_KINDS:
+        return {
+            **base,
+            "evaluation_status": "skipped",
+            "outcome_state": "skipped",
+            "observation_window": _empty_window(target, no_lookahead=True),
+            "metrics": {},
+            "evidence": ["Target kind is not supported by outcome evaluation."],
+            "warnings": ["unsupported_target_kind"],
             "errors": [],
         }
 
@@ -272,6 +296,365 @@ def _evaluation_evidence(target: dict[str, Any], metrics: dict[str, Any], *, out
     ]
 
 
+def _follow_through_record(
+    base: dict[str, Any],
+    target: dict[str, Any],
+    *,
+    follow_context: dict[str, Any],
+) -> dict[str, Any]:
+    target_kind = str(target.get("target_kind") or "unknown")
+    current_records = _matching_follow_records(target, follow_context)
+    text_history_records = int(follow_context.get("text_event_history_records") or 0)
+    if not current_records and text_history_records <= 0:
+        return {
+            **base,
+            "evaluation_status": "insufficient_data",
+            "outcome_state": "insufficient_data",
+            "observation_window": _follow_window(target),
+            "metrics": _follow_metrics([], text_history_records=text_history_records),
+            "evidence": ["No later Halpha follow-through artifacts or reusable text-event history were available."],
+            "uncertainty": _follow_uncertainty(target, []),
+            "warnings": ["missing_follow_through_evidence"],
+            "errors": [],
+            "source_artifacts": _follow_source_artifacts(base, [], follow_context),
+        }
+
+    state, basis = _follow_state(target, current_records)
+    status = "stale" if state == "stale" else "evaluated"
+    return {
+        **base,
+        "evaluation_status": status,
+        "outcome_state": state,
+        "observation_window": _follow_window(target),
+        "metrics": _follow_metrics(current_records, state=state, text_history_records=text_history_records),
+        "evidence": basis,
+        "uncertainty": _follow_uncertainty(target, current_records),
+        "warnings": _follow_warnings(current_records, state=state),
+        "errors": [],
+        "source_artifacts": _follow_source_artifacts(base, current_records, follow_context),
+    }
+
+
+def _follow_through_context(run: RunContext) -> dict[str, Any]:
+    artifacts = {
+        "event_assessment": _read_optional_current_artifact(
+            run.analysis_dir / "event_intelligence_assessment.json",
+            EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT,
+            "records",
+        ),
+        "alert_decision": _read_optional_current_artifact(
+            run.analysis_dir / "alert_decisions.json",
+            ALERT_DECISIONS_ARTIFACT,
+            "records",
+        ),
+        "decision_recommendation": _read_optional_current_artifact(
+            run.analysis_dir / "decision_recommendations.json",
+            DECISION_RECOMMENDATIONS_ARTIFACT,
+            "records",
+        ),
+        "watch_trigger": _read_optional_current_artifact(
+            run.analysis_dir / "watch_triggers.json",
+            WATCH_TRIGGERS_ARTIFACT,
+            "records",
+        ),
+    }
+    text_history_state = _read_optional_json(run.config_path.parent / TEXT_EVENT_HISTORY_STATE_ARTIFACT)
+    source_artifacts = [
+        artifact_path
+        for artifact_path, artifact in (
+            (EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT, artifacts["event_assessment"]),
+            (ALERT_DECISIONS_ARTIFACT, artifacts["alert_decision"]),
+            (DECISION_RECOMMENDATIONS_ARTIFACT, artifacts["decision_recommendation"]),
+            (WATCH_TRIGGERS_ARTIFACT, artifacts["watch_trigger"]),
+            (TEXT_EVENT_HISTORY_STATE_ARTIFACT, text_history_state),
+        )
+        if artifact is not None
+    ]
+    return {
+        "artifacts": artifacts,
+        "text_event_history_state": text_history_state,
+        "text_event_history_records": _text_history_record_count(text_history_state),
+        "source_artifacts": source_artifacts,
+    }
+
+
+def _read_optional_current_artifact(path: Path, artifact_name: str, records_key: str) -> dict[str, Any] | None:
+    artifact = _read_optional_json(path)
+    if artifact is None:
+        return None
+    records = artifact.get(records_key)
+    if not isinstance(records, list):
+        raise PipelineError(f"{artifact_name} must contain a {records_key} list.", stage=STAGE_NAME, exit_code=3)
+    return artifact
+
+
+def _read_optional_json(path: Path) -> dict[str, Any] | None:
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except JSONDecodeError as exc:
+        raise PipelineError(f"{display_path(path)} is not valid JSON: {exc.msg}.", stage=STAGE_NAME, exit_code=3) from exc
+    if not isinstance(artifact, dict):
+        raise PipelineError(f"{display_path(path)} must be a JSON object.", stage=STAGE_NAME, exit_code=3)
+    return artifact
+
+
+def _matching_follow_records(target: dict[str, Any], follow_context: dict[str, Any]) -> list[dict[str, Any]]:
+    target_kind = str(target.get("target_kind") or "unknown")
+    records = _records_for_target_kind(target_kind, follow_context)
+    exact = [record for record in records if _follow_record_id(record, target_kind) == target.get("source_record_id")]
+    if exact:
+        return exact
+    linked = [
+        record
+        for record in records
+        if str(target.get("source_record_id") or "") in _record_link_ids(record)
+    ]
+    if linked:
+        return linked
+    symbol = target.get("symbol")
+    timeframe = target.get("timeframe")
+    if not symbol or not timeframe:
+        return []
+    return [
+        record
+        for record in records
+        if _record_symbol(record) == symbol and _record_timeframe(record) == timeframe
+    ]
+
+
+def _records_for_target_kind(target_kind: str, follow_context: dict[str, Any]) -> list[dict[str, Any]]:
+    artifact_key = {
+        "event_assessment": "event_assessment",
+        "alert_decision": "alert_decision",
+        "decision_recommendation": "decision_recommendation",
+        "watch_trigger": "watch_trigger",
+    }.get(target_kind)
+    if artifact_key is None:
+        return []
+    artifact = follow_context["artifacts"].get(artifact_key)
+    if not isinstance(artifact, dict):
+        return []
+    return _dict_list(artifact.get("records"))
+
+
+def _follow_record_id(record: dict[str, Any], target_kind: str) -> str | None:
+    field = {
+        "event_assessment": "assessment_id",
+        "alert_decision": "alert_decision_id",
+        "decision_recommendation": "record_id",
+        "watch_trigger": "trigger_id",
+    }.get(target_kind)
+    if field is None:
+        return None
+    value = record.get(field)
+    return value if isinstance(value, str) and value else None
+
+
+def _record_link_ids(record: dict[str, Any]) -> set[str]:
+    ids: set[str] = set()
+    for field in (
+        "linked_event_assessment_ids",
+        "linked_decision_record_ids",
+        "linked_watch_trigger_ids",
+    ):
+        ids.update(_string_list(record.get(field)))
+    scope = record.get("scope") if isinstance(record.get("scope"), dict) else {}
+    for field in ("assessment_id", "linked_decision_record_id"):
+        value = record.get(field) or scope.get(field)
+        if isinstance(value, str) and value:
+            ids.add(value)
+    return ids
+
+
+def _follow_state(target: dict[str, Any], records: list[dict[str, Any]]) -> tuple[str, list[str]]:
+    if not records:
+        return "unresolved", ["Later reusable text-event history exists, but no matching follow-through artifact record was found."]
+    if any(_record_is_stale(record) for record in records):
+        return "stale", ["Later follow-through record is stale or explicitly downgraded as stale."]
+    if any(_record_contradicts_target(target, record) for record in records):
+        return "contradicted", ["Later follow-through record contradicts the prior target state."]
+    if any(_record_confirms_target(target, record) for record in records):
+        return "confirmed", ["Later follow-through record confirms or preserves the prior target state."]
+    return "unresolved", ["Later follow-through evidence exists but is not decisive."]
+
+
+def _record_confirms_target(target: dict[str, Any], record: dict[str, Any]) -> bool:
+    target_kind = str(target.get("target_kind") or "")
+    expected = target.get("expected_observation") if isinstance(target.get("expected_observation"), dict) else {}
+    if target_kind == "event_assessment":
+        return all(
+            _same_or_missing(expected.get(field), record.get(field))
+            for field in ("event_severity", "decision_impact", "risk_effect", "watch_relevance")
+        ) and str(record.get("status") or "") not in {"failed", "skipped"}
+    if target_kind == "alert_decision":
+        return _same_or_missing(expected.get("priority"), record.get("priority")) and _same_or_missing(
+            expected.get("attention_decision"), record.get("attention_decision")
+        )
+    if target_kind == "decision_recommendation":
+        return _same_or_missing(expected.get("action_level"), record.get("action_level")) and _same_or_missing(
+            expected.get("decision_bias"), record.get("decision_bias")
+        )
+    if target_kind == "watch_trigger":
+        return _same_or_missing(expected.get("trigger_type"), record.get("type")) and bool(record.get("condition"))
+    return False
+
+
+def _record_contradicts_target(target: dict[str, Any], record: dict[str, Any]) -> bool:
+    target_kind = str(target.get("target_kind") or "")
+    expected = target.get("expected_observation") if isinstance(target.get("expected_observation"), dict) else {}
+    if target_kind == "event_assessment":
+        expected_impact = str(expected.get("decision_impact") or "unknown")
+        current_impact = str(record.get("decision_impact") or "unknown")
+        expected_risk = str(expected.get("risk_effect") or "unknown")
+        current_risk = str(record.get("risk_effect") or "unknown")
+        return (
+            expected_impact == "supports_existing_view" and current_impact in {"could_invalidate", "could_downgrade"}
+        ) or (expected_risk in {"neutral", "risk_down"} and current_risk == "risk_up")
+    if target_kind == "alert_decision":
+        expected_priority = str(expected.get("priority") or "unknown")
+        current_priority = str(record.get("priority") or "unknown")
+        return _priority_side(expected_priority) != "unknown" and _priority_side(expected_priority) != _priority_side(
+            current_priority
+        )
+    if target_kind == "decision_recommendation":
+        expected_side = _action_side(str(expected.get("action_level") or "unknown"))
+        current_side = _action_side(str(record.get("action_level") or "unknown"))
+        return expected_side != "unknown" and current_side != "unknown" and expected_side != current_side
+    if target_kind == "watch_trigger":
+        expected_type = str(expected.get("trigger_type") or "")
+        current_type = str(record.get("type") or "")
+        return bool(expected_type and current_type and expected_type != current_type)
+    return False
+
+
+def _record_is_stale(record: dict[str, Any]) -> bool:
+    values = [
+        *_string_list(record.get("downgrade_reasons")),
+        *_string_list(record.get("suppression_reasons")),
+        *_string_list(record.get("warnings")),
+    ]
+    return "stale_event" in values or "stale_source_record" in values
+
+
+def _same_or_missing(expected: Any, current: Any) -> bool:
+    if expected in {None, "", "unknown"}:
+        return True
+    return expected == current
+
+
+def _priority_side(priority: str) -> str:
+    if priority in {"P0", "P1", "P2"}:
+        return "attention"
+    if priority in {"P3", "no_alert"}:
+        return "suppress"
+    return "unknown"
+
+
+def _action_side(action_level: str) -> str:
+    if action_level in {"STRONG_DO", "DO", "TRY_SMALL"}:
+        return "constructive"
+    if action_level in {"AVOID", "EXIT_OR_REDUCE", "HEDGE_OR_PROTECT"}:
+        return "defensive"
+    if action_level in {"WATCH", "NO_ACTION"}:
+        return "neutral"
+    return "unknown"
+
+
+def _follow_metrics(
+    records: list[dict[str, Any]],
+    *,
+    state: str = "unresolved",
+    text_history_records: int,
+) -> dict[str, Any]:
+    states = [_follow_record_id(record, _kind_from_record(record)) for record in records]
+    return {
+        "current_record_count": len(records),
+        "matched_record_ids": [value for value in states if value],
+        "confirming_evidence_count": len(records) if state == "confirmed" else 0,
+        "contradicting_evidence_count": len(records) if state == "contradicted" else 0,
+        "text_event_history_records": text_history_records,
+    }
+
+
+def _follow_source_artifacts(
+    base: dict[str, Any],
+    records: list[dict[str, Any]],
+    follow_context: dict[str, Any],
+) -> list[str]:
+    record_artifacts = [
+        artifact
+        for record in records
+        for artifact in _string_list(record.get("source_artifacts"))
+    ]
+    return _unique([*base["source_artifacts"], *follow_context["source_artifacts"], *record_artifacts])
+
+
+def _kind_from_record(record: dict[str, Any]) -> str:
+    if "assessment_id" in record:
+        return "event_assessment"
+    if "alert_decision_id" in record:
+        return "alert_decision"
+    if "trigger_id" in record:
+        return "watch_trigger"
+    return "decision_recommendation"
+
+
+def _follow_uncertainty(target: dict[str, Any], records: list[dict[str, Any]]) -> list[str]:
+    uncertainty = _string_list(target.get("uncertainty"))
+    for record in records:
+        uncertainty.extend(_string_list(record.get("uncertainty")))
+    if not records:
+        uncertainty.append("No matched follow-through record was available.")
+    return _unique(uncertainty)
+
+
+def _follow_warnings(records: list[dict[str, Any]], *, state: str) -> list[str]:
+    warnings = []
+    for record in records:
+        warnings.extend(_string_list(record.get("warnings")))
+        warnings.extend(_string_list(record.get("downgrade_reasons")))
+        warnings.extend(_string_list(record.get("suppression_reasons")))
+    if state == "unresolved":
+        warnings.append("follow_through_unresolved")
+    return _unique(warnings)
+
+
+def _follow_window(target: dict[str, Any]) -> dict[str, Any]:
+    horizon = _horizon(target)
+    return {
+        "source_as_of": target.get("source_as_of"),
+        "start": target.get("source_as_of"),
+        "end": horizon.get("observation_window_end"),
+        "horizon_end": horizon.get("observation_window_end"),
+        "sample_rows": None,
+        "no_lookahead": True,
+        "excluded_at_or_before_source_as_of": True,
+    }
+
+
+def _record_symbol(record: dict[str, Any]) -> Any:
+    scope = record.get("scope") if isinstance(record.get("scope"), dict) else {}
+    return record.get("symbol") or scope.get("symbol")
+
+
+def _record_timeframe(record: dict[str, Any]) -> Any:
+    scope = record.get("scope") if isinstance(record.get("scope"), dict) else {}
+    return record.get("timeframe") or scope.get("timeframe")
+
+
+def _text_history_record_count(state: dict[str, Any] | None) -> int:
+    if not isinstance(state, dict):
+        return 0
+    totals = state.get("totals")
+    if isinstance(totals, dict):
+        value = totals.get("records")
+        if isinstance(value, int):
+            return value
+    return 0
+
+
 def _read_targets(run: RunContext) -> dict[str, Any]:
     path = run.analysis_dir / "outcome_targets.json"
     try:
@@ -401,10 +784,13 @@ def _cost_context(target: dict[str, Any]) -> dict[str, Any]:
 
 def _evaluation_policy() -> dict[str, Any]:
     return {
-        "evaluated_target_kinds": sorted(OHLCV_TARGET_KINDS),
+        "evaluated_target_kinds": sorted(OHLCV_TARGET_KINDS | FOLLOW_THROUGH_TARGET_KINDS),
+        "ohlcv_target_kinds": sorted(OHLCV_TARGET_KINDS),
+        "follow_through_target_kinds": sorted(FOLLOW_THROUGH_TARGET_KINDS),
         "unsupported_target_kinds_are_visible_as_skipped": True,
         "observation_rows_must_be_after_source_as_of": True,
         "anchor_row_at_or_before_source_as_of_is_source_state_only": True,
+        "follow_through_labels_are_deterministic": True,
         "llm_generated_outcome_labels": False,
         "portfolio_pnl_or_trading_execution": False,
     }
@@ -424,12 +810,15 @@ def _artifact_warnings(
     skipped = sum(1 for evaluation in evaluations if evaluation.get("evaluation_status") == "skipped")
     insufficient = sum(1 for evaluation in evaluations if evaluation.get("evaluation_status") == "insufficient_data")
     pending = sum(1 for evaluation in evaluations if evaluation.get("evaluation_status") == "pending")
+    stale = sum(1 for evaluation in evaluations if evaluation.get("evaluation_status") == "stale")
     if skipped:
-        warnings.append(f"Skipped {skipped} outcome targets outside OHLCV evaluation scope.")
+        warnings.append(f"Skipped {skipped} unsupported outcome targets.")
     if insufficient:
-        warnings.append(f"Recorded {insufficient} outcome targets with insufficient OHLCV data.")
+        warnings.append(f"Recorded {insufficient} outcome targets with insufficient evaluation data.")
     if pending:
         warnings.append(f"Recorded {pending} pending outcome targets.")
+    if stale:
+        warnings.append(f"Recorded {stale} stale outcome targets.")
     return warnings
 
 
@@ -454,6 +843,7 @@ def _counts(evaluations: list[dict[str, Any]], errors: list[dict[str, Any]]) -> 
         "evaluated": sum(1 for record in evaluations if record.get("evaluation_status") == "evaluated"),
         "pending": sum(1 for record in evaluations if record.get("evaluation_status") == "pending"),
         "skipped": sum(1 for record in evaluations if record.get("evaluation_status") == "skipped"),
+        "stale": sum(1 for record in evaluations if record.get("evaluation_status") == "stale"),
         "insufficient_data": sum(
             1 for record in evaluations if record.get("evaluation_status") == "insufficient_data"
         ),
@@ -476,6 +866,7 @@ def _record_manifest(run: RunContext, artifact: dict[str, Any]) -> None:
         "pending_count": counts["pending"],
         "insufficient_data_count": counts["insufficient_data"],
         "skipped_count": counts["skipped"],
+        "stale_count": counts["stale"],
         "warning_count": len(artifact["warnings"]),
         "error_count": len(artifact["errors"]),
     }
@@ -484,6 +875,7 @@ def _record_manifest(run: RunContext, artifact: dict[str, Any]) -> None:
     run.manifest["counts"]["outcome_evaluations_pending"] = counts["pending"]
     run.manifest["counts"]["outcome_evaluations_insufficient_data"] = counts["insufficient_data"]
     run.manifest["counts"]["outcome_evaluations_skipped"] = counts["skipped"]
+    run.manifest["counts"]["outcome_evaluations_stale"] = counts["stale"]
     run.manifest["counts"]["outcome_evaluation_warnings"] = len(artifact["warnings"])
     run.manifest["counts"]["outcome_evaluation_errors"] = len(artifact["errors"])
 

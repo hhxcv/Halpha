@@ -137,7 +137,7 @@ def test_outcome_evaluations_record_strategy_gate_context_and_costs(tmp_path: Pa
                     "cost_context": {"fees_bps": 10, "slippage_bps": 5},
                 },
             ),
-            _target("event_assessment", record_id="event:one"),
+            _target("unsupported_kind", record_id="unsupported:one"),
         ],
     )
 
@@ -149,8 +149,134 @@ def test_outcome_evaluations_record_strategy_gate_context_and_costs(tmp_path: Pa
     assert by_kind["strategy_gate"]["evaluation_status"] == "evaluated"
     assert by_kind["strategy_gate"]["outcome_state"] == "aligned"
     assert by_kind["strategy_gate"]["metrics"]["cost_context"] == {"fees_bps": 10, "slippage_bps": 5}
-    assert by_kind["event_assessment"]["evaluation_status"] == "skipped"
-    assert by_kind["event_assessment"]["outcome_state"] == "skipped"
+    assert by_kind["unsupported_kind"]["evaluation_status"] == "skipped"
+    assert by_kind["unsupported_kind"]["outcome_state"] == "skipped"
+
+
+def test_outcome_evaluations_classify_follow_through_states(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    targets = [
+        _target(
+            "event_assessment",
+            record_id="event:confirmed",
+            expected_extra=_event_expected("supports_existing_view", "neutral"),
+        ),
+        _target(
+            "event_assessment",
+            record_id="event:unresolved",
+            expected_extra=_event_expected("supports_existing_view", "neutral"),
+        ),
+        _target(
+            "event_assessment",
+            record_id="event:stale",
+            expected_extra=_event_expected("supports_existing_view", "neutral"),
+        ),
+        _target(
+            "alert_decision",
+            record_id="alert:confirmed",
+            expected_extra={
+                "priority": "P1",
+                "attention_decision": "escalate",
+            },
+        ),
+        _target(
+            "decision_recommendation",
+            record_id="decision:contradicted",
+            expected_extra={
+                "action_level": "TRY_SMALL",
+                "decision_bias": "tentative_constructive",
+            },
+        ),
+        _target(
+            "watch_trigger",
+            record_id="watch:missing",
+            expected_extra={
+                "trigger_type": "confirmation",
+                "condition": "Confirmation remains required.",
+            },
+        ),
+    ]
+
+    result = _run_with_targets(
+        config,
+        config_path,
+        targets,
+        stage_overrides={
+            "build_event_intelligence_assessment": lambda config, run: _write_current_event_assessments(
+                run,
+                [
+                    _event_record("event:confirmed", "supports_existing_view", "neutral"),
+                    _event_record("event:unresolved", "insufficient_evidence", "unknown"),
+                    _event_record("event:stale", "supports_existing_view", "neutral", stale=True),
+                ],
+            ),
+            "build_decision_recommendations": lambda config, run: _write_current_decisions(
+                run,
+                [
+                    {
+                        "record_id": "decision:contradicted",
+                        "symbol": "BTCUSDT",
+                        "timeframe": "1d",
+                        "action_level": "AVOID",
+                        "decision_bias": "defensive_avoid",
+                        "source_artifacts": ["analysis/risk_assessment.json"],
+                        "uncertainty": ["Decision evidence changed."],
+                    }
+                ],
+            ),
+            "build_alert_decisions": lambda config, run: _write_current_alert_decisions(
+                run,
+                [
+                    {
+                        "alert_decision_id": "alert:confirmed",
+                        "scope": {"symbol": "BTCUSDT", "timeframe": "1d"},
+                        "priority": "P1",
+                        "attention_decision": "escalate",
+                        "linked_event_assessment_ids": ["event:confirmed"],
+                        "source_artifacts": ["analysis/event_intelligence_assessment.json"],
+                        "uncertainty": ["Alert remains relevant."],
+                    }
+                ],
+            ),
+        },
+    )
+
+    artifact = _outcome_evaluations(result)
+    by_target = {evaluation["target_id"]: evaluation for evaluation in artifact["evaluations"]}
+    confirmed = by_target["outcome_target:event_assessment:source-run:event:confirmed"]
+    unresolved = by_target["outcome_target:event_assessment:source-run:event:unresolved"]
+    stale = by_target["outcome_target:event_assessment:source-run:event:stale"]
+    alert = by_target["outcome_target:alert_decision:source-run:alert:confirmed"]
+    contradicted = by_target["outcome_target:decision_recommendation:source-run:decision:contradicted"]
+    insufficient = by_target["outcome_target:watch_trigger:source-run:watch:missing"]
+
+    assert confirmed["outcome_state"] == "confirmed"
+    assert confirmed["metrics"]["confirming_evidence_count"] == 1
+    assert alert["outcome_state"] == "confirmed"
+    assert alert["metrics"]["matched_record_ids"] == ["alert:confirmed"]
+    assert contradicted["outcome_state"] == "contradicted"
+    assert contradicted["metrics"]["contradicting_evidence_count"] == 1
+    assert unresolved["outcome_state"] == "unresolved"
+    assert "follow_through_unresolved" in unresolved["warnings"]
+    assert stale["evaluation_status"] == "stale"
+    assert stale["outcome_state"] == "stale"
+    assert "stale_event" in stale["warnings"]
+    assert insufficient["evaluation_status"] == "insufficient_data"
+    assert insufficient["outcome_state"] == "insufficient_data"
+    assert insufficient["uncertainty"] == ["No matched follow-through record was available."]
+    assert "analysis/event_intelligence_assessment.json" in confirmed["source_artifacts"]
+    assert "analysis/text_event_signals.json" in confirmed["source_artifacts"]
+    assert "analysis/alert_decisions.json" in alert["source_artifacts"]
+    assert "analysis/decision_recommendations.json" in contradicted["source_artifacts"]
+    assert "analysis/risk_assessment.json" in contradicted["source_artifacts"]
+    assert artifact["counts"]["by_outcome_state"] == {
+        "confirmed": 2,
+        "contradicted": 1,
+        "insufficient_data": 1,
+        "stale": 1,
+        "unresolved": 1,
+    }
 
 
 def _run_with_targets(
@@ -159,15 +285,18 @@ def _run_with_targets(
     targets: list[dict[str, Any]],
     *,
     now: datetime | None = None,
+    stage_overrides: dict[str, Any] | None = None,
 ):
+    overrides = {
+        "build_outcome_targets": lambda config, run: _write_outcome_targets(run, targets),
+    }
+    if stage_overrides:
+        overrides.update(stage_overrides)
     return run_pipeline(
         config,
         config_path=config_path,
         until_stage="evaluate_outcomes",
-        stage_handlers=_handlers_for_until(
-            "evaluate_outcomes",
-            {"build_outcome_targets": lambda config, run: _write_outcome_targets(run, targets)},
-        ),
+        stage_handlers=_handlers_for_until("evaluate_outcomes", overrides),
         now=now or datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
     )
 
@@ -287,6 +416,92 @@ def _write_outcome_targets(run, targets: list[dict[str, Any]]) -> list[str]:
     )
     run.manifest["artifacts"]["outcome_targets"] = "analysis/outcome_targets.json"
     return ["analysis/outcome_targets.json"]
+
+
+def _event_expected(decision_impact: str, risk_effect: str) -> dict[str, Any]:
+    return {
+        "event_severity": "medium",
+        "decision_impact": decision_impact,
+        "risk_effect": risk_effect,
+        "watch_relevance": "confirmation",
+    }
+
+
+def _event_record(
+    record_id: str,
+    decision_impact: str,
+    risk_effect: str,
+    *,
+    stale: bool = False,
+) -> dict[str, Any]:
+    return {
+        "assessment_id": record_id,
+        "status": "degraded" if stale else "succeeded",
+        "scope": {"symbol": "BTCUSDT", "timeframe": "1d"},
+        "event_severity": "medium",
+        "decision_impact": decision_impact,
+        "risk_effect": risk_effect,
+        "watch_relevance": "confirmation",
+        "evidence": [{"type": "event_signal", "event_signal_id": record_id}],
+        "downgrade_reasons": ["stale_event"] if stale else [],
+        "uncertainty": ["Event follow-through uncertainty."],
+        "source_artifacts": ["analysis/text_event_signals.json"],
+        "warnings": ["stale_event"] if stale else [],
+    }
+
+
+def _write_current_event_assessments(run, records: list[dict[str, Any]]) -> list[str]:
+    write_json(
+        run.analysis_dir / "event_intelligence_assessment.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "event_intelligence_assessment",
+            "run_id": run.run_id,
+            "created_at": "2026-06-07T00:00:00Z",
+            "source_artifacts": ["analysis/text_event_signals.json"],
+            "records": records,
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["event_intelligence_assessment"] = "analysis/event_intelligence_assessment.json"
+    return ["analysis/event_intelligence_assessment.json"]
+
+
+def _write_current_decisions(run, records: list[dict[str, Any]]) -> list[str]:
+    write_json(
+        run.analysis_dir / "decision_recommendations.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "decision_recommendations",
+            "run_id": run.run_id,
+            "created_at": "2026-06-07T00:00:00Z",
+            "source_artifacts": ["analysis/risk_assessment.json"],
+            "records": records,
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["decision_recommendations"] = "analysis/decision_recommendations.json"
+    return ["analysis/decision_recommendations.json"]
+
+
+def _write_current_alert_decisions(run, records: list[dict[str, Any]]) -> list[str]:
+    write_json(
+        run.analysis_dir / "alert_decisions.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "alert_decisions",
+            "run_id": run.run_id,
+            "created_at": "2026-06-07T00:00:00Z",
+            "source_artifacts": ["analysis/event_intelligence_assessment.json"],
+            "records": records,
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["alert_decisions"] = "analysis/alert_decisions.json"
+    return ["analysis/alert_decisions.json"]
 
 
 def _ohlcv(
