@@ -654,11 +654,13 @@ def _build_data_quality_summary(config: dict[str, Any], run: RunContext) -> list
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .analysis.data_quality_material import build_data_quality_material
     from .analysis.market_material import build_market_material
     from .analysis.text_material import build_text_material
 
     artifacts = []
     try:
+        artifacts.extend(build_data_quality_material(config, run))
         artifacts.extend(build_market_material(config, run))
         artifacts.extend(build_text_material(config, run))
     except PipelineError as exc:

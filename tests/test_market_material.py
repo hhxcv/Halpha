@@ -48,7 +48,10 @@ def test_pipeline_generates_ai_readable_market_material(tmp_path: Path) -> None:
     assert manifest["counts"]["market_material_records"] == 1
     stage = _stage(manifest, "build_analysis_materials")
     assert stage["status"] == "succeeded"
-    assert stage["artifacts"] == ["analysis/market_material.md"]
+    assert stage["artifacts"] == [
+        "analysis/data_quality_material.md",
+        "analysis/market_material.md",
+    ]
 
 
 def test_market_material_marks_missing_values_explicitly(tmp_path: Path) -> None:
@@ -126,7 +129,7 @@ def test_market_material_skips_when_market_disabled(tmp_path: Path) -> None:
     assert market_stage["status"] == "succeeded"
     assert market_stage["artifacts"] == []
     assert analysis_stage["status"] == "succeeded"
-    assert analysis_stage["artifacts"] == []
+    assert analysis_stage["artifacts"] == ["analysis/data_quality_material.md"]
 
 
 def test_market_material_rejects_invalid_raw_market_artifact(tmp_path: Path) -> None:

@@ -71,6 +71,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/alert_decision_material.md",
         "analysis/event_intelligence_material.md",
         "analysis/data_quality_summary.json",
+        "analysis/data_quality_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
         "analysis/research_context.md",
@@ -93,6 +94,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "codex_context": "codex_context/context.md",
             "codex_prompt": "codex_context/prompt.md",
             "data_quality_summary": "analysis/data_quality_summary.json",
+            "data_quality_material": "analysis/data_quality_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
         "raw_text_events": "raw/text_events.json",
@@ -164,15 +166,19 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert "artifact_type: analysis_text_material" in text_material
     event_material = (run_dir / "analysis/event_intelligence_material.md").read_text(encoding="utf-8")
     alert_material = (run_dir / "analysis/alert_decision_material.md").read_text(encoding="utf-8")
+    quality_material = (run_dir / "analysis/data_quality_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_event_intelligence_material" in event_material
     assert "codex_may_generate_event_categories: false" in event_material
     assert "artifact_type: analysis_alert_decision_material" in alert_material
     assert "codex_may_generate_alert_priority: false" in alert_material
+    assert "artifact_type: analysis_data_quality_material" in quality_material
+    assert "codex_may_generate_quality_checks: false" in quality_material
 
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     assert "Use Chinese section headings only." in prompt
     assert "Event intelligence material rules:" in prompt
     assert "Alert decision material rules:" in prompt
+    assert "Data quality material rules:" in prompt
     assert "Source-provided smoke event." in prompt
     assert codex_calls[0]["input"] == prompt
     assert codex_calls[0]["encoding"] == "utf-8"
@@ -289,6 +295,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/event_intelligence_material.md",
         "analysis/decision_intelligence_delta.json",
         "analysis/decision_intelligence_material.md",
+        "analysis/data_quality_summary.json",
+        "analysis/data_quality_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
         "analysis/text_event_classification_evidence.json",
@@ -574,12 +582,14 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
     assert "alert_decision_material: analysis/alert_decision_material.md" in research_context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in research_context
+    assert "data_quality_material: analysis/data_quality_material.md" in research_context
     assert "artifact_type: analysis_market_signal_material" in research_context
     assert "artifact_type: analysis_strategy_evaluation_material" in research_context
     assert "artifact_type: analysis_strategy_experiment_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
     assert "artifact_type: analysis_alert_decision_material" in research_context
     assert "artifact_type: analysis_event_intelligence_material" in research_context
+    assert "artifact_type: analysis_data_quality_material" in research_context
     assert "artifact_type: analysis_market_signal_material" in context
     assert "artifact_type: analysis_strategy_evaluation_material" in context
     assert "artifact_type: analysis_strategy_experiment_material" in context
@@ -596,6 +606,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "alert_decision_material: analysis/alert_decision_material.md" in context
     assert "artifact_type: analysis_event_intelligence_material" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
+    assert "data_quality_material: analysis/data_quality_material.md" in context
+    assert "artifact_type: analysis_data_quality_material" in context
     assert "analysis/decision_recommendations.json" in context
     assert "analysis/watch_triggers.json" in context
     assert "raw_ohlcv_history_embedded: false" in context
@@ -610,7 +622,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "Decision intelligence material rules:" in prompt
     assert "Event intelligence material rules:" in prompt
     assert "Alert decision material rules:" in prompt
+    assert "Data quality material rules:" in prompt
     assert "Do not generate or revise alert priorities" in prompt
+    assert "Do not generate or revise data-quality checks" in prompt
     assert "Do not generate or revise event classifications" in prompt
     assert "event-quant confluence or conflict" in prompt
     assert "current decision view" in prompt

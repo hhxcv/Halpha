@@ -49,7 +49,10 @@ def test_pipeline_generates_ai_readable_text_material(tmp_path: Path) -> None:
     assert manifest["counts"]["text_material_records"] == 1
     stage = _stage(manifest, "build_analysis_materials")
     assert stage["status"] == "succeeded"
-    assert stage["artifacts"] == ["analysis/text_material.md"]
+    assert stage["artifacts"] == [
+        "analysis/data_quality_material.md",
+        "analysis/text_material.md",
+    ]
 
 
 def test_text_material_marks_missing_optional_source_values_explicitly(tmp_path: Path) -> None:
@@ -124,7 +127,7 @@ def test_text_material_skips_when_text_disabled(tmp_path: Path) -> None:
     assert text_stage["status"] == "succeeded"
     assert text_stage["artifacts"] == []
     assert analysis_stage["status"] == "succeeded"
-    assert analysis_stage["artifacts"] == []
+    assert analysis_stage["artifacts"] == ["analysis/data_quality_material.md"]
 
 
 def test_text_material_rejects_invalid_raw_text_artifact(tmp_path: Path) -> None:
@@ -185,7 +188,10 @@ def test_analysis_stage_records_market_artifact_before_text_material_failure(tmp
     assert manifest["artifacts"]["market_material"] == "analysis/market_material.md"
     stage = _stage(manifest, "build_analysis_materials")
     assert stage["status"] == "failed"
-    assert stage["artifacts"] == ["analysis/market_material.md"]
+    assert stage["artifacts"] == [
+        "analysis/data_quality_material.md",
+        "analysis/market_material.md",
+    ]
 
 
 def _write_config(

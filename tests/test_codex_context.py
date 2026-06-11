@@ -31,6 +31,8 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "# codex_context" in context
     assert "raw_market: raw/market.json" in context
     assert "raw_text_events: raw/text_events.json" in context
+    assert "data_quality_summary: analysis/data_quality_summary.json" in context
+    assert "data_quality_material: analysis/data_quality_material.md" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
@@ -43,6 +45,13 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "codex_prompt: codex_context/prompt.md" in context
     assert '<embed path="analysis/research_context.md">' in context
     assert "artifact_type: research_context" in context
+    assert "artifact_type: analysis_data_quality_material" in context
+    assert "codex_may_generate_quality_checks: false" in context
+    assert "full_reusable_history_embedded: false" in context
+    assert "full_catalog_embedded: false" in context
+    assert "full_run_index_embedded: false" in context
+    assert "CREATE TABLE" not in context
+    assert "stable_event_key:" not in context
     assert "content_text: Source-provided event text." in context
 
     prompt = (result.run.codex_context_dir / "prompt.md").read_text(encoding="utf-8")
@@ -68,6 +77,10 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Do not generate or revise event classifications" in prompt
     assert "Event intelligence material rules:" in prompt
     assert "Alert decision material rules:" in prompt
+    assert "Data quality material rules:" in prompt
+    assert "When data quality material is present" in prompt
+    assert "Do not generate or revise data-quality checks" in prompt
+    assert "Treat store references as references only" in prompt
     assert "P0, P1, P2, P3, and no-alert" in prompt
     assert "Do not generate or revise alert priorities" in prompt
     assert "event-quant confluence or conflict" in prompt
@@ -81,8 +94,10 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "artifact_type: research_context" in prompt
     assert "artifact_type: analysis_event_intelligence_material" in prompt
     assert "artifact_type: analysis_alert_decision_material" in prompt
+    assert "artifact_type: analysis_data_quality_material" in prompt
     assert "codex_may_generate_event_categories: false" in prompt
     assert "codex_may_generate_alert_priority: false" in prompt
+    assert "codex_may_generate_quality_checks: false" in prompt
     assert "codex_may_generate_price_forecasts: false" in prompt
     assert "- 核心摘要" in prompt
     assert "- 标题" not in prompt
@@ -91,6 +106,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
+    assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
     assert manifest["codex_input"]["codex_context"]["artifact"] == "codex_context/context.md"
     assert manifest["codex_input"]["codex_context"]["status"] == "included"
     assert manifest["codex_input"]["codex_context"]["chars"] == len(context)
@@ -100,6 +116,10 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert manifest["codex_input"]["codex_prompt"]["chars"] == len(prompt)
     assert manifest["codex_input"]["codex_prompt"]["over_budget"] is False
     assert manifest["codex_input"]["warnings"] == []
+    material_records = {
+        record["artifact"]: record for record in manifest["codex_input"]["materials"]
+    }
+    assert material_records["analysis/data_quality_material.md"]["status"] == "included"
     codex_context_stage = _stage(manifest, "build_codex_context")
     report_stage = _stage(manifest, "run_codex_report")
     assert codex_context_stage["status"] == "succeeded"
@@ -141,6 +161,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json" in context
     assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert "data_quality_material: analysis/data_quality_material.md" in context
     assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
     assert "risk_assessment: analysis/risk_assessment.json" in context
     assert "decision_recommendations: analysis/decision_recommendations.json" in context
@@ -161,6 +182,8 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "return_window_pct is 6.0% over the configured return window." in context
     assert "Strategy uses OHLCV close prices only and excludes text events." in context
     assert "raw_ohlcv_history_embedded: false" in context
+    assert "full_data_quality_json_embedded: false" in context
+    assert "codex_may_generate_validation_results: false" in context
     assert "open_time:" not in context
     assert "Quantitative conclusions" in prompt
     assert "Keep quantitative signal evidence and uncertainty near" in prompt
@@ -183,6 +206,8 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "identify effective, watchlisted, rejected, and insufficient-evidence" in prompt
     assert "Do not generate or revise strategy gate statuses" in prompt
     assert "Decision intelligence material rules:" in prompt
+    assert "Data quality material rules:" in prompt
+    assert "data quality material as Halpha-generated reliability evidence" in prompt
     assert "use it for action-facing decision language" in prompt
     assert "current decision view" in prompt
     assert "what to do" in prompt
@@ -208,6 +233,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Simplified Chinese Markdown" in prompt
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"
+    assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
     assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
     assert manifest["artifacts"]["strategy_experiment_material"] == "analysis/strategy_experiment_material.md"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"

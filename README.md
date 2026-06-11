@@ -236,6 +236,7 @@ A successful configured run can write:
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
 - `analysis/data_quality_summary.json`: current-run data quality checks, statuses, warnings, and source artifact references.
+- `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
@@ -299,6 +300,9 @@ Those are produced deterministically before report generation.
 Codex input is governed by `docs/artifact-governance.md`: complete evidence
 artifacts stay inspectable on disk, while Codex receives bounded report-facing
 material plus explicit budget metadata in `run_manifest.json`.
+Data-quality evidence follows the same rule: Codex receives concise
+`analysis/data_quality_material.md`, not full local histories, raw archives,
+catalog contents, SQLite tables, or Parquet data.
 
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
@@ -379,7 +383,9 @@ For Codex input-budget review, inspect `run_manifest.json` `codex_input`,
 `analysis/research_context.md`, `codex_context/context.md`, and
 `codex_context/prompt.md`. Complete intermediate JSON artifacts should be
 referenced by path and summarized through bounded material, not embedded
-wholesale.
+wholesale. For data-quality review, inspect
+`analysis/data_quality_summary.json` as the structured evidence and
+`analysis/data_quality_material.md` as the bounded Codex-facing summary.
 
 To rerun only the report-facing alert material after inspecting or regenerating
 upstream artifacts:
