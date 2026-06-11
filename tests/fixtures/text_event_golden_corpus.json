@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "artifact_type": "text_events_raw",
+  "collector": "text",
+  "collection_method": "golden_fixture",
+  "collected_at": "2026-06-05T00:31:00Z",
+  "sources": [
+    {
+      "name": "golden-feed",
+      "type": "rss",
+      "url": "https://example.com/golden-feed.xml"
+    }
+  ],
+  "items": [
+    {
+      "id": "text:golden:btc-etf-a",
+      "type": "rss_item",
+      "title": "Bitcoin ETF inflows accelerate as BlackRock fund leads",
+      "published_at": "2026-06-05T00:30:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/btc-etf-a",
+      "content_text": "Bitcoin ETF inflows rose as institutional demand improved for BTC.",
+      "language": "en"
+    },
+    {
+      "id": "text:golden:btc-etf-b",
+      "type": "rss_item",
+      "title": "Spot Bitcoin ETF flow rises again",
+      "published_at": "2026-06-05T02:00:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/btc-etf-b",
+      "content_text": "Spot ETF inflow demand for bitcoin continued during the session.",
+      "language": "en"
+    },
+    {
+      "id": "text:golden:eth-security",
+      "type": "rss_item",
+      "title": "Ethereum bridge exploit investigation expands",
+      "published_at": "2026-06-05T03:00:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/eth-exploit",
+      "content_text": "A security exploit on an Ethereum bridge led to stolen funds and vulnerability review.",
+      "language": "en"
+    },
+    {
+      "id": "text:golden:stablecoin-liquidity",
+      "type": "rss_item",
+      "title": "Stablecoin liquidity expands on USDC issuance",
+      "published_at": "2026-06-05T04:00:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/stablecoin-liquidity",
+      "content_text": "Stablecoin liquidity increased as USDC issuance expanded across exchanges.",
+      "language": "en"
+    },
+    {
+      "id": "text:golden:regulation",
+      "type": "rss_item",
+      "title": "SEC regulation compliance guidance targets crypto exchanges",
+      "published_at": "2026-06-05T05:00:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/regulation",
+      "content_text": "Regulatory compliance guidance described AML and KYC expectations for exchange operators.",
+      "language": "en"
+    },
+    {
+      "id": "text:golden:macro-policy",
+      "type": "rss_item",
+      "title": "CPI inflation report shapes Federal Reserve rate cut expectations",
+      "published_at": "2026-06-05T06:00:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/macro-policy",
+      "content_text": "Macro investors watched CPI inflation and Federal Reserve rate cut expectations.",
+      "language": "en"
+    },
+    {
+      "id": "text:golden:unrelated-art",
+      "type": "rss_item",
+      "title": "Museum opens public archive of digital art",
+      "published_at": "2026-06-05T07:00:00Z",
+      "source": {
+        "name": "golden-feed",
+        "url": "https://example.com/golden-feed.xml"
+      },
+      "link": "https://example.com/golden/digital-art",
+      "content_text": "A museum opened a public archive of digital art and education materials.",
+      "language": "en"
+    }
+  ],
+  "errors": []
+}

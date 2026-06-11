@@ -1,0 +1,31 @@
+{
+  "accepted_asset_relevance": {
+    "text:golden:btc-etf-a": "BTCUSDT",
+    "text:golden:btc-etf-b": "BTCUSDT",
+    "text:golden:eth-security": "ETHUSDT"
+  },
+  "accepted_categories": {
+    "text:golden:btc-etf-a": "etf_flows",
+    "text:golden:btc-etf-b": "etf_flows",
+    "text:golden:eth-security": "security_exploit",
+    "text:golden:stablecoin-liquidity": "stablecoin_liquidity",
+    "text:golden:regulation": "regulation_compliance",
+    "text:golden:macro-policy": "macro_policy"
+  },
+  "unknown_categories": [
+    "text:golden:unrelated-art"
+  ],
+  "same_topic_groups": [
+    [
+      "text:golden:btc-etf-a",
+      "text:golden:btc-etf-b"
+    ]
+  ],
+  "must_not_merge_with_btc_etf_group": [
+    "text:golden:eth-security",
+    "text:golden:stablecoin-liquidity",
+    "text:golden:regulation",
+    "text:golden:macro-policy",
+    "text:golden:unrelated-art"
+  ]
+}
