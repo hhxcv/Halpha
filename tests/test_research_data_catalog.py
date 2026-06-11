@@ -79,6 +79,31 @@ def test_research_data_catalog_skips_when_ohlcv_is_not_configured(tmp_path: Path
     assert catalog["warnings"] == []
 
 
+def test_research_data_catalog_registers_outcome_history_store(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    run = _run_context(tmp_path, config_path)
+    _write_outcome_history_state(tmp_path)
+
+    catalog = build_research_data_catalog({}, run, now="2026-06-05T00:00:00Z")
+    store = catalog["stores"][0]
+
+    assert catalog["status"] == "ok"
+    assert catalog["counts"] == {"errors": 0, "records": 2, "stores": 1, "warnings": 0}
+    assert store["name"] == "outcome_history"
+    assert store["status"] == "ok"
+    assert store["format"] == "json"
+    assert store["storage_path"] == "data/research/outcomes"
+    assert store["state_path"] == "data/research/metadata/outcome_history_state.json"
+    assert store["unique_key_fields"] == ["stable_outcome_key"]
+    assert store["source_fields"] == ["source_run_id", "evaluation_run_id", "target_kind"]
+    assert store["sources"] == ["source-run"]
+    assert store["record_count"] == 2
+    assert store["source_artifacts"] == [
+        "data/research/outcomes/outcome_history.json",
+        "data/research/metadata/outcome_history_state.json",
+    ]
+
+
 def _write_config(tmp_path: Path) -> Path:
     path = tmp_path / "config.yaml"
     path.write_text("run:\n  output_dir: runs\n", encoding="utf-8")
@@ -98,6 +123,38 @@ def _config() -> dict[str, Any]:
             },
         }
     }
+
+
+def _write_outcome_history_state(tmp_path: Path) -> None:
+    state_path = tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state = {
+        "schema_version": 1,
+        "artifact_type": "outcome_history_state",
+        "updated_at": "2026-06-05T00:00:00Z",
+        "status": "ok",
+        "storage_path": "data/research/outcomes",
+        "history_path": "data/research/outcomes/outcome_history.json",
+        "state_path": "data/research/metadata/outcome_history_state.json",
+        "totals": {
+            "records": 2,
+            "incoming_records": 2,
+            "inserted_records": 2,
+            "updated_records": 0,
+            "duplicate_records": 0,
+            "conflicting_duplicates": 0,
+            "warning_count": 0,
+            "error_count": 0,
+        },
+        "sources": [{"source_run_id": "source-run", "record_count": 2}],
+        "target_kinds": [{"value": "market_signal", "record_count": 2}],
+        "outcome_states": [{"value": "aligned", "record_count": 2}],
+        "evaluation_statuses": [{"value": "evaluated", "record_count": 2}],
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
+    }
+    state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
 
 
 def _run_context(tmp_path: Path, config_path: Path) -> RunContext:

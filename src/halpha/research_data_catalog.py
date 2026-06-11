@@ -53,6 +53,7 @@ def build_research_data_catalog(
         _ohlcv_store_record(config, run),
         _run_index_store_record(run),
         _text_event_history_store_record(run),
+        _outcome_history_store_record(run),
     ):
         if store is None:
             continue
@@ -238,6 +239,56 @@ def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
     }
 
 
+def _outcome_history_store_record(run: RunContext) -> dict[str, Any] | None:
+    state_path = run.config_path.parent / "data" / "research" / "metadata" / "outcome_history_state.json"
+    storage_path = run.config_path.parent / "data" / "research" / "outcomes"
+    history_path = storage_path / "outcome_history.json"
+    state = _read_json_object(state_path)
+    summary = run.manifest.get("outcome_history")
+    if state is None and not isinstance(summary, dict):
+        return None
+    if state is None and isinstance(summary, dict) and summary.get("status") != "failed":
+        return None
+
+    totals = state.get("totals") if isinstance(state, dict) else {}
+    if isinstance(state, dict) and state.get("status") == "skipped" and _int(totals.get("records")) == 0:
+        return None
+
+    warnings = _string_list(state.get("warnings")) if isinstance(state, dict) else []
+    errors = _error_list(state.get("errors")) if isinstance(state, dict) else []
+    if isinstance(summary, dict) and summary.get("status") == "failed":
+        errors.append({"message": str(summary.get("error") or "outcome history write failed")})
+    return {
+        "name": "outcome_history",
+        "kind": "outcome_history",
+        "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
+        "format": "json",
+        "storage_path": display_path(storage_path, base=run.config_path.parent),
+        "schema_path": None,
+        "state_path": display_path(state_path, base=run.config_path.parent),
+        "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
+        "partition_fields": [],
+        "unique_key_fields": ["stable_outcome_key"],
+        "source_fields": ["source_run_id", "evaluation_run_id", "target_kind"],
+        "sources": _outcome_sources(state),
+        "latest_update_at": state.get("updated_at") if isinstance(state, dict) else None,
+        "record_count": _int(totals.get("records")) if isinstance(totals, dict) else 0,
+        "warning_count": len(warnings),
+        "error_count": len(errors),
+        "consumers": [
+            "data_inspection",
+            "analysis/outcome_tracking_material.md",
+            "future_research_calibration",
+        ],
+        "source_artifacts": [
+            display_path(history_path, base=run.config_path.parent),
+            display_path(state_path, base=run.config_path.parent),
+        ],
+        "warnings": warnings,
+        "errors": errors,
+    }
+
+
 def _history_sources(state: dict[str, Any] | None) -> list[str]:
     sources = state.get("sources") if isinstance(state, dict) else None
     if not isinstance(sources, list):
@@ -247,6 +298,19 @@ def _history_sources(state: dict[str, Any] | None) -> list[str]:
             str(source.get("source"))
             for source in sources
             if isinstance(source, dict) and isinstance(source.get("source"), str) and source.get("source")
+        }
+    )
+
+
+def _outcome_sources(state: dict[str, Any] | None) -> list[str]:
+    sources = state.get("sources") if isinstance(state, dict) else None
+    if not isinstance(sources, list):
+        return []
+    return sorted(
+        {
+            str(source.get("source_run_id"))
+            for source in sources
+            if isinstance(source, dict) and isinstance(source.get("source_run_id"), str) and source.get("source_run_id")
         }
     )
 

@@ -727,6 +727,7 @@ def _record_terminal_local_data_state(
     clock: Callable[[], datetime],
 ) -> None:
     _record_run_index(run, clock=clock)
+    _record_outcome_history(config, run, clock=clock)
     _record_research_data_catalog(config, run, clock=clock)
     _record_run_index(run, clock=clock)
     _write_manifest(run)
@@ -747,6 +748,25 @@ def _record_run_index(run: RunContext, *, clock: Callable[[], datetime]) -> None
         }
     run.manifest["run_index"] = summary
     run.manifest.setdefault("counts", {})["run_index_errors"] = 1 if summary["status"] == "failed" else 0
+
+
+def _record_outcome_history(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    clock: Callable[[], datetime],
+) -> None:
+    from .outcome_history import OUTCOME_HISTORY_STATE_ARTIFACT, write_outcome_history
+
+    try:
+        write_outcome_history(config, run, now=clock())
+    except Exception as exc:
+        run.manifest["outcome_history"] = {
+            "status": "failed",
+            "artifact": OUTCOME_HISTORY_STATE_ARTIFACT,
+            "error": str(exc),
+        }
+        run.manifest.setdefault("counts", {})["outcome_history_errors"] = 1
 
 
 def _record_research_data_catalog(

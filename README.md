@@ -31,6 +31,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds AI-readable decision material from deterministic JSON artifacts.
 - Extracts deterministic outcome targets from the latest previous successful run.
 - Evaluates matured market, strategy, event, alert, decision, and watch outcome targets.
+- Persists reusable local outcome history outside per-run report directories.
 - Builds research context and Codex prompt artifacts.
 - Runs Codex CLI to generate a Simplified Chinese report.
 - Inserts deterministic strategy output and strategy effectiveness tables into the final report.
@@ -225,6 +226,8 @@ A successful configured run can write:
 - `data/research/index.sqlite`: local run index with run, stage, artifact, and latest-run metadata.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
+- `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.
+- `data/research/outcomes/outcome_history.json`: shared reusable outcome history.
 - `analysis/strategy_benchmark_suite.json`: fixed strategy benchmark window metadata.
 - `analysis/quant_strategy_runs.json`: configured strategy run outputs.
 - `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.
