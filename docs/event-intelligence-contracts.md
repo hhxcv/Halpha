@@ -349,6 +349,24 @@ financial_tone_evidence
 similarity_evidence
 ```
 
+Initial entity and asset relevance artifact:
+
+```text
+analysis/text_entity_evidence.json
+```
+
+Artifact type:
+
+```text
+text_entity_evidence
+```
+
+Source artifacts:
+
+```text
+analysis/text_event_records.json
+```
+
 Entity evidence contract:
 
 ```json
@@ -742,6 +760,7 @@ Target product pipeline order:
 ```text
 collect_text_events
 build_text_event_records
+build_text_entity_evidence
 build_text_event_topics
 build_text_event_signals
 build_event_market_confluence
@@ -771,6 +790,7 @@ Event intelligence may be added to the existing report context when generated.
 
 ```yaml
 text_event_records: analysis/text_event_records.json
+text_entity_evidence: analysis/text_entity_evidence.json
 text_event_topics: analysis/text_event_topics.json
 text_event_signals: analysis/text_event_signals.json
 event_market_confluence: analysis/event_market_confluence.json
@@ -781,6 +801,7 @@ event_intelligence_material: analysis/event_intelligence_material.md
 
 ```yaml
 text_event_records: analysis/text_event_records.json
+text_entity_evidence: analysis/text_entity_evidence.json
 text_event_topics: analysis/text_event_topics.json
 text_event_signals: analysis/text_event_signals.json
 event_market_confluence: analysis/event_market_confluence.json

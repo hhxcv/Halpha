@@ -11,6 +11,7 @@ from .collectors.text import TEXT_ARTIFACT, collect_text_events_raw
 from .pipeline import PipelineError, RunContext
 from .raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from .storage import display_path, ensure_directory, write_json
+from .text_entity_evidence import build_text_entity_evidence
 from .text_event_records import TEXT_EVENT_RECORDS_ARTIFACT, build_text_event_records
 
 
@@ -79,6 +80,7 @@ def run_standalone_text_intelligence(
     try:
         _write_raw_text_events(config, run, input_path=input_path)
         _run_text_event_records(config, run)
+        _run_text_entity_evidence(config, run)
         _record_skipped_processors(run)
         _finish_manifest(run, status="succeeded")
         return StandaloneTextIntelligenceResult(
@@ -203,6 +205,22 @@ def _run_text_event_records(config: dict[str, Any], run: RunContext) -> None:
             "status": "succeeded",
             "artifacts": artifacts,
             "counts": dict(artifact.get("coverage") or {}),
+            "warnings": list(artifact.get("warnings") or []),
+            "errors": list(artifact.get("errors") or []),
+        }
+    )
+
+
+def _run_text_entity_evidence(config: dict[str, Any], run: RunContext) -> None:
+    artifacts = build_text_entity_evidence(config, run)
+    artifact = _read_json(run.analysis_dir / "text_entity_evidence.json")
+    run.manifest["processors"].append(
+        {
+            "name": "build_text_entity_evidence",
+            "status": "succeeded",
+            "artifacts": artifacts,
+            "counts": dict(artifact.get("coverage") or {}),
+            "model_states": list(artifact.get("model_states") or []),
             "warnings": list(artifact.get("warnings") or []),
             "errors": list(artifact.get("errors") or []),
         }
