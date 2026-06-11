@@ -32,7 +32,8 @@ def test_sync_ohlcv_history_skips_when_ohlcv_is_not_configured(tmp_path: Path) -
     assert manifest["artifacts"]["research_data_catalog"] == (
         "data/research/metadata/research_data_catalog.json"
     )
-    assert manifest["research_data_catalog"]["status"] == "skipped"
+    assert manifest["research_data_catalog"]["status"] == "ok"
+    assert manifest["counts"]["research_data_catalog_stores"] == 1
     assert _stage(manifest, "sync_ohlcv")["artifacts"] == [
         "data/research/metadata/research_data_catalog.json"
     ]
@@ -86,7 +87,7 @@ def test_sync_ohlcv_history_initial_backfill_stores_latest_lookback(tmp_path: Pa
         "data/research/metadata/research_data_catalog.json"
     )
     assert manifest["research_data_catalog"]["status"] == "ok"
-    assert manifest["counts"]["research_data_catalog_stores"] == 1
+    assert manifest["counts"]["research_data_catalog_stores"] == 2
     assert (tmp_path / "data" / "market" / "metadata" / "ohlcv_sync_state.json").is_file()
     assert (tmp_path / "data" / "research" / "metadata" / "research_data_catalog.json").is_file()
 

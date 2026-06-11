@@ -169,6 +169,7 @@ Current bias:
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
 * `data/research/metadata/research_data_catalog.json` records implemented reusable local stores, schema refs, state refs, counts, warnings, errors, and consumers.
+* `data/research/index.sqlite` records run, stage, artifact, and latest-run metadata; it stores references, not artifact contents.
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
 * `analysis/text_event_records.json` records normalized source-aware text event records.
 * `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.

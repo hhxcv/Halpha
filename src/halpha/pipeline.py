@@ -163,6 +163,7 @@ def run_pipeline(
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
+    _record_terminal_local_data_state(config, run, clock=clock)
     return RunResult(True, run, 0, None, None)
 
 
@@ -212,6 +213,7 @@ def run_pipeline_stage(
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
+    _record_terminal_local_data_state(config, run, clock=clock)
     return RunResult(True, run, 0, None, None)
 
 
@@ -374,7 +376,7 @@ def _run_stage_handler(
         stage_record["error"] = error
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
-        _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
+        _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
         return RunResult(False, run, exc.exit_code, failed_stage, reason)
     except Exception as exc:
         finished_at = _utc_timestamp(clock())
@@ -385,7 +387,7 @@ def _run_stage_handler(
         stage_record["error"] = error
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
-        _finish_manifest(run, status="failed", error=error, finished_at=finished_at)
+        _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
         return RunResult(False, run, 1, stage, reason)
 
     finished_at = _utc_timestamp(clock())
@@ -676,11 +678,67 @@ def _run_codex_report(config: dict[str, Any], run: RunContext) -> list[str] | No
     return run_codex_report(config, run)
 
 
-def _finish_manifest(run: RunContext, *, status: str, error: dict[str, Any], finished_at: str) -> None:
+def _finish_manifest(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    status: str,
+    error: dict[str, Any],
+    finished_at: str,
+    clock: Callable[[], datetime],
+) -> None:
     run.manifest["status"] = status
     run.manifest["finished_at"] = finished_at
     run.manifest["errors"].append(error)
     _write_manifest(run)
+    _record_terminal_local_data_state(config, run, clock=clock)
+
+
+def _record_terminal_local_data_state(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    clock: Callable[[], datetime],
+) -> None:
+    _record_run_index(run, clock=clock)
+    _record_research_data_catalog(config, run, clock=clock)
+    _record_run_index(run, clock=clock)
+    _write_manifest(run)
+
+
+def _record_run_index(run: RunContext, *, clock: Callable[[], datetime]) -> None:
+    from .run_index import RUN_INDEX_ARTIFACT, write_run_index
+
+    run.manifest.setdefault("artifacts", {})["run_index"] = RUN_INDEX_ARTIFACT
+    try:
+        summary = write_run_index(run, now=clock())
+    except Exception as exc:
+        summary = {
+            "schema_version": 1,
+            "status": "failed",
+            "artifact": RUN_INDEX_ARTIFACT,
+            "error": str(exc),
+        }
+    run.manifest["run_index"] = summary
+    run.manifest.setdefault("counts", {})["run_index_errors"] = 1 if summary["status"] == "failed" else 0
+
+
+def _record_research_data_catalog(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    clock: Callable[[], datetime],
+) -> None:
+    from .research_data_catalog import write_research_data_catalog
+
+    try:
+        write_research_data_catalog(config, run, now=clock())
+    except Exception as exc:
+        run.manifest["research_data_catalog"] = {
+            "status": "failed",
+            "artifact": "data/research/metadata/research_data_catalog.json",
+            "error": str(exc),
+        }
 
 
 def _error_summary(stage: str, reason: str, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
