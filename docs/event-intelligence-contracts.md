@@ -923,6 +923,45 @@ Validation rules:
 - Representative misclassifications should become regression fixtures when they
   are within the implemented scope.
 
+### Manual Review Checklist
+
+For real-source event-intelligence acceptance, review the newest standalone
+text-intelligence output or product run artifacts without exposing local config
+values.
+
+Recommended inputs:
+
+```bash
+python -m halpha text-intel --config <local config>
+python -m halpha run --config <local config> --no-codex
+```
+
+Checklist:
+
+- Inspect `analysis/text_event_records.json` for source names, canonical URLs,
+  timestamps, warnings, and absence of fabricated source fields.
+- Inspect `analysis/text_entity_evidence.json` for accepted asset relevance.
+  High-confidence asset relevance should cite deterministic alias rules or
+  model evidence and configured symbols.
+- Inspect `analysis/text_event_classification_evidence.json` for accepted event
+  categories. Accepted categories should have model scores, threshold checks,
+  rule evidence or accepted symbols, model metadata, and warnings when evidence
+  is weak.
+- Inspect `analysis/text_event_topics.json` for duplicate and same-topic
+  decisions. False duplicate merges are critical and should become regression
+  fixtures.
+- Inspect `analysis/text_event_signals.json` for accepted, low-confidence, and
+  unknown signal states. Ambiguous events should remain unknown or
+  low-confidence rather than being forced.
+- Inspect `analysis/event_market_confluence.json` when present for confluence,
+  conflict, independent, or insufficient-event-evidence relationships and for
+  decision links.
+- Inspect `analysis/event_intelligence_material.md` for bounded source-aware
+  report material and explicit Codex usage boundaries.
+- If a representative misclassification, false merge, missing traceability, or
+  unsafe upgrade is found, add or update a golden fixture and expected output
+  before changing gates.
+
 ## Contract Summary
 
 - Event intelligence is additive to existing text, quant, strategy, decision,
