@@ -809,6 +809,12 @@ Standalone manifest:
 runs/text_intelligence/<id>/manifest.json
 ```
 
+Implemented standalone outputs also include:
+
+```text
+runs/text_intelligence/<id>/analysis/event_intelligence_material.md
+```
+
 Manifest rules:
 
 - Record command inputs, source artifact paths, produced artifact paths, model

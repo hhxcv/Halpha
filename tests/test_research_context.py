@@ -33,6 +33,10 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "raw_text_events: raw/text_events.json" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
+    assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
+    assert "text_event_records: analysis/text_event_records.json" in context
+    assert "text_event_topics: analysis/text_event_topics.json" in context
+    assert "text_event_signals: analysis/text_event_signals.json" in context
     assert "## source_policy" in context
     assert "allowed_sources_only: true" in context
     assert "fabricate_missing_sources: false" in context
@@ -53,6 +57,12 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "include_risk_notes: true" in context
     assert "do_not_calculate_signals_from_raw_ohlcv_history: true" in context
     assert "do_not_inspect_shared_ohlcv_storage: true" in context
+    assert "event_intelligence_requirements:" in context
+    assert "use_halpha_event_categories_only: true" in context
+    assert "do_not_generate_event_classification: true" in context
+    assert "do_not_generate_event_impacts: true" in context
+    assert "do_not_generate_price_forecasts: true" in context
+    assert "do_not_generate_action_guidance: true" in context
     assert "required_sections:" in context
     assert "- 核心摘要" in context
     assert "- 标题" not in context
@@ -61,9 +71,14 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "artifact_type: analysis_market_material" in context
     assert '<embed path="analysis/text_material.md">' in context
     assert "artifact_type: analysis_text_material" in context
+    assert '<embed path="analysis/event_intelligence_material.md">' in context
+    assert "artifact_type: analysis_event_intelligence_material" in context
+    assert "codex_may_generate_event_categories: false" in context
+    assert "codex_may_generate_price_forecasts: false" in context
     assert "content_text: Source-provided event text." in context
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["artifacts"]["event_intelligence_material"] == "analysis/event_intelligence_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
     research_stage = _stage(manifest, "build_research_context")
     codex_context_stage = _stage(manifest, "build_codex_context")

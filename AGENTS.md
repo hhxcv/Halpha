@@ -187,13 +187,16 @@ Current bias:
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, not trading instructions.
 * `analysis/watch_triggers.json` records deterministic static watch triggers, not monitoring or alerts.
 * `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
+* `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from M3 JSON artifacts.
 * `run_manifest.json` records decision-intelligence enabled/status, produced artifacts, counts, previous-run comparison status, warnings, and errors.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include signal, strategy evaluation, strategy experiment, and decision material, not shared OHLCV history.
+* Codex context may include signal, strategy evaluation, strategy experiment, decision, and event intelligence material, not shared OHLCV history.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
+* Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
+* Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.

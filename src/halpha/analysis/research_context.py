@@ -13,6 +13,7 @@ MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
 STRATEGY_EVALUATION_MATERIAL_ARTIFACT = "analysis/strategy_evaluation_material.md"
 STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT = "analysis/strategy_experiment_material.md"
 DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
+EVENT_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/event_intelligence_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 
 
@@ -54,6 +55,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=_quant_enabled(config),
         producer_stage="build_decision_intelligence_material",
     )
+    event_intelligence_material = _read_material(
+        run.analysis_dir / "event_intelligence_material.md",
+        EVENT_INTELLIGENCE_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("event_intelligence_material")),
+        producer_stage="build_event_intelligence_material",
+    )
 
     output_path = run.analysis_dir / "research_context.md"
     output_path.write_text(
@@ -66,6 +73,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
             strategy_evaluation_material=strategy_evaluation_material,
             strategy_experiment_material=strategy_experiment_material,
             decision_intelligence_material=decision_intelligence_material,
+            event_intelligence_material=event_intelligence_material,
             text_material=text_material,
         ),
         encoding="utf-8",
@@ -84,6 +92,7 @@ def render_research_context(
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
     decision_intelligence_material: str | None,
+    event_intelligence_material: str | None,
     text_material: str | None,
 ) -> str:
     source_artifacts = [value for value in artifact_index.values() if value is not None]
@@ -135,6 +144,8 @@ def render_research_context(
     lines.extend(_embedded_material(STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material))
     lines.extend(["", "## decision_intelligence_material", ""])
     lines.extend(_embedded_material(DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material))
+    lines.extend(["", "## event_intelligence_material", ""])
+    lines.extend(_embedded_material(EVENT_INTELLIGENCE_MATERIAL_ARTIFACT, event_intelligence_material))
     lines.extend(["", "## text_material", ""])
     lines.extend(_embedded_material(TEXT_MATERIAL_ARTIFACT, text_material))
     return "\n".join(lines)
@@ -172,6 +183,18 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "watch_triggers": artifacts.get("watch_triggers"),
                 "decision_intelligence_delta": artifacts.get("decision_intelligence_delta"),
                 "decision_intelligence_material": artifacts.get("decision_intelligence_material"),
+            }
+        )
+    if artifacts.get("event_intelligence_material"):
+        index.update(
+            {
+                "text_event_records": artifacts.get("text_event_records"),
+                "text_entity_evidence": artifacts.get("text_entity_evidence"),
+                "text_event_classification_evidence": artifacts.get("text_event_classification_evidence"),
+                "text_event_topics": artifacts.get("text_event_topics"),
+                "text_event_signals": artifacts.get("text_event_signals"),
+                "event_market_confluence": artifacts.get("event_market_confluence"),
+                "event_intelligence_material": artifacts.get("event_intelligence_material"),
             }
         )
     return index
@@ -272,6 +295,20 @@ def _generation_constraints() -> dict[str, Any]:
             "do_not_invent_action_levels": True,
             "do_not_upgrade_low_confidence_or_unsupported_material": True,
             "do_not_create_trading_instructions": True,
+        },
+        "event_intelligence_requirements": {
+            "include_when_event_intelligence_material_exists": True,
+            "use_halpha_event_categories_only": True,
+            "use_halpha_event_signals_only": True,
+            "use_halpha_event_market_relationships_only": True,
+            "include_source_coverage_topic_grouping_recency_and_uncertainty": True,
+            "include_event_quant_confluence_or_conflict_when_supported": True,
+            "financial_tone_is_not_a_trading_signal": True,
+            "do_not_generate_event_classification": True,
+            "do_not_generate_event_impacts": True,
+            "do_not_generate_price_forecasts": True,
+            "do_not_generate_action_guidance": True,
+            "do_not_upgrade_low_confidence_or_unknown_event_evidence": True,
         },
         "required_sections": [
             "核心摘要",
