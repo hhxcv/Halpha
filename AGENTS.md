@@ -173,6 +173,8 @@ Current bias:
 * `data/research/index.sqlite` records run, stage, artifact, and latest-run metadata; it stores references, not artifact contents.
 * `data/research/metadata/text_event_history_state.json` records shared text-event history state, counts, duplicates, conflicts, warnings, and source refs.
 * `data/research/text_events/` stores reusable text-event history; it is input data, not AI context.
+* `data/research/metadata/outcome_history_state.json` records shared outcome history state, counts, duplicates, conflicts, warnings, and source refs.
+* `data/research/outcomes/outcome_history.json` stores reusable outcome history; it is input data, not AI context.
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
 * `analysis/text_event_records.json` records normalized source-aware text event records.
 * `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
@@ -204,12 +206,12 @@ Current bias:
 * `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
 * `analysis/outcome_targets.json` records deterministic source-linked outcome targets extracted from the latest previous successful run.
 * `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
-* Other planned outcome tracking artifacts are defined in `docs/outcome-tracking-contracts.md`.
+* `analysis/outcome_tracking_material.md` is planned in `docs/outcome-tracking-contracts.md`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
 * Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, event intelligence, and data quality material, not shared OHLCV history.
-* Codex context must not embed full raw streams, full shared OHLCV history, full reusable text-event history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
+* Codex context must not embed full raw streams, full shared OHLCV history, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
 * Codex input should prioritize high-signal decision, risk, alert, strategy gate, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.

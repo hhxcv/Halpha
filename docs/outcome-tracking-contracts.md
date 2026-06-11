@@ -35,7 +35,7 @@ promises, price forecasts, or financial advice.
 | --- | --- | --- | --- |
 | Outcome targets | Implemented | outcome target extraction stage | outcome evaluation, outcome material |
 | Outcome evaluations | Implemented | outcome evaluation stage | outcome history, outcome material |
-| Outcome history | Planned | outcome history writer | later runs, data inspection, outcome material |
+| Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
 | Outcome tracking material | Planned | outcome material stage | research context, Codex context, report |
 
 README should describe only user-visible behavior that exists. This file may
@@ -358,13 +358,19 @@ Event, alert, decision, and watch follow-through evaluations should record:
 
 ## Reusable Outcome History
 
-Planned reusable store root:
+Implemented reusable store root:
 
 ```text
 data/research/outcomes/
 ```
 
-Planned state metadata:
+Implemented history artifact:
+
+```text
+data/research/outcomes/outcome_history.json
+```
+
+Implemented state metadata:
 
 ```text
 data/research/metadata/outcome_history_state.json
@@ -378,36 +384,46 @@ Purpose:
 
 Required history fields:
 
+- `stable_outcome_key`
 - `outcome_id`
 - `target_id`
 - `target_kind`
 - `source_run_id`
-- `evaluation_run_id`
+- `evaluation_run_ids`
+- `first_evaluation_run_id`
+- `latest_evaluation_run_id`
+- `first_evaluated_at`
+- `latest_evaluated_at`
 - `source_as_of`
-- `evaluated_at`
-- `horizon_id`
+- `horizon_end`
 - `evaluation_status`
 - `outcome_state`
-- `asset`
-- `symbol`
-- `timeframe`
+- `observation_start`
+- `observation_end`
+- `sample_rows`
+- `metrics`
+- `evidence`
+- `uncertainty`
 - `source_artifacts`
+- `content_hash`
+- `status`
 - `warnings`
 - `errors`
 
 Required state metadata fields:
 
 - `schema_version`
-- `generated_at`
+- `artifact_type`
+- `updated_at`
 - `status`
 - `storage_path`
-- `partition_fields`
-- `unique_key_fields`
-- `record_count`
-- `latest_source_run_id`
-- `latest_evaluation_run_id`
-- `warning_count`
-- `error_count`
+- `history_path`
+- `state_path`
+- `totals`
+- `sources`
+- `target_kinds`
+- `outcome_states`
+- `evaluation_statuses`
 - `source_artifacts`
 - `warnings`
 - `errors`

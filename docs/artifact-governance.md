@@ -152,8 +152,9 @@ Outcome tracking artifacts:
 - `analysis/outcome_evaluations.json`: implemented market and strategy outcome
   evaluations plus event, alert, decision, and watch follow-through
   evaluations.
-- `data/research/outcomes/`: planned reusable outcome history.
-- `data/research/metadata/outcome_history_state.json`: planned outcome history
+- `data/research/outcomes/outcome_history.json`: implemented reusable outcome
+  history.
+- `data/research/metadata/outcome_history_state.json`: implemented outcome history
   state metadata.
 
 These artifacts record prior research targets, later outcome evaluations, and
