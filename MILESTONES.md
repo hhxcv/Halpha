@@ -20,9 +20,72 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M5 - Strategy Iteration and Validation Foundation
+### M6 - Pretrained NLP Event Intelligence Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Turn raw public text events into a pretrained-NLP-assisted, source-aware event intelligence layer that normalizes, deduplicates, classifies, and connects market-relevant events to quant and decision artifacts while preserving Halpha-owned deterministic artifact contracts and conservative report boundaries.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M5 strategy benchmark, experiment, gate, decision-intelligence, Codex context, and report path instead of replacing it;
+* preserve existing raw text collection and `analysis/text_material.md` as source-aware text material while adding deeper event-intelligence artifacts;
+* introduce optional local NLP runtime support for pretrained models without hidden model downloads during normal product runs;
+* normalize `raw/text_events.json` into stable event records that preserve source, URL, canonical URL, timestamps, normalized text, warnings, and source artifact references;
+* support standalone text-intelligence execution from configured public text sources and from an existing local `raw/text_events.json` artifact;
+* use pretrained sentence embeddings for duplicate detection and same-topic grouping, with deterministic merge gates and explicit duplicate, same-topic, related-context, or distinct decisions;
+* use pretrained zero-shot classification, financial-tone classification, and open entity extraction as evidence generators for event taxonomy, asset relevance, source context, and topic interpretation;
+* keep Halpha-owned deterministic gates as the final authority for accepted event categories, asset relevance, event signals, topic grouping, confidence, warnings, and degraded states;
+* generate `analysis/text_event_records.json`, `analysis/text_event_topics.json`, `analysis/text_event_signals.json`, `analysis/event_market_confluence.json`, and `analysis/event_intelligence_material.md`;
+* connect event signals with current quant, strategy gate, risk, and decision artifacts so reports can explain event-quant confluence, conflict, or independence;
+* record model names, model revisions, thresholds, scores, rule evidence, acceptance or downgrade reasons, warnings, errors, and degraded or skipped model states in inspectable artifacts or manifests;
+* add golden text-event fixtures and accuracy checks for high-confidence asset relevance, category classification, duplicate safety, topic grouping, and evidence traceability;
+* support human review of recent real-source event-intelligence artifacts as part of local acceptance, with representative misclassifications captured as regression fixtures;
+* produce a Simplified Chinese Markdown report that explains structured event evidence, event uncertainty, and event-quant relationships without letting Codex invent event categories, event impacts, action levels, or price forecasts;
+* keep the M6 product path covered by tests and verified by standalone text-intelligence and real-source product runs.
+
+M6 favors:
+
+* pretrained NLP models as auditable evidence generators over hand-written-only text processing;
+* deterministic Halpha gates over direct model decisions;
+* precision for accepted high-confidence event outputs over broad but weak recall;
+* explicit `unknown`, `low_confidence`, `skipped`, and `degraded` states over fabricated certainty;
+* model metadata, thresholds, scores, matched evidence, and source references in every durable artifact;
+* standalone text-intelligence commands that allow quick local validation without running the full report pipeline;
+* golden fixtures and human review over trusting a pretrained model in isolation;
+* event-quant confluence and conflict interpretation over simple news listing;
+* simple, inspectable Halpha-owned JSON and Markdown artifacts over hidden framework objects;
+* conservative report language that separates evidence, assumptions, uncertainty, and judgment;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M6 does not require:
+
+* training custom NLP, ML, or LLM models from scratch;
+* using hosted NLP APIs or remote inference services;
+* making pretrained models the final source of event categories, asset relevance, decision recommendations, or report conclusions;
+* claiming that event classification is complete semantic understanding;
+* perfect duplicate detection or perfect topic clustering for all public text;
+* automatic parameter optimization or best-parameter selection;
+* additional quantitative strategy candidates;
+* portfolio allocation optimization;
+* trading execution, order placement, position sizing, or exchange account operations;
+* real-time event streaming, scheduler, websocket, daemon, alert delivery runtime, Kafka, Redis, or Celery;
+* new exchange or market data sources;
+* broad public text source expansion before the configured sources are structured well;
+* dashboard UI or hosted service design;
+* database service, vector database, state store redesign, microservices, or feature-store design;
+* making Codex or another LLM the source of event classification, event impact, event-quant confluence, or action recommendations;
+* claiming that an event signal predicts price, guarantees a market move, or supports trading execution.
+
+## Completed Milestones
+
+### M5 - Strategy Iteration and Validation Foundation
+
+Status: completed.
 
 Goal:
 
@@ -72,8 +135,6 @@ M5 does not require:
 * database service, state store redesign, microservices, Kafka, Redis, or Celery;
 * making Codex or another LLM the source of backtest metrics, strategy gate outcomes, or effective-strategy promotion;
 * claiming that an effective research candidate is profitable, safe, or suitable for live trading.
-
-## Completed Milestones
 
 ### M4 - Strategy Evaluation Foundation
 
