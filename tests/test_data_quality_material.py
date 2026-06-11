@@ -85,6 +85,8 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
     assert "full_reusable_history_embedded: false" in material
     assert "full_catalog_embedded: false" in material
     assert "full_run_index_embedded: false" in material
+    assert "run_index_lifecycle:" in material
+    assert "report_stage_time_skip_as_final_missing: false" in material
     assert "data/research/index.sqlite" in material
     assert "data/research/metadata/research_data_catalog.json" in material
     assert "CREATE TABLE" not in material

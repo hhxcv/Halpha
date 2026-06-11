@@ -128,6 +128,7 @@ def _record_from_summary(
         "full_raw_archives_embedded": False,
         "full_catalog_embedded": False,
         "full_run_index_embedded": False,
+        "run_index_lifecycle": _run_index_lifecycle(summary),
         "source_artifacts": [DATA_QUALITY_SUMMARY_ARTIFACT],
         "referenced_evidence_artifacts": _bounded_artifacts(_list(summary.get("source_artifacts"))),
         "store_references": _store_references(summary, manifest_artifacts),
@@ -164,6 +165,25 @@ def _check_record(check: Any) -> dict[str, Any]:
         "details": _detail_counts(details),
         "warnings": _bounded_messages(_list(details.get("warnings"))),
         "errors": _bounded_messages(_list(details.get("errors"))),
+    }
+
+
+def _run_index_lifecycle(summary: dict[str, Any]) -> dict[str, Any]:
+    for check in _list(summary.get("checks")):
+        if not isinstance(check, dict) or check.get("name") != "run_index":
+            continue
+        details = _dict(check.get("details"))
+        return {
+            "terminal_artifact": bool(details.get("terminal_artifact")),
+            "written_after_data_quality_stage": bool(details.get("written_after_data_quality_stage")),
+            "stage_time_skip_is_expected": bool(details.get("stage_time_skip_is_expected")),
+            "report_stage_time_skip_as_final_missing": bool(details.get("report_as_final_missing")),
+        }
+    return {
+        "terminal_artifact": False,
+        "written_after_data_quality_stage": False,
+        "stage_time_skip_is_expected": False,
+        "report_stage_time_skip_as_final_missing": False,
     }
 
 
