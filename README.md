@@ -130,6 +130,7 @@ collect_market_data
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
+build_text_event_topics
 sync_ohlcv
 build_market_data_views
 build_strategy_benchmark_suite
@@ -190,6 +191,7 @@ A successful configured run can write:
 - `raw/text_events.json`: public RSS text events.
 - `analysis/text_event_records.json`: normalized source-aware text event records.
 - `analysis/text_entity_evidence.json`: entity and configured-asset relevance evidence.
+- `analysis/text_event_topics.json`: duplicate, same-topic, related-context, and distinct event grouping evidence.
 - `raw/market_data_views.json`: current-run OHLCV input window metadata.
 - `data/market/ohlcv/`: shared finalized OHLCV history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
@@ -226,6 +228,7 @@ A successful configured run can write:
 - `runs/text_intelligence/<id>/raw/text_events.json`: standalone text raw artifact.
 - `runs/text_intelligence/<id>/analysis/text_event_records.json`: standalone normalized text event records.
 - `runs/text_intelligence/<id>/analysis/text_entity_evidence.json`: standalone entity and asset relevance evidence.
+- `runs/text_intelligence/<id>/analysis/text_event_topics.json`: standalone event topic grouping evidence.
 - `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
 

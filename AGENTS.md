@@ -167,6 +167,9 @@ Current bias:
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
+* `analysis/text_event_records.json` records normalized source-aware text event records.
+* `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
+* `analysis/text_event_topics.json` records duplicate, same-topic, related-context, and distinct event grouping evidence.
 * `analysis/strategy_benchmark_suite.json` records fixed strategy benchmark window metadata, coverage, storage refs, warnings, errors, and source artifacts, not full raw history.
 * `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
 * `analysis/strategy_evaluation_summary.json` records pipeline strategy evaluation outputs from configured strategy runs and current-run OHLCV views.
