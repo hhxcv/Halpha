@@ -840,6 +840,8 @@ Rules:
 - Existing raw text collection remains the upstream source.
 - Existing `analysis/text_material.md` remains source-aware text material.
 - Event intelligence is additive.
+- `build_event_market_confluence` runs after market, risk, decision, and
+  watch-trigger artifacts exist in the full product pipeline.
 - Event intelligence may be skipped when text or text intelligence is disabled.
 - Skipped stages must not fabricate unknown artifacts.
 - Manifest counts should record records, topics, event signals, accepted signals,

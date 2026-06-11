@@ -30,6 +30,7 @@ STAGE_ORDER = (
     "build_risk_assessment",
     "build_decision_recommendations",
     "build_watch_triggers",
+    "build_event_market_confluence",
     "build_decision_intelligence_delta",
     "build_decision_intelligence_material",
     "build_analysis_materials",
@@ -331,6 +332,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_risk_assessment"] = _build_risk_assessment
     handlers["build_decision_recommendations"] = _build_decision_recommendations
     handlers["build_watch_triggers"] = _build_watch_triggers
+    handlers["build_event_market_confluence"] = _build_event_market_confluence
     handlers["build_decision_intelligence_delta"] = _build_decision_intelligence_delta
     handlers["build_decision_intelligence_material"] = _build_decision_intelligence_material
     handlers["build_analysis_materials"] = _build_analysis_materials
@@ -589,6 +591,12 @@ def _build_watch_triggers(config: dict[str, Any], run: RunContext) -> list[str] 
     from .decision_intelligence import build_watch_triggers
 
     return build_watch_triggers(config, run)
+
+
+def _build_event_market_confluence(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .event_market_confluence import build_event_market_confluence
+
+    return build_event_market_confluence(config, run)
 
 
 def _build_decision_intelligence_delta(config: dict[str, Any], run: RunContext) -> list[str] | None:

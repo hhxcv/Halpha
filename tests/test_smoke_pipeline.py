@@ -120,6 +120,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_risk_assessment", "succeeded"),
         ("build_decision_recommendations", "succeeded"),
         ("build_watch_triggers", "succeeded"),
+        ("build_event_market_confluence", "succeeded"),
         ("build_decision_intelligence_delta", "succeeded"),
         ("build_decision_intelligence_material", "succeeded"),
         ("build_analysis_materials", "succeeded"),
@@ -255,6 +256,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/risk_assessment.json",
         "analysis/decision_recommendations.json",
         "analysis/watch_triggers.json",
+        "analysis/event_market_confluence.json",
         "analysis/decision_intelligence_delta.json",
         "analysis/decision_intelligence_material.md",
         "analysis/text_event_records.json",
@@ -341,6 +343,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["decision_recommendation_risk_blocked_records"] == 0
     assert manifest["counts"]["watch_trigger_records"] == 20
     assert manifest["counts"]["watch_trigger_linked_records"] == 20
+    assert manifest["counts"]["event_market_confluence_records"] == 4
+    assert manifest["counts"]["event_market_confluence_insufficient_event_evidence"] == 4
     assert manifest["counts"]["decision_delta_changed_records"] == 0
     assert manifest["counts"]["decision_intelligence_material_records"] == 4
     assert manifest["codex"]["status"] == "succeeded"
@@ -360,6 +364,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["risk_assessment"] == "analysis/risk_assessment.json"
     assert manifest["artifacts"]["decision_recommendations"] == "analysis/decision_recommendations.json"
     assert manifest["artifacts"]["watch_triggers"] == "analysis/watch_triggers.json"
+    assert manifest["artifacts"]["event_market_confluence"] == "analysis/event_market_confluence.json"
     assert manifest["artifacts"]["decision_intelligence_delta"] == "analysis/decision_intelligence_delta.json"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
