@@ -341,6 +341,7 @@ def _text_intel(config_arg: str, *, input_path: str | None, output_dir: str | No
         print(f"status: {result.status}")
         print(f"output_dir: {output}")
         print("text_event_records: analysis/text_event_records.json")
+        print("text_event_classification_evidence: analysis/text_event_classification_evidence.json")
         print("text_event_topics: analysis/text_event_topics.json")
         print(f"manifest: {manifest}")
         return 0

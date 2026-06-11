@@ -63,6 +63,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "raw/text_events.json",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
+        "analysis/text_event_classification_evidence.json",
         "analysis/text_event_topics.json",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -91,6 +92,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "report": "report/report.md",
         "research_context": "analysis/research_context.md",
         "text_event_records": "analysis/text_event_records.json",
+        "text_event_classification_evidence": "analysis/text_event_classification_evidence.json",
         "text_entity_evidence": "analysis/text_entity_evidence.json",
         "text_event_topics": "analysis/text_event_topics.json",
         "text_material": "analysis/text_material.md",
@@ -100,6 +102,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("collect_text_events", "succeeded"),
         ("build_text_event_records", "succeeded"),
         ("build_text_entity_evidence", "succeeded"),
+        ("build_text_event_classification_evidence", "succeeded"),
         ("build_text_event_topics", "succeeded"),
         ("sync_ohlcv", "succeeded"),
         ("build_market_data_views", "succeeded"),
@@ -253,6 +256,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/decision_intelligence_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
+        "analysis/text_event_classification_evidence.json",
         "analysis/text_event_topics.json",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -308,6 +312,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["text_entity_records"] == 1
     assert manifest["counts"]["text_entity_evidence"] == 0
     assert manifest["counts"]["text_asset_relevance_evidence"] == 0
+    assert manifest["counts"]["text_event_classification_records"] == 1
+    assert manifest["counts"]["text_event_category_candidate_evidence"] == 0
+    assert manifest["counts"]["text_event_financial_tone_evidence"] == 0
     assert manifest["counts"]["text_event_topics"] == 1
     assert manifest["counts"]["text_event_topic_pair_decisions"] == 0
     assert manifest["counts"]["market_strategy_signals"] == 4
@@ -350,6 +357,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"
+    assert manifest["artifacts"]["text_event_classification_evidence"] == (
+        "analysis/text_event_classification_evidence.json"
+    )
     assert manifest["artifacts"]["text_event_topics"] == "analysis/text_event_topics.json"
     assert manifest["artifacts"]["report"] == "report/report.md"
     assert manifest["decision_intelligence"] == {

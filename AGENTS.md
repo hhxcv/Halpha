@@ -169,6 +169,7 @@ Current bias:
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
 * `analysis/text_event_records.json` records normalized source-aware text event records.
 * `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
+* `analysis/text_event_classification_evidence.json` records event taxonomy candidates and financial tone evidence, not trading signals.
 * `analysis/text_event_topics.json` records duplicate, same-topic, related-context, and distinct event grouping evidence.
 * `analysis/strategy_benchmark_suite.json` records fixed strategy benchmark window metadata, coverage, storage refs, warnings, errors, and source artifacts, not full raw history.
 * `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
