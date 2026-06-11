@@ -203,6 +203,7 @@ Current bias:
 * `analysis/data_quality_summary.json` records current-run market, text, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
 * `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
 * `analysis/outcome_targets.json` records deterministic source-linked outcome targets extracted from the latest previous successful run.
+* `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows.
 * Other planned outcome tracking artifacts are defined in `docs/outcome-tracking-contracts.md`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
