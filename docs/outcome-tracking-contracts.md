@@ -34,7 +34,7 @@ promises, price forecasts, or financial advice.
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
 | Outcome targets | Implemented | outcome target extraction stage | outcome evaluation, outcome material |
-| Outcome evaluations | Initial implementation | outcome evaluation stage | outcome history, outcome material |
+| Outcome evaluations | Implemented | outcome evaluation stage | outcome history, outcome material |
 | Outcome history | Planned | outcome history writer | later runs, data inspection, outcome material |
 | Outcome tracking material | Planned | outcome material stage | research context, Codex context, report |
 
@@ -48,8 +48,8 @@ Define contracts for:
 
 - target extraction from earlier Halpha artifacts;
 - market and strategy outcome evaluation from later OHLCV evidence;
-- event, alert, and decision follow-through evaluation from later Halpha
-  artifacts;
+- event, alert, decision, and watch follow-through evaluation from later
+  Halpha artifacts;
 - reusable outcome history;
 - AI-readable outcome material;
 - manifest, catalog, and Codex-boundary rules;
@@ -256,8 +256,8 @@ reason, and missing fields when relevant.
 
 ## Outcome Evaluation Artifact
 
-Implemented current-run artifact for market and strategy targets. Event, alert,
-and decision follow-through evaluation is planned.
+Implemented current-run artifact for market, strategy, event, alert, decision,
+and watch targets.
 
 ```text
 analysis/outcome_evaluations.json
@@ -307,8 +307,11 @@ Current implementation rules:
 - observation rows must be strictly after `source_as_of`;
 - the anchor row at or before `source_as_of` is source-state context, not an
   observation row;
-- event, alert, decision, and watch targets remain visible as `skipped` until
-  their follow-through evaluators are implemented.
+- event, alert, decision, and watch targets are evaluated from later Halpha
+  artifacts and reusable text-event history;
+- ambiguous later follow-through stays `unresolved`;
+- missing later follow-through evidence stays `insufficient_data`;
+- unsupported target kinds remain visible as `skipped`.
 
 Allowed `evaluation_status` values:
 
@@ -345,7 +348,7 @@ Market and strategy evaluations should record:
 - sample count and coverage warnings;
 - source OHLCV view or shared-store references.
 
-Event, alert, and decision follow-through evaluations should record:
+Event, alert, decision, and watch follow-through evaluations should record:
 
 - later artifacts inspected;
 - confirming evidence count;
@@ -503,7 +506,7 @@ Automated validation should cover:
   failed states;
 - market directional alignment and threshold behavior;
 - favorable and adverse excursion calculations;
-- event, alert, and decision follow-through state rules;
+- event, alert, decision, and watch follow-through state rules;
 - duplicate and conflicting history writes;
 - manifest and catalog references;
 - Codex input boundaries and material budgets.

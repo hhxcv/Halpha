@@ -150,7 +150,8 @@ Outcome tracking artifacts:
 - `analysis/outcome_targets.json`: implemented source-linked targets from the
   latest previous successful run.
 - `analysis/outcome_evaluations.json`: implemented market and strategy outcome
-  evaluations; event, alert, and decision follow-through expansion is planned.
+  evaluations plus event, alert, decision, and watch follow-through
+  evaluations.
 - `data/research/outcomes/`: planned reusable outcome history.
 - `data/research/metadata/outcome_history_state.json`: planned outcome history
   state metadata.
