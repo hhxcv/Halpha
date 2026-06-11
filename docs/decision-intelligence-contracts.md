@@ -19,6 +19,7 @@ quant strategy run artifacts
   -> risk assessment
   -> decision recommendations
   -> watch triggers
+  -> alert decisions
   -> previous-run decision delta
   -> AI-readable decision material
   -> research context
@@ -44,6 +45,7 @@ Define contracts for:
 
 - Upstream quantitative artifact retention.
 - Decision-intelligence JSON artifacts.
+- Alert decision JSON artifacts.
 - AI-readable decision material.
 - Missing-upstream and insufficient-data behavior.
 - Report-level fusion between quant evidence and decision synthesis.
@@ -64,6 +66,7 @@ Define contracts for:
 - Trading execution, order placement, position sizing, or portfolio management.
 - Machine learning prediction or ML regime classification.
 - LLM-generated action contracts.
+- LLM-generated alert priority, event impact, or alert delivery decisions.
 
 ## Technology Boundaries
 
@@ -391,6 +394,179 @@ Rules:
 - Static trigger generation does not implement monitoring.
 - Do not add scheduler, daemon, websocket, polling, notifications, or alert delivery.
 
+## Alert Decisions
+
+Status: contract, not implemented yet.
+
+Artifact:
+
+```text
+analysis/alert_decisions.json
+```
+
+Purpose:
+
+- Turn event assessment, risk, decision recommendations, and watch triggers into
+  deterministic attention-priority decisions for report and future monitoring
+  consumers.
+
+Artifact type:
+
+```text
+alert_decisions
+```
+
+Source artifacts may include:
+
+```text
+analysis/event_intelligence_assessment.json
+analysis/event_market_confluence.json
+analysis/risk_assessment.json
+analysis/decision_recommendations.json
+analysis/watch_triggers.json
+analysis/market_regime_assessment.json
+analysis/market_signals.json
+analysis/text_event_signals.json
+```
+
+Record contract:
+
+```json
+{
+  "alert_decision_id": "alert_decision:BTCUSDT:1d:event_intelligence_assessment:abc123",
+  "status": "succeeded",
+  "priority": "P2",
+  "scope": {
+    "symbol": "BTCUSDT",
+    "timeframe": "1d",
+    "assessment_id": "event_intelligence_assessment:BTCUSDT:1d:text_event_topic:abc123"
+  },
+  "attention_decision": "record_without_interrupting",
+  "decision_impact": "no_change",
+  "risk_effect": "neutral",
+  "watch_trigger_relevance": [],
+  "requires_reassessment": false,
+  "requires_user_attention": false,
+  "reason": "Event evidence is source-aware but does not change current decision intelligence.",
+  "evidence_strength": "low",
+  "downgrade_reasons": [],
+  "suppression_reasons": [],
+  "uncertainty": [],
+  "warnings": [],
+  "linked_event_assessment_ids": [],
+  "linked_decision_record_ids": [],
+  "linked_watch_trigger_ids": [],
+  "source_artifacts": []
+}
+```
+
+Priority taxonomy:
+
+```text
+P0
+P1
+P2
+P3
+no_alert
+unknown
+```
+
+Attention decision taxonomy:
+
+```text
+interrupt_now
+review_soon
+record_without_interrupting
+archive_as_noise
+no_alert
+unknown
+```
+
+Evidence strength taxonomy:
+
+```text
+high
+medium
+low
+insufficient
+unknown
+```
+
+Rules:
+
+- Alert decisions are deterministic Halpha decisions, not notification delivery.
+- P0 and P1 require source artifacts, event assessment evidence, and explicit
+  risk, decision, invalidation, or watch-trigger relevance.
+- P2 may record notable but non-urgent events that do not require immediate
+  attention.
+- P3 and `no_alert` should preserve noise suppression, stale events, duplicates,
+  unrelated events, low-confidence events, or insufficient evidence without
+  promoting them into user attention.
+- `requires_reassessment` is true only when evidence could change current risk,
+  decision recommendations, invalidation conditions, or watch state.
+- Alert decisions must not send notifications, schedule background work, place
+  trades, size positions, access accounts, or create price forecasts.
+- Codex may explain alert decisions from bounded material, but it must not
+  assign or upgrade alert priority.
+
+## Alert Decision Material
+
+Status: contract, not implemented yet.
+
+Artifact:
+
+```text
+analysis/alert_decision_material.md
+```
+
+Purpose:
+
+- Provide bounded AI-readable alert and event-attention material for Codex report
+  generation.
+
+Front matter:
+
+```yaml
+artifact_type: analysis_alert_decision_material
+schema_version: 1
+audience: ai
+source_artifacts:
+  - analysis/event_intelligence_assessment.json
+  - analysis/alert_decisions.json
+  - analysis/risk_assessment.json
+  - analysis/decision_recommendations.json
+  - analysis/watch_triggers.json
+```
+
+Required sections:
+
+```text
+source_policy
+alert_overview
+priority_summary
+decision_impact
+risk_and_watch_relevance
+downgrade_and_suppression_summary
+uncertainty
+report_usage_rules
+record: <alert decision id>
+```
+
+Rules:
+
+- Material should summarize alert priority and event-attention evidence without
+  embedding full `analysis/event_intelligence_assessment.json`,
+  `analysis/alert_decisions.json`, or upstream text event JSON artifacts.
+- P0 and P1 records may be included with detailed evidence when supported.
+- P2 records should be bounded and selected by decision relevance.
+- P3, `no_alert`, unknown, duplicate, stale, low-confidence, unrelated, or
+  insufficient-evidence records should be summarized with counts, examples only
+  when useful, and explicit downgrade or suppression reasons.
+- Codex consumes this material for report language only.
+- Codex must not create or revise alert priority, event severity, decision
+  impact, action levels, event impacts, trading instructions, position sizing,
+  account actions, price forecasts, or return promises.
+
 ## Previous-Run Decision Delta
 
 Artifact:
@@ -519,6 +695,8 @@ market_regime_assessment: analysis/market_regime_assessment.json
 risk_assessment: analysis/risk_assessment.json
 decision_recommendations: analysis/decision_recommendations.json
 watch_triggers: analysis/watch_triggers.json
+alert_decisions: analysis/alert_decisions.json
+alert_decision_material: analysis/alert_decision_material.md
 decision_intelligence_delta: analysis/decision_intelligence_delta.json
 decision_intelligence_material: analysis/decision_intelligence_material.md
 ```
@@ -526,14 +704,19 @@ decision_intelligence_material: analysis/decision_intelligence_material.md
 Rules:
 
 - Embed or reference `analysis/decision_intelligence_material.md`.
+- Embed or reference `analysis/alert_decision_material.md` when generated.
 - Preserve existing market material, text material, and quant signal material.
 - Keep upstream quant material as evidence and decision material as synthesis.
 - Codex consumes decision material for report language only.
 - Codex must not invent action levels, prices, strategy conclusions, signals, trading instructions, or unsupported certainty.
+- Codex consumes alert decision material for explanation only and must not
+  invent alert priorities, event severity, or decision impact.
 
 Prompt rules:
 
 - Require supported sections for current decision view, what to do, what not to do, tentative opportunities, wait/watch conditions, risk state, invalidation conditions, changes versus previous run, uncertainty, and method limits when decision material exists.
+- Require supported alert-priority, event-attention, downgrade, suppression,
+  decision-impact, and uncertainty coverage when alert decision material exists.
 - Require cautious language for uncertain market conclusions.
 - Require evidence and risk conditions near decision guidance.
 - Forbid upgrading unsupported or low-confidence material into strong advice.
@@ -591,6 +774,8 @@ Succeeded or partially succeeded:
       "risk_assessment": "analysis/risk_assessment.json",
       "decision_recommendations": "analysis/decision_recommendations.json",
       "watch_triggers": "analysis/watch_triggers.json",
+      "alert_decisions": "analysis/alert_decisions.json",
+      "alert_decision_material": "analysis/alert_decision_material.md",
       "decision_intelligence_delta": "analysis/decision_intelligence_delta.json",
       "decision_intelligence_material": "analysis/decision_intelligence_material.md"
     },
@@ -599,6 +784,8 @@ Succeeded or partially succeeded:
       "risk_records": 4,
       "decision_recommendations": 4,
       "watch_triggers": 12,
+      "alert_decisions": 4,
+      "alert_decision_material_records": 4,
       "changed_delta_records": 3,
       "decision_material_records": 4
     },
@@ -617,7 +804,10 @@ Rules:
 
 - Record enabled and status fields.
 - Record all produced decision-intelligence artifact paths.
-- Record counts for regime records, risk records, decision recommendations, watch triggers, changed delta records, and decision material records.
+- Record counts for regime records, risk records, decision recommendations,
+  watch triggers, alert decisions, changed delta records, alert decision
+  material records, and decision material records when those artifacts are
+  implemented.
 - Record previous-run comparison status and previous run id or path when available.
 - Record warnings and errors.
 - Handle partial failure without silently reporting success.
@@ -633,6 +823,8 @@ build_market_regime_assessment
 build_risk_assessment
 build_decision_recommendations
 build_watch_triggers
+build_alert_decisions
+build_alert_decision_material
 build_decision_intelligence_delta
 build_decision_intelligence_material
 build_research_context
@@ -642,6 +834,10 @@ Rules:
 
 - Use one pipeline stage per decision-intelligence artifact.
 - Place decision-intelligence stages after market signal material generation and before research context generation.
+- `build_alert_decisions` runs after event intelligence assessment, current
+  risk, decision, and watch-trigger artifacts exist.
+- `build_alert_decision_material` consumes alert decision and event assessment
+  artifacts.
 - `build_decision_intelligence_delta` runs after current regime, risk, decision, and watch artifacts exist.
 - `build_decision_intelligence_material` consumes the delta artifact.
 - Failure handling should preserve artifacts from completed stages and record actionable errors.
@@ -656,6 +852,8 @@ Decision intelligence distinguishes disabled, missing, insufficient, and partial
 | `quant.enabled: false` | Skip decision intelligence. Do not write decision-intelligence JSON or Markdown artifacts. Record skipped and zero counts in the manifest. |
 | `quant.enabled: true`, required upstream quant artifact missing | Write an error or fail the producing stage according to existing pipeline error policy. Do not fabricate evidence. |
 | `quant.enabled: true`, upstream record has insufficient data | Write decision-intelligence artifacts with `unknown`, `WATCH`, `NO_ACTION`, warnings, or non-actionable status as appropriate. |
+| Alert decision upstream event assessment missing | Skip alert decisions or fail the alert decision stage according to existing pipeline error policy. Do not fabricate event impact or alert priority. |
+| Alert decision upstream evidence is low confidence, duplicate, stale, unrelated, or insufficient | Write downgraded, suppressed, P3, `no_alert`, or unknown alert decisions with explicit reasons. |
 | Partial upstream evidence exists | Preserve usable evidence, record warnings for missing pieces, and avoid unsupported conclusions. |
 | Conflicting upstream evidence exists | Record conflicts and cap or downgrade decision strength. |
 
@@ -673,5 +871,7 @@ Rules:
 - Decision-intelligence artifacts are additive derived artifacts, not replacements for quant artifacts.
 - Missing-upstream, insufficient-data, skipped, partial, and conflict behavior are defined.
 - Action recommendations must come from deterministic Halpha logic, not Codex or another LLM.
+- Alert decisions must come from deterministic Halpha logic, not Codex or
+  another LLM.
 - Action taxonomy is research decision-support language only.
 - The intended pipeline position is after market signal material and before research context.
