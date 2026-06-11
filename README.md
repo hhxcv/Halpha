@@ -24,6 +24,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Writes pipeline strategy evaluation summaries with single-window, bounded walk-forward, parameter-stability, and overfitting-risk evidence.
 - Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
 - Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
+- Builds event-quant confluence records and bounded AI-readable event intelligence material.
 - Builds AI-readable decision material from deterministic JSON artifacts.
 - Builds research context and Codex prompt artifacts.
 - Runs Codex CLI to generate a Simplified Chinese report.
@@ -147,6 +148,7 @@ build_risk_assessment
 build_decision_recommendations
 build_watch_triggers
 build_event_market_confluence
+build_event_intelligence_material
 build_decision_intelligence_delta
 build_decision_intelligence_material
 build_analysis_materials
@@ -216,6 +218,7 @@ A successful configured run can write:
 - `analysis/decision_recommendations.json`: deterministic decision-support recommendations.
 - `analysis/watch_triggers.json`: deterministic watch triggers.
 - `analysis/event_market_confluence.json`: deterministic event-quant and event-decision relationship records.
+- `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
 - `analysis/market_material.md`: AI-readable market material.
@@ -237,6 +240,7 @@ A successful configured run can write:
 - `runs/text_intelligence/<id>/analysis/text_event_classification_evidence.json`: standalone event category and financial tone evidence.
 - `runs/text_intelligence/<id>/analysis/text_event_topics.json`: standalone event topic grouping evidence.
 - `runs/text_intelligence/<id>/analysis/text_event_signals.json`: standalone text event signals.
+- `runs/text_intelligence/<id>/analysis/event_intelligence_material.md`: standalone AI-readable event intelligence material.
 - `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
 
@@ -273,7 +277,8 @@ calculate new metrics.
 ## Codex Report Generation
 
 Codex consumes generated research context and prompt artifacts. It does not
-generate action levels, strategy signals, or structured decision artifacts.
+generate action levels, strategy signals, structured decision artifacts, event
+categories, event impacts, event-market relationships, or price forecasts.
 Those are produced deterministically before report generation.
 
 The final report is generated from Codex stdout. When strategy run artifacts are

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .collectors.text import TEXT_ARTIFACT, collect_text_events_raw
+from .analysis.event_intelligence_material import build_event_intelligence_material
 from .pipeline import PipelineError, RunContext
 from .raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from .storage import display_path, ensure_directory, write_json
@@ -22,7 +23,6 @@ TEXT_INTELLIGENCE_MANIFEST = "manifest.json"
 TEXT_INTELLIGENCE_DEFAULT_DIR = "text_intelligence"
 SKIPPED_PROCESSORS = (
     "build_event_market_confluence",
-    "build_event_intelligence_material",
 )
 
 
@@ -85,6 +85,7 @@ def run_standalone_text_intelligence(
         _run_text_event_classification_evidence(config, run)
         _run_text_event_topics(config, run)
         _run_text_event_signals(config, run)
+        _run_event_intelligence_material(config, run)
         _record_skipped_processors(run)
         _finish_manifest(run, status="succeeded")
         return StandaloneTextIntelligenceResult(
@@ -275,6 +276,25 @@ def _run_text_event_signals(config: dict[str, Any], run: RunContext) -> None:
             "model_states": list(artifact.get("model_states") or []),
             "warnings": list(artifact.get("warnings") or []),
             "errors": list(artifact.get("errors") or []),
+        }
+    )
+
+
+def _run_event_intelligence_material(config: dict[str, Any], run: RunContext) -> None:
+    artifacts = build_event_intelligence_material(config, run)
+    material_path = run.analysis_dir / "event_intelligence_material.md"
+    run.manifest["processors"].append(
+        {
+            "name": "build_event_intelligence_material",
+            "status": "succeeded" if material_path.exists() else "skipped",
+            "artifacts": artifacts,
+            "counts": {
+                "records": run.manifest.get("counts", {}).get("event_intelligence_material_records", 0),
+            },
+            "warning_count": run.manifest.get("event_intelligence_material", {}).get("warnings", 0)
+            if isinstance(run.manifest.get("event_intelligence_material"), dict)
+            else 0,
+            "errors": [],
         }
     )
 

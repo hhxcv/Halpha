@@ -95,6 +95,11 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "24. When strategy experiment material is present, identify effective, watchlisted, rejected, and insufficient-evidence strategy candidates from Halpha gate outcomes.",
             "25. Explain benchmark coverage, costs, sample limits, walk-forward evidence, overfitting checks, and uncertainty near strategy effectiveness statements.",
             "26. Do not generate or revise strategy gate statuses, reasons, metrics, or promotion decisions.",
+            "27. When event intelligence material is present, explain Halpha-generated event evidence, topic grouping, source coverage, recency, uncertainty, and event-quant confluence or conflict where supported.",
+            "28. Use only Halpha-generated event categories, event signals, event impacts, and event-market relationships from the event intelligence material.",
+            "29. Do not generate or revise event classifications, event impacts, event-market relationships, action levels, price forecasts, trading advice, position sizing, or account actions.",
+            "30. Treat unknown, low-confidence, skipped, degraded, conflicting, or insufficient event evidence conservatively.",
+            "31. Treat financial tone as event-text evidence only, not as a trading signal or price forecast.",
             "",
             "Quantitative strategy material rules:",
             "",
@@ -131,6 +136,16 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "- Treat WATCH, NO_ACTION, low confidence, high risk, conflicts, or insufficient evidence conservatively.",
             "- When previous-run delta status is no_previous_run, state that no previous successful decision-intelligence run was available instead of fabricating changes.",
             "- Do not invent action levels, signals, prices, strategy conclusions, unsupported trading instructions, position sizing, account actions, return promises, or investment recommendations.",
+            "",
+            "Event intelligence material rules:",
+            "",
+            "- Use event intelligence material as Halpha-generated event evidence, not as a source for new event analysis.",
+            "- Explain source coverage, topic grouping, event signal status, recency, uncertainty, and event-quant confluence or conflict when those artifacts exist.",
+            "- Keep event evidence and uncertainty near each event-related conclusion.",
+            "- Do not generate or revise event taxonomy labels, event categories, event impacts, event-market relationships, action levels, strategy gates, price forecasts, return promises, or trading advice.",
+            "- Do not upgrade unknown, low-confidence, skipped, degraded, conflicting, or insufficient event evidence into stronger conclusions.",
+            "- Do not turn event signals, financial tone, or confluence records into trading instructions, position sizing, account actions, or investment recommendations.",
+            "- If event intelligence material is absent or degraded, do not recreate it from raw text.",
             "",
             "Report style:",
             "",
@@ -200,6 +215,18 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "watch_triggers": artifacts.get("watch_triggers"),
                 "decision_intelligence_delta": artifacts.get("decision_intelligence_delta"),
                 "decision_intelligence_material": artifacts.get("decision_intelligence_material"),
+            }
+        )
+    if artifacts.get("event_intelligence_material"):
+        index.update(
+            {
+                "text_event_records": artifacts.get("text_event_records"),
+                "text_entity_evidence": artifacts.get("text_entity_evidence"),
+                "text_event_classification_evidence": artifacts.get("text_event_classification_evidence"),
+                "text_event_topics": artifacts.get("text_event_topics"),
+                "text_event_signals": artifacts.get("text_event_signals"),
+                "event_market_confluence": artifacts.get("event_market_confluence"),
+                "event_intelligence_material": artifacts.get("event_intelligence_material"),
             }
         )
     return index
