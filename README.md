@@ -12,6 +12,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 
 - Collects public Binance ticker data for configured symbols.
 - Collects public RSS text events from configured sources.
+- Validates optional local text-intelligence model settings and explicit model preparation metadata.
 - Syncs reusable OHLCV history into a shared local Parquet store.
 - Builds deterministic current-run OHLCV data views.
 - Builds fixed strategy benchmark window suites from shared local OHLCV history.
@@ -37,6 +38,13 @@ python -m pip install -e ".[dev]"
 ```
 
 Python 3.11 or newer is required.
+
+Install optional local NLP model preparation and runtime dependencies only when
+text intelligence model preparation is intended:
+
+```bash
+python -m pip install -e ".[dev,nlp]"
+```
 
 ## Run
 
@@ -86,6 +94,17 @@ Use `--strategy <strategy_name>` one or more times to limit candidates, and
 experiments write inspectable artifacts under `runs/strategy_experiments/` by
 default and do not run the report pipeline or Codex CLI.
 
+Prepare configured text-intelligence models explicitly:
+
+```bash
+python -m halpha text-models prepare --config config.example.yaml
+```
+
+With the portable example config, `allow_model_download: false` records a local
+metadata manifest and skips downloads. Actual model downloads require a
+gitignored local config that sets `allow_model_download: true`, explicit model
+revisions, and the optional `nlp` dependencies.
+
 Supported stage names:
 
 ```text
@@ -118,6 +137,7 @@ run_codex_report
 
 - Binance public market data.
 - Public RSS text sources.
+- Optional text-intelligence model roles, revisions, download policy, and thresholds.
 - Shared OHLCV history storage under `data/market/`.
 - Built-in quantitative strategies:
   `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and
@@ -181,6 +201,7 @@ A successful configured run can write:
 - `runs/strategy_experiments/<id>/strategy_benchmark_suite.json`: benchmark suite used by a standalone experiment.
 - `runs/strategy_experiments/<id>/strategy_effectiveness_gates.json`: deterministic strategy gate output.
 - `runs/strategy_experiments/<id>/manifest.json`: standalone strategy experiment manifest.
+- `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
 
 Failed runs preserve artifacts created before the failure and record errors in
 `run_manifest.json`. The product command must not emit fake raw data, fake
@@ -248,6 +269,12 @@ Inspect the generated `runs/strategy_experiments/<id>/manifest.json` and
 `strategy_effectiveness_gates.json` files for benchmark, experiment, and gate
 counts. The portable example config is expected to produce at least three
 `effective` research candidates under the deterministic gate policy.
+
+Run text model preparation metadata acceptance without downloads:
+
+```bash
+python -m halpha text-models prepare --config config.example.yaml
+```
 
 Run full report acceptance when Codex CLI use is intended:
 

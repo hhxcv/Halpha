@@ -62,6 +62,15 @@ def test_config_example_loads_successfully() -> None:
         "sma_cross_trend",
         "tsmom_vol_scaled",
     ]
+    assert config["text"]["intelligence"]["enabled"] is True
+    assert config["text"]["intelligence"]["model_cache_dir"] == "data/models/text"
+    assert config["text"]["intelligence"]["allow_model_download"] is False
+    assert config["text"]["intelligence"]["models"]["embedding"] == {
+        "provider": "sentence_transformers",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "revision": "pinned",
+    }
+    assert config["text"]["intelligence"]["thresholds"]["duplicate_similarity"] == 0.92
     assert config["text"]["sources"][0]["type"] == "rss"
     assert config["report"]["language"] == "zh-CN"
 
@@ -801,6 +810,88 @@ def test_load_config_rejects_invalid_text_max_items(tmp_path: Path) -> None:
         load_config(config_path)
 
 
+def test_load_config_accepts_text_intelligence_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_text_intelligence_config(config_path)
+
+    config = load_config(config_path)
+
+    intelligence = config["text"]["intelligence"]
+    assert intelligence["allow_model_download"] is False
+    assert sorted(intelligence["models"]) == ["classifier", "embedding", "ner", "sentiment"]
+    assert intelligence["models"]["classifier"]["provider"] == "transformers_zero_shot"
+    assert intelligence["thresholds"]["max_topic_window_hours"] == 48
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        (
+            "    allow_model_download: false",
+            "    allow_model_download: false\n    unsupported: true",
+            r"unsupported text\.intelligence field",
+        ),
+        (
+            "      ner:\n        provider: gliner",
+            "      unsupported:\n        provider: gliner",
+            r"unsupported text\.intelligence\.models role",
+        ),
+        (
+            "        provider: sentence_transformers",
+            "        provider: transformers",
+            r"text\.intelligence\.models\.embedding\.provider",
+        ),
+        (
+            "        revision: pinned",
+            "",
+            r"text\.intelligence\.models\.embedding\.revision",
+        ),
+        (
+            "      duplicate_similarity: 0.92",
+            "      duplicate_similarity: 1.5",
+            r"text\.intelligence\.thresholds\.duplicate_similarity",
+        ),
+        (
+            "      max_topic_window_hours: 48",
+            "      max_topic_window_hours: 0",
+            r"text\.intelligence\.thresholds\.max_topic_window_hours",
+        ),
+        (
+            "      entity_accept_score: 0.50",
+            "",
+            r"text\.intelligence\.thresholds missing required field",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_text_intelligence_config(
+    tmp_path: Path,
+    old: str,
+    new: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_text_intelligence_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new, 1),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+def test_load_config_rejects_text_intelligence_when_text_disabled(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_text_intelligence_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("text:\n  enabled: true", "text:\n  enabled: false"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="text.intelligence.enabled requires text.enabled"):
+        load_config(config_path)
+
+
 @pytest.mark.parametrize(
     ("old", "new", "expected"),
     [
@@ -871,6 +962,47 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _add_text_intelligence_config(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "text:\n  enabled: true",
+            """
+text:
+  enabled: true
+  intelligence:
+    enabled: true
+    model_cache_dir: data/models/text
+    allow_model_download: false
+    models:
+      embedding:
+        provider: sentence_transformers
+        name: sentence-transformers/all-MiniLM-L6-v2
+        revision: pinned
+      classifier:
+        provider: transformers_zero_shot
+        name: facebook/bart-large-mnli
+        revision: pinned
+      sentiment:
+        provider: transformers_text_classification
+        name: ProsusAI/finbert
+        revision: pinned
+      ner:
+        provider: gliner
+        name: urchade/gliner_medium-v2.1
+        revision: pinned
+    thresholds:
+      duplicate_similarity: 0.92
+      same_topic_similarity: 0.82
+      classifier_accept_score: 0.65
+      classifier_top_margin: 0.10
+      entity_accept_score: 0.50
+      max_topic_window_hours: 48
+""".strip(),
+        ),
+        encoding="utf-8",
+    )
 
 
 def _remove_quant_and_ohlcv(config_path: Path) -> None:

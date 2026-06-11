@@ -9,6 +9,7 @@ from .pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipe
 from .standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
 from .storage import display_path
 from .strategy_experiment import StrategyExperimentError, run_strategy_experiment
+from .text_models import prepare_text_models
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +49,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     experiment_parser.add_argument("--output-dir", help="Directory for strategy experiment output artifacts.")
 
+    text_models_parser = subparsers.add_parser("text-models", help="Manage local text intelligence models.")
+    text_models_subparsers = text_models_parser.add_subparsers(dest="text_models_command", required=True)
+    prepare_parser = text_models_subparsers.add_parser(
+        "prepare",
+        help="Explicitly prepare configured text intelligence models.",
+    )
+    prepare_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    prepare_parser.add_argument("--output-dir", help="Directory for model preparation metadata and cache.")
+
     return parser
 
 
@@ -76,6 +86,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             strategy_names=args.strategy,
             output_dir=args.output_dir,
         )
+
+    if args.command == "text-models" and args.text_models_command == "prepare":
+        return _text_models_prepare(args.config, output_dir=args.output_dir)
 
     parser.error(f"unknown command: {args.command}")
     return 1
@@ -260,3 +273,43 @@ def _experiment(
     print(f"strategy_effectiveness_gates: {gates}")
     print(f"manifest: {manifest}")
     return result.exit_code
+
+
+def _text_models_prepare(config_arg: str, *, output_dir: str | None) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha text model preparation failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    result = prepare_text_models(
+        config,
+        config_path=config_path,
+        output_dir=Path(output_dir) if output_dir else None,
+    )
+
+    manifest = _safe_local_display_path(result.manifest_path)
+    if result.succeeded:
+        print("Halpha text model preparation completed.")
+        print(f"status: {result.status}")
+        print(f"manifest: {manifest}")
+        return 0
+
+    print("Halpha text model preparation failed.")
+    print(f"status: {result.status}")
+    if result.manifest.get("errors"):
+        print(f"reason: {result.manifest['errors'][0]}")
+    print(f"manifest: {manifest}")
+    return result.exit_code
+
+
+def _safe_local_display_path(path: Path) -> str:
+    try:
+        path.resolve().relative_to(Path.cwd().resolve())
+    except ValueError:
+        return path.name
+    return display_path(path)
