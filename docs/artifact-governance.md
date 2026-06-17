@@ -10,14 +10,16 @@ milestone plan.
 - `AGENTS.md`: AI-agent rules, artifact expectations, and validation rules.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
+- `docs/derivatives-market-contracts.md`: planned derivatives and
+  market-structure data, context, material, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
   watch trigger, delta, alert decision, and decision-material contracts.
-- `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation,
-  history, material, and Codex-boundary contracts.
+- `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history,
+  material, and Codex-boundary contracts.
 
 ## Layer Rules
 
@@ -71,8 +73,27 @@ Codex input.
 Current-run market windows and storage references:
 
 - `raw/market_data_views.json`
+- `raw/derivatives_market_views.json` when derivatives market views are
+  implemented
 
-This artifact records view metadata, not full raw OHLCV history.
+These artifacts record view metadata and bounded current-run windows, not full
+raw OHLCV or derivatives history.
+
+### Derivatives And Market-Structure Evidence
+
+Planned derivatives artifacts:
+
+- `raw/derivatives_market.json`
+- `data/market/derivatives/`
+- `data/market/metadata/derivatives_market_schema.json`
+- `data/market/metadata/derivatives_market_state.json`
+- `raw/derivatives_market_views.json`
+- `analysis/derivatives_market_context.json`
+
+These artifacts preserve funding, open-interest, premium or basis, bounded
+spread or depth, and liquidation-source availability evidence. Codex should
+consume bounded `analysis/derivatives_market_material.md` instead of full raw,
+history, view, or context artifacts.
 
 ### Text Intelligence Evidence
 
@@ -171,6 +192,7 @@ Eligible Codex input:
 - `analysis/market_signal_material.md`
 - `analysis/strategy_evaluation_material.md`
 - `analysis/strategy_experiment_material.md`
+- `analysis/derivatives_market_material.md` when implemented
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
@@ -211,6 +233,7 @@ Codex input policy:
 - Do not embed full reusable outcome history.
 - Do not embed full run manifests.
 - Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
+- Prefer high-signal derivatives and market-structure context when implemented.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:
@@ -253,6 +276,17 @@ Strategy and decision material:
 - Avoid row dumps when a deterministic post-processed table will be inserted
   after Codex stdout validation.
 
+Derivatives market material:
+
+- Prefer high-severity funding, open-interest, premium or basis, liquidity, and
+  liquidation-availability records first.
+- Summarize neutral, skipped, unavailable, stale, partial, degraded, or
+  low-severity records with counts and representative examples only when useful.
+- Record unavailable source classes explicitly so missing derivatives evidence
+  is not treated as neutral.
+- Do not embed full raw derivatives payloads, reusable derivatives history,
+  full order-book snapshots, or full context JSON.
+
 ## Validation
 
 Automated validation:
@@ -281,6 +315,7 @@ Inspect:
 - `codex_context/prompt.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
+- `analysis/derivatives_market_material.md` when implemented
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or
