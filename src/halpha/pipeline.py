@@ -11,6 +11,7 @@ from .storage import ensure_directory, write_json
 
 STAGE_ORDER = (
     "collect_market_data",
+    "collect_derivatives_market_data",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -322,6 +323,7 @@ def _load_run_context(config: dict[str, Any], *, config_path: Path, run_dir: Pat
 def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[str, StageHandler]:
     handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
     handlers["collect_market_data"] = _collect_market_data
+    handlers["collect_derivatives_market_data"] = _collect_derivatives_market_data
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -493,6 +495,12 @@ def _collect_market_data(config: dict[str, Any], run: RunContext) -> list[str] |
     from .collectors.market import collect_market_data
 
     return collect_market_data(config, run)
+
+
+def _collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .collectors.derivatives_market import collect_derivatives_market_data
+
+    return collect_derivatives_market_data(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
@@ -843,12 +851,23 @@ def _unique_run_dir(output_dir: Path, run_id: str) -> Path:
 def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
     market = config.get("market", {})
     text = config.get("text", {})
+    derivatives = market.get("derivatives") if isinstance(market, dict) else {}
+    derivatives_summary = {}
+    if isinstance(derivatives, dict):
+        derivatives_summary = {
+            "enabled": derivatives.get("enabled"),
+            "source": derivatives.get("source"),
+            "symbols": list(derivatives.get("symbols", [])),
+            "data_classes": list(derivatives.get("data_classes", [])),
+            "periods": list(derivatives.get("periods", [])),
+        }
 
     return {
         "market": {
             "enabled": market.get("enabled"),
             "source": market.get("source"),
             "symbols": list(market.get("symbols", [])),
+            "derivatives": derivatives_summary,
         },
         "text": [
             {

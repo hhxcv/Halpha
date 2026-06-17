@@ -81,9 +81,12 @@ raw OHLCV or derivatives history.
 
 ### Derivatives And Market-Structure Evidence
 
-Planned derivatives artifacts:
+Derivatives artifacts:
 
 - `raw/derivatives_market.json`
+
+Planned derivatives history, view, and analysis artifacts:
+
 - `data/market/derivatives/`
 - `data/market/metadata/derivatives_market_schema.json`
 - `data/market/metadata/derivatives_market_state.json`
