@@ -18,6 +18,8 @@ market:
     lookback:
       1d: 500
       1h: 720
+  derivatives:
+    enabled: false
 
 quant:
   enabled: true

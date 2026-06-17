@@ -12,6 +12,17 @@ from .quant.registry import SUPPORTED_STRATEGY_NAMES
 CONFIG_SECTIONS = {"codex", "market", "quant", "report", "run", "text"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
+SUPPORTED_DERIVATIVES_MARKET_SOURCES = {"binance_usdm"}
+SUPPORTED_DERIVATIVES_DATA_CLASSES = {
+    "basis",
+    "funding_rate",
+    "liquidation_summary",
+    "open_interest",
+    "premium_index",
+    "spread_depth",
+}
+SUPPORTED_DERIVATIVES_PERIODS = {"5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"}
+SUPPORTED_DERIVATIVES_FIELDS = {"data_classes", "enabled", "lookback", "periods", "source", "symbols"}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
@@ -118,6 +129,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
         _require_non_empty_string_list(market, "symbols", "market.symbols")
         if "proxy" in market:
             _validate_market_proxy_config(market)
+    if "derivatives" in market:
+        _validate_derivatives_config(market, market_enabled=market_enabled)
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -377,6 +390,58 @@ def _validate_ohlcv_config(
         raise ConfigError("market.ohlcv.lookback must be a mapping.")
     for timeframe in timeframes:
         _require_positive_int(lookback, timeframe, f"market.ohlcv.lookback.{timeframe}")
+
+
+def _validate_derivatives_config(market: dict[str, Any], *, market_enabled: bool) -> None:
+    derivatives = market.get("derivatives")
+    if not isinstance(derivatives, dict):
+        raise ConfigError("market.derivatives must be a mapping.")
+    _reject_unsupported_fields(
+        derivatives,
+        path="market.derivatives",
+        supported_fields=SUPPORTED_DERIVATIVES_FIELDS,
+    )
+
+    derivatives_enabled = _require_bool(derivatives, "enabled", "market.derivatives.enabled")
+    if not derivatives_enabled:
+        return
+    if not market_enabled:
+        raise ConfigError("market.derivatives.enabled requires market.enabled to be true.")
+
+    source = _require_non_empty_string(derivatives, "source", "market.derivatives.source")
+    _require_supported_value(source, "market.derivatives.source", SUPPORTED_DERIVATIVES_MARKET_SOURCES)
+
+    _require_non_empty_string_list(derivatives, "symbols", "market.derivatives.symbols")
+
+    data_classes = _require_non_empty_string_list(
+        derivatives,
+        "data_classes",
+        "market.derivatives.data_classes",
+    )
+    for index, data_class in enumerate(data_classes):
+        _require_supported_value(
+            data_class,
+            f"market.derivatives.data_classes[{index}]",
+            SUPPORTED_DERIVATIVES_DATA_CLASSES,
+        )
+
+    periods = _require_non_empty_string_list(derivatives, "periods", "market.derivatives.periods")
+    for index, period in enumerate(periods):
+        _require_supported_value(period, f"market.derivatives.periods[{index}]", SUPPORTED_DERIVATIVES_PERIODS)
+
+    lookback = derivatives.get("lookback")
+    if not isinstance(lookback, dict):
+        raise ConfigError("market.derivatives.lookback must be a mapping.")
+    unsupported_lookback_periods = sorted(set(lookback) - set(periods))
+    if unsupported_lookback_periods:
+        configured = ", ".join(periods)
+        names = ", ".join(str(period) for period in unsupported_lookback_periods)
+        raise ConfigError(
+            "unsupported market.derivatives.lookback period(s): "
+            f"{names}. Configured periods: {configured}."
+        )
+    for period in periods:
+        _require_positive_int(lookback, period, f"market.derivatives.lookback.{period}")
 
 
 def _validate_quant_config(quant: dict[str, Any]) -> None:
