@@ -12,6 +12,8 @@ their downstream consumers. It is not a milestone plan.
   documentation index.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
+- `docs/derivatives-market-contracts.md`: planned derivatives and
+  market-structure data, context, material, and Codex-boundary contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
@@ -34,6 +36,7 @@ must stay marked until their producers are added.
 | Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
 | Data quality material | Implemented | analysis material stage | research context, Codex context, report |
 | Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
+| Derivatives market history | not implemented yet | derivatives history writer | derivatives views, data inspection, data quality |
 
 ## Layer Boundary
 
@@ -343,6 +346,16 @@ Outcome history contracts live in `docs/outcome-tracking-contracts.md`.
 Outcome history is reusable local research data. It should stay outside per-run
 report directories, preserve references to source runs and artifacts, and avoid
 embedding full history into Codex input.
+
+## Derivatives Market History
+
+Derivatives market history contracts live in
+`docs/derivatives-market-contracts.md`.
+
+Planned reusable derivatives history is local market context data. It should
+stay outside per-run report directories, preserve source endpoint and timestamp
+references, make unavailable data classes explicit, and avoid embedding full
+history into Codex input.
 
 ## Validation Rules
 

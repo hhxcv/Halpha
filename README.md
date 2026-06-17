@@ -454,9 +454,10 @@ they are not proof of a real-source product run.
   - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
   - `docs/research-data-contracts.md`: shared local research data, run index, text-event history, and data-quality contracts.
   - `docs/quant-contracts.md`: quantitative research contracts.
+  - `docs/derivatives-market-contracts.md`: planned derivatives and market-structure data contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
-  - `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
+  - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.
 - `src/halpha/`: Python package.
 - `tests/`: automated tests.
 - `runs/`: per-run artifact area; generated contents are ignored by git.
