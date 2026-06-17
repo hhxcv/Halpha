@@ -20,9 +20,55 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M9 - Outcome Tracking and Research Feedback Foundation
+### M10 - Derivatives and Market Structure Data Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Add the first high-value non-price market context that materially improves risk, regime, strategy, decision, alert, outcome, and report interpretation through source-aware derivatives and bounded market-structure evidence.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M9 outcome tracking, local research data, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable derivatives and market-structure data contracts for funding rates, open interest, premium or basis, bounded spread or depth summaries, liquidation-summary source availability, quality checks, downstream consumers, and Codex boundaries;
+* collect configured public derivatives and market-structure data from stable unauthenticated sources where available;
+* produce inspectable raw, reusable local-history, current-run view, analysis, and material artifacts without embedding full reusable stores into Codex input;
+* normalize funding, open interest, mark or index premium, basis, spread, depth, and liquidation-summary availability or evidence into source-aware records with symbol, market type, timestamp, source endpoint, value units, warnings, and errors;
+* explicitly distinguish implemented, skipped, unavailable, stale, partial, degraded, and failed data classes instead of silently treating missing derivatives evidence as neutral;
+* generate deterministic derivatives context artifacts such as `analysis/derivatives_market_context.json` with leverage, funding, open-interest, premium or basis, liquidity, market-structure, and liquidation-availability states;
+* generate bounded `analysis/derivatives_market_material.md` for Codex and final report generation;
+* connect derivatives context into market regime, risk assessment, decision recommendations, watch triggers, alert decisions, outcome accountability, and strategy interpretation only as conservative evidence;
+* ensure Codex may explain Halpha-generated derivatives context but must not create derivatives signals, infer missing market-structure data, assign risk levels, or generate trading instructions;
+* support focused validation through existing run, until-stage, single-stage, data inspection, no-Codex, and full Codex product paths;
+* add tests for source parsing, config validation, missing source, stale data, partial collection, extreme funding, open-interest expansion, premium or basis stress, spread or depth degradation, liquidation-source unavailable behavior, risk integration, material boundaries, and report constraints;
+* verify the M10 product path with automated tests and real-source local runs.
+
+M10 favors:
+
+* derivatives and market-structure context over broader data expansion;
+* public unauthenticated endpoints over account, order, position, margin, or trading APIs;
+* low-frequency bounded summaries over streaming microstructure;
+* deterministic Halpha-owned context states over AI-generated market-structure conclusions;
+* explicit source availability and quality states over fabricated neutral evidence;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M10 does not require:
+
+* exchange account access, balances, orders, positions, margin state, portfolio automation, trading execution, or position sizing;
+* websocket streaming, tick storage, high-frequency order-book replay, scheduler, daemon, or alert delivery runtime;
+* execution-grade market microstructure, slippage modeling from order books, or liquidation monitoring service;
+* new exchange coverage beyond the first configured stable public source;
+* macro data, on-chain data, user-state personalization, dashboard UI, hosted services, ML prediction, or automatic strategy optimization;
+* making Codex or another LLM the source of derivatives context, risk levels, market-structure conclusions, action recommendations, alert priorities, or price forecasts.
+
+## Completed Milestones
+
+### M9 - Outcome Tracking and Research Feedback Foundation
+
+Status: completed.
 
 Goal:
 
@@ -72,8 +118,6 @@ M9 does not require:
 * storing full reusable outcome history, raw text archives, SQLite tables, Parquet tables, or local data lake tables in Codex context;
 * making Codex or another LLM the source of outcome labels, correctness judgments, strategy promotion, alert validation, action recommendations, or price forecasts;
 * claiming that favorable historical outcomes guarantee future performance, safe trading, or investment suitability.
-
-## Completed Milestones
 
 ### M8 - Local Research Data Lake and Data Quality Foundation
 
