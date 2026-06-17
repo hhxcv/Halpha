@@ -5,6 +5,26 @@ import pytest
 from halpha.config import ConfigError, load_config
 
 
+_DERIVATIVES_CONFIG_BLOCK = """  derivatives:
+    enabled: true
+    source: binance_usdm
+    symbols:
+      - BTCUSDT
+    data_classes:
+      - funding_rate
+      - open_interest
+      - premium_index
+    periods:
+      - 1h
+      - 4h
+      - 1d
+    lookback:
+      1h: 720
+      4h: 180
+      1d: 90
+"""
+
+
 def test_config_example_loads_successfully() -> None:
     config = load_config(Path("config.example.yaml"))
 
@@ -15,6 +35,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["market"]["ohlcv"]["storage_dir"] == "data/market/ohlcv"
     assert config["market"]["ohlcv"]["timeframes"] == ["1d", "1h"]
     assert config["market"]["ohlcv"]["lookback"] == {"1d": 500, "1h": 720}
+    assert config["market"]["derivatives"] == {"enabled": False}
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
@@ -334,6 +355,96 @@ def test_load_config_rejects_invalid_market_proxy_config(
             "  source: binance",
             f"  source: binance\n{proxy_block}",
         ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+def test_load_config_accepts_omitted_derivatives_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+
+    config = load_config(config_path)
+
+    assert "derivatives" not in config["market"]
+
+
+def test_load_config_accepts_enabled_derivatives_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_derivatives_config(config_path)
+
+    config = load_config(config_path)
+
+    assert config["market"]["derivatives"]["source"] == "binance_usdm"
+    assert config["market"]["derivatives"]["symbols"] == ["BTCUSDT"]
+    assert config["market"]["derivatives"]["data_classes"] == [
+        "funding_rate",
+        "open_interest",
+        "premium_index",
+    ]
+    assert config["market"]["derivatives"]["periods"] == ["1h", "4h", "1d"]
+    assert config["market"]["derivatives"]["lookback"] == {"1h": 720, "4h": 180, "1d": 90}
+
+
+def test_load_config_rejects_enabled_derivatives_when_market_disabled(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_derivatives_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("market:\n  enabled: true", "market:\n  enabled: false"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="market.derivatives.enabled requires market.enabled"):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        (_DERIVATIVES_CONFIG_BLOCK, "  derivatives: invalid\n", "market.derivatives must be a mapping"),
+        ("    enabled: true", "    enabled: \"yes\"", "market.derivatives.enabled"),
+        (
+            "    source: binance_usdm",
+            "    source: unsupported",
+            "market.derivatives.source must be one of: binance_usdm",
+        ),
+        ("    source: binance_usdm\n", "", "market.derivatives.source"),
+        (
+            "    symbols:\n      - BTCUSDT\n",
+            "",
+            "market.derivatives.symbols",
+        ),
+        (
+            "    symbols:\n      - BTCUSDT",
+            "    symbols: []",
+            "market.derivatives.symbols",
+        ),
+        (
+            "    data_classes:\n      - funding_rate\n      - open_interest\n      - premium_index\n",
+            "",
+            "market.derivatives.data_classes",
+        ),
+        (
+            "      - premium_index",
+            "      - unsupported",
+            r"market\.derivatives\.data_classes\[2\]",
+        ),
+        ("      - 4h", "      - 3h", r"market\.derivatives\.periods\[1\]"),
+        ("    lookback:\n      1h: 720\n      4h: 180\n      1d: 90\n", "", "market.derivatives.lookback"),
+        ("      4h: 180\n", "", "market.derivatives.lookback.4h"),
+        ("      4h: 180", "      4h: 0", "market.derivatives.lookback.4h"),
+        ("      1d: 90", "      1d: 90\n      12h: 30", "unsupported market.derivatives.lookback period"),
+        ("    periods:", "    unsupported_field: true\n    periods:", "unsupported market.derivatives field"),
+    ],
+)
+def test_load_config_rejects_invalid_derivatives_config(
+    tmp_path: Path, old: str, new: str, expected: str
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_derivatives_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new),
         encoding="utf-8",
     )
 
@@ -962,6 +1073,16 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _add_derivatives_config(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "      1h: 720\n",
+            f"      1h: 720\n{_DERIVATIVES_CONFIG_BLOCK}",
+        ),
+        encoding="utf-8",
+    )
 
 
 def _add_text_intelligence_config(config_path: Path) -> None:
