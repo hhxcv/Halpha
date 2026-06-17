@@ -42,11 +42,11 @@ README should describe only user-visible behavior that exists. This file may
 define intended contracts before implementation when they are needed to guide a
 focused issue.
 
-Planned contract set:
+Contract set:
 
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
-| Raw derivatives market artifact | not implemented yet | derivatives collection stage | reusable history, data quality |
+| Raw derivatives market artifact | initial adoption | derivatives collection stage | reusable history, data quality |
 | Shared derivatives market history | not implemented yet | derivatives history writer | current-run views, data inspection |
 | Derivatives current-run views | not implemented yet | derivatives view builder | context, data quality |
 | Derivatives market context | not implemented yet | context builder | regime, risk, decisions, alerts, outcomes, material |
@@ -104,13 +104,13 @@ source such as Binance USD-M futures public REST market-data endpoints. The
 contract does not require multi-exchange abstraction before one source is
 working end to end.
 
-## Planned Pipeline Position
+## Pipeline Position
 
-Planned product flow:
+Intended product flow:
 
 ```text
 configured public derivatives source
-  -> raw derivatives market artifact
+  -> raw derivatives market artifact [initial adoption]
   -> shared derivatives market history
   -> derivatives current-run views
   -> derivatives market context
