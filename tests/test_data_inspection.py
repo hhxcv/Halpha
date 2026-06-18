@@ -31,6 +31,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "run_index: skipped" in output
     assert "text_event_history: skipped" in output
     assert "ohlcv_history: skipped" in output
+    assert "derivatives_market_history: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -60,9 +61,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "records=2" in output
     assert "ohlcv_history: ok" in output
     assert "items=1" in output
+    assert "derivatives_market_history: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
-    assert "checks=8" in output
+    assert "checks=11" in output
     assert "degraded=1" in output
     assert "runs/run-1/analysis/data_quality_summary.json" in output
     assert "CREATE TABLE" not in output
@@ -109,6 +111,31 @@ def test_data_inspect_uses_specific_run_dir_and_reports_missing_quality_as_skipp
     assert "run_status=succeeded" in output
 
 
+def test_data_inspect_reports_derivatives_store_and_current_run_views(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False, derivatives_enabled=True)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_derivatives_store_metadata(tmp_path)
+    _write_derivatives_views(run)
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "status: ok" in output
+    assert "derivatives_market_history: ok" in output
+    assert "records=3" in output
+    assert "groups=1" in output
+    assert "schema_version=1" in output
+    assert "views=2" in output
+    assert "insufficient_views=1" in output
+    assert "skipped_views=1" in output
+    assert "derivatives_market_state.json" in output
+    assert str(tmp_path) not in output
+
+
 def test_data_inspect_returns_error_for_missing_requested_run_dir(tmp_path: Path, capsys) -> None:
     config_path = _write_config(tmp_path, ohlcv_enabled=False)
 
@@ -145,6 +172,7 @@ def _write_config(
     tmp_path: Path,
     *,
     ohlcv_enabled: bool,
+    derivatives_enabled: bool = False,
     proxy_url: str | None = None,
 ) -> Path:
     proxy_block = (
@@ -171,6 +199,24 @@ def _write_config(
         if ohlcv_enabled
         else ""
     )
+    derivatives_block = (
+        """
+  derivatives:
+    enabled: true
+    source: binance_usdm
+    symbols:
+      - BTCUSDT
+    data_classes:
+      - funding_rate
+      - open_interest
+    periods:
+      - 5m
+    lookback:
+      5m: 2
+"""
+        if derivatives_enabled
+        else ""
+    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -184,6 +230,7 @@ market:
   symbols:
     - BTCUSDT
 {ohlcv_block.rstrip()}
+{derivatives_block.rstrip()}
 text:
   enabled: false
 report:
@@ -229,6 +276,9 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
         manifest=manifest,
     )
     write_json(run.manifest_path, manifest)
+    warning_messages = ["one configured source returned partial data."] if quality_status != "ok" else []
+    degraded_count = 1 if quality_status == "degraded" else 0
+    warning_count = 1 if quality_status == "warning" else 0
     write_json(
         analysis_dir / "data_quality_summary.json",
         {
@@ -238,17 +288,17 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
             "created_at": "2026-06-05T00:10:00Z",
             "status": quality_status,
             "counts": {
-                "checks": 8,
-                "ok": 7,
-                "warning": 0,
-                "degraded": 1,
+                "checks": 11,
+                "ok": 11 - degraded_count - warning_count,
+                "warning": warning_count,
+                "degraded": degraded_count,
                 "skipped": 0,
                 "failed": 0,
-                "warnings": 1,
+                "warnings": len(warning_messages),
                 "errors": 0,
             },
             "checks": [],
-            "warnings": ["one configured source returned partial data."],
+            "warnings": warning_messages,
             "errors": [],
             "source_artifacts": ["raw/market.json"],
         },
@@ -256,6 +306,62 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
     summary = write_run_index(run, now="2026-06-05T00:10:00Z")
     run.manifest["run_index"] = summary
     return run
+
+
+def _write_derivatives_store_metadata(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "derivatives_market_schema.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_schema",
+            "identity": ["source", "market_type", "data_class", "symbol", "period", "as_of"],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "derivatives_market_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_state",
+            "updated_at": "2026-06-05T00:10:00Z",
+            "status": "ok",
+            "storage_path": "data/market/derivatives",
+            "totals": {"records": 3},
+            "groups": [{"source": "binance_usdm", "data_class": "funding_rate", "row_count": 3}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_derivatives_views(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "derivatives_market_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_views",
+            "created_at": "2026-06-05T00:10:00Z",
+            "views": [
+                {
+                    "view_id": "derivatives_view:funding_rate:binance_usdm:BTCUSDT:8h:latest",
+                    "status": "succeeded",
+                    "latest_observation_time": "2026-06-05T00:00:00Z",
+                    "insufficient_data": False,
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "derivatives_view:spread_depth:binance_usdm:skipped",
+                    "status": "skipped",
+                    "latest_observation_time": None,
+                    "insufficient_data": True,
+                    "warnings": ["spread_depth derivatives views are not implemented."],
+                    "errors": [],
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
 
 
 def _write_store_metadata(tmp_path: Path, run: RunContext) -> None:
