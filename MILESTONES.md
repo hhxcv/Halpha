@@ -20,9 +20,56 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M10 - Derivatives and Market Structure Data Foundation
+### M11 - Macro and Calendar Context Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Add macro and scheduled-event context as conservative risk, watch-condition, event-intelligence, and report evidence without turning Halpha into a macro forecaster or alert runtime.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M10 derivatives, market-structure, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable macro and calendar contracts for scheduled economic releases, central-bank events, broad macro proxy observations where stable public sources are available, source metadata, freshness, impact scope, warnings, errors, and Codex boundaries;
+* collect configured public macro and calendar evidence from stable unauthenticated sources where available;
+* produce inspectable raw, reusable local-history, current-run view, analysis, and material artifacts without embedding full reusable stores into Codex input;
+* normalize scheduled catalysts with event time, source time zone, affected market scope, event class, importance, source refs, freshness state, warnings, and errors;
+* explicitly distinguish upcoming scheduled risk from confirmed realized market impact;
+* explicitly distinguish implemented, skipped, unavailable, stale, partial, degraded, no-event, and failed data classes instead of silently treating missing macro evidence as neutral;
+* generate deterministic macro and calendar context artifacts such as `analysis/macro_calendar_context.json` with scheduled catalyst, recent catalyst, no-event, stale, and unavailable states;
+* generate bounded `analysis/macro_calendar_material.md` for Codex and final report generation;
+* connect macro and calendar context into market regime, risk assessment, decision recommendations, watch triggers, alert decisions, outcome accountability, and strategy interpretation only as conservative evidence;
+* ensure Codex may explain Halpha-generated macro and calendar context but must not create macro events, infer missing source data, assign risk levels, forecast releases, or generate trading instructions;
+* support focused validation through existing run, until-stage, single-stage, data inspection, no-Codex, and full Codex product paths;
+* add tests for upcoming event, recent event, no-event, stale calendar, missing source, duplicate event, source-time-zone handling, partial collection, risk integration, watch trigger integration, material boundaries, and report constraints;
+* verify the M11 product path with automated tests and real-source local runs.
+
+M11 favors:
+
+* scheduled catalyst awareness over macro prediction;
+* official or stable public sources over terminal-only, paid, authenticated, or fragile scraped data;
+* deterministic Halpha-owned context states over AI-generated macro interpretation;
+* bounded macro context over large calendar dumps;
+* explicit source availability, freshness, and time-zone states over fabricated neutral evidence;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M11 does not require:
+
+* macro forecasting, economic surprise modeling, nowcasting, central-bank policy prediction, or asset price prediction;
+* paid data terminals, authenticated APIs, hosted services, or account-specific data;
+* scheduler, daemon, websocket, push notification, dashboard, or alert delivery runtime;
+* portfolio automation, position sizing, trading execution, exchange account access, or broker integration;
+* on-chain flow, user-state personalization, unified feature and factor engine, intelligence fusion layer, or strategy lifecycle automation;
+* making Codex or another LLM the source of macro events, risk levels, watch triggers, alert priorities, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M10 - Derivatives and Market Structure Data Foundation
+
+Status: completed.
 
 Goal:
 
@@ -63,8 +110,6 @@ M10 does not require:
 * new exchange coverage beyond the first configured stable public source;
 * macro data, on-chain data, user-state personalization, dashboard UI, hosted services, ML prediction, or automatic strategy optimization;
 * making Codex or another LLM the source of derivatives context, risk levels, market-structure conclusions, action recommendations, alert priorities, or price forecasts.
-
-## Completed Milestones
 
 ### M9 - Outcome Tracking and Research Feedback Foundation
 
