@@ -39,6 +39,7 @@ must stay marked until their producers are added.
 | Data quality material | Implemented | analysis material stage | research context, Codex context, report |
 | Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
 | Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
+| Macro calendar history | Initial adoption | macro calendar history writer | macro calendar views, data inspection, data quality |
 
 ## Layer Boundary
 
@@ -354,10 +355,20 @@ embedding full history into Codex input.
 Derivatives market history contracts live in
 `docs/derivatives-market-contracts.md`.
 
-Planned reusable derivatives history is local market context data. It should
+Reusable derivatives history is local market context data. It should
 stay outside per-run report directories, preserve source endpoint and timestamp
 references, make unavailable data classes explicit, and avoid embedding full
 history into Codex input.
+
+## Macro Calendar History
+
+Macro calendar history contracts live in `docs/macro-calendar-contracts.md`.
+
+Reusable macro/calendar history is local scheduled-event input data. It should
+stay outside per-run report directories, preserve source endpoint and source
+artifact references, make stale or unavailable calendar states explicit, expose
+bounded current-run views through `raw/macro_calendar_views.json`, and avoid
+embedding full history into Codex input.
 
 ## Validation Rules
 

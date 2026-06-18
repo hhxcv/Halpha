@@ -51,8 +51,8 @@ Contract set:
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
 | Raw macro calendar artifact | initial adoption | macro/calendar collection stage | reusable state, data quality |
-| Shared macro calendar state or history | planned | macro/calendar state writer | current-run views, data inspection |
-| Macro calendar current-run views | planned | macro/calendar view builder | context, data quality |
+| Shared macro calendar state or history | initial adoption | macro/calendar history writer | current-run views, data inspection |
+| Macro calendar current-run views | initial adoption | macro/calendar view builder | context, data quality |
 | Macro calendar context | planned | context builder | regime, risk, decisions, watches, alerts, outcomes, material |
 | Macro calendar material | planned | material builder | research context, Codex context, report |
 
@@ -119,8 +119,8 @@ Intended product flow:
 ```text
 configured public macro/calendar source
   -> raw macro calendar artifact [initial adoption]
-  -> shared macro calendar state or history [planned]
-  -> macro calendar current-run views [planned]
+  -> shared macro calendar state or history [initial adoption]
+  -> macro calendar current-run views [initial adoption]
   -> macro calendar context [planned]
   -> regime, risk, decision, watch, alert, outcome, and strategy interpretation
   -> macro calendar material [planned]
@@ -272,7 +272,7 @@ Rules:
 
 ## Shared Macro Calendar State Or History
 
-Planned reusable storage:
+Implemented reusable storage:
 
 ```text
 data/macro/calendar/
@@ -311,7 +311,7 @@ Required behavior:
 
 ## Macro Calendar Current-Run Views
 
-Planned artifact:
+Implemented artifact:
 
 ```text
 raw/macro_calendar_views.json
@@ -335,8 +335,23 @@ Record fields:
   "input_window_end": "2026-06-19T00:00:00Z",
   "latest_observation_time": "2026-06-18T00:00:00Z",
   "event_count": 1,
+  "included_record_count": 1,
+  "omitted_record_count": 0,
   "status": "succeeded",
   "storage_ref": "data/macro/calendar/source=example_public_calendar/data_class=economic_release/region=US",
+  "included_columns": ["scheduled_at", "event_name", "event_type", "importance", "affected_assets", "endpoint", "warnings", "errors"],
+  "records": [
+    {
+      "scheduled_at": "2026-06-18T00:00:00Z",
+      "event_name": "Example release",
+      "event_type": "economic_release",
+      "importance": "high",
+      "affected_assets": ["BTCUSDT"],
+      "endpoint": "example_calendar",
+      "warnings": [],
+      "errors": []
+    }
+  ],
   "warnings": [],
   "errors": [],
   "source_artifacts": []

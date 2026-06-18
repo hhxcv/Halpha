@@ -63,6 +63,9 @@ Reusable input data:
 - `data/market/ohlcv/`
 - `data/market/metadata/ohlcv_schema.json`
 - `data/market/metadata/ohlcv_sync_state.json`
+- `data/macro/calendar/`
+- `data/macro/metadata/macro_calendar_schema.json`
+- `data/macro/metadata/macro_calendar_state.json`
 - `data/research/metadata/research_data_catalog.json`
 - `data/research/metadata/text_event_history_state.json`
 - `data/research/text_events/`
@@ -77,9 +80,10 @@ Current-run market windows and storage references:
 
 - `raw/market_data_views.json`
 - `raw/derivatives_market_views.json`
+- `raw/macro_calendar_views.json`
 
 These artifacts record view metadata and bounded current-run windows, not full
-raw OHLCV or derivatives history.
+raw OHLCV, derivatives history, or macro/calendar history.
 
 ### Derivatives And Market-Structure Evidence
 
@@ -102,15 +106,20 @@ full raw, history, view, or context artifacts.
 
 ### Macro And Calendar Evidence
 
-Initial macro/calendar artifact:
+Macro/calendar artifacts:
 
 - `raw/macro_calendar.json`
+- `data/macro/calendar/`
+- `data/macro/metadata/macro_calendar_schema.json`
+- `data/macro/metadata/macro_calendar_state.json`
+- `raw/macro_calendar_views.json`
 
-This artifact preserves configured public macro and scheduled-event
+These artifacts preserve configured public macro and scheduled-event
 observations such as Federal Reserve FOMC meeting calendar records when enabled.
-It is source-aware raw evidence, not Codex context by itself. Until later
-macro/calendar material exists, Codex input must not embed this raw artifact by
-default.
+The reusable history and current-run views are source-aware input data, not
+Codex context by themselves. Until later macro/calendar material exists, Codex
+input must not embed raw macro/calendar artifacts, reusable macro/calendar
+history, or macro/calendar views by default.
 
 ### Text Intelligence Evidence
 
