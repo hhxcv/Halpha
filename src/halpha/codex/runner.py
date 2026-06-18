@@ -6,6 +6,7 @@ import subprocess
 from typing import Any
 
 from halpha.codex.report_postprocess import (
+    inject_derivatives_market_section,
     inject_quant_strategy_table,
     inject_strategy_effectiveness_table,
 )
@@ -88,7 +89,8 @@ def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
             error_details=_error_details(exit_code=completed.returncode, stderr_summary=stderr_summary),
         )
 
-    report = inject_quant_strategy_table(completed.stdout, run)
+    report = inject_derivatives_market_section(completed.stdout, run)
+    report = inject_quant_strategy_table(report, run)
     report = inject_strategy_effectiveness_table(report, run)
     report_path = run.report_dir / "report.md"
     report_path.write_text(report, encoding="utf-8")

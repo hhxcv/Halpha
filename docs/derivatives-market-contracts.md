@@ -505,6 +505,14 @@ Codex must not:
 - generate trading instructions, position sizing, account actions, price
   forecasts, or return promises.
 
+Final report post-processing may insert a bounded deterministic derivatives and
+market-structure evidence section from `analysis/derivatives_market_context.json`
+when `analysis/derivatives_market_material.md` exists. This inserted section
+must cite the material artifact and source artifacts, distinguish supported
+stress, no-impact, unavailable, stale, degraded, partial, and failed states, and
+must not create new derivatives states, risk levels, forecasts, or trading
+instructions.
+
 ## Manifest Expectations
 
 `run_manifest.json` records implemented derivatives context summaries and should

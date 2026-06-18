@@ -348,6 +348,9 @@ available, Halpha inserts the complete strategy output table after Codex output
 validation so Codex does not need to recreate every row. When strategy gate
 artifacts are available, Halpha also inserts a deterministic strategy
 effectiveness table from `analysis/strategy_effectiveness_gates.json`.
+When derivatives market material exists, Halpha inserts a bounded derivatives
+and market-structure evidence section from deterministic artifacts after Codex
+output validation.
 
 ## Validation
 
