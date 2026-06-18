@@ -168,6 +168,7 @@ def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path)
     assert history["details"]["records"] == 1
     assert history["details"]["duplicate_records"] == 1
     assert history["details"]["conflicting_duplicates"] == 1
+    assert "derivatives endpoint returned an unavailable optional class" in history["details"]["errors"]
 
     assert views["status"] == "warning"
     assert views["details"]["views"] == 3
@@ -400,7 +401,7 @@ def _write_derivatives_state(tmp_path: Path) -> None:
                 }
             ],
             "warnings": ["one duplicate derivatives record ignored."],
-            "errors": [],
+            "errors": ["derivatives endpoint returned an unavailable optional class"],
         },
     )
 

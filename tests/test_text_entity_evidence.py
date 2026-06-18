@@ -129,7 +129,7 @@ def _write_config(tmp_path: Path, *, symbols: list[str]) -> Path:
 run:
   output_dir: runs
 market:
-  enabled: true
+  enabled: false
   source: binance
   symbols:
 {symbol_lines}
