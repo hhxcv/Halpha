@@ -242,7 +242,7 @@ Default size budgets:
 
 | Input | Budget |
 | --- | ---: |
-| Each material block | 16,000 characters |
+| Each material block | 12,000 characters |
 | `analysis/research_context.md` | 140,000 characters |
 | `codex_context/context.md` | 150,000 characters |
 | `codex_context/prompt.md` | 170,000 characters |

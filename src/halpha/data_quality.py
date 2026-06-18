@@ -242,7 +242,7 @@ def _derivatives_history_check(config: dict[str, Any], run: RunContext) -> dict[
     errors = _error_messages(state.get("errors"))
     totals_value = state.get("totals")
     totals = dict(totals_value) if isinstance(totals_value, dict) else {}
-    status = _status_from_summary(str(state.get("status") or summary.get("status")), warnings, errors)
+    status = _derivatives_history_status(str(state.get("status") or summary.get("status")), warnings, errors)
     return _check(
         "derivatives_market_history",
         "shared_data",
@@ -636,6 +636,16 @@ def _status_from_summary(status: str, warnings: list[str], errors: list[str]) ->
     if status in {"degraded", "warning", "skipped"}:
         return status
     if warnings:
+        return "warning"
+    return "ok"
+
+
+def _derivatives_history_status(status: str, warnings: list[str], errors: list[str]) -> str:
+    if status == "failed":
+        return "failed"
+    if status in {"degraded", "warning", "skipped"}:
+        return status
+    if errors or warnings:
         return "warning"
     return "ok"
 
