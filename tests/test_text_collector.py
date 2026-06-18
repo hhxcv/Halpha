@@ -96,9 +96,13 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     assert manifest["stages"][4]["artifacts"] == []
     assert manifest["stages"][5]["name"] == "collect_macro_calendar_data"
     assert manifest["stages"][5]["artifacts"] == []
-    assert manifest["stages"][6]["name"] == "collect_text_events"
-    assert manifest["stages"][6]["status"] == "succeeded"
-    assert manifest["stages"][6]["artifacts"] == ["raw/text_events.json"]
+    assert manifest["stages"][6]["name"] == "sync_macro_calendar_history"
+    assert manifest["stages"][6]["artifacts"] == []
+    assert manifest["stages"][7]["name"] == "build_macro_calendar_views"
+    assert manifest["stages"][7]["artifacts"] == []
+    assert manifest["stages"][8]["name"] == "collect_text_events"
+    assert manifest["stages"][8]["status"] == "succeeded"
+    assert manifest["stages"][8]["artifacts"] == ["raw/text_events.json"]
 
 
 def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
@@ -184,9 +188,9 @@ def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_rec
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_text_events"] == "raw/text_events.json"
     assert manifest["counts"]["text_event_items"] == 0
-    assert manifest["stages"][6]["status"] == "failed"
-    assert manifest["stages"][6]["artifacts"] == ["raw/text_events.json"]
-    assert manifest["stages"][6]["error"] == manifest["errors"][0]
+    assert manifest["stages"][8]["status"] == "failed"
+    assert manifest["stages"][8]["artifacts"] == ["raw/text_events.json"]
+    assert manifest["stages"][8]["error"] == manifest["errors"][0]
     assert "coindesk: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert "cointelegraph: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert not (result.run.analysis_dir / "text_material.md").exists()

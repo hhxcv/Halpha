@@ -178,6 +178,10 @@ Current bias:
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
 * `raw/derivatives_market.json` records current-run public derivatives and market-structure observations, endpoint availability, warnings, and errors.
 * `raw/macro_calendar.json` records current-run public macro and scheduled-event observations, endpoint availability, warnings, and errors.
+* `data/macro/calendar/` stores reusable macro/calendar history; it is input data, not AI context.
+* `data/macro/metadata/macro_calendar_schema.json` records reusable macro/calendar history schema and logical keys.
+* `data/macro/metadata/macro_calendar_state.json` records reusable macro/calendar history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
+* `raw/macro_calendar_views.json` records current-run macro/calendar input windows, bounded records, and storage refs, not full reusable macro/calendar history.
 * `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
 * `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
 * `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
@@ -218,8 +222,8 @@ Current bias:
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, reusable derivatives history, derivatives views, or full derivatives context JSON.
-* Codex context must not embed full raw streams, full raw derivatives artifacts, full shared OHLCV history, full reusable derivatives history, full derivatives context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, reusable derivatives history, reusable macro/calendar history, derivatives views, macro/calendar views, or full derivatives context JSON.
+* Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full derivatives context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
 * Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.

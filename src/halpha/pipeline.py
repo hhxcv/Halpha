@@ -16,6 +16,8 @@ STAGE_ORDER = (
     "build_derivatives_market_views",
     "build_derivatives_market_context",
     "collect_macro_calendar_data",
+    "sync_macro_calendar_history",
+    "build_macro_calendar_views",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -332,6 +334,8 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_derivatives_market_views"] = _build_derivatives_market_views
     handlers["build_derivatives_market_context"] = _build_derivatives_market_context
     handlers["collect_macro_calendar_data"] = _collect_macro_calendar_data
+    handlers["sync_macro_calendar_history"] = _sync_macro_calendar_history
+    handlers["build_macro_calendar_views"] = _build_macro_calendar_views
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -533,6 +537,18 @@ def _collect_macro_calendar_data(config: dict[str, Any], run: RunContext) -> lis
     from .collectors.macro_calendar import collect_macro_calendar_data
 
     return collect_macro_calendar_data(config, run)
+
+
+def _sync_macro_calendar_history(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .macro_calendar_history import sync_macro_calendar_history
+
+    return sync_macro_calendar_history(config, run)
+
+
+def _build_macro_calendar_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .macro_calendar_views import build_macro_calendar_views
+
+    return build_macro_calendar_views(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
