@@ -16,7 +16,7 @@ STAGE_NAME = "build_derivatives_market_views"
 DERIVATIVES_MARKET_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 VIEW_SCHEMA_VERSION = 1
 VIEW_INCLUDED_COLUMNS = ("as_of", "endpoint", "metrics", "units", "warnings", "errors")
-SUPPORTED_VIEW_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index"}
+SUPPORTED_VIEW_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index", "spread_depth"}
 
 
 def build_derivatives_market_views(
@@ -185,6 +185,8 @@ def _view_periods(data_class: str, periods: list[str]) -> list[str]:
     if data_class == "open_interest":
         return ["snapshot", *periods]
     if data_class == "premium_index":
+        return ["snapshot"]
+    if data_class == "spread_depth":
         return ["snapshot"]
     return periods
 

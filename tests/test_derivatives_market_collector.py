@@ -40,23 +40,24 @@ def test_pipeline_collects_derivatives_market_raw_artifact(tmp_path: Path, monke
         "url": "https://fapi.binance.com",
     }
     assert raw["errors"] == []
-    assert len(raw["items"]) == 5
+    assert len(raw["items"]) == 6
     assert {item["data_class"] for item in raw["items"]} == {
         "basis",
         "funding_rate",
         "open_interest",
         "premium_index",
+        "spread_depth",
     }
     assert {item["source"] for item in raw["items"]} == {"binance_usdm"}
     assert {item["market_type"] for item in raw["items"]} == {"usd_m_futures"}
-    assert len(raw["availability"]) == 5
+    assert len(raw["availability"]) == 6
     assert {item["status"] for item in raw["availability"]} == {"succeeded"}
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_derivatives_market"] == "raw/derivatives_market.json"
-    assert manifest["counts"]["derivatives_market_items"] == 5
+    assert manifest["counts"]["derivatives_market_items"] == 6
     assert manifest["counts"]["derivatives_market_errors"] == 0
-    assert manifest["counts"]["derivatives_market_requests"] == 5
+    assert manifest["counts"]["derivatives_market_requests"] == 6
     assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
     assert manifest["stages"][1]["artifacts"] == ["raw/derivatives_market.json"]
 
@@ -146,7 +147,7 @@ def _write_config(
     derivatives_enabled: bool = True,
     data_classes: list[str] | None = None,
 ) -> Path:
-    data_classes = data_classes or ["funding_rate", "open_interest", "premium_index", "basis"]
+    data_classes = data_classes or ["funding_rate", "open_interest", "premium_index", "basis", "spread_depth"]
     data_class_lines = "\n".join(f"      - {data_class}" for data_class in data_classes)
     enabled_value = "true" if derivatives_enabled else "false"
     extra_derivatives = ""
@@ -231,6 +232,13 @@ def _successful_payloads() -> dict[str, object]:
                 "timestamp": _millis("2026-06-18T00:00:00Z"),
             }
         ],
+        "https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=20": {
+            "lastUpdateId": 1027024,
+            "E": _millis("2026-06-18T00:03:01Z"),
+            "T": _millis("2026-06-18T00:03:00Z"),
+            "bids": [["100.00", "2.0"], ["99.90", "3.0"]],
+            "asks": [["100.05", "1.0"], ["100.10", "2.0"]],
+        },
     }
 
 

@@ -16,7 +16,7 @@ DERIVATIVES_MARKET_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 RAW_DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
 CONTEXT_SCHEMA_VERSION = 1
 STALE_MAX_AGE_HOURS = 48
-SUPPORTED_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index"}
+SUPPORTED_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index", "spread_depth"}
 
 FUNDING_THRESHOLDS = {
     "elevated_positive_funding_rate": 0.0002,
@@ -37,6 +37,12 @@ PREMIUM_THRESHOLDS = {
 BASIS_THRESHOLDS = {
     "stretched_abs_basis_rate": 0.001,
     "stressed_abs_basis_rate": 0.005,
+}
+SPREAD_DEPTH_THRESHOLDS = {
+    "wide_spread_bps": 10.0,
+    "stressed_spread_bps": 20.0,
+    "depth_imbalance_abs": 0.4,
+    "severe_depth_imbalance_abs": 0.7,
 }
 
 
@@ -110,7 +116,7 @@ def _context_record(
     elif view.get("data_class") == "open_interest":
         state = _open_interest_state(rows, status_inputs=status_inputs, period=str(view.get("period") or ""))
         context_type = "open_interest_pressure"
-    else:
+    elif view.get("data_class") in {"premium_index", "basis"}:
         state = _premium_basis_state(
             rows,
             raw=raw,
@@ -118,6 +124,9 @@ def _context_record(
             status_inputs=status_inputs,
         )
         context_type = "premium_basis_state"
+    else:
+        state = _spread_depth_state(rows, status_inputs=status_inputs)
+        context_type = "liquidity_depth_state"
 
     warnings = _unique_sorted(
         [
@@ -337,6 +346,57 @@ def _premium_basis_state(
     return _basis_state(rows, raw=raw, view=view, status_inputs=status_inputs)
 
 
+def _spread_depth_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, Any]) -> dict[str, Any]:
+    latest_spread_bps = _latest_metric(rows, "spread_bps")
+    latest_imbalance = _latest_metric(rows, "depth_imbalance")
+    latest_row = rows[-1] if rows else {}
+    as_of = latest_row.get("as_of") if isinstance(latest_row, dict) else None
+    if status_inputs["status"] in {"unavailable", "failed"}:
+        return _empty_state("unavailable", thresholds=SPREAD_DEPTH_THRESHOLDS)
+    if status_inputs["status"] == "stale":
+        return _empty_state("stale", thresholds=SPREAD_DEPTH_THRESHOLDS, as_of=as_of)
+    if latest_spread_bps is None or latest_imbalance is None:
+        missing = "spread_bps" if latest_spread_bps is None else "depth_imbalance"
+        return _empty_state(
+            "insufficient_evidence",
+            thresholds=SPREAD_DEPTH_THRESHOLDS,
+            as_of=as_of,
+            warnings=[f"{missing} metric is missing."],
+        )
+    state, severity = _spread_depth_state_from_metrics(latest_spread_bps, latest_imbalance)
+    return {
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "as_of": as_of,
+        "metrics": {
+            "top_bid_price": _latest_metric(rows, "top_bid_price"),
+            "top_ask_price": _latest_metric(rows, "top_ask_price"),
+            "mid_price": _latest_metric(rows, "mid_price"),
+            "spread": _latest_metric(rows, "spread"),
+            "spread_bps": latest_spread_bps,
+            "bid_depth_quantity": _latest_metric(rows, "bid_depth_quantity"),
+            "ask_depth_quantity": _latest_metric(rows, "ask_depth_quantity"),
+            "bid_depth_notional": _latest_metric(rows, "bid_depth_notional"),
+            "ask_depth_notional": _latest_metric(rows, "ask_depth_notional"),
+            "depth_imbalance": latest_imbalance,
+            "snapshot_depth_limit": _latest_metric(rows, "snapshot_depth_limit"),
+            "observations": len(_metric_series(rows, "spread_bps")),
+            "units": _latest_units(rows),
+        },
+        "thresholds": SPREAD_DEPTH_THRESHOLDS,
+        "evidence": _evidence(
+            rows,
+            metric_name="spread_bps",
+            latest_value=latest_spread_bps,
+            rolling_change=None,
+        ),
+        "uncertainty": ["single depth snapshot is not execution-grade liquidity evidence."],
+        "warnings": [],
+        "errors": [],
+    }
+
+
 def _premium_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, Any]) -> dict[str, Any]:
     latest = _latest_metric(rows, "premium_rate")
     latest_row = rows[-1] if rows else {}
@@ -535,6 +595,19 @@ def _basis_state_from_rate(latest: float) -> tuple[str, str]:
     return "neutral", "low"
 
 
+def _spread_depth_state_from_metrics(spread_bps: float, imbalance: float) -> tuple[str, str]:
+    if spread_bps >= SPREAD_DEPTH_THRESHOLDS["stressed_spread_bps"]:
+        return "spread_stressed", "high"
+    if spread_bps >= SPREAD_DEPTH_THRESHOLDS["wide_spread_bps"]:
+        return "spread_wide", "medium"
+    imbalance_abs = abs(imbalance)
+    if imbalance_abs >= SPREAD_DEPTH_THRESHOLDS["severe_depth_imbalance_abs"]:
+        return "depth_imbalanced", "high"
+    if imbalance_abs >= SPREAD_DEPTH_THRESHOLDS["depth_imbalance_abs"]:
+        return "depth_imbalanced", "medium"
+    return "neutral", "low"
+
+
 def _empty_state(
     state: str,
     *,
@@ -693,6 +766,7 @@ def _record_manifest_summary(run: RunContext, artifact: dict[str, Any]) -> None:
         "funding_pressure": counts["funding_pressure"],
         "open_interest_pressure": counts["open_interest_pressure"],
         "premium_basis_state": counts["premium_basis_state"],
+        "liquidity_depth_state": counts["liquidity_depth_state"],
         "warnings": counts["warnings"],
         "errors": counts["errors"],
         "states": counts["states"],
@@ -704,6 +778,7 @@ def _record_manifest_summary(run: RunContext, artifact: dict[str, Any]) -> None:
     manifest_counts["derivatives_market_context_funding_pressure"] = counts["funding_pressure"]
     manifest_counts["derivatives_market_context_open_interest_pressure"] = counts["open_interest_pressure"]
     manifest_counts["derivatives_market_context_premium_basis_state"] = counts["premium_basis_state"]
+    manifest_counts["derivatives_market_context_liquidity_depth_state"] = counts["liquidity_depth_state"]
     manifest_counts["derivatives_market_context_warnings"] = counts["warnings"]
     manifest_counts["derivatives_market_context_errors"] = counts["errors"]
 
@@ -713,6 +788,8 @@ def _record_zero_counts(run: RunContext) -> None:
     counts["derivatives_market_context_records"] = 0
     counts["derivatives_market_context_funding_pressure"] = 0
     counts["derivatives_market_context_open_interest_pressure"] = 0
+    counts["derivatives_market_context_premium_basis_state"] = 0
+    counts["derivatives_market_context_liquidity_depth_state"] = 0
     counts["derivatives_market_context_warnings"] = 0
     counts["derivatives_market_context_errors"] = 0
 
@@ -725,6 +802,9 @@ def _counts(records: list[dict[str, Any]], *, warnings: list[str], errors: list[
             1 for record in records if record.get("context_type") == "open_interest_pressure"
         ),
         "premium_basis_state": sum(1 for record in records if record.get("context_type") == "premium_basis_state"),
+        "liquidity_depth_state": sum(
+            1 for record in records if record.get("context_type") == "liquidity_depth_state"
+        ),
         "succeeded": sum(1 for record in records if record.get("status") == "succeeded"),
         "partial": sum(1 for record in records if record.get("status") == "partial"),
         "stale": sum(1 for record in records if record.get("status") == "stale"),

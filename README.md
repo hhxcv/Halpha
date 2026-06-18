@@ -255,7 +255,7 @@ A successful configured run can write:
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
-- `analysis/derivatives_market_context.json`: deterministic funding, open-interest, premium, and basis derivatives context records.
+- `analysis/derivatives_market_context.json`: deterministic funding, open-interest, premium, basis, and bounded liquidity-depth derivatives context records.
 - `analysis/market_regime_assessment.json`: deterministic market regime assessment.
 - `analysis/risk_assessment.json`: deterministic risk assessment.
 - `analysis/decision_recommendations.json`: deterministic decision-support recommendations.
