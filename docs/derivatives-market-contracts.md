@@ -49,8 +49,8 @@ Contract set:
 | Raw derivatives market artifact | initial adoption | derivatives collection stage | reusable history, data quality |
 | Shared derivatives market history | initial adoption | derivatives history writer | current-run views, data inspection |
 | Derivatives current-run views | initial adoption | derivatives view builder | context, data quality |
-| Derivatives market context | not implemented yet | context builder | regime, risk, decisions, alerts, outcomes, material |
-| Derivatives market material | not implemented yet | material builder | research context, Codex context, report |
+| Derivatives market context | initial adoption | context builder | regime, risk, decisions, alerts, outcomes, material |
+| Derivatives market material | initial adoption | material builder | research context, Codex context, report |
 
 ## Scope
 
@@ -289,7 +289,7 @@ Required behavior:
 
 ## Derivatives Current-Run Views
 
-Planned artifact:
+Implemented artifact:
 
 ```text
 raw/derivatives_market_views.json
@@ -468,7 +468,7 @@ liquidation_source_availability
 data_quality
 downstream_implications
 report_usage_rules
-record: <context id>
+selected_records
 ```
 
 Rules:
@@ -479,6 +479,11 @@ Rules:
 - Preserve source artifacts and source limitations.
 - State that derivatives context is research context, not trading instruction
   or forecast.
+- Include `codex_may_generate_derivatives_states: false`,
+  `codex_may_generate_risk_levels: false`, and
+  `full_derivatives_context_json_embedded: false`.
+- Record selected-record and omitted-record counts in `run_manifest.json` and
+  Codex input budget metadata through the standard material budget mechanism.
 
 ## Codex Boundary
 
@@ -510,7 +515,8 @@ continue to record:
 - derivatives current-run view counts and unavailable classes;
 - derivatives context counts by context type, state, severity, status, warning,
   and error;
-- derivatives material path and Codex input budget metadata;
+- derivatives material path, selected counts, omitted counts, and Codex input
+  budget metadata;
 - source availability for liquidation and spread or depth summaries.
 
 Do not embed full raw derivatives artifacts, reusable history, or context

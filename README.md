@@ -29,6 +29,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Builds bounded AI-readable alert decision material for report generation.
 - Builds bounded AI-readable event intelligence material.
 - Builds AI-readable decision material from deterministic JSON artifacts.
+- Builds bounded AI-readable derivatives market material from deterministic derivatives context.
 - Extracts deterministic outcome targets from the latest previous successful run.
 - Evaluates matured market, strategy, event, alert, decision, and watch outcome targets.
 - Persists reusable local outcome history outside per-run report directories.
@@ -256,6 +257,7 @@ A successful configured run can write:
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
 - `analysis/derivatives_market_context.json`: deterministic funding, open-interest, premium, basis, bounded liquidity-depth, and liquidation-availability derivatives context records.
+- `analysis/derivatives_market_material.md`: bounded AI-readable derivatives market material for Codex context.
 - `analysis/market_regime_assessment.json`: deterministic market regime assessment.
 - `analysis/risk_assessment.json`: deterministic risk assessment.
 - `analysis/decision_recommendations.json`: deterministic decision-support recommendations with source-aware risk and downgrade context.
@@ -328,16 +330,18 @@ calculate new metrics.
 ## Codex Report Generation
 
 Codex consumes generated research context and prompt artifacts. It does not
-generate action levels, strategy signals, structured decision artifacts, event
-categories, event impacts, event-market relationships, or price forecasts.
-Those are produced deterministically before report generation.
+generate action levels, strategy signals, structured decision artifacts,
+derivatives states, risk levels, event categories, event impacts,
+event-market relationships, or price forecasts. Those are produced
+deterministically before report generation.
 
 Codex input is governed by `docs/artifact-governance.md`: complete evidence
 artifacts stay inspectable on disk, while Codex receives bounded report-facing
 material plus explicit budget metadata in `run_manifest.json`.
-Data-quality evidence follows the same rule: Codex receives concise
+Derivatives and data-quality evidence follow the same rule: Codex receives
+concise `analysis/derivatives_market_material.md` and
 `analysis/data_quality_material.md`, not full local histories, raw archives,
-catalog contents, SQLite tables, or Parquet data.
+catalog contents, SQLite tables, Parquet data, or full derivatives context JSON.
 
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
@@ -464,7 +468,7 @@ they are not proof of a real-source product run.
   - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
   - `docs/research-data-contracts.md`: shared local research data, run index, text-event history, and data-quality contracts.
   - `docs/quant-contracts.md`: quantitative research contracts.
-  - `docs/derivatives-market-contracts.md`: planned derivatives and market-structure data contracts.
+  - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.

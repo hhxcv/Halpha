@@ -182,6 +182,7 @@ Current bias:
 * `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
 * `raw/derivatives_market_views.json` records current-run derivatives input windows and storage refs, not full reusable derivatives history.
 * `analysis/derivatives_market_context.json` records deterministic funding, open-interest, premium, basis, bounded liquidity-depth, and liquidation-availability context states, evidence, thresholds, uncertainty, warnings, and errors, not trading signals.
+* `analysis/derivatives_market_material.md` records bounded AI-readable derivatives market context, source availability, data-quality limits, selected high-signal records, and omission counts for Codex/report use.
 * `analysis/text_event_records.json` records normalized source-aware text event records.
 * `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
 * `analysis/text_event_classification_evidence.json` records event taxonomy candidates and financial tone evidence, not trading signals.
@@ -216,14 +217,16 @@ Current bias:
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, reusable derivatives history, derivatives views, or full derivatives context JSON.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, reusable derivatives history, derivatives views, or full derivatives context JSON.
 * Codex context must not embed full raw streams, full raw derivatives artifacts, full shared OHLCV history, full reusable derivatives history, full derivatives context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
-* Codex input should prioritize high-signal decision, risk, alert, strategy gate, event, and data-quality evidence over low-priority record dumps.
+* Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
+* Codex prompt may ask for derivatives market explanation when derivatives material exists.
 * Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
 * Codex prompt may ask for data-quality status explanation when data quality material exists.
 * Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
+* Codex prompt must not ask Codex to generate derivatives states, risk levels, signals, source availability, liquidation summaries, price forecasts, trading instructions, or position sizing.
 * Codex prompt must not ask Codex to generate data-quality checks, validation results, catalog contents, run-index contents, or reusable history contents.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
