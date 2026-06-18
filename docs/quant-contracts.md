@@ -67,6 +67,7 @@ Decision-intelligence contracts live in `docs/decision-intelligence-contracts.md
 ## Related Docs
 
 - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
 - `docs/decision-intelligence-contracts.md`: downstream regime, risk, decision, watch trigger, delta, and decision material contracts.
 - `docs/event-intelligence-contracts.md`: event intelligence and event-quant confluence contracts.
 - `docs/outcome-tracking-contracts.md`: planned downstream target, evaluation, history, material, and Codex-boundary contracts.

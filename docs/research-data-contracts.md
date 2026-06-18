@@ -14,6 +14,8 @@ their downstream consumers. It is not a milestone plan.
   strategy-material contracts.
 - `docs/derivatives-market-contracts.md`: derivatives and
   market-structure data, context, material, and Codex-boundary contracts.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context,
+  material, and Codex-boundary contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,

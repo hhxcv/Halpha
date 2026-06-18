@@ -245,6 +245,7 @@ Current bias:
 * Documentation index:
 * `docs/artifact-governance.md`: artifact map, artifact layer rules, Codex input policy, and doc index.
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
+* `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.

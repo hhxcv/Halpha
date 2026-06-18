@@ -12,6 +12,8 @@ milestone plan.
   strategy-material contracts.
 - `docs/derivatives-market-contracts.md`: derivatives and
   market-structure data, context, material, and Codex-boundary contracts.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context,
+  material, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
