@@ -91,9 +91,10 @@ Derivatives artifacts:
 
 These artifacts preserve funding, open-interest, premium or basis, bounded
 spread or depth, and liquidation-source availability evidence. The implemented
-context artifact currently covers deterministic funding and open-interest
-states. Codex should consume bounded `analysis/derivatives_market_material.md`
-when implemented instead of full raw, history, view, or context artifacts.
+context artifact currently covers deterministic funding, open-interest, premium,
+and basis states. Codex should consume bounded
+`analysis/derivatives_market_material.md` when implemented instead of full raw,
+history, view, or context artifacts.
 
 ### Text Intelligence Evidence
 

@@ -113,6 +113,96 @@ def test_derivatives_context_flags_partial_source_failure(tmp_path: Path) -> Non
     assert context["counts"]["partial"] == 1
 
 
+def test_derivatives_context_builds_premium_and_basis_records(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["premium_index", "basis"], lookback=2)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_premium_basis_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    manifest = _manifest(result)
+    premium = _context_record(context, context_type="premium_basis_state", period="snapshot")
+    basis = _context_record(context, context_type="premium_basis_state", period="1h")
+
+    assert context["status"] == "ok"
+    assert premium["status"] == "succeeded"
+    assert premium["state"] == "neutral"
+    assert premium["metrics"]["latest_premium_rate"] == 0.0005
+    assert premium["metrics"]["units"]["premium_rate"] == "ratio"
+    assert basis["status"] == "succeeded"
+    assert basis["state"] == "basis_stressed"
+    assert basis["severity"] == "high"
+    assert basis["metrics"]["latest_basis_rate"] == 0.006
+    assert basis["metrics"]["contract_type"] == "CURRENT_QUARTER"
+    assert basis["metrics"]["units"]["basis_rate"] == "ratio"
+    assert manifest["derivatives_market_context"]["premium_basis_state"] == 2
+    assert manifest["counts"]["derivatives_market_context_premium_basis_state"] == 2
+
+
+def test_derivatives_context_records_stretched_and_inverted_premium_basis(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["premium_index", "basis"], lookback=2)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_stretched_inverted_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    premium = _context_record(context, context_type="premium_basis_state", period="snapshot")
+    basis = _context_record(context, context_type="premium_basis_state", period="1h")
+
+    assert premium["state"] == "premium_stretched"
+    assert premium["severity"] == "medium"
+    assert premium["thresholds"]["stretched_abs_premium_rate"] == 0.001
+    assert basis["state"] == "basis_inverted"
+    assert basis["severity"] == "medium"
+
+
+def test_derivatives_context_flags_stale_and_missing_premium_basis(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["premium_index", "basis"], lookback=2)
+    config = load_config(config_path)
+
+    result = _run_until_context(
+        config,
+        config_path,
+        _write_stale_premium_raw_stage,
+        context_now="2026-06-18T01:02:00Z",
+    )
+
+    assert result.succeeded is True
+    context = _context(result)
+    premium = _context_record(context, context_type="premium_basis_state", period="snapshot")
+    basis = _context_record(context, context_type="premium_basis_state", period="1h")
+
+    assert context["status"] == "warning"
+    assert premium["status"] == "stale"
+    assert premium["state"] == "stale"
+    assert basis["status"] == "unavailable"
+    assert basis["state"] == "unavailable"
+    assert context["counts"]["stale"] == 1
+    assert context["counts"]["unavailable"] == 1
+
+
+def test_derivatives_context_flags_malformed_premium_basis_metrics(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["premium_index", "basis"], lookback=2)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_malformed_premium_basis_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    premium = _context_record(context, context_type="premium_basis_state", period="snapshot")
+    basis = _context_record(context, context_type="premium_basis_state", period="1h")
+
+    assert premium["status"] == "insufficient"
+    assert premium["state"] == "insufficient_evidence"
+    assert "premium_rate metric is missing." in premium["warnings"]
+    assert basis["status"] == "insufficient"
+    assert basis["state"] == "insufficient_evidence"
+    assert "basis_rate metric is missing." in basis["warnings"]
+    assert context["counts"]["insufficient"] == 2
+
+
 def _run_until_context(
     config: dict[str, Any],
     config_path: Path,
@@ -225,6 +315,71 @@ def _write_partial_raw_stage(config: dict[str, Any], run: RunContext) -> list[st
     return [RAW_DERIVATIVES_ARTIFACT]
 
 
+def _write_premium_basis_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [
+            _premium_item("2026-06-18T00:00:00Z", premium_rate=0.0005),
+            _basis_item("2026-06-17T23:00:00Z", basis_rate=0.001, contract_type="CURRENT_QUARTER"),
+            _basis_item("2026-06-18T00:00:00Z", basis_rate=0.006, contract_type="CURRENT_QUARTER"),
+        ],
+        availability=[
+            _availability("premium_index", "snapshot", request_class="premium_index", record_count=1),
+            _availability("basis", "1h", request_class="basis", record_count=2),
+        ],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_stretched_inverted_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [
+            _premium_item("2026-06-18T00:00:00Z", premium_rate=0.0015),
+            _basis_item("2026-06-17T23:00:00Z", basis_rate=0.0002, contract_type="CURRENT_QUARTER"),
+            _basis_item("2026-06-18T00:00:00Z", basis_rate=-0.002, contract_type="CURRENT_QUARTER"),
+        ],
+        availability=[
+            _availability("premium_index", "snapshot", request_class="premium_index", record_count=1),
+            _availability("basis", "1h", request_class="basis", record_count=2),
+        ],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_stale_premium_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [_premium_item("2026-06-11T00:00:00Z", premium_rate=0.0002)],
+        availability=[_availability("premium_index", "snapshot", request_class="premium_index", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_malformed_premium_basis_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [
+            _premium_item("2026-06-18T00:00:00Z", premium_rate=None),
+            _basis_item(
+                "2026-06-17T23:00:00Z",
+                basis_rate=None,
+                contract_type="CURRENT_QUARTER",
+            ),
+            _basis_item(
+                "2026-06-18T00:00:00Z",
+                basis_rate=None,
+                contract_type="CURRENT_QUARTER",
+            ),
+        ],
+        availability=[
+            _availability("premium_index", "snapshot", request_class="premium_index", record_count=1),
+            _availability("basis", "1h", request_class="basis", record_count=2),
+        ],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
 RAW_DERIVATIVES_ARTIFACT = "raw/derivatives_market.json"
 
 
@@ -298,6 +453,76 @@ def _open_interest_item(
         "metrics": metrics,
         "units": units,
         "raw_fields": {},
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _premium_item(as_of: str, *, premium_rate: float | None) -> dict[str, Any]:
+    mark_price = 100.0 + (premium_rate or 0.0) * 100.0
+    metrics = {
+        "mark_price": mark_price,
+        "index_price": 100.0,
+    }
+    units = {
+        "mark_price": "quote_asset",
+        "index_price": "quote_asset",
+    }
+    if premium_rate is not None:
+        metrics["premium_rate"] = premium_rate
+        units["premium_rate"] = "ratio"
+    return {
+        "item_id": f"derivatives_market:premium_index:binance_usdm:BTCUSDT:snapshot:{as_of}",
+        "data_class": "premium_index",
+        "source": "binance_usdm",
+        "market_type": "usd_m_futures",
+        "symbol": "BTCUSDT",
+        "period": "snapshot",
+        "as_of": as_of,
+        "endpoint": "premium_index",
+        "request_class": "premium_index",
+        "metrics": metrics,
+        "units": units,
+        "raw_fields": {"time": as_of},
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _basis_item(
+    as_of: str,
+    *,
+    basis_rate: float | None,
+    contract_type: str,
+) -> dict[str, Any]:
+    metrics = {
+        "basis": 10.0,
+        "futures_price": 110.0,
+        "index_price": 100.0,
+    }
+    units = {
+        "basis": "quote_asset",
+        "futures_price": "quote_asset",
+        "index_price": "quote_asset",
+    }
+    if basis_rate is not None:
+        metrics["basis_rate"] = basis_rate
+        metrics["annualized_basis_rate"] = basis_rate * 365
+        units["basis_rate"] = "ratio"
+        units["annualized_basis_rate"] = "ratio"
+    return {
+        "item_id": f"derivatives_market:basis:binance_usdm:BTCUSDT:1h:{as_of}",
+        "data_class": "basis",
+        "source": "binance_usdm",
+        "market_type": "usd_m_futures",
+        "symbol": "BTCUSDT",
+        "period": "1h",
+        "as_of": as_of,
+        "endpoint": "basis",
+        "request_class": "basis",
+        "metrics": metrics,
+        "units": units,
+        "raw_fields": {"contractType": contract_type},
         "warnings": [],
         "errors": [],
     }

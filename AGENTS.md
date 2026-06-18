@@ -181,7 +181,7 @@ Current bias:
 * `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
 * `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
 * `raw/derivatives_market_views.json` records current-run derivatives input windows and storage refs, not full reusable derivatives history.
-* `analysis/derivatives_market_context.json` records deterministic funding and open-interest context states, evidence, thresholds, uncertainty, warnings, and errors, not trading signals.
+* `analysis/derivatives_market_context.json` records deterministic funding, open-interest, premium, and basis context states, evidence, thresholds, uncertainty, warnings, and errors, not trading signals.
 * `analysis/text_event_records.json` records normalized source-aware text event records.
 * `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
 * `analysis/text_event_classification_evidence.json` records event taxonomy candidates and financial tone evidence, not trading signals.
