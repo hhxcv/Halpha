@@ -14,6 +14,7 @@ STAGE_ORDER = (
     "collect_derivatives_market_data",
     "sync_derivatives_market_history",
     "build_derivatives_market_views",
+    "build_derivatives_market_context",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -328,6 +329,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["collect_derivatives_market_data"] = _collect_derivatives_market_data
     handlers["sync_derivatives_market_history"] = _sync_derivatives_market_history
     handlers["build_derivatives_market_views"] = _build_derivatives_market_views
+    handlers["build_derivatives_market_context"] = _build_derivatives_market_context
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -517,6 +519,12 @@ def _build_derivatives_market_views(config: dict[str, Any], run: RunContext) -> 
     from .derivatives_market_views import build_derivatives_market_views
 
     return build_derivatives_market_views(config, run)
+
+
+def _build_derivatives_market_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .derivatives_market_context import build_derivatives_market_context
+
+    return build_derivatives_market_context(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:

@@ -187,7 +187,7 @@ Rules:
 
 ## Raw Derivatives Market Artifact
 
-Planned artifact:
+Implemented artifact for funding and open-interest initial adoption:
 
 ```text
 raw/derivatives_market.json
@@ -382,8 +382,8 @@ Record fields:
 Context types:
 
 ```text
-funding_pressure
-open_interest_pressure
+funding_pressure [implemented]
+open_interest_pressure [implemented]
 premium_basis_state
 liquidity_depth_state
 liquidation_availability
@@ -496,7 +496,8 @@ Codex must not:
 
 ## Manifest Expectations
 
-When implemented, `run_manifest.json` should record:
+`run_manifest.json` records implemented derivatives context summaries and should
+continue to record:
 
 - raw derivatives artifact path and counts;
 - reusable derivatives history state and store counts;
