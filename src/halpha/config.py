@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from .quant.registry import SUPPORTED_STRATEGY_NAMES
 
 
-CONFIG_SECTIONS = {"codex", "market", "quant", "report", "run", "text"}
+CONFIG_SECTIONS = {"codex", "macro_calendar", "market", "quant", "report", "run", "text"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_DERIVATIVES_MARKET_SOURCES = {"binance_usdm"}
@@ -23,6 +23,18 @@ SUPPORTED_DERIVATIVES_DATA_CLASSES = {
 }
 SUPPORTED_DERIVATIVES_PERIODS = {"5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"}
 SUPPORTED_DERIVATIVES_FIELDS = {"data_classes", "enabled", "lookback", "periods", "source", "symbols"}
+SUPPORTED_MACRO_CALENDAR_SOURCES = {"federal_reserve_fomc"}
+SUPPORTED_MACRO_CALENDAR_DATA_CLASSES = {"central_bank_event"}
+SUPPORTED_MACRO_CALENDAR_REGIONS = {"US"}
+SUPPORTED_MACRO_CALENDAR_FIELDS = {
+    "data_classes",
+    "enabled",
+    "lookahead_days",
+    "lookback_days",
+    "regions",
+    "source",
+    "source_url",
+}
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
@@ -131,6 +143,9 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
             _validate_market_proxy_config(market)
     if "derivatives" in market:
         _validate_derivatives_config(market, market_enabled=market_enabled)
+
+    if "macro_calendar" in config:
+        _validate_macro_calendar_config(config["macro_calendar"])
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -442,6 +457,43 @@ def _validate_derivatives_config(market: dict[str, Any], *, market_enabled: bool
         )
     for period in periods:
         _require_positive_int(lookback, period, f"market.derivatives.lookback.{period}")
+
+
+def _validate_macro_calendar_config(macro_calendar: Any) -> None:
+    if not isinstance(macro_calendar, dict):
+        raise ConfigError("macro_calendar must be a mapping.")
+    _reject_unsupported_fields(
+        macro_calendar,
+        path="macro_calendar",
+        supported_fields=SUPPORTED_MACRO_CALENDAR_FIELDS,
+    )
+
+    enabled = _require_bool(macro_calendar, "enabled", "macro_calendar.enabled")
+    if not enabled:
+        return
+
+    source = _require_non_empty_string(macro_calendar, "source", "macro_calendar.source")
+    _require_supported_value(source, "macro_calendar.source", SUPPORTED_MACRO_CALENDAR_SOURCES)
+
+    data_classes = _require_non_empty_string_list(
+        macro_calendar,
+        "data_classes",
+        "macro_calendar.data_classes",
+    )
+    for index, data_class in enumerate(data_classes):
+        _require_supported_value(
+            data_class,
+            f"macro_calendar.data_classes[{index}]",
+            SUPPORTED_MACRO_CALENDAR_DATA_CLASSES,
+        )
+
+    regions = _require_non_empty_string_list(macro_calendar, "regions", "macro_calendar.regions")
+    for index, region in enumerate(regions):
+        _require_supported_value(region, f"macro_calendar.regions[{index}]", SUPPORTED_MACRO_CALENDAR_REGIONS)
+    _require_positive_int(macro_calendar, "lookback_days", "macro_calendar.lookback_days")
+    _require_positive_int(macro_calendar, "lookahead_days", "macro_calendar.lookahead_days")
+    if "source_url" in macro_calendar:
+        _require_proxy_url(macro_calendar, "source_url", "macro_calendar.source_url")
 
 
 def _validate_quant_config(quant: dict[str, Any]) -> None:
