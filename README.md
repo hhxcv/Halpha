@@ -149,6 +149,10 @@ Supported stage names:
 
 ```text
 collect_market_data
+collect_derivatives_market_data
+sync_derivatives_market_history
+build_derivatives_market_views
+build_derivatives_market_context
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
@@ -220,6 +224,7 @@ tokens, cookies, or account identifiers.
 A successful configured run can write:
 
 - `raw/market.json`: public market observations.
+- `raw/derivatives_market.json`: public derivatives and market-structure observations.
 - `raw/text_events.json`: public RSS text events.
 - `analysis/text_event_records.json`: normalized source-aware text event records.
 - `analysis/text_entity_evidence.json`: entity and configured-asset relevance evidence.
@@ -227,9 +232,13 @@ A successful configured run can write:
 - `analysis/text_event_topics.json`: duplicate, same-topic, related-context, and distinct event grouping evidence.
 - `analysis/text_event_signals.json`: deterministic report-facing text event signals.
 - `raw/market_data_views.json`: current-run OHLCV input window metadata.
+- `raw/derivatives_market_views.json`: current-run derivatives input window metadata.
 - `data/market/ohlcv/`: shared finalized OHLCV history.
+- `data/market/derivatives/`: shared reusable derivatives market history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
+- `data/market/metadata/derivatives_market_schema.json`: shared derivatives history schema metadata.
+- `data/market/metadata/derivatives_market_state.json`: shared derivatives history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
 - `data/research/index.sqlite`: local run index with run, stage, artifact, and latest-run metadata.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
@@ -246,6 +255,7 @@ A successful configured run can write:
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
+- `analysis/derivatives_market_context.json`: deterministic funding and open-interest derivatives context records.
 - `analysis/market_regime_assessment.json`: deterministic market regime assessment.
 - `analysis/risk_assessment.json`: deterministic risk assessment.
 - `analysis/decision_recommendations.json`: deterministic decision-support recommendations.
