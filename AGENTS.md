@@ -177,6 +177,7 @@ Current bias:
 * `data/research/outcomes/outcome_history.json` stores reusable outcome history; it is input data, not AI context.
 * `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
 * `raw/derivatives_market.json` records current-run public derivatives and market-structure observations, endpoint availability, warnings, and errors.
+* `raw/macro_calendar.json` records current-run public macro and scheduled-event observations, endpoint availability, warnings, and errors.
 * `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
 * `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
 * `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.

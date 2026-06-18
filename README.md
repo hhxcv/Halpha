@@ -11,6 +11,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 ## What It Does
 
 - Collects public Binance ticker data for configured symbols.
+- Collects configured public macro/calendar evidence when enabled.
 - Collects public RSS text events from configured sources.
 - Normalizes raw text events into source-aware event records for later text intelligence stages.
 - Extracts traceable entity evidence and configured-asset relevance from normalized text events.
@@ -154,6 +155,7 @@ collect_derivatives_market_data
 sync_derivatives_market_history
 build_derivatives_market_views
 build_derivatives_market_context
+collect_macro_calendar_data
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
@@ -201,6 +203,7 @@ run_codex_report
   `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and
   `bollinger_rsi_reversion`.
 - Bounded backtest and parameter diagnostics.
+- Optional Federal Reserve FOMC public calendar collection.
 - Optional deterministic strategy effectiveness gate thresholds.
 - Codex CLI command and arguments for final report generation.
 
@@ -226,6 +229,7 @@ A successful configured run can write:
 
 - `raw/market.json`: public market observations.
 - `raw/derivatives_market.json`: public derivatives and market-structure observations.
+- `raw/macro_calendar.json`: public macro and scheduled-event observations when enabled.
 - `raw/text_events.json`: public RSS text events.
 - `analysis/text_event_records.json`: normalized source-aware text event records.
 - `analysis/text_entity_evidence.json`: entity and configured-asset relevance evidence.

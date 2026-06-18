@@ -50,6 +50,7 @@ rules for those contracts.
 Produced early in a product run:
 
 - `raw/market.json`
+- `raw/macro_calendar.json`
 - `raw/text_events.json`
 
 These preserve public collection results. They are not Codex context by
@@ -98,6 +99,18 @@ context artifact currently covers deterministic funding, open-interest, premium,
 basis, bounded liquidity-depth, and liquidation-availability states. Codex
 should consume bounded `analysis/derivatives_market_material.md` instead of
 full raw, history, view, or context artifacts.
+
+### Macro And Calendar Evidence
+
+Initial macro/calendar artifact:
+
+- `raw/macro_calendar.json`
+
+This artifact preserves configured public macro and scheduled-event
+observations such as Federal Reserve FOMC meeting calendar records when enabled.
+It is source-aware raw evidence, not Codex context by itself. Until later
+macro/calendar material exists, Codex input must not embed this raw artifact by
+default.
 
 ### Text Intelligence Evidence
 

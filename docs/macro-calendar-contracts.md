@@ -37,6 +37,7 @@ economic-release predictions, or financial advice.
 This file separates stable direction from shipped behavior.
 
 - `contract`: expected durable interface or rule.
+- `initial adoption`: first implementation slice.
 - `planned`: intended contract whose producer is not implemented yet.
 - `not implemented yet`: allowed future contract detail that must not be
   described as shipped behavior.
@@ -49,7 +50,7 @@ Contract set:
 
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
-| Raw macro calendar artifact | planned | macro/calendar collection stage | reusable state, data quality |
+| Raw macro calendar artifact | initial adoption | macro/calendar collection stage | reusable state, data quality |
 | Shared macro calendar state or history | planned | macro/calendar state writer | current-run views, data inspection |
 | Macro calendar current-run views | planned | macro/calendar view builder | context, data quality |
 | Macro calendar context | planned | context builder | regime, risk, decisions, watches, alerts, outcomes, material |
@@ -117,7 +118,7 @@ Intended product flow:
 
 ```text
 configured public macro/calendar source
-  -> raw macro calendar artifact [planned]
+  -> raw macro calendar artifact [initial adoption]
   -> shared macro calendar state or history [planned]
   -> macro calendar current-run views [planned]
   -> macro calendar context [planned]
@@ -196,7 +197,7 @@ Rules:
 
 ## Raw Macro Calendar Artifact
 
-Planned artifact:
+Implemented artifact:
 
 ```text
 raw/macro_calendar.json

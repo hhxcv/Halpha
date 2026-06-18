@@ -15,6 +15,7 @@ STAGE_ORDER = (
     "sync_derivatives_market_history",
     "build_derivatives_market_views",
     "build_derivatives_market_context",
+    "collect_macro_calendar_data",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -330,6 +331,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["sync_derivatives_market_history"] = _sync_derivatives_market_history
     handlers["build_derivatives_market_views"] = _build_derivatives_market_views
     handlers["build_derivatives_market_context"] = _build_derivatives_market_context
+    handlers["collect_macro_calendar_data"] = _collect_macro_calendar_data
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -525,6 +527,12 @@ def _build_derivatives_market_context(config: dict[str, Any], run: RunContext) -
     from .derivatives_market_context import build_derivatives_market_context
 
     return build_derivatives_market_context(config, run)
+
+
+def _collect_macro_calendar_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .collectors.macro_calendar import collect_macro_calendar_data
+
+    return collect_macro_calendar_data(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
@@ -878,6 +886,7 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
     market = config.get("market", {})
     text = config.get("text", {})
     derivatives = market.get("derivatives") if isinstance(market, dict) else {}
+    macro_calendar = config.get("macro_calendar", {})
     derivatives_summary = {}
     if isinstance(derivatives, dict):
         derivatives_summary = {
@@ -887,6 +896,14 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
             "data_classes": list(derivatives.get("data_classes", [])),
             "periods": list(derivatives.get("periods", [])),
         }
+    macro_calendar_summary = {}
+    if isinstance(macro_calendar, dict):
+        macro_calendar_summary = {
+            "enabled": macro_calendar.get("enabled"),
+            "source": macro_calendar.get("source"),
+            "data_classes": list(macro_calendar.get("data_classes", [])),
+            "regions": list(macro_calendar.get("regions", [])),
+        }
 
     return {
         "market": {
@@ -895,6 +912,7 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
             "symbols": list(market.get("symbols", [])),
             "derivatives": derivatives_summary,
         },
+        "macro_calendar": macro_calendar_summary,
         "text": [
             {
                 "name": source.get("name"),

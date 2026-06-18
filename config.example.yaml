@@ -21,6 +21,9 @@ market:
   derivatives:
     enabled: false
 
+macro_calendar:
+  enabled: false
+
 quant:
   enabled: true
   engine: vectorbt

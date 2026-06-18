@@ -36,6 +36,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["market"]["ohlcv"]["timeframes"] == ["1d", "1h"]
     assert config["market"]["ohlcv"]["lookback"] == {"1d": 500, "1h": 720}
     assert config["market"]["derivatives"] == {"enabled": False}
+    assert config["macro_calendar"] == {"enabled": False}
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
@@ -385,6 +386,77 @@ def test_load_config_accepts_enabled_derivatives_config(tmp_path: Path) -> None:
     ]
     assert config["market"]["derivatives"]["periods"] == ["1h", "4h", "1d"]
     assert config["market"]["derivatives"]["lookback"] == {"1h": 720, "4h": 180, "1d": 90}
+
+
+def test_load_config_accepts_enabled_macro_calendar_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_macro_calendar_config(config_path)
+
+    config = load_config(config_path)
+
+    assert config["macro_calendar"] == {
+        "enabled": True,
+        "source": "federal_reserve_fomc",
+        "data_classes": ["central_bank_event"],
+        "regions": ["US"],
+        "lookback_days": 7,
+        "lookahead_days": 45,
+    }
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("macro_calendar:\n  enabled: true", "macro_calendar:\n  enabled: \"yes\"", "macro_calendar.enabled"),
+        ("  source: federal_reserve_fomc", "  source: unsupported", "macro_calendar.source"),
+        ("  data_classes:\n    - central_bank_event", "  data_classes: []", "macro_calendar.data_classes"),
+        ("    - central_bank_event", "    - unsupported", r"macro_calendar\.data_classes\[0\]"),
+        ("  regions:\n    - US", "  regions: []", "macro_calendar.regions"),
+        ("    - US", "    - EU", r"macro_calendar\.regions\[0\]"),
+        ("  lookback_days: 7", "  lookback_days: 0", "macro_calendar.lookback_days"),
+        ("  lookahead_days: 45", "  lookahead_days: true", "macro_calendar.lookahead_days"),
+        ("  source: federal_reserve_fomc", "  source: federal_reserve_fomc\n  unsupported: true", "unsupported macro_calendar field"),
+        (
+            "  source: federal_reserve_fomc",
+            "  source: federal_reserve_fomc\n  source_url: file:///tmp/calendar.html",
+            "macro_calendar.source_url",
+        ),
+        (
+            "  source: federal_reserve_fomc",
+            "  source: federal_reserve_fomc\n  source_url: http://user:secret@example.com/calendar",
+            "macro_calendar.source_url must not include credentials",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_macro_calendar_config(
+    tmp_path: Path,
+    old: str,
+    new: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_macro_calendar_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new, 1),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+def test_load_config_rejects_non_mapping_macro_calendar_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "quant:\n",
+            "macro_calendar: invalid\n\nquant:\n",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="macro_calendar must be a mapping"):
+        load_config(config_path)
 
 
 def test_load_config_rejects_enabled_derivatives_when_market_disabled(tmp_path: Path) -> None:
@@ -1080,6 +1152,28 @@ def _add_derivatives_config(config_path: Path) -> None:
         config_path.read_text(encoding="utf-8").replace(
             "      1h: 720\n",
             f"      1h: 720\n{_DERIVATIVES_CONFIG_BLOCK}",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _add_macro_calendar_config(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "quant:\n",
+            """
+macro_calendar:
+  enabled: true
+  source: federal_reserve_fomc
+  data_classes:
+    - central_bank_event
+  regions:
+    - US
+  lookback_days: 7
+  lookahead_days: 45
+
+quant:
+""",
         ),
         encoding="utf-8",
     )
