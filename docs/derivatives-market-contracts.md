@@ -47,8 +47,8 @@ Contract set:
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
 | Raw derivatives market artifact | initial adoption | derivatives collection stage | reusable history, data quality |
-| Shared derivatives market history | not implemented yet | derivatives history writer | current-run views, data inspection |
-| Derivatives current-run views | not implemented yet | derivatives view builder | context, data quality |
+| Shared derivatives market history | initial adoption | derivatives history writer | current-run views, data inspection |
+| Derivatives current-run views | initial adoption | derivatives view builder | context, data quality |
 | Derivatives market context | not implemented yet | context builder | regime, risk, decisions, alerts, outcomes, material |
 | Derivatives market material | not implemented yet | material builder | research context, Codex context, report |
 
@@ -111,8 +111,8 @@ Intended product flow:
 ```text
 configured public derivatives source
   -> raw derivatives market artifact [initial adoption]
-  -> shared derivatives market history
-  -> derivatives current-run views
+  -> shared derivatives market history [initial adoption]
+  -> derivatives current-run views [initial adoption]
   -> derivatives market context
   -> regime, risk, decision, watch, alert, outcome, and strategy interpretation
   -> derivatives market material

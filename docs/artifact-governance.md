@@ -73,8 +73,7 @@ Codex input.
 Current-run market windows and storage references:
 
 - `raw/market_data_views.json`
-- `raw/derivatives_market_views.json` when derivatives market views are
-  implemented
+- `raw/derivatives_market_views.json`
 
 These artifacts record view metadata and bounded current-run windows, not full
 raw OHLCV or derivatives history.
@@ -84,13 +83,13 @@ raw OHLCV or derivatives history.
 Derivatives artifacts:
 
 - `raw/derivatives_market.json`
-
-Planned derivatives history, view, and analysis artifacts:
-
 - `data/market/derivatives/`
 - `data/market/metadata/derivatives_market_schema.json`
 - `data/market/metadata/derivatives_market_state.json`
 - `raw/derivatives_market_views.json`
+
+Planned derivatives analysis artifacts:
+
 - `analysis/derivatives_market_context.json`
 
 These artifacts preserve funding, open-interest, premium or basis, bounded
