@@ -255,6 +255,9 @@ def build_decision_recommendations(
         market_signals,
         stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
     )
+    derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    derivatives_records = _records_from_optional_artifact(derivatives_artifact)
+    derivatives_groups = _derivatives_by_symbol(derivatives_records)
     created_at = _created_at(risk_assessment, now)
     signal_groups = _signals_by_tuple(signals)
     regime_groups = _regime_by_tuple(regime_records)
@@ -265,6 +268,7 @@ def build_decision_recommendations(
             signal_groups.get(key, []),
             regime_groups.get(key),
             risk_groups.get(key),
+            derivatives_groups.get(key[1], []),
         )
         for key in _decision_group_keys(signals, regime_records, risk_records)
     ]
@@ -275,9 +279,15 @@ def build_decision_recommendations(
         "run_id": run.run_id,
         "created_at": created_at,
         "action_taxonomy": list(ACTION_TAXONOMY),
-        "source_artifacts": _decision_source_artifacts(market_signals, market_regime, risk_assessment, strategy_artifact),
+        "source_artifacts": _decision_source_artifacts(
+            market_signals,
+            market_regime,
+            risk_assessment,
+            strategy_artifact,
+            derivatives_artifact,
+        ),
         "records": records,
-        "warnings": _decision_artifact_warnings(records, strategy_warnings),
+        "warnings": _decision_artifact_warnings(records, [*strategy_warnings, *derivatives_warnings]),
         "errors": [],
     }
     write_json(run.analysis_dir / "decision_recommendations.json", artifact)
@@ -293,6 +303,10 @@ def build_decision_recommendations(
         1
         for record in records
         if any(condition.startswith(("risk_level=high", "risk_level=extreme")) for condition in record["risk_conditions"])
+    )
+    run.manifest["counts"]["decision_recommendation_derivatives_context_records"] = len(derivatives_records)
+    run.manifest["counts"]["decision_recommendation_derivatives_linked_records"] = sum(
+        1 for record in records if record.get("linked_derivatives_context_ids")
     )
     return [DECISION_RECOMMENDATIONS_ARTIFACT]
 
@@ -347,6 +361,9 @@ def build_watch_triggers(
         DECISION_RECOMMENDATIONS_ARTIFACT,
         stage=BUILD_WATCH_TRIGGERS_STAGE,
     )
+    derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    derivatives_records = _records_from_optional_artifact(derivatives_artifact)
+    derivatives_groups = _derivatives_by_symbol(derivatives_records)
 
     created_at = _created_at(decision_recommendations, now)
     signal_groups = _signals_by_tuple(signals)
@@ -360,6 +377,7 @@ def build_watch_triggers(
             signal_groups.get(_tuple_key(decision), []),
             regime_groups.get(_tuple_key(decision)),
             risk_groups.get(_tuple_key(decision)),
+            derivatives_groups.get(_tuple_key(decision)[1], []),
         )
     ]
 
@@ -374,14 +392,19 @@ def build_watch_triggers(
             market_regime,
             risk_assessment,
             decision_recommendations,
+            derivatives_artifact,
         ),
         "records": records,
-        "warnings": _watch_artifact_warnings(decision_records, records),
+        "warnings": _unique_ordered([*_watch_artifact_warnings(decision_records, records), *derivatives_warnings]),
         "errors": [],
     }
     write_json(run.analysis_dir / "watch_triggers.json", artifact)
     run.manifest["artifacts"]["watch_triggers"] = WATCH_TRIGGERS_ARTIFACT
     _record_watch_trigger_counts(run, records)
+    run.manifest["counts"]["watch_trigger_derivatives_context_records"] = len(derivatives_records)
+    run.manifest["counts"]["watch_trigger_derivatives_linked_records"] = sum(
+        1 for record in records if record.get("linked_derivatives_context_ids")
+    )
     return [WATCH_TRIGGERS_ARTIFACT]
 
 
@@ -1864,6 +1887,7 @@ def _decision_recommendation_record(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
+    derivatives_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source, symbol, timeframe = key
     latest = _latest_decision_candle_time(signals, regime, risk)
@@ -1873,6 +1897,7 @@ def _decision_recommendation_record(
     risk_status = _clean_text(risk.get("status") if risk else None, fallback="unknown")
     regime_value = _clean_text(regime.get("regime") if regime else None, fallback="unknown")
     has_evidence = _has_decision_evidence(usable_signals, regime, risk)
+    derivatives = _derivatives_context_effects(derivatives_records)
 
     action_level = _base_action_level(
         usable_signals,
@@ -1882,7 +1907,12 @@ def _decision_recommendation_record(
         has_evidence=has_evidence,
     )
     action_level = _apply_decision_gates(action_level, risk, conflicts=conflicts, has_evidence=has_evidence)
-    evidence = _decision_evidence(usable_signals, regime, risk)
+    action_level, derivatives_downgrade_reasons = _apply_derivatives_decision_gate(
+        action_level,
+        derivatives,
+        has_evidence=has_evidence,
+    )
+    evidence = _decision_evidence(usable_signals, regime, risk, derivatives=derivatives)
     invalidation_conditions = _decision_invalidation_conditions(
         action_level,
         symbol=symbol,
@@ -1891,6 +1921,13 @@ def _decision_recommendation_record(
         conflicts=conflicts,
         has_evidence=has_evidence,
     )
+    if action_level in ACTIONABLE_ACTION_LEVELS:
+        invalidation_conditions = _unique_ordered(
+            [
+                *invalidation_conditions,
+                *_derivatives_invalidation_conditions(symbol=symbol, derivatives=derivatives),
+            ]
+        )
     warnings = _decision_warnings(
         action_level,
         risk_level=risk_level,
@@ -1899,6 +1936,8 @@ def _decision_recommendation_record(
         conflicts=conflicts,
         has_evidence=has_evidence,
         risk=risk,
+        derivatives=derivatives,
+        derivatives_downgrade_reasons=derivatives_downgrade_reasons,
     )
     if action_level in ACTIONABLE_ACTION_LEVELS and (not evidence or not invalidation_conditions):
         action_level = "WATCH"
@@ -1922,12 +1961,14 @@ def _decision_recommendation_record(
         "status": _decision_status(action_level, risk_level, risk_status, conflicts, has_evidence),
         "recommended_actions": _recommended_actions(action_level, symbol=symbol, conflicts=conflicts, risk_level=risk_level),
         "do_not_do": _do_not_do_guidance(action_level, risk_level=risk_level, conflicts=conflicts, has_evidence=has_evidence),
-        "risk_conditions": _risk_conditions(risk),
+        "risk_conditions": _risk_conditions(risk, derivatives=derivatives),
+        "downgrade_reasons": derivatives_downgrade_reasons,
         "invalidation_conditions": invalidation_conditions,
         "evidence": evidence,
         "conflicts": conflicts,
         "warnings": warnings,
-        "source_artifacts": _decision_record_source_artifacts(signals, regime, risk),
+        "linked_derivatives_context_ids": _derivatives_context_ids(derivatives_records),
+        "source_artifacts": _decision_record_source_artifacts(signals, regime, risk, derivatives_records),
     }
 
 
@@ -1991,6 +2032,22 @@ def _apply_decision_gates(
     if cap == "TRY_SMALL" and action_level in {"STRONG_DO", "DO"}:
         return "TRY_SMALL"
     return action_level
+
+
+def _apply_derivatives_decision_gate(
+    action_level: str,
+    derivatives: dict[str, Any],
+    *,
+    has_evidence: bool,
+) -> tuple[str, list[str]]:
+    if not has_evidence or not derivatives.get("supports_risk_assessment"):
+        return action_level, []
+    severities = set(_string_list(derivatives.get("severities")))
+    if "high" in severities and action_level in ACTIONABLE_ACTION_LEVELS:
+        return "WATCH", ["high_severity_derivatives_context"]
+    if "medium" in severities and action_level in {"STRONG_DO", "DO"}:
+        return "TRY_SMALL", ["medium_severity_derivatives_context"]
+    return action_level, []
 
 
 def _decision_status(
@@ -2082,25 +2139,33 @@ def _do_not_do_guidance(action_level: str, *, risk_level: str, conflicts: list[s
     return _unique_ordered(guidance)
 
 
-def _risk_conditions(risk: dict[str, Any] | None) -> list[str]:
+def _risk_conditions(risk: dict[str, Any] | None, *, derivatives: dict[str, Any] | None = None) -> list[str]:
     if risk is None:
-        return ["risk_assessment=missing."]
-    gates = _mapping(risk.get("gates"))
-    conditions = [
-        f"risk_level={_clean_text(risk.get('risk_level'), fallback='unknown')}; "
-        f"status={_clean_text(risk.get('status'), fallback='unknown')}.",
-    ]
-    cap = gates.get("cap_action_level")
-    if isinstance(cap, str) and cap.strip():
-        conditions.append(f"cap_action_level={cap.strip()}.")
-    for label, field in (
-        ("rising_risk", "rising_risks"),
-        ("blocking_risk", "blocking_risks"),
-        ("data_quality_risk", "data_quality_risks"),
-        ("signal_conflict_risk", "signal_conflict_risks"),
-    ):
-        for item in _string_list(risk.get(field))[:4]:
-            conditions.append(f"{label}: {item}")
+        conditions = ["risk_assessment=missing."]
+    else:
+        gates = _mapping(risk.get("gates"))
+        conditions = [
+            f"risk_level={_clean_text(risk.get('risk_level'), fallback='unknown')}; "
+            f"status={_clean_text(risk.get('status'), fallback='unknown')}.",
+        ]
+        cap = gates.get("cap_action_level")
+        if isinstance(cap, str) and cap.strip():
+            conditions.append(f"cap_action_level={cap.strip()}.")
+        for label, field in (
+            ("rising_risk", "rising_risks"),
+            ("blocking_risk", "blocking_risks"),
+            ("data_quality_risk", "data_quality_risks"),
+            ("signal_conflict_risk", "signal_conflict_risks"),
+        ):
+            for item in _string_list(risk.get(field))[:4]:
+                conditions.append(f"{label}: {item}")
+    if derivatives:
+        for item in _string_list(derivatives.get("rising"))[:3]:
+            conditions.append(f"derivatives_context_risk: {item}")
+        for item in _string_list(derivatives.get("blocking"))[:2]:
+            conditions.append(f"derivatives_context_blocking: {item}")
+        for item in _string_list(derivatives.get("uncertainty"))[:2]:
+            conditions.append(f"derivatives_context_uncertainty: {item}")
     return _unique_ordered(conditions)
 
 
@@ -2140,10 +2205,20 @@ def _decision_invalidation_conditions(
     return []
 
 
+def _derivatives_invalidation_conditions(*, symbol: str, derivatives: dict[str, Any]) -> list[str]:
+    if not derivatives.get("supports_risk_assessment"):
+        return []
+    return [
+        f"{symbol} derivatives context adds high-severity leverage, premium, basis, spread, or depth stress.",
+    ]
+
+
 def _decision_evidence(
     usable_signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
+    *,
+    derivatives: dict[str, Any] | None = None,
 ) -> list[str]:
     evidence = [
         _counts_evidence("direction_counts", _direction_counts(usable_signals)),
@@ -2167,6 +2242,9 @@ def _decision_evidence(
             f"status={_clean_text(risk.get('status'), fallback='unknown')}."
         )
         evidence.extend(_string_list(risk.get("evidence"))[:3])
+    if derivatives:
+        evidence.extend(_string_list(derivatives.get("evidence"))[:3])
+        evidence.extend(_string_list(derivatives.get("uncertainty"))[:2])
     evidence.extend(_bounded_signal_evidence(usable_signals))
     return _unique_ordered(evidence)
 
@@ -2180,6 +2258,8 @@ def _decision_warnings(
     conflicts: list[str],
     has_evidence: bool,
     risk: dict[str, Any] | None,
+    derivatives: dict[str, Any] | None = None,
+    derivatives_downgrade_reasons: list[str] | None = None,
 ) -> list[str]:
     warnings = []
     if not has_evidence or risk_status == "insufficient_data" or regime_value == "unknown":
@@ -2194,6 +2274,10 @@ def _decision_warnings(
         warnings.append("No matching risk assessment record was available.")
     else:
         warnings.extend(_string_list(risk.get("warnings")))
+    if derivatives_downgrade_reasons:
+        warnings.append("Derivatives context downgraded stronger action language.")
+    if derivatives:
+        warnings.extend(_string_list(derivatives.get("warnings")))
     return _unique_ordered(warnings)
 
 
@@ -2260,10 +2344,22 @@ def _risk_by_tuple(records: list[dict[str, Any]]) -> dict[tuple[str, str, str], 
     return {_tuple_key(record): record for record in records}
 
 
+def _derivatives_context_ids(records: list[dict[str, Any]]) -> list[str]:
+    return _unique_ordered(
+        [
+            record_id
+            for record in records
+            for record_id in [_clean_text(record.get("context_id"), fallback="")]
+            if record_id
+        ]
+    )
+
+
 def _decision_record_source_artifacts(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
+    derivatives_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2272,6 +2368,12 @@ def _decision_record_source_artifacts(
             MARKET_SIGNALS_ARTIFACT,
             *(_string_list(risk.get("source_artifacts")) if risk else []),
             *(_string_list(regime.get("source_artifacts")) if regime else []),
+            *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_records else []),
+            *[
+                artifact
+                for record in derivatives_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
             *[
                 artifact
                 for signal in signals
@@ -2289,8 +2391,10 @@ def _watch_trigger_records(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
+    derivatives_records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    evidence = _watch_evidence(decision, signals, regime, risk)
+    derivatives = _derivatives_context_effects(derivatives_records)
+    evidence = _unique_ordered([*_watch_evidence(decision, signals, regime, risk), *_string_list(derivatives.get("evidence"))[:3]])
     if not evidence:
         return []
 
@@ -2302,7 +2406,8 @@ def _watch_trigger_records(
     action_level = _clean_text(decision.get("action_level"), fallback="NO_ACTION")
     status = _clean_text(decision.get("status"), fallback="unknown")
     risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback=_risk_level_from_decision(decision))
-    source_artifacts = _watch_record_source_artifacts(decision, signals, regime, risk)
+    source_artifacts = _watch_record_source_artifacts(decision, signals, regime, risk, derivatives_records)
+    linked_derivatives_context_ids = _derivatives_context_ids(derivatives_records)
 
     if action_level in ACTIONABLE_ACTION_LEVELS:
         records.append(
@@ -2319,6 +2424,7 @@ def _watch_trigger_records(
                 evidence=evidence,
                 warnings=[],
                 source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
             )
         )
         for index, condition in enumerate(_string_list(decision.get("invalidation_conditions"))[:2], start=1):
@@ -2336,6 +2442,7 @@ def _watch_trigger_records(
                     evidence=evidence,
                     warnings=[],
                     source_artifacts=source_artifacts,
+                    linked_derivatives_context_ids=linked_derivatives_context_ids,
                     sequence=index,
                 )
             )
@@ -2353,6 +2460,45 @@ def _watch_trigger_records(
                 evidence=evidence,
                 warnings=[],
                 source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+            )
+        )
+
+    if derivatives.get("supports_risk_assessment") and (derivatives.get("rising") or derivatives.get("blocking")):
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="risk_escalation",
+                condition=f"{symbol} derivatives context adds leverage, premium, basis, spread, or depth stress.",
+                priority="high" if "high" in set(_string_list(derivatives.get("severities"))) else "medium",
+                expected_decision_impact="could_downgrade_or_block_stronger_action",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=[],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                sequence=1,
+            )
+        )
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="risk_relief",
+                condition=f"{symbol} derivatives stress clears or falls back to neutral context.",
+                priority="medium",
+                expected_decision_impact="could_relieve_derivatives_risk_cap",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=[],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                sequence=1,
             )
         )
 
@@ -2372,6 +2518,7 @@ def _watch_trigger_records(
                     evidence=evidence,
                     warnings=[],
                     source_artifacts=source_artifacts,
+                    linked_derivatives_context_ids=linked_derivatives_context_ids,
                 )
             )
         records.append(
@@ -2388,6 +2535,7 @@ def _watch_trigger_records(
                 evidence=evidence,
                 warnings=_string_list(decision.get("warnings"))[:2],
                 source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
             )
         )
 
@@ -2406,6 +2554,7 @@ def _watch_trigger_records(
                 evidence=evidence,
                 warnings=_string_list(decision.get("warnings"))[:2],
                 source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
             )
         )
 
@@ -2424,6 +2573,7 @@ def _watch_trigger_records(
                 evidence=evidence,
                 warnings=_string_list(decision.get("warnings"))[:2],
                 source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
             )
         )
 
@@ -2441,6 +2591,7 @@ def _watch_trigger_records(
             evidence=evidence,
             warnings=[],
             source_artifacts=source_artifacts,
+            linked_derivatives_context_ids=linked_derivatives_context_ids,
         )
     )
     return records
@@ -2460,6 +2611,7 @@ def _watch_trigger_record(
     evidence: list[str],
     warnings: list[str],
     source_artifacts: list[str],
+    linked_derivatives_context_ids: list[str] | None = None,
     sequence: int | None = None,
 ) -> dict[str, Any]:
     suffix = f":{sequence}" if sequence is not None else ""
@@ -2475,6 +2627,7 @@ def _watch_trigger_record(
         "linked_decision_record_id": linked_decision_record_id,
         "evidence": evidence,
         "warnings": _unique_ordered(warnings),
+        "linked_derivatives_context_ids": linked_derivatives_context_ids or [],
         "source_artifacts": source_artifacts,
     }
 
@@ -2556,6 +2709,7 @@ def _watch_record_source_artifacts(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
+    derivatives_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2566,6 +2720,12 @@ def _watch_record_source_artifacts(
             *_string_list(decision.get("source_artifacts")),
             *(_string_list(risk.get("source_artifacts")) if risk else []),
             *(_string_list(regime.get("source_artifacts")) if regime else []),
+            *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_records else []),
+            *[
+                artifact
+                for record in derivatives_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
             *[
                 artifact
                 for signal in signals
@@ -2583,6 +2743,7 @@ def _watch_source_artifacts(
     market_regime: dict[str, Any],
     risk_assessment: dict[str, Any],
     decision_recommendations: dict[str, Any],
+    derivatives_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2594,6 +2755,8 @@ def _watch_source_artifacts(
             *_string_list(risk_assessment.get("source_artifacts")),
             *_string_list(market_regime.get("source_artifacts")),
             *_string_list(market_signals.get("source_artifacts")),
+            *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
+            *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
@@ -2622,6 +2785,7 @@ def _decision_source_artifacts(
     market_regime: dict[str, Any],
     risk_assessment: dict[str, Any],
     strategy_artifact: dict[str, Any] | None,
+    derivatives_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2633,6 +2797,8 @@ def _decision_source_artifacts(
             *_string_list(market_signals.get("source_artifacts")),
             *([QUANT_STRATEGY_RUNS_ARTIFACT] if strategy_artifact is not None else []),
             *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
+            *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
+            *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
@@ -3549,6 +3715,8 @@ def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
     run.manifest["counts"]["decision_recommendation_actionable_records"] = 0
     run.manifest["counts"]["decision_recommendation_non_actionable_records"] = 0
     run.manifest["counts"]["decision_recommendation_risk_blocked_records"] = 0
+    run.manifest["counts"]["decision_recommendation_derivatives_context_records"] = 0
+    run.manifest["counts"]["decision_recommendation_derivatives_linked_records"] = 0
 
 
 def _record_watch_trigger_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
@@ -3565,6 +3733,8 @@ def _record_watch_trigger_counts(run: RunContext, records: list[dict[str, Any]])
 def _record_zero_watch_trigger_counts(run: RunContext) -> None:
     run.manifest["counts"]["watch_trigger_records"] = 0
     run.manifest["counts"]["watch_trigger_linked_records"] = 0
+    run.manifest["counts"]["watch_trigger_derivatives_context_records"] = 0
+    run.manifest["counts"]["watch_trigger_derivatives_linked_records"] = 0
     for trigger_type in TRIGGER_TYPES:
         run.manifest["counts"][f"watch_trigger_{trigger_type}_records"] = 0
 

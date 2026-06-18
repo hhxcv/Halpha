@@ -258,11 +258,11 @@ A successful configured run can write:
 - `analysis/derivatives_market_context.json`: deterministic funding, open-interest, premium, basis, bounded liquidity-depth, and liquidation-availability derivatives context records.
 - `analysis/market_regime_assessment.json`: deterministic market regime assessment.
 - `analysis/risk_assessment.json`: deterministic risk assessment.
-- `analysis/decision_recommendations.json`: deterministic decision-support recommendations.
-- `analysis/watch_triggers.json`: deterministic watch triggers.
+- `analysis/decision_recommendations.json`: deterministic decision-support recommendations with source-aware risk and downgrade context.
+- `analysis/watch_triggers.json`: deterministic watch triggers, including supported risk escalation and risk relief conditions.
 - `analysis/event_market_confluence.json`: deterministic event-quant and event-decision relationship records.
 - `analysis/event_intelligence_assessment.json`: deterministic event relevance, severity, market response, and decision-impact assessment records.
-- `analysis/alert_decisions.json`: deterministic event attention-priority decisions, not alert delivery.
+- `analysis/alert_decisions.json`: deterministic event attention-priority decisions, including supported derivatives relevance, not alert delivery.
 - `analysis/alert_decision_material.md`: AI-readable alert priority, downgrade, suppression, and uncertainty material.
 - `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.

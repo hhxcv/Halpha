@@ -326,10 +326,12 @@ Record fields:
   "recommended_actions": [],
   "do_not_do": [],
   "risk_conditions": [],
+  "downgrade_reasons": [],
   "invalidation_conditions": [],
   "evidence": [],
   "conflicts": [],
   "warnings": [],
+  "linked_derivatives_context_ids": [],
   "source_artifacts": []
 }
 ```
@@ -337,6 +339,12 @@ Record fields:
 Rules:
 
 - Derive action level from quant evidence, market regime, and risk assessment.
+- Supported derivatives context may appear as evidence, risk conditions,
+  uncertainty, invalidation context, or downgrade reasons.
+- Supported medium or high severity derivatives stress may conservatively
+  downgrade or block stronger action levels.
+- Missing, stale, degraded, unavailable, or partial derivatives context must
+  remain uncertainty or warning evidence and must not upgrade action language.
 - Evidence insufficient means `WATCH`, `NO_ACTION`, or a non-actionable status.
 - High or extreme risk must downgrade or block stronger action levels.
 - Major conflicts must cap action strength.
@@ -389,14 +397,20 @@ Record fields:
   "linked_decision_record_id": "decision_recommendation:binance:BTCUSDT:1d:2026-06-06T00:00:00Z",
   "evidence": [],
   "warnings": [],
+  "linked_derivatives_context_ids": [],
   "source_artifacts": []
 }
 ```
 
 Rules:
 
-- Derive triggers from current upstream signals, regime, risk, and decision artifacts.
+- Derive triggers from current upstream signals, regime, risk, decision, and
+  supported derivatives context artifacts.
 - Link triggers to decision recommendations when evidence supports the link.
+- Supported derivatives stress may create `risk_escalation` and `risk_relief`
+  triggers with linked derivatives context ids.
+- Missing, stale, degraded, unavailable, or partial derivatives context must not
+  fabricate stronger decision conditions.
 - Missing evidence produces warnings or no-trigger records, not fabricated conditions.
 - Static trigger generation does not implement monitoring.
 - Do not add scheduler, daemon, websocket, polling, notifications, or alert delivery.
@@ -431,6 +445,7 @@ analysis/event_market_confluence.json
 analysis/risk_assessment.json
 analysis/decision_recommendations.json
 analysis/watch_triggers.json
+analysis/derivatives_market_context.json
 analysis/market_regime_assessment.json
 analysis/market_signals.json
 analysis/text_event_signals.json
@@ -463,6 +478,8 @@ Record contract:
   "linked_event_assessment_ids": [],
   "linked_decision_record_ids": [],
   "linked_watch_trigger_ids": [],
+  "linked_derivatives_context_ids": [],
+  "derivatives_relevance": [],
   "source_artifacts": []
 }
 ```
@@ -511,6 +528,11 @@ Rules:
   promoting them into user attention.
 - `requires_reassessment` is true only when evidence could change current risk,
   decision recommendations, invalidation conditions, or watch state.
+- Derivatives relevance may be linked only when an event assessment already has
+  explicit event, risk, decision, or watch relevance for the same symbol.
+- Derivatives context is supporting evidence for attention priority; it must not
+  independently upgrade stale, duplicate, unrelated, or insufficient-evidence
+  events.
 - Alert decisions must not send notifications, schedule background work, place
   trades, size positions, access accounts, or create price forecasts.
 - Codex may explain alert decisions from bounded material, but it must not
