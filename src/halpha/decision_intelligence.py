@@ -26,6 +26,7 @@ MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
 MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_DATA_VIEWS_ARTIFACT = "raw/market_data_views.json"
+DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
 SCHEMA_VERSION = 1
 NO_PREVIOUS_RUN_WARNING = "No previous successful decision-intelligence run found."
 DECISION_DELTA_INPUT_ARTIFACTS = {
@@ -75,6 +76,8 @@ def build_market_regime_assessment(
     if not _quant_enabled(config):
         run.manifest["counts"]["market_regime_records"] = 0
         run.manifest["counts"]["market_regime_unknown_records"] = 0
+        run.manifest["counts"]["market_regime_derivatives_context_records"] = 0
+        run.manifest["counts"]["market_regime_derivatives_influenced_records"] = 0
         return []
 
     market_signals = _read_json_artifact(
@@ -90,18 +93,21 @@ def build_market_regime_assessment(
         market_signals,
         stage=BUILD_MARKET_REGIME_ASSESSMENT_STAGE,
     )
+    derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    derivatives_records = _records_from_optional_artifact(derivatives_artifact)
+    derivatives_groups = _derivatives_by_symbol(derivatives_records)
     records = [
-        _regime_record(group_signals)
+        _regime_record(group_signals, derivatives_groups.get(_group_value(group_signals, "symbol"), []))
         for group_signals in _grouped_signals(signals).values()
     ]
-    warnings = _artifact_warnings(records, strategy_warnings)
+    warnings = _artifact_warnings(records, [*strategy_warnings, *derivatives_warnings])
 
     artifact = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": "market_regime_assessment",
         "run_id": run.run_id,
         "created_at": created_at,
-        "source_artifacts": _source_artifacts(market_signals, strategy_artifact),
+        "source_artifacts": _source_artifacts(market_signals, strategy_artifact, derivatives_artifact),
         "records": records,
         "warnings": warnings,
         "errors": [],
@@ -111,6 +117,10 @@ def build_market_regime_assessment(
     run.manifest["counts"]["market_regime_records"] = len(records)
     run.manifest["counts"]["market_regime_unknown_records"] = sum(
         1 for record in records if record["regime"] == "unknown"
+    )
+    run.manifest["counts"]["market_regime_derivatives_context_records"] = len(derivatives_records)
+    run.manifest["counts"]["market_regime_derivatives_influenced_records"] = sum(
+        1 for record in records if any("derivatives_context" in item for item in _string_list(record.get("evidence")))
     )
     return [MARKET_REGIME_ASSESSMENT_ARTIFACT]
 
@@ -149,6 +159,9 @@ def build_risk_assessment(
         stage=BUILD_RISK_ASSESSMENT_STAGE,
     )
     strategy_runs, run_warnings = _strategy_runs_from_optional_artifact(strategy_artifact)
+    derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    derivatives_records = _records_from_optional_artifact(derivatives_artifact)
+    derivatives_groups = _derivatives_by_symbol(derivatives_records)
     created_at = _created_at(market_regime, now)
     signal_groups = _signals_by_tuple(signals)
     regime_groups = _regime_by_tuple(regime_records)
@@ -159,6 +172,7 @@ def build_risk_assessment(
             signal_groups.get(key, []),
             regime_groups.get(key),
             strategy_groups.get(key, []),
+            derivatives_groups.get(key[1], []),
         )
         for key in _risk_group_keys(signals, regime_records, strategy_runs)
     ]
@@ -168,9 +182,14 @@ def build_risk_assessment(
         "artifact_type": "risk_assessment",
         "run_id": run.run_id,
         "created_at": created_at,
-        "source_artifacts": _risk_source_artifacts(market_signals, market_regime, strategy_artifact),
+        "source_artifacts": _risk_source_artifacts(
+            market_signals,
+            market_regime,
+            strategy_artifact,
+            derivatives_artifact,
+        ),
         "records": records,
-        "warnings": _risk_artifact_warnings(records, [*strategy_warnings, *run_warnings]),
+        "warnings": _risk_artifact_warnings(records, [*strategy_warnings, *run_warnings, *derivatives_warnings]),
         "errors": [],
     }
     write_json(run.analysis_dir / "risk_assessment.json", artifact)
@@ -184,6 +203,10 @@ def build_risk_assessment(
     )
     run.manifest["counts"]["risk_assessment_blocking_records"] = sum(
         1 for record in records if record["blocking_risks"]
+    )
+    run.manifest["counts"]["risk_assessment_derivatives_context_records"] = len(derivatives_records)
+    run.manifest["counts"]["risk_assessment_derivatives_influenced_records"] = sum(
+        1 for record in records if any("Derivatives context" in item for item in _string_list(record.get("rising_risks")))
     )
     return [RISK_ASSESSMENT_ARTIFACT]
 
@@ -1656,7 +1679,7 @@ def _decision_manifest_artifact_messages(run: RunContext, *, field: str) -> list
     return messages
 
 
-def _regime_record(signals: list[dict[str, Any]]) -> dict[str, Any]:
+def _regime_record(signals: list[dict[str, Any]], derivatives_records: list[dict[str, Any]]) -> dict[str, Any]:
     usable = [signal for signal in signals if _has_usable_signal_evidence(signal)]
     latest = _latest_candle_time(signals)
     source = _group_value(signals, "source")
@@ -1667,6 +1690,8 @@ def _regime_record(signals: list[dict[str, Any]]) -> dict[str, Any]:
         warnings.append("One or more upstream market signals have insufficient or weak evidence.")
 
     regime, regime_evidence, conflicts = _classify_regime(usable)
+    derivatives = _derivatives_context_effects(derivatives_records)
+    conflicts = _unique_ordered([*conflicts, *_derivatives_regime_conflicts(regime, derivatives)])
     if not usable:
         warnings.append("No usable upstream market signal evidence was available.")
 
@@ -1682,13 +1707,14 @@ def _regime_record(signals: list[dict[str, Any]]) -> dict[str, Any]:
         "evidence": _unique_ordered(
             [
                 *regime_evidence,
+                *derivatives["evidence"],
                 *_bounded_signal_evidence(usable),
             ]
         ),
         "conflicts": conflicts,
-        "uncertainty": _uncertainty(signals),
+        "uncertainty": _unique_ordered([*_uncertainty(signals), *derivatives["uncertainty"]]),
         "warnings": warnings,
-        "source_artifacts": _record_source_artifacts(signals),
+        "source_artifacts": _record_source_artifacts(signals, derivatives_records),
     }
 
 
@@ -1765,6 +1791,7 @@ def _risk_record(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     strategy_runs: list[dict[str, Any]],
+    derivatives_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source, symbol, timeframe = key
     latest = _latest_risk_candle_time(signals, regime, strategy_runs)
@@ -1773,7 +1800,8 @@ def _risk_record(
     volatility = _volatility_risk(signals)
     strategy = _strategy_warning_risk(strategy_runs, signals)
     regime_risks = _regime_risks(regime)
-    usable_evidence = _has_usable_risk_evidence(signals, regime)
+    derivatives = _derivatives_context_effects(derivatives_records)
+    usable_evidence = _has_usable_risk_evidence(signals, regime) or derivatives["supports_risk_assessment"]
     warnings = _risk_record_warnings(regime, usable_evidence)
 
     rising_risks = _unique_ordered(
@@ -1781,6 +1809,7 @@ def _risk_record(
             *volatility["rising"],
             *strategy["rising"],
             *regime_risks["rising"],
+            *derivatives["rising"],
             *([] if usable_evidence else ["Upstream evidence is insufficient for a supported low-risk conclusion."]),
         ]
     )
@@ -1789,6 +1818,7 @@ def _risk_record(
             *signal_conflict_risks,
             *volatility["blocking"],
             *regime_risks["blocking"],
+            *derivatives["blocking"],
             *([] if usable_evidence else ["Insufficient upstream evidence blocks stronger action levels."]),
         ]
     )
@@ -1796,6 +1826,7 @@ def _risk_record(
         *volatility["severities"],
         *strategy["severities"],
         *regime_risks["severities"],
+        *derivatives["severities"],
         *(["high"] if signal_conflict_risks else []),
         *(["medium"] if data_quality_risks and usable_evidence else []),
     ]
@@ -1819,11 +1850,12 @@ def _risk_record(
             volatility=volatility,
             strategy=strategy,
             regime_risks=regime_risks,
+            derivatives=derivatives,
             risk_level=risk_level,
         ),
-        "warnings": warnings,
+        "warnings": _unique_ordered([*warnings, *derivatives["warnings"]]),
         "errors": [],
-        "source_artifacts": _risk_record_source_artifacts(signals, regime, strategy_runs),
+        "source_artifacts": _risk_record_source_artifacts(signals, regime, strategy_runs, derivatives_records),
     }
 
 
@@ -2661,6 +2693,19 @@ def _read_optional_strategy_artifact(
     return loaded, []
 
 
+def _read_optional_derivatives_context(run: RunContext) -> tuple[dict[str, Any] | None, list[str]]:
+    path = run.analysis_dir / "derivatives_market_context.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None, []
+    except JSONDecodeError as exc:
+        return None, [f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}."]
+    if not isinstance(loaded, dict):
+        return None, [f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} must be a JSON object."]
+    return loaded, []
+
+
 def _signals_from_artifact(artifact: dict[str, Any], *, stage: str) -> list[dict[str, Any]]:
     signals = artifact.get("signals")
     if not isinstance(signals, list):
@@ -2695,6 +2740,15 @@ def _records_from_artifact(artifact: dict[str, Any], artifact_name: str, *, stag
                 exit_code=3,
             )
     return records
+
+
+def _records_from_optional_artifact(artifact: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if artifact is None:
+        return []
+    records = artifact.get("records")
+    if not isinstance(records, list):
+        return []
+    return [record for record in records if isinstance(record, dict)]
 
 
 def _strategy_runs_from_optional_artifact(artifact: dict[str, Any] | None) -> tuple[list[dict[str, Any]], list[str]]:
@@ -2871,7 +2925,10 @@ def _bounded_signal_evidence(signals: list[dict[str, Any]]) -> list[str]:
     return evidence[:6]
 
 
-def _record_source_artifacts(signals: list[dict[str, Any]]) -> list[str]:
+def _record_source_artifacts(
+    signals: list[dict[str, Any]],
+    derivatives_records: list[dict[str, Any]] | None = None,
+) -> list[str]:
     return _unique_ordered(
         [
             MARKET_SIGNALS_ARTIFACT,
@@ -2880,17 +2937,33 @@ def _record_source_artifacts(signals: list[dict[str, Any]]) -> list[str]:
                 for signal in signals
                 for artifact in _string_list(signal.get("source_artifacts"))
             ],
+            *(
+                [DERIVATIVES_MARKET_CONTEXT_ARTIFACT]
+                if derivatives_records
+                else []
+            ),
+            *[
+                artifact
+                for record in derivatives_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
         ]
     )
 
 
-def _source_artifacts(market_signals: dict[str, Any], strategy_artifact: dict[str, Any] | None) -> list[str]:
+def _source_artifacts(
+    market_signals: dict[str, Any],
+    strategy_artifact: dict[str, Any] | None,
+    derivatives_artifact: dict[str, Any] | None = None,
+) -> list[str]:
     return _unique_ordered(
         [
             MARKET_SIGNALS_ARTIFACT,
             *_string_list(market_signals.get("source_artifacts")),
             *([QUANT_STRATEGY_RUNS_ARTIFACT] if strategy_artifact is not None else []),
             *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
+            *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
+            *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -2938,11 +3011,28 @@ def _strategy_runs_by_tuple(runs: list[dict[str, Any]]) -> dict[tuple[str, str, 
     return groups
 
 
+def _derivatives_by_symbol(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        symbol = _clean_text(record.get("symbol"), fallback="")
+        if symbol:
+            groups.setdefault(symbol, []).append(record)
+    return {symbol: sorted(items, key=_derivatives_sort_key) for symbol, items in groups.items()}
+
+
 def _tuple_key(item: dict[str, Any]) -> tuple[str, str, str]:
     return (
         _clean_text(item.get("source"), fallback="missing"),
         _clean_text(item.get("symbol"), fallback="missing"),
         _clean_text(item.get("timeframe"), fallback="missing"),
+    )
+
+
+def _derivatives_sort_key(record: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        _clean_text(record.get("context_type"), fallback=""),
+        _clean_text(record.get("period"), fallback=""),
+        _clean_text(record.get("as_of"), fallback=""),
     )
 
 
@@ -3180,6 +3270,7 @@ def _risk_evidence(
     volatility: dict[str, list[str]],
     strategy: dict[str, list[str]],
     regime_risks: dict[str, list[str]],
+    derivatives: dict[str, Any],
     risk_level: str,
 ) -> list[str]:
     evidence = [
@@ -3187,6 +3278,8 @@ def _risk_evidence(
         *regime_risks["evidence"],
         *volatility["evidence"],
         *strategy["evidence"],
+        *derivatives["evidence"],
+        *derivatives["uncertainty"],
         *_bounded_signal_evidence([signal for signal in signals if _has_usable_signal_evidence(signal)]),
     ]
     if regime is None:
@@ -3194,6 +3287,109 @@ def _risk_evidence(
     if risk_level == "low":
         evidence.append("No elevated risk factors were found in current bounded M2 and regime artifacts.")
     return _unique_ordered(evidence)
+
+
+def _derivatives_context_effects(records: list[dict[str, Any]]) -> dict[str, Any]:
+    rising: list[str] = []
+    blocking: list[str] = []
+    evidence: list[str] = []
+    uncertainty: list[str] = []
+    warnings: list[str] = []
+    severities: list[str] = []
+    supports_risk_assessment = False
+
+    for record in records:
+        context_type = _clean_text(record.get("context_type"), fallback="unknown")
+        state = _clean_text(record.get("state"), fallback="unknown")
+        status = _clean_text(record.get("status"), fallback="unknown")
+        severity = _clean_text(record.get("severity"), fallback="unknown")
+        evidence_line = (
+            f"derivatives_context {context_type} state={state}; "
+            f"severity={severity}; status={status}."
+        )
+
+        if status in {"failed", "unavailable", "stale", "degraded", "partial"} or state in {
+            "unavailable",
+            "stale",
+            "insufficient_evidence",
+        }:
+            uncertainty.append(_derivatives_uncertainty_message(context_type, state, status))
+            evidence.append(evidence_line)
+            if context_type == "liquidation_availability" and state == "unavailable":
+                rising.append(
+                    "Derivatives context: liquidation summary is unavailable; risk must not be reduced by absence of liquidation evidence."
+                )
+                severities.append("medium")
+            elif status in {"failed", "stale", "degraded", "partial"}:
+                rising.append(f"Derivatives context {context_type} is {status}; assessment should remain conservative.")
+                severities.append("medium")
+            continue
+
+        if state in {"neutral", "open_interest_level_only"} or severity in {"low", "unknown"}:
+            evidence.append(evidence_line)
+            continue
+
+        message = _derivatives_risk_message(context_type=context_type, state=state, severity=severity)
+        rising.append(message)
+        evidence.append(evidence_line)
+        supports_risk_assessment = True
+        if severity == "high":
+            blocking.append("High-severity derivatives context blocks stronger action levels.")
+            severities.append("high")
+        elif severity == "medium":
+            severities.append("medium")
+
+    return {
+        "rising": _unique_ordered(rising),
+        "blocking": _unique_ordered(blocking),
+        "evidence": _unique_ordered(evidence),
+        "uncertainty": _unique_ordered(uncertainty),
+        "warnings": _unique_ordered(warnings),
+        "severities": _unique_ordered(severities),
+        "supports_risk_assessment": supports_risk_assessment,
+    }
+
+
+def _derivatives_regime_conflicts(regime: str, derivatives: dict[str, Any]) -> list[str]:
+    if not derivatives.get("supports_risk_assessment"):
+        return []
+    if regime in {"unknown", "mixed"}:
+        return []
+    severities = set(_string_list(derivatives.get("severities")))
+    if "high" in severities and regime in {"trend_up", "low_volatility", "range_bound"}:
+        return ["High-severity derivatives context qualifies the market regime."]
+    if "medium" in severities and regime == "trend_up":
+        return ["Derivatives context adds leverage or liquidity stress to the trend_up regime."]
+    return []
+
+
+def _derivatives_uncertainty_message(context_type: str, state: str, status: str) -> str:
+    return (
+        f"Derivatives context {context_type} is state={state}, status={status}; "
+        "missing or degraded derivatives evidence cannot support lower risk."
+    )
+
+
+def _derivatives_risk_message(*, context_type: str, state: str, severity: str) -> str:
+    state_messages = {
+        "extreme_positive_funding": "extreme positive funding suggests crowded long leverage pressure",
+        "extreme_negative_funding": "extreme negative funding suggests crowded short leverage pressure",
+        "elevated_positive_funding": "elevated positive funding suggests leverage pressure",
+        "elevated_negative_funding": "elevated negative funding suggests leverage pressure",
+        "sharp_open_interest_expansion": "sharp open-interest expansion suggests leverage is building",
+        "open_interest_expansion": "open-interest expansion suggests leverage is building",
+        "premium_stressed": "premium stress indicates derivatives market pressure",
+        "premium_stretched": "premium stretch indicates derivatives market pressure",
+        "premium_inverted": "premium inversion indicates derivatives market pressure",
+        "basis_stressed": "basis stress indicates derivatives market pressure",
+        "basis_stretched": "basis stretch indicates derivatives market pressure",
+        "basis_inverted": "basis inversion indicates derivatives market pressure",
+        "spread_stressed": "spread stress indicates liquidity degradation",
+        "spread_wide": "wide spread indicates liquidity degradation",
+        "depth_imbalanced": "depth imbalance indicates liquidity degradation",
+    }
+    detail = state_messages.get(state, f"{context_type} state {state} requires conservative interpretation")
+    return f"Derivatives context: {detail} ({severity} severity)."
 
 
 def _risk_record_warnings(regime: dict[str, Any] | None, usable_evidence: bool) -> list[str]:
@@ -3209,12 +3405,23 @@ def _risk_record_source_artifacts(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     strategy_runs: list[dict[str, Any]],
+    derivatives_records: list[dict[str, Any]],
 ) -> list[str]:
     return _unique_ordered(
         [
             MARKET_REGIME_ASSESSMENT_ARTIFACT,
             MARKET_SIGNALS_ARTIFACT,
             *(_string_list(regime.get("source_artifacts")) if regime else []),
+            *(
+                [DERIVATIVES_MARKET_CONTEXT_ARTIFACT]
+                if derivatives_records
+                else []
+            ),
+            *[
+                artifact
+                for record in derivatives_records
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
             *[
                 artifact
                 for signal in signals
@@ -3233,6 +3440,7 @@ def _risk_source_artifacts(
     market_signals: dict[str, Any],
     market_regime: dict[str, Any],
     strategy_artifact: dict[str, Any] | None,
+    derivatives_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -3242,6 +3450,8 @@ def _risk_source_artifacts(
             *_string_list(market_signals.get("source_artifacts")),
             *([QUANT_STRATEGY_RUNS_ARTIFACT] if strategy_artifact is not None else []),
             *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
+            *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
+            *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -3330,6 +3540,8 @@ def _record_zero_risk_counts(run: RunContext) -> None:
     run.manifest["counts"]["risk_assessment_unknown_records"] = 0
     run.manifest["counts"]["risk_assessment_high_or_extreme_records"] = 0
     run.manifest["counts"]["risk_assessment_blocking_records"] = 0
+    run.manifest["counts"]["risk_assessment_derivatives_context_records"] = 0
+    run.manifest["counts"]["risk_assessment_derivatives_influenced_records"] = 0
 
 
 def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
