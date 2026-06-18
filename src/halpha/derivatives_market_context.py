@@ -16,7 +16,7 @@ DERIVATIVES_MARKET_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 RAW_DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
 CONTEXT_SCHEMA_VERSION = 1
 STALE_MAX_AGE_HOURS = 48
-SUPPORTED_DATA_CLASSES = {"funding_rate", "open_interest"}
+SUPPORTED_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index"}
 
 FUNDING_THRESHOLDS = {
     "elevated_positive_funding_rate": 0.0002,
@@ -29,6 +29,14 @@ OPEN_INTEREST_THRESHOLDS = {
     "sharp_expansion_change_pct": 0.15,
     "contraction_change_pct": -0.05,
     "sharp_contraction_change_pct": -0.15,
+}
+PREMIUM_THRESHOLDS = {
+    "stretched_abs_premium_rate": 0.001,
+    "stressed_abs_premium_rate": 0.003,
+}
+BASIS_THRESHOLDS = {
+    "stretched_abs_basis_rate": 0.001,
+    "stressed_abs_basis_rate": 0.005,
 }
 
 
@@ -99,9 +107,17 @@ def _context_record(
     if view.get("data_class") == "funding_rate":
         state = _funding_state(rows, status_inputs=status_inputs)
         context_type = "funding_pressure"
-    else:
+    elif view.get("data_class") == "open_interest":
         state = _open_interest_state(rows, status_inputs=status_inputs, period=str(view.get("period") or ""))
         context_type = "open_interest_pressure"
+    else:
+        state = _premium_basis_state(
+            rows,
+            raw=raw,
+            view=view,
+            status_inputs=status_inputs,
+        )
+        context_type = "premium_basis_state"
 
     warnings = _unique_sorted(
         [
@@ -123,6 +139,9 @@ def _context_record(
         source_artifacts = _unique_sorted(source_artifacts)
 
     as_of = state["as_of"] or view.get("latest_observation_time")
+    record_status = str(status_inputs["status"])
+    if state["state"] == "insufficient_evidence" and record_status == "succeeded":
+        record_status = "insufficient"
     context_id = _context_id(
         context_type=context_type,
         source=str(view.get("source") or "unknown_source"),
@@ -139,10 +158,10 @@ def _context_record(
         "symbol": view.get("symbol"),
         "period": view.get("period"),
         "as_of": as_of,
-        "status": status_inputs["status"],
+        "status": record_status,
         "state": state["state"],
         "severity": state["severity"],
-        "confidence": _confidence(status_inputs["status"], state["confidence"]),
+        "confidence": _confidence(record_status, state["confidence"]),
         "metrics": state["metrics"],
         "thresholds": state["thresholds"],
         "evidence": state["evidence"],
@@ -305,6 +324,113 @@ def _open_interest_state(
     }
 
 
+def _premium_basis_state(
+    rows: list[dict[str, Any]],
+    *,
+    raw: dict[str, Any],
+    view: dict[str, Any],
+    status_inputs: dict[str, Any],
+) -> dict[str, Any]:
+    data_class = str(view.get("data_class") or "")
+    if data_class == "premium_index":
+        return _premium_state(rows, status_inputs=status_inputs)
+    return _basis_state(rows, raw=raw, view=view, status_inputs=status_inputs)
+
+
+def _premium_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, Any]) -> dict[str, Any]:
+    latest = _latest_metric(rows, "premium_rate")
+    latest_row = rows[-1] if rows else {}
+    as_of = latest_row.get("as_of") if isinstance(latest_row, dict) else None
+    if status_inputs["status"] in {"unavailable", "failed"}:
+        return _empty_state("unavailable", thresholds=PREMIUM_THRESHOLDS)
+    if status_inputs["status"] == "stale":
+        return _empty_state("stale", thresholds=PREMIUM_THRESHOLDS, as_of=as_of)
+    if latest is None:
+        return _empty_state(
+            "insufficient_evidence",
+            thresholds=PREMIUM_THRESHOLDS,
+            as_of=as_of,
+            warnings=["premium_rate metric is missing."],
+        )
+    state, severity = _premium_state_from_rate(latest)
+    return {
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "as_of": as_of,
+        "metrics": {
+            "latest_premium_rate": latest,
+            "latest_mark_price": _latest_metric(rows, "mark_price"),
+            "latest_index_price": _latest_metric(rows, "index_price"),
+            "latest_last_funding_rate": _latest_metric(rows, "last_funding_rate"),
+            "latest_interest_rate": _latest_metric(rows, "interest_rate"),
+            "observations": len(_metric_series(rows, "premium_rate")),
+            "units": _latest_units(rows),
+        },
+        "thresholds": PREMIUM_THRESHOLDS,
+        "evidence": _evidence(
+            rows,
+            metric_name="premium_rate",
+            latest_value=latest,
+            rolling_change=None,
+        ),
+        "uncertainty": [],
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _basis_state(
+    rows: list[dict[str, Any]],
+    *,
+    raw: dict[str, Any],
+    view: dict[str, Any],
+    status_inputs: dict[str, Any],
+) -> dict[str, Any]:
+    latest = _latest_metric(rows, "basis_rate")
+    latest_row = rows[-1] if rows else {}
+    as_of = latest_row.get("as_of") if isinstance(latest_row, dict) else None
+    if status_inputs["status"] in {"unavailable", "failed"}:
+        return _empty_state("unavailable", thresholds=BASIS_THRESHOLDS)
+    if status_inputs["status"] == "stale":
+        return _empty_state("stale", thresholds=BASIS_THRESHOLDS, as_of=as_of)
+    if latest is None:
+        return _empty_state(
+            "insufficient_evidence",
+            thresholds=BASIS_THRESHOLDS,
+            as_of=as_of,
+            warnings=["basis_rate metric is missing."],
+        )
+    state, severity = _basis_state_from_rate(latest)
+    contract_type = _raw_field_for_as_of(raw, view, as_of, "contractType")
+    return {
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "as_of": as_of,
+        "metrics": {
+            "latest_basis": _latest_metric(rows, "basis"),
+            "latest_basis_rate": latest,
+            "latest_annualized_basis_rate": _latest_metric(rows, "annualized_basis_rate"),
+            "latest_futures_price": _latest_metric(rows, "futures_price"),
+            "latest_index_price": _latest_metric(rows, "index_price"),
+            "contract_type": contract_type,
+            "observations": len(_metric_series(rows, "basis_rate")),
+            "units": _latest_units(rows),
+        },
+        "thresholds": BASIS_THRESHOLDS,
+        "evidence": _evidence(
+            rows,
+            metric_name="basis_rate",
+            latest_value=latest,
+            rolling_change=None,
+        ),
+        "uncertainty": [],
+        "warnings": [],
+        "errors": [],
+    }
+
+
 def _source_state(raw: dict[str, Any], view: dict[str, Any]) -> dict[str, Any]:
     has_raw_source = bool(raw)
     availability = [
@@ -382,6 +508,30 @@ def _open_interest_pressure_state(change_pct: float) -> tuple[str, str]:
         return "sharp_open_interest_contraction", "high"
     if change_pct <= OPEN_INTEREST_THRESHOLDS["contraction_change_pct"]:
         return "open_interest_contraction", "medium"
+    return "neutral", "low"
+
+
+def _premium_state_from_rate(latest: float) -> tuple[str, str]:
+    absolute = abs(latest)
+    if latest < 0:
+        severity = "high" if absolute >= PREMIUM_THRESHOLDS["stressed_abs_premium_rate"] else "medium"
+        return "premium_inverted", severity
+    if absolute >= PREMIUM_THRESHOLDS["stressed_abs_premium_rate"]:
+        return "premium_stressed", "high"
+    if absolute >= PREMIUM_THRESHOLDS["stretched_abs_premium_rate"]:
+        return "premium_stretched", "medium"
+    return "neutral", "low"
+
+
+def _basis_state_from_rate(latest: float) -> tuple[str, str]:
+    absolute = abs(latest)
+    if latest < 0:
+        severity = "high" if absolute >= BASIS_THRESHOLDS["stressed_abs_basis_rate"] else "medium"
+        return "basis_inverted", severity
+    if absolute >= BASIS_THRESHOLDS["stressed_abs_basis_rate"]:
+        return "basis_stressed", "high"
+    if absolute >= BASIS_THRESHOLDS["stretched_abs_basis_rate"]:
+        return "basis_stretched", "medium"
     return "neutral", "low"
 
 
@@ -464,6 +614,14 @@ def _latest_metric(rows: list[dict[str, Any]], metric_name: str) -> float | None
     return None
 
 
+def _latest_units(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    for row in reversed(rows):
+        units = row.get("units") if isinstance(row, dict) else None
+        if isinstance(units, dict):
+            return dict(sorted(units.items()))
+    return {}
+
+
 def _metric(row: dict[str, Any], metric_name: str) -> float | None:
     metrics = row.get("metrics") if isinstance(row, dict) else None
     if not isinstance(metrics, dict):
@@ -473,6 +631,22 @@ def _metric(row: dict[str, Any], metric_name: str) -> float | None:
         return None
     if isinstance(value, int | float):
         return float(value)
+    return None
+
+
+def _raw_field_for_as_of(raw: dict[str, Any], view: dict[str, Any], as_of: Any, field: str) -> Any:
+    for item in _list(raw.get("items")):
+        if not isinstance(item, dict):
+            continue
+        if item.get("data_class") != view.get("data_class"):
+            continue
+        if item.get("symbol") != view.get("symbol") or item.get("period") != view.get("period"):
+            continue
+        if as_of is not None and item.get("as_of") != as_of:
+            continue
+        raw_fields = item.get("raw_fields")
+        if isinstance(raw_fields, dict) and field in raw_fields:
+            return raw_fields[field]
     return None
 
 
@@ -518,6 +692,7 @@ def _record_manifest_summary(run: RunContext, artifact: dict[str, Any]) -> None:
         "records": counts["records"],
         "funding_pressure": counts["funding_pressure"],
         "open_interest_pressure": counts["open_interest_pressure"],
+        "premium_basis_state": counts["premium_basis_state"],
         "warnings": counts["warnings"],
         "errors": counts["errors"],
         "states": counts["states"],
@@ -528,6 +703,7 @@ def _record_manifest_summary(run: RunContext, artifact: dict[str, Any]) -> None:
     manifest_counts["derivatives_market_context_records"] = counts["records"]
     manifest_counts["derivatives_market_context_funding_pressure"] = counts["funding_pressure"]
     manifest_counts["derivatives_market_context_open_interest_pressure"] = counts["open_interest_pressure"]
+    manifest_counts["derivatives_market_context_premium_basis_state"] = counts["premium_basis_state"]
     manifest_counts["derivatives_market_context_warnings"] = counts["warnings"]
     manifest_counts["derivatives_market_context_errors"] = counts["errors"]
 
@@ -548,6 +724,7 @@ def _counts(records: list[dict[str, Any]], *, warnings: list[str], errors: list[
         "open_interest_pressure": sum(
             1 for record in records if record.get("context_type") == "open_interest_pressure"
         ),
+        "premium_basis_state": sum(1 for record in records if record.get("context_type") == "premium_basis_state"),
         "succeeded": sum(1 for record in records if record.get("status") == "succeeded"),
         "partial": sum(1 for record in records if record.get("status") == "partial"),
         "stale": sum(1 for record in records if record.get("status") == "stale"),
