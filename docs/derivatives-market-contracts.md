@@ -187,8 +187,8 @@ Rules:
 
 ## Raw Derivatives Market Artifact
 
-Implemented artifact for funding, open-interest, premium, and basis initial
-adoption:
+Implemented artifact for funding, open-interest, premium, basis, and bounded
+spread/depth initial adoption:
 
 ```text
 raw/derivatives_market.json
@@ -386,7 +386,7 @@ Context types:
 funding_pressure [implemented]
 open_interest_pressure [implemented]
 premium_basis_state [implemented]
-liquidity_depth_state
+liquidity_depth_state [implemented]
 liquidation_availability
 ```
 

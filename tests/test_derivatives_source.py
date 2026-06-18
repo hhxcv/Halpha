@@ -58,6 +58,13 @@ def test_binance_usdm_derivatives_source_parses_supported_payloads() -> None:
                 "timestamp": _millis("2026-06-18T00:00:00Z"),
             }
         ],
+        "https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=20": {
+            "lastUpdateId": 1027024,
+            "E": _millis("2026-06-18T00:03:01Z"),
+            "T": _millis("2026-06-18T00:03:00Z"),
+            "bids": [["100.00", "2.0"], ["99.90", "3.0"]],
+            "asks": [["100.05", "1.0"], ["100.10", "2.0"]],
+        },
     }
 
     def fake_urlopen(request, timeout):
@@ -71,6 +78,7 @@ def test_binance_usdm_derivatives_source_parses_supported_payloads() -> None:
     oi_history = source.fetch_records("open_interest_history", symbol="BTCUSDT", period="1h", limit=2)
     premium = source.fetch_records("premium_index", symbol="BTCUSDT")
     basis = source.fetch_records("basis", symbol="BTCUSDT", period="1h", limit=1)
+    depth = source.fetch_records("order_book_depth", symbol="BTCUSDT", limit=20)
 
     assert requested_urls == list(payloads)
     assert funding["errors"] == []
@@ -115,6 +123,21 @@ def test_binance_usdm_derivatives_source_parses_supported_payloads() -> None:
         "basis_rate": 0.0004,
         "futures_price": 34414.1,
         "index_price": 34400.15945055,
+    }
+    assert depth["records"][0]["data_class"] == "spread_depth"
+    assert depth["records"][0]["period"] == "snapshot"
+    assert depth["records"][0]["metrics"]["spread_bps"] == pytest.approx(4.99875031242161)
+    assert depth["records"][0]["metrics"]["bid_depth_quantity"] == 5.0
+    assert depth["records"][0]["metrics"]["ask_depth_quantity"] == 3.0
+    assert depth["records"][0]["metrics"]["depth_imbalance"] == pytest.approx(0.25)
+    assert depth["records"][0]["metrics"]["snapshot_depth_limit"] == 2
+    assert depth["records"][0]["raw_fields"] == {
+        "lastUpdateId": 1027024,
+        "E": _millis("2026-06-18T00:03:01Z"),
+        "T": _millis("2026-06-18T00:03:00Z"),
+        "bidLevelCount": 2,
+        "askLevelCount": 2,
+        "snapshotDepthLimit": 2,
     }
 
 
@@ -208,6 +231,28 @@ def test_derivatives_source_records_malformed_endpoint_payload(payload: Any, exp
     assert result["errors"][0]["message"] == expected
 
 
+def test_derivatives_source_records_malformed_order_book_payload() -> None:
+    def fake_urlopen(request, timeout):
+        return _FakeResponse(
+            {
+                "lastUpdateId": 1027024,
+                "T": _millis("2026-06-18T00:03:00Z"),
+                "bids": [],
+                "asks": [["100.05", "1.0"]],
+            }
+        )
+
+    result = PublicDerivativesSource("binance_usdm", urlopen_func=fake_urlopen).fetch_records(
+        "order_book_depth",
+        symbol="BTCUSDT",
+        limit=20,
+    )
+
+    assert result["records"] == []
+    assert result["errors"][0]["error_type"] == "malformed_payload"
+    assert result["errors"][0]["message"] == "order_book_depth payload bids must be a non-empty list."
+
+
 def test_derivatives_source_rejects_unsupported_source_and_request_class() -> None:
     with pytest.raises(DerivativesSourceError, match="unsupported derivatives source: kraken"):
         PublicDerivativesSource("kraken")
@@ -228,6 +273,9 @@ def test_derivatives_source_rejects_invalid_request_parameters() -> None:
 
     with pytest.raises(DerivativesSourceError, match="does not accept a period parameter"):
         source.fetch_records("premium_index", symbol="BTCUSDT", period="1h")
+
+    with pytest.raises(DerivativesSourceError, match="order_book_depth limit must be one of"):
+        source.fetch_records("order_book_depth", symbol="BTCUSDT", limit=7)
 
 
 def _millis(value: str) -> int:

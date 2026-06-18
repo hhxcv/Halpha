@@ -203,6 +203,85 @@ def test_derivatives_context_flags_malformed_premium_basis_metrics(tmp_path: Pat
     assert context["counts"]["insufficient"] == 2
 
 
+def test_derivatives_context_builds_normal_spread_depth_state(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["spread_depth"], lookback=1)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_normal_spread_depth_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    depth = _context_record(context, context_type="liquidity_depth_state", period="snapshot")
+
+    assert context["status"] == "ok"
+    assert depth["status"] == "succeeded"
+    assert depth["state"] == "neutral"
+    assert depth["metrics"]["spread_bps"] == 5.0
+    assert depth["metrics"]["snapshot_depth_limit"] == 20.0
+    assert depth["metrics"]["units"]["spread_bps"] == "basis_points"
+    assert "single depth snapshot" in depth["uncertainty"][0]
+    assert _manifest(result)["derivatives_market_context"]["liquidity_depth_state"] == 1
+
+
+def test_derivatives_context_flags_wide_spread_and_depth_imbalance(tmp_path: Path) -> None:
+    wide_config_path = _write_config(tmp_path / "wide", data_classes=["spread_depth"], lookback=1)
+    wide_config = load_config(wide_config_path)
+    wide_result = _run_until_context(wide_config, wide_config_path, _write_wide_spread_depth_raw_stage)
+    wide = _context_record(_context(wide_result), context_type="liquidity_depth_state", period="snapshot")
+
+    imbalance_config_path = _write_config(tmp_path / "imbalance", data_classes=["spread_depth"], lookback=1)
+    imbalance_config = load_config(imbalance_config_path)
+    imbalance_result = _run_until_context(
+        imbalance_config,
+        imbalance_config_path,
+        _write_imbalanced_spread_depth_raw_stage,
+    )
+    imbalance = _context_record(_context(imbalance_result), context_type="liquidity_depth_state", period="snapshot")
+
+    assert wide["state"] == "spread_wide"
+    assert wide["severity"] == "medium"
+    assert imbalance["state"] == "depth_imbalanced"
+    assert imbalance["severity"] == "medium"
+
+
+def test_derivatives_context_flags_stale_and_unavailable_spread_depth(tmp_path: Path) -> None:
+    stale_config_path = _write_config(tmp_path / "stale", data_classes=["spread_depth"], lookback=1)
+    stale_config = load_config(stale_config_path)
+    stale_result = _run_until_context(
+        stale_config,
+        stale_config_path,
+        _write_stale_spread_depth_raw_stage,
+        context_now="2026-06-18T01:02:00Z",
+    )
+    stale = _context_record(_context(stale_result), context_type="liquidity_depth_state", period="snapshot")
+
+    missing_config_path = _write_config(tmp_path / "missing", data_classes=["spread_depth"], lookback=1)
+    missing_config = load_config(missing_config_path)
+    missing_result = _run_until_context(missing_config, missing_config_path, _noop_stage)
+    missing = _context_record(_context(missing_result), context_type="liquidity_depth_state", period="snapshot")
+
+    assert stale["status"] == "stale"
+    assert stale["state"] == "stale"
+    assert missing["status"] == "unavailable"
+    assert missing["state"] == "unavailable"
+
+
+def test_derivatives_context_flags_malformed_spread_depth_metrics(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["spread_depth"], lookback=1)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_malformed_spread_depth_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    depth = _context_record(context, context_type="liquidity_depth_state", period="snapshot")
+
+    assert depth["status"] == "insufficient"
+    assert depth["state"] == "insufficient_evidence"
+    assert "spread_bps metric is missing." in depth["warnings"]
+    assert context["counts"]["insufficient"] == 1
+
+
 def _run_until_context(
     config: dict[str, Any],
     config_path: Path,
@@ -380,6 +459,57 @@ def _write_malformed_premium_basis_raw_stage(config: dict[str, Any], run: RunCon
     return [RAW_DERIVATIVES_ARTIFACT]
 
 
+def _write_normal_spread_depth_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [_spread_depth_item("2026-06-18T00:00:00Z", spread_bps=5.0, depth_imbalance=0.1)],
+        availability=[_availability("spread_depth", "snapshot", request_class="order_book_depth", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_wide_spread_depth_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [_spread_depth_item("2026-06-18T00:00:00Z", spread_bps=15.0, depth_imbalance=0.1)],
+        availability=[_availability("spread_depth", "snapshot", request_class="order_book_depth", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_imbalanced_spread_depth_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [_spread_depth_item("2026-06-18T00:00:00Z", spread_bps=5.0, depth_imbalance=0.6)],
+        availability=[_availability("spread_depth", "snapshot", request_class="order_book_depth", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_stale_spread_depth_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [_spread_depth_item("2026-06-11T00:00:00Z", spread_bps=5.0, depth_imbalance=0.1)],
+        availability=[_availability("spread_depth", "snapshot", request_class="order_book_depth", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_malformed_spread_depth_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [
+            _spread_depth_item(
+                "2026-06-18T00:00:00Z",
+                spread_bps=None,
+                depth_imbalance=0.1,
+            )
+        ],
+        availability=[_availability("spread_depth", "snapshot", request_class="order_book_depth", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
 RAW_DERIVATIVES_ARTIFACT = "raw/derivatives_market.json"
 
 
@@ -528,6 +658,61 @@ def _basis_item(
     }
 
 
+def _spread_depth_item(
+    as_of: str,
+    *,
+    spread_bps: float | None,
+    depth_imbalance: float,
+) -> dict[str, Any]:
+    metrics = {
+        "top_bid_price": 100.0,
+        "top_bid_quantity": 10.0,
+        "top_ask_price": 100.05,
+        "top_ask_quantity": 8.0,
+        "mid_price": 100.025,
+        "spread": 0.05,
+        "bid_depth_quantity": 120.0,
+        "ask_depth_quantity": 100.0,
+        "bid_depth_notional": 12000.0,
+        "ask_depth_notional": 10000.0,
+        "depth_imbalance": depth_imbalance,
+        "snapshot_depth_limit": 20,
+    }
+    units = {
+        "top_bid_price": "quote_asset",
+        "top_bid_quantity": "base_asset",
+        "top_ask_price": "quote_asset",
+        "top_ask_quantity": "base_asset",
+        "mid_price": "quote_asset",
+        "spread": "quote_asset",
+        "bid_depth_quantity": "base_asset",
+        "ask_depth_quantity": "base_asset",
+        "bid_depth_notional": "quote_asset",
+        "ask_depth_notional": "quote_asset",
+        "depth_imbalance": "ratio",
+        "snapshot_depth_limit": "levels",
+    }
+    if spread_bps is not None:
+        metrics["spread_bps"] = spread_bps
+        units["spread_bps"] = "basis_points"
+    return {
+        "item_id": f"derivatives_market:spread_depth:binance_usdm:BTCUSDT:snapshot:{as_of}",
+        "data_class": "spread_depth",
+        "source": "binance_usdm",
+        "market_type": "usd_m_futures",
+        "symbol": "BTCUSDT",
+        "period": "snapshot",
+        "as_of": as_of,
+        "endpoint": "order_book_depth",
+        "request_class": "order_book_depth",
+        "metrics": metrics,
+        "units": units,
+        "raw_fields": {"snapshotDepthLimit": 20, "bidLevelCount": 20, "askLevelCount": 20},
+        "warnings": [],
+        "errors": [],
+    }
+
+
 def _availability(
     data_class: str,
     period: str,
@@ -559,6 +744,7 @@ def _write_config(
     data_classes: list[str],
     lookback: int,
 ) -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     data_class_lines = "\n".join(f"      - {data_class}" for data_class in data_classes)
     path = tmp_path / "config.yaml"
     path.write_text(

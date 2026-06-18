@@ -98,6 +98,15 @@ _REQUEST_SPECS: dict[str, _RequestSpec] = {
         limit_allowed=True,
         fixed_params=(("contractType", "PERPETUAL"),),
     ),
+    "order_book_depth": _RequestSpec(
+        request_class="order_book_depth",
+        data_class="spread_depth",
+        endpoint="order_book_depth",
+        path="/fapi/v1/depth",
+        symbol_param="symbol",
+        response_shape="dict",
+        limit_allowed=True,
+    ),
 }
 
 
@@ -371,6 +380,56 @@ def _normalize_row(
             "basis",
             "timestamp",
         )
+    elif spec.request_class == "order_book_depth":
+        as_of = _timestamp_from_millis(_depth_timestamp(row, spec.endpoint))
+        bids = _depth_levels(row, "bids", spec.endpoint)
+        asks = _depth_levels(row, "asks", spec.endpoint)
+        top_bid_price, top_bid_quantity = bids[0]
+        top_ask_price, top_ask_quantity = asks[0]
+        spread = top_ask_price - top_bid_price
+        mid_price = (top_ask_price + top_bid_price) / 2
+        bid_depth_quantity = sum(quantity for _price, quantity in bids)
+        ask_depth_quantity = sum(quantity for _price, quantity in asks)
+        depth_quantity = bid_depth_quantity + ask_depth_quantity
+        metrics = {
+            "top_bid_price": top_bid_price,
+            "top_bid_quantity": top_bid_quantity,
+            "top_ask_price": top_ask_price,
+            "top_ask_quantity": top_ask_quantity,
+            "mid_price": mid_price,
+            "spread": spread,
+            "spread_bps": spread / mid_price * 10000,
+            "bid_depth_quantity": bid_depth_quantity,
+            "ask_depth_quantity": ask_depth_quantity,
+            "bid_depth_notional": sum(price * quantity for price, quantity in bids),
+            "ask_depth_notional": sum(price * quantity for price, quantity in asks),
+            "depth_imbalance": (
+                (bid_depth_quantity - ask_depth_quantity) / depth_quantity if depth_quantity else 0.0
+            ),
+            "snapshot_depth_limit": max(len(bids), len(asks)),
+        }
+        units = {
+            "top_bid_price": "quote_asset",
+            "top_bid_quantity": "base_asset",
+            "top_ask_price": "quote_asset",
+            "top_ask_quantity": "base_asset",
+            "mid_price": "quote_asset",
+            "spread": "quote_asset",
+            "spread_bps": "basis_points",
+            "bid_depth_quantity": "base_asset",
+            "ask_depth_quantity": "base_asset",
+            "bid_depth_notional": "quote_asset",
+            "ask_depth_notional": "quote_asset",
+            "depth_imbalance": "ratio",
+            "snapshot_depth_limit": "levels",
+        }
+        row = {
+            **row,
+            "bidLevelCount": len(bids),
+            "askLevelCount": len(asks),
+            "snapshotDepthLimit": max(len(bids), len(asks)),
+        }
+        raw_keys = ("lastUpdateId", "E", "T", "bidLevelCount", "askLevelCount", "snapshotDepthLimit")
     else:
         raise DerivativesSourceError(f"unsupported derivatives request_class: {spec.request_class}")
 
@@ -458,6 +517,8 @@ def _normalize_limit(spec: _RequestSpec, limit: int | None) -> int | None:
         raise DerivativesSourceError(f"{spec.request_class} does not accept a limit parameter.")
     if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
         raise DerivativesSourceError("limit must be a positive integer.")
+    if spec.request_class == "order_book_depth" and limit not in {5, 10, 20, 50, 100, 500, 1000}:
+        raise DerivativesSourceError("order_book_depth limit must be one of: 5, 10, 20, 50, 100, 500, 1000.")
     return limit
 
 
@@ -513,6 +574,42 @@ def _premium_rate(mark_price: float, index_price: float) -> float:
     if index_price == 0:
         raise DerivativesSourceError("premium_index payload indexPrice must be non-zero.")
     return (mark_price - index_price) / index_price
+
+
+def _depth_timestamp(data: dict[str, Any], endpoint: str) -> int:
+    for key in ("T", "E"):
+        value = data.get(key)
+        if value is not None:
+            return _required_millis(data, key, endpoint)
+    raise DerivativesSourceError(f"{endpoint} payload missing millisecond timestamp T or E.")
+
+
+def _depth_levels(data: dict[str, Any], key: str, endpoint: str) -> list[tuple[float, float]]:
+    values = data.get(key)
+    if not isinstance(values, list) or not values:
+        raise DerivativesSourceError(f"{endpoint} payload {key} must be a non-empty list.")
+    levels = []
+    for index, level in enumerate(values):
+        if not isinstance(level, (list, tuple)) or len(level) < 2:
+            raise DerivativesSourceError(f"{endpoint} payload {key}[{index}] must contain price and quantity.")
+        price = _level_number(level[0], endpoint, f"{key}[{index}].price")
+        quantity = _level_number(level[1], endpoint, f"{key}[{index}].quantity")
+        if price <= 0:
+            raise DerivativesSourceError(f"{endpoint} payload {key}[{index}].price must be positive.")
+        if quantity < 0:
+            raise DerivativesSourceError(f"{endpoint} payload {key}[{index}].quantity must be non-negative.")
+        levels.append((price, quantity))
+    return levels
+
+
+def _level_number(value: Any, endpoint: str, path: str) -> float:
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, ValueError) as exc:
+        raise DerivativesSourceError(f"{endpoint} payload {path} must be numeric.") from exc
+    if not number.is_finite():
+        raise DerivativesSourceError(f"{endpoint} payload {path} must be finite.")
+    return float(number)
 
 
 def _timestamp_from_millis(value: int) -> str:

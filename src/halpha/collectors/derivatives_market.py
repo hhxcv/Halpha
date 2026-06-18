@@ -15,7 +15,8 @@ from halpha.storage import write_json
 
 STAGE_NAME = "collect_derivatives_market_data"
 DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
-SUPPORTED_RAW_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index"}
+SUPPORTED_RAW_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index", "spread_depth"}
+SPREAD_DEPTH_LIMIT = 20
 
 
 def collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -99,6 +100,11 @@ def _collect_data_class(
     if data_class == "premium_index":
         for symbol in symbols:
             _collect_request(raw, source, "premium_index", symbol=symbol)
+        return
+
+    if data_class == "spread_depth":
+        for symbol in symbols:
+            _collect_request(raw, source, "order_book_depth", symbol=symbol, limit=SPREAD_DEPTH_LIMIT)
         return
 
     if data_class == "basis":
