@@ -144,6 +144,62 @@ def test_codex_runner_injects_quant_strategy_markdown_table_after_codex_stdout(
     ) in report
 
 
+def test_codex_runner_injects_derivatives_market_section_after_codex_stdout(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    report_stdout = "\n".join(
+        [
+            "# \u6bcf\u65e5\u5e02\u573a\u7b80\u62a5",
+            "",
+            "## \u5e02\u573a\u6982\u89c8",
+            "",
+            "Codex generated market overview.",
+            "",
+            "## \u7efc\u5408\u5224\u65ad",
+            "",
+            "Codex generated synthesis.",
+            "",
+            "## \u98ce\u9669\u63d0\u793a",
+            "",
+            "\u6570\u636e\u7a97\u53e3\u8f83\u77ed\uff0c\u9700\u8981\u7ee7\u7eed\u89c2\u5bdf\u516c\u5f00\u4e8b\u4ef6\u548c\u4ef7\u683c\u53d8\u5316\u3002",
+            "",
+        ]
+    )
+
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+        return subprocess.CompletedProcess(command, 0, stdout=report_stdout, stderr="")
+
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_run)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"build_codex_context": _write_prompt_and_derivatives_material},
+    )
+
+    assert result.succeeded is True
+    report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
+    derivatives_heading = "## \u884d\u751f\u54c1\u4e0e\u5e02\u573a\u7ed3\u6784\u8bc1\u636e"
+    synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
+    assert derivatives_heading in report
+    assert report.index(derivatives_heading) < report.index(synthesis_heading)
+    assert "analysis/derivatives_market_material.md" in report
+    assert "\u8d44\u91d1\u8d39\u7387\u538b\u529b" in report
+    assert "extreme_positive_funding" in report
+    assert "\u5f3a\u5e73\u6765\u6e90\u53ef\u7528\u6027" in report
+    assert "unavailable/unavailable" in report
+    assert "degraded/stale" in report
+    assert "succeeded/neutral" in report
+    assert "no-impact" in report
+    assert "\u4e0d\u4ee3\u8868\u4f4e\u98ce\u9669" in report
+    assert "\u4ea4\u6613\u6307\u4ee4" in report
+    assert "\u4ed3\u4f4d\u5efa\u8bae" in report
+    assert "\u4ef7\u683c\u9884\u6d4b" in report
+
+
 def test_codex_runner_resolves_configured_command_before_subprocess(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -460,6 +516,165 @@ def _write_prompt_and_quant_strategy_runs(config, run) -> list[str]:
     run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
     run.manifest["artifacts"]["strategy_effectiveness_gates"] = (
         "analysis/strategy_effectiveness_gates.json"
+    )
+    return ["codex_context/prompt.md"]
+
+
+def _write_prompt_and_derivatives_material(config, run) -> list[str]:
+    run.codex_context_dir.joinpath("prompt.md").write_text("prompt", encoding="utf-8")
+    write_json(
+        run.analysis_dir / "derivatives_market_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-18T01:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": (
+                        "derivatives_context:funding_pressure:binance_usdm:"
+                        "BTCUSDT:8h:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "funding_pressure",
+                    "data_class": "funding_rate",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "BTCUSDT",
+                    "period": "8h",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "extreme_positive_funding",
+                    "severity": "high",
+                    "confidence": "medium",
+                    "metrics": {"latest_funding_rate": 0.0007},
+                    "thresholds": {"extreme_positive_funding_rate": 0.0005},
+                    "evidence": [],
+                    "uncertainty": [],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/derivatives_market_context.json",
+                        "raw/derivatives_market_views.json",
+                    ],
+                },
+                {
+                    "context_id": (
+                        "derivatives_context:liquidation_availability:binance_usdm:"
+                        "BTCUSDT:summary:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "liquidation_availability",
+                    "data_class": "liquidation_summary",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "BTCUSDT",
+                    "period": "summary",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "unavailable",
+                    "state": "unavailable",
+                    "severity": "unknown",
+                    "confidence": "low",
+                    "metrics": {},
+                    "thresholds": {},
+                    "evidence": [],
+                    "uncertainty": ["periodic public liquidation summary is unavailable."],
+                    "warnings": ["liquidation source is unavailable."],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/derivatives_market_context.json",
+                        "raw/derivatives_market.json",
+                    ],
+                },
+                {
+                    "context_id": (
+                        "derivatives_context:premium_basis_state:binance_usdm:"
+                        "BTCUSDT:snapshot:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "premium_basis_state",
+                    "data_class": "premium_index",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "BTCUSDT",
+                    "period": "snapshot",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "degraded",
+                    "state": "stale",
+                    "severity": "medium",
+                    "confidence": "low",
+                    "metrics": {"latest_premium_rate": 0.001},
+                    "thresholds": {"stretched_abs_premium_rate": 0.001},
+                    "evidence": [],
+                    "uncertainty": ["latest derivatives observation is stale."],
+                    "warnings": ["premium source is stale."],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/derivatives_market_context.json",
+                        "raw/derivatives_market_views.json",
+                    ],
+                },
+                {
+                    "context_id": (
+                        "derivatives_context:liquidity_depth_state:binance_usdm:"
+                        "BTCUSDT:snapshot:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "liquidity_depth_state",
+                    "data_class": "spread_depth",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "BTCUSDT",
+                    "period": "snapshot",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "neutral",
+                    "severity": "low",
+                    "confidence": "medium",
+                    "metrics": {"latest_spread_bps": 2.0},
+                    "thresholds": {"wide_spread_bps": 10.0},
+                    "evidence": [],
+                    "uncertainty": [],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/derivatives_market_context.json",
+                        "raw/derivatives_market_views.json",
+                    ],
+                },
+            ],
+            "counts": {"records": 4},
+            "warnings": ["liquidation source is unavailable."],
+            "errors": [],
+            "source_artifacts": [
+                "raw/derivatives_market_views.json",
+                "raw/derivatives_market.json",
+            ],
+        },
+    )
+    run.analysis_dir.joinpath("derivatives_market_material.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "artifact_type: analysis_derivatives_market_material",
+                "schema_version: 1",
+                "audience: ai",
+                "source_artifacts:",
+                "  - analysis/derivatives_market_context.json",
+                "---",
+                "",
+                "# derivatives_market_material",
+                "",
+                "codex_may_generate_derivatives_states: false",
+                "full_derivatives_context_json_embedded: false",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    run.manifest["artifacts"]["codex_prompt"] = "codex_context/prompt.md"
+    run.manifest["artifacts"]["derivatives_market_context"] = (
+        "analysis/derivatives_market_context.json"
+    )
+    run.manifest["artifacts"]["derivatives_market_material"] = (
+        "analysis/derivatives_market_material.md"
     )
     return ["codex_context/prompt.md"]
 

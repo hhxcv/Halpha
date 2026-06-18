@@ -230,7 +230,9 @@ Current bias:
 * Codex prompt must not ask Codex to generate data-quality checks, validation results, catalog contents, run-index contents, or reusable history contents.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
+* Final reports may include a deterministic derivatives and market-structure evidence section inserted from `analysis/derivatives_market_context.json` when `analysis/derivatives_market_material.md` exists after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.
+* Codex prompt should not ask Codex to recreate the complete derivatives context table.
 * Reports come from Codex stdout, not placeholder text.
 * Fake market data, fake signals, and fake Codex output stay test-only.
 

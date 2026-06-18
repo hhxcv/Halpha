@@ -9,6 +9,32 @@ from halpha.pipeline import PipelineError, RunContext
 STAGE_NAME = "run_codex_report"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 STRATEGY_EFFECTIVENESS_GATES_ARTIFACT = "analysis/strategy_effectiveness_gates.json"
+DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
+DERIVATIVES_MARKET_MATERIAL_ARTIFACT = "analysis/derivatives_market_material.md"
+MAX_DERIVATIVES_REPORT_ROWS = 8
+
+
+def inject_derivatives_market_section(report: str, run: RunContext) -> str:
+    table = _derivatives_market_markdown_table(run)
+    if table is None:
+        return report
+    section = "\n".join(
+        [
+            "## \u884d\u751f\u54c1\u4e0e\u5e02\u573a\u7ed3\u6784\u8bc1\u636e",
+            "",
+            (
+                "\u4ee5\u4e0b\u5185\u5bb9\u6765\u81ea "
+                f"`{DERIVATIVES_MARKET_MATERIAL_ARTIFACT}` "
+                "\u548c Halpha \u786e\u5b9a\u6027\u4e0a\u4e0b\u6587\uff1b"
+                "\u53ea\u7528\u4e8e\u89e3\u91ca\uff0c\u4e0d\u751f\u6210\u98ce\u9669\u7b49\u7ea7\u3001"
+                "\u4ea4\u6613\u6307\u4ee4\u3001\u4ed3\u4f4d\u5efa\u8bae\u6216\u4ef7\u683c\u9884\u6d4b\u3002"
+            ),
+            "",
+            table,
+            "",
+        ]
+    )
+    return _insert_report_section(report, section)
 
 
 def inject_quant_strategy_table(report: str, run: RunContext) -> str:
@@ -24,6 +50,174 @@ def inject_quant_strategy_table(report: str, run: RunContext) -> str:
         ]
     )
     return _insert_report_section(report, section)
+
+
+def _derivatives_market_markdown_table(run: RunContext) -> str | None:
+    material_path = run.analysis_dir / "derivatives_market_material.md"
+    if not material_path.exists():
+        return None
+    artifact = _read_derivatives_market_context(run)
+    records = artifact.get("records")
+    if not isinstance(records, list):
+        raise PipelineError(
+            f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} must contain records as a list.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    rows = [_derivatives_report_row(record) for record in _selected_derivatives_records(records)]
+    if not rows:
+        rows = [
+            [
+                "\u65e0\u53ef\u7528\u8bb0\u5f55",
+                "",
+                "",
+                _text(artifact.get("status")),
+                "",
+                "\u884d\u751f\u54c1 material \u5b58\u5728\uff0c\u4f46\u672a\u63d0\u4f9b\u53ef\u62a5\u544a\u7684 context record\u3002",
+                DERIVATIVES_MARKET_MATERIAL_ARTIFACT,
+            ]
+        ]
+    header = [
+        "\u7c7b\u578b",
+        "\u6807\u7684",
+        "\u5468\u671f",
+        "\u72b6\u6001",
+        "\u5f3a\u5ea6",
+        "\u89e3\u91ca\u53e3\u5f84",
+        "\u6765\u6e90",
+    ]
+    lines = [
+        _markdown_row(header),
+        _markdown_row(["---"] * len(header)),
+    ]
+    for row in rows:
+        lines.append(_markdown_row(row))
+    return "\n".join(lines)
+
+
+def _read_derivatives_market_context(run: RunContext) -> dict[str, Any]:
+    path = run.analysis_dir / "derivatives_market_context.json"
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(
+            f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} was not found but derivatives material exists.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict):
+        raise PipelineError(
+            f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} must be a mapping.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    return artifact
+
+
+def _selected_derivatives_records(records: list[Any]) -> list[dict[str, Any]]:
+    mappings = [record for record in records if isinstance(record, dict)]
+    return sorted(mappings, key=_derivatives_record_sort_key)[:MAX_DERIVATIVES_REPORT_ROWS]
+
+
+def _derivatives_record_sort_key(record: dict[str, Any]) -> tuple[int, int, str, str, str]:
+    severity_order = {"high": 0, "medium": 1, "unknown": 2, "low": 3}
+    status_order = {
+        "failed": 0,
+        "unavailable": 1,
+        "stale": 2,
+        "degraded": 3,
+        "partial": 4,
+        "insufficient": 5,
+        "succeeded": 6,
+    }
+    severity = _text(record.get("severity")) or "unknown"
+    status = _text(record.get("status")) or "unknown"
+    return (
+        severity_order.get(severity, 2),
+        status_order.get(status, 6),
+        _text(record.get("context_type")),
+        _text(record.get("symbol")),
+        _text(record.get("period")),
+    )
+
+
+def _derivatives_report_row(record: dict[str, Any]) -> list[str]:
+    return [
+        _derivatives_type_label(record.get("context_type")),
+        _text(record.get("symbol")),
+        _text(record.get("period")),
+        _derivatives_status(record),
+        _text(record.get("severity")),
+        _derivatives_interpretation(record),
+        _derivatives_sources(record),
+    ]
+
+
+def _derivatives_type_label(value: Any) -> str:
+    labels = {
+        "funding_pressure": "\u8d44\u91d1\u8d39\u7387\u538b\u529b",
+        "open_interest_pressure": "\u672a\u5e73\u4ed3\u91cf\u538b\u529b",
+        "premium_basis_state": "\u6ea2\u4ef7\u6216\u57fa\u5dee",
+        "liquidity_depth_state": "\u4e70\u5356\u4ef7\u5dee\u4e0e\u6df1\u5ea6",
+        "liquidation_availability": "\u5f3a\u5e73\u6765\u6e90\u53ef\u7528\u6027",
+    }
+    return labels.get(value, _text(value))
+
+
+def _derivatives_status(record: dict[str, Any]) -> str:
+    status = _text(record.get("status")) or "unknown"
+    state = _text(record.get("state")) or "unknown"
+    return f"{status}/{state}"
+
+
+def _derivatives_interpretation(record: dict[str, Any]) -> str:
+    status = _text(record.get("status")) or "unknown"
+    state = _text(record.get("state")) or "unknown"
+    severity = _text(record.get("severity")) or "unknown"
+    if status in {"failed", "unavailable", "stale", "degraded", "partial"} or state in {
+        "unavailable",
+        "stale",
+        "insufficient_evidence",
+    }:
+        return (
+            f"Halpha material \u6807\u8bb0\u4e3a {status}/{state}\uff1b"
+            "\u8fd9\u662f\u6765\u6e90\u6216\u8d28\u91cf\u4e0d\u786e\u5b9a\u6027\uff0c"
+            "\u4e0d\u4ee3\u8868\u4f4e\u98ce\u9669\u3002"
+        )
+    if severity in {"high", "medium"}:
+        return (
+            f"Halpha material \u663e\u793a {state}\uff1b"
+            "\u53ea\u53ef\u5728\u4e0b\u6e38 Halpha \u4ea7\u7269\u94fe\u63a5\u65f6\u4f5c\u4e3a"
+            "\u4fdd\u5b88\u786e\u8ba4\u6216\u51b2\u7a81\u7ebf\u7d22\u3002"
+        )
+    if state in {"neutral", "open_interest_level_only"} or severity == "low":
+        return (
+            f"Halpha material \u663e\u793a {state}\uff1b"
+            "\u53ef\u4f5c\u4e3a no-impact \u8bc1\u636e\uff0c"
+            "\u4f46\u4e0d\u5f97\u5355\u72ec\u964d\u4f4e\u5176\u4ed6\u98ce\u9669\u3002"
+        )
+    return (
+        "\u4ec5\u6309 Halpha \u5df2\u751f\u6210\u7684\u884d\u751f\u54c1 context \u89e3\u91ca\uff1b"
+        "\u4e0d\u751f\u6210\u4ea4\u6613\u6307\u4ee4\u6216\u9884\u6d4b\u3002"
+    )
+
+
+def _derivatives_sources(record: dict[str, Any]) -> str:
+    artifacts = [
+        DERIVATIVES_MARKET_MATERIAL_ARTIFACT,
+        *[
+            artifact
+            for artifact in record.get("source_artifacts", [])
+            if isinstance(artifact, str) and artifact
+        ],
+    ]
+    return "; ".join(_unique(artifacts)[:4])
 
 
 def inject_strategy_effectiveness_table(report: str, run: RunContext) -> str:
@@ -337,3 +531,11 @@ def _text(value: Any) -> str:
     if value is None:
         return ""
     return str(value)
+
+
+def _unique(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        if value not in unique:
+            unique.append(value)
+    return unique

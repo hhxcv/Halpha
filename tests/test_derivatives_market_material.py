@@ -101,6 +101,8 @@ def test_pipeline_embeds_derivatives_material_in_research_and_codex_context(tmp_
     assert "Derivatives market material rules:" in prompt
     assert "Do not generate or revise derivatives states" in prompt
     assert "Do not calculate funding pressure" in prompt
+    assert "confirming, conflicting, no-impact, unavailable, stale, degraded" in prompt
+    assert "Do not treat unavailable, stale, degraded, partial, failed, or missing derivatives evidence as low risk" in prompt
 
     material_records = {
         record["artifact"]: record for record in manifest["codex_input"]["materials"]
