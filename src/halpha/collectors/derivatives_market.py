@@ -15,8 +15,20 @@ from halpha.storage import write_json
 
 STAGE_NAME = "collect_derivatives_market_data"
 DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
-SUPPORTED_RAW_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index", "spread_depth"}
+SUPPORTED_RAW_DATA_CLASSES = {
+    "basis",
+    "funding_rate",
+    "liquidation_summary",
+    "open_interest",
+    "premium_index",
+    "spread_depth",
+}
 SPREAD_DEPTH_LIMIT = 20
+LIQUIDATION_SUMMARY_PERIOD = "source_availability"
+LIQUIDATION_UNAVAILABLE_REASON = (
+    "binance_usdm public liquidation data is available as real-time WebSocket force-order streams; "
+    "periodic unauthenticated REST liquidation summaries are not available for the current product path."
+)
 
 
 def collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -105,6 +117,11 @@ def _collect_data_class(
     if data_class == "spread_depth":
         for symbol in symbols:
             _collect_request(raw, source, "order_book_depth", symbol=symbol, limit=SPREAD_DEPTH_LIMIT)
+        return
+
+    if data_class == "liquidation_summary":
+        for symbol in symbols:
+            raw["availability"].append(_liquidation_availability_record(symbol=symbol))
         return
 
     if data_class == "basis":
@@ -207,6 +224,35 @@ def _availability_record(
         record["period"] = period
     if reason is not None:
         record["reason"] = reason
+    return record
+
+
+def _liquidation_availability_record(*, symbol: str) -> dict[str, Any]:
+    record = _availability_record(
+        data_class="liquidation_summary",
+        status="unavailable",
+        endpoint="liquidation_order_streams",
+        symbol=symbol,
+        period=LIQUIDATION_SUMMARY_PERIOD,
+        reason=LIQUIDATION_UNAVAILABLE_REASON,
+    )
+    record.update(
+        {
+            "method": "websocket_market_stream",
+            "stream_name": f"{symbol.lower()}@forceOrder",
+            "stream_path": "/market",
+            "signed_rest_endpoint": "/fapi/v1/forceOrders",
+            "signed_rest_access": "USER_DATA",
+            "limitations": [
+                "public liquidation stream is real-time and requires a streaming runtime",
+                "stream snapshots include only the largest liquidation order within each 1000ms interval",
+                "signed REST force-order query is user data and is outside public market-data scope",
+            ],
+            "downstream_implication": (
+                "liquidation evidence is unavailable and must not be treated as neutral risk context"
+            ),
+        }
+    )
     return record
 
 

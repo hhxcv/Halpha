@@ -16,7 +16,14 @@ DERIVATIVES_MARKET_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 RAW_DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
 CONTEXT_SCHEMA_VERSION = 1
 STALE_MAX_AGE_HOURS = 48
-SUPPORTED_DATA_CLASSES = {"basis", "funding_rate", "open_interest", "premium_index", "spread_depth"}
+SUPPORTED_DATA_CLASSES = {
+    "basis",
+    "funding_rate",
+    "liquidation_summary",
+    "open_interest",
+    "premium_index",
+    "spread_depth",
+}
 
 FUNDING_THRESHOLDS = {
     "elevated_positive_funding_rate": 0.0002,
@@ -124,9 +131,12 @@ def _context_record(
             status_inputs=status_inputs,
         )
         context_type = "premium_basis_state"
-    else:
+    elif view.get("data_class") == "spread_depth":
         state = _spread_depth_state(rows, status_inputs=status_inputs)
         context_type = "liquidity_depth_state"
+    else:
+        state = _liquidation_availability_state(view, source_state=source_state, status_inputs=status_inputs)
+        context_type = "liquidation_availability"
 
     warnings = _unique_sorted(
         [
@@ -199,7 +209,7 @@ def _status_inputs(
         )
         uncertainty.append("latest derivatives observation is stale.")
 
-    if source_state["status"] in {"failed", "unavailable"} and not rows:
+    if source_state["status"] in {"failed", "unavailable", "stale", "degraded"} and not rows:
         return {
             "status": source_state["status"],
             "warnings": warnings,
@@ -397,6 +407,42 @@ def _spread_depth_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, 
     }
 
 
+def _liquidation_availability_state(
+    view: dict[str, Any],
+    *,
+    source_state: dict[str, Any],
+    status_inputs: dict[str, Any],
+) -> dict[str, Any]:
+    status = str(status_inputs["status"])
+    availability = [item for item in _list(source_state.get("availability")) if isinstance(item, dict)]
+    state = "unavailable" if status in {"failed", "unavailable"} else status
+    if state == "succeeded":
+        state = "insufficient_evidence"
+    warnings = [
+        "periodic public liquidation summary is unavailable for the configured source."
+        if state == "unavailable"
+        else f"liquidation source availability is {state}."
+    ]
+    return {
+        "state": state,
+        "severity": "unknown" if state in {"unavailable", "insufficient_evidence"} else "medium",
+        "confidence": "low",
+        "as_of": view.get("latest_observation_time"),
+        "metrics": {
+            "available_periodic_public_summary": False,
+            "availability_records": len(availability),
+        },
+        "thresholds": {},
+        "evidence": [_liquidation_availability_evidence(item) for item in availability],
+        "uncertainty": [
+            "missing liquidation evidence must not lower risk.",
+            "websocket liquidation streams require a runtime outside the current periodic pipeline.",
+        ],
+        "warnings": warnings,
+        "errors": [],
+    }
+
+
 def _premium_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, Any]) -> dict[str, Any]:
     latest = _latest_metric(rows, "premium_rate")
     latest_row = rows[-1] if rows else {}
@@ -509,7 +555,7 @@ def _source_state(raw: dict[str, Any], view: dict[str, Any]) -> dict[str, Any]:
     uncertainty = []
     for item in availability:
         status = item.get("status")
-        if status in {"partial", "failed", "unavailable"}:
+        if status in {"partial", "failed", "unavailable", "stale", "degraded"}:
             reason = item.get("reason") or status
             warnings.append(
                 f"derivatives source availability is {status} for {view.get('data_class')} "
@@ -524,6 +570,10 @@ def _source_state(raw: dict[str, Any], view: dict[str, Any]) -> dict[str, Any]:
         status = "failed"
     elif "unavailable" in statuses:
         status = "unavailable"
+    elif "stale" in statuses:
+        status = "stale"
+    elif "degraded" in statuses:
+        status = "degraded"
     elif "partial" in statuses or raw_errors:
         status = "partial"
     else:
@@ -534,6 +584,7 @@ def _source_state(raw: dict[str, Any], view: dict[str, Any]) -> dict[str, Any]:
         "errors": errors,
         "uncertainty": _unique_sorted(uncertainty),
         "has_raw_source": has_raw_source,
+        "availability": availability,
     }
 
 
@@ -670,6 +721,29 @@ def _evidence(
     return evidence
 
 
+def _liquidation_availability_evidence(item: dict[str, Any]) -> dict[str, Any]:
+    evidence = {
+        "source_artifact": RAW_DERIVATIVES_MARKET_ARTIFACT,
+        "status": item.get("status"),
+        "endpoint": item.get("endpoint"),
+        "method": item.get("method"),
+        "reason": item.get("reason"),
+        "symbol": item.get("symbol"),
+        "period": item.get("period"),
+    }
+    for key in (
+        "stream_name",
+        "stream_path",
+        "signed_rest_endpoint",
+        "signed_rest_access",
+        "limitations",
+        "downstream_implication",
+    ):
+        if key in item:
+            evidence[key] = item[key]
+    return {key: value for key, value in evidence.items() if value is not None}
+
+
 def _metric_series(rows: list[dict[str, Any]], metric_name: str) -> list[float]:
     values = []
     for row in rows:
@@ -767,6 +841,7 @@ def _record_manifest_summary(run: RunContext, artifact: dict[str, Any]) -> None:
         "open_interest_pressure": counts["open_interest_pressure"],
         "premium_basis_state": counts["premium_basis_state"],
         "liquidity_depth_state": counts["liquidity_depth_state"],
+        "liquidation_availability": counts["liquidation_availability"],
         "warnings": counts["warnings"],
         "errors": counts["errors"],
         "states": counts["states"],
@@ -779,6 +854,7 @@ def _record_manifest_summary(run: RunContext, artifact: dict[str, Any]) -> None:
     manifest_counts["derivatives_market_context_open_interest_pressure"] = counts["open_interest_pressure"]
     manifest_counts["derivatives_market_context_premium_basis_state"] = counts["premium_basis_state"]
     manifest_counts["derivatives_market_context_liquidity_depth_state"] = counts["liquidity_depth_state"]
+    manifest_counts["derivatives_market_context_liquidation_availability"] = counts["liquidation_availability"]
     manifest_counts["derivatives_market_context_warnings"] = counts["warnings"]
     manifest_counts["derivatives_market_context_errors"] = counts["errors"]
 
@@ -790,6 +866,7 @@ def _record_zero_counts(run: RunContext) -> None:
     counts["derivatives_market_context_open_interest_pressure"] = 0
     counts["derivatives_market_context_premium_basis_state"] = 0
     counts["derivatives_market_context_liquidity_depth_state"] = 0
+    counts["derivatives_market_context_liquidation_availability"] = 0
     counts["derivatives_market_context_warnings"] = 0
     counts["derivatives_market_context_errors"] = 0
 
@@ -804,6 +881,9 @@ def _counts(records: list[dict[str, Any]], *, warnings: list[str], errors: list[
         "premium_basis_state": sum(1 for record in records if record.get("context_type") == "premium_basis_state"),
         "liquidity_depth_state": sum(
             1 for record in records if record.get("context_type") == "liquidity_depth_state"
+        ),
+        "liquidation_availability": sum(
+            1 for record in records if record.get("context_type") == "liquidation_availability"
         ),
         "succeeded": sum(1 for record in records if record.get("status") == "succeeded"),
         "partial": sum(1 for record in records if record.get("status") == "partial"),

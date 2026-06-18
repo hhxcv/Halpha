@@ -149,13 +149,19 @@ def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path)
     assert summary["status"] == "degraded"
     assert raw["status"] == "degraded"
     assert raw["details"]["items"] == 1
-    assert raw["details"]["availability_records"] == 3
-    assert raw["details"]["unavailable_records"] == 1
+    assert raw["details"]["availability_records"] == 4
+    assert raw["details"]["unavailable_records"] == 2
     assert raw["details"]["partial_records"] == 1
     assert raw["details"]["failed_records"] == 1
+    assert raw["details"]["stale_records"] == 0
+    assert raw["details"]["degraded_records"] == 0
     assert any("metric funding_rate is missing" in warning for warning in raw["details"]["warnings"])
     assert any("is stale" in warning for warning in raw["details"]["warnings"])
     assert any("derivatives availability basis BTCUSDT 5m" in warning for warning in raw["details"]["warnings"])
+    assert any(
+        "derivatives availability liquidation_summary BTCUSDT source_availability" in warning
+        for warning in raw["details"]["warnings"]
+    )
     assert "funding rate source returned partial data" in raw["details"]["errors"]
 
     assert history["status"] == "warning"
@@ -351,6 +357,14 @@ def _write_derivatives_raw(run: RunContext) -> None:
                     "period": "snapshot",
                     "status": "failed",
                     "reason": "timeout",
+                },
+                {
+                    "source": "binance_usdm",
+                    "data_class": "liquidation_summary",
+                    "symbol": "BTCUSDT",
+                    "period": "source_availability",
+                    "status": "unavailable",
+                    "reason": "periodic public liquidation summary unavailable",
                 },
             ],
             "warnings": [],
