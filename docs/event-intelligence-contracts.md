@@ -41,6 +41,8 @@ promises, price forecasts, or financial advice.
   and documentation index.
 - `docs/quant-contracts.md`: upstream market, strategy, evaluation, signal, and
   event-quant confluence consumers.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event context
+  contracts for event proximity and report evidence.
 - `docs/decision-intelligence-contracts.md`: downstream risk, decision, watch,
   and alert-adjacent contracts.
 - `docs/outcome-tracking-contracts.md`: planned downstream target, evaluation,

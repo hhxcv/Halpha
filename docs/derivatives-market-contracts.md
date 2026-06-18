@@ -22,6 +22,8 @@ sizing, forecasts, or financial advice.
   text-event history, data-quality, and local-store contracts.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context,
+  material, and Codex-boundary contracts.
 - `docs/event-intelligence-contracts.md`: event evidence, confluence,
   assessment, alert-adjacent event contracts, and event material.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,

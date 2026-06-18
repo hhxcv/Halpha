@@ -33,6 +33,7 @@ Decision-intelligence outputs are personal research material. They are not trade
 
 - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
 - `docs/quant-contracts.md`: upstream quantitative data, strategy, evaluation, and signal contracts.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event context contracts for risk, watch, and alert evidence.
 - `docs/event-intelligence-contracts.md`: event evidence, confluence, and alert-adjacent event contracts.
 - `docs/outcome-tracking-contracts.md`: planned downstream target, evaluation, history, material, and Codex-boundary contracts.
 

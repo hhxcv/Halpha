@@ -23,6 +23,8 @@ promises, price forecasts, or financial advice.
   text-event history, and data-quality contracts.
 - `docs/quant-contracts.md`: upstream market, strategy, evaluation, signal, and
   strategy-material contracts.
+- `docs/macro-calendar-contracts.md`: macro and scheduled-event context
+  contracts for later outcome follow-through when implemented.
 - `docs/event-intelligence-contracts.md`: upstream text event, NLP evidence,
   topic, signal, confluence, and assessment contracts.
 - `docs/decision-intelligence-contracts.md`: upstream regime, risk,
