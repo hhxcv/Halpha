@@ -87,16 +87,22 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
     assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
     assert manifest["stages"][1]["status"] == "succeeded"
     assert manifest["stages"][1]["artifacts"] == []
-    assert manifest["stages"][2]["name"] == "collect_text_events"
-    assert manifest["stages"][2]["status"] == "failed"
-    assert manifest["stages"][2]["started_at"].endswith("Z")
-    assert manifest["stages"][2]["finished_at"].endswith("Z")
+    assert manifest["stages"][2]["name"] == "sync_derivatives_market_history"
+    assert manifest["stages"][2]["status"] == "succeeded"
     assert manifest["stages"][2]["artifacts"] == []
-    assert manifest["stages"][2]["error"] == {
+    assert manifest["stages"][3]["name"] == "build_derivatives_market_views"
+    assert manifest["stages"][3]["status"] == "succeeded"
+    assert manifest["stages"][3]["artifacts"] == []
+    assert manifest["stages"][4]["name"] == "collect_text_events"
+    assert manifest["stages"][4]["status"] == "failed"
+    assert manifest["stages"][4]["started_at"].endswith("Z")
+    assert manifest["stages"][4]["finished_at"].endswith("Z")
+    assert manifest["stages"][4]["artifacts"] == []
+    assert manifest["stages"][4]["error"] == {
         "stage": "collect_text_events",
         "message": "stage collect_text_events is not implemented",
     }
-    assert manifest["errors"] == [manifest["stages"][2]["error"]]
+    assert manifest["errors"] == [manifest["stages"][4]["error"]]
     assert not (result.run.raw_dir / "text_events.json").exists()
     assert not (result.run.report_dir / "report.md").exists()
     _assert_manifest_timeline(manifest)

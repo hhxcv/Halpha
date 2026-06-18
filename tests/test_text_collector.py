@@ -88,9 +88,13 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     assert manifest["counts"]["text_event_items"] == 1
     assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
     assert manifest["stages"][1]["artifacts"] == []
-    assert manifest["stages"][2]["name"] == "collect_text_events"
-    assert manifest["stages"][2]["status"] == "succeeded"
-    assert manifest["stages"][2]["artifacts"] == ["raw/text_events.json"]
+    assert manifest["stages"][2]["name"] == "sync_derivatives_market_history"
+    assert manifest["stages"][2]["artifacts"] == []
+    assert manifest["stages"][3]["name"] == "build_derivatives_market_views"
+    assert manifest["stages"][3]["artifacts"] == []
+    assert manifest["stages"][4]["name"] == "collect_text_events"
+    assert manifest["stages"][4]["status"] == "succeeded"
+    assert manifest["stages"][4]["artifacts"] == ["raw/text_events.json"]
 
 
 def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
@@ -133,7 +137,7 @@ def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["counts"]["text_event_items"] == 1
-    assert manifest["stages"][2]["status"] == "succeeded"
+    assert manifest["stages"][4]["status"] == "succeeded"
 
 
 def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_records(
@@ -176,9 +180,9 @@ def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_rec
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_text_events"] == "raw/text_events.json"
     assert manifest["counts"]["text_event_items"] == 0
-    assert manifest["stages"][2]["status"] == "failed"
-    assert manifest["stages"][2]["artifacts"] == ["raw/text_events.json"]
-    assert manifest["stages"][2]["error"] == manifest["errors"][0]
+    assert manifest["stages"][4]["status"] == "failed"
+    assert manifest["stages"][4]["artifacts"] == ["raw/text_events.json"]
+    assert manifest["stages"][4]["error"] == manifest["errors"][0]
     assert "coindesk: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert "cointelegraph: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert not (result.run.analysis_dir / "text_material.md").exists()

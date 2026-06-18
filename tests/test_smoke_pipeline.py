@@ -121,6 +121,8 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert [(stage["name"], stage["status"]) for stage in manifest["stages"]] == [
         ("collect_market_data", "succeeded"),
         ("collect_derivatives_market_data", "succeeded"),
+        ("sync_derivatives_market_history", "succeeded"),
+        ("build_derivatives_market_views", "succeeded"),
         ("collect_text_events", "succeeded"),
         ("build_text_event_records", "succeeded"),
         ("build_text_entity_evidence", "succeeded"),

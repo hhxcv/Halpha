@@ -12,7 +12,7 @@ their downstream consumers. It is not a milestone plan.
   documentation index.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
-- `docs/derivatives-market-contracts.md`: planned derivatives and
+- `docs/derivatives-market-contracts.md`: derivatives and
   market-structure data, context, material, and Codex-boundary contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
@@ -36,7 +36,7 @@ must stay marked until their producers are added.
 | Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
 | Data quality material | Implemented | analysis material stage | research context, Codex context, report |
 | Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
-| Derivatives market history | not implemented yet | derivatives history writer | derivatives views, data inspection, data quality |
+| Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
 
 ## Layer Boundary
 
