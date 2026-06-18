@@ -127,6 +127,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("collect_macro_calendar_data", "succeeded"),
         ("sync_macro_calendar_history", "succeeded"),
         ("build_macro_calendar_views", "succeeded"),
+        ("build_macro_calendar_context", "succeeded"),
         ("collect_text_events", "succeeded"),
         ("build_text_event_records", "succeeded"),
         ("build_text_entity_evidence", "succeeded"),

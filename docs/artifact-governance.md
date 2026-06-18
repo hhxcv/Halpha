@@ -113,13 +113,15 @@ Macro/calendar artifacts:
 - `data/macro/metadata/macro_calendar_schema.json`
 - `data/macro/metadata/macro_calendar_state.json`
 - `raw/macro_calendar_views.json`
+- `analysis/macro_calendar_context.json`
 
 These artifacts preserve configured public macro and scheduled-event
 observations such as Federal Reserve FOMC meeting calendar records when enabled.
-The reusable history and current-run views are source-aware input data, not
-Codex context by themselves. Until later macro/calendar material exists, Codex
-input must not embed raw macro/calendar artifacts, reusable macro/calendar
-history, or macro/calendar views by default.
+The reusable history, current-run views, and deterministic context are
+source-aware input or analysis data, not Codex context by themselves. Until
+later macro/calendar material exists, Codex input must not embed raw
+macro/calendar artifacts, reusable macro/calendar history, macro/calendar views,
+or full macro/calendar context JSON by default.
 
 ### Text Intelligence Evidence
 
