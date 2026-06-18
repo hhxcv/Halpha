@@ -184,6 +184,11 @@ Rules:
   limitation.
 - Spread and depth summaries must be bounded summaries, not full order-book
   dumps.
+- For Binance USD-M, public liquidation evidence is available as real-time
+  WebSocket force-order streams, while the REST force-orders endpoint is signed
+  `USER_DATA`. Halpha therefore records `liquidation_summary` as unavailable
+  for periodic unauthenticated public-source runs unless a reliable public
+  periodic source is added.
 
 ## Raw Derivatives Market Artifact
 
@@ -387,7 +392,7 @@ funding_pressure [implemented]
 open_interest_pressure [implemented]
 premium_basis_state [implemented]
 liquidity_depth_state [implemented]
-liquidation_availability
+liquidation_availability [implemented as periodic public-source availability state]
 ```
 
 Rules:

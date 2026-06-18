@@ -282,6 +282,49 @@ def test_derivatives_context_flags_malformed_spread_depth_metrics(tmp_path: Path
     assert context["counts"]["insufficient"] == 1
 
 
+def test_derivatives_context_records_unavailable_liquidation_source(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["liquidation_summary"], lookback=1)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_unavailable_liquidation_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    liquidation = _context_record(context, context_type="liquidation_availability", period="source_availability")
+
+    assert context["status"] == "warning"
+    assert liquidation["status"] == "unavailable"
+    assert liquidation["state"] == "unavailable"
+    assert liquidation["severity"] == "unknown"
+    assert liquidation["metrics"] == {
+        "available_periodic_public_summary": False,
+        "availability_records": 1,
+    }
+    assert liquidation["evidence"][0]["endpoint"] == "liquidation_order_streams"
+    assert liquidation["evidence"][0]["method"] == "websocket_market_stream"
+    assert liquidation["evidence"][0]["signed_rest_access"] == "USER_DATA"
+    assert "stream snapshots include only the largest liquidation order" in liquidation["evidence"][0]["limitations"][1]
+    assert "missing liquidation evidence must not lower risk." in liquidation["uncertainty"]
+    assert _manifest(result)["derivatives_market_context"]["liquidation_availability"] == 1
+
+
+def test_derivatives_context_flags_stale_liquidation_source(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["liquidation_summary"], lookback=1)
+    config = load_config(config_path)
+
+    result = _run_until_context(config, config_path, _write_stale_liquidation_raw_stage)
+
+    assert result.succeeded is True
+    context = _context(result)
+    liquidation = _context_record(context, context_type="liquidation_availability", period="source_availability")
+
+    assert liquidation["status"] == "stale"
+    assert liquidation["state"] == "stale"
+    assert liquidation["confidence"] == "low"
+    assert "source availability is stale." in liquidation["uncertainty"]
+    assert context["counts"]["stale"] == 1
+
+
 def _run_until_context(
     config: dict[str, Any],
     config_path: Path,
@@ -506,6 +549,29 @@ def _write_malformed_spread_depth_raw_stage(config: dict[str, Any], run: RunCont
             )
         ],
         availability=[_availability("spread_depth", "snapshot", request_class="order_book_depth", record_count=1)],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_unavailable_liquidation_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [],
+        availability=[_liquidation_availability(status="unavailable")],
+    )
+    return [RAW_DERIVATIVES_ARTIFACT]
+
+
+def _write_stale_liquidation_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
+    _write_raw(
+        run,
+        [],
+        availability=[
+            _liquidation_availability(
+                status="stale",
+                reason="no recent liquidation stream snapshot was captured by the periodic run",
+            )
+        ],
     )
     return [RAW_DERIVATIVES_ARTIFACT]
 
@@ -736,6 +802,34 @@ def _availability(
     if reason:
         record["reason"] = reason
     return record
+
+
+def _liquidation_availability(*, status: str, reason: str | None = None) -> dict[str, Any]:
+    return {
+        "data_class": "liquidation_summary",
+        "endpoint": "liquidation_order_streams",
+        "method": "websocket_market_stream",
+        "symbol": "BTCUSDT",
+        "period": "source_availability",
+        "status": status,
+        "record_count": 0,
+        "error_count": 0,
+        "reason": reason
+        or (
+            "binance_usdm public liquidation data is real-time WebSocket only; "
+            "periodic unauthenticated REST summaries are unavailable"
+        ),
+        "stream_name": "btcusdt@forceOrder",
+        "stream_path": "/market",
+        "signed_rest_endpoint": "/fapi/v1/forceOrders",
+        "signed_rest_access": "USER_DATA",
+        "limitations": [
+            "public liquidation stream is real-time and requires a streaming runtime",
+            "stream snapshots include only the largest liquidation order within each 1000ms interval",
+            "signed REST force-order query is user data and outside public market-data scope",
+        ],
+        "downstream_implication": "liquidation evidence is unavailable and must not be treated as neutral risk context",
+    }
 
 
 def _write_config(

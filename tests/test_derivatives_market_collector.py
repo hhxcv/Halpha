@@ -50,14 +50,23 @@ def test_pipeline_collects_derivatives_market_raw_artifact(tmp_path: Path, monke
     }
     assert {item["source"] for item in raw["items"]} == {"binance_usdm"}
     assert {item["market_type"] for item in raw["items"]} == {"usd_m_futures"}
-    assert len(raw["availability"]) == 6
-    assert {item["status"] for item in raw["availability"]} == {"succeeded"}
+    assert len(raw["availability"]) == 7
+    assert {item["status"] for item in raw["availability"]} == {"succeeded", "unavailable"}
+    liquidation = next(item for item in raw["availability"] if item["data_class"] == "liquidation_summary")
+    assert liquidation["status"] == "unavailable"
+    assert liquidation["endpoint"] == "liquidation_order_streams"
+    assert liquidation["method"] == "websocket_market_stream"
+    assert liquidation["period"] == "source_availability"
+    assert liquidation["signed_rest_access"] == "USER_DATA"
+    assert "must not be treated as neutral" in liquidation["downstream_implication"]
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_derivatives_market"] == "raw/derivatives_market.json"
     assert manifest["counts"]["derivatives_market_items"] == 6
     assert manifest["counts"]["derivatives_market_errors"] == 0
     assert manifest["counts"]["derivatives_market_requests"] == 6
+    assert manifest["counts"]["derivatives_market_availability"] == 7
+    assert manifest["counts"]["derivatives_market_unavailable"] == 1
     assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
     assert manifest["stages"][1]["artifacts"] == ["raw/derivatives_market.json"]
 
@@ -147,7 +156,14 @@ def _write_config(
     derivatives_enabled: bool = True,
     data_classes: list[str] | None = None,
 ) -> Path:
-    data_classes = data_classes or ["funding_rate", "open_interest", "premium_index", "basis", "spread_depth"]
+    data_classes = data_classes or [
+        "funding_rate",
+        "open_interest",
+        "premium_index",
+        "basis",
+        "spread_depth",
+        "liquidation_summary",
+    ]
     data_class_lines = "\n".join(f"      - {data_class}" for data_class in data_classes)
     enabled_value = "true" if derivatives_enabled else "false"
     extra_derivatives = ""

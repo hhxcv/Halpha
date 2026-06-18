@@ -189,6 +189,12 @@ def _raw_derivatives_check(config: dict[str, Any], run: RunContext, *, now: str)
             "failed_records": sum(
                 1 for item in _list(raw.get("availability")) if isinstance(item, dict) and item.get("status") == "failed"
             ),
+            "stale_records": sum(
+                1 for item in _list(raw.get("availability")) if isinstance(item, dict) and item.get("status") == "stale"
+            ),
+            "degraded_records": sum(
+                1 for item in _list(raw.get("availability")) if isinstance(item, dict) and item.get("status") == "degraded"
+            ),
         },
     )
 
@@ -576,7 +582,7 @@ def _derivatives_availability_warnings(raw: dict[str, Any]) -> list[str]:
         if not isinstance(item, dict):
             continue
         status = item.get("status")
-        if status not in {"failed", "partial", "unavailable"}:
+        if status not in {"failed", "partial", "unavailable", "stale", "degraded"}:
             continue
         data_class = item.get("data_class") or "unknown"
         symbol = item.get("symbol") or "all_symbols"
