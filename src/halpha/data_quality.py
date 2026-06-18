@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from .pipeline import RunContext
-from .raw_artifacts import RawArtifactError, validate_market_raw_artifact, validate_text_events_raw_artifact
+from .raw_artifacts import (
+    RawArtifactError,
+    validate_derivatives_market_raw_artifact,
+    validate_market_raw_artifact,
+    validate_text_events_raw_artifact,
+)
 from .storage import write_json
 
 
@@ -25,8 +30,11 @@ def build_data_quality_summary(
     created_at = _format_utc(now)
     checks = [
         _raw_market_check(config, run, now=created_at),
+        _raw_derivatives_check(config, run, now=created_at),
         _raw_text_check(config, run, now=created_at),
         _ohlcv_store_check(config, run),
+        _derivatives_history_check(config, run),
+        _derivatives_views_check(config, run, now=created_at),
         _text_event_records_check(config, run, now=created_at),
         _text_event_history_check(run),
         _research_data_catalog_check(run),
@@ -141,6 +149,50 @@ def _raw_text_check(config: dict[str, Any], run: RunContext, *, now: str) -> dic
     )
 
 
+def _raw_derivatives_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
+    derivatives = _derivatives_config(config)
+    if not derivatives.get("enabled"):
+        return _check("raw_derivatives_market", "raw", "skipped", "market.derivatives.enabled is false.", [])
+    artifact = "raw/derivatives_market.json"
+    raw, error = _read_json(run.raw_dir / "derivatives_market.json")
+    if error:
+        return _check("raw_derivatives_market", "raw", "failed", error, [artifact], errors=[error])
+    try:
+        validate_derivatives_market_raw_artifact(raw, artifact)
+    except RawArtifactError as exc:
+        return _check("raw_derivatives_market", "raw", "failed", str(exc), [artifact], errors=[str(exc)])
+
+    errors = _error_messages(raw.get("errors"))
+    timestamp_warnings = _timestamp_warnings(_derivatives_timestamps(raw), now=now)
+    stale_warnings = _stale_timestamp_warnings(_derivatives_timestamps(raw), now=now, max_age_hours=48)
+    value_warnings = _derivatives_missing_value_warnings(raw)
+    availability_warnings = _derivatives_availability_warnings(raw)
+    warnings = _unique_sorted([*timestamp_warnings, *stale_warnings, *value_warnings, *availability_warnings])
+    status = "degraded" if errors else "warning" if warnings else "ok"
+    return _check(
+        "raw_derivatives_market",
+        "raw",
+        status,
+        f"{len(raw.get('items', []))} derivatives item(s), {len(errors)} collection error(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "items": len(raw.get("items", [])),
+            "availability_records": len(_list(raw.get("availability"))),
+            "unavailable_records": sum(
+                1 for item in _list(raw.get("availability")) if isinstance(item, dict) and item.get("status") == "unavailable"
+            ),
+            "partial_records": sum(
+                1 for item in _list(raw.get("availability")) if isinstance(item, dict) and item.get("status") == "partial"
+            ),
+            "failed_records": sum(
+                1 for item in _list(raw.get("availability")) if isinstance(item, dict) and item.get("status") == "failed"
+            ),
+        },
+    )
+
+
 def _ohlcv_store_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
     market = config.get("market", {})
     if not isinstance(market.get("ohlcv"), dict):
@@ -166,6 +218,74 @@ def _ohlcv_store_check(config: dict[str, Any], run: RunContext) -> dict[str, Any
         warnings=warnings,
         errors=errors,
         details={"insufficient_views": insufficient_views},
+    )
+
+
+def _derivatives_history_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    derivatives = _derivatives_config(config)
+    if not derivatives.get("enabled"):
+        return _check("derivatives_market_history", "shared_data", "skipped", "market.derivatives.enabled is false.", [])
+    artifact = "data/market/metadata/derivatives_market_state.json"
+    summary = run.manifest.get("derivatives_market_history")
+    if not isinstance(summary, dict):
+        return _check("derivatives_market_history", "shared_data", "skipped", "derivatives market history was not produced.", [])
+    state, error = _read_json(run.config_path.parent / artifact)
+    if error:
+        return _check("derivatives_market_history", "shared_data", "failed", error, [artifact], errors=[error])
+    warnings = _string_list(state.get("warnings"))
+    errors = _error_messages(state.get("errors"))
+    totals_value = state.get("totals")
+    totals = dict(totals_value) if isinstance(totals_value, dict) else {}
+    status = _status_from_summary(str(state.get("status") or summary.get("status")), warnings, errors)
+    return _check(
+        "derivatives_market_history",
+        "shared_data",
+        status,
+        f"derivatives market history status: {state.get('status') or 'unknown'}.",
+        [artifact, "data/market/metadata/derivatives_market_schema.json"],
+        warnings=warnings,
+        errors=errors,
+        details=totals,
+    )
+
+
+def _derivatives_views_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
+    derivatives = _derivatives_config(config)
+    if not derivatives.get("enabled"):
+        return _check("derivatives_market_views", "raw", "skipped", "market.derivatives.enabled is false.", [])
+    artifact = "raw/derivatives_market_views.json"
+    views_artifact, error = _read_json(run.raw_dir / "derivatives_market_views.json")
+    if error:
+        return _check("derivatives_market_views", "raw", "failed", error, [artifact], errors=[error])
+    views = _list(views_artifact.get("views"))
+    warnings = _unique_sorted(
+        [
+            *_string_list(views_artifact.get("warnings")),
+            *_derivatives_view_warnings(views),
+            *_timestamp_warnings(_derivatives_view_timestamps(views), now=now),
+            *_stale_timestamp_warnings(_derivatives_view_timestamps(views), now=now, max_age_hours=48),
+        ]
+    )
+    errors = _error_messages(views_artifact.get("errors"))
+    status = "failed" if errors else "warning" if warnings else "ok"
+    return _check(
+        "derivatives_market_views",
+        "raw",
+        status,
+        f"{len(views)} derivatives market view(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "views": len(views),
+            "insufficient_views": sum(
+                1 for view in views if isinstance(view, dict) and view.get("insufficient_data")
+            ),
+            "missing_history_views": sum(
+                1 for view in views if isinstance(view, dict) and view.get("status") == "missing_history"
+            ),
+            "skipped_views": sum(1 for view in views if isinstance(view, dict) and view.get("status") == "skipped"),
+        },
     )
 
 
@@ -293,7 +413,7 @@ def _run_index_check(run: RunContext) -> dict[str, Any]:
 def _partial_collection_check(run: RunContext) -> dict[str, Any]:
     warnings = []
     errors = []
-    for key in ("raw_market", "raw_text_events"):
+    for key in ("raw_market", "raw_derivatives_market", "raw_text_events"):
         path = run.manifest.get("artifacts", {}).get(key)
         if not isinstance(path, str):
             continue
@@ -399,6 +519,82 @@ def _text_record_timestamps(records: list[Any]) -> list[tuple[str, str]]:
     return values
 
 
+def _derivatives_timestamps(raw: dict[str, Any]) -> list[tuple[str, str]]:
+    values = []
+    if isinstance(raw.get("collected_at"), str):
+        values.append(("raw/derivatives_market.json collected_at", raw["collected_at"]))
+    for item in raw.get("items", []):
+        if isinstance(item, dict) and isinstance(item.get("as_of"), str):
+            values.append(("raw/derivatives_market.json as_of", item["as_of"]))
+    return values
+
+
+def _derivatives_view_timestamps(views: list[Any]) -> list[tuple[str, str]]:
+    values = []
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        value = view.get("latest_observation_time")
+        if isinstance(value, str):
+            values.append(("raw/derivatives_market_views.json latest_observation_time", value))
+    return values
+
+
+def _stale_timestamp_warnings(timestamps: list[tuple[str, str]], *, now: str, max_age_hours: int) -> list[str]:
+    warnings = []
+    now_value = _parse_utc(now)
+    if now_value is None:
+        return warnings
+    for field, value in timestamps:
+        parsed = _parse_utc(value)
+        if parsed is None or parsed > now_value:
+            continue
+        age_hours = (now_value - parsed).total_seconds() / 3600
+        if age_hours > max_age_hours:
+            warnings.append(f"{field} is stale: {value} is older than {max_age_hours} hours.")
+    return warnings
+
+
+def _derivatives_missing_value_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in raw.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        metrics = item.get("metrics")
+        if not isinstance(metrics, dict) or not metrics:
+            warnings.append(f"derivatives item {item.get('item_id') or 'unknown'} has no metrics.")
+            continue
+        for key, value in metrics.items():
+            if value is None:
+                warnings.append(f"derivatives item {item.get('item_id') or 'unknown'} metric {key} is missing.")
+    return warnings
+
+
+def _derivatives_availability_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in _list(raw.get("availability")):
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status")
+        if status not in {"failed", "partial", "unavailable"}:
+            continue
+        data_class = item.get("data_class") or "unknown"
+        symbol = item.get("symbol") or "all_symbols"
+        period = item.get("period") or "all_periods"
+        reason = item.get("reason") or status
+        warnings.append(f"derivatives availability {data_class} {symbol} {period}: {reason}.")
+    return warnings
+
+
+def _derivatives_view_warnings(views: list[Any]) -> list[str]:
+    warnings = []
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        warnings.extend(_string_list(view.get("warnings")))
+    return warnings
+
+
 def _duplicate_summary(records: list[Any]) -> dict[str, Any]:
     seen: dict[str, str] = {}
     duplicates = 0
@@ -480,6 +676,18 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if isinstance(item, str) and item]
+
+
+def _list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _derivatives_config(config: dict[str, Any]) -> dict[str, Any]:
+    market = config.get("market")
+    if not isinstance(market, dict):
+        return {}
+    derivatives = market.get("derivatives")
+    return derivatives if isinstance(derivatives, dict) else {}
 
 
 def _int(value: Any) -> int:

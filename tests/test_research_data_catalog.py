@@ -104,6 +104,42 @@ def test_research_data_catalog_registers_outcome_history_store(tmp_path: Path) -
     ]
 
 
+def test_research_data_catalog_registers_derivatives_market_history_store(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    run = _run_context(tmp_path, config_path)
+    run.manifest["derivatives_market_history"] = {
+        "status": "warning",
+        "artifact": "data/market/metadata/derivatives_market_state.json",
+    }
+    _write_derivatives_market_metadata(tmp_path)
+
+    catalog = build_research_data_catalog({}, run, now="2026-06-05T00:00:00Z")
+    store = catalog["stores"][0]
+
+    assert catalog["status"] == "warning"
+    assert catalog["counts"] == {"errors": 0, "records": 3, "stores": 1, "warnings": 1}
+    assert store["name"] == "derivatives_market_history"
+    assert store["status"] == "warning"
+    assert store["format"] == "json"
+    assert store["storage_path"] == "data/market/derivatives"
+    assert store["schema_path"] == "data/market/metadata/derivatives_market_schema.json"
+    assert store["state_path"] == "data/market/metadata/derivatives_market_state.json"
+    assert store["unique_key_fields"] == [
+        "source",
+        "market_type",
+        "data_class",
+        "symbol",
+        "period",
+        "as_of",
+    ]
+    assert store["sources"] == ["binance_usdm"]
+    assert store["record_count"] == 3
+    assert store["details"]["groups"] == 1
+    assert store["details"]["duplicate_records"] == 1
+    assert "data_quality_summary" in store["consumers"]
+    assert str(tmp_path) not in json.dumps(catalog)
+
+
 def _write_config(tmp_path: Path) -> Path:
     path = tmp_path / "config.yaml"
     path.write_text("run:\n  output_dir: runs\n", encoding="utf-8")
@@ -155,6 +191,49 @@ def _write_outcome_history_state(tmp_path: Path) -> None:
         "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
     }
     state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+
+def _write_derivatives_market_metadata(tmp_path: Path) -> None:
+    metadata_dir = tmp_path / "data" / "market" / "metadata"
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+    schema = {
+        "schema_version": 1,
+        "artifact_type": "derivatives_market_schema",
+        "identity": ["source", "market_type", "data_class", "symbol", "period", "as_of"],
+    }
+    state = {
+        "schema_version": 1,
+        "artifact_type": "derivatives_market_state",
+        "updated_at": "2026-06-05T00:00:00Z",
+        "status": "warning",
+        "storage_path": "data/market/derivatives",
+        "totals": {
+            "records": 3,
+            "incoming_records": 4,
+            "inserted_records": 3,
+            "duplicate_records": 1,
+            "conflicting_duplicates": 0,
+        },
+        "groups": [
+            {
+                "source": "binance_usdm",
+                "data_class": "funding_rate",
+                "symbol": "BTCUSDT",
+                "period": "8h",
+                "row_count": 3,
+            }
+        ],
+        "warnings": ["one duplicate derivatives record ignored."],
+        "errors": [],
+    }
+    (metadata_dir / "derivatives_market_schema.json").write_text(
+        json.dumps(schema, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (metadata_dir / "derivatives_market_state.json").write_text(
+        json.dumps(state, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def _run_context(tmp_path: Path, config_path: Path) -> RunContext:

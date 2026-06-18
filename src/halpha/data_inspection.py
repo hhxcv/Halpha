@@ -14,6 +14,9 @@ from .run_index import RUN_INDEX_ARTIFACT, run_index_path
 TEXT_EVENT_HISTORY_STATE_ARTIFACT = "data/research/metadata/text_event_history_state.json"
 OHLCV_SCHEMA_ARTIFACT = "data/market/metadata/ohlcv_schema.json"
 OHLCV_SYNC_STATE_ARTIFACT = "data/market/metadata/ohlcv_sync_state.json"
+DERIVATIVES_SCHEMA_ARTIFACT = "data/market/metadata/derivatives_market_schema.json"
+DERIVATIVES_STATE_ARTIFACT = "data/market/metadata/derivatives_market_state.json"
+DERIVATIVES_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 
 
@@ -41,6 +44,7 @@ def inspect_local_data(
         _run_index_section(config_path, base=base),
         _text_event_history_section(config_path, base=base),
         _ohlcv_section(config, config_path, base=base),
+        _derivatives_section(config, config_path, run_dir=run_dir, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -154,6 +158,56 @@ def _ohlcv_section(config: dict[str, Any], config_path: Path, *, base: Path) -> 
             "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
             "warnings": len(warnings),
         },
+        reason="; ".join(warnings) if warnings else None,
+    )
+
+
+def _derivatives_section(
+    config: dict[str, Any],
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    derivatives = market.get("derivatives") if isinstance(market, dict) else None
+    if not isinstance(derivatives, dict) or not derivatives.get("enabled"):
+        return _section("derivatives_market_history", "skipped", reason="market.derivatives is not enabled.")
+
+    schema, schema_error = _read_json(base / DERIVATIVES_SCHEMA_ARTIFACT)
+    state, state_error = _read_json(base / DERIVATIVES_STATE_ARTIFACT)
+    warnings = [error for error in (schema_error, state_error) if error]
+    totals = _dict(state.get("totals")) if isinstance(state, dict) else {}
+    groups = _list(state.get("groups")) if isinstance(state, dict) else []
+    fields = {
+        "records": _int(totals.get("records")),
+        "groups": len(groups),
+        "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
+        "warnings": len(_list(state.get("warnings"))) if isinstance(state, dict) else len(warnings),
+        "errors": len(_list(state.get("errors"))) if isinstance(state, dict) else 0,
+    }
+
+    view_run_dir = _resolve_run_dir(run_dir, base=base) if run_dir is not None else _latest_run_from_index(config_path)
+    if view_run_dir is not None:
+        views, views_error = _read_json(view_run_dir / DERIVATIVES_VIEWS_ARTIFACT)
+        if views_error:
+            warnings.append(views_error)
+        else:
+            view_records = _list(views.get("views"))
+            fields["views"] = len(view_records)
+            fields["insufficient_views"] = sum(
+                1 for view in view_records if isinstance(view, dict) and view.get("insufficient_data")
+            )
+            fields["skipped_views"] = sum(
+                1 for view in view_records if isinstance(view, dict) and view.get("status") == "skipped"
+            )
+
+    status = "warning" if warnings else str(state.get("status") or "ok")
+    return _section(
+        "derivatives_market_history",
+        status,
+        artifact=DERIVATIVES_STATE_ARTIFACT,
+        fields=fields,
         reason="; ".join(warnings) if warnings else None,
     )
 

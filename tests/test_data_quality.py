@@ -31,7 +31,7 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
 
     assert summary["artifact_type"] == "data_quality_summary"
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 8
+    assert summary["counts"]["checks"] == 11
     assert summary["counts"]["failed"] == 0
     assert summary["counts"]["degraded"] == 0
     assert manifest["artifacts"]["data_quality_summary"] == "analysis/data_quality_summary.json"
@@ -39,6 +39,9 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "raw_market")["status"] == "ok"
     assert _check(summary, "raw_text")["status"] == "ok"
     assert _check(summary, "ohlcv_store")["status"] == "skipped"
+    assert _check(summary, "raw_derivatives_market")["status"] == "skipped"
+    assert _check(summary, "derivatives_market_history")["status"] == "skipped"
+    assert _check(summary, "derivatives_market_views")["status"] == "skipped"
     assert _check(summary, "text_event_history")["status"] == "ok"
     run_index = _check(summary, "run_index")
     assert run_index["status"] == "skipped"
@@ -120,6 +123,55 @@ def test_data_quality_summary_records_partial_collection_and_optional_skips(tmp_
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
+def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_market_raw({}, run)
+    _write_derivatives_raw(run)
+    _write_derivatives_state(tmp_path)
+    _write_derivatives_views(run)
+    run.manifest["derivatives_market_history"] = {
+        "status": "warning",
+        "artifact": "data/market/metadata/derivatives_market_state.json",
+    }
+
+    build_data_quality_summary(
+        _config(include_ohlcv=False, text_enabled=False, derivatives_enabled=True),
+        run,
+        now="2026-06-05T00:00:00Z",
+    )
+
+    summary = _summary(run.analysis_dir)
+    raw = _check(summary, "raw_derivatives_market")
+    history = _check(summary, "derivatives_market_history")
+    views = _check(summary, "derivatives_market_views")
+
+    assert summary["status"] == "degraded"
+    assert raw["status"] == "degraded"
+    assert raw["details"]["items"] == 1
+    assert raw["details"]["availability_records"] == 3
+    assert raw["details"]["unavailable_records"] == 1
+    assert raw["details"]["partial_records"] == 1
+    assert raw["details"]["failed_records"] == 1
+    assert any("metric funding_rate is missing" in warning for warning in raw["details"]["warnings"])
+    assert any("is stale" in warning for warning in raw["details"]["warnings"])
+    assert any("derivatives availability basis BTCUSDT 5m" in warning for warning in raw["details"]["warnings"])
+    assert "funding rate source returned partial data" in raw["details"]["errors"]
+
+    assert history["status"] == "warning"
+    assert history["details"]["records"] == 1
+    assert history["details"]["duplicate_records"] == 1
+    assert history["details"]["conflicting_duplicates"] == 1
+
+    assert views["status"] == "warning"
+    assert views["details"]["views"] == 3
+    assert views["details"]["insufficient_views"] == 3
+    assert views["details"]["missing_history_views"] == 1
+    assert views["details"]["skipped_views"] == 1
+    assert any("unsupported derivatives class" in warning for warning in views["details"]["warnings"])
+    assert _check(summary, "partial_collection")["status"] == "degraded"
+
+
 def _write_config(tmp_path: Path, *, include_ohlcv: bool = True) -> Path:
     ohlcv = ""
     if include_ohlcv:
@@ -159,7 +211,12 @@ codex:
     return path
 
 
-def _config(*, include_ohlcv: bool = True, text_enabled: bool = True) -> dict[str, Any]:
+def _config(
+    *,
+    include_ohlcv: bool = True,
+    text_enabled: bool = True,
+    derivatives_enabled: bool = False,
+) -> dict[str, Any]:
     market: dict[str, Any] = {
         "enabled": True,
         "source": "binance",
@@ -167,6 +224,15 @@ def _config(*, include_ohlcv: bool = True, text_enabled: bool = True) -> dict[st
     }
     if include_ohlcv:
         market["ohlcv"] = {"storage_dir": "data/market/ohlcv", "timeframes": ["1d"], "lookback": {"1d": 2}}
+    if derivatives_enabled:
+        market["derivatives"] = {
+            "enabled": True,
+            "source": "binance_usdm",
+            "symbols": ["BTCUSDT"],
+            "data_classes": ["funding_rate", "basis", "open_interest"],
+            "periods": ["5m"],
+            "lookback": {"5m": 2},
+        }
     return {
         "market": market,
         "text": {"enabled": text_enabled},
@@ -235,6 +301,134 @@ def _write_text_raw(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["raw_text_events"] = "raw/text_events.json"
     return ["raw/text_events.json"]
+
+
+def _write_derivatives_raw(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "derivatives_market.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "raw_derivatives_market",
+            "collected_at": "2026-06-01T00:00:00Z",
+            "items": [
+                {
+                    "item_id": "derivatives:binance_usdm:funding_rate:BTCUSDT:8h:2026-06-01T00:00:00Z",
+                    "data_class": "funding_rate",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "BTCUSDT",
+                    "period": "8h",
+                    "as_of": "2026-06-01T00:00:00Z",
+                    "endpoint": "/fapi/v1/fundingRate",
+                    "metrics": {"funding_rate": None},
+                    "units": {"funding_rate": "ratio"},
+                    "raw_fields": {},
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "availability": [
+                {
+                    "source": "binance_usdm",
+                    "data_class": "open_interest",
+                    "symbol": "BTCUSDT",
+                    "period": "5m",
+                    "status": "partial",
+                    "reason": "partial page",
+                },
+                {
+                    "source": "binance_usdm",
+                    "data_class": "basis",
+                    "symbol": "BTCUSDT",
+                    "period": "5m",
+                    "status": "unavailable",
+                    "reason": "unsupported interval",
+                },
+                {
+                    "source": "binance_usdm",
+                    "data_class": "premium_index",
+                    "symbol": "BTCUSDT",
+                    "period": "snapshot",
+                    "status": "failed",
+                    "reason": "timeout",
+                },
+            ],
+            "warnings": [],
+            "errors": [{"message": "funding rate source returned partial data"}],
+        },
+    )
+    run.manifest["artifacts"]["raw_derivatives_market"] = "raw/derivatives_market.json"
+
+
+def _write_derivatives_state(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "derivatives_market_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_state",
+            "updated_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "storage_path": "data/market/derivatives",
+            "totals": {
+                "records": 1,
+                "incoming_records": 2,
+                "inserted_records": 1,
+                "duplicate_records": 1,
+                "conflicting_duplicates": 1,
+            },
+            "groups": [
+                {
+                    "source": "binance_usdm",
+                    "data_class": "funding_rate",
+                    "symbol": "BTCUSDT",
+                    "period": "8h",
+                    "row_count": 1,
+                }
+            ],
+            "warnings": ["one duplicate derivatives record ignored."],
+            "errors": [],
+        },
+    )
+
+
+def _write_derivatives_views(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "derivatives_market_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_views",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["data/market/metadata/derivatives_market_state.json"],
+            "views": [
+                {
+                    "view_id": "derivatives_view:funding_rate:binance_usdm:BTCUSDT:8h:2026-06-01T00:00:00Z",
+                    "status": "insufficient_data",
+                    "latest_observation_time": "2026-06-01T00:00:00Z",
+                    "insufficient_data": True,
+                    "warnings": ["funding_rate BTCUSDT has insufficient history."],
+                    "errors": [],
+                },
+                {
+                    "view_id": "derivatives_view:open_interest:binance_usdm:BTCUSDT:5m:missing",
+                    "status": "missing_history",
+                    "latest_observation_time": None,
+                    "insufficient_data": True,
+                    "warnings": ["open_interest BTCUSDT has no derivatives history."],
+                    "errors": [],
+                },
+                {
+                    "view_id": "derivatives_view:spread_depth:binance_usdm:skipped",
+                    "status": "skipped",
+                    "latest_observation_time": None,
+                    "insufficient_data": True,
+                    "warnings": ["unsupported derivatives class."],
+                    "errors": [],
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
 
 
 def _event_record(raw_id: str, *, canonical_url: str, text: str) -> dict[str, Any]:

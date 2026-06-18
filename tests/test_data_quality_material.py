@@ -20,13 +20,13 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
             "created_at": "2026-06-05T00:00:00Z",
             "status": "warning",
             "counts": {
-                "checks": 2,
+                "checks": 3,
                 "ok": 1,
-                "warning": 1,
+                "warning": 2,
                 "degraded": 0,
                 "skipped": 0,
                 "failed": 0,
-                "warnings": 1,
+                "warnings": 2,
                 "errors": 0,
             },
             "checks": [
@@ -57,13 +57,35 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
                         "errors": [],
                     },
                 },
+                {
+                    "name": "derivatives_market_views",
+                    "status": "warning",
+                    "scope": "raw",
+                    "summary": "3 derivatives market view(s).",
+                    "warning_count": 1,
+                    "error_count": 0,
+                    "source_artifacts": ["raw/derivatives_market_views.json"],
+                    "details": {
+                        "views": 3,
+                        "insufficient_views": 1,
+                        "missing_history_views": 1,
+                        "skipped_views": 1,
+                        "warnings": ["one derivatives view has insufficient history."],
+                        "errors": [],
+                    },
+                },
             ],
-            "warnings": ["index was rebuilt from current manifest."],
+            "warnings": [
+                "index was rebuilt from current manifest.",
+                "one derivatives view has insufficient history.",
+            ],
             "errors": [],
             "source_artifacts": [
                 "analysis/data_quality_summary.json",
                 "raw/market.json",
+                "raw/derivatives_market_views.json",
                 "data/research/index.sqlite",
+                "data/market/metadata/derivatives_market_state.json",
                 "data/research/metadata/research_data_catalog.json",
             ],
         },
@@ -88,13 +110,17 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
     assert "run_index_lifecycle:" in material
     assert "report_stage_time_skip_as_final_missing: false" in material
     assert "data/research/index.sqlite" in material
+    assert "data/market/metadata/derivatives_market_state.json" in material
+    assert "derivatives_market_views" in material
+    assert "insufficient_views: 1" in material
     assert "data/research/metadata/research_data_catalog.json" in material
+    assert "funding_rate:" not in material
     assert "CREATE TABLE" not in material
     assert "stable_event_key:" not in material
     assert "content_text:" not in material
 
     assert run.manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
-    assert run.manifest["counts"]["data_quality_material_checks"] == 2
+    assert run.manifest["counts"]["data_quality_material_checks"] == 3
 
 
 def test_data_quality_material_requires_summary_first(tmp_path: Path) -> None:
