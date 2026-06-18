@@ -108,6 +108,41 @@ def test_alert_decisions_record_p2_and_p3_archival_attention(tmp_path: Path) -> 
     assert "alert_decision_suppressed_or_downgraded" in records["p3"]["warnings"]
 
 
+def test_alert_decisions_reference_derivatives_relevance_when_event_is_relevant(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_alert_pipeline(
+        config,
+        config_path,
+        records=[
+            _assessment_record(
+                "derivatives",
+                event_severity="high",
+                source_reliability="high",
+                confidence="high",
+                decision_impact="could_downgrade",
+                risk_effect="risk_up",
+                watch_relevance="risk_escalation",
+            )
+        ],
+        extra_handlers={"build_derivatives_market_context": _write_derivatives_context},
+    )
+
+    artifact = _alert_decisions(result)
+    manifest = _manifest(result)
+    record = artifact["records"][0]
+
+    assert record["priority"] == "P1"
+    assert record["linked_derivatives_context_ids"] == [
+        "derivatives_context:funding_pressure:binance_usdm:BTCUSDT:8h:2026-06-05T00:00:00Z"
+    ]
+    assert any("derivatives_context funding_pressure" in item for item in record["derivatives_relevance"])
+    assert "analysis/derivatives_market_context.json" in record["source_artifacts"]
+    assert "analysis/derivatives_market_context.json" in artifact["source_artifacts"]
+    assert manifest["counts"]["alert_decision_derivatives_linked_records"] == 1
+
+
 def test_alert_decisions_suppress_no_alert_for_unrelated_or_insufficient_events(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -191,14 +226,21 @@ def test_alert_decisions_single_stage_rerun(tmp_path: Path) -> None:
     assert _alert_decisions(result)["records"][0]["priority"] == "P2"
 
 
-def _run_alert_pipeline(config: dict[str, Any], config_path: Path, *, records: list[dict[str, Any]]):
+def _run_alert_pipeline(
+    config: dict[str, Any],
+    config_path: Path,
+    *,
+    records: list[dict[str, Any]],
+    extra_handlers: dict[str, Any] | None = None,
+):
+    overrides = {"build_event_intelligence_assessment": lambda config, run: _write_assessment(run, records)}
+    if extra_handlers:
+        overrides.update(extra_handlers)
     return run_pipeline(
         config,
         config_path=config_path,
         until_stage="build_alert_decisions",
-        stage_handlers=_base_handlers(
-            {"build_event_intelligence_assessment": lambda config, run: _write_assessment(run, records)}
-        ),
+        stage_handlers=_base_handlers(overrides),
     )
 
 
@@ -417,6 +459,51 @@ def _write_watch_triggers(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["watch_triggers"] = "analysis/watch_triggers.json"
     return ["analysis/watch_triggers.json"]
+
+
+def _write_derivatives_context(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "derivatives_market_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": "derivatives_context:funding_pressure:binance_usdm:BTCUSDT:8h:2026-06-05T00:00:00Z",
+                    "context_type": "funding_pressure",
+                    "data_class": "funding_rate",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "BTCUSDT",
+                    "period": "8h",
+                    "as_of": "2026-06-05T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "extreme_positive_funding",
+                    "severity": "high",
+                    "confidence": "medium",
+                    "metrics": {},
+                    "thresholds": {},
+                    "evidence": [],
+                    "uncertainty": [],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/derivatives_market_context.json",
+                        "raw/derivatives_market_views.json",
+                    ],
+                }
+            ],
+            "counts": {"records": 1},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/derivatives_market_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["derivatives_market_context"] = "analysis/derivatives_market_context.json"
+    return ["analysis/derivatives_market_context.json"]
 
 
 def _alert_decisions(result) -> dict[str, Any]:

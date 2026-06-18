@@ -98,6 +98,48 @@ def test_watch_triggers_generate_supported_types_and_link_decisions(tmp_path: Pa
     assert _stage(manifest, "build_analysis_materials")["status"] == "not_run"
 
 
+def test_watch_triggers_include_derivatives_risk_conditions(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_watch_triggers",
+        stage_handlers={
+            "collect_market_data": _noop_stage,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _noop_stage,
+            "build_derivatives_market_context": _write_stressed_derivatives_context,
+            "evaluate_quant_strategies": _noop_stage,
+            "evaluate_strategy_evaluation": _noop_stage,
+            "evaluate_market_strategy_signals": _noop_stage,
+            "build_market_signals": _write_market_signals,
+            "build_market_signal_material": _noop_stage,
+            "build_market_regime_assessment": _write_market_regime_assessment,
+            "build_risk_assessment": _write_risk_assessment,
+            "build_decision_recommendations": _write_decision_recommendations,
+        },
+    )
+
+    assert result.succeeded is True
+    artifact = _watch_triggers(result)
+    manifest = _manifest(result)
+    eth_triggers = [record for record in artifact["records"] if record["symbol"] == "ETHUSDT"]
+    derivatives_triggers = [
+        record for record in eth_triggers if record["linked_derivatives_context_ids"]
+    ]
+
+    assert derivatives_triggers
+    assert any(record["type"] == "risk_escalation" for record in derivatives_triggers)
+    assert any(record["type"] == "risk_relief" for record in derivatives_triggers)
+    assert any("derivatives context adds" in record["condition"] for record in derivatives_triggers)
+    assert all("analysis/derivatives_market_context.json" in record["source_artifacts"] for record in derivatives_triggers)
+    assert manifest["counts"]["watch_trigger_derivatives_context_records"] == 1
+    assert manifest["counts"]["watch_trigger_derivatives_linked_records"] == len(derivatives_triggers)
+
+
 def test_watch_triggers_do_not_fabricate_conditions_without_evidence(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -435,6 +477,51 @@ def _write_empty_decision_recommendations(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["decision_recommendations"] = "analysis/decision_recommendations.json"
     return ["analysis/decision_recommendations.json"]
+
+
+def _write_stressed_derivatives_context(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "derivatives_market_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": "derivatives_context:funding_pressure:binance_usdm:ETHUSDT:8h:2026-06-05T00:00:00Z",
+                    "context_type": "funding_pressure",
+                    "data_class": "funding_rate",
+                    "source": "binance_usdm",
+                    "market_type": "usd_m_futures",
+                    "symbol": "ETHUSDT",
+                    "period": "8h",
+                    "as_of": "2026-06-05T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "extreme_positive_funding",
+                    "severity": "high",
+                    "confidence": "medium",
+                    "metrics": {},
+                    "thresholds": {},
+                    "evidence": [],
+                    "uncertainty": [],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/derivatives_market_context.json",
+                        "raw/derivatives_market_views.json",
+                    ],
+                }
+            ],
+            "counts": {"records": 1},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/derivatives_market_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["derivatives_market_context"] = "analysis/derivatives_market_context.json"
+    return ["analysis/derivatives_market_context.json"]
 
 
 def _signal(symbol: str, direction: str, confidence: str, latest_regime: str) -> dict[str, Any]:
