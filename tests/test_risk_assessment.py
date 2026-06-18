@@ -109,6 +109,64 @@ def test_risk_assessment_classifies_taxonomy_and_gating_fields(tmp_path: Path) -
     ]
 
 
+def test_risk_assessment_escalates_with_derivatives_stress(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_risk_with_derivatives(config, config_path, _write_stressed_derivatives_context)
+
+    assert result.succeeded is True
+    artifact = _risk_assessment(result)
+    manifest = _manifest(result)
+    eth = next(record for record in artifact["records"] if record["symbol"] == "ETHUSDT")
+
+    assert eth["risk_level"] == "high"
+    assert any("extreme positive funding" in item for item in eth["rising_risks"])
+    assert "High-severity derivatives context blocks stronger action levels." in eth["blocking_risks"]
+    assert any("derivatives_context funding_pressure" in item for item in eth["evidence"])
+    assert "analysis/derivatives_market_context.json" in eth["source_artifacts"]
+    assert "analysis/derivatives_market_context.json" in artifact["source_artifacts"]
+    assert manifest["counts"]["risk_assessment_derivatives_context_records"] == 1
+    assert manifest["counts"]["risk_assessment_derivatives_influenced_records"] == 1
+
+
+def test_risk_assessment_preserves_low_risk_with_neutral_derivatives_context(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_risk_with_derivatives(config, config_path, _write_neutral_derivatives_context)
+
+    assert result.succeeded is True
+    artifact = _risk_assessment(result)
+    eth = next(record for record in artifact["records"] if record["symbol"] == "ETHUSDT")
+
+    assert eth["risk_level"] == "low"
+    assert eth["rising_risks"] == []
+    assert eth["blocking_risks"] == []
+    assert any("derivatives_context funding_pressure state=neutral" in item for item in eth["evidence"])
+    assert eth["gates"] == {
+        "block_strong_action": False,
+        "cap_action_level": None,
+        "requires_invalidation": False,
+    }
+
+
+def test_risk_assessment_records_degraded_derivatives_uncertainty(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_risk_with_derivatives(config, config_path, _write_degraded_derivatives_context)
+
+    assert result.succeeded is True
+    artifact = _risk_assessment(result)
+    eth = next(record for record in artifact["records"] if record["symbol"] == "ETHUSDT")
+
+    assert eth["risk_level"] == "medium"
+    assert any("liquidation summary is unavailable" in item for item in eth["rising_risks"])
+    assert any("missing or degraded derivatives evidence" in item for item in eth["evidence"])
+    assert eth["gates"]["cap_action_level"] == "TRY_SMALL"
+
+
 def test_risk_assessment_writes_warning_without_fake_low_risk_when_upstream_is_empty(
     tmp_path: Path,
 ) -> None:
@@ -226,6 +284,27 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _run_risk_with_derivatives(config: dict[str, Any], config_path: Path, derivatives_stage):
+    return run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={
+            "collect_market_data": _noop_stage,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _write_market_data_views,
+            "build_derivatives_market_context": derivatives_stage,
+            "evaluate_quant_strategies": _write_quant_strategy_runs,
+            "evaluate_strategy_evaluation": _noop_stage,
+            "evaluate_market_strategy_signals": _write_strategy_signals,
+            "build_analysis_materials": _noop_stage,
+            "build_research_context": _noop_stage,
+            "build_codex_context": _noop_stage,
+            "run_codex_report": _noop_stage,
+        },
+    )
 
 
 def _write_market_data_views(config, run) -> list[str]:
@@ -391,6 +470,109 @@ def _write_empty_market_signals(config, run) -> list[str]:
     run.manifest["counts"]["market_signals"] = 0
     run.manifest["counts"]["market_signals_insufficient_data"] = 0
     return ["analysis/market_signals.json"]
+
+
+def _write_stressed_derivatives_context(config, run) -> list[str]:
+    _write_derivatives_context(
+        run,
+        [
+            _derivatives_context_record(
+                symbol="ETHUSDT",
+                context_type="funding_pressure",
+                data_class="funding_rate",
+                state="extreme_positive_funding",
+                severity="high",
+                status="succeeded",
+            )
+        ],
+    )
+    return ["analysis/derivatives_market_context.json"]
+
+
+def _write_neutral_derivatives_context(config, run) -> list[str]:
+    _write_derivatives_context(
+        run,
+        [
+            _derivatives_context_record(
+                symbol="ETHUSDT",
+                context_type="funding_pressure",
+                data_class="funding_rate",
+                state="neutral",
+                severity="low",
+                status="succeeded",
+            )
+        ],
+    )
+    return ["analysis/derivatives_market_context.json"]
+
+
+def _write_degraded_derivatives_context(config, run) -> list[str]:
+    _write_derivatives_context(
+        run,
+        [
+            _derivatives_context_record(
+                symbol="ETHUSDT",
+                context_type="liquidation_availability",
+                data_class="liquidation_summary",
+                state="unavailable",
+                severity="unknown",
+                status="unavailable",
+            )
+        ],
+    )
+    return ["analysis/derivatives_market_context.json"]
+
+
+def _write_derivatives_context(run, records: list[dict[str, Any]]) -> None:
+    write_json(
+        run.analysis_dir / "derivatives_market_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": records,
+            "counts": {"records": len(records)},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/derivatives_market_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["derivatives_market_context"] = "analysis/derivatives_market_context.json"
+
+
+def _derivatives_context_record(
+    *,
+    symbol: str,
+    context_type: str,
+    data_class: str,
+    state: str,
+    severity: str,
+    status: str,
+) -> dict[str, Any]:
+    period = "source_availability" if context_type == "liquidation_availability" else "8h"
+    return {
+        "context_id": f"derivatives_context:{context_type}:binance_usdm:{symbol}:{period}:2026-06-05T00:00:00Z",
+        "context_type": context_type,
+        "data_class": data_class,
+        "source": "binance_usdm",
+        "market_type": "usd_m_futures",
+        "symbol": symbol,
+        "period": period,
+        "as_of": "2026-06-05T00:00:00Z",
+        "status": status,
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "metrics": {},
+        "thresholds": {},
+        "evidence": [],
+        "uncertainty": [],
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": ["analysis/derivatives_market_context.json", "raw/derivatives_market_views.json"],
+    }
 
 
 def _strategy_signal(

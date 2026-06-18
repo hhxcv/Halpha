@@ -91,6 +91,44 @@ def test_market_regime_assessment_classifies_groups_and_records_evidence(tmp_pat
     ]
 
 
+def test_market_regime_assessment_qualifies_trend_with_conflicting_derivatives_context(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={
+            "collect_market_data": _noop_stage,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _write_market_data_views,
+            "build_derivatives_market_context": _write_stressed_derivatives_context,
+            "evaluate_quant_strategies": _write_quant_strategy_runs,
+            "evaluate_strategy_evaluation": _noop_stage,
+            "evaluate_market_strategy_signals": _write_strategy_signals,
+            "build_analysis_materials": _noop_stage,
+            "build_research_context": _noop_stage,
+            "build_codex_context": _noop_stage,
+            "run_codex_report": _noop_stage,
+        },
+    )
+
+    assert result.succeeded is True
+    artifact = _market_regime_assessment(result)
+    eth = next(record for record in artifact["records"] if record["symbol"] == "ETHUSDT")
+    manifest = _manifest(result)
+
+    assert eth["regime"] == "trend_up"
+    assert eth["confidence"] == "medium"
+    assert "High-severity derivatives context qualifies the market regime." in eth["conflicts"]
+    assert any("derivatives_context funding_pressure" in item for item in eth["evidence"])
+    assert "analysis/derivatives_market_context.json" in eth["source_artifacts"]
+    assert "analysis/derivatives_market_context.json" in artifact["source_artifacts"]
+    assert manifest["counts"]["market_regime_derivatives_context_records"] == 1
+    assert manifest["counts"]["market_regime_derivatives_influenced_records"] == 1
+
+
 def test_market_regime_assessment_writes_warning_without_fake_records_when_signals_are_empty(
     tmp_path: Path,
 ) -> None:
@@ -298,6 +336,67 @@ def _write_empty_market_signals(config, run) -> list[str]:
     run.manifest["counts"]["market_signals"] = 0
     run.manifest["counts"]["market_signals_insufficient_data"] = 0
     return ["analysis/market_signals.json"]
+
+
+def _write_stressed_derivatives_context(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "derivatives_market_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": [
+                _derivatives_context_record(
+                    symbol="ETHUSDT",
+                    context_type="funding_pressure",
+                    data_class="funding_rate",
+                    state="extreme_positive_funding",
+                    severity="high",
+                    status="succeeded",
+                )
+            ],
+            "counts": {"records": 1},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/derivatives_market_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["derivatives_market_context"] = "analysis/derivatives_market_context.json"
+    return ["analysis/derivatives_market_context.json"]
+
+
+def _derivatives_context_record(
+    *,
+    symbol: str,
+    context_type: str,
+    data_class: str,
+    state: str,
+    severity: str,
+    status: str,
+) -> dict[str, Any]:
+    return {
+        "context_id": f"derivatives_context:{context_type}:binance_usdm:{symbol}:8h:2026-06-05T00:00:00Z",
+        "context_type": context_type,
+        "data_class": data_class,
+        "source": "binance_usdm",
+        "market_type": "usd_m_futures",
+        "symbol": symbol,
+        "period": "8h",
+        "as_of": "2026-06-05T00:00:00Z",
+        "status": status,
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "metrics": {},
+        "thresholds": {},
+        "evidence": [],
+        "uncertainty": [],
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": ["analysis/derivatives_market_context.json", "raw/derivatives_market_views.json"],
+    }
 
 
 def _strategy_signal(
