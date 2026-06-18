@@ -191,7 +191,53 @@ def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_rec
     assert not (result.run.report_dir / "report.md").exists()
 
 
-def _write_config(tmp_path: Path, *, second_source: bool = False) -> Path:
+def test_text_collection_uses_configured_market_proxy(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path, proxy_url="http://proxy.example:8080")
+    config = load_config(config_path)
+    proxy_handlers: list[dict[str, str]] = []
+    requested_urls: list[str] = []
+
+    def fake_proxy_handler(proxies):
+        proxy_handlers.append(proxies)
+        return proxies
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            requested_urls.append(request.full_url)
+            return _FakeResponse(
+                b"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Bitcoin market event</title>
+      <guid>event-1</guid>
+      <description>Source-provided event text.</description>
+    </item>
+  </channel>
+</rss>
+"""
+            )
+
+    def fake_build_opener(handler):
+        assert handler == {"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}
+        return FakeOpener()
+
+    monkeypatch.setattr("halpha.collectors.text.ProxyHandler", fake_proxy_handler)
+    monkeypatch.setattr("halpha.collectors.text.build_opener", fake_build_opener)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_market_data": _collect_market_data},
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_analysis_materials"
+    assert requested_urls == ["https://www.coindesk.com/arc/outboundfeeds/rss/"]
+    assert proxy_handlers == [{"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}]
+
+
+def _write_config(tmp_path: Path, *, second_source: bool = False, proxy_url: str | None = None) -> Path:
     source_block = """
     - name: coindesk
       type: rss
@@ -202,6 +248,13 @@ def _write_config(tmp_path: Path, *, second_source: bool = False) -> Path:
       type: rss
       url: https://cointelegraph.com/rss
 """
+    proxy_block = ""
+    if proxy_url is not None:
+        proxy_block = f"""
+  proxy:
+    enabled: true
+    url: {proxy_url}
+"""
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -211,6 +264,7 @@ run:
 market:
   enabled: true
   source: binance
+{proxy_block.rstrip()}
   symbols:
     - BTCUSDT
 text:

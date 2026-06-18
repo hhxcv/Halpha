@@ -54,7 +54,7 @@ def test_text_raw_validation_failure_records_manifest_error(tmp_path: Path, monk
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    def invalid_raw_text(text):
+    def invalid_raw_text(text, *, proxy_url=None):
         return {
             "schema_version": 1,
             "artifact_type": "text_events_raw",

@@ -150,11 +150,45 @@ def test_disabled_derivatives_config_does_not_write_fake_raw_artifact(tmp_path: 
     assert manifest["stages"][1]["artifacts"] == []
 
 
+def test_derivatives_collector_passes_configured_market_proxy(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(
+        tmp_path,
+        data_classes=["liquidation_summary"],
+        proxy_url="http://proxy.example:8080",
+    )
+    config = load_config(config_path)
+    captured_proxy_urls: list[str | None] = []
+
+    class FakeDerivativesSource:
+        def __init__(self, source: str, *, proxy_url: str | None = None) -> None:
+            self.source = source
+            captured_proxy_urls.append(proxy_url)
+
+        def fetch_records(self, request_class, *, symbol, period=None, limit=None):
+            raise AssertionError("liquidation_summary should not call REST fetch_records")
+
+    monkeypatch.setattr(
+        "halpha.collectors.derivatives_market.PublicDerivativesSource",
+        FakeDerivativesSource,
+    )
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_derivatives_market_data",
+        stage_handlers={"collect_market_data": _noop_stage},
+    )
+
+    assert result.succeeded is True
+    assert captured_proxy_urls == ["http://proxy.example:8080"]
+
+
 def _write_config(
     tmp_path: Path,
     *,
     derivatives_enabled: bool = True,
     data_classes: list[str] | None = None,
+    proxy_url: str | None = None,
 ) -> Path:
     data_classes = data_classes or [
         "funding_rate",
@@ -179,6 +213,13 @@ def _write_config(
     lookback:
       1h: 2
 """
+    proxy_block = ""
+    if proxy_url is not None:
+        proxy_block = f"""
+  proxy:
+    enabled: true
+    url: {proxy_url}
+"""
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -187,6 +228,7 @@ run:
 market:
   enabled: true
   source: binance
+{proxy_block.rstrip()}
   symbols:
     - BTCUSDT
   derivatives:

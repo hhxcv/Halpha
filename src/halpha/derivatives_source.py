@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode, urlparse
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 
 SUPPORTED_DERIVATIVES_SOURCES = {"binance_usdm"}
@@ -115,10 +115,11 @@ class PublicDerivativesSource:
         self,
         source: str,
         *,
+        proxy_url: str | None = None,
         urlopen_func: Callable[..., Any] | None = None,
     ) -> None:
         self.source = _require_supported_source(source)
-        self._urlopen = urlopen_func or urlopen
+        self._urlopen = urlopen_func or _urlopen_from_proxy(proxy_url)
 
     def fetch_records(
         self,
@@ -489,6 +490,28 @@ def _require_supported_source(source: str) -> str:
         supported = ", ".join(sorted(SUPPORTED_DERIVATIVES_SOURCES))
         raise DerivativesSourceError(f"unsupported derivatives source: {source}. Supported sources: {supported}.")
     return source
+
+
+def _urlopen_from_proxy(proxy_url: str | None):
+    proxy_url = _normalize_proxy_url(proxy_url)
+    if proxy_url is None:
+        return urlopen
+    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
+    return opener.open
+
+
+def _normalize_proxy_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise DerivativesSourceError("market.proxy.url must be a non-empty string.")
+    proxy_url = value.strip()
+    parsed = urlparse(proxy_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise DerivativesSourceError("market.proxy.url must be an http or https URL.")
+    if parsed.username or parsed.password:
+        raise DerivativesSourceError("market.proxy.url must not include credentials.")
+    return proxy_url
 
 
 def _require_request_spec(request_class: str) -> _RequestSpec:

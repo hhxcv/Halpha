@@ -7,7 +7,8 @@ from html import unescape
 from html.parser import HTMLParser
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlparse
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 from xml.etree import ElementTree
 
 from halpha.pipeline import PipelineError, RunContext
@@ -27,7 +28,7 @@ def collect_text_events(config: dict[str, Any], run: RunContext) -> list[str]:
         run.manifest["counts"]["text_event_items"] = 0
         return []
 
-    raw = collect_text_events_raw(text)
+    raw = collect_text_events_raw(text, proxy_url=_proxy_url_from_config(config))
     artifact_path = run.raw_dir / "text_events.json"
     write_json(artifact_path, raw)
     run.manifest["artifacts"]["raw_text_events"] = TEXT_ARTIFACT
@@ -44,8 +45,8 @@ def collect_text_events(config: dict[str, Any], run: RunContext) -> list[str]:
     return [TEXT_ARTIFACT]
 
 
-def collect_text_events_raw(text: dict[str, Any]) -> dict[str, Any]:
-    raw = _collect_raw_text_events(text)
+def collect_text_events_raw(text: dict[str, Any], *, proxy_url: str | None = None) -> dict[str, Any]:
+    raw = _collect_raw_text_events(text, proxy_url=proxy_url)
     try:
         validate_text_events_raw_artifact(raw, TEXT_ARTIFACT)
     except RawArtifactError as exc:
@@ -53,7 +54,7 @@ def collect_text_events_raw(text: dict[str, Any]) -> dict[str, Any]:
     return raw
 
 
-def _collect_raw_text_events(text: dict[str, Any]) -> dict[str, Any]:
+def _collect_raw_text_events(text: dict[str, Any], *, proxy_url: str | None) -> dict[str, Any]:
     collected_at = _utc_timestamp()
     max_items = text.get("max_items")
     if not isinstance(max_items, int) or isinstance(max_items, bool):
@@ -70,13 +71,14 @@ def _collect_raw_text_events(text: dict[str, Any]) -> dict[str, Any]:
         "items": [],
         "errors": [],
     }
+    urlopen_func = _urlopen_from_proxy(proxy_url)
 
     for source in sources:
         if max_items is not None and len(raw["items"]) >= max_items:
             break
 
         try:
-            items = _collect_rss_source(source, collected_at)
+            items = _collect_rss_source(source, collected_at, urlopen_func=urlopen_func)
         except TextCollectionError as exc:
             raw["errors"].append(
                 {
@@ -93,12 +95,12 @@ def _collect_raw_text_events(text: dict[str, Any]) -> dict[str, Any]:
     return raw
 
 
-def _collect_rss_source(source: dict[str, Any], collected_at: str) -> list[dict[str, Any]]:
+def _collect_rss_source(source: dict[str, Any], collected_at: str, *, urlopen_func) -> list[dict[str, Any]]:
     source_type = source.get("type")
     if source_type != RSS_SOURCE_TYPE:
         raise TextCollectionError(f"unsupported text source type: {source_type}")
 
-    body = _request_feed(source)
+    body = _request_feed(source, urlopen_func=urlopen_func)
     try:
         root = ElementTree.fromstring(body)
     except ElementTree.ParseError as exc:
@@ -111,11 +113,11 @@ def _collect_rss_source(source: dict[str, Any], collected_at: str) -> list[dict[
     return [_text_item(source, item, collected_at) for item in rss_items]
 
 
-def _request_feed(source: dict[str, Any]) -> str:
+def _request_feed(source: dict[str, Any], *, urlopen_func) -> str:
     url = source.get("url")
     request = Request(str(url), headers={"User-Agent": "Halpha/0.0.0"})
     try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        with urlopen_func(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read()
     except HTTPError as exc:
         detail = _read_error_detail(exc)
@@ -126,6 +128,41 @@ def _request_feed(source: dict[str, Any]) -> str:
         raise TextCollectionError("RSS request timed out") from exc
 
     return body.decode("utf-8", errors="replace")
+
+
+def _proxy_url_from_config(config: dict[str, Any]) -> str | None:
+    market = config.get("market")
+    if not isinstance(market, dict):
+        return None
+    proxy = market.get("proxy")
+    if not isinstance(proxy, dict) or proxy.get("enabled") is not True:
+        return None
+    url = proxy.get("url")
+    if isinstance(url, str) and url.strip():
+        return url.strip()
+    return None
+
+
+def _urlopen_from_proxy(proxy_url: str | None):
+    proxy_url = _normalize_proxy_url(proxy_url)
+    if proxy_url is None:
+        return urlopen
+    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
+    return opener.open
+
+
+def _normalize_proxy_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise TextCollectionError("market.proxy.url must be a non-empty string.")
+    proxy_url = value.strip()
+    parsed = urlparse(proxy_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise TextCollectionError("market.proxy.url must be an http or https URL.")
+    if parsed.username or parsed.password:
+        raise TextCollectionError("market.proxy.url must not include credentials.")
+    return proxy_url
 
 
 def _rss_items(root: ElementTree.Element) -> list[ElementTree.Element]:

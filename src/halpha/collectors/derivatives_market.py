@@ -45,7 +45,10 @@ def collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> 
     lookback = derivatives.get("lookback") if isinstance(derivatives.get("lookback"), dict) else {}
 
     try:
-        source = PublicDerivativesSource(str(derivatives.get("source") or ""))
+        source = PublicDerivativesSource(
+            str(derivatives.get("source") or ""),
+            proxy_url=_proxy_url_from_market_config(config),
+        )
     except DerivativesSourceError as exc:
         raw["errors"].append(_collector_error(derivatives, str(exc)))
     else:
@@ -287,6 +290,19 @@ def _derivatives_config(config: dict[str, Any]) -> dict[str, Any]:
         return {}
     derivatives = market.get("derivatives")
     return derivatives if isinstance(derivatives, dict) else {}
+
+
+def _proxy_url_from_market_config(config: dict[str, Any]) -> str | None:
+    market = config.get("market")
+    if not isinstance(market, dict):
+        return None
+    proxy = market.get("proxy")
+    if not isinstance(proxy, dict) or proxy.get("enabled") is not True:
+        return None
+    value = proxy.get("url")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _string_list(value: Any) -> list[str]:

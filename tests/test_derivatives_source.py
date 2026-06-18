@@ -180,6 +180,43 @@ def test_derivatives_source_records_partial_malformed_rows() -> None:
     ]
 
 
+def test_derivatives_source_uses_configured_proxy(monkeypatch) -> None:
+    proxy_handlers: list[dict[str, str]] = []
+    requested_urls: list[str] = []
+
+    def fake_proxy_handler(proxies):
+        proxy_handlers.append(proxies)
+        return proxies
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            requested_urls.append(request.full_url)
+            return _FakeResponse(
+                [
+                    {
+                        "symbol": "BTCUSDT",
+                        "fundingRate": "0.00010000",
+                        "fundingTime": _millis("2026-06-18T00:00:00Z"),
+                    }
+                ]
+            )
+
+    def fake_build_opener(handler):
+        assert handler == {"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}
+        return FakeOpener()
+
+    monkeypatch.setattr("halpha.derivatives_source.ProxyHandler", fake_proxy_handler)
+    monkeypatch.setattr("halpha.derivatives_source.build_opener", fake_build_opener)
+
+    source = PublicDerivativesSource("binance_usdm", proxy_url="http://proxy.example:8080")
+    result = source.fetch_records("funding_rate_history", symbol="BTCUSDT")
+
+    assert result["errors"] == []
+    assert len(result["records"]) == 1
+    assert requested_urls == ["https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT"]
+    assert proxy_handlers == [{"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}]
+
+
 def test_derivatives_source_records_http_unsupported_symbol_error() -> None:
     def fake_urlopen(request, timeout):
         body = b'{"code": -1121, "msg": "Invalid symbol."}'
@@ -276,6 +313,9 @@ def test_derivatives_source_rejects_invalid_request_parameters() -> None:
 
     with pytest.raises(DerivativesSourceError, match="order_book_depth limit must be one of"):
         source.fetch_records("order_book_depth", symbol="BTCUSDT", limit=7)
+
+    with pytest.raises(DerivativesSourceError, match="market.proxy.url must not include credentials"):
+        PublicDerivativesSource("binance_usdm", proxy_url="http://user:password@proxy.example:8080")
 
 
 def _millis(value: str) -> int:

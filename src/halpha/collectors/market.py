@@ -4,8 +4,8 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode, urlparse
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from halpha.pipeline import PipelineError, RunContext
 from halpha.raw_artifacts import RawArtifactError, validate_market_raw_artifact
@@ -62,9 +62,20 @@ def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
         )
         return raw
 
+    try:
+        urlopen_func = _urlopen_from_market_config(market)
+    except MarketCollectionError as exc:
+        raw["errors"].append(
+            {
+                "source": source_name,
+                "message": str(exc),
+            }
+        )
+        return raw
+
     for symbol in market.get("symbols", []):
         try:
-            ticker = _request_binance_ticker(symbol)
+            ticker = _request_binance_ticker(symbol, urlopen_func=urlopen_func)
             raw["items"].append(_market_item(ticker, collected_at))
         except MarketCollectionError as exc:
             raw["errors"].append(
@@ -95,11 +106,11 @@ def _raw_artifact(source_name: Any, collected_at: str) -> dict[str, Any]:
     }
 
 
-def _request_binance_ticker(symbol: str) -> dict[str, Any]:
+def _request_binance_ticker(symbol: str, *, urlopen_func) -> dict[str, Any]:
     url = _ticker_url(symbol)
     request = Request(url, headers={"User-Agent": "Halpha/0.0.0"})
     try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        with urlopen_func(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read().decode("utf-8")
     except HTTPError as exc:
         detail = _read_error_detail(exc)
@@ -121,6 +132,30 @@ def _request_binance_ticker(symbol: str) -> dict[str, Any]:
 def _ticker_url(symbol: str) -> str:
     query = urlencode({"symbol": symbol})
     return f"{BINANCE_BASE_URL}{BINANCE_TICKER_PATH}?{query}"
+
+
+def _urlopen_from_market_config(market: dict[str, Any]):
+    proxy_url = _proxy_url_from_market_config(market)
+    if proxy_url is None:
+        return urlopen
+    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
+    return opener.open
+
+
+def _proxy_url_from_market_config(market: dict[str, Any]) -> str | None:
+    proxy = market.get("proxy")
+    if not isinstance(proxy, dict) or proxy.get("enabled") is not True:
+        return None
+    url = proxy.get("url")
+    if not isinstance(url, str) or not url.strip():
+        raise MarketCollectionError("market.proxy.url must be a non-empty string when market.proxy.enabled is true")
+    proxy_url = url.strip()
+    parsed = urlparse(proxy_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise MarketCollectionError("market.proxy.url must be an http or https URL")
+    if parsed.username or parsed.password:
+        raise MarketCollectionError("market.proxy.url must not include credentials")
+    return proxy_url
 
 
 def _market_item(ticker: dict[str, Any], collected_at: str) -> dict[str, Any]:
