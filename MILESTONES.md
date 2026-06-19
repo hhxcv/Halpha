@@ -20,9 +20,56 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M15 - User State and Personalized Risk Constraints v1
+### M16 - Local Monitoring and Alert Runtime v1
 
 Status: active.
+
+Goal:
+
+```text
+Move Halpha from purely manual periodic runs to a local, observable, low-complexity monitoring loop that can refresh bounded evidence, reassess alert decisions, and archive emitted or suppressed alerts without becoming a hosted service or trading system.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M15 user-state and personalized-risk paths, M14 intelligence fusion, M13 feature/factor, M12 on-chain flow, M11 macro/calendar, M10 derivatives, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable local-monitoring contracts for monitor configuration, cycle identity, run refs, trigger source, cycle status, alert archive records, suppression decisions, cooldown state, duplicate keys, warnings, errors, and health summaries;
+* support an explicit `monitor` command family that can run one bounded monitoring cycle or a finite local loop with configured interval, maximum cycles, clean stop behavior, and no hidden background service;
+* reuse existing pipeline stages for targeted reassessment instead of inventing a separate fake monitoring flow, with the default monitor path stopping before Codex report generation unless full report validation is explicitly requested;
+* produce a monitor cycle manifest that records cycle start and finish times, source config, linked run directory, stage boundary, alert decision artifacts, emitted alert records, suppressed alert records, warnings, errors, and exit status;
+* persist a local alert archive that records alert decisions, deterministic alert keys, priority, source artifact refs, personalized-risk linkage where present, duplicate state, cooldown state, suppression reasons, and timestamps without storing private user-state values;
+* implement deterministic duplicate suppression and cooldown handling so repeated equivalent alert decisions are archived as suppressed records rather than repeatedly emitted;
+* produce a monitor health summary that makes recent cycle status, failures, archive counts, suppression counts, cooldown counts, and latest linked run refs inspectable from a read-only command;
+* update data-quality or inspection paths where needed so monitor artifacts and alert archive state are visible without dumping raw alert records or local private values;
+* ensure monitor artifacts remain local plain files or small local state, and Codex may explain monitor evidence only when explicitly included by existing report paths;
+* add tests for one-shot cycle execution, finite loop behavior, clean stop limits, alert archive writes, duplicate suppression, cooldown, missing upstream artifacts, failed cycle recording, health inspection, and privacy boundaries;
+* verify the M16 product path with automated tests, local no-Codex monitor runs, and at least one full local product validation with Codex where report behavior is affected.
+
+M16 favors:
+
+* a simple local CLI loop over background daemons, hosted schedulers, or distributed workflow systems;
+* idempotent cycle records and deterministic alert keys over implicit runtime memory;
+* archived emitted and suppressed alerts over ephemeral terminal-only output;
+* reusing existing Halpha stages and artifacts over parallel monitoring-only logic;
+* observable failure and health artifacts over silent retries;
+* cooldown and duplicate suppression over noisy repeated alerts;
+* local plain artifacts and small local state over service infrastructure;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M16 does not require:
+
+* Kafka, Redis, Celery, Prefect, Airflow, cron integration, websocket streams, hosted services, mobile push, email delivery, or dashboard UI;
+* a persistent daemon, Windows service, system tray app, cloud worker, remote scheduler, or multi-user runtime;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* new public data sources beyond the already configured product sources;
+* automatic strategy promotion, alert subscription management, or user-notification delivery channels;
+* making Codex or another LLM the source of monitor state, alert priority, suppression decisions, cooldown decisions, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M15 - User State and Personalized Risk Constraints v1
+
+Status: completed.
 
 Goal:
 
@@ -63,8 +110,6 @@ M15 does not require:
 * dashboard UI, hosted services, scheduler, daemon, websocket, push notification, or alert delivery runtime;
 * black-box personalization models, ML ranking, vector databases, hidden profile services, or hidden model state;
 * making Codex or another LLM the source of user state, constraints, holdings, allocations, action recommendations, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M14 - Intelligence Fusion Engine v1
 
