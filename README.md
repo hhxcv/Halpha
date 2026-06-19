@@ -341,9 +341,9 @@ analysis, or placeholder reports.
 
 Feature, factor, and multi-source signal contracts are defined in
 `docs/feature-factor-contracts.md`. Product runs generate
-`analysis/feature_snapshots.json`, `analysis/factor_states.json`, and
-`analysis/multi_source_signals.json`. `analysis/factor_signal_material.md` is
-not generated until its pipeline stage is implemented.
+`analysis/feature_snapshots.json`, `analysis/factor_states.json`,
+`analysis/multi_source_signals.json`, and bounded
+`analysis/factor_signal_material.md` for Codex/report input.
 
 ## Quantitative Research
 

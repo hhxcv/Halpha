@@ -195,12 +195,11 @@ Feature/factor artifacts:
 - `analysis/factor_signal_material.md`
 
 These contracts are defined in `docs/feature-factor-contracts.md`. Product runs
-generate `analysis/feature_snapshots.json`, `analysis/factor_states.json`, and
-`analysis/multi_source_signals.json`; the factor-signal material artifact is
-not generated until its pipeline stage is implemented. Feature, factor, and
-multi-source signal JSON artifacts are intermediate evidence and should not be
-embedded in full Codex input. Codex should consume bounded
-`analysis/factor_signal_material.md` after that material stage exists.
+generate `analysis/feature_snapshots.json`, `analysis/factor_states.json`,
+`analysis/multi_source_signals.json`, and bounded
+`analysis/factor_signal_material.md`. Feature, factor, and multi-source signal
+JSON artifacts are intermediate evidence and should not be embedded in full
+Codex input. Codex should consume bounded `analysis/factor_signal_material.md`.
 
 ### Decision And Risk Evidence
 
@@ -443,7 +442,7 @@ Inspect:
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
-- `analysis/factor_signal_material.md` when implemented
+- `analysis/factor_signal_material.md`
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or

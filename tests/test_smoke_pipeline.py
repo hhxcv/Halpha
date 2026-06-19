@@ -77,6 +77,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/feature_snapshots.json",
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
+        "analysis/factor_signal_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
         "analysis/research_context.md",
@@ -105,6 +106,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "feature_snapshots": "analysis/feature_snapshots.json",
             "factor_states": "analysis/factor_states.json",
             "multi_source_signals": "analysis/multi_source_signals.json",
+            "factor_signal_material": "analysis/factor_signal_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
         "raw_text_events": "raw/text_events.json",
@@ -196,15 +198,20 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     event_material = (run_dir / "analysis/event_intelligence_material.md").read_text(encoding="utf-8")
     alert_material = (run_dir / "analysis/alert_decision_material.md").read_text(encoding="utf-8")
     quality_material = (run_dir / "analysis/data_quality_material.md").read_text(encoding="utf-8")
+    factor_signal_material = (run_dir / "analysis/factor_signal_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_event_intelligence_material" in event_material
     assert "codex_may_generate_event_categories: false" in event_material
     assert "artifact_type: analysis_alert_decision_material" in alert_material
     assert "codex_may_generate_alert_priority: false" in alert_material
     assert "artifact_type: analysis_data_quality_material" in quality_material
     assert "codex_may_generate_quality_checks: false" in quality_material
+    assert "artifact_type: analysis_factor_signal_material" in factor_signal_material
+    assert "codex_may_generate_factor_scores: false" in factor_signal_material
+    assert "codex_may_generate_signal_states: false" in factor_signal_material
 
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     assert "Use Chinese section headings only." in prompt
+    assert "Factor signal material rules:" in prompt
     assert "Event intelligence material rules:" in prompt
     assert "Alert decision material rules:" in prompt
     assert "Data quality material rules:" in prompt
@@ -329,6 +336,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/feature_snapshots.json",
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
+        "analysis/factor_signal_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
         "analysis/text_event_classification_evidence.json",
@@ -430,6 +438,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["feature_snapshot_coverage_records"] >= 1
     assert manifest["counts"]["factor_states"] >= 1
     assert manifest["counts"]["multi_source_signals"] >= 1
+    assert manifest["counts"]["factor_signal_material_records"] >= 1
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
@@ -457,6 +466,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["feature_snapshots"] == "analysis/feature_snapshots.json"
     assert manifest["artifacts"]["factor_states"] == "analysis/factor_states.json"
     assert manifest["artifacts"]["multi_source_signals"] == "analysis/multi_source_signals.json"
+    assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"
     assert manifest["artifacts"]["text_event_classification_evidence"] == (
@@ -599,6 +609,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "## delta_vs_previous_run" in decision_material
 
     signal_material = (run_dir / "analysis/market_signal_material.md").read_text(encoding="utf-8")
+    factor_signal_material = (run_dir / "analysis/factor_signal_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_market_signal_material" in signal_material
     assert "record_type: market_signal" in signal_material
     assert "key_values:" in signal_material
@@ -606,6 +617,15 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "uncertainty:" in signal_material
     assert "raw_ohlcv_history_embedded: false" in signal_material
     assert "open_time:" not in signal_material
+    assert "artifact_type: analysis_factor_signal_material" in factor_signal_material
+    assert "record_type: factor_signal_overview" in factor_signal_material
+    assert "record_type: factor_state" in factor_signal_material
+    assert "record_type: multi_source_signal" in factor_signal_material
+    assert "codex_may_generate_factor_scores: false" in factor_signal_material
+    assert "codex_may_generate_signal_states: false" in factor_signal_material
+    assert "full_feature_snapshots_json_embedded: false" in factor_signal_material
+    assert "full_factor_states_json_embedded: false" in factor_signal_material
+    assert "full_multi_source_signals_json_embedded: false" in factor_signal_material
 
     context = (run_dir / "codex_context/context.md").read_text(encoding="utf-8")
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
@@ -619,6 +639,10 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in research_context
     assert "market_signals: analysis/market_signals.json" in research_context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
+    assert "feature_snapshots: analysis/feature_snapshots.json" in research_context
+    assert "factor_states: analysis/factor_states.json" in research_context
+    assert "multi_source_signals: analysis/multi_source_signals.json" in research_context
+    assert "factor_signal_material: analysis/factor_signal_material.md" in research_context
     assert "alert_decision_material: analysis/alert_decision_material.md" in research_context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in research_context
     assert "data_quality_material: analysis/data_quality_material.md" in research_context
@@ -626,6 +650,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "artifact_type: analysis_strategy_evaluation_material" in research_context
     assert "artifact_type: analysis_strategy_experiment_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
+    assert "artifact_type: analysis_factor_signal_material" in research_context
     assert "artifact_type: analysis_alert_decision_material" in research_context
     assert "artifact_type: analysis_event_intelligence_material" in research_context
     assert "artifact_type: analysis_data_quality_material" in research_context
@@ -639,7 +664,12 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
+    assert "feature_snapshots: analysis/feature_snapshots.json" in context
+    assert "factor_states: analysis/factor_states.json" in context
+    assert "multi_source_signals: analysis/multi_source_signals.json" in context
+    assert "factor_signal_material: analysis/factor_signal_material.md" in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
+    assert "artifact_type: analysis_factor_signal_material" in context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
     assert "artifact_type: analysis_alert_decision_material" in context
     assert "alert_decision_material: analysis/alert_decision_material.md" in context
@@ -656,6 +686,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "Strategy experiment gate material rules:" in prompt
     assert "Use Halpha-generated effectiveness gate statuses only" in prompt
     assert "Do not generate or revise strategy gate statuses" in prompt
+    assert "Factor signal material rules:" in prompt
+    assert "When factor/signal material is present" in prompt
+    assert "Do not generate or revise feature records" in prompt
     assert "cost assumptions, baseline comparison, sample limits" in prompt
     assert "Use Halpha-generated evaluation metrics only" in prompt
     assert "Decision intelligence material rules:" in prompt
@@ -687,6 +720,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "## " + "\u51b3\u7b56\u652f\u6301" in report
     assert "action_level=TRY_SMALL" in report
     assert "decision_bias=tentative_constructive" in report
+    assert "factor_state=trend/supportive" in report
+    assert "multi_source_signal_state=supportive" in report
     assert "cost_assumptions" in report
     assert "baseline_comparison" in report
     assert "sample_limits=short_window" in report
@@ -912,6 +947,7 @@ def _m3_report_stdout() -> str:
             "",
             "- 趋势信号显示 BTCUSDT 与 ETHUSDT 的样本窗口偏强。",
             "- 证据：报告上下文包含 tsmom_vol_scaled 策略信号记录。",
+            "- factor_state=trend/supportive; multi_source_signal_state=supportive.",
             "- 不确定性：这些信号仅基于 OHLCV 窗口，不包含文本事件信号。",
             "",
             "## 决策支持",

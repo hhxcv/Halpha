@@ -22,6 +22,7 @@ MACRO_CALENDAR_MATERIAL_ARTIFACT = "analysis/macro_calendar_material.md"
 ONCHAIN_FLOW_MATERIAL_ARTIFACT = "analysis/onchain_flow_material.md"
 STRATEGY_EVALUATION_MATERIAL_ARTIFACT = "analysis/strategy_evaluation_material.md"
 STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT = "analysis/strategy_experiment_material.md"
+FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
 DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
 ALERT_DECISION_MATERIAL_ARTIFACT = "analysis/alert_decision_material.md"
 EVENT_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/event_intelligence_material.md"
@@ -92,6 +93,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=bool(run.manifest.get("artifacts", {}).get("strategy_experiment_material")),
         producer_stage="build_strategy_experiment_material",
     )
+    factor_signal_material = _read_material(
+        run.analysis_dir / "factor_signal_material.md",
+        FACTOR_SIGNAL_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("factor_signal_material")),
+        producer_stage="build_analysis_materials",
+    )
     decision_intelligence_material = _read_material(
         run.analysis_dir / "decision_intelligence_material.md",
         DECISION_INTELLIGENCE_MATERIAL_ARTIFACT,
@@ -118,6 +125,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         onchain_flow_material=onchain_flow_material,
         strategy_evaluation_material=strategy_evaluation_material,
         strategy_experiment_material=strategy_experiment_material,
+        factor_signal_material=factor_signal_material,
         decision_intelligence_material=decision_intelligence_material,
         alert_decision_material=alert_decision_material,
         event_intelligence_material=event_intelligence_material,
@@ -137,6 +145,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         onchain_flow_material=material_inputs[ONCHAIN_FLOW_MATERIAL_ARTIFACT]["content"],
         strategy_evaluation_material=material_inputs[STRATEGY_EVALUATION_MATERIAL_ARTIFACT]["content"],
         strategy_experiment_material=material_inputs[STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT]["content"],
+        factor_signal_material=material_inputs[FACTOR_SIGNAL_MATERIAL_ARTIFACT]["content"],
         decision_intelligence_material=material_inputs[DECISION_INTELLIGENCE_MATERIAL_ARTIFACT]["content"],
         alert_decision_material=material_inputs[ALERT_DECISION_MATERIAL_ARTIFACT]["content"],
         event_intelligence_material=material_inputs[EVENT_INTELLIGENCE_MATERIAL_ARTIFACT]["content"],
@@ -173,6 +182,7 @@ def render_research_context(
     onchain_flow_material: str | None,
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
+    factor_signal_material: str | None,
     decision_intelligence_material: str | None,
     alert_decision_material: str | None,
     event_intelligence_material: str | None,
@@ -239,6 +249,8 @@ def render_research_context(
     lines.extend(_embedded_material(STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material))
     lines.extend(["", "## strategy_experiment_material", ""])
     lines.extend(_embedded_material(STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material))
+    lines.extend(["", "## factor_signal_material", ""])
+    lines.extend(_embedded_material(FACTOR_SIGNAL_MATERIAL_ARTIFACT, factor_signal_material))
     lines.extend(["", "## decision_intelligence_material", ""])
     lines.extend(_embedded_material(DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material))
     lines.extend(["", "## alert_decision_material", ""])
@@ -263,6 +275,10 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "derivatives_market_material": artifacts.get("derivatives_market_material"),
         "macro_calendar_material": artifacts.get("macro_calendar_material"),
         "onchain_flow_material": artifacts.get("onchain_flow_material"),
+        "feature_snapshots": artifacts.get("feature_snapshots"),
+        "factor_states": artifacts.get("factor_states"),
+        "multi_source_signals": artifacts.get("multi_source_signals"),
+        "factor_signal_material": artifacts.get("factor_signal_material"),
         "data_quality_summary": artifacts.get("data_quality_summary"),
         "data_quality_material": artifacts.get("data_quality_material"),
         "outcome_tracking_material": artifacts.get("outcome_tracking_material"),
@@ -317,6 +333,15 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "onchain_flow_views": artifacts.get("onchain_flow_views"),
                 "onchain_flow_context": artifacts.get("onchain_flow_context"),
                 "onchain_flow_material": artifacts.get("onchain_flow_material"),
+            }
+        )
+    if artifacts.get("factor_signal_material"):
+        index.update(
+            {
+                "feature_snapshots": artifacts.get("feature_snapshots"),
+                "factor_states": artifacts.get("factor_states"),
+                "multi_source_signals": artifacts.get("multi_source_signals"),
+                "factor_signal_material": artifacts.get("factor_signal_material"),
             }
         )
     if artifacts.get("decision_intelligence_material"):
@@ -404,6 +429,9 @@ def _source_policy() -> dict[str, Any]:
         "full_derivatives_context_json_embedded": False,
         "full_macro_calendar_context_json_embedded": False,
         "full_onchain_flow_context_json_embedded": False,
+        "full_feature_snapshots_json_embedded": False,
+        "full_factor_states_json_embedded": False,
+        "full_multi_source_signals_json_embedded": False,
         "full_catalog_embedded": False,
         "full_run_index_embedded": False,
         "full_intermediate_json_embedded": False,
@@ -459,6 +487,23 @@ def _generation_constraints() -> dict[str, Any]:
             "include_costs_benchmark_coverage_sample_limits_and_uncertainty": True,
             "do_not_generate_gate_outcomes": True,
             "do_not_upgrade_rejected_watchlisted_or_insufficient_evidence": True,
+        },
+        "factor_signal_requirements": {
+            "include_when_factor_signal_material_exists": True,
+            "use_halpha_feature_records_only": True,
+            "use_halpha_factor_states_only": True,
+            "use_halpha_multi_source_signal_states_only": True,
+            "explain_agreement_conflict_missing_stale_degraded_and_uncertainty": True,
+            "do_not_generate_feature_records": True,
+            "do_not_generate_factor_scores": True,
+            "do_not_generate_factor_states": True,
+            "do_not_generate_signal_states": True,
+            "do_not_generate_action_levels": True,
+            "do_not_generate_price_forecasts": True,
+            "do_not_create_trading_instructions": True,
+            "full_feature_snapshots_json_embedded": False,
+            "full_factor_states_json_embedded": False,
+            "full_multi_source_signals_json_embedded": False,
         },
         "derivatives_market_requirements": {
             "include_when_derivatives_market_material_exists": True,
@@ -613,6 +658,7 @@ def _prepare_material_inputs(
     onchain_flow_material: str | None,
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
+    factor_signal_material: str | None,
     decision_intelligence_material: str | None,
     alert_decision_material: str | None,
     event_intelligence_material: str | None,
@@ -628,6 +674,7 @@ def _prepare_material_inputs(
         (ONCHAIN_FLOW_MATERIAL_ARTIFACT, onchain_flow_material),
         (STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material),
         (STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material),
+        (FACTOR_SIGNAL_MATERIAL_ARTIFACT, factor_signal_material),
         (DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material),
         (ALERT_DECISION_MATERIAL_ARTIFACT, alert_decision_material),
         (EVENT_INTELLIGENCE_MATERIAL_ARTIFACT, event_intelligence_material),
