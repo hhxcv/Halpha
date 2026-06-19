@@ -344,7 +344,7 @@ They must not fabricate skipped artifacts.
 
 `text-intel` does not run the full report pipeline or Codex CLI.
 
-`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, and data-quality summaries.
+`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, and data-quality summaries.
 
 `data inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
 
@@ -370,7 +370,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
-* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, and latest data-quality state without Codex CLI.
+* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, and latest data-quality state without Codex CLI.
 * Use `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect data-quality state for a specific run.
 * Use `python -m halpha outcomes inspect --config config.example.yaml` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
 * Use `python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect outcome state for a specific run.
@@ -381,6 +381,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>` to rerun only report-facing alert material against existing upstream artifacts.
 * For Codex input acceptance, inspect `run_manifest.json` `codex_input`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`.
 * For Codex input acceptance, verify full intermediate JSON, raw streams, shared OHLCV history, and full run manifests are referenced by path, not embedded wholesale.
+* For on-chain flow acceptance, inspect `raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`, `raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, `analysis/onchain_flow_material.md`, `analysis/data_quality_summary.json`, and `python -m halpha data inspect --config config.example.yaml`.
 * Treat critical asset-mapping errors, false duplicate merges, missing traceability, or unsafe event upgrades as regression-fixture candidates.
 * Treat unsafe alert escalation, missing no-alert suppression, or Codex-boundary leakage as regression-fixture candidates.
 * For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.

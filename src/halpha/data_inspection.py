@@ -20,6 +20,9 @@ DERIVATIVES_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 MACRO_CALENDAR_SCHEMA_ARTIFACT = "data/macro/metadata/macro_calendar_schema.json"
 MACRO_CALENDAR_STATE_ARTIFACT = "data/macro/metadata/macro_calendar_state.json"
 MACRO_CALENDAR_VIEWS_ARTIFACT = "raw/macro_calendar_views.json"
+ONCHAIN_FLOW_SCHEMA_ARTIFACT = "data/onchain/metadata/onchain_flow_schema.json"
+ONCHAIN_FLOW_STATE_ARTIFACT = "data/onchain/metadata/onchain_flow_state.json"
+ONCHAIN_FLOW_VIEWS_ARTIFACT = "raw/onchain_flow_views.json"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 
 
@@ -49,6 +52,7 @@ def inspect_local_data(
         _ohlcv_section(config, config_path, base=base),
         _derivatives_section(config, config_path, run_dir=run_dir, base=base),
         _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
+        _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -269,6 +273,65 @@ def _macro_calendar_section(
         "macro_calendar_history",
         status,
         artifact=MACRO_CALENDAR_STATE_ARTIFACT,
+        fields=fields,
+        reason="; ".join(warnings) if warnings else None,
+    )
+
+
+def _onchain_flow_section(
+    config: dict[str, Any],
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    onchain_flow = config.get("onchain_flow") if isinstance(config.get("onchain_flow"), dict) else None
+    if not isinstance(onchain_flow, dict) or not onchain_flow.get("enabled"):
+        return _section("onchain_flow_history", "skipped", reason="onchain_flow is not enabled.")
+
+    schema, schema_error = _read_json(base / ONCHAIN_FLOW_SCHEMA_ARTIFACT)
+    state, state_error = _read_json(base / ONCHAIN_FLOW_STATE_ARTIFACT)
+    warnings = [error for error in (schema_error, state_error) if error]
+    totals = _dict(state.get("totals")) if isinstance(state, dict) else {}
+    groups = _list(state.get("groups")) if isinstance(state, dict) else []
+    availability = _list(state.get("availability")) if isinstance(state, dict) else []
+    fields = {
+        "records": _int(totals.get("records")),
+        "groups": len(groups),
+        "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
+        "warnings": len(_list(state.get("warnings"))) if isinstance(state, dict) else len(warnings),
+        "errors": len(_list(state.get("errors"))) if isinstance(state, dict) else 0,
+        "duplicate_records": _int(totals.get("duplicate_records")),
+        "conflicting_duplicates": _int(totals.get("conflicting_duplicates")),
+        "availability_records": len(availability),
+        "unavailable_records": _status_count(availability, "unavailable"),
+        "partial_records": _status_count(availability, "partial"),
+        "failed_records": _status_count(availability, "failed"),
+        "stale_records": _status_count(availability, "stale"),
+        "degraded_records": _status_count(availability, "degraded"),
+        "insufficient_data_records": _status_count(availability, "insufficient_data"),
+    }
+
+    view_run_dir = _resolve_run_dir(run_dir, base=base) if run_dir is not None else _latest_run_from_index(config_path)
+    if view_run_dir is not None:
+        views, views_error = _read_json(view_run_dir / ONCHAIN_FLOW_VIEWS_ARTIFACT)
+        if views_error:
+            warnings.append(views_error)
+        else:
+            view_records = _list(views.get("views"))
+            fields["views"] = len(view_records)
+            fields["view_records"] = sum(_int(view.get("included_record_count")) for view in view_records if isinstance(view, dict))
+            fields["bounded_views"] = _status_count(view_records, "bounded")
+            fields["partial_views"] = _status_count(view_records, "partial")
+            fields["stale_views"] = _status_count(view_records, "stale")
+            fields["unavailable_views"] = _status_count(view_records, "unavailable")
+            fields["skipped_views"] = _status_count(view_records, "skipped")
+
+    status = "warning" if warnings else str(state.get("status") or "ok")
+    return _section(
+        "onchain_flow_history",
+        status,
+        artifact=ONCHAIN_FLOW_STATE_ARTIFACT,
         fields=fields,
         reason="; ".join(warnings) if warnings else None,
     )

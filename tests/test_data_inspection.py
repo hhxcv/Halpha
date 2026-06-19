@@ -33,6 +33,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "ohlcv_history: skipped" in output
     assert "derivatives_market_history: skipped" in output
     assert "macro_calendar_history: skipped" in output
+    assert "onchain_flow_history: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -64,9 +65,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "items=1" in output
     assert "derivatives_market_history: skipped" in output
     assert "macro_calendar_history: skipped" in output
+    assert "onchain_flow_history: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
-    assert "checks=16" in output
+    assert "checks=21" in output
     assert "degraded=1" in output
     assert "runs/run-1/analysis/data_quality_summary.json" in output
     assert "CREATE TABLE" not in output
@@ -171,6 +173,39 @@ def test_data_inspect_reports_macro_calendar_store_and_current_run_views(
     assert str(tmp_path) not in output
 
 
+def test_data_inspect_reports_onchain_flow_store_and_current_run_views(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False, onchain_enabled=True)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_onchain_flow_store_metadata(tmp_path)
+    _write_onchain_flow_views(run)
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "status: ok" in output
+    assert "onchain_flow_history: ok" in output
+    assert "records=4" in output
+    assert "groups=1" in output
+    assert "schema_version=1" in output
+    assert "duplicate_records=1" in output
+    assert "conflicting_duplicates=1" in output
+    assert "availability_records=2" in output
+    assert "partial_records=1" in output
+    assert "unavailable_records=1" in output
+    assert "views=4" in output
+    assert "view_records=2" in output
+    assert "bounded_views=1" in output
+    assert "stale_views=1" in output
+    assert "skipped_views=1" in output
+    assert "onchain_flow_state.json" in output
+    assert "total_circulating_usd" not in output
+    assert str(tmp_path) not in output
+
+
 def test_data_inspect_returns_error_for_missing_requested_run_dir(tmp_path: Path, capsys) -> None:
     config_path = _write_config(tmp_path, ohlcv_enabled=False)
 
@@ -209,6 +244,7 @@ def _write_config(
     ohlcv_enabled: bool,
     derivatives_enabled: bool = False,
     macro_enabled: bool = False,
+    onchain_enabled: bool = False,
     proxy_url: str | None = None,
 ) -> Path:
     proxy_block = (
@@ -271,6 +307,28 @@ macro_calendar:
   enabled: false
 """
     )
+    onchain_block = (
+        """
+onchain_flow:
+  enabled: true
+  source: public_aggregate
+  data_classes:
+    - stablecoin_supply
+    - exchange_flow_availability
+  assets:
+    - ALL_STABLECOINS
+    - BTC
+  chains:
+    - all
+    - bitcoin
+  lookback_days: 7
+"""
+        if onchain_enabled
+        else """
+onchain_flow:
+  enabled: false
+"""
+    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -286,6 +344,7 @@ market:
 {ohlcv_block.rstrip()}
 {derivatives_block.rstrip()}
 {macro_block.rstrip()}
+{onchain_block.rstrip()}
 text:
   enabled: false
 report:
@@ -343,8 +402,8 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
             "created_at": "2026-06-05T00:10:00Z",
             "status": quality_status,
             "counts": {
-                "checks": 16,
-                "ok": 16 - degraded_count - warning_count,
+                "checks": 21,
+                "ok": 21 - degraded_count - warning_count,
                 "warning": warning_count,
                 "degraded": degraded_count,
                 "skipped": 0,
@@ -512,6 +571,106 @@ def _write_macro_calendar_views(run: RunContext) -> None:
                     "status": "skipped",
                     "latest_observation_time": None,
                     "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_onchain_flow_store_metadata(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "onchain" / "metadata" / "onchain_flow_schema.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_schema",
+            "identity": ["source", "data_class", "asset", "chain", "as_of"],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "onchain" / "metadata" / "onchain_flow_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_state",
+            "updated_at": "2026-06-05T00:10:00Z",
+            "status": "ok",
+            "storage_path": "data/onchain/flow",
+            "totals": {
+                "records": 4,
+                "duplicate_records": 1,
+                "conflicting_duplicates": 1,
+            },
+            "groups": [
+                {
+                    "source": "defillama_stablecoins",
+                    "data_class": "stablecoin_supply",
+                    "asset": "ALL_STABLECOINS",
+                    "chain": "all",
+                    "row_count": 4,
+                }
+            ],
+            "availability": [
+                {
+                    "source": "defillama_stablecoins",
+                    "data_class": "stablecoin_supply",
+                    "status": "partial",
+                },
+                {
+                    "source": "public_aggregate",
+                    "data_class": "exchange_flow_availability",
+                    "status": "unavailable",
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_onchain_flow_views(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "onchain_flow_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_views",
+            "created_at": "2026-06-05T00:10:00Z",
+            "views": [
+                {
+                    "view_id": "onchain_flow_view:stablecoin_supply:defillama_stablecoins:ALL_STABLECOINS:all:latest",
+                    "status": "bounded",
+                    "latest_observation_time": "2026-06-05T00:00:00Z",
+                    "included_record_count": 2,
+                    "records": [{"total_circulating_usd": 123.0}],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "onchain_flow_view:stablecoin_supply:defillama_stablecoins:ALL_STABLECOINS:all:partial",
+                    "status": "partial",
+                    "latest_observation_time": None,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "onchain_flow_view:stablecoin_supply:defillama_stablecoins:ALL_STABLECOINS:all:stale",
+                    "status": "stale",
+                    "latest_observation_time": None,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "onchain_flow_view:exchange_flow_availability:public_aggregate:BTC:bitcoin:skipped",
+                    "status": "skipped",
+                    "latest_observation_time": None,
                     "included_record_count": 0,
                     "records": [],
                     "warnings": [],
