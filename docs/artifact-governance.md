@@ -10,6 +10,8 @@ milestone plan.
 - `AGENTS.md`: AI-agent rules, artifact expectations, and validation rules.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
+- `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy,
+  material, downstream, and Codex-boundary contracts.
 - `docs/derivatives-market-contracts.md`: derivatives and
   market-structure data, context, material, and Codex-boundary contracts.
 - `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context,
@@ -194,6 +196,22 @@ Strategy and signal artifacts:
 Codex should consume bounded strategy and signal material instead of full
 strategy run, benchmark, or experiment JSON.
 
+### Strategy Lifecycle Evidence
+
+Planned strategy lifecycle artifacts:
+
+- `analysis/strategy_lifecycle_state.json`
+- `analysis/strategy_lifecycle_material.md` (planned)
+
+These contracts are defined in `docs/strategy-lifecycle-contracts.md`. The
+planned lifecycle state artifact records deterministic strategy identity,
+contract version, parameter version, parameter digest, lifecycle status,
+degradation, insufficient-evidence, watchlist, rejection, retirement, policy,
+warnings, errors, and source refs from existing strategy and outcome evidence.
+The planned lifecycle material artifact is the bounded Codex-facing summary.
+Codex should consume bounded lifecycle material instead of full lifecycle JSON,
+full strategy runs, full outcome history, or local lifecycle policy input.
+
 ### Feature, Factor, And Multi-Source Signal Evidence
 
 Feature/factor artifacts:
@@ -344,6 +362,7 @@ Eligible Codex input:
 - `analysis/market_signal_material.md`
 - `analysis/strategy_evaluation_material.md`
 - `analysis/strategy_experiment_material.md`
+- `analysis/strategy_lifecycle_material.md` (planned)
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`

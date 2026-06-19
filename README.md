@@ -613,6 +613,7 @@ they are not proof of a real-source product run.
   - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
   - `docs/research-data-contracts.md`: shared local research data, run index, text-event history, and data-quality contracts.
   - `docs/quant-contracts.md`: quantitative research contracts.
+  - `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.
   - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
   - `docs/macro-calendar-contracts.md`: macro and scheduled-event data contracts.
   - `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data contracts.
