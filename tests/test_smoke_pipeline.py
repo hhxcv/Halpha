@@ -77,6 +77,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/feature_snapshots.json",
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
+        "analysis/intelligence_fusion.json",
         "analysis/factor_signal_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -106,6 +107,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "feature_snapshots": "analysis/feature_snapshots.json",
             "factor_states": "analysis/factor_states.json",
             "multi_source_signals": "analysis/multi_source_signals.json",
+            "intelligence_fusion": "analysis/intelligence_fusion.json",
             "factor_signal_material": "analysis/factor_signal_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
@@ -174,6 +176,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_feature_snapshots", "succeeded"),
         ("build_factor_states", "succeeded"),
         ("build_multi_source_signals", "succeeded"),
+        ("build_intelligence_fusion", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -336,6 +339,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/feature_snapshots.json",
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
+        "analysis/intelligence_fusion.json",
         "analysis/factor_signal_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
@@ -438,6 +442,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["feature_snapshot_coverage_records"] >= 1
     assert manifest["counts"]["factor_states"] >= 1
     assert manifest["counts"]["multi_source_signals"] >= 1
+    assert manifest["counts"]["intelligence_fusion_records"] >= 1
     assert manifest["counts"]["factor_signal_material_records"] >= 1
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
@@ -466,6 +471,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["feature_snapshots"] == "analysis/feature_snapshots.json"
     assert manifest["artifacts"]["factor_states"] == "analysis/factor_states.json"
     assert manifest["artifacts"]["multi_source_signals"] == "analysis/multi_source_signals.json"
+    assert manifest["artifacts"]["intelligence_fusion"] == "analysis/intelligence_fusion.json"
     assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"

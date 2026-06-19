@@ -5,8 +5,7 @@ project documentation, not a milestone plan.
 
 Implementation status:
 
-- `analysis/intelligence_fusion.json` is planned for the active milestone and
-  is not implemented yet.
+- `analysis/intelligence_fusion.json` is implemented in product runs.
 - `analysis/intelligence_fusion_material.md` is planned for the active
   milestone and is not implemented yet.
 - Fusion artifacts must remain additive. They must not replace strategy

@@ -217,6 +217,7 @@ Current bias:
 * `analysis/feature_snapshots.json` records normalized source-aware feature records and source coverage from implemented current-run evidence.
 * `analysis/factor_states.json` records deterministic factor states, bounded scores, directions, confidence, warnings, errors, and degraded or insufficient-evidence states from feature snapshots.
 * `analysis/multi_source_signals.json` records conservative normalized research signals derived from factor states, not trading instructions.
+* `analysis/intelligence_fusion.json` records deterministic cross-source confluence, conflict, risk override, event override, outcome feedback, uncertainty, and source-ref evidence, not trading instructions or Codex-generated states.
 * `analysis/factor_signal_material.md` records bounded AI-readable feature, factor, and multi-source signal evidence, selected records, omission counts, and Codex/report boundaries.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
 * `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
@@ -277,7 +278,7 @@ Current bias:
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
 * `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
 * `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
-* `docs/intelligence-fusion-contracts.md`: planned fusion artifact, material, integration, and Codex-boundary contracts.
+* `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
