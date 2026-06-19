@@ -372,6 +372,16 @@ artifact references, make stale or unavailable calendar states explicit, expose
 bounded current-run views through `raw/macro_calendar_views.json`, and avoid
 embedding full history into Codex input.
 
+## On-Chain Flow History
+
+On-chain flow history contracts live in `docs/onchain-flow-contracts.md`.
+
+Reusable on-chain flow history is local liquidity and network-activity context
+data. It should stay outside per-run report directories, preserve source
+endpoint and source artifact references, make unavailable or stale data classes
+explicit, expose bounded current-run views through `raw/onchain_flow_views.json`,
+and avoid embedding full history into Codex input.
+
 ## Validation Rules
 
 Automated validation should cover:

@@ -21,6 +21,8 @@ STAGE_ORDER = (
     "build_macro_calendar_context",
     "build_macro_calendar_material",
     "collect_onchain_flow_data",
+    "sync_onchain_flow_history",
+    "build_onchain_flow_views",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -342,6 +344,8 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_macro_calendar_context"] = _build_macro_calendar_context
     handlers["build_macro_calendar_material"] = _build_macro_calendar_material
     handlers["collect_onchain_flow_data"] = _collect_onchain_flow_data
+    handlers["sync_onchain_flow_history"] = _sync_onchain_flow_history
+    handlers["build_onchain_flow_views"] = _build_onchain_flow_views
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -573,6 +577,18 @@ def _collect_onchain_flow_data(config: dict[str, Any], run: RunContext) -> list[
     from .collectors.onchain_flow import collect_onchain_flow_data
 
     return collect_onchain_flow_data(config, run)
+
+
+def _sync_onchain_flow_history(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .onchain_flow_history import sync_onchain_flow_history
+
+    return sync_onchain_flow_history(config, run)
+
+
+def _build_onchain_flow_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .onchain_flow_views import build_onchain_flow_views
+
+    return build_onchain_flow_views(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:

@@ -106,9 +106,13 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     assert manifest["stages"][9]["artifacts"] == []
     assert manifest["stages"][10]["name"] == "collect_onchain_flow_data"
     assert manifest["stages"][10]["artifacts"] == []
-    assert manifest["stages"][11]["name"] == "collect_text_events"
-    assert manifest["stages"][11]["status"] == "succeeded"
-    assert manifest["stages"][11]["artifacts"] == ["raw/text_events.json"]
+    assert manifest["stages"][11]["name"] == "sync_onchain_flow_history"
+    assert manifest["stages"][11]["artifacts"] == []
+    assert manifest["stages"][12]["name"] == "build_onchain_flow_views"
+    assert manifest["stages"][12]["artifacts"] == []
+    assert manifest["stages"][13]["name"] == "collect_text_events"
+    assert manifest["stages"][13]["status"] == "succeeded"
+    assert manifest["stages"][13]["artifacts"] == ["raw/text_events.json"]
 
 
 def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
@@ -194,10 +198,10 @@ def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_rec
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_text_events"] == "raw/text_events.json"
     assert manifest["counts"]["text_event_items"] == 0
-    assert manifest["stages"][11]["name"] == "collect_text_events"
-    assert manifest["stages"][11]["status"] == "failed"
-    assert manifest["stages"][11]["artifacts"] == ["raw/text_events.json"]
-    assert manifest["stages"][11]["error"] == manifest["errors"][0]
+    assert manifest["stages"][13]["name"] == "collect_text_events"
+    assert manifest["stages"][13]["status"] == "failed"
+    assert manifest["stages"][13]["artifacts"] == ["raw/text_events.json"]
+    assert manifest["stages"][13]["error"] == manifest["errors"][0]
     assert "coindesk: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert "cointelegraph: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert not (result.run.analysis_dir / "text_material.md").exists()
