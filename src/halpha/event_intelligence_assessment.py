@@ -21,6 +21,7 @@ RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
 WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
 MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
+ONCHAIN_FLOW_CONTEXT_ARTIFACT = "analysis/onchain_flow_context.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT_TYPE = "event_intelligence_assessment"
 CONSTRUCTIVE_ACTIONS = {"STRONG_DO", "DO", "TRY_SMALL"}
@@ -98,6 +99,11 @@ def build_event_intelligence_assessment(
         MACRO_CALENDAR_CONTEXT_ARTIFACT,
         records_key="records",
     )
+    onchain_artifact = _read_optional_artifact(
+        run.analysis_dir / "onchain_flow_context.json",
+        ONCHAIN_FLOW_CONTEXT_ARTIFACT,
+        records_key="records",
+    )
 
     signals = _records(signals_artifact, "signals")
     confluence = _records(confluence_artifact, "records")
@@ -108,6 +114,7 @@ def build_event_intelligence_assessment(
     decision_records = _records(decision_artifact, "records")
     watch_records = _records(watch_artifact, "records")
     macro_records = _records(macro_artifact, "records")
+    onchain_records = _records(onchain_artifact, "records")
     assessment_records = _assessment_records(
         signals=signals,
         confluence=confluence,
@@ -118,6 +125,7 @@ def build_event_intelligence_assessment(
         decision_records=decision_records,
         watch_records=watch_records,
         macro_records=macro_records,
+        onchain_records=onchain_records,
     )
     warnings = _artifact_warnings(assessment_records)
     if signals_artifact is not None and not signals:
@@ -140,6 +148,7 @@ def build_event_intelligence_assessment(
             (DECISION_RECOMMENDATIONS_ARTIFACT, decision_artifact),
             (WATCH_TRIGGERS_ARTIFACT, watch_artifact),
             (MACRO_CALENDAR_CONTEXT_ARTIFACT, macro_artifact),
+            (ONCHAIN_FLOW_CONTEXT_ARTIFACT, onchain_artifact),
         ),
         "coverage": _coverage(assessment_records),
         "records": assessment_records,
@@ -155,6 +164,7 @@ def build_event_intelligence_assessment(
         errors=errors,
         status="succeeded",
         macro_context_records=len(macro_records),
+        onchain_context_records=len(onchain_records),
     )
     return [EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT]
 
@@ -170,6 +180,7 @@ def _assessment_records(
     decision_records: list[dict[str, Any]],
     watch_records: list[dict[str, Any]],
     macro_records: list[dict[str, Any]],
+    onchain_records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     signal_index = {
         str(signal.get("event_signal_id")): signal
@@ -187,6 +198,7 @@ def _assessment_records(
     decision_index = _records_by_symbol_timeframe(decision_records)
     watch_index = _records_by_symbol_timeframe(watch_records)
     macro_index = _macro_calendar_context_by_symbol(macro_records)
+    onchain_records = sorted(onchain_records, key=_onchain_flow_sort_key)
 
     records = []
     covered_signal_ids: set[str] = set()
@@ -212,6 +224,7 @@ def _assessment_records(
                 decision=_first(decision_index.get(key, [])),
                 watch_records=watch_index.get(key, []),
                 macro_records=_macro_calendar_records_for_symbol(macro_index, key[0]),
+                onchain_records=_onchain_flow_records_for_symbol(onchain_records, key[0]),
             )
         )
 
@@ -231,6 +244,7 @@ def _assessment_records(
                 decision=_first(decision_index.get(key, [])),
                 watch_records=watch_index.get(key, []),
                 macro_records=_macro_calendar_records_for_symbol(macro_index, key[0]),
+                onchain_records=_onchain_flow_records_for_symbol(onchain_records, key[0]),
             )
         )
     return records
@@ -247,6 +261,7 @@ def _assessment_record(
     decision: dict[str, Any] | None,
     watch_records: list[dict[str, Any]],
     macro_records: list[dict[str, Any]],
+    onchain_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     symbol = _record_symbol(confluence_record, signals)
     timeframe = _record_timeframe(confluence_record, market_signals, decision, risk, watch_records)
@@ -254,9 +269,10 @@ def _assessment_record(
     topics = [topic_index[topic_id] for topic_id in topic_ids if topic_id in topic_index]
     affected_assets = _affected_assets(symbol, signals)
     macro = _macro_calendar_event_context(signals, topics, symbol=symbol, macro_records=macro_records)
+    onchain = _onchain_flow_event_context(affected_assets=affected_assets, onchain_records=onchain_records)
     market_relationship = _market_response_relationship(confluence_record, market_signals)
     source_reliability = _source_reliability(signals, topics)
-    risk_effect = _risk_effect(signals, confluence_record, risk)
+    risk_effect = _risk_effect(signals, confluence_record, risk, onchain=onchain)
     watch_relevance = _watch_relevance(confluence_record, watch_records)
     decision_impact = _decision_impact(
         confluence_record,
@@ -274,6 +290,7 @@ def _assessment_record(
         market_relationship=market_relationship,
         decision=decision,
         macro=macro,
+        onchain=onchain,
     )
     event_severity = _event_severity(
         signals,
@@ -290,9 +307,25 @@ def _assessment_record(
         downgrade_reasons=downgrade_reasons,
     )
     status = "degraded" if downgrade_reasons else "succeeded"
-    evidence = _evidence(confluence_record, signals, market_signals, regime, risk, decision, watch_records, macro=macro)
+    evidence = _evidence(
+        confluence_record,
+        signals,
+        market_signals,
+        regime,
+        risk,
+        decision,
+        watch_records,
+        macro=macro,
+        onchain=onchain,
+    )
     warnings = _warnings(confluence_record, signals, downgrade_reasons=downgrade_reasons)
-    uncertainty = _uncertainty(confluence_record, signals, downgrade_reasons=downgrade_reasons, macro=macro)
+    uncertainty = _uncertainty(
+        confluence_record,
+        signals,
+        downgrade_reasons=downgrade_reasons,
+        macro=macro,
+        onchain=onchain,
+    )
     linked_signal_ids = _signal_ids(signals)
     linked_watch_ids = _watch_trigger_ids(watch_records)
     linked_decision_ids = _decision_ids(confluence_record, decision)
@@ -305,6 +338,7 @@ def _assessment_record(
         decision,
         watch_records,
         macro["records"],
+        onchain["records"],
     )
     if market_signals:
         source_artifacts.append(MARKET_SIGNALS_ARTIFACT)
@@ -318,6 +352,8 @@ def _assessment_record(
         source_artifacts.append(WATCH_TRIGGERS_ARTIFACT)
     if macro["linked_ids"]:
         source_artifacts.append(MACRO_CALENDAR_CONTEXT_ARTIFACT)
+    if onchain["linked_ids"]:
+        source_artifacts.append(ONCHAIN_FLOW_CONTEXT_ARTIFACT)
     source_artifacts = _unique(source_artifacts)
     source_key = _source_key(confluence_record, linked_signal_ids, topic_ids)
     return {
@@ -357,6 +393,8 @@ def _assessment_record(
         "linked_watch_trigger_ids": linked_watch_ids,
         "linked_macro_calendar_context_ids": macro["linked_ids"],
         "macro_calendar_relevance": macro["relevance"],
+        "linked_onchain_flow_context_ids": onchain["linked_ids"],
+        "onchain_flow_relevance": onchain["relevance"],
         "source_artifacts": source_artifacts,
     }
 
@@ -421,6 +459,28 @@ def _macro_calendar_records_for_symbol(
     return _unique_macro_calendar_records([*groups.get(symbol, []), *groups.get("__global__", [])])
 
 
+def _onchain_flow_records_for_symbol(records: list[dict[str, Any]], symbol: str) -> list[dict[str, Any]]:
+    if symbol in {"", "market_wide", "missing", "event"}:
+        return []
+    base_asset = _symbol_base_asset(symbol)
+    matched: list[dict[str, Any]] = []
+    for record in records:
+        context_type = _clean_text(record.get("context_type"), fallback="")
+        asset = _clean_text(record.get("asset"), fallback="")
+        chain = _clean_text(record.get("chain"), fallback="")
+        if asset in {"ALL_CONFIGURED_ASSETS", "ALL_STABLECOINS"}:
+            matched.append(record)
+        elif asset and asset == base_asset:
+            matched.append(record)
+        elif context_type == "exchange_flow_source_availability" and not asset:
+            matched.append(record)
+        elif chain == "bitcoin" and base_asset == "BTC":
+            matched.append(record)
+        elif chain == "ethereum" and base_asset == "ETH":
+            matched.append(record)
+    return _unique_onchain_flow_records(sorted(matched, key=_onchain_flow_sort_key))
+
+
 def _macro_calendar_event_context(
     signals: list[dict[str, Any]],
     topics: list[dict[str, Any]],
@@ -476,6 +536,72 @@ def _macro_calendar_event_context(
     }
 
 
+def _onchain_flow_event_context(
+    *,
+    affected_assets: list[str],
+    onchain_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not affected_assets:
+        return {
+            "records": [],
+            "linked_ids": [],
+            "relevance": [],
+            "uncertainty": [],
+            "downgrade_reasons": [],
+            "risk_effect": "unknown",
+        }
+
+    linked_records: list[dict[str, Any]] = []
+    relevance: list[str] = []
+    uncertainty: list[str] = []
+    downgrade_reasons: list[str] = []
+    risk_effect = "unknown"
+
+    for record in _unique_onchain_flow_records(onchain_records):
+        context_type = _clean_text(record.get("context_type"), fallback="unknown")
+        status = _clean_text(record.get("status"), fallback="unknown")
+        state = _clean_text(record.get("state"), fallback="unknown")
+        severity = _clean_text(record.get("severity"), fallback="unknown")
+        asset = _clean_text(record.get("asset"), fallback="unknown_asset")
+        chain = _clean_text(record.get("chain"), fallback="unknown_chain")
+        if status in {"failed", "unavailable", "stale", "degraded", "partial"} or state in {
+            "source_unavailable",
+            "source_failed",
+            "unavailable",
+            "stale",
+            "insufficient_evidence",
+        }:
+            linked_records.append(record)
+            relevance.append(
+                "onchain_flow_context "
+                f"{context_type} source_state={state}; status={status}; asset={asset}; chain={chain}."
+            )
+            uncertainty.append(
+                "On-chain flow source availability is degraded; missing flow evidence cannot be treated as neutral."
+            )
+            downgrade_reasons.append("onchain_flow_source_uncertainty")
+            continue
+        if state in {"normal", "neutral"} or severity in {"low", "unknown"}:
+            continue
+        linked_records.append(record)
+        relevance.append(
+            "onchain_flow_context "
+            f"{context_type} state={state}; severity={severity}; status={status}; asset={asset}; chain={chain}."
+        )
+        uncertainty.append("On-chain flow context is supporting evidence, not realized event impact or alert priority.")
+        risk_effect = "risk_up"
+
+    linked_records = _unique_onchain_flow_records(linked_records)
+    return {
+        "records": linked_records,
+        "linked_ids": _onchain_flow_context_ids(linked_records),
+        "relevance": _unique(relevance),
+        "uncertainty": _unique(uncertainty),
+        "downgrade_reasons": _unique(downgrade_reasons),
+        "risk_effect": risk_effect,
+    }
+
+
 def _event_reference_times(signals: list[dict[str, Any]], topics: list[dict[str, Any]]) -> list[datetime]:
     values: list[datetime] = []
     for signal in signals:
@@ -519,7 +645,36 @@ def _macro_calendar_evidence_records(macro: dict[str, Any]) -> list[dict[str, An
     return evidence
 
 
+def _onchain_flow_evidence_records(onchain: dict[str, Any]) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    for record in onchain.get("records", [])[:4]:
+        evidence.append(
+            {
+                "type": "onchain_flow_context",
+                "context_id": record.get("context_id"),
+                "context_type": record.get("context_type"),
+                "status": record.get("status"),
+                "state": record.get("state"),
+                "severity": record.get("severity"),
+                "asset": record.get("asset"),
+                "chain": record.get("chain"),
+            }
+        )
+    return evidence
+
+
 def _macro_calendar_context_ids(records: list[dict[str, Any]]) -> list[str]:
+    return _unique(
+        [
+            context_id
+            for record in records
+            for context_id in [_clean_text(record.get("context_id"), fallback="")]
+            if context_id
+        ]
+    )
+
+
+def _onchain_flow_context_ids(records: list[dict[str, Any]]) -> list[str]:
     return _unique(
         [
             context_id
@@ -534,6 +689,16 @@ def _macro_calendar_sort_key(record: dict[str, Any]) -> tuple[str, str, str, str
     return (
         _clean_text(record.get("context_type"), fallback=""),
         _clean_text(record.get("scheduled_at"), fallback=""),
+        _clean_text(record.get("as_of"), fallback=""),
+        _clean_text(record.get("context_id"), fallback=""),
+    )
+
+
+def _onchain_flow_sort_key(record: dict[str, Any]) -> tuple[str, str, str, str, str]:
+    return (
+        _clean_text(record.get("context_type"), fallback=""),
+        _clean_text(record.get("asset"), fallback=""),
+        _clean_text(record.get("chain"), fallback=""),
         _clean_text(record.get("as_of"), fallback=""),
         _clean_text(record.get("context_id"), fallback=""),
     )
@@ -650,6 +815,8 @@ def _risk_effect(
     signals: list[dict[str, Any]],
     confluence_record: dict[str, Any] | None,
     risk: dict[str, Any] | None,
+    *,
+    onchain: dict[str, Any],
 ) -> str:
     signal_effects = {
         _clean_text(signal.get("risk_impact"), fallback="unknown")
@@ -657,6 +824,8 @@ def _risk_effect(
         if _clean_text(signal.get("risk_impact"), fallback="unknown") != "unknown"
     }
     if "risk_up" in signal_effects:
+        return "risk_up"
+    if _clean_text(onchain.get("risk_effect"), fallback="unknown") == "risk_up":
         return "risk_up"
     if "risk_down" in signal_effects:
         return "risk_down"
@@ -724,6 +893,7 @@ def _downgrade_reasons(
     market_relationship: str,
     decision: dict[str, Any] | None,
     macro: dict[str, Any],
+    onchain: dict[str, Any],
 ) -> list[str]:
     reasons: list[str] = []
     if not signals:
@@ -749,6 +919,7 @@ def _downgrade_reasons(
     if decision is None:
         reasons.append("decision_recommendation_missing")
     reasons.extend(_string_list(macro.get("downgrade_reasons")))
+    reasons.extend(_string_list(onchain.get("downgrade_reasons")))
     for warning in _string_list(confluence_record.get("warnings") if confluence_record else None):
         if warning == "insufficient_event_evidence":
             reasons.append("insufficient_event_evidence")
@@ -813,6 +984,7 @@ def _evidence(
     watch_records: list[dict[str, Any]],
     *,
     macro: dict[str, Any],
+    onchain: dict[str, Any],
 ) -> list[dict[str, Any]]:
     evidence: list[dict[str, Any]] = []
     if confluence_record is not None:
@@ -885,6 +1057,7 @@ def _evidence(
             }
         )
     evidence.extend(_macro_calendar_evidence_records(macro))
+    evidence.extend(_onchain_flow_evidence_records(onchain))
     return evidence[:16]
 
 
@@ -908,6 +1081,7 @@ def _uncertainty(
     *,
     downgrade_reasons: list[str],
     macro: dict[str, Any],
+    onchain: dict[str, Any],
 ) -> list[str]:
     uncertainty = _string_list(confluence_record.get("uncertainty") if confluence_record else None)
     for signal in signals:
@@ -915,6 +1089,7 @@ def _uncertainty(
     if downgrade_reasons:
         uncertainty.append(f"Event assessment was downgraded: {', '.join(downgrade_reasons)}.")
     uncertainty.extend(_string_list(macro.get("uncertainty")))
+    uncertainty.extend(_string_list(onchain.get("uncertainty")))
     uncertainty.append("Event assessment does not assign alert priority or action levels.")
     return _unique(uncertainty)
 
@@ -1026,6 +1201,7 @@ def _coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "insufficient_market_evidence_records": relationship_counts.get("insufficient_market_evidence", 0),
         "macro_calendar_linked_records": sum(1 for record in records if record.get("linked_macro_calendar_context_ids")),
+        "onchain_flow_linked_records": sum(1 for record in records if record.get("linked_onchain_flow_context_ids")),
     }
 
 
@@ -1037,6 +1213,7 @@ def _record_manifest_summary(
     errors: list[dict[str, Any]],
     status: str,
     macro_context_records: int = 0,
+    onchain_context_records: int = 0,
 ) -> None:
     coverage = _coverage(records)
     run.manifest["counts"]["event_intelligence_assessment_records"] = coverage["records"]
@@ -1052,6 +1229,10 @@ def _record_manifest_summary(
     run.manifest["counts"]["event_intelligence_assessment_macro_calendar_linked_records"] = coverage[
         "macro_calendar_linked_records"
     ]
+    run.manifest["counts"]["event_intelligence_assessment_onchain_flow_context_records"] = onchain_context_records
+    run.manifest["counts"]["event_intelligence_assessment_onchain_flow_linked_records"] = coverage[
+        "onchain_flow_linked_records"
+    ]
     run.manifest["event_intelligence_assessment"] = {
         "status": status,
         "artifacts": [EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT] if status == "succeeded" else [],
@@ -1063,6 +1244,8 @@ def _record_manifest_summary(
         "warning_records": coverage["warning_records"],
         "macro_calendar_context_records": macro_context_records,
         "macro_calendar_linked_records": coverage["macro_calendar_linked_records"],
+        "onchain_flow_context_records": onchain_context_records,
+        "onchain_flow_linked_records": coverage["onchain_flow_linked_records"],
         "degraded": bool(coverage["downgraded_records"] or warnings),
         "warnings": len(warnings),
         "errors": len(errors),
@@ -1172,3 +1355,30 @@ def _unique_macro_calendar_records(records: list[dict[str, Any]]) -> list[dict[s
         seen.add(key)
         result.append(record)
     return result
+
+
+def _unique_onchain_flow_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for record in records:
+        key = _clean_text(record.get("context_id"), fallback="")
+        if not key:
+            key = ":".join(
+                _clean_text(record.get(field), fallback="")
+                for field in ("context_type", "asset", "chain", "as_of", "status")
+            )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(record)
+    return result
+
+
+def _symbol_base_asset(symbol: str) -> str:
+    value = _clean_text(symbol, fallback="").upper()
+    if not value:
+        return ""
+    for suffix in ("USDT", "USDC", "BUSD", "USD", "BTC", "ETH"):
+        if value.endswith(suffix) and len(value) > len(suffix):
+            return value[: -len(suffix)]
+    return value

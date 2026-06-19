@@ -215,17 +215,17 @@ Current bias:
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
-* `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional macro/calendar and derivatives context references.
-* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives and macro/calendar context links, not trading instructions.
-* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported macro/calendar observation, risk escalation, and risk relief conditions, not monitoring or alerts.
+* `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
+* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives, macro/calendar, and on-chain flow context links, not trading instructions.
+* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported derivatives, macro/calendar, and on-chain flow observation, risk escalation, and risk relief conditions, not monitoring or alerts.
 * `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
-* `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, decision-impact, and optional macro/calendar proximity assessment records.
-* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives and macro/calendar relevance links, not alert delivery or trading execution.
+* `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, decision-impact, optional macro/calendar proximity, and optional on-chain flow relevance assessment records.
+* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives, macro/calendar, and on-chain flow relevance links, not alert delivery or trading execution.
 * `analysis/alert_decision_material.md` records bounded AI-readable alert priority, downgrade, suppression, and uncertainty material.
 * `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from deterministic decision-intelligence JSON artifacts.
-* `analysis/data_quality_summary.json` records current-run market, text, derivatives, macro/calendar, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
+* `analysis/data_quality_summary.json` records current-run market, text, derivatives, macro/calendar, on-chain flow, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
 * `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
 * `analysis/outcome_targets.json` records deterministic source-linked outcome targets extracted from the latest previous successful run.
 * `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
