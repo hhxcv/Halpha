@@ -143,6 +143,101 @@ def test_alert_decisions_reference_derivatives_relevance_when_event_is_relevant(
     assert manifest["counts"]["alert_decision_derivatives_linked_records"] == 1
 
 
+def test_alert_decisions_reference_macro_calendar_relevance(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_alert_pipeline(
+        config,
+        config_path,
+        records=[
+            _assessment_record(
+                "macro",
+                linked_macro_calendar_context_ids=[
+                    "macro_calendar_context:scheduled_catalyst:federal_reserve_fomc:US:Federal Reserve policy decision:2026-06-05T02:00:00Z"
+                ],
+                macro_calendar_relevance=["macro_calendar_context scheduled_catalyst proximity_hours=1.5."],
+            )
+        ],
+        extra_handlers={"build_macro_calendar_context": _write_macro_calendar_context},
+    )
+
+    artifact = _alert_decisions(result)
+    manifest = _manifest(result)
+    record = artifact["records"][0]
+
+    assert record["priority"] == "P2"
+    assert record["linked_macro_calendar_context_ids"] == [
+        "macro_calendar_context:scheduled_catalyst:federal_reserve_fomc:US:Federal Reserve policy decision:2026-06-05T02:00:00Z"
+    ]
+    assert any("scheduled_catalyst" in item for item in record["macro_calendar_relevance"])
+    assert "analysis/macro_calendar_context.json" in record["source_artifacts"]
+    assert "analysis/macro_calendar_context.json" in artifact["source_artifacts"]
+    assert manifest["counts"]["alert_decision_macro_calendar_context_records"] == 1
+    assert manifest["counts"]["alert_decision_macro_calendar_linked_records"] == 1
+
+
+def test_alert_decisions_do_not_escalate_from_macro_calendar_context_alone(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_alert_pipeline(
+        config,
+        config_path,
+        records=[
+            _assessment_record(
+                "macro-alone",
+                event_severity="high",
+                source_reliability="high",
+                confidence="high",
+                decision_impact="no_change",
+                risk_effect="neutral",
+                watch_relevance="none",
+                linked_macro_calendar_context_ids=[
+                    "macro_calendar_context:scheduled_catalyst:federal_reserve_fomc:US:Federal Reserve policy decision:2026-06-05T02:00:00Z"
+                ],
+                macro_calendar_relevance=["macro_calendar_context scheduled_catalyst proximity_hours=1.5."],
+            )
+        ],
+        extra_handlers={"build_macro_calendar_context": _write_macro_calendar_context},
+    )
+
+    record = _alert_decisions(result)["records"][0]
+
+    assert record["priority"] not in {"P0", "P1"}
+    assert record["requires_user_attention"] is False
+    assert record["linked_macro_calendar_context_ids"]
+    assert record["macro_calendar_relevance"]
+
+
+def test_alert_decisions_downgrade_stale_macro_calendar_source(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_alert_pipeline(
+        config,
+        config_path,
+        records=[
+            _assessment_record(
+                "stale-macro",
+                downgrade_reasons=["macro_calendar_source_uncertainty"],
+                linked_macro_calendar_context_ids=[
+                    "macro_calendar_context:source_availability:federal_reserve_fomc:US:Federal Reserve calendar:2026-06-05T02:00:00Z"
+                ],
+                macro_calendar_relevance=["macro_calendar_context source_availability status=stale."],
+            )
+        ],
+        extra_handlers={"build_macro_calendar_context": _write_stale_macro_calendar_context},
+    )
+
+    record = _alert_decisions(result)["records"][0]
+
+    assert record["priority"] == "P3"
+    assert "macro_calendar_source_uncertainty" in record["suppression_reasons"]
+    assert record["requires_user_attention"] is False
+    assert record["linked_macro_calendar_context_ids"]
+
+
 def test_alert_decisions_suppress_no_alert_for_unrelated_or_insufficient_events(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -322,6 +417,8 @@ def _assessment_record(
     watch_relevance: str = "confirmation",
     downgrade_reasons: list[str] | None = None,
     affected_assets: list[str] | None = None,
+    linked_macro_calendar_context_ids: list[str] | None = None,
+    macro_calendar_relevance: list[str] | None = None,
 ) -> dict[str, Any]:
     downgrade_reasons = downgrade_reasons or []
     affected_assets = ["BTCUSDT"] if affected_assets is None else affected_assets
@@ -351,6 +448,8 @@ def _assessment_record(
         "linked_event_signal_ids": [f"text_event_signal:{suffix}"],
         "linked_decision_record_ids": ["decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z"],
         "linked_watch_trigger_ids": ["watch_trigger:binance:BTCUSDT:1d:confirmation:2026-06-05T00:00:00Z"],
+        "linked_macro_calendar_context_ids": linked_macro_calendar_context_ids or [],
+        "macro_calendar_relevance": macro_calendar_relevance or [],
         "source_artifacts": [
             "analysis/event_intelligence_assessment.json",
             "analysis/text_event_signals.json",
@@ -504,6 +603,93 @@ def _write_derivatives_context(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["derivatives_market_context"] = "analysis/derivatives_market_context.json"
     return ["analysis/derivatives_market_context.json"]
+
+
+def _write_macro_calendar_context(config, run) -> list[str]:
+    _write_macro_calendar_records(
+        run,
+        [
+            _macro_calendar_context_record(
+                context_type="scheduled_catalyst",
+                event_name="Federal Reserve policy decision",
+                state="upcoming",
+                status="succeeded",
+                severity="medium",
+                affected_assets=["BTCUSDT"],
+            )
+        ],
+    )
+    return ["analysis/macro_calendar_context.json"]
+
+
+def _write_stale_macro_calendar_context(config, run) -> list[str]:
+    _write_macro_calendar_records(
+        run,
+        [
+            _macro_calendar_context_record(
+                context_type="source_availability",
+                event_name="Federal Reserve calendar",
+                state="stale",
+                status="stale",
+                severity="unknown",
+                affected_assets=[],
+            )
+        ],
+    )
+    return ["analysis/macro_calendar_context.json"]
+
+
+def _write_macro_calendar_records(run, records: list[dict[str, Any]]) -> None:
+    write_json(
+        run.analysis_dir / "macro_calendar_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": records,
+            "counts": {"records": len(records)},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/macro_calendar_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["macro_calendar_context"] = "analysis/macro_calendar_context.json"
+
+
+def _macro_calendar_context_record(
+    *,
+    context_type: str,
+    event_name: str,
+    state: str,
+    status: str,
+    severity: str,
+    affected_assets: list[str],
+) -> dict[str, Any]:
+    scheduled_at = "2026-06-05T02:00:00Z"
+    return {
+        "context_id": f"macro_calendar_context:{context_type}:federal_reserve_fomc:US:{event_name}:{scheduled_at}",
+        "context_type": context_type,
+        "data_class": "central_bank_event",
+        "source": "federal_reserve_fomc",
+        "event_name": event_name,
+        "region": "US",
+        "scheduled_at": scheduled_at,
+        "as_of": "2026-06-05T00:00:00Z",
+        "status": status,
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "time_to_event_hours": 2.0,
+        "affected_assets": affected_assets,
+        "importance": "high" if context_type == "scheduled_catalyst" else "unknown",
+        "evidence": [f"{event_name} calendar evidence."],
+        "uncertainty": [f"{event_name} source uncertainty."],
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": ["analysis/macro_calendar_context.json", "raw/macro_calendar_views.json"],
+    }
 
 
 def _alert_decisions(result) -> dict[str, Any]:

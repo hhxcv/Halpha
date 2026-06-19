@@ -209,8 +209,8 @@ Current bias:
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives and macro/calendar context links, not trading instructions.
 * `analysis/watch_triggers.json` records deterministic static watch triggers, including supported macro/calendar observation, risk escalation, and risk relief conditions, not monitoring or alerts.
 * `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
-* `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, and decision-impact assessment records.
-* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives relevance links, not alert delivery or trading execution.
+* `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, decision-impact, and optional macro/calendar proximity assessment records.
+* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives and macro/calendar relevance links, not alert delivery or trading execution.
 * `analysis/alert_decision_material.md` records bounded AI-readable alert priority, downgrade, suppression, and uncertainty material.
 * `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.

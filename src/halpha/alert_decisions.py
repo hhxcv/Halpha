@@ -16,6 +16,7 @@ RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
 WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
 DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
+MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 ALERT_DECISIONS_ARTIFACT_TYPE = "alert_decisions"
 PRIORITY_TAXONOMY = ("P0", "P1", "P2", "P3", "no_alert", "unknown")
@@ -38,7 +39,13 @@ NO_ALERT_DOWNGRADES = {
     "weak_source_reliability",
     "event_signal_missing",
 }
-P3_DOWNGRADES = {"low_confidence_event", "duplicate_event_group", "stale_event", "event_market_confluence_missing"}
+P3_DOWNGRADES = {
+    "low_confidence_event",
+    "duplicate_event_group",
+    "stale_event",
+    "event_market_confluence_missing",
+    "macro_calendar_source_uncertainty",
+}
 
 
 def build_alert_decisions(
@@ -76,12 +83,18 @@ def build_alert_decisions(
         DERIVATIVES_MARKET_CONTEXT_ARTIFACT,
         records_key="records",
     )
+    macro_artifact = _read_optional_artifact(
+        run.analysis_dir / "macro_calendar_context.json",
+        MACRO_CALENDAR_CONTEXT_ARTIFACT,
+        records_key="records",
+    )
 
     assessment_records = _records(assessment_artifact, "records")
     risk_records = _records(risk_artifact, "records")
     decision_records = _records(decision_artifact, "records")
     watch_records = _records(watch_artifact, "records")
     derivatives_records = _records(derivatives_artifact, "records")
+    macro_records = _records(macro_artifact, "records")
     records = [
         _alert_decision_record(
             assessment,
@@ -89,6 +102,7 @@ def build_alert_decisions(
             decision_records=decision_records,
             watch_records=watch_records,
             derivatives_records=derivatives_records,
+            macro_records=macro_records,
         )
         for assessment in assessment_records
     ]
@@ -109,6 +123,7 @@ def build_alert_decisions(
             (DECISION_RECOMMENDATIONS_ARTIFACT, decision_artifact),
             (WATCH_TRIGGERS_ARTIFACT, watch_artifact),
             (DERIVATIVES_MARKET_CONTEXT_ARTIFACT, derivatives_artifact),
+            (MACRO_CALENDAR_CONTEXT_ARTIFACT, macro_artifact),
         ),
         "coverage": _coverage(records),
         "records": records,
@@ -117,7 +132,14 @@ def build_alert_decisions(
     }
     write_json(run.analysis_dir / "alert_decisions.json", artifact)
     run.manifest["artifacts"]["alert_decisions"] = ALERT_DECISIONS_ARTIFACT
-    _record_manifest_summary(run, records=records, warnings=warnings, errors=errors, status="succeeded")
+    _record_manifest_summary(
+        run,
+        records=records,
+        warnings=warnings,
+        errors=errors,
+        status="succeeded",
+        macro_context_records=len(macro_records),
+    )
     return [ALERT_DECISIONS_ARTIFACT]
 
 
@@ -128,6 +150,7 @@ def _alert_decision_record(
     decision_records: list[dict[str, Any]],
     watch_records: list[dict[str, Any]],
     derivatives_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     scope = assessment.get("scope") if isinstance(assessment.get("scope"), dict) else {}
     symbol = _clean_text(scope.get("symbol") or assessment.get("symbol"), fallback="market_wide")
@@ -142,8 +165,16 @@ def _alert_decision_record(
     attention_decision = ATTENTION_DECISIONS[priority]
     linked_derivatives = _linked_derivatives_records(assessment, derivatives_records, symbol=symbol)
     derivatives_relevance = _derivatives_relevance(assessment, linked_derivatives)
+    linked_macro = _linked_macro_calendar_records(assessment, macro_records, symbol=symbol)
+    macro_relevance = _macro_calendar_relevance(assessment, linked_macro)
     warnings = _warnings(assessment, priority=priority, suppression_reasons=suppression_reasons)
-    uncertainty = _unique([*_uncertainty(assessment, priority=priority), *_derivatives_uncertainty(derivatives_relevance)])
+    uncertainty = _unique(
+        [
+            *_uncertainty(assessment, priority=priority),
+            *_derivatives_uncertainty(derivatives_relevance),
+            *_macro_calendar_uncertainty(macro_relevance),
+        ]
+    )
     return {
         "alert_decision_id": f"alert_decision:{symbol}:{timeframe}:{_assessment_id(assessment)}",
         "status": _status(priority, suppression_reasons),
@@ -172,6 +203,8 @@ def _alert_decision_record(
         "linked_watch_trigger_ids": linked_watch_ids,
         "linked_derivatives_context_ids": _linked_derivatives_context_ids(linked_derivatives),
         "derivatives_relevance": derivatives_relevance,
+        "linked_macro_calendar_context_ids": _linked_macro_calendar_context_ids(linked_macro),
+        "macro_calendar_relevance": macro_relevance,
         "source_artifacts": _record_source_artifacts(
             assessment,
             risk_records,
@@ -179,6 +212,7 @@ def _alert_decision_record(
             watch_records,
             key,
             linked_derivatives,
+            linked_macro,
         ),
     }
 
@@ -416,6 +450,43 @@ def _linked_derivatives_context_ids(records: list[dict[str, Any]]) -> list[str]:
     )
 
 
+def _linked_macro_calendar_records(
+    assessment: dict[str, Any],
+    macro_records: list[dict[str, Any]],
+    *,
+    symbol: str,
+) -> list[dict[str, Any]]:
+    ids = set(_string_list(assessment.get("linked_macro_calendar_context_ids")))
+    if ids:
+        return [
+            record
+            for record in macro_records
+            if _clean_text(record.get("context_id"), fallback="") in ids
+        ]
+    if not _string_list(assessment.get("macro_calendar_relevance")):
+        return []
+    if symbol in {"", "market_wide"}:
+        return []
+    linked = []
+    for record in macro_records:
+        affected = _string_list(record.get("affected_assets"))
+        context_type = _clean_text(record.get("context_type"), fallback="")
+        if symbol in affected or (not affected and context_type == "source_availability"):
+            linked.append(record)
+    return _unique_macro_calendar_records(linked)
+
+
+def _linked_macro_calendar_context_ids(records: list[dict[str, Any]]) -> list[str]:
+    return _unique(
+        [
+            context_id
+            for record in records
+            for context_id in [_clean_text(record.get("context_id"), fallback="")]
+            if context_id
+        ]
+    )
+
+
 def _derivatives_relevance(assessment: dict[str, Any], records: list[dict[str, Any]]) -> list[str]:
     if not records:
         return []
@@ -434,10 +505,30 @@ def _derivatives_relevance(assessment: dict[str, Any], records: list[dict[str, A
     return _unique(values)
 
 
+def _macro_calendar_relevance(assessment: dict[str, Any], records: list[dict[str, Any]]) -> list[str]:
+    values = _string_list(assessment.get("macro_calendar_relevance"))
+    for record in records[:4]:
+        values.append(
+            "macro_calendar_context "
+            f"{_clean_text(record.get('context_type'), fallback='unknown')} "
+            f"state={_clean_text(record.get('state'), fallback='unknown')}; "
+            f"status={_clean_text(record.get('status'), fallback='unknown')}; "
+            f"event={_clean_text(record.get('event_name'), fallback='unknown')}; "
+            f"scheduled_at={_clean_text(record.get('scheduled_at'), fallback='unknown')}."
+        )
+    return _unique(values)
+
+
 def _derivatives_uncertainty(relevance: list[str]) -> list[str]:
     if not relevance:
         return []
     return ["Alert decision references derivatives context only as Halpha-generated supporting evidence."]
+
+
+def _macro_calendar_uncertainty(relevance: list[str]) -> list[str]:
+    if not relevance:
+        return []
+    return ["Alert decision references macro/calendar context only as Halpha-generated scheduled-context evidence."]
 
 
 def _record_source_artifacts(
@@ -447,6 +538,7 @@ def _record_source_artifacts(
     watch_records: list[dict[str, Any]],
     key: tuple[str, str],
     derivatives_records: list[dict[str, Any]] | None = None,
+    macro_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     artifacts = [EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT, *_string_list(assessment.get("source_artifacts"))]
     for artifact_path, records in (
@@ -459,6 +551,10 @@ def _record_source_artifacts(
     if derivatives_records:
         artifacts.append(DERIVATIVES_MARKET_CONTEXT_ARTIFACT)
         for record in derivatives_records:
+            artifacts.extend(_string_list(record.get("source_artifacts")))
+    if macro_records:
+        artifacts.append(MACRO_CALENDAR_CONTEXT_ARTIFACT)
+        for record in macro_records:
             artifacts.extend(_string_list(record.get("source_artifacts")))
     return _unique(artifacts)
 
@@ -484,6 +580,7 @@ def _coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
         "suppressed_records": sum(1 for record in records if record.get("suppression_reasons")),
         "warning_records": sum(1 for record in records if record.get("warnings")),
         "derivatives_linked_records": sum(1 for record in records if record.get("linked_derivatives_context_ids")),
+        "macro_calendar_linked_records": sum(1 for record in records if record.get("linked_macro_calendar_context_ids")),
         "p0_p1_records": priority_counts.get("P0", 0) + priority_counts.get("P1", 0),
     }
 
@@ -495,6 +592,7 @@ def _record_manifest_summary(
     warnings: list[str],
     errors: list[dict[str, Any]],
     status: str,
+    macro_context_records: int = 0,
 ) -> None:
     coverage = _coverage(records)
     run.manifest["counts"]["alert_decision_records"] = coverage["records"]
@@ -507,6 +605,10 @@ def _record_manifest_summary(
     run.manifest["counts"]["alert_decision_suppressed_records"] = coverage["suppressed_records"]
     run.manifest["counts"]["alert_decision_warning_records"] = coverage["warning_records"]
     run.manifest["counts"]["alert_decision_derivatives_linked_records"] = coverage["derivatives_linked_records"]
+    run.manifest["counts"]["alert_decision_macro_calendar_context_records"] = macro_context_records
+    run.manifest["counts"]["alert_decision_macro_calendar_linked_records"] = coverage[
+        "macro_calendar_linked_records"
+    ]
     run.manifest["alert_decisions"] = {
         "status": status,
         "artifacts": [ALERT_DECISIONS_ARTIFACT] if status == "succeeded" else [],
@@ -518,6 +620,8 @@ def _record_manifest_summary(
         "suppressed_records": coverage["suppressed_records"],
         "warning_records": coverage["warning_records"],
         "derivatives_linked_records": coverage["derivatives_linked_records"],
+        "macro_calendar_context_records": macro_context_records,
+        "macro_calendar_linked_records": coverage["macro_calendar_linked_records"],
         "warnings": len(warnings),
         "errors": len(errors),
     }
@@ -576,3 +680,20 @@ def _unique(values: list[str]) -> list[str]:
         if value not in unique:
             unique.append(value)
     return unique
+
+
+def _unique_macro_calendar_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for record in records:
+        key = _clean_text(record.get("context_id"), fallback="")
+        if not key:
+            key = ":".join(
+                _clean_text(record.get(field), fallback="")
+                for field in ("context_type", "scheduled_at", "status")
+            )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(record)
+    return result

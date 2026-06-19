@@ -745,7 +745,7 @@ Rules:
 
 ## Event Intelligence Assessment
 
-Status: contract, not implemented yet.
+Status: implemented.
 
 Artifact:
 
@@ -780,6 +780,7 @@ analysis/market_regime_assessment.json
 analysis/risk_assessment.json
 analysis/decision_recommendations.json
 analysis/watch_triggers.json
+analysis/macro_calendar_context.json
 ```
 
 Record contract:
@@ -807,6 +808,8 @@ Record contract:
   "downgrade_reasons": [],
   "uncertainty": [],
   "warnings": [],
+  "linked_macro_calendar_context_ids": [],
+  "macro_calendar_relevance": [],
   "source_artifacts": []
 }
 ```
@@ -885,6 +888,12 @@ Rules:
   event evidence, and either market, risk, decision, or watch-trigger relevance.
 - Low-confidence, unrelated, stale, duplicate, or insufficient-evidence events
   should remain visible through downgrade reasons or low-severity records.
+- Scheduled or recent macro/calendar context may appear as proximity evidence
+  only when event source timestamps overlap the catalyst window.
+- Stale, unavailable, degraded, or partial macro/calendar source states may add
+  source uncertainty or downgrade reasons.
+- No-event macro/calendar windows must not be treated as low-risk evidence and
+  must not create event relevance by themselves.
 - Event assessment must not assign alert priority, action level, trading advice,
   position sizing, price targets, or return forecasts.
 - Alert priority is assigned by `analysis/alert_decisions.json`, not by this
