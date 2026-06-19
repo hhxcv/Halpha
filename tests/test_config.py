@@ -39,6 +39,15 @@ def test_config_example_loads_successfully() -> None:
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
     assert config["user_state"] == {"enabled": False, "path": "user_state.local.yaml"}
+    assert config["monitor"] == {
+        "enabled": False,
+        "interval_seconds": 300,
+        "max_cycles": 1,
+        "cooldown_seconds": 3600,
+        "output_dir": "runs/monitor",
+        "target_stage": "build_personalized_risk_material",
+        "no_codex": True,
+    }
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
@@ -107,7 +116,7 @@ def test_load_config_rejects_non_mapping_root(tmp_path: Path) -> None:
         load_config(config_path)
 
 
-@pytest.mark.parametrize("section", ["run", "market", "quant", "text", "report", "codex"])
+@pytest.mark.parametrize("section", ["run", "market", "monitor", "quant", "text", "report", "codex"])
 def test_load_config_rejects_non_mapping_sections(tmp_path: Path, section: str) -> None:
     config_path = _write_valid_config(tmp_path)
     section_blocks = {
@@ -139,6 +148,7 @@ def test_load_config_rejects_non_mapping_sections(tmp_path: Path, section: str) 
             "        volatility_window: 20\n"
             "        target_volatility: 0.2"
         ),
+        "monitor": "monitor:\n  enabled: false",
         "text": (
             "text:\n"
             "  enabled: true\n"
@@ -228,6 +238,37 @@ def test_load_config_rejects_invalid_user_state_config(
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace("quant:\n", f"{block}\n\nquant:\n"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("monitor_block", "expected"),
+    [
+        ("  enabled: \"yes\"", r"monitor\.enabled must be a boolean"),
+        ("  interval_seconds: 0", r"monitor\.interval_seconds must be a positive integer"),
+        ("  max_cycles: false", r"monitor\.max_cycles must be a positive integer"),
+        ("  cooldown_seconds: -1", r"monitor\.cooldown_seconds must be a positive integer"),
+        ("  output_dir: ''", r"monitor\.output_dir must be a non-empty string"),
+        ("  target_stage: ''", r"monitor\.target_stage must be a non-empty string"),
+        ("  no_codex: \"no\"", r"monitor\.no_codex must be a boolean"),
+        ("  surprise: value", r"unsupported monitor field\(s\): surprise"),
+    ],
+)
+def test_load_config_rejects_invalid_monitor_config(
+    tmp_path: Path,
+    monitor_block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "monitor:\n  enabled: false",
+            f"monitor:\n{monitor_block}",
+        ),
         encoding="utf-8",
     )
 
@@ -1262,6 +1303,8 @@ codex:
     - read-only
     - "-"
   timeout_seconds: 300
+monitor:
+  enabled: false
 """.strip(),
         encoding="utf-8",
     )

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from .monitoring import SUPPORTED_MONITOR_FIELDS
 from .quant.registry import SUPPORTED_STRATEGY_NAMES
 
 
@@ -13,6 +14,7 @@ CONFIG_SECTIONS = {
     "codex",
     "macro_calendar",
     "market",
+    "monitor",
     "onchain_flow",
     "quant",
     "report",
@@ -181,6 +183,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
         _validate_onchain_flow_config(config["onchain_flow"])
     if "user_state" in config:
         _validate_user_state_config(config["user_state"])
+    if "monitor" in config:
+        _validate_monitor_config(config["monitor"])
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -272,6 +276,30 @@ def _validate_user_state_config(user_state: dict[str, Any]) -> None:
     enabled = _require_bool(user_state, "enabled", "user_state.enabled")
     if enabled or "path" in user_state:
         _require_non_empty_string(user_state, "path", "user_state.path")
+
+
+def _validate_monitor_config(monitor: dict[str, Any]) -> None:
+    if not isinstance(monitor, dict):
+        raise ConfigError("monitor must be a mapping.")
+    _reject_unsupported_fields(
+        monitor,
+        path="monitor",
+        supported_fields=SUPPORTED_MONITOR_FIELDS,
+    )
+    if "enabled" in monitor:
+        _require_bool(monitor, "enabled", "monitor.enabled")
+    if "interval_seconds" in monitor:
+        _require_positive_int(monitor, "interval_seconds", "monitor.interval_seconds")
+    if "max_cycles" in monitor:
+        _require_positive_int(monitor, "max_cycles", "monitor.max_cycles")
+    if "cooldown_seconds" in monitor:
+        _require_positive_int(monitor, "cooldown_seconds", "monitor.cooldown_seconds")
+    if "output_dir" in monitor:
+        _require_non_empty_string(monitor, "output_dir", "monitor.output_dir")
+    if "target_stage" in monitor:
+        _require_non_empty_string(monitor, "target_stage", "monitor.target_stage")
+    if "no_codex" in monitor:
+        _require_bool(monitor, "no_codex", "monitor.no_codex")
 
 
 def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:

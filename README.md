@@ -39,6 +39,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Runs Codex CLI to generate a Simplified Chinese report.
 - Inserts deterministic strategy output and strategy effectiveness tables into the final report.
 - Records lifecycle status, artifacts, counts, warnings, errors, and Codex status in `run_manifest.json`.
+- Validates local monitor configuration without starting hidden background execution.
 
 Halpha does not implement account access, exchange trading, order placement,
 portfolio automation, real-time alerts, dashboards, or hosted services.
@@ -83,6 +84,17 @@ Run one stage against an existing run directory:
 ```bash
 python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
 ```
+
+Inspect the monitor command surface and validate local monitor configuration
+without running collection, pipeline stages, or Codex:
+
+```bash
+python -m halpha monitor --help
+python -m halpha monitor run --config config.example.yaml --dry-run
+```
+
+Monitor cycle execution and monitor health inspection are not implemented by
+the current skeleton command.
 
 Inspect local research data and data-quality state without collection or Codex:
 
@@ -550,6 +562,7 @@ they are not proof of a real-source product run.
   - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
   - `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
   - `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
+  - `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.
