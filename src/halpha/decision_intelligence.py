@@ -28,6 +28,7 @@ QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_DATA_VIEWS_ARTIFACT = "raw/market_data_views.json"
 DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
 MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
+ONCHAIN_FLOW_CONTEXT_ARTIFACT = "analysis/onchain_flow_context.json"
 SCHEMA_VERSION = 1
 NO_PREVIOUS_RUN_WARNING = "No previous successful decision-intelligence run found."
 DECISION_DELTA_INPUT_ARTIFACTS = {
@@ -162,10 +163,12 @@ def build_risk_assessment(
     strategy_runs, run_warnings = _strategy_runs_from_optional_artifact(strategy_artifact)
     derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
     macro_artifact, macro_warnings = _read_optional_macro_calendar_context(run)
+    onchain_artifact, onchain_warnings = _read_optional_onchain_flow_context(run)
     derivatives_records = _records_from_optional_artifact(derivatives_artifact)
     derivatives_groups = _derivatives_by_symbol(derivatives_records)
     macro_records = _records_from_optional_artifact(macro_artifact)
     macro_groups = _macro_calendar_context_by_symbol(macro_records)
+    onchain_records = _records_from_optional_artifact(onchain_artifact)
     created_at = _created_at(market_regime, now)
     signal_groups = _signals_by_tuple(signals)
     regime_groups = _regime_by_tuple(regime_records)
@@ -178,6 +181,7 @@ def build_risk_assessment(
             strategy_groups.get(key, []),
             derivatives_groups.get(key[1], []),
             _macro_calendar_records_for_symbol(macro_groups, key[1]),
+            _onchain_flow_records_for_symbol(onchain_records, key[1]),
         )
         for key in _risk_group_keys(signals, regime_records, strategy_runs)
     ]
@@ -193,11 +197,12 @@ def build_risk_assessment(
             strategy_artifact,
             derivatives_artifact,
             macro_artifact,
+            onchain_artifact,
         ),
         "records": records,
         "warnings": _risk_artifact_warnings(
             records,
-            [*strategy_warnings, *run_warnings, *derivatives_warnings, *macro_warnings],
+            [*strategy_warnings, *run_warnings, *derivatives_warnings, *macro_warnings, *onchain_warnings],
         ),
         "errors": [],
     }
@@ -222,6 +227,12 @@ def build_risk_assessment(
         1
         for record in records
         if any("Macro calendar context" in item for item in _string_list(record.get("rising_risks")))
+    )
+    run.manifest["counts"]["risk_assessment_onchain_flow_context_records"] = len(onchain_records)
+    run.manifest["counts"]["risk_assessment_onchain_flow_influenced_records"] = sum(
+        1
+        for record in records
+        if any("On-chain flow context" in item for item in _string_list(record.get("rising_risks")))
     )
     return [RISK_ASSESSMENT_ARTIFACT]
 
@@ -272,10 +283,12 @@ def build_decision_recommendations(
     )
     derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
     macro_artifact, macro_warnings = _read_optional_macro_calendar_context(run)
+    onchain_artifact, onchain_warnings = _read_optional_onchain_flow_context(run)
     derivatives_records = _records_from_optional_artifact(derivatives_artifact)
     derivatives_groups = _derivatives_by_symbol(derivatives_records)
     macro_records = _records_from_optional_artifact(macro_artifact)
     macro_groups = _macro_calendar_context_by_symbol(macro_records)
+    onchain_records = _records_from_optional_artifact(onchain_artifact)
     created_at = _created_at(risk_assessment, now)
     signal_groups = _signals_by_tuple(signals)
     regime_groups = _regime_by_tuple(regime_records)
@@ -288,6 +301,7 @@ def build_decision_recommendations(
             risk_groups.get(key),
             derivatives_groups.get(key[1], []),
             _macro_calendar_records_for_symbol(macro_groups, key[1]),
+            _onchain_flow_records_for_symbol(onchain_records, key[1]),
         )
         for key in _decision_group_keys(signals, regime_records, risk_records)
     ]
@@ -305,9 +319,13 @@ def build_decision_recommendations(
             strategy_artifact,
             derivatives_artifact,
             macro_artifact,
+            onchain_artifact,
         ),
         "records": records,
-        "warnings": _decision_artifact_warnings(records, [*strategy_warnings, *derivatives_warnings, *macro_warnings]),
+        "warnings": _decision_artifact_warnings(
+            records,
+            [*strategy_warnings, *derivatives_warnings, *macro_warnings, *onchain_warnings],
+        ),
         "errors": [],
     }
     write_json(run.analysis_dir / "decision_recommendations.json", artifact)
@@ -331,6 +349,10 @@ def build_decision_recommendations(
     run.manifest["counts"]["decision_recommendation_macro_calendar_context_records"] = len(macro_records)
     run.manifest["counts"]["decision_recommendation_macro_calendar_linked_records"] = sum(
         1 for record in records if record.get("linked_macro_calendar_context_ids")
+    )
+    run.manifest["counts"]["decision_recommendation_onchain_flow_context_records"] = len(onchain_records)
+    run.manifest["counts"]["decision_recommendation_onchain_flow_linked_records"] = sum(
+        1 for record in records if record.get("linked_onchain_flow_context_ids")
     )
     return [DECISION_RECOMMENDATIONS_ARTIFACT]
 
@@ -387,10 +409,12 @@ def build_watch_triggers(
     )
     derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
     macro_artifact, macro_warnings = _read_optional_macro_calendar_context(run)
+    onchain_artifact, onchain_warnings = _read_optional_onchain_flow_context(run)
     derivatives_records = _records_from_optional_artifact(derivatives_artifact)
     derivatives_groups = _derivatives_by_symbol(derivatives_records)
     macro_records = _records_from_optional_artifact(macro_artifact)
     macro_groups = _macro_calendar_context_by_symbol(macro_records)
+    onchain_records = _records_from_optional_artifact(onchain_artifact)
 
     created_at = _created_at(decision_recommendations, now)
     signal_groups = _signals_by_tuple(signals)
@@ -406,6 +430,7 @@ def build_watch_triggers(
             risk_groups.get(_tuple_key(decision)),
             derivatives_groups.get(_tuple_key(decision)[1], []),
             _macro_calendar_records_for_symbol(macro_groups, _tuple_key(decision)[1]),
+            _onchain_flow_records_for_symbol(onchain_records, _tuple_key(decision)[1]),
         )
     ]
 
@@ -422,10 +447,16 @@ def build_watch_triggers(
             decision_recommendations,
             derivatives_artifact,
             macro_artifact,
+            onchain_artifact,
         ),
         "records": records,
         "warnings": _unique_ordered(
-            [*_watch_artifact_warnings(decision_records, records), *derivatives_warnings, *macro_warnings]
+            [
+                *_watch_artifact_warnings(decision_records, records),
+                *derivatives_warnings,
+                *macro_warnings,
+                *onchain_warnings,
+            ]
         ),
         "errors": [],
     }
@@ -439,6 +470,10 @@ def build_watch_triggers(
     run.manifest["counts"]["watch_trigger_macro_calendar_context_records"] = len(macro_records)
     run.manifest["counts"]["watch_trigger_macro_calendar_linked_records"] = sum(
         1 for record in records if record.get("linked_macro_calendar_context_ids")
+    )
+    run.manifest["counts"]["watch_trigger_onchain_flow_context_records"] = len(onchain_records)
+    run.manifest["counts"]["watch_trigger_onchain_flow_linked_records"] = sum(
+        1 for record in records if record.get("linked_onchain_flow_context_ids")
     )
     return [WATCH_TRIGGERS_ARTIFACT]
 
@@ -1851,6 +1886,7 @@ def _risk_record(
     strategy_runs: list[dict[str, Any]],
     derivatives_records: list[dict[str, Any]],
     macro_records: list[dict[str, Any]],
+    onchain_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source, symbol, timeframe = key
     latest = _latest_risk_candle_time(signals, regime, strategy_runs)
@@ -1861,10 +1897,12 @@ def _risk_record(
     regime_risks = _regime_risks(regime)
     derivatives = _derivatives_context_effects(derivatives_records)
     macro = _macro_calendar_context_effects(macro_records)
+    onchain = _onchain_flow_context_effects(onchain_records)
     usable_evidence = (
         _has_usable_risk_evidence(signals, regime)
         or derivatives["supports_risk_assessment"]
         or macro["supports_risk_assessment"]
+        or onchain["supports_risk_assessment"]
     )
     warnings = _risk_record_warnings(regime, usable_evidence)
 
@@ -1875,6 +1913,7 @@ def _risk_record(
             *regime_risks["rising"],
             *derivatives["rising"],
             *macro["rising"],
+            *onchain["rising"],
             *([] if usable_evidence else ["Upstream evidence is insufficient for a supported low-risk conclusion."]),
         ]
     )
@@ -1885,6 +1924,7 @@ def _risk_record(
             *regime_risks["blocking"],
             *derivatives["blocking"],
             *macro["blocking"],
+            *onchain["blocking"],
             *([] if usable_evidence else ["Insufficient upstream evidence blocks stronger action levels."]),
         ]
     )
@@ -1894,6 +1934,7 @@ def _risk_record(
         *regime_risks["severities"],
         *derivatives["severities"],
         *macro["severities"],
+        *onchain["severities"],
         *(["high"] if signal_conflict_risks else []),
         *(["medium"] if data_quality_risks and usable_evidence else []),
     ]
@@ -1919,9 +1960,10 @@ def _risk_record(
             regime_risks=regime_risks,
             derivatives=derivatives,
             macro=macro,
+            onchain=onchain,
             risk_level=risk_level,
         ),
-        "warnings": _unique_ordered([*warnings, *derivatives["warnings"], *macro["warnings"]]),
+        "warnings": _unique_ordered([*warnings, *derivatives["warnings"], *macro["warnings"], *onchain["warnings"]]),
         "errors": [],
         "source_artifacts": _risk_record_source_artifacts(
             signals,
@@ -1929,6 +1971,7 @@ def _risk_record(
             strategy_runs,
             derivatives_records,
             macro_records,
+            onchain_records,
         ),
     }
 
@@ -1940,6 +1983,7 @@ def _decision_recommendation_record(
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]],
     macro_records: list[dict[str, Any]],
+    onchain_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source, symbol, timeframe = key
     latest = _latest_decision_candle_time(signals, regime, risk)
@@ -1951,6 +1995,7 @@ def _decision_recommendation_record(
     has_evidence = _has_decision_evidence(usable_signals, regime, risk)
     derivatives = _derivatives_context_effects(derivatives_records)
     macro = _macro_calendar_context_effects(macro_records)
+    onchain = _onchain_flow_context_effects(onchain_records)
 
     base_action_level = _base_action_level(
         usable_signals,
@@ -1971,8 +2016,15 @@ def _decision_recommendation_record(
         base_action_level=base_action_level,
         has_evidence=has_evidence,
     )
-    downgrade_reasons = _unique_ordered([*derivatives_downgrade_reasons, *macro_downgrade_reasons])
-    evidence = _decision_evidence(usable_signals, regime, risk, derivatives=derivatives, macro=macro)
+    action_level, onchain_downgrade_reasons = _apply_onchain_flow_decision_gate(
+        action_level,
+        onchain,
+        has_evidence=has_evidence,
+    )
+    downgrade_reasons = _unique_ordered(
+        [*derivatives_downgrade_reasons, *macro_downgrade_reasons, *onchain_downgrade_reasons]
+    )
+    evidence = _decision_evidence(usable_signals, regime, risk, derivatives=derivatives, macro=macro, onchain=onchain)
     invalidation_conditions = _decision_invalidation_conditions(
         action_level,
         symbol=symbol,
@@ -1987,6 +2039,7 @@ def _decision_recommendation_record(
                 *invalidation_conditions,
                 *_derivatives_invalidation_conditions(symbol=symbol, derivatives=derivatives),
                 *_macro_calendar_invalidation_conditions(symbol=symbol, macro=macro),
+                *_onchain_flow_invalidation_conditions(symbol=symbol, onchain=onchain),
             ]
         )
     warnings = _decision_warnings(
@@ -1999,8 +2052,10 @@ def _decision_recommendation_record(
         risk=risk,
         derivatives=derivatives,
         macro=macro,
+        onchain=onchain,
         derivatives_downgrade_reasons=derivatives_downgrade_reasons,
         macro_downgrade_reasons=macro_downgrade_reasons,
+        onchain_downgrade_reasons=onchain_downgrade_reasons,
     )
     if action_level in ACTIONABLE_ACTION_LEVELS and (not evidence or not invalidation_conditions):
         action_level = "WATCH"
@@ -2024,7 +2079,7 @@ def _decision_recommendation_record(
         "status": _decision_status(action_level, risk_level, risk_status, conflicts, has_evidence),
         "recommended_actions": _recommended_actions(action_level, symbol=symbol, conflicts=conflicts, risk_level=risk_level),
         "do_not_do": _do_not_do_guidance(action_level, risk_level=risk_level, conflicts=conflicts, has_evidence=has_evidence),
-        "risk_conditions": _risk_conditions(risk, derivatives=derivatives, macro=macro),
+        "risk_conditions": _risk_conditions(risk, derivatives=derivatives, macro=macro, onchain=onchain),
         "downgrade_reasons": downgrade_reasons,
         "invalidation_conditions": invalidation_conditions,
         "evidence": evidence,
@@ -2032,7 +2087,15 @@ def _decision_recommendation_record(
         "warnings": warnings,
         "linked_derivatives_context_ids": _derivatives_context_ids(derivatives_records),
         "linked_macro_calendar_context_ids": _macro_calendar_context_ids(macro_records),
-        "source_artifacts": _decision_record_source_artifacts(signals, regime, risk, derivatives_records, macro_records),
+        "linked_onchain_flow_context_ids": _onchain_flow_context_ids(onchain_records),
+        "source_artifacts": _decision_record_source_artifacts(
+            signals,
+            regime,
+            risk,
+            derivatives_records,
+            macro_records,
+            onchain_records,
+        ),
     }
 
 
@@ -2134,6 +2197,24 @@ def _apply_macro_calendar_decision_gate(
     return action_level, reasons
 
 
+def _apply_onchain_flow_decision_gate(
+    action_level: str,
+    onchain: dict[str, Any],
+    *,
+    has_evidence: bool,
+) -> tuple[str, list[str]]:
+    if not has_evidence or not onchain.get("supports_risk_assessment"):
+        return action_level, []
+    if onchain.get("availability_issue_ids") and action_level in ACTIONABLE_ACTION_LEVELS:
+        return "WATCH", ["onchain_flow_source_uncertainty"]
+    severities = set(_string_list(onchain.get("severities")))
+    if "high" in severities and action_level in ACTIONABLE_ACTION_LEVELS:
+        return "WATCH", ["high_severity_onchain_flow_context"]
+    if "medium" in severities and action_level in {"STRONG_DO", "DO"}:
+        return "TRY_SMALL", ["medium_severity_onchain_flow_context"]
+    return action_level, []
+
+
 def _decision_status(
     action_level: str,
     risk_level: str,
@@ -2228,6 +2309,7 @@ def _risk_conditions(
     *,
     derivatives: dict[str, Any] | None = None,
     macro: dict[str, Any] | None = None,
+    onchain: dict[str, Any] | None = None,
 ) -> list[str]:
     if risk is None:
         conditions = ["risk_assessment=missing."]
@@ -2262,6 +2344,13 @@ def _risk_conditions(
             conditions.append(f"macro_calendar_context_blocking: {item}")
         for item in _string_list(macro.get("uncertainty"))[:2]:
             conditions.append(f"macro_calendar_context_uncertainty: {item}")
+    if onchain:
+        for item in _string_list(onchain.get("rising"))[:3]:
+            conditions.append(f"onchain_flow_context_risk: {item}")
+        for item in _string_list(onchain.get("blocking"))[:2]:
+            conditions.append(f"onchain_flow_context_blocking: {item}")
+        for item in _string_list(onchain.get("uncertainty"))[:2]:
+            conditions.append(f"onchain_flow_context_uncertainty: {item}")
     return _unique_ordered(conditions)
 
 
@@ -2317,6 +2406,14 @@ def _macro_calendar_invalidation_conditions(*, symbol: str, macro: dict[str, Any
     ]
 
 
+def _onchain_flow_invalidation_conditions(*, symbol: str, onchain: dict[str, Any]) -> list[str]:
+    if not onchain.get("supports_risk_assessment"):
+        return []
+    return [
+        f"{symbol} on-chain flow context adds high-severity liquidity, network, congestion, or source-availability stress.",
+    ]
+
+
 def _decision_evidence(
     usable_signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
@@ -2324,6 +2421,7 @@ def _decision_evidence(
     *,
     derivatives: dict[str, Any] | None = None,
     macro: dict[str, Any] | None = None,
+    onchain: dict[str, Any] | None = None,
 ) -> list[str]:
     evidence = [
         _counts_evidence("direction_counts", _direction_counts(usable_signals)),
@@ -2353,6 +2451,9 @@ def _decision_evidence(
     if macro:
         evidence.extend(_string_list(macro.get("evidence"))[:3])
         evidence.extend(_string_list(macro.get("uncertainty"))[:2])
+    if onchain:
+        evidence.extend(_string_list(onchain.get("evidence"))[:3])
+        evidence.extend(_string_list(onchain.get("uncertainty"))[:2])
     evidence.extend(_bounded_signal_evidence(usable_signals))
     return _unique_ordered(evidence)
 
@@ -2368,8 +2469,10 @@ def _decision_warnings(
     risk: dict[str, Any] | None,
     derivatives: dict[str, Any] | None = None,
     macro: dict[str, Any] | None = None,
+    onchain: dict[str, Any] | None = None,
     derivatives_downgrade_reasons: list[str] | None = None,
     macro_downgrade_reasons: list[str] | None = None,
+    onchain_downgrade_reasons: list[str] | None = None,
 ) -> list[str]:
     warnings = []
     if not has_evidence or risk_status == "insufficient_data" or regime_value == "unknown":
@@ -2392,6 +2495,10 @@ def _decision_warnings(
         warnings.append("Macro calendar context downgraded stronger action language.")
     if macro:
         warnings.extend(_string_list(macro.get("warnings")))
+    if onchain_downgrade_reasons:
+        warnings.append("On-chain flow context downgraded stronger action language.")
+    if onchain:
+        warnings.extend(_string_list(onchain.get("warnings")))
     return _unique_ordered(warnings)
 
 
@@ -2480,12 +2587,24 @@ def _macro_calendar_context_ids(records: list[dict[str, Any]]) -> list[str]:
     )
 
 
+def _onchain_flow_context_ids(records: list[dict[str, Any]]) -> list[str]:
+    return _unique_ordered(
+        [
+            record_id
+            for record in records
+            for record_id in [_clean_text(record.get("context_id"), fallback="")]
+            if record_id
+        ]
+    )
+
+
 def _decision_record_source_artifacts(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]] | None = None,
     macro_records: list[dict[str, Any]] | None = None,
+    onchain_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2504,6 +2623,12 @@ def _decision_record_source_artifacts(
             *[
                 artifact
                 for record in macro_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
+            *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_records else []),
+            *[
+                artifact
+                for record in onchain_records or []
                 for artifact in _string_list(record.get("source_artifacts"))
             ],
             *[
@@ -2525,15 +2650,19 @@ def _watch_trigger_records(
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]],
     macro_records: list[dict[str, Any]],
+    onchain_records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     derivatives = _derivatives_context_effects(derivatives_records)
     macro = _macro_calendar_context_effects(macro_records)
+    onchain = _onchain_flow_context_effects(onchain_records)
     evidence = _unique_ordered(
         [
             *_watch_evidence(decision, signals, regime, risk),
             *_string_list(derivatives.get("evidence"))[:3],
             *_string_list(macro.get("evidence"))[:3],
             *_string_list(macro.get("uncertainty"))[:2],
+            *_string_list(onchain.get("evidence"))[:3],
+            *_string_list(onchain.get("uncertainty"))[:2],
         ]
     )
     if not evidence:
@@ -2547,9 +2676,18 @@ def _watch_trigger_records(
     action_level = _clean_text(decision.get("action_level"), fallback="NO_ACTION")
     status = _clean_text(decision.get("status"), fallback="unknown")
     risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback=_risk_level_from_decision(decision))
-    source_artifacts = _watch_record_source_artifacts(decision, signals, regime, risk, derivatives_records, macro_records)
+    source_artifacts = _watch_record_source_artifacts(
+        decision,
+        signals,
+        regime,
+        risk,
+        derivatives_records,
+        macro_records,
+        onchain_records,
+    )
     linked_derivatives_context_ids = _derivatives_context_ids(derivatives_records)
     linked_macro_calendar_context_ids = _macro_calendar_context_ids(macro_records)
+    linked_onchain_flow_context_ids = _onchain_flow_context_ids(onchain_records)
 
     if action_level in ACTIONABLE_ACTION_LEVELS:
         records.append(
@@ -2568,6 +2706,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
             )
         )
         for index, condition in enumerate(_string_list(decision.get("invalidation_conditions"))[:2], start=1):
@@ -2587,6 +2726,7 @@ def _watch_trigger_records(
                     source_artifacts=source_artifacts,
                     linked_derivatives_context_ids=linked_derivatives_context_ids,
                     linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                    linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                     sequence=index,
                 )
             )
@@ -2606,6 +2746,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
             )
         )
 
@@ -2626,6 +2767,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                 sequence=1,
             )
         )
@@ -2645,6 +2787,72 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
+                sequence=1,
+            )
+        )
+
+    if onchain.get("supports_risk_assessment") and (onchain.get("rising") or onchain.get("blocking")):
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="risk_escalation",
+                condition=f"{symbol} on-chain flow context adds liquidity, network activity, congestion, or source-availability risk.",
+                priority="high" if "high" in set(_string_list(onchain.get("severities"))) else "medium",
+                expected_decision_impact="could_downgrade_or_block_stronger_action",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(onchain.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
+                sequence=1,
+            )
+        )
+        if onchain.get("stress_context_ids"):
+            records.append(
+                _watch_trigger_record(
+                    source=source,
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    latest=latest,
+                    trigger_type="risk_relief",
+                    condition=f"{symbol} on-chain flow stress clears or falls back to normal context.",
+                    priority="medium",
+                    expected_decision_impact="could_relieve_onchain_flow_risk_cap",
+                    linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                    evidence=evidence,
+                    warnings=[],
+                    source_artifacts=source_artifacts,
+                    linked_derivatives_context_ids=linked_derivatives_context_ids,
+                    linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                    linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
+                    sequence=1,
+                )
+            )
+
+    if onchain.get("availability_issue_ids"):
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="recheck_next_run",
+                condition=f"Recheck on-chain flow source availability for {symbol}; do not treat stale, unavailable, partial, or missing flow evidence as neutral.",
+                priority="medium",
+                expected_decision_impact="could_keep_or_relieve_onchain_flow_source_uncertainty",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(onchain.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                 sequence=1,
             )
         )
@@ -2666,6 +2874,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                 sequence=1,
             )
         )
@@ -2685,6 +2894,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                 sequence=1,
             )
         )
@@ -2706,6 +2916,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                 sequence=1,
             )
         )
@@ -2728,6 +2939,7 @@ def _watch_trigger_records(
                     source_artifacts=source_artifacts,
                     linked_derivatives_context_ids=linked_derivatives_context_ids,
                     linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                    linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
                 )
             )
         records.append(
@@ -2746,6 +2958,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
             )
         )
 
@@ -2766,6 +2979,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
             )
         )
 
@@ -2786,6 +3000,7 @@ def _watch_trigger_records(
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
                 linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
             )
         )
 
@@ -2804,6 +3019,8 @@ def _watch_trigger_records(
             warnings=[],
             source_artifacts=source_artifacts,
             linked_derivatives_context_ids=linked_derivatives_context_ids,
+            linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+            linked_onchain_flow_context_ids=linked_onchain_flow_context_ids,
         )
     )
     return records
@@ -2825,6 +3042,7 @@ def _watch_trigger_record(
     source_artifacts: list[str],
     linked_derivatives_context_ids: list[str] | None = None,
     linked_macro_calendar_context_ids: list[str] | None = None,
+    linked_onchain_flow_context_ids: list[str] | None = None,
     sequence: int | None = None,
 ) -> dict[str, Any]:
     suffix = f":{sequence}" if sequence is not None else ""
@@ -2842,6 +3060,7 @@ def _watch_trigger_record(
         "warnings": _unique_ordered(warnings),
         "linked_derivatives_context_ids": linked_derivatives_context_ids or [],
         "linked_macro_calendar_context_ids": linked_macro_calendar_context_ids or [],
+        "linked_onchain_flow_context_ids": linked_onchain_flow_context_ids or [],
         "source_artifacts": source_artifacts,
     }
 
@@ -2944,6 +3163,7 @@ def _watch_record_source_artifacts(
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]] | None = None,
     macro_records: list[dict[str, Any]] | None = None,
+    onchain_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2966,6 +3186,12 @@ def _watch_record_source_artifacts(
                 for record in macro_records or []
                 for artifact in _string_list(record.get("source_artifacts"))
             ],
+            *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_records else []),
+            *[
+                artifact
+                for record in onchain_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
             *[
                 artifact
                 for signal in signals
@@ -2985,6 +3211,7 @@ def _watch_source_artifacts(
     decision_recommendations: dict[str, Any],
     derivatives_artifact: dict[str, Any] | None = None,
     macro_artifact: dict[str, Any] | None = None,
+    onchain_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -3000,6 +3227,8 @@ def _watch_source_artifacts(
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_artifact is not None else []),
             *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
+            *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_artifact is not None else []),
+            *_string_list(onchain_artifact.get("source_artifacts") if onchain_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
@@ -3030,6 +3259,7 @@ def _decision_source_artifacts(
     strategy_artifact: dict[str, Any] | None,
     derivatives_artifact: dict[str, Any] | None = None,
     macro_artifact: dict[str, Any] | None = None,
+    onchain_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -3045,6 +3275,8 @@ def _decision_source_artifacts(
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_artifact is not None else []),
             *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
+            *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_artifact is not None else []),
+            *_string_list(onchain_artifact.get("source_artifacts") if onchain_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
@@ -3128,6 +3360,19 @@ def _read_optional_macro_calendar_context(run: RunContext) -> tuple[dict[str, An
         return None, [f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}."]
     if not isinstance(loaded, dict):
         return None, [f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} must be a JSON object."]
+    return loaded, []
+
+
+def _read_optional_onchain_flow_context(run: RunContext) -> tuple[dict[str, Any] | None, list[str]]:
+    path = run.analysis_dir / "onchain_flow_context.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None, []
+    except JSONDecodeError as exc:
+        return None, [f"{ONCHAIN_FLOW_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}."]
+    if not isinstance(loaded, dict):
+        return None, [f"{ONCHAIN_FLOW_CONTEXT_ARTIFACT} must be a JSON object."]
     return loaded, []
 
 
@@ -3470,6 +3715,26 @@ def _macro_calendar_records_for_symbol(
     return _unique_macro_calendar_records([*groups.get(symbol, []), *groups.get("__global__", [])])
 
 
+def _onchain_flow_records_for_symbol(records: list[dict[str, Any]], symbol: str) -> list[dict[str, Any]]:
+    base_asset = _symbol_base_asset(symbol)
+    matched: list[dict[str, Any]] = []
+    for record in records:
+        context_type = _clean_text(record.get("context_type"), fallback="")
+        asset = _clean_text(record.get("asset"), fallback="")
+        chain = _clean_text(record.get("chain"), fallback="")
+        if asset in {"ALL_CONFIGURED_ASSETS", "ALL_STABLECOINS"}:
+            matched.append(record)
+        elif asset and base_asset and asset == base_asset:
+            matched.append(record)
+        elif context_type == "exchange_flow_source_availability" and not asset:
+            matched.append(record)
+        elif chain == "bitcoin" and base_asset == "BTC":
+            matched.append(record)
+        elif chain == "ethereum" and base_asset == "ETH":
+            matched.append(record)
+    return _unique_onchain_flow_records(sorted(matched, key=_onchain_flow_sort_key))
+
+
 def _tuple_key(item: dict[str, Any]) -> tuple[str, str, str]:
     return (
         _clean_text(item.get("source"), fallback="missing"),
@@ -3491,6 +3756,16 @@ def _macro_calendar_sort_key(record: dict[str, Any]) -> tuple[str, str, str, str
         _clean_text(record.get("context_type"), fallback=""),
         _clean_text(record.get("scheduled_at"), fallback=""),
         _clean_text(record.get("as_of"), fallback=""),
+        _clean_text(record.get("context_id"), fallback=""),
+    )
+
+
+def _onchain_flow_sort_key(record: dict[str, Any]) -> tuple[str, str, str, str, str]:
+    return (
+        _clean_text(record.get("context_type"), fallback=""),
+        _clean_text(record.get("asset"), fallback=""),
+        _clean_text(record.get("chain"), fallback=""),
+        _clean_text(record.get("period"), fallback=""),
         _clean_text(record.get("context_id"), fallback=""),
     )
 
@@ -3731,6 +4006,7 @@ def _risk_evidence(
     regime_risks: dict[str, list[str]],
     derivatives: dict[str, Any],
     macro: dict[str, Any],
+    onchain: dict[str, Any],
     risk_level: str,
 ) -> list[str]:
     evidence = [
@@ -3742,12 +4018,14 @@ def _risk_evidence(
         *derivatives["uncertainty"],
         *macro["evidence"],
         *macro["uncertainty"],
+        *onchain["evidence"],
+        *onchain["uncertainty"],
         *_bounded_signal_evidence([signal for signal in signals if _has_usable_signal_evidence(signal)]),
     ]
     if regime is None:
         evidence.append("No matching market regime record was available.")
     if risk_level == "low":
-        evidence.append("No elevated risk factors were found in current bounded M2 and regime artifacts.")
+        evidence.append("No elevated risk factors were found in current bounded signal, regime, and optional context artifacts.")
     return _unique_ordered(evidence)
 
 
@@ -3894,6 +4172,81 @@ def _macro_calendar_context_effects(records: list[dict[str, Any]]) -> dict[str, 
     }
 
 
+def _onchain_flow_context_effects(records: list[dict[str, Any]]) -> dict[str, Any]:
+    rising: list[str] = []
+    blocking: list[str] = []
+    evidence: list[str] = []
+    uncertainty: list[str] = []
+    warnings: list[str] = []
+    severities: list[str] = []
+    stress_context_ids: list[str] = []
+    availability_issue_ids: list[str] = []
+    normal_context_ids: list[str] = []
+    supports_risk_assessment = False
+
+    for record in _unique_onchain_flow_records(records):
+        context_type = _clean_text(record.get("context_type"), fallback="unknown")
+        state = _clean_text(record.get("state"), fallback="unknown")
+        status = _clean_text(record.get("status"), fallback="unknown")
+        severity = _clean_text(record.get("severity"), fallback="unknown")
+        asset = _clean_text(record.get("asset"), fallback="unknown_asset")
+        chain = _clean_text(record.get("chain"), fallback="unknown_chain")
+        period = _clean_text(record.get("period"), fallback="unknown_period")
+        context_id = _clean_text(record.get("context_id"), fallback="")
+        evidence_line = (
+            f"onchain_flow_context {context_type} state={state}; severity={severity}; "
+            f"status={status}; asset={asset}; chain={chain}; period={period}."
+        )
+        evidence.append(evidence_line)
+        warnings.extend(_string_list(record.get("warnings")))
+        uncertainty.extend(_string_list(record.get("uncertainty")))
+
+        if status in {"failed", "unavailable", "stale", "degraded", "partial"} or state in {
+            "source_unavailable",
+            "source_failed",
+            "unavailable",
+            "stale",
+            "insufficient_evidence",
+        }:
+            if context_id:
+                availability_issue_ids.append(context_id)
+            uncertainty.append(_onchain_flow_uncertainty_message(context_type, state, status))
+            rising.append(
+                f"On-chain flow context {context_type} is {status}; missing or degraded flow evidence cannot support lower risk."
+            )
+            severities.append("medium")
+            supports_risk_assessment = True
+            continue
+
+        if state in {"normal", "neutral"} or severity in {"low", "unknown"}:
+            if context_id:
+                normal_context_ids.append(context_id)
+            continue
+
+        if context_id:
+            stress_context_ids.append(context_id)
+        rising.append(_onchain_flow_risk_message(context_type=context_type, state=state, severity=severity))
+        supports_risk_assessment = True
+        if severity == "high":
+            blocking.append("High-severity on-chain flow context blocks stronger action levels.")
+            severities.append("high")
+        elif severity == "medium":
+            severities.append("medium")
+
+    return {
+        "rising": _unique_ordered(rising),
+        "blocking": _unique_ordered(blocking),
+        "evidence": _unique_ordered(evidence),
+        "uncertainty": _unique_ordered(uncertainty),
+        "warnings": _unique_ordered(warnings),
+        "severities": _unique_ordered(severities),
+        "supports_risk_assessment": supports_risk_assessment,
+        "stress_context_ids": _unique_ordered(stress_context_ids),
+        "availability_issue_ids": _unique_ordered(availability_issue_ids),
+        "normal_context_ids": _unique_ordered(normal_context_ids),
+    }
+
+
 def _macro_calendar_uncertainty_message(context_type: str, state: str, status: str) -> str:
     return (
         f"Macro calendar context {context_type} is state={state}, status={status}; "
@@ -3937,6 +4290,32 @@ def _derivatives_uncertainty_message(context_type: str, state: str, status: str)
     )
 
 
+def _onchain_flow_uncertainty_message(context_type: str, state: str, status: str) -> str:
+    return (
+        f"On-chain flow context {context_type} is state={state}, status={status}; "
+        "missing or degraded on-chain flow evidence cannot support lower risk."
+    )
+
+
+def _onchain_flow_risk_message(*, context_type: str, state: str, severity: str) -> str:
+    state_messages = {
+        "sharp_exchange_inflow": "sharp exchange inflow can indicate elevated sell-side transfer pressure",
+        "exchange_inflow": "exchange inflow can indicate sell-side transfer pressure",
+        "sharp_exchange_outflow": "sharp exchange outflow is abnormal exchange-flow context",
+        "exchange_outflow": "exchange outflow is abnormal exchange-flow context",
+        "sharp_stablecoin_supply_contraction": "sharp stablecoin supply contraction suggests liquidity pressure",
+        "stablecoin_supply_contraction": "stablecoin supply contraction suggests liquidity pressure",
+        "sharp_stablecoin_supply_expansion": "sharp stablecoin supply expansion is abnormal liquidity context",
+        "stablecoin_supply_expansion": "stablecoin supply expansion is abnormal liquidity context",
+        "surging_chain_activity": "surging chain activity suggests abnormal network usage",
+        "elevated_chain_activity": "elevated chain activity suggests abnormal network usage",
+        "severe_network_congestion": "severe network congestion indicates settlement friction",
+        "elevated_network_congestion": "elevated network congestion indicates settlement friction",
+    }
+    detail = state_messages.get(state, f"{context_type} state {state} requires conservative interpretation")
+    return f"On-chain flow context: {detail} ({severity} severity)."
+
+
 def _derivatives_risk_message(*, context_type: str, state: str, severity: str) -> str:
     state_messages = {
         "extreme_positive_funding": "extreme positive funding suggests crowded long leverage pressure",
@@ -3974,6 +4353,7 @@ def _risk_record_source_artifacts(
     strategy_runs: list[dict[str, Any]],
     derivatives_records: list[dict[str, Any]],
     macro_records: list[dict[str, Any]],
+    onchain_records: list[dict[str, Any]],
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -4000,6 +4380,16 @@ def _risk_record_source_artifacts(
                 for record in macro_records
                 for artifact in _string_list(record.get("source_artifacts"))
             ],
+            *(
+                [ONCHAIN_FLOW_CONTEXT_ARTIFACT]
+                if onchain_records
+                else []
+            ),
+            *[
+                artifact
+                for record in onchain_records
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
             *[
                 artifact
                 for signal in signals
@@ -4020,6 +4410,7 @@ def _risk_source_artifacts(
     strategy_artifact: dict[str, Any] | None,
     derivatives_artifact: dict[str, Any] | None = None,
     macro_artifact: dict[str, Any] | None = None,
+    onchain_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -4033,6 +4424,8 @@ def _risk_source_artifacts(
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
             *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_artifact is not None else []),
             *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
+            *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_artifact is not None else []),
+            *_string_list(onchain_artifact.get("source_artifacts") if onchain_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -4125,6 +4518,8 @@ def _record_zero_risk_counts(run: RunContext) -> None:
     run.manifest["counts"]["risk_assessment_derivatives_influenced_records"] = 0
     run.manifest["counts"]["risk_assessment_macro_calendar_context_records"] = 0
     run.manifest["counts"]["risk_assessment_macro_calendar_influenced_records"] = 0
+    run.manifest["counts"]["risk_assessment_onchain_flow_context_records"] = 0
+    run.manifest["counts"]["risk_assessment_onchain_flow_influenced_records"] = 0
 
 
 def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
@@ -4136,6 +4531,8 @@ def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
     run.manifest["counts"]["decision_recommendation_derivatives_linked_records"] = 0
     run.manifest["counts"]["decision_recommendation_macro_calendar_context_records"] = 0
     run.manifest["counts"]["decision_recommendation_macro_calendar_linked_records"] = 0
+    run.manifest["counts"]["decision_recommendation_onchain_flow_context_records"] = 0
+    run.manifest["counts"]["decision_recommendation_onchain_flow_linked_records"] = 0
 
 
 def _record_watch_trigger_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
@@ -4156,6 +4553,8 @@ def _record_zero_watch_trigger_counts(run: RunContext) -> None:
     run.manifest["counts"]["watch_trigger_derivatives_linked_records"] = 0
     run.manifest["counts"]["watch_trigger_macro_calendar_context_records"] = 0
     run.manifest["counts"]["watch_trigger_macro_calendar_linked_records"] = 0
+    run.manifest["counts"]["watch_trigger_onchain_flow_context_records"] = 0
+    run.manifest["counts"]["watch_trigger_onchain_flow_linked_records"] = 0
     for trigger_type in TRIGGER_TYPES:
         run.manifest["counts"][f"watch_trigger_{trigger_type}_records"] = 0
 
@@ -4240,6 +4639,33 @@ def _unique_macro_calendar_records(records: list[dict[str, Any]]) -> list[dict[s
         seen.add(key)
         result.append(record)
     return result
+
+
+def _unique_onchain_flow_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for record in records:
+        key = _clean_text(record.get("context_id"), fallback="")
+        if not key:
+            key = ":".join(
+                _clean_text(record.get(field), fallback="")
+                for field in ("context_type", "asset", "chain", "period", "status")
+            )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(record)
+    return result
+
+
+def _symbol_base_asset(symbol: str) -> str:
+    value = _clean_text(symbol, fallback="").upper()
+    if not value:
+        return ""
+    for suffix in ("USDT", "USDC", "BUSD", "USD", "BTC", "ETH"):
+        if value.endswith(suffix) and len(value) > len(suffix):
+            return value[: -len(suffix)]
+    return value
 
 
 def _yaml_list(values: list[str]) -> list[str]:
