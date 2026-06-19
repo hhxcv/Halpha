@@ -17,6 +17,9 @@ OHLCV_SYNC_STATE_ARTIFACT = "data/market/metadata/ohlcv_sync_state.json"
 DERIVATIVES_SCHEMA_ARTIFACT = "data/market/metadata/derivatives_market_schema.json"
 DERIVATIVES_STATE_ARTIFACT = "data/market/metadata/derivatives_market_state.json"
 DERIVATIVES_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
+MACRO_CALENDAR_SCHEMA_ARTIFACT = "data/macro/metadata/macro_calendar_schema.json"
+MACRO_CALENDAR_STATE_ARTIFACT = "data/macro/metadata/macro_calendar_state.json"
+MACRO_CALENDAR_VIEWS_ARTIFACT = "raw/macro_calendar_views.json"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 
 
@@ -45,6 +48,7 @@ def inspect_local_data(
         _text_event_history_section(config_path, base=base),
         _ohlcv_section(config, config_path, base=base),
         _derivatives_section(config, config_path, run_dir=run_dir, base=base),
+        _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -207,6 +211,64 @@ def _derivatives_section(
         "derivatives_market_history",
         status,
         artifact=DERIVATIVES_STATE_ARTIFACT,
+        fields=fields,
+        reason="; ".join(warnings) if warnings else None,
+    )
+
+
+def _macro_calendar_section(
+    config: dict[str, Any],
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    macro_calendar = config.get("macro_calendar") if isinstance(config.get("macro_calendar"), dict) else None
+    if not isinstance(macro_calendar, dict) or not macro_calendar.get("enabled"):
+        return _section("macro_calendar_history", "skipped", reason="macro_calendar is not enabled.")
+
+    schema, schema_error = _read_json(base / MACRO_CALENDAR_SCHEMA_ARTIFACT)
+    state, state_error = _read_json(base / MACRO_CALENDAR_STATE_ARTIFACT)
+    warnings = [error for error in (schema_error, state_error) if error]
+    totals = _dict(state.get("totals")) if isinstance(state, dict) else {}
+    groups = _list(state.get("groups")) if isinstance(state, dict) else []
+    availability = _list(state.get("availability")) if isinstance(state, dict) else []
+    fields = {
+        "records": _int(totals.get("records")),
+        "groups": len(groups),
+        "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
+        "warnings": len(_list(state.get("warnings"))) if isinstance(state, dict) else len(warnings),
+        "errors": len(_list(state.get("errors"))) if isinstance(state, dict) else 0,
+        "duplicate_records": _int(totals.get("duplicate_records")),
+        "conflicting_duplicates": _int(totals.get("conflicting_duplicates")),
+        "availability_records": len(availability),
+        "no_event_records": _status_count(availability, "no_event"),
+        "unavailable_records": _status_count(availability, "unavailable"),
+        "partial_records": _status_count(availability, "partial"),
+        "failed_records": _status_count(availability, "failed"),
+        "stale_records": _status_count(availability, "stale"),
+        "degraded_records": _status_count(availability, "degraded"),
+    }
+
+    view_run_dir = _resolve_run_dir(run_dir, base=base) if run_dir is not None else _latest_run_from_index(config_path)
+    if view_run_dir is not None:
+        views, views_error = _read_json(view_run_dir / MACRO_CALENDAR_VIEWS_ARTIFACT)
+        if views_error:
+            warnings.append(views_error)
+        else:
+            view_records = _list(views.get("views"))
+            fields["views"] = len(view_records)
+            fields["view_records"] = sum(_int(view.get("included_record_count")) for view in view_records if isinstance(view, dict))
+            fields["no_event_views"] = _status_count(view_records, "no_event")
+            fields["stale_views"] = _status_count(view_records, "stale")
+            fields["unavailable_views"] = _status_count(view_records, "unavailable")
+            fields["skipped_views"] = _status_count(view_records, "skipped")
+
+    status = "warning" if warnings else str(state.get("status") or "ok")
+    return _section(
+        "macro_calendar_history",
+        status,
+        artifact=MACRO_CALENDAR_STATE_ARTIFACT,
         fields=fields,
         reason="; ".join(warnings) if warnings else None,
     )
@@ -407,3 +469,7 @@ def _int(value: Any) -> int:
     if isinstance(value, bool):
         return 0
     return value if isinstance(value, int) else 0
+
+
+def _status_count(records: list[Any], status: str) -> int:
+    return sum(1 for item in records if isinstance(item, dict) and item.get("status") == status)

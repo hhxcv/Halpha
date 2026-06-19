@@ -31,7 +31,7 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
 
     assert summary["artifact_type"] == "data_quality_summary"
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 11
+    assert summary["counts"]["checks"] == 16
     assert summary["counts"]["failed"] == 0
     assert summary["counts"]["degraded"] == 0
     assert manifest["artifacts"]["data_quality_summary"] == "analysis/data_quality_summary.json"
@@ -42,6 +42,11 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "raw_derivatives_market")["status"] == "skipped"
     assert _check(summary, "derivatives_market_history")["status"] == "skipped"
     assert _check(summary, "derivatives_market_views")["status"] == "skipped"
+    assert _check(summary, "raw_macro_calendar")["status"] == "skipped"
+    assert _check(summary, "macro_calendar_history")["status"] == "skipped"
+    assert _check(summary, "macro_calendar_views")["status"] == "skipped"
+    assert _check(summary, "macro_calendar_context")["status"] == "skipped"
+    assert _check(summary, "macro_calendar_material")["status"] == "skipped"
     assert _check(summary, "text_event_history")["status"] == "ok"
     run_index = _check(summary, "run_index")
     assert run_index["status"] == "skipped"
@@ -179,6 +184,77 @@ def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path)
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
+def test_data_quality_summary_reports_macro_calendar_quality_states(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_market_raw({}, run)
+    _write_macro_raw(run)
+    _write_macro_state(tmp_path)
+    _write_macro_views(run)
+    _write_macro_context(run)
+    _write_macro_material(run)
+    run.manifest["macro_calendar_history"] = {
+        "status": "warning",
+        "artifact": "data/macro/metadata/macro_calendar_state.json",
+    }
+
+    build_data_quality_summary(
+        _config(include_ohlcv=False, text_enabled=False, macro_enabled=True),
+        run,
+        now="2026-06-05T00:00:00Z",
+    )
+
+    summary = _summary(run.analysis_dir)
+    raw = _check(summary, "raw_macro_calendar")
+    history = _check(summary, "macro_calendar_history")
+    views = _check(summary, "macro_calendar_views")
+    context = _check(summary, "macro_calendar_context")
+    material = _check(summary, "macro_calendar_material")
+
+    assert summary["status"] == "degraded"
+    assert raw["status"] == "degraded"
+    assert raw["details"]["items"] == 1
+    assert raw["details"]["availability_records"] == 6
+    assert raw["details"]["no_event_records"] == 1
+    assert raw["details"]["unavailable_records"] == 1
+    assert raw["details"]["partial_records"] == 1
+    assert raw["details"]["failed_records"] == 1
+    assert raw["details"]["stale_records"] == 1
+    assert raw["details"]["degraded_records"] == 1
+    assert any(
+        "macro calendar availability federal_reserve_fomc central_bank_event US" in warning
+        for warning in raw["details"]["warnings"]
+    )
+    assert "macro calendar source failed" in raw["details"]["errors"]
+
+    assert history["status"] == "warning"
+    assert history["details"]["records"] == 1
+    assert history["details"]["duplicate_records"] == 1
+    assert history["details"]["conflicting_duplicates"] == 1
+    assert history["details"]["no_event_records"] == 1
+    assert "macro calendar duplicate conflict" in history["details"]["warnings"]
+
+    assert views["status"] == "warning"
+    assert views["details"]["views"] == 4
+    assert views["details"]["records"] == 1
+    assert views["details"]["no_event_views"] == 1
+    assert views["details"]["stale_views"] == 1
+    assert views["details"]["skipped_views"] == 1
+    assert any("macro calendar view is stale" in warning for warning in views["details"]["warnings"])
+
+    assert context["status"] == "warning"
+    assert context["details"]["records"] == 2
+    assert context["details"]["scheduled_catalyst"] == 1
+    assert context["details"]["source_availability"] == 1
+    assert context["details"]["stale"] == 1
+
+    assert material["status"] == "ok"
+    assert material["details"]["selected_records"] == 2
+    assert material["details"]["omitted_records"] == 0
+    assert material["details"]["codex_boundaries_present"] is True
+    assert _check(summary, "partial_collection")["status"] == "degraded"
+
+
 def _write_config(tmp_path: Path, *, include_ohlcv: bool = True) -> Path:
     ohlcv = ""
     if include_ohlcv:
@@ -223,6 +299,7 @@ def _config(
     include_ohlcv: bool = True,
     text_enabled: bool = True,
     derivatives_enabled: bool = False,
+    macro_enabled: bool = False,
 ) -> dict[str, Any]:
     market: dict[str, Any] = {
         "enabled": True,
@@ -242,6 +319,14 @@ def _config(
         }
     return {
         "market": market,
+        "macro_calendar": {
+            "enabled": macro_enabled,
+            "source": "federal_reserve_fomc",
+            "data_classes": ["central_bank_event"],
+            "regions": ["US"],
+            "lookback_days": 7,
+            "lookahead_days": 45,
+        },
         "text": {"enabled": text_enabled},
     }
 
@@ -444,6 +529,293 @@ def _write_derivatives_views(run: RunContext) -> None:
             "errors": [],
         },
     )
+
+
+def _write_macro_raw(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "macro_calendar.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_raw",
+            "collector": "macro_calendar",
+            "collection_method": "public_http",
+            "source": {
+                "name": "federal_reserve_fomc",
+                "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+            },
+            "collected_at": "2026-06-01T00:00:00Z",
+            "window": {
+                "lookback_start": "2026-05-29T00:00:00Z",
+                "lookahead_end": "2026-07-20T00:00:00Z",
+            },
+            "items": [
+                {
+                    "item_id": "macro_calendar:central_bank_event:federal_reserve_fomc:US:fomc:2026-07-29T00:00:00Z",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "event_name": "Federal Open Market Committee meeting",
+                    "event_type": "fomc_meeting",
+                    "region": "US",
+                    "scheduled_at": "2026-07-29T00:00:00Z",
+                    "source_timezone": "America/New_York",
+                    "source_published_at": "2026-06-01T00:00:00Z",
+                    "importance": "high",
+                    "affected_assets": ["BTCUSDT"],
+                    "endpoint": "fomc_calendars",
+                    "metrics": {},
+                    "units": {},
+                    "raw_fields": {"time_precision": "date"},
+                    "warnings": ["macro calendar item warning"],
+                    "errors": [],
+                }
+            ],
+            "availability": [
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "no_event",
+                    "reason": "no event in window",
+                },
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "partial",
+                    "reason": "partial page",
+                },
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "unavailable",
+                    "reason": "calendar unavailable",
+                },
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "failed",
+                    "reason": "timeout",
+                },
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "stale",
+                    "reason": "calendar stale",
+                },
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "degraded",
+                    "reason": "calendar degraded",
+                },
+            ],
+            "warnings": ["macro calendar raw warning"],
+            "errors": [{"message": "macro calendar source failed"}],
+        },
+    )
+    run.manifest["artifacts"]["raw_macro_calendar"] = "raw/macro_calendar.json"
+
+
+def _write_macro_state(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "macro" / "metadata" / "macro_calendar_schema.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_schema",
+            "identity": ["source", "data_class", "region", "event_name", "scheduled_at"],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "macro" / "metadata" / "macro_calendar_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_state",
+            "updated_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "storage_path": "data/macro/calendar",
+            "totals": {
+                "records": 1,
+                "incoming_records": 2,
+                "inserted_records": 1,
+                "updated_records": 1,
+                "duplicate_records": 1,
+                "conflicting_duplicates": 1,
+            },
+            "groups": [
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "row_count": 1,
+                }
+            ],
+            "availability": [
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "no_event",
+                }
+            ],
+            "warnings": ["macro calendar duplicate conflict"],
+            "errors": [],
+        },
+    )
+
+
+def _write_macro_views(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "macro_calendar_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_views",
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["data/macro/metadata/macro_calendar_state.json"],
+            "views": [
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:latest",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "region": "US",
+                    "status": "succeeded",
+                    "latest_observation_time": "2026-06-01T00:00:00Z",
+                    "event_count": 1,
+                    "included_record_count": 1,
+                    "records": [],
+                    "warnings": ["macro calendar view is stale"],
+                    "errors": [],
+                },
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:no_event",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "region": "US",
+                    "status": "no_event",
+                    "latest_observation_time": None,
+                    "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:stale",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "region": "US",
+                    "status": "stale",
+                    "latest_observation_time": None,
+                    "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:skipped",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "region": "US",
+                    "status": "skipped",
+                    "latest_observation_time": None,
+                    "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_macro_context(run: RunContext) -> None:
+    write_json(
+        run.analysis_dir / "macro_calendar_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": "macro_calendar_context:scheduled_catalyst:federal_reserve_fomc:US:FOMC:2026-07-29T00:00:00Z",
+                    "context_type": "scheduled_catalyst",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "event_name": "Federal Open Market Committee meeting",
+                    "region": "US",
+                    "scheduled_at": "2026-07-29T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "upcoming",
+                    "severity": "medium",
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "context_id": "macro_calendar_context:source_availability:federal_reserve_fomc:US:FOMC:missing",
+                    "context_type": "source_availability",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "event_name": None,
+                    "region": "US",
+                    "scheduled_at": None,
+                    "status": "stale",
+                    "state": "stale",
+                    "severity": "low",
+                    "warnings": ["source availability is stale."],
+                    "errors": [],
+                },
+            ],
+            "counts": {
+                "records": 2,
+                "scheduled_catalyst": 1,
+                "recent_catalyst": 0,
+                "no_event_window": 0,
+                "source_availability": 1,
+            },
+            "warnings": ["macro calendar context warning"],
+            "errors": [],
+            "source_artifacts": ["raw/macro_calendar_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["macro_calendar_context"] = "analysis/macro_calendar_context.json"
+
+
+def _write_macro_material(run: RunContext) -> None:
+    material = "\n".join(
+        [
+            "---",
+            "artifact_type: analysis_macro_calendar_material",
+            "schema_version: 1",
+            "---",
+            "",
+            "# macro_calendar_material",
+            "",
+            "codex_may_generate_macro_events: false",
+            "codex_may_generate_risk_levels: false",
+            "full_raw_macro_calendar_artifacts_embedded: false",
+            "full_reusable_macro_calendar_history_embedded: false",
+            "full_macro_calendar_context_json_embedded: false",
+            "",
+        ]
+    )
+    run.analysis_dir.joinpath("macro_calendar_material.md").write_text(material, encoding="utf-8")
+    run.manifest["artifacts"]["macro_calendar_material"] = "analysis/macro_calendar_material.md"
+    run.manifest["macro_calendar_material"] = {
+        "status": "warning",
+        "artifact": "analysis/macro_calendar_material.md",
+        "context_records": 2,
+        "selected_records": 2,
+        "omitted_records": 0,
+    }
 
 
 def _event_record(raw_id: str, *, canonical_url: str, text: str) -> dict[str, Any]:

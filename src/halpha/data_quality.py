@@ -10,6 +10,7 @@ from .pipeline import RunContext
 from .raw_artifacts import (
     RawArtifactError,
     validate_derivatives_market_raw_artifact,
+    validate_macro_calendar_raw_artifact,
     validate_market_raw_artifact,
     validate_text_events_raw_artifact,
 )
@@ -31,10 +32,15 @@ def build_data_quality_summary(
     checks = [
         _raw_market_check(config, run, now=created_at),
         _raw_derivatives_check(config, run, now=created_at),
+        _raw_macro_calendar_check(config, run, now=created_at),
         _raw_text_check(config, run, now=created_at),
         _ohlcv_store_check(config, run),
         _derivatives_history_check(config, run),
         _derivatives_views_check(config, run, now=created_at),
+        _macro_calendar_history_check(config, run),
+        _macro_calendar_views_check(config, run, now=created_at),
+        _macro_calendar_context_check(config, run),
+        _macro_calendar_material_check(config, run),
         _text_event_records_check(config, run, now=created_at),
         _text_event_history_check(run),
         _research_data_catalog_check(run),
@@ -199,6 +205,57 @@ def _raw_derivatives_check(config: dict[str, Any], run: RunContext, *, now: str)
     )
 
 
+def _raw_macro_calendar_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
+    macro_calendar = _macro_calendar_config(config)
+    if not macro_calendar.get("enabled"):
+        return _check("raw_macro_calendar", "raw", "skipped", "macro_calendar.enabled is false.", [])
+    artifact = "raw/macro_calendar.json"
+    raw, error = _read_json(run.raw_dir / "macro_calendar.json")
+    if error:
+        return _check("raw_macro_calendar", "raw", "failed", error, [artifact], errors=[error])
+    try:
+        validate_macro_calendar_raw_artifact(raw, artifact)
+    except RawArtifactError as exc:
+        return _check("raw_macro_calendar", "raw", "failed", str(exc), [artifact], errors=[str(exc)])
+
+    errors = _error_messages(raw.get("errors"))
+    timestamps = _macro_calendar_timestamps(raw)
+    timestamp_warnings = _timestamp_warnings(timestamps, now=now)
+    stale_warnings = _stale_timestamp_warnings(timestamps, now=now, max_age_hours=48)
+    availability_warnings = _macro_calendar_availability_warnings(raw)
+    item_warnings = _macro_calendar_item_warnings(raw)
+    warnings = _unique_sorted(
+        [
+            *_string_list(raw.get("warnings")),
+            *timestamp_warnings,
+            *stale_warnings,
+            *availability_warnings,
+            *item_warnings,
+        ]
+    )
+    availability = _list(raw.get("availability"))
+    status = "degraded" if errors else "warning" if warnings else "ok"
+    return _check(
+        "raw_macro_calendar",
+        "raw",
+        status,
+        f"{len(raw.get('items', []))} macro calendar item(s), {len(errors)} collection error(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "items": len(raw.get("items", [])),
+            "availability_records": len(availability),
+            "no_event_records": _availability_status_count(availability, "no_event"),
+            "unavailable_records": _availability_status_count(availability, "unavailable"),
+            "partial_records": _availability_status_count(availability, "partial"),
+            "failed_records": _availability_status_count(availability, "failed"),
+            "stale_records": _availability_status_count(availability, "stale"),
+            "degraded_records": _availability_status_count(availability, "degraded"),
+        },
+    )
+
+
 def _ohlcv_store_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
     market = config.get("market", {})
     if not isinstance(market.get("ohlcv"), dict):
@@ -255,6 +312,48 @@ def _derivatives_history_check(config: dict[str, Any], run: RunContext) -> dict[
     )
 
 
+def _macro_calendar_history_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    macro_calendar = _macro_calendar_config(config)
+    if not macro_calendar.get("enabled"):
+        return _check("macro_calendar_history", "shared_data", "skipped", "macro_calendar.enabled is false.", [])
+    artifact = "data/macro/metadata/macro_calendar_state.json"
+    summary = run.manifest.get("macro_calendar_history")
+    if not isinstance(summary, dict):
+        return _check("macro_calendar_history", "shared_data", "skipped", "macro calendar history was not produced.", [])
+    state, error = _read_json(run.config_path.parent / artifact)
+    if error:
+        return _check("macro_calendar_history", "shared_data", "failed", error, [artifact], errors=[error])
+    warnings = _string_list(state.get("warnings"))
+    errors = _error_messages(state.get("errors"))
+    totals_value = state.get("totals")
+    totals = dict(totals_value) if isinstance(totals_value, dict) else {}
+    availability = _list(state.get("availability"))
+    status = _status_from_summary(str(state.get("status") or summary.get("status")), warnings, errors)
+    return _check(
+        "macro_calendar_history",
+        "shared_data",
+        status,
+        f"macro calendar history status: {state.get('status') or 'unknown'}.",
+        [
+            artifact,
+            "data/macro/metadata/macro_calendar_schema.json",
+        ],
+        warnings=warnings,
+        errors=errors,
+        details={
+            **totals,
+            "groups": len(_list(state.get("groups"))),
+            "availability_records": len(availability),
+            "no_event_records": _availability_status_count(availability, "no_event"),
+            "unavailable_records": _availability_status_count(availability, "unavailable"),
+            "partial_records": _availability_status_count(availability, "partial"),
+            "failed_records": _availability_status_count(availability, "failed"),
+            "stale_records": _availability_status_count(availability, "stale"),
+            "degraded_records": _availability_status_count(availability, "degraded"),
+        },
+    )
+
+
 def _derivatives_views_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
     derivatives = _derivatives_config(config)
     if not derivatives.get("enabled"):
@@ -291,6 +390,136 @@ def _derivatives_views_check(config: dict[str, Any], run: RunContext, *, now: st
                 1 for view in views if isinstance(view, dict) and view.get("status") == "missing_history"
             ),
             "skipped_views": sum(1 for view in views if isinstance(view, dict) and view.get("status") == "skipped"),
+        },
+    )
+
+
+def _macro_calendar_views_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
+    macro_calendar = _macro_calendar_config(config)
+    if not macro_calendar.get("enabled"):
+        return _check("macro_calendar_views", "raw", "skipped", "macro_calendar.enabled is false.", [])
+    artifact = "raw/macro_calendar_views.json"
+    views_artifact, error = _read_json(run.raw_dir / "macro_calendar_views.json")
+    if error:
+        return _check("macro_calendar_views", "raw", "failed", error, [artifact], errors=[error])
+    views = _list(views_artifact.get("views"))
+    warnings = _unique_sorted(
+        [
+            *_string_list(views_artifact.get("warnings")),
+            *_macro_calendar_view_warnings(views),
+            *_timestamp_warnings(_macro_calendar_view_timestamps(views), now=now),
+            *_stale_timestamp_warnings(_macro_calendar_view_timestamps(views), now=now, max_age_hours=48),
+        ]
+    )
+    errors = _error_messages(views_artifact.get("errors"))
+    status = "failed" if errors else "warning" if warnings else "ok"
+    return _check(
+        "macro_calendar_views",
+        "raw",
+        status,
+        f"{len(views)} macro calendar view(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "views": len(views),
+            "events": sum(_int(view.get("event_count")) for view in views if isinstance(view, dict)),
+            "records": sum(_int(view.get("included_record_count")) for view in views if isinstance(view, dict)),
+            "no_event_views": sum(1 for view in views if isinstance(view, dict) and view.get("status") == "no_event"),
+            "stale_views": sum(1 for view in views if isinstance(view, dict) and view.get("status") == "stale"),
+            "unavailable_views": sum(
+                1 for view in views if isinstance(view, dict) and view.get("status") == "unavailable"
+            ),
+            "skipped_views": sum(1 for view in views if isinstance(view, dict) and view.get("status") == "skipped"),
+        },
+    )
+
+
+def _macro_calendar_context_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    macro_calendar = _macro_calendar_config(config)
+    if not macro_calendar.get("enabled"):
+        return _check("macro_calendar_context", "analysis", "skipped", "macro_calendar.enabled is false.", [])
+    artifact = "analysis/macro_calendar_context.json"
+    context, error = _read_json(run.analysis_dir / "macro_calendar_context.json")
+    if error:
+        return _check("macro_calendar_context", "analysis", "failed", error, [artifact], errors=[error])
+    if context.get("artifact_type") != "macro_calendar_context" or not isinstance(context.get("records"), list):
+        return _check(
+            "macro_calendar_context",
+            "analysis",
+            "failed",
+            "analysis/macro_calendar_context.json is invalid.",
+            [artifact],
+            errors=["macro calendar context artifact_type or records are invalid."],
+        )
+    records = _list(context.get("records"))
+    warnings = _unique_sorted([*_string_list(context.get("warnings")), *_macro_calendar_context_warnings(records)])
+    errors = _error_messages(context.get("errors"))
+    status = _status_from_summary(str(context.get("status") or "unknown"), warnings, errors)
+    counts = _dict(context.get("counts"))
+    return _check(
+        "macro_calendar_context",
+        "analysis",
+        status,
+        f"{len(records)} macro calendar context record(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "records": len(records),
+            "scheduled_catalyst": _int(counts.get("scheduled_catalyst")),
+            "recent_catalyst": _int(counts.get("recent_catalyst")),
+            "no_event_window": _int(counts.get("no_event_window")),
+            "source_availability": _int(counts.get("source_availability")),
+            "succeeded": _status_count(records, "succeeded"),
+            "partial": _status_count(records, "partial"),
+            "stale": _status_count(records, "stale"),
+            "no_event": _status_count(records, "no_event"),
+            "unavailable": _status_count(records, "unavailable"),
+            "failed": _status_count(records, "failed"),
+            "degraded": _status_count(records, "degraded"),
+        },
+    )
+
+
+def _macro_calendar_material_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    macro_calendar = _macro_calendar_config(config)
+    if not macro_calendar.get("enabled"):
+        return _check("macro_calendar_material", "analysis", "skipped", "macro_calendar.enabled is false.", [])
+    artifact = "analysis/macro_calendar_material.md"
+    path = run.analysis_dir / "macro_calendar_material.md"
+    if not path.exists():
+        return _check("macro_calendar_material", "analysis", "failed", f"{artifact} was not found.", [artifact], errors=[f"{artifact} was not found."])
+    material = path.read_text(encoding="utf-8")
+    warnings = []
+    errors = []
+    required_boundaries = [
+        "codex_may_generate_macro_events: false",
+        "codex_may_generate_risk_levels: false",
+        "full_raw_macro_calendar_artifacts_embedded: false",
+        "full_reusable_macro_calendar_history_embedded: false",
+        "full_macro_calendar_context_json_embedded: false",
+    ]
+    for boundary in required_boundaries:
+        if boundary not in material:
+            errors.append(f"macro calendar material missing boundary: {boundary}")
+    summary = run.manifest.get("macro_calendar_material")
+    summary_mapping = summary if isinstance(summary, dict) else {}
+    status = "failed" if errors else "warning" if warnings else "ok"
+    return _check(
+        "macro_calendar_material",
+        "analysis",
+        status,
+        "macro calendar material is present with Codex boundary metadata.",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "selected_records": _int(summary_mapping.get("selected_records")),
+            "omitted_records": _int(summary_mapping.get("omitted_records")),
+            "context_records": _int(summary_mapping.get("context_records")),
+            "chars": len(material),
+            "codex_boundaries_present": not errors,
         },
     )
 
@@ -419,7 +648,7 @@ def _run_index_check(run: RunContext) -> dict[str, Any]:
 def _partial_collection_check(run: RunContext) -> dict[str, Any]:
     warnings = []
     errors = []
-    for key in ("raw_market", "raw_derivatives_market", "raw_text_events"):
+    for key in ("raw_market", "raw_derivatives_market", "raw_macro_calendar", "raw_text_events"):
         path = run.manifest.get("artifacts", {}).get(key)
         if not isinstance(path, str):
             continue
@@ -546,6 +775,27 @@ def _derivatives_view_timestamps(views: list[Any]) -> list[tuple[str, str]]:
     return values
 
 
+def _macro_calendar_timestamps(raw: dict[str, Any]) -> list[tuple[str, str]]:
+    values = []
+    if isinstance(raw.get("collected_at"), str):
+        values.append(("raw/macro_calendar.json collected_at", raw["collected_at"]))
+    for item in raw.get("items", []):
+        if isinstance(item, dict) and isinstance(item.get("source_published_at"), str):
+            values.append(("raw/macro_calendar.json source_published_at", item["source_published_at"]))
+    return values
+
+
+def _macro_calendar_view_timestamps(views: list[Any]) -> list[tuple[str, str]]:
+    values = []
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        value = view.get("latest_observation_time")
+        if isinstance(value, str):
+            values.append(("raw/macro_calendar_views.json latest_observation_time", value))
+    return values
+
+
 def _stale_timestamp_warnings(timestamps: list[tuple[str, str]], *, now: str, max_age_hours: int) -> list[str]:
     warnings = []
     now_value = _parse_utc(now)
@@ -592,6 +842,31 @@ def _derivatives_availability_warnings(raw: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def _macro_calendar_availability_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in _list(raw.get("availability")):
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status")
+        if status not in {"failed", "partial", "unavailable", "stale", "degraded"}:
+            continue
+        source = item.get("source") or "unknown_source"
+        data_class = item.get("data_class") or "unknown"
+        region = item.get("region") or "all_regions"
+        reason = item.get("reason") or status
+        warnings.append(f"macro calendar availability {source} {data_class} {region}: {reason}.")
+    return warnings
+
+
+def _macro_calendar_item_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in raw.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        warnings.extend(_string_list(item.get("warnings")))
+    return warnings
+
+
 def _derivatives_view_warnings(views: list[Any]) -> list[str]:
     warnings = []
     for view in views:
@@ -599,6 +874,32 @@ def _derivatives_view_warnings(views: list[Any]) -> list[str]:
             continue
         warnings.extend(_string_list(view.get("warnings")))
     return warnings
+
+
+def _macro_calendar_view_warnings(views: list[Any]) -> list[str]:
+    warnings = []
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        warnings.extend(_string_list(view.get("warnings")))
+    return warnings
+
+
+def _macro_calendar_context_warnings(records: list[Any]) -> list[str]:
+    warnings = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        warnings.extend(_string_list(record.get("warnings")))
+    return warnings
+
+
+def _availability_status_count(records: list[Any], status: str) -> int:
+    return sum(1 for item in records if isinstance(item, dict) and item.get("status") == status)
+
+
+def _status_count(records: list[Any], status: str) -> int:
+    return sum(1 for item in records if isinstance(item, dict) and item.get("status") == status)
 
 
 def _duplicate_summary(records: list[Any]) -> dict[str, Any]:
@@ -704,6 +1005,15 @@ def _derivatives_config(config: dict[str, Any]) -> dict[str, Any]:
         return {}
     derivatives = market.get("derivatives")
     return derivatives if isinstance(derivatives, dict) else {}
+
+
+def _macro_calendar_config(config: dict[str, Any]) -> dict[str, Any]:
+    macro_calendar = config.get("macro_calendar")
+    return macro_calendar if isinstance(macro_calendar, dict) else {}
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def _int(value: Any) -> int:

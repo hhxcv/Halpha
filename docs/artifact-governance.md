@@ -188,9 +188,10 @@ Current-run quality artifact:
 - `analysis/data_quality_material.md`
 
 `analysis/data_quality_summary.json` records deterministic schema, timestamp,
-duplicate, shared-store, partial-collection, degraded, skipped, warning, and
-failed states. `analysis/data_quality_material.md` is the bounded Codex-facing
-summary derived from that JSON. Codex may explain Halpha-generated quality
+duplicate, shared-store, derivatives, macro/calendar, partial-collection,
+degraded, skipped, warning, and failed states.
+`analysis/data_quality_material.md` is the bounded Codex-facing summary derived
+from that JSON. Codex may explain Halpha-generated quality
 status, but must not create quality checks, invent validation results, inspect
 full shared stores, read SQLite contents, read Parquet tables, or reconstruct
 raw archives.
