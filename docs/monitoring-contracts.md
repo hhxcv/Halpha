@@ -14,10 +14,10 @@ It must remain observable, bounded, and local-first:
 - no Codex execution unless a command explicitly asks for a full report path;
 - no private user-state values in public artifacts, logs, issues, PRs, or docs.
 
-The current command surface validates monitor configuration and runs one bounded
-local monitor cycle. Alert archive writes, duplicate suppression, cooldown, and
-health inspection are defined here as contracts and are implemented by later
-monitor runtime changes.
+The current command surface validates monitor configuration, runs one bounded
+local monitor cycle, and writes local alert archive and cooldown state from
+generated alert decisions. Health inspection is defined here as a contract and
+is implemented by later monitor runtime changes.
 
 ## Configuration
 
@@ -52,6 +52,8 @@ python -m halpha monitor run --config config.example.yaml --once
 This command runs exactly one bounded cycle through the configured product
 pipeline target stage and writes one monitor cycle manifest. The default
 `no_codex: true` setting keeps the monitor path before Codex report generation.
+When generated `analysis/alert_decisions.json` exists, the cycle also appends
+local alert archive records and updates cooldown state.
 
 ## Cycle Manifest
 
@@ -86,30 +88,39 @@ private local values.
 ## Alert Archive
 
 The local alert archive records emitted and suppressed alert decisions. The
-intended local state paths are:
+local state paths are:
 
 ```text
 runs/monitor/alert_archive.jsonl
 runs/monitor/alert_cooldown_state.json
+runs/monitor/alert_archive_state.json
 ```
 
 Each alert archive record must include:
 
+- `artifact_type`: `monitor_alert_archive_record`.
 - `record_id`: deterministic record id.
 - `alert_key`: deterministic duplicate key.
 - `cycle_id`: producing monitor cycle.
 - `decision_id`: source alert decision id when available.
 - `symbol`, `timeframe`, `priority`, `attention_decision`.
-- `status`: `emitted` or `suppressed`.
+- `status`: `emitted`, `suppressed_duplicate`, `suppressed_cooldown`,
+  `suppressed_no_alert`, or `skipped`.
 - `suppression_reasons`: reason codes for suppressed records.
 - `cooldown_until`: UTC timestamp when cooldown applies.
 - `source_artifacts`: bounded path refs to source evidence.
-- `personalized_context_present`: boolean only, not private user-state values.
+- `personalized_context`: boolean presence plus bounded constraint id, state,
+  and action only when present.
+- `source_run`: linked product run id and run manifest ref.
 - `created_at`: UTC timestamp.
 
 Duplicate keys must be deterministic and source-aware. Repeated equivalent
 alerts during cooldown are archived as suppressed records instead of emitted
 again.
+
+The archive must not store raw user-state files, private notes, account
+identifiers, holdings, balances, allocations, position sizes, private endpoints,
+or personalized evidence text.
 
 ## Health Summary
 
