@@ -6,7 +6,7 @@ from typing import Sequence
 
 from .config import ConfigError, load_config
 from .data_inspection import DataInspectionError, inspect_local_data
-from .monitoring import load_monitor_config, monitor_config_lines
+from .monitoring import load_monitor_config, monitor_config_lines, run_monitor_cycle
 from .outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
 from .pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipeline_stage
 from .standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
@@ -95,14 +95,20 @@ def build_parser() -> argparse.ArgumentParser:
     monitor_subparsers = monitor_parser.add_subparsers(dest="monitor_command", required=True)
     monitor_run_parser = monitor_subparsers.add_parser(
         "run",
-        help="Validate monitor configuration without hidden background execution.",
-        description="Validate monitor configuration without hidden background execution.",
+        help="Run or validate local monitor cycles without hidden background execution.",
+        description="Run or validate local monitor cycles without hidden background execution.",
     )
     monitor_run_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
-    monitor_run_parser.add_argument(
+    monitor_run_mode = monitor_run_parser.add_mutually_exclusive_group()
+    monitor_run_mode.add_argument(
         "--dry-run",
         action="store_true",
         help="Validate monitor configuration and print effective settings without running a cycle.",
+    )
+    monitor_run_mode.add_argument(
+        "--once",
+        action="store_true",
+        help="Run exactly one bounded monitor cycle.",
     )
     monitor_inspect_parser = monitor_subparsers.add_parser(
         "inspect",
@@ -153,7 +159,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _outcomes_inspect(args.config, run_dir=args.run_dir)
 
     if args.command == "monitor" and args.monitor_command == "run":
-        return _monitor_run(args.config, dry_run=args.dry_run)
+        return _monitor_run(args.config, dry_run=args.dry_run, once=args.once)
 
     if args.command == "monitor" and args.monitor_command == "inspect":
         return _monitor_inspect(args.config)
@@ -472,7 +478,7 @@ def _outcomes_inspect(config_arg: str, *, run_dir: str | None) -> int:
     return 0
 
 
-def _monitor_run(config_arg: str, *, dry_run: bool) -> int:
+def _monitor_run(config_arg: str, *, dry_run: bool, once: bool) -> int:
     config_path = Path(config_arg)
 
     try:
@@ -484,10 +490,31 @@ def _monitor_run(config_arg: str, *, dry_run: bool) -> int:
         return 2
 
     if not dry_run:
+        if not once:
+            print("Halpha monitor run failed.")
+            print("stage: monitor")
+            print("reason: choose --dry-run or --once.")
+            return 3
+        result = run_monitor_cycle(config, config_path=config_path)
+        manifest = _safe_local_display_path(result.manifest_path)
+        if result.succeeded:
+            print("Halpha monitor cycle succeeded.")
+            print(f"cycle_id: {result.cycle_id}")
+            if result.run_id:
+                print(f"run_id: {result.run_id}")
+            print(f"target_stage: {result.target_stage}")
+            print(f"no_codex: {str(result.no_codex).lower()}")
+            print(f"monitor_manifest: {manifest}")
+            return result.exit_code
+
         print("Halpha monitor run failed.")
         print("stage: monitor")
-        print("reason: monitor cycle execution is not implemented yet; use --dry-run to validate monitor config.")
-        return 3
+        if result.reason:
+            print(f"reason: {result.reason}")
+        print(f"target_stage: {result.target_stage}")
+        print(f"no_codex: {str(result.no_codex).lower()}")
+        print(f"monitor_manifest: {manifest}")
+        return result.exit_code
 
     settings = load_monitor_config(config)
     print("Halpha monitor dry run succeeded.")

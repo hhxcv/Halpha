@@ -14,8 +14,8 @@ It must remain observable, bounded, and local-first:
 - no Codex execution unless a command explicitly asks for a full report path;
 - no private user-state values in public artifacts, logs, issues, PRs, or docs.
 
-The current command surface only validates monitor configuration and help text.
-Cycle execution, alert archive writes, duplicate suppression, cooldown, and
+The current command surface validates monitor configuration and runs one bounded
+local monitor cycle. Alert archive writes, duplicate suppression, cooldown, and
 health inspection are defined here as contracts and are implemented by later
 monitor runtime changes.
 
@@ -43,10 +43,20 @@ This command prints the effective monitor config and records
 `cycle_execution: not_run`. It must not collect data, run pipeline stages, write
 monitor artifacts, or invoke Codex CLI.
 
+Current implemented one-cycle command:
+
+```bash
+python -m halpha monitor run --config config.example.yaml --once
+```
+
+This command runs exactly one bounded cycle through the configured product
+pipeline target stage and writes one monitor cycle manifest. The default
+`no_codex: true` setting keeps the monitor path before Codex report generation.
+
 ## Cycle Manifest
 
 Monitor runtime writes one manifest per cycle under the configured monitor
-output directory. The intended path shape is:
+output directory. The path shape is:
 
 ```text
 runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json
@@ -61,10 +71,12 @@ Required manifest fields:
 - `config_ref`: local config path reference, never embedded secrets.
 - `target_stage`: requested pipeline stage boundary.
 - `no_codex`: boolean Codex boundary state.
+- `exit_code`: terminal monitor command exit code.
+- `run_id`: linked product run id when a run was created.
 - `run_dir`: linked product run directory when a run was created.
 - `run_manifest`: linked product run manifest path when available.
-- `alert_decisions`: linked alert decision artifact refs when available.
-- `emitted_alerts`, `suppressed_alerts`: counts and archive refs.
+- `product_run`: bounded linked product-run summary.
+- `source_artifacts`: linked product-run artifact refs when available.
 - `warnings`, `errors`: bounded actionable strings.
 
 The cycle manifest stores references and counts. It must not embed full raw
