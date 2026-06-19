@@ -11,7 +11,10 @@ QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 STRATEGY_EFFECTIVENESS_GATES_ARTIFACT = "analysis/strategy_effectiveness_gates.json"
 DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
 DERIVATIVES_MARKET_MATERIAL_ARTIFACT = "analysis/derivatives_market_material.md"
+MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
+MACRO_CALENDAR_MATERIAL_ARTIFACT = "analysis/macro_calendar_material.md"
 MAX_DERIVATIVES_REPORT_ROWS = 8
+MAX_MACRO_CALENDAR_REPORT_ROWS = 8
 
 
 def inject_derivatives_market_section(report: str, run: RunContext) -> str:
@@ -37,6 +40,30 @@ def inject_derivatives_market_section(report: str, run: RunContext) -> str:
     return _insert_report_section(report, section)
 
 
+def inject_macro_calendar_section(report: str, run: RunContext) -> str:
+    table = _macro_calendar_markdown_table(run)
+    if table is None:
+        return report
+    section = "\n".join(
+        [
+            "## \u5b8f\u89c2\u65e5\u5386\u4e0e\u8c03\u5ea6\u98ce\u9669\u8bc1\u636e",
+            "",
+            (
+                "\u4ee5\u4e0b\u5185\u5bb9\u6765\u81ea "
+                f"`{MACRO_CALENDAR_MATERIAL_ARTIFACT}` "
+                "\u548c Halpha \u786e\u5b9a\u6027\u5b8f\u89c2\u65e5\u5386\u4e0a\u4e0b\u6587\uff1b"
+                "\u8ba1\u5212\u4e2d\u50ac\u5316\u5242\u4ec5\u4ee3\u8868\u65f6\u70b9\u548c\u4e0d\u786e\u5b9a\u6027\uff0c"
+                "\u4e0d\u4ee3\u8868\u5df2\u786e\u8ba4\u7684\u5e02\u573a\u5f71\u54cd\u3001"
+                "\u98ce\u9669\u7b49\u7ea7\u3001\u4ea4\u6613\u6307\u4ee4\u6216\u4ef7\u683c\u9884\u6d4b\u3002"
+            ),
+            "",
+            table,
+            "",
+        ]
+    )
+    return _insert_report_section(report, section)
+
+
 def inject_quant_strategy_table(report: str, run: RunContext) -> str:
     table = _quant_strategy_markdown_table(run)
     if table is None:
@@ -50,6 +77,51 @@ def inject_quant_strategy_table(report: str, run: RunContext) -> str:
         ]
     )
     return _insert_report_section(report, section)
+
+
+def _macro_calendar_markdown_table(run: RunContext) -> str | None:
+    material_path = run.analysis_dir / "macro_calendar_material.md"
+    if not material_path.exists():
+        return None
+    artifact = _read_macro_calendar_context(run)
+    records = artifact.get("records")
+    if not isinstance(records, list):
+        raise PipelineError(
+            f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} must contain records as a list.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    rows = [_macro_calendar_report_row(record) for record in _selected_macro_calendar_records(records)]
+    if not rows:
+        rows = [
+            [
+                "\u65e0\u53ef\u7528\u8bb0\u5f55",
+                "",
+                "",
+                "",
+                _text(artifact.get("status")),
+                "not_evaluated",
+                "\u5b8f\u89c2\u65e5\u5386 material \u5b58\u5728\uff0c\u4f46\u672a\u63d0\u4f9b\u53ef\u62a5\u544a\u7684 context record\u3002",
+                MACRO_CALENDAR_MATERIAL_ARTIFACT,
+            ]
+        ]
+    header = [
+        "\u7c7b\u578b",
+        "\u4e8b\u4ef6",
+        "\u533a\u57df",
+        "\u65f6\u95f4",
+        "\u72b6\u6001",
+        "\u5b9e\u9645\u5f71\u54cd",
+        "\u89e3\u91ca\u53e3\u5f84",
+        "\u6765\u6e90",
+    ]
+    lines = [
+        _markdown_row(header),
+        _markdown_row(["---"] * len(header)),
+    ]
+    for row in rows:
+        lines.append(_markdown_row(row))
+    return "\n".join(lines)
 
 
 def _derivatives_market_markdown_table(run: RunContext) -> str | None:
@@ -95,6 +167,31 @@ def _derivatives_market_markdown_table(run: RunContext) -> str | None:
     return "\n".join(lines)
 
 
+def _read_macro_calendar_context(run: RunContext) -> dict[str, Any]:
+    path = run.analysis_dir / "macro_calendar_context.json"
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(
+            f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} was not found but macro calendar material exists.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict):
+        raise PipelineError(
+            f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} must be a mapping.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    return artifact
+
+
 def _read_derivatives_market_context(run: RunContext) -> dict[str, Any]:
     path = run.analysis_dir / "derivatives_market_context.json"
     try:
@@ -120,9 +217,46 @@ def _read_derivatives_market_context(run: RunContext) -> dict[str, Any]:
     return artifact
 
 
+def _selected_macro_calendar_records(records: list[Any]) -> list[dict[str, Any]]:
+    mappings = [record for record in records if isinstance(record, dict)]
+    return sorted(mappings, key=_macro_calendar_record_sort_key)[:MAX_MACRO_CALENDAR_REPORT_ROWS]
+
+
 def _selected_derivatives_records(records: list[Any]) -> list[dict[str, Any]]:
     mappings = [record for record in records if isinstance(record, dict)]
     return sorted(mappings, key=_derivatives_record_sort_key)[:MAX_DERIVATIVES_REPORT_ROWS]
+
+
+def _macro_calendar_record_sort_key(record: dict[str, Any]) -> tuple[int, int, int, float, str, str]:
+    severity_order = {"high": 0, "medium": 1, "unknown": 2, "low": 3}
+    status_order = {
+        "failed": 0,
+        "unavailable": 1,
+        "stale": 2,
+        "degraded": 3,
+        "partial": 4,
+        "succeeded": 5,
+        "no_event": 6,
+    }
+    type_order = {
+        "scheduled_catalyst": 0,
+        "recent_catalyst": 1,
+        "source_availability": 2,
+        "no_event_window": 3,
+    }
+    hours = record.get("time_to_event_hours")
+    hours_value = abs(float(hours)) if isinstance(hours, int | float) else 999999.0
+    severity = _text(record.get("severity")) or "unknown"
+    status = _text(record.get("status")) or "unknown"
+    context_type = _text(record.get("context_type")) or "unknown"
+    return (
+        severity_order.get(severity, 2),
+        status_order.get(status, 7),
+        type_order.get(context_type, 4),
+        hours_value,
+        _text(record.get("scheduled_at")),
+        _text(record.get("context_id")),
+    )
 
 
 def _derivatives_record_sort_key(record: dict[str, Any]) -> tuple[int, int, str, str, str]:
@@ -147,6 +281,19 @@ def _derivatives_record_sort_key(record: dict[str, Any]) -> tuple[int, int, str,
     )
 
 
+def _macro_calendar_report_row(record: dict[str, Any]) -> list[str]:
+    return [
+        _macro_calendar_type_label(record.get("context_type")),
+        _text(record.get("event_name")) or "-",
+        _text(record.get("region")),
+        _text(record.get("scheduled_at")) or "-",
+        _macro_calendar_status(record),
+        _macro_calendar_realized_impact(record),
+        _macro_calendar_interpretation(record),
+        _macro_calendar_sources(record),
+    ]
+
+
 def _derivatives_report_row(record: dict[str, Any]) -> list[str]:
     return [
         _derivatives_type_label(record.get("context_type")),
@@ -157,6 +304,16 @@ def _derivatives_report_row(record: dict[str, Any]) -> list[str]:
         _derivatives_interpretation(record),
         _derivatives_sources(record),
     ]
+
+
+def _macro_calendar_type_label(value: Any) -> str:
+    labels = {
+        "scheduled_catalyst": "\u8ba1\u5212\u4e2d\u50ac\u5316\u5242",
+        "recent_catalyst": "\u8fd1\u671f\u50ac\u5316\u5242",
+        "no_event_window": "\u65e0\u4e8b\u4ef6\u7a97\u53e3",
+        "source_availability": "\u6765\u6e90\u53ef\u7528\u6027",
+    }
+    return labels.get(value, _text(value))
 
 
 def _derivatives_type_label(value: Any) -> str:
@@ -170,10 +327,61 @@ def _derivatives_type_label(value: Any) -> str:
     return labels.get(value, _text(value))
 
 
+def _macro_calendar_status(record: dict[str, Any]) -> str:
+    status = _text(record.get("status")) or "unknown"
+    state = _text(record.get("state")) or "unknown"
+    return f"{status}/{state}"
+
+
 def _derivatives_status(record: dict[str, Any]) -> str:
     status = _text(record.get("status")) or "unknown"
     state = _text(record.get("state")) or "unknown"
     return f"{status}/{state}"
+
+
+def _macro_calendar_realized_impact(record: dict[str, Any]) -> str:
+    impact = record.get("realized_impact") if isinstance(record.get("realized_impact"), dict) else {}
+    status = _text(impact.get("status")) or "not_evaluated"
+    if status == "not_evaluated":
+        return "not_evaluated; \u672a\u8bc4\u4f30\u5b9e\u9645\u5e02\u573a\u5f71\u54cd"
+    return status
+
+
+def _macro_calendar_interpretation(record: dict[str, Any]) -> str:
+    context_type = _text(record.get("context_type")) or "unknown"
+    status = _text(record.get("status")) or "unknown"
+    state = _text(record.get("state")) or "unknown"
+    if status in {"failed", "unavailable", "stale", "degraded", "partial"} or state in {
+        "unavailable",
+        "stale",
+        "degraded",
+        "partial",
+        "failed",
+    }:
+        return (
+            f"Halpha material \u6807\u8bb0\u4e3a {status}/{state}\uff1b"
+            "\u8fd9\u662f\u6765\u6e90\u6216\u65f6\u6548\u4e0d\u786e\u5b9a\u6027\uff0c"
+            "\u4e0d\u4ee3\u8868\u4f4e\u98ce\u9669\u3002"
+        )
+    if context_type == "scheduled_catalyst":
+        return (
+            "\u8ba1\u5212\u4e2d\u50ac\u5316\u5242\u53ea\u8868\u793a\u65f6\u70b9\u548c\u50ac\u5316\u5242\u98ce\u9669\uff1b"
+            "\u4e0d\u7b49\u4e8e\u9884\u6d4b\uff0c\u4e5f\u4e0d\u7b49\u4e8e\u5df2\u786e\u8ba4\u7684\u5e02\u573a\u5f71\u54cd\u3002"
+        )
+    if context_type == "recent_catalyst":
+        return (
+            "\u8fd1\u671f\u50ac\u5316\u5242\u662f\u4e8b\u4ef6\u65f6\u70b9\u8bc1\u636e\uff1b"
+            "\u4e0d\u786e\u8ba4\u5e02\u573a\u5df2\u53d1\u751f\u54cd\u5e94\u3002"
+        )
+    if context_type == "no_event_window":
+        return (
+            "\u65e0\u4e8b\u4ef6\u7a97\u53e3\u4e0d\u8bc1\u660e\u5b8f\u89c2\u98ce\u9669\u4e0d\u5b58\u5728\uff1b"
+            "\u4ec5\u8bf4\u660e\u5f53\u524d\u7a97\u53e3\u672a\u8bb0\u5f55\u914d\u7f6e\u4e8b\u4ef6\u3002"
+        )
+    return (
+        "\u4ec5\u6309 Halpha \u5df2\u751f\u6210\u7684\u5b8f\u89c2\u65e5\u5386 context \u89e3\u91ca\uff1b"
+        "\u4e0d\u751f\u6210\u98ce\u9669\u7b49\u7ea7\u3001\u4ea4\u6613\u6307\u4ee4\u6216\u9884\u6d4b\u3002"
+    )
 
 
 def _derivatives_interpretation(record: dict[str, Any]) -> str:
@@ -206,6 +414,18 @@ def _derivatives_interpretation(record: dict[str, Any]) -> str:
         "\u4ec5\u6309 Halpha \u5df2\u751f\u6210\u7684\u884d\u751f\u54c1 context \u89e3\u91ca\uff1b"
         "\u4e0d\u751f\u6210\u4ea4\u6613\u6307\u4ee4\u6216\u9884\u6d4b\u3002"
     )
+
+
+def _macro_calendar_sources(record: dict[str, Any]) -> str:
+    artifacts = [
+        MACRO_CALENDAR_MATERIAL_ARTIFACT,
+        *[
+            artifact
+            for artifact in record.get("source_artifacts", [])
+            if isinstance(artifact, str) and artifact
+        ],
+    ]
+    return "; ".join(_unique(artifacts)[:4])
 
 
 def _derivatives_sources(record: dict[str, Any]) -> str:

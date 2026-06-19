@@ -183,6 +183,7 @@ Current bias:
 * `data/macro/metadata/macro_calendar_state.json` records reusable macro/calendar history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
 * `raw/macro_calendar_views.json` records current-run macro/calendar input windows, bounded records, and storage refs, not full reusable macro/calendar history.
 * `analysis/macro_calendar_context.json` records deterministic macro/calendar scheduled-catalyst, recent-catalyst, no-event, stale, unavailable, partial, degraded, failed, source-availability, uncertainty, and realized-impact-not-evaluated context states, not forecasts or trading signals.
+* `analysis/macro_calendar_material.md` records bounded AI-readable macro/calendar context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
 * `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
 * `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
 * `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
@@ -223,22 +224,26 @@ Current bias:
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, reusable derivatives history, reusable macro/calendar history, derivatives views, macro/calendar views, full macro/calendar context JSON, or full derivatives context JSON.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, macro/calendar, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, reusable derivatives history, reusable macro/calendar history, derivatives views, macro/calendar views, full macro/calendar context JSON, or full derivatives context JSON.
 * Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full macro/calendar context JSON, full derivatives context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
-* Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, event, and data-quality evidence over low-priority record dumps.
+* Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, macro/calendar, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Codex prompt may ask for derivatives market explanation when derivatives material exists.
+* Codex prompt may ask for macro/calendar scheduled-catalyst, no-event, source-availability, freshness, time-zone, and realized-impact-not-evaluated explanation when macro calendar material exists.
 * Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
 * Codex prompt may ask for data-quality status explanation when data quality material exists.
 * Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
 * Codex prompt must not ask Codex to generate derivatives states, risk levels, signals, source availability, liquidation summaries, price forecasts, trading instructions, or position sizing.
+* Codex prompt must not ask Codex to generate macro/calendar events, states, source availability, risk levels, watch triggers, alert priorities, release outcomes, policy outcomes, price forecasts, trading instructions, or position sizing.
 * Codex prompt must not ask Codex to generate data-quality checks, validation results, catalog contents, run-index contents, or reusable history contents.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
 * Final reports may include a deterministic derivatives and market-structure evidence section inserted from `analysis/derivatives_market_context.json` when `analysis/derivatives_market_material.md` exists after Codex stdout validation.
+* Final reports may include a deterministic macro/calendar evidence section inserted from `analysis/macro_calendar_context.json` when `analysis/macro_calendar_material.md` exists after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.
 * Codex prompt should not ask Codex to recreate the complete derivatives context table.
+* Codex prompt should not ask Codex to recreate the complete macro/calendar context table.
 * Reports come from Codex stdout, not placeholder text.
 * Fake market data, fake signals, and fake Codex output stay test-only.
 

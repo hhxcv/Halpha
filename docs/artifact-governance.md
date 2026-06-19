@@ -114,16 +114,17 @@ Macro/calendar artifacts:
 - `data/macro/metadata/macro_calendar_state.json`
 - `raw/macro_calendar_views.json`
 - `analysis/macro_calendar_context.json`
+- `analysis/macro_calendar_material.md`
 
 These artifacts preserve configured public macro and scheduled-event
 observations such as Federal Reserve FOMC meeting calendar records when enabled.
 The reusable history, current-run views, and deterministic context are
 source-aware input or analysis data, not Codex context by themselves.
 Risk, decision, and watch-trigger artifacts may cite bounded macro/calendar
-context records as conservative source-linked evidence. Until later
-macro/calendar material exists, Codex input must not embed raw macro/calendar
+context records as conservative source-linked evidence. Codex should consume
+bounded `analysis/macro_calendar_material.md` instead of raw macro/calendar
 artifacts, reusable macro/calendar history, macro/calendar views, or full
-macro/calendar context JSON by default.
+macro/calendar context JSON.
 
 ### Text Intelligence Evidence
 
@@ -223,6 +224,7 @@ Eligible Codex input:
 - `analysis/strategy_evaluation_material.md`
 - `analysis/strategy_experiment_material.md`
 - `analysis/derivatives_market_material.md`
+- `analysis/macro_calendar_material.md`
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
@@ -264,6 +266,7 @@ Codex input policy:
 - Do not embed full run manifests.
 - Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
 - Prefer high-signal derivatives and market-structure context.
+- Prefer scheduled-catalyst, no-event, and source-availability macro/calendar context.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:
@@ -317,6 +320,19 @@ Derivatives market material:
 - Do not embed full raw derivatives payloads, reusable derivatives history,
   full order-book snapshots, or full context JSON.
 
+Macro calendar material:
+
+- Prefer high-importance scheduled catalysts, recent catalysts, no-event
+  windows, and unavailable, stale, degraded, partial, or failed source states.
+- Summarize low-signal macro/calendar records with counts and representative
+  examples.
+- Record source availability explicitly so missing macro/calendar evidence is
+  not treated as neutral.
+- Distinguish scheduled catalyst timing risk from confirmed realized market
+  impact.
+- Do not embed full raw macro/calendar payloads, reusable macro/calendar
+  history, current-run views, or full context JSON.
+
 ## Validation
 
 Automated validation:
@@ -346,6 +362,7 @@ Inspect:
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
 - `analysis/derivatives_market_material.md`
+- `analysis/macro_calendar_material.md`
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or
