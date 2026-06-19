@@ -40,6 +40,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Inserts deterministic strategy output and strategy effectiveness tables into the final report.
 - Records lifecycle status, artifacts, counts, warnings, errors, and Codex status in `run_manifest.json`.
 - Validates local monitor configuration without starting hidden background execution.
+- Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 
 Halpha does not implement account access, exchange trading, order placement,
 portfolio automation, real-time alerts, dashboards, or hosted services.
@@ -93,8 +94,17 @@ python -m halpha monitor --help
 python -m halpha monitor run --config config.example.yaml --dry-run
 ```
 
-Monitor cycle execution and monitor health inspection are not implemented by
-the current skeleton command.
+Run exactly one bounded local monitor cycle:
+
+```bash
+python -m halpha monitor run --config config.example.yaml --once
+```
+
+The default monitor cycle reuses the configured product pipeline through the
+configured monitor target stage and stops before Codex report generation unless
+monitor config explicitly changes that boundary. Monitor health inspection,
+alert archive writes, duplicate suppression, and cooldown are not implemented
+by the current command.
 
 Inspect local research data and data-quality state without collection or Codex:
 
