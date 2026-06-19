@@ -191,7 +191,7 @@ Current bias:
 * `data/onchain/metadata/onchain_flow_schema.json` records reusable on-chain flow history schema and logical keys.
 * `data/onchain/metadata/onchain_flow_state.json` records reusable on-chain flow history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
 * `raw/onchain_flow_views.json` records current-run on-chain flow input windows and storage refs, not full reusable on-chain flow history.
-* Planned `analysis/onchain_flow_context.json` records deterministic stablecoin liquidity, chain activity, network congestion, exchange-flow source-availability, stale, unavailable, partial, degraded, insufficient-data, warning, and failed context states, not forecasts or trading signals.
+* `analysis/onchain_flow_context.json` records deterministic stablecoin liquidity, chain activity, network congestion, exchange-flow source-availability, stale, unavailable, partial, degraded, insufficient-data, warning, and failed context states, not forecasts or trading signals.
 * Planned `analysis/onchain_flow_material.md` records bounded AI-readable on-chain flow context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
 * `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
 * `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
