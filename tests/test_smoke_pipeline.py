@@ -627,6 +627,24 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "full_factor_states_json_embedded: false" in factor_signal_material
     assert "full_multi_source_signals_json_embedded: false" in factor_signal_material
 
+    data_quality_summary = json.loads((run_dir / "analysis/data_quality_summary.json").read_text(encoding="utf-8"))
+    quality_material = (run_dir / "analysis/data_quality_material.md").read_text(encoding="utf-8")
+    m13_quality_checks = {
+        check["name"]: check
+        for check in data_quality_summary["checks"]
+        if check["name"] in {"feature_snapshots", "factor_states", "multi_source_signals", "factor_signal_material"}
+    }
+    assert set(m13_quality_checks) == {
+        "feature_snapshots",
+        "factor_states",
+        "multi_source_signals",
+        "factor_signal_material",
+    }
+    assert all(check["status"] != "skipped" for check in m13_quality_checks.values())
+    assert all(check["details"].get("stage_time_skip_is_expected") is not True for check in m13_quality_checks.values())
+    for name in m13_quality_checks:
+        assert f"name: {name}" in quality_material
+
     context = (run_dir / "codex_context/context.md").read_text(encoding="utf-8")
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     research_context = (run_dir / "analysis/research_context.md").read_text(encoding="utf-8")
