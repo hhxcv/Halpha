@@ -187,7 +187,7 @@ strategy run, benchmark, or experiment JSON.
 
 ### Feature, Factor, And Multi-Source Signal Evidence
 
-Intended feature/factor artifacts:
+Feature/factor artifacts:
 
 - `analysis/feature_snapshots.json`
 - `analysis/factor_states.json`
@@ -195,10 +195,12 @@ Intended feature/factor artifacts:
 - `analysis/factor_signal_material.md`
 
 These contracts are defined in `docs/feature-factor-contracts.md`. Product runs
-do not generate these artifacts until their pipeline stages are implemented.
-When implemented, feature, factor, and multi-source signal JSON artifacts are
-intermediate evidence and should not be embedded in full Codex input. Codex
-should consume bounded `analysis/factor_signal_material.md` instead.
+generate `analysis/feature_snapshots.json`; the factor-state, multi-source
+signal, and factor-signal material artifacts are not generated until their
+pipeline stages are implemented. Feature, factor, and multi-source signal JSON
+artifacts are intermediate evidence and should not be embedded in full Codex
+input. Codex should consume bounded `analysis/factor_signal_material.md` after
+that material stage exists.
 
 ### Decision And Risk Evidence
 
@@ -441,7 +443,7 @@ Inspect:
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
-- `analysis/factor_signal_material.md`
+- `analysis/factor_signal_material.md` when implemented
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or

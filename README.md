@@ -199,6 +199,7 @@ build_decision_intelligence_material
 build_data_quality_summary
 build_outcome_targets
 evaluate_outcomes
+build_feature_snapshots
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -306,6 +307,7 @@ A successful configured run can write:
 - `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
 - `analysis/outcome_evaluations.json`: deterministic market, strategy, event, alert, decision, and watch outcome evaluations.
 - `analysis/outcome_tracking_material.md`: AI-readable bounded outcome accountability material.
+- `analysis/feature_snapshots.json`: normalized source-aware feature records and source coverage from implemented current-run evidence.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
@@ -334,10 +336,10 @@ Failed runs preserve artifacts created before the failure and record errors in
 analysis, or placeholder reports.
 
 Feature, factor, and multi-source signal contracts are defined in
-`docs/feature-factor-contracts.md`. Product runs do not generate
-`analysis/feature_snapshots.json`, `analysis/factor_states.json`,
-`analysis/multi_source_signals.json`, or `analysis/factor_signal_material.md`
-until the corresponding pipeline stages are implemented.
+`docs/feature-factor-contracts.md`. Product runs generate
+`analysis/feature_snapshots.json`. `analysis/factor_states.json`,
+`analysis/multi_source_signals.json`, and `analysis/factor_signal_material.md`
+are not generated until their pipeline stages are implemented.
 
 ## Quantitative Research
 
