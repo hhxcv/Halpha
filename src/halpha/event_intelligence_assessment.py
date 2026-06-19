@@ -20,6 +20,7 @@ MARKET_REGIME_ASSESSMENT_ARTIFACT = "analysis/market_regime_assessment.json"
 RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
 WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
+MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT_TYPE = "event_intelligence_assessment"
 CONSTRUCTIVE_ACTIONS = {"STRONG_DO", "DO", "TRY_SMALL"}
@@ -92,6 +93,11 @@ def build_event_intelligence_assessment(
         WATCH_TRIGGERS_ARTIFACT,
         records_key="records",
     )
+    macro_artifact = _read_optional_artifact(
+        run.analysis_dir / "macro_calendar_context.json",
+        MACRO_CALENDAR_CONTEXT_ARTIFACT,
+        records_key="records",
+    )
 
     signals = _records(signals_artifact, "signals")
     confluence = _records(confluence_artifact, "records")
@@ -101,6 +107,7 @@ def build_event_intelligence_assessment(
     risk_records = _records(risk_artifact, "records")
     decision_records = _records(decision_artifact, "records")
     watch_records = _records(watch_artifact, "records")
+    macro_records = _records(macro_artifact, "records")
     assessment_records = _assessment_records(
         signals=signals,
         confluence=confluence,
@@ -110,6 +117,7 @@ def build_event_intelligence_assessment(
         risk_records=risk_records,
         decision_records=decision_records,
         watch_records=watch_records,
+        macro_records=macro_records,
     )
     warnings = _artifact_warnings(assessment_records)
     if signals_artifact is not None and not signals:
@@ -131,6 +139,7 @@ def build_event_intelligence_assessment(
             (RISK_ASSESSMENT_ARTIFACT, risk_artifact),
             (DECISION_RECOMMENDATIONS_ARTIFACT, decision_artifact),
             (WATCH_TRIGGERS_ARTIFACT, watch_artifact),
+            (MACRO_CALENDAR_CONTEXT_ARTIFACT, macro_artifact),
         ),
         "coverage": _coverage(assessment_records),
         "records": assessment_records,
@@ -139,7 +148,14 @@ def build_event_intelligence_assessment(
     }
     write_json(run.analysis_dir / "event_intelligence_assessment.json", artifact)
     run.manifest["artifacts"]["event_intelligence_assessment"] = EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT
-    _record_manifest_summary(run, records=assessment_records, warnings=warnings, errors=errors, status="succeeded")
+    _record_manifest_summary(
+        run,
+        records=assessment_records,
+        warnings=warnings,
+        errors=errors,
+        status="succeeded",
+        macro_context_records=len(macro_records),
+    )
     return [EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT]
 
 
@@ -153,6 +169,7 @@ def _assessment_records(
     risk_records: list[dict[str, Any]],
     decision_records: list[dict[str, Any]],
     watch_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     signal_index = {
         str(signal.get("event_signal_id")): signal
@@ -169,6 +186,7 @@ def _assessment_records(
     risk_index = _records_by_symbol_timeframe(risk_records)
     decision_index = _records_by_symbol_timeframe(decision_records)
     watch_index = _records_by_symbol_timeframe(watch_records)
+    macro_index = _macro_calendar_context_by_symbol(macro_records)
 
     records = []
     covered_signal_ids: set[str] = set()
@@ -193,6 +211,7 @@ def _assessment_records(
                 risk=_first(risk_index.get(key, [])),
                 decision=_first(decision_index.get(key, [])),
                 watch_records=watch_index.get(key, []),
+                macro_records=_macro_calendar_records_for_symbol(macro_index, key[0]),
             )
         )
 
@@ -211,6 +230,7 @@ def _assessment_records(
                 risk=_first(risk_index.get(key, [])),
                 decision=_first(decision_index.get(key, [])),
                 watch_records=watch_index.get(key, []),
+                macro_records=_macro_calendar_records_for_symbol(macro_index, key[0]),
             )
         )
     return records
@@ -226,12 +246,14 @@ def _assessment_record(
     risk: dict[str, Any] | None,
     decision: dict[str, Any] | None,
     watch_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     symbol = _record_symbol(confluence_record, signals)
     timeframe = _record_timeframe(confluence_record, market_signals, decision, risk, watch_records)
     topic_ids = _topic_ids(signals)
     topics = [topic_index[topic_id] for topic_id in topic_ids if topic_id in topic_index]
     affected_assets = _affected_assets(symbol, signals)
+    macro = _macro_calendar_event_context(signals, topics, symbol=symbol, macro_records=macro_records)
     market_relationship = _market_response_relationship(confluence_record, market_signals)
     source_reliability = _source_reliability(signals, topics)
     risk_effect = _risk_effect(signals, confluence_record, risk)
@@ -251,6 +273,7 @@ def _assessment_record(
         affected_assets=affected_assets,
         market_relationship=market_relationship,
         decision=decision,
+        macro=macro,
     )
     event_severity = _event_severity(
         signals,
@@ -267,13 +290,22 @@ def _assessment_record(
         downgrade_reasons=downgrade_reasons,
     )
     status = "degraded" if downgrade_reasons else "succeeded"
-    evidence = _evidence(confluence_record, signals, market_signals, regime, risk, decision, watch_records)
+    evidence = _evidence(confluence_record, signals, market_signals, regime, risk, decision, watch_records, macro=macro)
     warnings = _warnings(confluence_record, signals, downgrade_reasons=downgrade_reasons)
-    uncertainty = _uncertainty(confluence_record, signals, downgrade_reasons=downgrade_reasons)
+    uncertainty = _uncertainty(confluence_record, signals, downgrade_reasons=downgrade_reasons, macro=macro)
     linked_signal_ids = _signal_ids(signals)
     linked_watch_ids = _watch_trigger_ids(watch_records)
     linked_decision_ids = _decision_ids(confluence_record, decision)
-    source_artifacts = _record_source_artifacts(confluence_record, signals, market_signals, regime, risk, decision, watch_records)
+    source_artifacts = _record_source_artifacts(
+        confluence_record,
+        signals,
+        market_signals,
+        regime,
+        risk,
+        decision,
+        watch_records,
+        macro["records"],
+    )
     if market_signals:
         source_artifacts.append(MARKET_SIGNALS_ARTIFACT)
     if regime is not None:
@@ -284,6 +316,8 @@ def _assessment_record(
         source_artifacts.append(DECISION_RECOMMENDATIONS_ARTIFACT)
     if watch_records:
         source_artifacts.append(WATCH_TRIGGERS_ARTIFACT)
+    if macro["linked_ids"]:
+        source_artifacts.append(MACRO_CALENDAR_CONTEXT_ARTIFACT)
     source_artifacts = _unique(source_artifacts)
     source_key = _source_key(confluence_record, linked_signal_ids, topic_ids)
     return {
@@ -321,6 +355,8 @@ def _assessment_record(
         "linked_event_signal_ids": linked_signal_ids,
         "linked_decision_record_ids": linked_decision_ids,
         "linked_watch_trigger_ids": linked_watch_ids,
+        "linked_macro_calendar_context_ids": macro["linked_ids"],
+        "macro_calendar_relevance": macro["relevance"],
         "source_artifacts": source_artifacts,
     }
 
@@ -358,6 +394,149 @@ def _records_by_symbol_timeframe(records: list[dict[str, Any]]) -> dict[tuple[st
             continue
         grouped.setdefault((symbol, timeframe), []).append(record)
     return grouped
+
+
+def _macro_calendar_context_by_symbol(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        symbols = [
+            symbol
+            for symbol in (_clean_text(value, fallback="") for value in _string_list(record.get("affected_assets")))
+            if symbol
+        ]
+        if not symbols and _clean_text(record.get("context_type"), fallback="") in {
+            "no_event_window",
+            "source_availability",
+        }:
+            symbols = ["__global__"]
+        for symbol in symbols:
+            groups.setdefault(symbol, []).append(record)
+    return {symbol: sorted(items, key=_macro_calendar_sort_key) for symbol, items in groups.items()}
+
+
+def _macro_calendar_records_for_symbol(
+    groups: dict[str, list[dict[str, Any]]],
+    symbol: str,
+) -> list[dict[str, Any]]:
+    return _unique_macro_calendar_records([*groups.get(symbol, []), *groups.get("__global__", [])])
+
+
+def _macro_calendar_event_context(
+    signals: list[dict[str, Any]],
+    topics: list[dict[str, Any]],
+    *,
+    symbol: str,
+    macro_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    event_times = _event_reference_times(signals, topics)
+    linked_records: list[dict[str, Any]] = []
+    relevance: list[str] = []
+    uncertainty: list[str] = []
+    downgrade_reasons: list[str] = []
+
+    for record in _unique_macro_calendar_records(macro_records):
+        context_type = _clean_text(record.get("context_type"), fallback="unknown")
+        status = _clean_text(record.get("status"), fallback="unknown")
+        state = _clean_text(record.get("state"), fallback="unknown")
+        event_name = _clean_text(record.get("event_name"), fallback=context_type)
+        if context_type in {"scheduled_catalyst", "recent_catalyst"}:
+            scheduled_at = _parse_utc(record.get("scheduled_at"))
+            if scheduled_at is None or not event_times:
+                continue
+            proximity_hours = min(abs((event_time - scheduled_at).total_seconds()) / 3600 for event_time in event_times)
+            if proximity_hours > 72:
+                continue
+            linked_records.append(record)
+            relevance.append(
+                f"macro_calendar_context {context_type} event={event_name}; "
+                f"proximity_hours={proximity_hours:.1f}; status={status}; state={state}."
+            )
+            uncertainty.append(
+                "Macro/calendar catalyst proximity is scheduled context, not realized market impact or alert priority."
+            )
+            continue
+        if context_type == "source_availability" or status in {"failed", "unavailable", "stale", "degraded", "partial"}:
+            linked_records.append(record)
+            relevance.append(
+                f"macro_calendar_context {context_type} source_state={state}; status={status}; event={event_name}."
+            )
+            uncertainty.append(
+                "Macro/calendar source availability is degraded; missing calendar evidence cannot be treated as neutral."
+            )
+            downgrade_reasons.append("macro_calendar_source_uncertainty")
+            continue
+
+    linked_records = _unique_macro_calendar_records(linked_records)
+    return {
+        "records": linked_records,
+        "linked_ids": _macro_calendar_context_ids(linked_records),
+        "relevance": _unique(relevance),
+        "uncertainty": _unique(uncertainty),
+        "downgrade_reasons": _unique(downgrade_reasons),
+    }
+
+
+def _event_reference_times(signals: list[dict[str, Any]], topics: list[dict[str, Any]]) -> list[datetime]:
+    values: list[datetime] = []
+    for signal in signals:
+        values.extend(_event_signal_times(signal))
+    for topic in topics:
+        for field in ("latest_seen_at", "first_seen_at"):
+            parsed = _parse_utc(topic.get(field))
+            if parsed is not None:
+                values.append(parsed)
+    return sorted({value for value in values})
+
+
+def _event_signal_times(signal: dict[str, Any]) -> list[datetime]:
+    values = []
+    for field in ("published_at", "created_at"):
+        parsed = _parse_utc(signal.get(field))
+        if parsed is not None:
+            values.append(parsed)
+    for evidence in signal.get("evidence") or []:
+        if isinstance(evidence, dict):
+            parsed = _parse_utc(evidence.get("published_at"))
+            if parsed is not None:
+                values.append(parsed)
+    return values
+
+
+def _macro_calendar_evidence_records(macro: dict[str, Any]) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    for record in macro.get("records", [])[:4]:
+        evidence.append(
+            {
+                "type": "macro_calendar_context",
+                "context_id": record.get("context_id"),
+                "context_type": record.get("context_type"),
+                "status": record.get("status"),
+                "state": record.get("state"),
+                "event_name": record.get("event_name"),
+                "scheduled_at": record.get("scheduled_at"),
+            }
+        )
+    return evidence
+
+
+def _macro_calendar_context_ids(records: list[dict[str, Any]]) -> list[str]:
+    return _unique(
+        [
+            context_id
+            for record in records
+            for context_id in [_clean_text(record.get("context_id"), fallback="")]
+            if context_id
+        ]
+    )
+
+
+def _macro_calendar_sort_key(record: dict[str, Any]) -> tuple[str, str, str, str]:
+    return (
+        _clean_text(record.get("context_type"), fallback=""),
+        _clean_text(record.get("scheduled_at"), fallback=""),
+        _clean_text(record.get("as_of"), fallback=""),
+        _clean_text(record.get("context_id"), fallback=""),
+    )
 
 
 def _confluence_sort_key(record: dict[str, Any]) -> tuple[str, str, str]:
@@ -544,6 +723,7 @@ def _downgrade_reasons(
     affected_assets: list[str],
     market_relationship: str,
     decision: dict[str, Any] | None,
+    macro: dict[str, Any],
 ) -> list[str]:
     reasons: list[str] = []
     if not signals:
@@ -568,6 +748,7 @@ def _downgrade_reasons(
         reasons.append("weak_source_reliability")
     if decision is None:
         reasons.append("decision_recommendation_missing")
+    reasons.extend(_string_list(macro.get("downgrade_reasons")))
     for warning in _string_list(confluence_record.get("warnings") if confluence_record else None):
         if warning == "insufficient_event_evidence":
             reasons.append("insufficient_event_evidence")
@@ -630,6 +811,8 @@ def _evidence(
     risk: dict[str, Any] | None,
     decision: dict[str, Any] | None,
     watch_records: list[dict[str, Any]],
+    *,
+    macro: dict[str, Any],
 ) -> list[dict[str, Any]]:
     evidence: list[dict[str, Any]] = []
     if confluence_record is not None:
@@ -701,6 +884,7 @@ def _evidence(
                 "condition": watch.get("condition"),
             }
         )
+    evidence.extend(_macro_calendar_evidence_records(macro))
     return evidence[:16]
 
 
@@ -723,12 +907,14 @@ def _uncertainty(
     signals: list[dict[str, Any]],
     *,
     downgrade_reasons: list[str],
+    macro: dict[str, Any],
 ) -> list[str]:
     uncertainty = _string_list(confluence_record.get("uncertainty") if confluence_record else None)
     for signal in signals:
         uncertainty.extend(_string_list(signal.get("uncertainty")))
     if downgrade_reasons:
         uncertainty.append(f"Event assessment was downgraded: {', '.join(downgrade_reasons)}.")
+    uncertainty.extend(_string_list(macro.get("uncertainty")))
     uncertainty.append("Event assessment does not assign alert priority or action levels.")
     return _unique(uncertainty)
 
@@ -839,6 +1025,7 @@ def _coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
             1 for record in records if record.get("event_severity") in {"high", "critical"}
         ),
         "insufficient_market_evidence_records": relationship_counts.get("insufficient_market_evidence", 0),
+        "macro_calendar_linked_records": sum(1 for record in records if record.get("linked_macro_calendar_context_ids")),
     }
 
 
@@ -849,6 +1036,7 @@ def _record_manifest_summary(
     warnings: list[str],
     errors: list[dict[str, Any]],
     status: str,
+    macro_context_records: int = 0,
 ) -> None:
     coverage = _coverage(records)
     run.manifest["counts"]["event_intelligence_assessment_records"] = coverage["records"]
@@ -860,6 +1048,10 @@ def _record_manifest_summary(
     run.manifest["counts"]["event_intelligence_assessment_insufficient_market_evidence_records"] = coverage[
         "insufficient_market_evidence_records"
     ]
+    run.manifest["counts"]["event_intelligence_assessment_macro_calendar_context_records"] = macro_context_records
+    run.manifest["counts"]["event_intelligence_assessment_macro_calendar_linked_records"] = coverage[
+        "macro_calendar_linked_records"
+    ]
     run.manifest["event_intelligence_assessment"] = {
         "status": status,
         "artifacts": [EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT] if status == "succeeded" else [],
@@ -869,6 +1061,8 @@ def _record_manifest_summary(
         "market_response_relationship": coverage["market_response_relationship"],
         "downgraded_records": coverage["downgraded_records"],
         "warning_records": coverage["warning_records"],
+        "macro_calendar_context_records": macro_context_records,
+        "macro_calendar_linked_records": coverage["macro_calendar_linked_records"],
         "degraded": bool(coverage["downgraded_records"] or warnings),
         "warnings": len(warnings),
         "errors": len(errors),
@@ -931,6 +1125,18 @@ def _utc_timestamp(value: datetime | str | None = None) -> str:
     return timestamp.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _parse_utc(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(UTC).replace(microsecond=0)
+
+
 def _clean_text(value: Any, *, fallback: str) -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
@@ -949,3 +1155,20 @@ def _unique(values: list[str]) -> list[str]:
         if value not in unique:
             unique.append(value)
     return unique
+
+
+def _unique_macro_calendar_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for record in records:
+        key = _clean_text(record.get("context_id"), fallback="")
+        if not key:
+            key = ":".join(
+                _clean_text(record.get(field), fallback="")
+                for field in ("context_type", "scheduled_at", "status")
+            )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(record)
+    return result

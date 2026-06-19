@@ -464,6 +464,7 @@ analysis/risk_assessment.json
 analysis/decision_recommendations.json
 analysis/watch_triggers.json
 analysis/derivatives_market_context.json
+analysis/macro_calendar_context.json
 analysis/market_regime_assessment.json
 analysis/market_signals.json
 analysis/text_event_signals.json
@@ -498,6 +499,8 @@ Record contract:
   "linked_watch_trigger_ids": [],
   "linked_derivatives_context_ids": [],
   "derivatives_relevance": [],
+  "linked_macro_calendar_context_ids": [],
+  "macro_calendar_relevance": [],
   "source_artifacts": []
 }
 ```
@@ -548,6 +551,13 @@ Rules:
   decision recommendations, invalidation conditions, or watch state.
 - Derivatives relevance may be linked only when an event assessment already has
   explicit event, risk, decision, or watch relevance for the same symbol.
+- Macro/calendar relevance may be linked from event assessment proximity or
+  source-availability evidence, but scheduled macro events alone must not
+  create P0/P1 alert priority.
+- Stale, unavailable, degraded, or partial macro/calendar source states may add
+  downgrade or suppression reasons.
+- No-event macro/calendar windows must not upgrade alert priority or be treated
+  as confirmed absence of risk.
 - Derivatives context is supporting evidence for attention priority; it must not
   independently upgrade stale, duplicate, unrelated, or insufficient-evidence
   events.

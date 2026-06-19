@@ -495,6 +495,9 @@ Event intelligence and alert decisions:
   decisions occur near configured catalyst windows.
 - Must not escalate high-priority alerts from a scheduled macro event alone.
 - Must preserve low-confidence, no-alert, and downgrade behavior.
+- Initial adoption implements event-assessment proximity evidence, linked
+  macro/calendar context ids, alert-decision macro relevance, and
+  source-availability downgrade or suppression reasons.
 
 Outcome tracking:
 
