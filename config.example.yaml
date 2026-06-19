@@ -24,6 +24,9 @@ market:
 macro_calendar:
   enabled: false
 
+onchain_flow:
+  enabled: false
+
 quant:
   enabled: true
   engine: vectorbt

@@ -53,7 +53,7 @@ Produced early in a product run:
 
 - `raw/market.json`
 - `raw/macro_calendar.json`
-- `raw/onchain_flow.json` [planned]
+- `raw/onchain_flow.json`
 - `raw/text_events.json`
 
 These preserve public collection results. They are not Codex context by
@@ -135,23 +135,23 @@ macro/calendar context JSON.
 
 ### On-Chain And Exchange-Flow Evidence
 
-Planned on-chain flow artifacts:
+On-chain flow artifacts:
 
 - `raw/onchain_flow.json`
-- `data/onchain/flow/`
-- `data/onchain/metadata/onchain_flow_schema.json`
-- `data/onchain/metadata/onchain_flow_state.json`
-- `raw/onchain_flow_views.json`
-- `analysis/onchain_flow_context.json`
-- `analysis/onchain_flow_material.md`
+- `data/onchain/flow/` [planned]
+- `data/onchain/metadata/onchain_flow_schema.json` [planned]
+- `data/onchain/metadata/onchain_flow_state.json` [planned]
+- `raw/onchain_flow_views.json` [planned]
+- `analysis/onchain_flow_context.json` [planned]
+- `analysis/onchain_flow_material.md` [planned]
 
-These artifacts will preserve configured public stablecoin supply, broad chain
-activity, network congestion, and exchange-flow source-availability evidence
-when implemented. Reusable history, current-run views, and deterministic
-context are source-aware input or analysis data, not Codex context by
+`raw/onchain_flow.json` preserves configured public stablecoin supply, broad
+chain activity, network congestion, and exchange-flow source-availability
+evidence when enabled. Reusable history, current-run views, and deterministic
+context are planned source-aware input or analysis data, not Codex context by
 themselves. Codex should consume bounded `analysis/onchain_flow_material.md`
-instead of raw on-chain flow artifacts, reusable on-chain flow history,
-on-chain flow views, or full on-chain flow context JSON.
+after it is implemented instead of raw on-chain flow artifacts, reusable
+on-chain flow history, on-chain flow views, or full on-chain flow context JSON.
 
 ### Text Intelligence Evidence
 

@@ -73,6 +73,27 @@ def validate_macro_calendar_raw_artifact(raw: Any, artifact: str) -> None:
     _required_list(raw, "errors", artifact, "artifact")
 
 
+def validate_onchain_flow_raw_artifact(raw: Any, artifact: str) -> None:
+    items = _items(raw, artifact)
+    for index, item in enumerate(items):
+        path = f"items[{index}]"
+        _required_string(item, "item_id", artifact, path)
+        _required_string(item, "data_class", artifact, path)
+        _required_string(item, "source", artifact, path)
+        _required_string(item, "asset", artifact, path)
+        _required_string(item, "chain", artifact, path)
+        _required_string(item, "as_of", artifact, path)
+        _required_string(item, "endpoint", artifact, path)
+        _required_mapping(item, "metrics", artifact, path)
+        _required_mapping(item, "units", artifact, path)
+        _required_mapping(item, "raw_fields", artifact, path)
+        _required_list(item, "warnings", artifact, path)
+        _required_list(item, "errors", artifact, path)
+    _required_list(raw, "availability", artifact, "artifact")
+    _required_list(raw, "warnings", artifact, "artifact")
+    _required_list(raw, "errors", artifact, "artifact")
+
+
 def _items(raw: Any, artifact: str) -> list[Any]:
     if not isinstance(raw, dict):
         raise RawArtifactError(f"{artifact} is invalid: artifact must be a JSON object.")

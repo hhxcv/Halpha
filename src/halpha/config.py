@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from .quant.registry import SUPPORTED_STRATEGY_NAMES
 
 
-CONFIG_SECTIONS = {"codex", "macro_calendar", "market", "quant", "report", "run", "text"}
+CONFIG_SECTIONS = {"codex", "macro_calendar", "market", "onchain_flow", "quant", "report", "run", "text"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_DERIVATIVES_MARKET_SOURCES = {"binance_usdm"}
@@ -34,6 +34,26 @@ SUPPORTED_MACRO_CALENDAR_FIELDS = {
     "regions",
     "source",
     "source_url",
+}
+SUPPORTED_ONCHAIN_FLOW_SOURCES = {"public_aggregate"}
+SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES = {
+    "chain_activity",
+    "exchange_flow_availability",
+    "network_congestion",
+    "stablecoin_supply",
+}
+SUPPORTED_ONCHAIN_FLOW_ASSETS = {"ALL_STABLECOINS", "BTC"}
+SUPPORTED_ONCHAIN_FLOW_CHAINS = {"all", "bitcoin"}
+SUPPORTED_ONCHAIN_FLOW_FIELDS = {
+    "assets",
+    "chain_activity_source_url",
+    "chains",
+    "data_classes",
+    "enabled",
+    "lookback_days",
+    "network_congestion_source_url",
+    "source",
+    "stablecoin_source_url",
 }
 SUPPORTED_QUANT_ENGINES = {"vectorbt"}
 SUPPORTED_QUANT_STRATEGIES = SUPPORTED_STRATEGY_NAMES
@@ -146,6 +166,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
 
     if "macro_calendar" in config:
         _validate_macro_calendar_config(config["macro_calendar"])
+    if "onchain_flow" in config:
+        _validate_onchain_flow_config(config["onchain_flow"])
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -494,6 +516,48 @@ def _validate_macro_calendar_config(macro_calendar: Any) -> None:
     _require_positive_int(macro_calendar, "lookahead_days", "macro_calendar.lookahead_days")
     if "source_url" in macro_calendar:
         _require_proxy_url(macro_calendar, "source_url", "macro_calendar.source_url")
+
+
+def _validate_onchain_flow_config(onchain_flow: Any) -> None:
+    if not isinstance(onchain_flow, dict):
+        raise ConfigError("onchain_flow must be a mapping.")
+    _reject_unsupported_fields(
+        onchain_flow,
+        path="onchain_flow",
+        supported_fields=SUPPORTED_ONCHAIN_FLOW_FIELDS,
+    )
+
+    enabled = _require_bool(onchain_flow, "enabled", "onchain_flow.enabled")
+    if not enabled:
+        return
+
+    source = _require_non_empty_string(onchain_flow, "source", "onchain_flow.source")
+    _require_supported_value(source, "onchain_flow.source", SUPPORTED_ONCHAIN_FLOW_SOURCES)
+
+    data_classes = _require_non_empty_string_list(
+        onchain_flow,
+        "data_classes",
+        "onchain_flow.data_classes",
+    )
+    for index, data_class in enumerate(data_classes):
+        _require_supported_value(
+            data_class,
+            f"onchain_flow.data_classes[{index}]",
+            SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
+        )
+
+    assets = _require_non_empty_string_list(onchain_flow, "assets", "onchain_flow.assets")
+    for index, asset in enumerate(assets):
+        _require_supported_value(asset, f"onchain_flow.assets[{index}]", SUPPORTED_ONCHAIN_FLOW_ASSETS)
+
+    chains = _require_non_empty_string_list(onchain_flow, "chains", "onchain_flow.chains")
+    for index, chain in enumerate(chains):
+        _require_supported_value(chain, f"onchain_flow.chains[{index}]", SUPPORTED_ONCHAIN_FLOW_CHAINS)
+
+    _require_positive_int(onchain_flow, "lookback_days", "onchain_flow.lookback_days")
+    for key in ("stablecoin_source_url", "chain_activity_source_url", "network_congestion_source_url"):
+        if key in onchain_flow:
+            _require_proxy_url(onchain_flow, key, f"onchain_flow.{key}")
 
 
 def _validate_quant_config(quant: dict[str, Any]) -> None:

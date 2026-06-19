@@ -40,6 +40,7 @@ portfolio instructions, position sizing, forecasts, or financial advice.
 This file separates stable direction from shipped behavior.
 
 - `contract`: expected durable interface or rule.
+- `initial adoption`: first implementation slice.
 - `planned`: intended contract whose producer is not implemented yet.
 - `not implemented yet`: allowed future contract detail that must not be
   described as shipped behavior.
@@ -52,7 +53,7 @@ Contract set:
 
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
-| Raw on-chain flow artifact | planned | on-chain flow collection stage | reusable history, data quality |
+| Raw on-chain flow artifact | initial adoption | on-chain flow collection stage | reusable history, data quality |
 | Shared on-chain flow history | planned | on-chain flow history writer | current-run views, data inspection |
 | On-chain flow current-run views | planned | on-chain flow view builder | context, data quality |
 | On-chain flow context | planned | context builder | regime, risk, decisions, watches, alerts, outcomes, material |
@@ -128,7 +129,7 @@ Intended product flow:
 
 ```text
 configured public on-chain or flow source
-  -> raw on-chain flow artifact [planned]
+  -> raw on-chain flow artifact [initial adoption]
   -> shared on-chain flow history [planned]
   -> on-chain flow current-run views [planned]
   -> on-chain flow context [planned]
@@ -210,7 +211,7 @@ Rules:
 
 ## Raw On-Chain Flow Artifact
 
-Planned artifact:
+Implemented artifact:
 
 ```text
 raw/onchain_flow.json
