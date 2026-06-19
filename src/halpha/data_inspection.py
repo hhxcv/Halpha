@@ -24,6 +24,16 @@ ONCHAIN_FLOW_SCHEMA_ARTIFACT = "data/onchain/metadata/onchain_flow_schema.json"
 ONCHAIN_FLOW_STATE_ARTIFACT = "data/onchain/metadata/onchain_flow_state.json"
 ONCHAIN_FLOW_VIEWS_ARTIFACT = "raw/onchain_flow_views.json"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
+FEATURE_SNAPSHOTS_ARTIFACT = "analysis/feature_snapshots.json"
+FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
+MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
+FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
+M13_CHECK_NAMES = {
+    "feature_snapshots",
+    "factor_states",
+    "multi_source_signals",
+    "factor_signal_material",
+}
 
 
 class DataInspectionError(Exception):
@@ -53,6 +63,7 @@ def inspect_local_data(
         _derivatives_section(config, config_path, run_dir=run_dir, base=base),
         _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
         _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
+        _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -337,6 +348,110 @@ def _onchain_flow_section(
     )
 
 
+def _feature_factor_artifacts_section(
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    if run_dir is not None:
+        resolved_run_dir = _resolve_run_dir(run_dir, base=base)
+    else:
+        resolved_run_dir = _latest_run_from_index(config_path)
+    if resolved_run_dir is None:
+        return _section(
+            "feature_factor_artifacts",
+            "skipped",
+            reason="no latest run was found in the local run index.",
+        )
+
+    manifest_path = resolved_run_dir / "run_manifest.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    if manifest_error:
+        raise DataInspectionError(f"run_manifest.json could not be inspected: {manifest_error}")
+
+    artifacts = _dict(manifest.get("artifacts"))
+    counts = _dict(manifest.get("counts"))
+    artifact_summaries = {
+        "feature_snapshots": _dict(manifest.get("feature_snapshots")),
+        "factor_states": _dict(manifest.get("factor_states")),
+        "multi_source_signals": _dict(manifest.get("multi_source_signals")),
+        "factor_signal_material": _dict(manifest.get("factor_signal_material")),
+    }
+    has_m13_artifacts = any(
+        artifacts.get(key)
+        for key in ("feature_snapshots", "factor_states", "multi_source_signals", "factor_signal_material")
+    ) or any(summary for summary in artifact_summaries.values())
+
+    quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
+    quality_counts = _m13_quality_check_counts(quality)
+    if not has_m13_artifacts and not any(quality_counts.values()):
+        return _section(
+            "feature_factor_artifacts",
+            "skipped",
+            artifact=_safe_path(manifest_path, base=base),
+            fields={
+                "run_id": manifest.get("run_id"),
+                "run_status": manifest.get("status"),
+            },
+            reason="M13 feature/factor artifacts were not found in this run.",
+        )
+
+    budget = _codex_material_budget(manifest)
+    fields = {
+        "run_id": manifest.get("run_id"),
+        "run_status": manifest.get("status"),
+        "feature_records": _int(counts.get("feature_snapshots")),
+        "feature_coverage_records": _int(counts.get("feature_snapshot_coverage_records")),
+        "feature_warnings": _int(counts.get("feature_snapshot_warnings")),
+        "feature_errors": _int(counts.get("feature_snapshot_errors")),
+        "factor_records": _int(counts.get("factor_states")),
+        "factor_warnings": _int(counts.get("factor_state_warnings")),
+        "factor_errors": _int(counts.get("factor_state_errors")),
+        "signal_records": _int(counts.get("multi_source_signals")),
+        "signal_conflicting": _int(counts.get("multi_source_signal_conflicting")),
+        "signal_warnings": _int(counts.get("multi_source_signal_warnings")),
+        "signal_errors": _int(counts.get("multi_source_signal_errors")),
+        "material_records": _int(counts.get("factor_signal_material_records")),
+        "material_omitted_records": _int(counts.get("factor_signal_material_omitted_records")),
+        "m13_quality_ok": quality_counts["ok"],
+        "m13_quality_warning": quality_counts["warning"],
+        "m13_quality_degraded": quality_counts["degraded"],
+        "m13_quality_skipped": quality_counts["skipped"],
+        "m13_quality_failed": quality_counts["failed"],
+        "manifest": _safe_path(manifest_path, base=base),
+    }
+    if budget:
+        fields.update(
+            {
+                "codex_budget_status": budget.get("status") or "unknown",
+                "codex_budget_chars": _int(budget.get("chars")),
+                "codex_budget_over_budget": bool(budget.get("over_budget")),
+                "codex_budget_warnings": len(_list(budget.get("warnings"))),
+            }
+        )
+    else:
+        fields["codex_budget_status"] = "not_available"
+
+    statuses = [
+        str(summary.get("status"))
+        for summary in artifact_summaries.values()
+        if isinstance(summary.get("status"), str) and summary.get("status")
+    ]
+    statuses.extend(status for status, value in quality_counts.items() for _ in range(value))
+    if budget and (budget.get("over_budget") or budget.get("status") not in {None, "included"}):
+        statuses.append("warning")
+    status = _status_from_values(statuses)
+    reason = quality_error if quality_error else None
+    return _section(
+        "feature_factor_artifacts",
+        status,
+        artifact=_safe_path(manifest_path, base=base),
+        fields=fields,
+        reason=reason,
+    )
+
+
 def _quality_section(config_path: Path, *, run_dir: Path | None, base: Path) -> dict[str, Any]:
     if run_dir is not None:
         resolved_run_dir = _resolve_run_dir(run_dir, base=base)
@@ -501,6 +616,37 @@ def _store_statuses(catalog: dict[str, Any]) -> str | None:
         if isinstance(name, str) and name and isinstance(status, str) and status:
             statuses.append(f"{name}={status}")
     return ", ".join(sorted(statuses)) if statuses else None
+
+
+def _m13_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
+    counts = {"ok": 0, "warning": 0, "degraded": 0, "skipped": 0, "failed": 0}
+    for check in _list(quality.get("checks")):
+        if not isinstance(check, dict) or check.get("name") not in M13_CHECK_NAMES:
+            continue
+        status = str(check.get("status") or "unknown")
+        if status in counts:
+            counts[status] += 1
+    return counts
+
+
+def _codex_material_budget(manifest: dict[str, Any]) -> dict[str, Any]:
+    codex_input = _dict(manifest.get("codex_input"))
+    materials = codex_input.get("materials")
+    if isinstance(materials, dict):
+        budget = materials.get(FACTOR_SIGNAL_MATERIAL_ARTIFACT)
+        return budget if isinstance(budget, dict) else {}
+    if isinstance(materials, list):
+        for item in materials:
+            record = _dict(item)
+            if record.get("artifact") == FACTOR_SIGNAL_MATERIAL_ARTIFACT:
+                return record
+    return {}
+
+
+def _status_from_values(statuses: list[str]) -> str:
+    if not statuses or set(statuses) == {"skipped"}:
+        return "skipped"
+    return _overall_status(statuses)
 
 
 def _overall_status(statuses: list[str]) -> str:

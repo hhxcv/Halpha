@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.data_quality import build_data_quality_summary
+from halpha.data_quality import build_data_quality_summary, refresh_m13_data_quality_checks
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 
@@ -31,7 +31,7 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
 
     assert summary["artifact_type"] == "data_quality_summary"
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 21
+    assert summary["counts"]["checks"] == 25
     assert summary["counts"]["failed"] == 0
     assert summary["counts"]["degraded"] == 0
     assert manifest["artifacts"]["data_quality_summary"] == "analysis/data_quality_summary.json"
@@ -52,6 +52,10 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "onchain_flow_views")["status"] == "skipped"
     assert _check(summary, "onchain_flow_context")["status"] == "skipped"
     assert _check(summary, "onchain_flow_material")["status"] == "skipped"
+    for name in ("feature_snapshots", "factor_states", "multi_source_signals", "factor_signal_material"):
+        m13_check = _check(summary, name)
+        assert m13_check["status"] == "skipped"
+        assert m13_check["details"]["stage_time_skip_is_expected"] is True
     assert _check(summary, "text_event_history")["status"] == "ok"
     run_index = _check(summary, "run_index")
     assert run_index["status"] == "skipped"
@@ -131,6 +135,68 @@ def test_data_quality_summary_records_partial_collection_and_optional_skips(tmp_
     assert _check(summary, "raw_text")["status"] == "skipped"
     assert _check(summary, "ohlcv_store")["status"] == "skipped"
     assert _check(summary, "partial_collection")["status"] == "degraded"
+
+
+def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+    _write_m13_artifacts(run)
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    assert summary["status"] == "ok"
+    assert summary["counts"]["checks"] == 4
+    assert _check(summary, "feature_snapshots")["status"] == "ok"
+    assert _check(summary, "factor_states")["status"] == "ok"
+    assert _check(summary, "multi_source_signals")["status"] == "ok"
+    material = _check(summary, "factor_signal_material")
+    assert material["status"] == "ok"
+    assert material["details"]["codex_boundaries_present"] is True
+    assert material["details"]["codex_budget_status"] == "not_available_before_codex_context"
+    assert run.manifest["counts"]["data_quality_checks"] == 4
+
+
+def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+    _write_m13_artifacts(run, feature_status="warning", feature_warnings=["one source was partial."])
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    assert summary["status"] == "warning"
+    feature = _check(summary, "feature_snapshots")
+    assert feature["status"] == "warning"
+    assert feature["warning_count"] == 1
+
+
+def test_data_quality_summary_refreshes_m13_artifact_checks_degraded(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+    _write_m13_artifacts(run, factor_status="degraded")
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    assert summary["status"] == "degraded"
+    assert _check(summary, "factor_states")["status"] == "degraded"
+
+
+def test_data_quality_summary_refreshes_m13_artifact_checks_missing_as_failed(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    assert summary["status"] == "failed"
+    assert summary["counts"]["failed"] == 4
+    assert _check(summary, "feature_snapshots")["details"]["report_as_final_missing"] is True
 
 
 def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path) -> None:
@@ -435,6 +501,168 @@ def _run_context(tmp_path: Path, config_path: Path) -> RunContext:
         config_path=config_path,
         manifest={"artifacts": {}, "counts": {}, "errors": []},
     )
+
+
+def _write_initial_quality_summary(run: RunContext) -> None:
+    write_json(
+        run.analysis_dir / "data_quality_summary.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "data_quality_summary",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "ok",
+            "checks": [],
+            "counts": {
+                "checks": 0,
+                "ok": 0,
+                "warning": 0,
+                "degraded": 0,
+                "skipped": 0,
+                "failed": 0,
+                "warnings": 0,
+                "errors": 0,
+            },
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": [],
+        },
+    )
+
+
+def _write_m13_artifacts(
+    run: RunContext,
+    *,
+    feature_status: str = "ok",
+    feature_warnings: list[str] | None = None,
+    factor_status: str = "ok",
+    signal_status: str = "ok",
+) -> None:
+    feature_warnings = feature_warnings or []
+    write_json(
+        run.analysis_dir / "feature_snapshots.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "feature_snapshots",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": feature_status,
+            "coverage": [{"source_layer": "market", "status": "ok"}],
+            "records": [
+                {
+                    "feature_id": "feature:BTCUSDT:trend",
+                    "feature_type": "price_trend",
+                    "status": "ok",
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "counts": {
+                "records": 1,
+                "coverage_records": 1,
+                "warnings": len(feature_warnings),
+                "errors": 0,
+            },
+            "warnings": feature_warnings,
+            "errors": [],
+            "source_artifacts": ["analysis/market_signals.json"],
+        },
+    )
+    run.manifest["artifacts"]["feature_snapshots"] = "analysis/feature_snapshots.json"
+    run.manifest["feature_snapshots"] = {
+        "status": feature_status,
+        "artifact": "analysis/feature_snapshots.json",
+        "records": 1,
+        "coverage_records": 1,
+        "warnings": len(feature_warnings),
+        "errors": 0,
+    }
+    run.manifest["counts"]["feature_snapshots"] = 1
+    run.manifest["counts"]["feature_snapshot_coverage_records"] = 1
+    run.manifest["counts"]["feature_snapshot_warnings"] = len(feature_warnings)
+    run.manifest["counts"]["feature_snapshot_errors"] = 0
+
+    write_json(
+        run.analysis_dir / "factor_states.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "factor_states",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": factor_status,
+            "records": [{"factor_id": "factor:BTCUSDT:trend", "state": "supportive"}],
+            "counts": {"records": 1, "warnings": 0, "errors": 0},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["analysis/feature_snapshots.json"],
+        },
+    )
+    run.manifest["artifacts"]["factor_states"] = "analysis/factor_states.json"
+    run.manifest["factor_states"] = {
+        "status": factor_status,
+        "artifact": "analysis/factor_states.json",
+        "records": 1,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"]["factor_states"] = 1
+    run.manifest["counts"]["factor_state_warnings"] = 0
+    run.manifest["counts"]["factor_state_errors"] = 0
+
+    write_json(
+        run.analysis_dir / "multi_source_signals.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "multi_source_signals",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": signal_status,
+            "records": [{"signal_id": "signal:BTCUSDT:trend", "state": "supportive"}],
+            "counts": {"records": 1, "conflicting": 0, "warnings": 0, "errors": 0},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["analysis/factor_states.json"],
+        },
+    )
+    run.manifest["artifacts"]["multi_source_signals"] = "analysis/multi_source_signals.json"
+    run.manifest["multi_source_signals"] = {
+        "status": signal_status,
+        "artifact": "analysis/multi_source_signals.json",
+        "records": 1,
+        "conflicting": 0,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"]["multi_source_signals"] = 1
+    run.manifest["counts"]["multi_source_signal_conflicting"] = 0
+    run.manifest["counts"]["multi_source_signal_warnings"] = 0
+    run.manifest["counts"]["multi_source_signal_errors"] = 0
+
+    material = "\n".join(
+        [
+            "---",
+            "artifact_type: analysis_factor_signal_material",
+            "schema_version: 1",
+            "---",
+            "",
+            "codex_may_generate_feature_records: false",
+            "codex_may_generate_factor_scores: false",
+            "codex_may_generate_signal_states: false",
+            "full_feature_snapshots_json_embedded: false",
+            "full_factor_states_json_embedded: false",
+            "full_multi_source_signals_json_embedded: false",
+            "selected_records_only: true",
+            "",
+        ]
+    )
+    (run.analysis_dir / "factor_signal_material.md").write_text(material, encoding="utf-8")
+    run.manifest["artifacts"]["factor_signal_material"] = "analysis/factor_signal_material.md"
+    run.manifest["factor_signal_material"] = {
+        "status": "ok",
+        "artifact": "analysis/factor_signal_material.md",
+    }
+    run.manifest["counts"]["factor_signal_material_records"] = 3
+    run.manifest["counts"]["factor_signal_material_omitted_records"] = 0
 
 
 def _write_market_raw(config, run) -> list[str]:

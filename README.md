@@ -304,7 +304,7 @@ A successful configured run can write:
 - `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
-- `analysis/data_quality_summary.json`: current-run market, text, derivatives, macro/calendar, on-chain flow, shared-store, and Codex-boundary quality checks.
+- `analysis/data_quality_summary.json`: current-run market, text, derivatives, macro/calendar, on-chain flow, feature/factor, shared-store, and Codex-boundary quality checks.
 - `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
 - `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
 - `analysis/outcome_evaluations.json`: deterministic market, strategy, event, alert, decision, and watch outcome evaluations.
@@ -420,8 +420,8 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 ```
 
 Use this output to check on-chain flow history state, current-run on-chain view
-coverage, and latest data-quality counts without exposing reusable record
-contents.
+coverage, feature/factor artifact status, Codex input budget state, and latest
+data-quality counts without exposing reusable record contents.
 
 Inspect outcome tracking state without collection or Codex CLI:
 

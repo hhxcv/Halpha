@@ -229,7 +229,7 @@ Current bias:
 * `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
 * `analysis/decision_intelligence_material.md` records AI-readable decision material from deterministic decision-intelligence JSON artifacts.
-* `analysis/data_quality_summary.json` records current-run market, text, derivatives, macro/calendar, on-chain flow, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
+* `analysis/data_quality_summary.json` records current-run market, text, derivatives, macro/calendar, on-chain flow, feature/factor, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
 * `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
 * `analysis/outcome_targets.json` records deterministic source-linked outcome targets extracted from the latest previous successful run.
 * `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
@@ -352,7 +352,7 @@ They must not fabricate skipped artifacts.
 
 `text-intel` does not run the full report pipeline or Codex CLI.
 
-`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, and data-quality summaries.
+`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, Codex input budget state, and data-quality summaries.
 
 `data inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
 
@@ -378,7 +378,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
-* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, and latest data-quality state without Codex CLI.
+* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, Codex input budget state, and latest data-quality state without Codex CLI.
 * Use `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect data-quality state for a specific run.
 * Use `python -m halpha outcomes inspect --config config.example.yaml` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
 * Use `python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect outcome state for a specific run.

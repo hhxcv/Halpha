@@ -34,6 +34,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "derivatives_market_history: skipped" in output
     assert "macro_calendar_history: skipped" in output
     assert "onchain_flow_history: skipped" in output
+    assert "feature_factor_artifacts: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -66,9 +67,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "derivatives_market_history: skipped" in output
     assert "macro_calendar_history: skipped" in output
     assert "onchain_flow_history: skipped" in output
+    assert "feature_factor_artifacts: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
-    assert "checks=21" in output
+    assert "checks=25" in output
     assert "degraded=1" in output
     assert "runs/run-1/analysis/data_quality_summary.json" in output
     assert "CREATE TABLE" not in output
@@ -113,6 +115,44 @@ def test_data_inspect_uses_specific_run_dir_and_reports_missing_quality_as_skipp
     assert "data_quality_summary: skipped" in output
     assert "run_id=run-without-quality" in output
     assert "run_status=succeeded" in output
+
+
+def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_m13_inspection_artifacts(run)
+
+    exit_code = main(
+        [
+            "data",
+            "inspect",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            "runs/run-1",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "feature_factor_artifacts: warning" in output
+    assert "feature_records=2" in output
+    assert "factor_records=2" in output
+    assert "signal_records=1" in output
+    assert "signal_conflicting=1" in output
+    assert "material_records=5" in output
+    assert "material_omitted_records=3" in output
+    assert "m13_quality_ok=3" in output
+    assert "m13_quality_warning=1" in output
+    assert "codex_budget_status=included" in output
+    assert "codex_budget_chars=2048" in output
+    assert "codex_budget_over_budget=False" in output
+    assert "feature_id" not in output
+    assert "factor_id" not in output
+    assert "signal_id" not in output
 
 
 def test_data_inspect_reports_derivatives_store_and_current_run_views(
@@ -402,8 +442,8 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
             "created_at": "2026-06-05T00:10:00Z",
             "status": quality_status,
             "counts": {
-                "checks": 21,
-                "ok": 21 - degraded_count - warning_count,
+                "checks": 25,
+                "ok": 25 - degraded_count - warning_count,
                 "warning": warning_count,
                 "degraded": degraded_count,
                 "skipped": 0,
@@ -420,6 +460,107 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
     summary = write_run_index(run, now="2026-06-05T00:10:00Z")
     run.manifest["run_index"] = summary
     return run
+
+
+def _write_m13_inspection_artifacts(run: RunContext) -> None:
+    run.manifest["artifacts"].update(
+        {
+            "feature_snapshots": "analysis/feature_snapshots.json",
+            "factor_states": "analysis/factor_states.json",
+            "multi_source_signals": "analysis/multi_source_signals.json",
+            "factor_signal_material": "analysis/factor_signal_material.md",
+        }
+    )
+    run.manifest["feature_snapshots"] = {
+        "status": "ok",
+        "artifact": "analysis/feature_snapshots.json",
+        "records": 2,
+        "coverage_records": 3,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["factor_states"] = {
+        "status": "ok",
+        "artifact": "analysis/factor_states.json",
+        "records": 2,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["multi_source_signals"] = {
+        "status": "warning",
+        "artifact": "analysis/multi_source_signals.json",
+        "records": 1,
+        "conflicting": 1,
+        "warnings": 1,
+        "errors": 0,
+    }
+    run.manifest["factor_signal_material"] = {
+        "status": "ok",
+        "artifact": "analysis/factor_signal_material.md",
+    }
+    run.manifest["counts"].update(
+        {
+            "feature_snapshots": 2,
+            "feature_snapshot_coverage_records": 3,
+            "feature_snapshot_warnings": 0,
+            "feature_snapshot_errors": 0,
+            "factor_states": 2,
+            "factor_state_warnings": 0,
+            "factor_state_errors": 0,
+            "multi_source_signals": 1,
+            "multi_source_signal_conflicting": 1,
+            "multi_source_signal_warnings": 1,
+            "multi_source_signal_errors": 0,
+            "factor_signal_material_records": 5,
+            "factor_signal_material_omitted_records": 3,
+        }
+    )
+    run.manifest["codex_input"] = {
+        "materials": {
+            "analysis/factor_signal_material.md": {
+                "status": "included",
+                "chars": 2048,
+                "over_budget": False,
+                "warnings": [],
+            }
+        }
+    }
+    write_json(run.manifest_path, run.manifest)
+
+    quality_path = run.analysis_dir / "data_quality_summary.json"
+    quality = json.loads(quality_path.read_text(encoding="utf-8"))
+    quality["checks"] = [
+        _quality_check("feature_snapshots", "ok"),
+        _quality_check("factor_states", "ok"),
+        _quality_check("multi_source_signals", "warning"),
+        _quality_check("factor_signal_material", "ok"),
+    ]
+    quality["counts"] = {
+        "checks": 4,
+        "ok": 3,
+        "warning": 1,
+        "degraded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "warnings": 1,
+        "errors": 0,
+    }
+    quality["status"] = "warning"
+    quality["warnings"] = ["one multi-source signal is conflicting."]
+    write_json(quality_path, quality)
+
+
+def _quality_check(name: str, status: str) -> dict[str, object]:
+    return {
+        "name": name,
+        "scope": "analysis",
+        "status": status,
+        "summary": f"{name} status: {status}",
+        "warning_count": 1 if status == "warning" else 0,
+        "error_count": 0,
+        "source_artifacts": [],
+        "details": {"warnings": ["conflict"] if status == "warning" else [], "errors": []},
+    }
 
 
 def _write_derivatives_store_metadata(tmp_path: Path) -> None:
