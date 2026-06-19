@@ -164,6 +164,7 @@ build_macro_calendar_material
 collect_onchain_flow_data
 sync_onchain_flow_history
 build_onchain_flow_views
+build_onchain_flow_context
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
@@ -242,6 +243,7 @@ A successful configured run can write:
 - `raw/onchain_flow.json`: public on-chain flow observations when enabled.
 - `raw/macro_calendar_views.json`: current-run macro/calendar input window metadata and bounded records.
 - `raw/onchain_flow_views.json`: current-run on-chain flow input window metadata and bounded records.
+- `analysis/onchain_flow_context.json`: deterministic on-chain flow context when enabled.
 - `analysis/macro_calendar_context.json`: deterministic macro/calendar timing, source-availability, and catalyst context.
 - `analysis/macro_calendar_material.md`: bounded AI-readable macro/calendar context for Codex and report generation.
 - `raw/text_events.json`: public RSS text events.
