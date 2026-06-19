@@ -62,6 +62,7 @@ STAGE_ORDER = (
     "build_user_state_context",
     "build_personalized_risk_constraints",
     "integrate_personalized_risk_constraints",
+    "build_personalized_risk_material",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -395,6 +396,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_user_state_context"] = _build_user_state_context
     handlers["build_personalized_risk_constraints"] = _build_personalized_risk_constraints
     handlers["integrate_personalized_risk_constraints"] = _integrate_personalized_risk_constraints
+    handlers["build_personalized_risk_material"] = _build_personalized_risk_material
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -843,6 +845,12 @@ def _integrate_personalized_risk_constraints(config: dict[str, Any], run: RunCon
     from .personalized_integration import integrate_personalized_risk_constraints
 
     return integrate_personalized_risk_constraints(config, run)
+
+
+def _build_personalized_risk_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .analysis.personalized_risk_material import build_personalized_risk_material
+
+    return build_personalized_risk_material(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

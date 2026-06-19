@@ -204,6 +204,10 @@ build_factor_states
 build_multi_source_signals
 build_intelligence_fusion
 integrate_intelligence_fusion
+build_user_state_context
+build_personalized_risk_constraints
+integrate_personalized_risk_constraints
+build_personalized_risk_material
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -318,6 +322,7 @@ A successful configured run can write:
 - `analysis/intelligence_fusion_material.md`: AI-readable bounded fusion material for Codex/report input.
 - `analysis/user_state_context.json`: optional sanitized local user-state context with privacy boundary metadata.
 - `analysis/personalized_risk_constraints.json`: deterministic personalized risk constraint records from sanitized user state and current-run intelligence.
+- `analysis/personalized_risk_material.md`: bounded AI-readable personalized-risk material for Codex/report input.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
@@ -382,17 +387,19 @@ calculate new metrics.
 Codex consumes generated research context and prompt artifacts. It does not
 generate action levels, strategy signals, structured decision artifacts,
 derivatives states, macro/calendar states, on-chain records, flow states,
-address labels, risk levels, event categories, event impacts,
-event-market relationships, or price forecasts. Those are produced
+address labels, risk levels, user state, personalized constraints, holdings,
+allocations, position sizes, event categories, event impacts, event-market
+relationships, or price forecasts. Those are produced
 deterministically before report generation.
 
 Codex input is governed by `docs/artifact-governance.md`: complete evidence
 artifacts stay inspectable on disk, while Codex receives bounded report-facing
 material plus explicit budget metadata in `run_manifest.json`.
-Derivatives, macro/calendar, on-chain flow, and data-quality evidence follow
-the same rule: Codex receives concise report-facing material files, not full
-local histories, raw archives, current-run views, catalog contents, SQLite
-tables, Parquet data, or full context JSON.
+Derivatives, macro/calendar, on-chain flow, personalized risk, and data-quality
+evidence follow the same rule: Codex receives concise report-facing material
+files, not full local histories, raw archives, current-run views, raw
+user-state files, private notes, catalog contents, SQLite tables, Parquet data,
+or full context JSON.
 
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
@@ -496,7 +503,11 @@ For Codex input-budget review, inspect `run_manifest.json` `codex_input`,
 `analysis/research_context.md`, `codex_context/context.md`, and
 `codex_context/prompt.md`. Complete intermediate JSON artifacts should be
 referenced by path and summarized through bounded material, not embedded
-wholesale. For data-quality review, inspect
+wholesale. Personalized risk review should include
+`analysis/user_state_context.json`, `analysis/personalized_risk_constraints.json`,
+and `analysis/personalized_risk_material.md` while confirming raw local
+user-state files, private notes, account identifiers, holdings, allocations,
+and position sizes are not embedded in Codex input. For data-quality review, inspect
 `analysis/data_quality_summary.json` as the structured evidence and
 `analysis/data_quality_material.md` as the bounded Codex-facing summary. When
 on-chain flow is enabled, data-quality review should include

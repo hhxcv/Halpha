@@ -7,10 +7,9 @@ The contracts below are intended for local-first personalization. They do not
 create account integration, portfolio automation, position sizing, order
 placement, or trading execution.
 
-Product runs generate `analysis/user_state_context.json` and
-`analysis/personalized_risk_constraints.json`. The personalized-risk material
-artifact below is a downstream contract and may not be written until its stage
-is implemented. Implementations should update this document as behavior evolves.
+Product runs generate `analysis/user_state_context.json`,
+`analysis/personalized_risk_constraints.json`, and
+`analysis/personalized_risk_material.md`.
 
 ## Scope
 
@@ -386,6 +385,13 @@ Material should prefer high-impact constraints before low-impact annotations:
 
 Material should record selected counts, omitted counts, omitted state counts,
 omission reasons, warnings, errors, and source artifacts.
+
+The implemented material is built by `build_personalized_risk_material` after
+decision/watch/alert integration and before general research-context assembly.
+It is the only personalized-risk artifact eligible for Codex embedding by
+default. `analysis/user_state_context.json` and
+`analysis/personalized_risk_constraints.json` may be referenced by path, but
+their full JSON contents must not be embedded as Codex input.
 
 ## Manifest Expectations
 
