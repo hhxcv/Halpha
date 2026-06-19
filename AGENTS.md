@@ -216,7 +216,8 @@ Current bias:
 * Feature/factor contracts live in `docs/feature-factor-contracts.md`.
 * `analysis/feature_snapshots.json` records normalized source-aware feature records and source coverage from implemented current-run evidence.
 * `analysis/factor_states.json` records deterministic factor states, bounded scores, directions, confidence, warnings, errors, and degraded or insufficient-evidence states from feature snapshots.
-* Intended feature/factor artifacts are `analysis/multi_source_signals.json` and `analysis/factor_signal_material.md`; they are not implemented until their pipeline stages exist.
+* `analysis/multi_source_signals.json` records conservative normalized research signals derived from factor states, not trading instructions.
+* Intended feature/factor artifact `analysis/factor_signal_material.md` is not implemented until its pipeline stage exists.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
 * `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives, macro/calendar, and on-chain flow context links, not trading instructions.
