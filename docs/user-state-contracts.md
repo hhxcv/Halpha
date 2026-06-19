@@ -7,10 +7,10 @@ The contracts below are intended for local-first personalization. They do not
 create account integration, portfolio automation, position sizing, order
 placement, or trading execution.
 
-Product runs generate `analysis/user_state_context.json`. The personalized-risk
-constraints and material artifacts below are downstream contracts and may not be
-written until their stages are implemented. Implementations should update this
-document as behavior evolves.
+Product runs generate `analysis/user_state_context.json` and
+`analysis/personalized_risk_constraints.json`. The personalized-risk material
+artifact below is a downstream contract and may not be written until its stage
+is implemented. Implementations should update this document as behavior evolves.
 
 ## Scope
 
