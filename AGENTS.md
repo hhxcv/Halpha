@@ -247,11 +247,14 @@ Current bias:
 * `runs/monitor/alert_cooldown_state.json` records deterministic alert cooldown state keyed by alert key.
 * `runs/monitor/alert_archive_state.json` records latest local alert archive metadata, counts, warnings, and errors.
 * `runs/monitor/monitor_health_state.json` records latest local monitor health metadata, cycle counts, latest cycle refs, alert archive counts, cooldown counts, warning counts, error counts, and latest finite-loop status.
+* `runs/workbench/latest/workbench_summary.json` records bounded local delivery state, source artifact refs, latest report refs, decision/risk/watch summaries, alert archive status, monitor health, outcome state, strategy state, data-quality state, warnings, errors, and Codex-boundary metadata; it is delivery output, not upstream decision input or Codex input by default.
+* `runs/workbench/latest/index.md` records the human-readable local Markdown workbench index generated from `workbench_summary.json`.
+* `runs/workbench/latest/index.html` records the static local HTML workbench index generated from `workbench_summary.json`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
 * Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, macro/calendar, on-chain flow, feature/factor, intelligence fusion, personalized risk, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, raw local user-state files, or full on-chain flow context JSON.
-* Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full local user-state files, private user notes, account identifiers, exact holdings, balances, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full feature snapshots JSON, full factor states JSON, full multi-source signals JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
+* Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full local user-state files, private user notes, account identifiers, exact holdings, balances, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full feature snapshots JSON, full factor states JSON, full multi-source signals JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, full workbench summaries or indexes, or full run manifests by default.
 * Codex input should prioritize high-signal decision, risk, alert, fusion, strategy gate, derivatives, macro/calendar, on-chain flow, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
@@ -348,6 +351,9 @@ python -m halpha data inspect --config config.example.yaml
 python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha outcomes inspect --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha workbench build --config config.example.yaml
+python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha workbench inspect --config config.example.yaml
 ```
 
 The run command is the implemented product path.
@@ -402,6 +408,14 @@ They must not fabricate skipped artifacts.
 
 `outcomes inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
 
+`workbench build` builds `runs/workbench/latest/workbench_summary.json`, `runs/workbench/latest/index.md`, and `runs/workbench/latest/index.html` from existing local artifacts.
+
+`workbench build` does not collect network data, run processors, run pipeline stages, run monitor cycles, run Codex CLI, generate reports, change decision artifacts, or feed workbench output back into Codex context.
+
+`workbench build --run-dir runs/<run_id>` builds the workbench outputs from an explicit run directory instead of latest run-index selection.
+
+`workbench inspect` is read-only. It summarizes the latest workbench summary and index refs without collection, pipeline execution, Codex CLI, raw artifact dumps, private user-state values, trading, or account access.
+
 Full report runs require public network access, configured public sources, and a working Codex CLI.
 
 Do not claim success without running the relevant command.
@@ -424,10 +438,13 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
-* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, personalized-risk aggregate status, Codex input budget state, and latest data-quality state without Codex CLI.
+* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, personalized-risk aggregate status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
 * Use `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect data-quality state for a specific run.
 * Use `python -m halpha outcomes inspect --config config.example.yaml` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
 * Use `python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect outcome state for a specific run.
+* Use `python -m halpha workbench build --config config.example.yaml` to generate local delivery summary and index outputs from existing artifacts without running collection, pipeline stages, or Codex CLI.
+* Use `python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>` to generate workbench outputs from a specific run directory.
+* Use `python -m halpha workbench inspect --config config.example.yaml` to validate read-only workbench visibility without raw artifact dumps or Codex CLI.
 * For event-intelligence acceptance, inspect recent text event records, entity evidence, classification evidence, topic grouping, event signals, event-market confluence, and event intelligence material.
 * For alert-decision acceptance, use `python -m halpha run --config config.example.yaml --until build_alert_decision_material` when final Codex output is not needed.
 * For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.
