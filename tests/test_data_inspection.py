@@ -35,6 +35,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "macro_calendar_history: skipped" in output
     assert "onchain_flow_history: skipped" in output
     assert "feature_factor_artifacts: skipped" in output
+    assert "intelligence_fusion: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -68,9 +69,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "macro_calendar_history: skipped" in output
     assert "onchain_flow_history: skipped" in output
     assert "feature_factor_artifacts: skipped" in output
+    assert "intelligence_fusion: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
-    assert "checks=25" in output
+    assert "checks=27" in output
     assert "degraded=1" in output
     assert "runs/run-1/analysis/data_quality_summary.json" in output
     assert "CREATE TABLE" not in output
@@ -153,6 +155,47 @@ def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(
     assert "feature_id" not in output
     assert "factor_id" not in output
     assert "signal_id" not in output
+
+
+def test_data_inspect_reports_intelligence_fusion_artifacts_and_codex_budget(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_fusion_inspection_artifacts(run)
+
+    exit_code = main(
+        [
+            "data",
+            "inspect",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            "runs/run-1",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "intelligence_fusion: warning" in output
+    assert "fusion_records=3" in output
+    assert "fusion_state_counts=conflicting:1,supportive:2" in output
+    assert "fusion_conflict_counts=severe:1" in output
+    assert "fusion_risk_override_counts=block:1" in output
+    assert "fusion_event_override_counts=watch:1" in output
+    assert "decision_linked_records=2" in output
+    assert "decision_adjusted_records=1" in output
+    assert "alert_linked_records=2" in output
+    assert "alert_adjusted_records=1" in output
+    assert "material_records=3" in output
+    assert "material_omitted_records=2" in output
+    assert "fusion_quality_ok=1" in output
+    assert "fusion_quality_warning=1" in output
+    assert "codex_budget_status=included" in output
+    assert "codex_budget_chars=3072" in output
+    assert "fusion_record_id" not in output
+    assert "bounded fusion evidence" not in output
 
 
 def test_data_inspect_reports_derivatives_store_and_current_run_views(
@@ -442,8 +485,8 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
             "created_at": "2026-06-05T00:10:00Z",
             "status": quality_status,
             "counts": {
-                "checks": 25,
-                "ok": 25 - degraded_count - warning_count,
+                "checks": 27,
+                "ok": 27 - degraded_count - warning_count,
                 "warning": warning_count,
                 "degraded": degraded_count,
                 "skipped": 0,
@@ -547,6 +590,94 @@ def _write_m13_inspection_artifacts(run: RunContext) -> None:
     }
     quality["status"] = "warning"
     quality["warnings"] = ["one multi-source signal is conflicting."]
+    write_json(quality_path, quality)
+
+
+def _write_fusion_inspection_artifacts(run: RunContext) -> None:
+    run.manifest["artifacts"].update(
+        {
+            "intelligence_fusion": "analysis/intelligence_fusion.json",
+            "intelligence_fusion_material": "analysis/intelligence_fusion_material.md",
+        }
+    )
+    run.manifest["intelligence_fusion"] = {
+        "status": "warning",
+        "artifact": "analysis/intelligence_fusion.json",
+        "records": 3,
+        "state_counts": {"supportive": 2, "conflicting": 1},
+        "confluence_counts": {"aligned": 2},
+        "conflict_counts": {"severe": 1},
+        "risk_override_counts": {"block": 1},
+        "event_override_counts": {"watch": 1},
+        "outcome_feedback_counts": {"mixed": 1, "supportive": 2},
+        "warnings": 1,
+        "errors": 0,
+    }
+    run.manifest["intelligence_fusion_integration"] = {
+        "status": "succeeded",
+        "source_artifact": "analysis/intelligence_fusion.json",
+        "decision_records": 2,
+        "decision_linked_records": 2,
+        "decision_adjusted_records": 1,
+        "alert_records": 2,
+        "alert_linked_records": 2,
+        "alert_adjusted_records": 1,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["intelligence_fusion_material"] = {
+        "status": "ok",
+        "artifact": "analysis/intelligence_fusion_material.md",
+        "selected_records": 3,
+        "omitted_records": 2,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"].update(
+        {
+            "intelligence_fusion_records": 3,
+            "intelligence_fusion_warnings": 1,
+            "intelligence_fusion_errors": 0,
+            "intelligence_fusion_supportive_records": 2,
+            "intelligence_fusion_conflicting_records": 1,
+            "intelligence_fusion_decision_linked_records": 2,
+            "intelligence_fusion_decision_adjusted_records": 1,
+            "intelligence_fusion_alert_linked_records": 2,
+            "intelligence_fusion_alert_adjusted_records": 1,
+            "intelligence_fusion_material_records": 3,
+            "intelligence_fusion_material_omitted_records": 2,
+        }
+    )
+    run.manifest["codex_input"] = {
+        "materials": {
+            "analysis/intelligence_fusion_material.md": {
+                "status": "included",
+                "chars": 3072,
+                "over_budget": False,
+                "warnings": [],
+            }
+        }
+    }
+    write_json(run.manifest_path, run.manifest)
+
+    quality_path = run.analysis_dir / "data_quality_summary.json"
+    quality = json.loads(quality_path.read_text(encoding="utf-8"))
+    quality["checks"] = [
+        _quality_check("intelligence_fusion", "warning"),
+        _quality_check("intelligence_fusion_material", "ok"),
+    ]
+    quality["counts"] = {
+        "checks": 2,
+        "ok": 1,
+        "warning": 1,
+        "degraded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "warnings": 1,
+        "errors": 0,
+    }
+    quality["status"] = "warning"
+    quality["warnings"] = ["one intelligence fusion record is conflicting."]
     write_json(quality_path, quality)
 
 

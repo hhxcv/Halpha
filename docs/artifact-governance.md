@@ -252,8 +252,8 @@ Current-run quality artifact:
 
 `analysis/data_quality_summary.json` records deterministic schema, timestamp,
 duplicate, shared-store, derivatives, macro/calendar, on-chain flow,
-feature/factor, partial-collection, degraded, skipped, warning, and failed
-states.
+feature/factor, intelligence-fusion, partial-collection, degraded, skipped,
+warning, and failed states.
 `analysis/data_quality_material.md` is the bounded Codex-facing summary derived
 from that JSON. Codex may explain Halpha-generated quality
 status, but must not create quality checks, invent validation results, inspect

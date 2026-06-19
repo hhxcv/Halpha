@@ -31,7 +31,7 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
 
     assert summary["artifact_type"] == "data_quality_summary"
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 25
+    assert summary["counts"]["checks"] == 27
     assert summary["counts"]["failed"] == 0
     assert summary["counts"]["degraded"] == 0
     assert manifest["artifacts"]["data_quality_summary"] == "analysis/data_quality_summary.json"
@@ -52,7 +52,14 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "onchain_flow_views")["status"] == "skipped"
     assert _check(summary, "onchain_flow_context")["status"] == "skipped"
     assert _check(summary, "onchain_flow_material")["status"] == "skipped"
-    for name in ("feature_snapshots", "factor_states", "multi_source_signals", "factor_signal_material"):
+    for name in (
+        "feature_snapshots",
+        "factor_states",
+        "multi_source_signals",
+        "factor_signal_material",
+        "intelligence_fusion",
+        "intelligence_fusion_material",
+    ):
         m13_check = _check(summary, name)
         assert m13_check["status"] == "skipped"
         assert m13_check["details"]["stage_time_skip_is_expected"] is True
@@ -142,12 +149,13 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run)
+    _write_fusion_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 4
+    assert summary["counts"]["checks"] == 6
     assert _check(summary, "feature_snapshots")["status"] == "ok"
     assert _check(summary, "factor_states")["status"] == "ok"
     assert _check(summary, "multi_source_signals")["status"] == "ok"
@@ -155,7 +163,15 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -
     assert material["status"] == "ok"
     assert material["details"]["codex_boundaries_present"] is True
     assert material["details"]["codex_budget_status"] == "not_available_before_codex_context"
-    assert run.manifest["counts"]["data_quality_checks"] == 4
+    fusion = _check(summary, "intelligence_fusion")
+    assert fusion["status"] == "ok"
+    assert fusion["details"]["records"] == 2
+    assert fusion["details"]["state_counts"]["supportive"] == 2
+    fusion_material = _check(summary, "intelligence_fusion_material")
+    assert fusion_material["status"] == "ok"
+    assert fusion_material["details"]["codex_boundaries_present"] is True
+    assert fusion_material["details"]["codex_budget_status"] == "not_available_before_codex_context"
+    assert run.manifest["counts"]["data_quality_checks"] == 6
 
 
 def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Path) -> None:
@@ -163,6 +179,7 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Pa
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run, feature_status="warning", feature_warnings=["one source was partial."])
+    _write_fusion_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -178,12 +195,57 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_degraded(tmp_path: P
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run, factor_status="degraded")
+    _write_fusion_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "degraded"
     assert _check(summary, "factor_states")["status"] == "degraded"
+
+
+def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_and_failed(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+    _write_m13_artifacts(run)
+    _write_fusion_artifacts(run, status="warning", state="conflicting", conflict_state="severe")
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    fusion = _check(summary, "intelligence_fusion")
+    assert summary["status"] == "warning"
+    assert fusion["status"] == "warning"
+    assert fusion["details"]["conflicting_records"] == 2
+    assert fusion["details"]["conflict_counts"]["severe"] == 2
+
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+    _write_m13_artifacts(run)
+    _write_fusion_artifacts(run, status="warning", state="degraded")
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    fusion = _check(summary, "intelligence_fusion")
+    assert summary["status"] == "degraded"
+    assert fusion["status"] == "degraded"
+    assert fusion["details"]["degraded_records"] == 2
+
+    run = _run_context(tmp_path, config_path)
+    _write_initial_quality_summary(run)
+    _write_m13_artifacts(run)
+    _write_fusion_artifacts(run, status="failed", state="failed", errors=["fusion failed"])
+
+    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    summary = _summary(run.analysis_dir)
+    fusion = _check(summary, "intelligence_fusion")
+    assert summary["status"] == "failed"
+    assert fusion["status"] == "failed"
+    assert fusion["error_count"] == 1
+    assert fusion["details"]["failed_records"] == 2
 
 
 def test_data_quality_summary_refreshes_m13_artifact_checks_missing_as_failed(tmp_path: Path) -> None:
@@ -195,8 +257,9 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_missing_as_failed(tm
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "failed"
-    assert summary["counts"]["failed"] == 4
+    assert summary["counts"]["failed"] == 6
     assert _check(summary, "feature_snapshots")["details"]["report_as_final_missing"] is True
+    assert _check(summary, "intelligence_fusion")["details"]["report_as_final_missing"] is True
 
 
 def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path) -> None:
@@ -663,6 +726,123 @@ def _write_m13_artifacts(
     }
     run.manifest["counts"]["factor_signal_material_records"] = 3
     run.manifest["counts"]["factor_signal_material_omitted_records"] = 0
+
+
+def _write_fusion_artifacts(
+    run: RunContext,
+    *,
+    status: str = "ok",
+    state: str = "supportive",
+    conflict_state: str = "none",
+    errors: list[str] | None = None,
+) -> None:
+    errors = errors or []
+    state_counts = {
+        "supportive": 0,
+        "cautionary": 0,
+        "conflicting": 0,
+        "risk_blocked": 0,
+        "event_overridden": 0,
+        "insufficient_evidence": 0,
+        "degraded": 0,
+        "failed": 0,
+        "neutral": 0,
+    }
+    state_counts[state] = 2
+    records = [
+        {
+            "fusion_record_id": f"fusion:BTCUSDT:{index}",
+            "scope": {"symbol": "BTCUSDT", "timeframe": "1d"},
+            "state": state,
+            "direction": "bullish" if state == "supportive" else "unknown",
+            "confidence": "medium",
+            "confluence": {"state": "aligned" if state == "supportive" else "none"},
+            "conflict": {"state": conflict_state},
+            "risk_override": {"state": "none"},
+            "event_override": {"state": "none"},
+            "outcome_feedback": {"state": "supportive"},
+            "evidence": ["bounded fusion evidence"],
+            "uncertainty": [],
+            "warnings": [],
+            "errors": [{"message": message} for message in errors],
+            "source_artifacts": ["analysis/multi_source_signals.json"],
+        }
+        for index in range(2)
+    ]
+    write_json(
+        run.analysis_dir / "intelligence_fusion.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "intelligence_fusion",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": status,
+            "records": records,
+            "coverage": [{"source_layer": "factor", "source_artifact": "analysis/multi_source_signals.json"}],
+            "counts": {
+                "records": 2,
+                "state_counts": state_counts,
+                "confluence_counts": {"aligned": 2 if state == "supportive" else 0},
+                "conflict_counts": {conflict_state: 2},
+                "risk_override_counts": {"none": 2},
+                "event_override_counts": {"none": 2},
+                "outcome_feedback_counts": {"supportive": 2},
+                "warnings": 0,
+                "errors": len(errors),
+            },
+            "warnings": [],
+            "errors": [{"message": message} for message in errors],
+            "source_artifacts": ["analysis/multi_source_signals.json"],
+        },
+    )
+    run.manifest["artifacts"]["intelligence_fusion"] = "analysis/intelligence_fusion.json"
+    run.manifest["intelligence_fusion"] = {
+        "status": status,
+        "artifact": "analysis/intelligence_fusion.json",
+        "records": 2,
+        "state_counts": state_counts,
+        "confluence_counts": {"aligned": 2 if state == "supportive" else 0},
+        "conflict_counts": {conflict_state: 2},
+        "risk_override_counts": {"none": 2},
+        "event_override_counts": {"none": 2},
+        "outcome_feedback_counts": {"supportive": 2},
+        "warnings": 0,
+        "errors": len(errors),
+    }
+    run.manifest["counts"]["intelligence_fusion_records"] = 2
+    run.manifest["counts"]["intelligence_fusion_warnings"] = 0
+    run.manifest["counts"]["intelligence_fusion_errors"] = len(errors)
+    run.manifest["counts"][f"intelligence_fusion_{state}_records"] = 2
+    run.manifest["counts"]["intelligence_fusion_decision_linked_records"] = 1
+    run.manifest["counts"]["intelligence_fusion_decision_adjusted_records"] = 0
+    run.manifest["counts"]["intelligence_fusion_alert_linked_records"] = 1
+    run.manifest["counts"]["intelligence_fusion_alert_adjusted_records"] = 0
+
+    material = "\n".join(
+        [
+            "---",
+            "artifact_type: analysis_intelligence_fusion_material",
+            "schema_version: 1",
+            "---",
+            "",
+            "full_intelligence_fusion_json_embedded: false",
+            "full_upstream_json_embedded: false",
+            "codex_may_generate_fusion_states: false",
+            "codex_may_generate_risk_overrides: false",
+            "codex_may_generate_event_overrides: false",
+            "codex_may_generate_alert_priorities: false",
+            "codex_may_generate_action_levels: false",
+            "",
+        ]
+    )
+    (run.analysis_dir / "intelligence_fusion_material.md").write_text(material, encoding="utf-8")
+    run.manifest["artifacts"]["intelligence_fusion_material"] = "analysis/intelligence_fusion_material.md"
+    run.manifest["intelligence_fusion_material"] = {
+        "status": status,
+        "artifact": "analysis/intelligence_fusion_material.md",
+    }
+    run.manifest["counts"]["intelligence_fusion_material_records"] = 2
+    run.manifest["counts"]["intelligence_fusion_material_omitted_records"] = 0
 
 
 def _write_market_raw(config, run) -> list[str]:

@@ -25,11 +25,18 @@ FEATURE_SNAPSHOTS_ARTIFACT = "analysis/feature_snapshots.json"
 FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
 MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
 FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
+INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
+INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.md"
 M13_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
     "multi_source_signals",
     "factor_signal_material",
+}
+POST_DATA_QUALITY_CHECK_NAMES = {
+    *M13_CHECK_NAMES,
+    "intelligence_fusion",
+    "intelligence_fusion_material",
 }
 
 
@@ -51,7 +58,7 @@ def refresh_m13_data_quality_checks(
     *,
     now: datetime | str | None = None,
 ) -> list[str]:
-    """Refresh final-stage M13 artifact checks after feature/factor artifacts exist."""
+    """Refresh final-stage analysis artifact checks after downstream artifacts exist."""
     created_at = _format_utc(now)
     existing, error = _read_json(run.analysis_dir / "data_quality_summary.json")
     if error:
@@ -60,9 +67,9 @@ def refresh_m13_data_quality_checks(
         checks = [
             check
             for check in _list(existing.get("checks"))
-            if isinstance(check, dict) and check.get("name") not in M13_CHECK_NAMES
+            if isinstance(check, dict) and check.get("name") not in POST_DATA_QUALITY_CHECK_NAMES
         ]
-        checks.extend(_m13_artifact_checks(run, expected=True))
+        checks.extend(_post_data_quality_artifact_checks(run, expected=True))
     _write_data_quality_summary(run, created_at=created_at, checks=checks)
     return [DATA_QUALITY_SUMMARY_ARTIFACT]
 
@@ -96,7 +103,7 @@ def _data_quality_checks(
         _research_data_catalog_check(run),
         _run_index_check(run),
         _partial_collection_check(run),
-        *_m13_artifact_checks(run, expected=m13_expected),
+        *_post_data_quality_artifact_checks(run, expected=m13_expected),
     ]
     return checks
 
@@ -819,12 +826,14 @@ def _onchain_flow_material_check(config: dict[str, Any], run: RunContext) -> dic
     )
 
 
-def _m13_artifact_checks(run: RunContext, *, expected: bool) -> list[dict[str, Any]]:
+def _post_data_quality_artifact_checks(run: RunContext, *, expected: bool) -> list[dict[str, Any]]:
     return [
         _feature_snapshots_check(run, expected=expected),
         _factor_states_check(run, expected=expected),
         _multi_source_signals_check(run, expected=expected),
         _factor_signal_material_check(run, expected=expected),
+        _intelligence_fusion_check(run, expected=expected),
+        _intelligence_fusion_material_check(run, expected=expected),
     ]
 
 
@@ -838,7 +847,7 @@ def _feature_snapshots_check(run: RunContext, *, expected: bool) -> dict[str, An
         )
     data, error = _read_json(run.analysis_dir / "feature_snapshots.json")
     if error:
-        return _missing_m13_check("feature_snapshots", artifact, error)
+        return _missing_post_data_quality_check("feature_snapshots", artifact, error)
     records = _list(data.get("records"))
     coverage = _list(data.get("coverage"))
     warnings = _string_list(data.get("warnings"))
@@ -885,7 +894,7 @@ def _factor_states_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
         )
     data, error = _read_json(run.analysis_dir / "factor_states.json")
     if error:
-        return _missing_m13_check("factor_states", artifact, error)
+        return _missing_post_data_quality_check("factor_states", artifact, error)
     records = _list(data.get("records"))
     warnings = _string_list(data.get("warnings"))
     errors = _error_messages(data.get("errors"))
@@ -928,7 +937,7 @@ def _multi_source_signals_check(run: RunContext, *, expected: bool) -> dict[str,
         )
     data, error = _read_json(run.analysis_dir / "multi_source_signals.json")
     if error:
-        return _missing_m13_check("multi_source_signals", artifact, error)
+        return _missing_post_data_quality_check("multi_source_signals", artifact, error)
     records = _list(data.get("records"))
     warnings = _string_list(data.get("warnings"))
     errors = _error_messages(data.get("errors"))
@@ -971,7 +980,7 @@ def _factor_signal_material_check(run: RunContext, *, expected: bool) -> dict[st
         )
     path = run.analysis_dir / "factor_signal_material.md"
     if not path.exists():
-        return _missing_m13_check("factor_signal_material", artifact, f"{path.name} was not found.")
+        return _missing_post_data_quality_check("factor_signal_material", artifact, f"{path.name} was not found.")
     material = path.read_text(encoding="utf-8")
     errors = []
     required_boundaries = [
@@ -1011,6 +1020,129 @@ def _factor_signal_material_check(run: RunContext, *, expected: bool) -> dict[st
     )
 
 
+def _intelligence_fusion_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
+    artifact = INTELLIGENCE_FUSION_ARTIFACT
+    if not expected:
+        return _post_data_quality_stage_check(
+            "intelligence_fusion",
+            artifact,
+            producer_stage="build_intelligence_fusion",
+        )
+    data, error = _read_json(run.analysis_dir / "intelligence_fusion.json")
+    if error:
+        return _missing_post_data_quality_check("intelligence_fusion", artifact, error)
+    records = _list(data.get("records"))
+    coverage = _list(data.get("coverage"))
+    warnings = _string_list(data.get("warnings"))
+    errors = _error_messages(data.get("errors"))
+    errors.extend(
+        _json_artifact_shape_errors(
+            data,
+            artifact_type="intelligence_fusion",
+            records_field="records",
+        )
+    )
+    if not isinstance(data.get("coverage"), list):
+        errors.append("coverage must be a list.")
+    counts = _dict(data.get("counts"))
+    state_counts = _count_mapping(counts.get("state_counts"), records, field="state")
+    confluence_counts = _nested_count_mapping(counts.get("confluence_counts"), records, "confluence")
+    conflict_counts = _nested_count_mapping(counts.get("conflict_counts"), records, "conflict")
+    risk_override_counts = _nested_count_mapping(counts.get("risk_override_counts"), records, "risk_override")
+    event_override_counts = _nested_count_mapping(counts.get("event_override_counts"), records, "event_override")
+    outcome_feedback_counts = _nested_count_mapping(
+        counts.get("outcome_feedback_counts"),
+        records,
+        "outcome_feedback",
+    )
+    status = _intelligence_fusion_quality_status(str(data.get("status") or "unknown"), state_counts, warnings, errors)
+    manifest_summary = _dict(run.manifest.get("intelligence_fusion"))
+    manifest_counts = _dict(run.manifest.get("counts"))
+    return _check(
+        "intelligence_fusion",
+        "analysis",
+        status,
+        f"{len(records)} intelligence fusion record(s), {len(coverage)} source coverage record(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "records": len(records),
+            "coverage_records": len(coverage),
+            "manifest_records": _int(manifest_summary.get("records")),
+            "state_counts": state_counts,
+            "confluence_counts": confluence_counts,
+            "conflict_counts": conflict_counts,
+            "risk_override_counts": risk_override_counts,
+            "event_override_counts": event_override_counts,
+            "outcome_feedback_counts": outcome_feedback_counts,
+            "warnings": _int(counts.get("warnings")),
+            "errors": _int(counts.get("errors")),
+            "degraded_records": _int(state_counts.get("degraded")),
+            "failed_records": _int(state_counts.get("failed")),
+            "insufficient_evidence_records": _int(state_counts.get("insufficient_evidence")),
+            "risk_blocked_records": _int(state_counts.get("risk_blocked")),
+            "event_overridden_records": _int(state_counts.get("event_overridden")),
+            "conflicting_records": _int(state_counts.get("conflicting")),
+            "decision_linked_records": _int(manifest_counts.get("intelligence_fusion_decision_linked_records")),
+            "decision_adjusted_records": _int(manifest_counts.get("intelligence_fusion_decision_adjusted_records")),
+            "alert_linked_records": _int(manifest_counts.get("intelligence_fusion_alert_linked_records")),
+            "alert_adjusted_records": _int(manifest_counts.get("intelligence_fusion_alert_adjusted_records")),
+        },
+    )
+
+
+def _intelligence_fusion_material_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
+    artifact = INTELLIGENCE_FUSION_MATERIAL_ARTIFACT
+    if not expected:
+        return _post_data_quality_stage_check(
+            "intelligence_fusion_material",
+            artifact,
+            producer_stage="build_analysis_materials",
+        )
+    path = run.analysis_dir / "intelligence_fusion_material.md"
+    if not path.exists():
+        return _missing_post_data_quality_check("intelligence_fusion_material", artifact, f"{path.name} was not found.")
+    material = path.read_text(encoding="utf-8")
+    errors = []
+    required_boundaries = [
+        "artifact_type: analysis_intelligence_fusion_material",
+        "full_intelligence_fusion_json_embedded: false",
+        "full_upstream_json_embedded: false",
+        "codex_may_generate_fusion_states: false",
+        "codex_may_generate_risk_overrides: false",
+        "codex_may_generate_event_overrides: false",
+        "codex_may_generate_alert_priorities: false",
+        "codex_may_generate_action_levels: false",
+    ]
+    for boundary in required_boundaries:
+        if boundary not in material:
+            errors.append(f"intelligence fusion material missing boundary: {boundary}")
+    material_summary = _dict(run.manifest.get("intelligence_fusion_material"))
+    manifest_counts = _dict(run.manifest.get("counts"))
+    budget = _material_budget(run, INTELLIGENCE_FUSION_MATERIAL_ARTIFACT)
+    status = "failed" if errors else _analysis_artifact_status(str(material_summary.get("status") or "ok"), [], [])
+    return _check(
+        "intelligence_fusion_material",
+        "analysis",
+        status,
+        "intelligence fusion material is present with Codex boundary metadata.",
+        [artifact, INTELLIGENCE_FUSION_ARTIFACT],
+        errors=errors,
+        details={
+            "chars": len(material),
+            "selected_records": _int(manifest_counts.get("intelligence_fusion_material_records")),
+            "omitted_records": _int(manifest_counts.get("intelligence_fusion_material_omitted_records")),
+            "codex_boundaries_present": not errors,
+            "codex_budget_checked": bool(budget),
+            "codex_budget_status": budget.get("status") if budget else "not_available_before_codex_context",
+            "codex_budget_chars": _int(budget.get("chars")) if budget else 0,
+            "codex_budget_over_budget": bool(budget.get("over_budget")) if budget else False,
+            "codex_budget_warnings": len(_list(budget.get("warnings"))) if budget else 0,
+        },
+    )
+
+
 def _post_data_quality_stage_check(name: str, artifact: str, *, producer_stage: str) -> dict[str, Any]:
     return _check(
         name,
@@ -1027,8 +1159,8 @@ def _post_data_quality_stage_check(name: str, artifact: str, *, producer_stage: 
     )
 
 
-def _missing_m13_check(name: str, artifact: str, error: str) -> dict[str, Any]:
-    message = f"{artifact} was expected for final M13 audit but could not be inspected: {error}"
+def _missing_post_data_quality_check(name: str, artifact: str, error: str) -> dict[str, Any]:
+    message = f"{artifact} was expected for final artifact audit but could not be inspected: {error}"
     return _check(
         name,
         "analysis",
@@ -1063,20 +1195,71 @@ def _analysis_artifact_status(status: str, warnings: list[str], errors: list[str
     return "ok"
 
 
+def _intelligence_fusion_quality_status(
+    status: str,
+    state_counts: dict[str, int],
+    warnings: list[str],
+    errors: list[str],
+) -> str:
+    normalized = status.strip().lower()
+    if errors or normalized == "failed" or _int(state_counts.get("failed")):
+        return "failed"
+    if _int(state_counts.get("degraded")):
+        return "degraded"
+    if normalized in {"degraded", "warning", "skipped"}:
+        return normalized
+    if warnings:
+        return "warning"
+    return "ok"
+
+
 def _state_count(records: list[Any], state: str) -> int:
     return sum(1 for item in records if isinstance(item, dict) and item.get("state") == state)
 
 
+def _count_mapping(value: Any, records: list[Any], *, field: str) -> dict[str, int]:
+    counts = {str(key): _int(count) for key, count in _dict(value).items() if isinstance(key, str)}
+    if counts:
+        return dict(sorted(counts.items()))
+    fallback: dict[str, int] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        key = record.get(field)
+        if isinstance(key, str) and key:
+            fallback[key] = fallback.get(key, 0) + 1
+    return dict(sorted(fallback.items()))
+
+
+def _nested_count_mapping(value: Any, records: list[Any], field: str) -> dict[str, int]:
+    counts = {str(key): _int(count) for key, count in _dict(value).items() if isinstance(key, str)}
+    if counts:
+        return dict(sorted(counts.items()))
+    fallback: dict[str, int] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        nested = record.get(field)
+        nested_state = nested.get("state") if isinstance(nested, dict) else None
+        if isinstance(nested_state, str) and nested_state:
+            fallback[nested_state] = fallback.get(nested_state, 0) + 1
+    return dict(sorted(fallback.items()))
+
+
 def _factor_signal_material_budget(run: RunContext) -> dict[str, Any]:
+    return _material_budget(run, FACTOR_SIGNAL_MATERIAL_ARTIFACT)
+
+
+def _material_budget(run: RunContext, artifact: str) -> dict[str, Any]:
     codex_input = _dict(run.manifest.get("codex_input"))
     materials = codex_input.get("materials")
     if isinstance(materials, dict):
-        budget = materials.get(FACTOR_SIGNAL_MATERIAL_ARTIFACT)
+        budget = materials.get(artifact)
         return budget if isinstance(budget, dict) else {}
     if isinstance(materials, list):
         for item in materials:
             record = _dict(item)
-            if record.get("artifact") == FACTOR_SIGNAL_MATERIAL_ARTIFACT:
+            if record.get("artifact") == artifact:
                 return record
     return {}
 
