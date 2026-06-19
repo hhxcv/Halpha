@@ -42,6 +42,9 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "multi_source_signals: analysis/multi_source_signals.json" in context
     assert "intelligence_fusion: analysis/intelligence_fusion.json" in context
     assert "intelligence_fusion_material: analysis/intelligence_fusion_material.md" in context
+    assert "user_state_context: analysis/user_state_context.json" in context
+    assert "personalized_risk_constraints: analysis/personalized_risk_constraints.json" in context
+    assert "personalized_risk_material: analysis/personalized_risk_material.md" in context
     assert "factor_signal_material: analysis/factor_signal_material.md" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
@@ -59,17 +62,24 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "artifact_type: analysis_outcome_tracking_material" in context
     assert "artifact_type: analysis_factor_signal_material" in context
     assert "artifact_type: analysis_intelligence_fusion_material" in context
+    assert "artifact_type: analysis_personalized_risk_material" in context
     assert "outcome_tracking_material: analysis/outcome_tracking_material.md" in research_context
     assert "artifact_type: analysis_outcome_tracking_material" in research_context
     assert "factor_signal_material: analysis/factor_signal_material.md" in research_context
     assert "intelligence_fusion_material: analysis/intelligence_fusion_material.md" in research_context
+    assert "personalized_risk_material: analysis/personalized_risk_material.md" in research_context
     assert "artifact_type: analysis_factor_signal_material" in research_context
     assert "artifact_type: analysis_intelligence_fusion_material" in research_context
+    assert "artifact_type: analysis_personalized_risk_material" in research_context
     assert "codex_may_generate_quality_checks: false" in context
     assert "codex_may_generate_factor_scores: false" in context
     assert "codex_may_generate_signal_states: false" in context
     assert "codex_may_generate_fusion_states: false" in context
+    assert "codex_may_generate_user_state: false" in context
+    assert "codex_may_generate_allocations: false" in context
     assert "full_reusable_history_embedded: false" in context
+    assert "full_user_state_context_json_embedded: false" in context
+    assert "full_personalized_risk_constraints_json_embedded: false" in context
     assert "full_catalog_embedded: false" in context
     assert "full_run_index_embedded: false" in context
     assert "full_outcome_history_embedded: false" in context
@@ -105,9 +115,13 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Outcome tracking material rules:" in prompt
     assert "Factor signal material rules:" in prompt
     assert "Intelligence fusion material rules:" in prompt
+    assert "Personalized risk material rules:" in prompt
     assert "When factor/signal material is present" in prompt
     assert "When intelligence fusion material is present" in prompt
+    assert "When personalized risk material is present" in prompt
     assert "Do not generate or revise feature records" in prompt
+    assert "Do not infer hidden user state" in prompt
+    assert "Do not generate or revise personalized constraints" in prompt
     assert "When data quality material is present" in prompt
     assert "Do not generate or revise data-quality checks" in prompt
     assert "Do not create outcome labels" in prompt
@@ -130,6 +144,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "artifact_type: analysis_outcome_tracking_material" in prompt
     assert "artifact_type: analysis_factor_signal_material" in prompt
     assert "artifact_type: analysis_intelligence_fusion_material" in prompt
+    assert "artifact_type: analysis_personalized_risk_material" in prompt
     assert "codex_may_generate_event_categories: false" in prompt
     assert "codex_may_generate_alert_priority: false" in prompt
     assert "codex_may_generate_quality_checks: false" in prompt
@@ -137,6 +152,8 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "codex_may_generate_factor_scores: false" in prompt
     assert "codex_may_generate_signal_states: false" in prompt
     assert "codex_may_generate_fusion_states: false" in prompt
+    assert "codex_may_generate_user_state: false" in prompt
+    assert "codex_may_generate_allocations: false" in prompt
     assert "codex_may_generate_price_forecasts: false" in prompt
     assert "- 核心摘要" in prompt
     assert "- 标题" not in prompt
@@ -149,6 +166,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert manifest["artifacts"]["outcome_tracking_material"] == "analysis/outcome_tracking_material.md"
     assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["intelligence_fusion_material"] == "analysis/intelligence_fusion_material.md"
+    assert manifest["artifacts"]["personalized_risk_material"] == "analysis/personalized_risk_material.md"
     assert manifest["codex_input"]["codex_context"]["artifact"] == "codex_context/context.md"
     assert manifest["codex_input"]["codex_context"]["status"] == "included"
     assert manifest["codex_input"]["codex_context"]["chars"] == len(context)
@@ -165,6 +183,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert material_records["analysis/outcome_tracking_material.md"]["status"] == "included"
     assert material_records["analysis/factor_signal_material.md"]["status"] == "included"
     assert material_records["analysis/intelligence_fusion_material.md"]["status"] == "included"
+    assert material_records["analysis/personalized_risk_material.md"]["status"] == "included"
     codex_context_stage = _stage(manifest, "build_codex_context")
     report_stage = _stage(manifest, "run_codex_report")
     assert codex_context_stage["status"] == "succeeded"

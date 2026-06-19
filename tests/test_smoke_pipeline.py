@@ -81,6 +81,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/intelligence_fusion_material.md",
         "analysis/user_state_context.json",
         "analysis/personalized_risk_constraints.json",
+        "analysis/personalized_risk_material.md",
         "analysis/factor_signal_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -119,6 +120,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "intelligence_fusion_material": "analysis/intelligence_fusion_material.md",
             "user_state_context": "analysis/user_state_context.json",
             "personalized_risk_constraints": "analysis/personalized_risk_constraints.json",
+            "personalized_risk_material": "analysis/personalized_risk_material.md",
             "factor_signal_material": "analysis/factor_signal_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
@@ -192,6 +194,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_user_state_context", "succeeded"),
         ("build_personalized_risk_constraints", "succeeded"),
         ("integrate_personalized_risk_constraints", "succeeded"),
+        ("build_personalized_risk_material", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -217,6 +220,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     alert_material = (run_dir / "analysis/alert_decision_material.md").read_text(encoding="utf-8")
     quality_material = (run_dir / "analysis/data_quality_material.md").read_text(encoding="utf-8")
     factor_signal_material = (run_dir / "analysis/factor_signal_material.md").read_text(encoding="utf-8")
+    personalized_risk_material = (run_dir / "analysis/personalized_risk_material.md").read_text(encoding="utf-8")
     assert "artifact_type: analysis_event_intelligence_material" in event_material
     assert "codex_may_generate_event_categories: false" in event_material
     assert "artifact_type: analysis_alert_decision_material" in alert_material
@@ -226,10 +230,14 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert "artifact_type: analysis_factor_signal_material" in factor_signal_material
     assert "codex_may_generate_factor_scores: false" in factor_signal_material
     assert "codex_may_generate_signal_states: false" in factor_signal_material
+    assert "artifact_type: analysis_personalized_risk_material" in personalized_risk_material
+    assert "codex_may_generate_user_state: false" in personalized_risk_material
+    assert "full_user_state_context_json_embedded: false" in personalized_risk_material
 
     prompt = (run_dir / "codex_context/prompt.md").read_text(encoding="utf-8")
     assert "Use Chinese section headings only." in prompt
     assert "Factor signal material rules:" in prompt
+    assert "Personalized risk material rules:" in prompt
     assert "Event intelligence material rules:" in prompt
     assert "Alert decision material rules:" in prompt
     assert "Data quality material rules:" in prompt
@@ -358,6 +366,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/intelligence_fusion_material.md",
         "analysis/user_state_context.json",
         "analysis/personalized_risk_constraints.json",
+        "analysis/personalized_risk_material.md",
         "analysis/factor_signal_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
@@ -469,6 +478,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["personalized_risk_integration"]["status"] == "succeeded"
     assert manifest["counts"]["personalized_risk_decision_linked_records"] >= 1
     assert manifest["counts"]["personalized_risk_decision_adjusted_records"] == 0
+    assert manifest["personalized_risk_material"]["status"] == "skipped"
+    assert manifest["counts"]["personalized_risk_material_records"] >= 1
+    assert manifest["counts"]["personalized_risk_material_omitted_records"] >= 0
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
@@ -500,6 +512,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["intelligence_fusion_material"] == "analysis/intelligence_fusion_material.md"
     assert manifest["artifacts"]["user_state_context"] == "analysis/user_state_context.json"
     assert manifest["artifacts"]["personalized_risk_constraints"] == "analysis/personalized_risk_constraints.json"
+    assert manifest["artifacts"]["personalized_risk_material"] == "analysis/personalized_risk_material.md"
     assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"
@@ -695,6 +708,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "factor_states: analysis/factor_states.json" in research_context
     assert "multi_source_signals: analysis/multi_source_signals.json" in research_context
     assert "factor_signal_material: analysis/factor_signal_material.md" in research_context
+    assert "personalized_risk_material: analysis/personalized_risk_material.md" in research_context
     assert "alert_decision_material: analysis/alert_decision_material.md" in research_context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in research_context
     assert "data_quality_material: analysis/data_quality_material.md" in research_context
@@ -703,6 +717,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "artifact_type: analysis_strategy_experiment_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
     assert "artifact_type: analysis_factor_signal_material" in research_context
+    assert "artifact_type: analysis_personalized_risk_material" in research_context
     assert "artifact_type: analysis_alert_decision_material" in research_context
     assert "artifact_type: analysis_event_intelligence_material" in research_context
     assert "artifact_type: analysis_data_quality_material" in research_context
@@ -720,8 +735,10 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "factor_states: analysis/factor_states.json" in context
     assert "multi_source_signals: analysis/multi_source_signals.json" in context
     assert "factor_signal_material: analysis/factor_signal_material.md" in context
+    assert "personalized_risk_material: analysis/personalized_risk_material.md" in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "artifact_type: analysis_factor_signal_material" in context
+    assert "artifact_type: analysis_personalized_risk_material" in context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in context
     assert "artifact_type: analysis_alert_decision_material" in context
     assert "alert_decision_material: analysis/alert_decision_material.md" in context
@@ -739,8 +756,11 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "Use Halpha-generated effectiveness gate statuses only" in prompt
     assert "Do not generate or revise strategy gate statuses" in prompt
     assert "Factor signal material rules:" in prompt
+    assert "Personalized risk material rules:" in prompt
     assert "When factor/signal material is present" in prompt
+    assert "When personalized risk material is present" in prompt
     assert "Do not generate or revise feature records" in prompt
+    assert "Do not generate or revise personalized constraints" in prompt
     assert "cost assumptions, baseline comparison, sample limits" in prompt
     assert "Use Halpha-generated evaluation metrics only" in prompt
     assert "Decision intelligence material rules:" in prompt

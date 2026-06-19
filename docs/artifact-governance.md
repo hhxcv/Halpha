@@ -234,12 +234,12 @@ user-state status and context, and
 `analysis/personalized_risk_constraints.json` as deterministic constraints from
 sanitized user state plus available current-run intelligence. Constraint JSON is
 intermediate evidence and should not be embedded in full Codex input.
-`analysis/personalized_risk_material.md` is a downstream Codex-facing contract
-and may not be written until its stage is implemented. Raw local user-state
-files, private notes, account identifiers, exact holdings, balances, machine
-paths, full user-state JSON, and full personalized-risk JSON must not be
-embedded in Codex input. Codex should consume bounded
-`analysis/personalized_risk_material.md` once implemented.
+Product runs generate bounded Codex-facing personalized-risk material as
+`analysis/personalized_risk_material.md`. Raw local user-state files, private
+notes, account identifiers, exact holdings, balances, machine paths, full
+user-state JSON, and full personalized-risk JSON must not be embedded in Codex
+input. Codex should consume bounded `analysis/personalized_risk_material.md`
+instead of full user-state or personalized-risk JSON.
 Product runs integrate constraints into decision recommendations, watch
 triggers, and alert decisions as conservative fields while preserving
 pre-personalization values when a record is downgraded or blocked.
