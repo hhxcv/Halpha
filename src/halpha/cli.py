@@ -645,6 +645,12 @@ def _workbench_build(config_arg: str, *, run_dir: str | None) -> int:
     print("Halpha workbench build succeeded.")
     print(f"status: {result.summary.get('status') or 'unknown'}")
     print(f"summary: {_safe_local_display_path(result.summary_path)}")
+    index_outputs = result.summary.get("index_outputs")
+    if isinstance(index_outputs, dict):
+        if index_outputs.get("markdown"):
+            print(f"index_markdown: {index_outputs['markdown']}")
+        if index_outputs.get("html"):
+            print(f"index_html: {index_outputs['html']}")
     latest_run = result.summary.get("latest_run")
     if isinstance(latest_run, dict):
         fields = latest_run.get("fields")
