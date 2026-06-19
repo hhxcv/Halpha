@@ -200,6 +200,60 @@ def test_codex_runner_injects_derivatives_market_section_after_codex_stdout(
     assert "\u4ef7\u683c\u9884\u6d4b" in report
 
 
+def test_codex_runner_injects_onchain_flow_section_after_codex_stdout(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    report_stdout = "\n".join(
+        [
+            "# \u6bcf\u65e5\u5e02\u573a\u7b80\u62a5",
+            "",
+            "## \u5e02\u573a\u6982\u89c8",
+            "",
+            "Codex generated market overview.",
+            "",
+            "## \u7efc\u5408\u5224\u65ad",
+            "",
+            "Codex generated synthesis.",
+            "",
+            "## \u98ce\u9669\u63d0\u793a",
+            "",
+            "\u6570\u636e\u7a97\u53e3\u8f83\u77ed\uff0c\u9700\u8981\u7ee7\u7eed\u89c2\u5bdf\u516c\u5f00\u4e8b\u4ef6\u548c\u4ef7\u683c\u53d8\u5316\u3002",
+            "",
+        ]
+    )
+
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+        return subprocess.CompletedProcess(command, 0, stdout=report_stdout, stderr="")
+
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_run)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"build_codex_context": _write_prompt_and_onchain_flow_material},
+    )
+
+    assert result.succeeded is True
+    report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
+    onchain_heading = "## \u94fe\u4e0a\u6d41\u4e0e\u6765\u6e90\u53ef\u7528\u6027\u8bc1\u636e"
+    synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
+    assert onchain_heading in report
+    assert report.index(onchain_heading) < report.index(synthesis_heading)
+    assert "analysis/onchain_flow_material.md" in report
+    assert "\u7a33\u5b9a\u5e01\u6d41\u52a8\u6027" in report
+    assert "sharp_stablecoin_supply_contraction" in report
+    assert "\u7f51\u7edc\u62e5\u5835" in report
+    assert "elevated_network_congestion" in report
+    assert "unavailable/source_unavailable" in report
+    assert "\u5730\u5740\u6807\u7b7e" in report
+    assert "\u4e0d\u4ee3\u8868\u4f4e\u98ce\u9669" in report
+    assert "\u4ea4\u6613\u6307\u4ee4" in report
+    assert "\u4ef7\u683c\u9884\u6d4b" in report
+
+
 def test_codex_runner_resolves_configured_command_before_subprocess(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -676,6 +730,134 @@ def _write_prompt_and_derivatives_material(config, run) -> list[str]:
     run.manifest["artifacts"]["derivatives_market_material"] = (
         "analysis/derivatives_market_material.md"
     )
+    return ["codex_context/prompt.md"]
+
+
+def _write_prompt_and_onchain_flow_material(config, run) -> list[str]:
+    run.codex_context_dir.joinpath("prompt.md").write_text("prompt", encoding="utf-8")
+    write_json(
+        run.analysis_dir / "onchain_flow_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-18T01:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": (
+                        "onchain_flow_context:stablecoin_liquidity:defillama_stablecoins:"
+                        "ALL_STABLECOINS:all:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "stablecoin_liquidity",
+                    "data_class": "stablecoin_supply",
+                    "source": "defillama_stablecoins",
+                    "asset": "ALL_STABLECOINS",
+                    "chain": "all",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "sharp_stablecoin_supply_contraction",
+                    "severity": "high",
+                    "confidence": "medium",
+                    "source_availability": "succeeded",
+                    "metrics": {"stablecoin_supply_change_pct": -0.1},
+                    "thresholds": {"sharp_supply_contraction_change_pct": -0.05},
+                    "evidence": [],
+                    "uncertainty": ["stablecoin supply is liquidity context, not a price forecast."],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/onchain_flow_context.json",
+                        "raw/onchain_flow_views.json",
+                    ],
+                },
+                {
+                    "context_id": (
+                        "onchain_flow_context:network_congestion:blockchain_com_charts:"
+                        "BTC:bitcoin:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "network_congestion",
+                    "data_class": "network_congestion",
+                    "source": "blockchain_com_charts",
+                    "asset": "BTC",
+                    "chain": "bitcoin",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "elevated_network_congestion",
+                    "severity": "medium",
+                    "confidence": "medium",
+                    "source_availability": "succeeded",
+                    "metrics": {"latest_mempool_size_bytes": 120000000.0},
+                    "thresholds": {"elevated_mempool_size_bytes": 20000000.0},
+                    "evidence": [],
+                    "uncertainty": ["network congestion is settlement-friction context."],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/onchain_flow_context.json",
+                        "raw/onchain_flow_views.json",
+                    ],
+                },
+                {
+                    "context_id": (
+                        "onchain_flow_context:exchange_flow_source_availability:"
+                        "public_exchange_flow_aggregate:ALL_CONFIGURED_ASSETS:"
+                        "all:2026-06-18T00:00:00Z"
+                    ),
+                    "context_type": "exchange_flow_source_availability",
+                    "data_class": "exchange_flow_availability",
+                    "source": "public_exchange_flow_aggregate",
+                    "asset": "ALL_CONFIGURED_ASSETS",
+                    "chain": "all",
+                    "as_of": "2026-06-18T00:00:00Z",
+                    "status": "unavailable",
+                    "state": "source_unavailable",
+                    "severity": "medium",
+                    "confidence": "low",
+                    "source_availability": "unavailable",
+                    "metrics": {},
+                    "thresholds": {},
+                    "evidence": [],
+                    "uncertainty": ["unavailable exchange-flow source prevents deterministic context."],
+                    "warnings": ["exchange-flow source is unavailable."],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/onchain_flow_context.json",
+                        "raw/onchain_flow.json",
+                    ],
+                },
+            ],
+            "counts": {"records": 3},
+            "warnings": ["exchange-flow source is unavailable."],
+            "errors": [],
+            "source_artifacts": ["raw/onchain_flow_views.json", "raw/onchain_flow.json"],
+        },
+    )
+    run.analysis_dir.joinpath("onchain_flow_material.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "artifact_type: analysis_onchain_flow_material",
+                "schema_version: 1",
+                "audience: ai",
+                "source_artifacts:",
+                "  - analysis/onchain_flow_context.json",
+                "---",
+                "",
+                "# onchain_flow_material",
+                "",
+                "codex_may_generate_onchain_records: false",
+                "codex_may_generate_flow_states: false",
+                "codex_may_generate_address_labels: false",
+                "full_onchain_flow_context_json_embedded: false",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    run.manifest["artifacts"]["codex_prompt"] = "codex_context/prompt.md"
+    run.manifest["artifacts"]["onchain_flow_context"] = "analysis/onchain_flow_context.json"
+    run.manifest["artifacts"]["onchain_flow_material"] = "analysis/onchain_flow_material.md"
     return ["codex_context/prompt.md"]
 
 

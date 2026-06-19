@@ -279,6 +279,48 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
 
 
+def test_research_context_embeds_onchain_flow_material_when_enabled(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, text_enabled=False, onchain_enabled=True)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_research_context",
+        stage_handlers={
+            "collect_market_data": _write_market_raw,
+            "collect_text_events": _noop_stage,
+            "collect_onchain_flow_data": _noop_stage,
+            "sync_onchain_flow_history": _noop_stage,
+            "build_onchain_flow_views": _noop_stage,
+            "build_onchain_flow_context": _write_onchain_flow_context,
+        },
+    )
+
+    assert result.succeeded is True
+    context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
+    manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
+    assert "onchain_flow_context: analysis/onchain_flow_context.json" in context
+    assert "onchain_flow_material: analysis/onchain_flow_material.md" in context
+    assert '<embed path="analysis/onchain_flow_material.md">' in context
+    assert "artifact_type: analysis_onchain_flow_material" in context
+    assert "onchain_flow_requirements:" in context
+    assert "include_when_onchain_flow_material_exists: true" in context
+    assert "do_not_generate_onchain_records: true" in context
+    assert "do_not_generate_flow_states: true" in context
+    assert "do_not_generate_address_labels: true" in context
+    assert "full_raw_onchain_flow_artifacts_embedded: false" in context
+    assert "full_reusable_onchain_flow_history_embedded: false" in context
+    assert "full_onchain_flow_views_embedded: false" in context
+    assert "full_onchain_flow_context_json_embedded: false" in context
+    assert "PRIVATE_RAW_SENTINEL_SHOULD_NOT_APPEAR" not in context
+    assert manifest["artifacts"]["onchain_flow_material"] == "analysis/onchain_flow_material.md"
+    material_records = {
+        record["artifact"]: record for record in manifest["codex_input"]["materials"]
+    }
+    assert material_records["analysis/onchain_flow_material.md"]["status"] == "included"
+
+
 def test_research_context_fails_when_decision_material_is_missing_for_quant_enabled(
     tmp_path: Path,
 ) -> None:
@@ -353,6 +395,7 @@ def _write_config(
     *,
     text_enabled: bool = True,
     quant_enabled: bool = False,
+    onchain_enabled: bool = False,
 ) -> Path:
     config_path = tmp_path / "config.yaml"
     text_block = (
@@ -394,6 +437,27 @@ quant:
         if quant_enabled
         else ""
     )
+    onchain_block = (
+        """
+onchain_flow:
+  enabled: true
+  source: public_aggregate
+  data_classes:
+    - stablecoin_supply
+    - chain_activity
+    - network_congestion
+    - exchange_flow_availability
+  assets:
+    - ALL_STABLECOINS
+    - BTC
+  chains:
+    - all
+    - bitcoin
+  lookback_days: 7
+"""
+        if onchain_enabled
+        else ""
+    )
     config_path.write_text(
         f"""
 run:
@@ -406,6 +470,7 @@ market:
     - BTCUSDT
 {ohlcv_block.rstrip()}
 {text_block.rstrip()}
+{onchain_block.rstrip()}
 {quant_block.rstrip()}
 report:
   title: Daily Market Brief
@@ -637,6 +702,52 @@ def _write_strategy_experiment_material(config, run) -> list[str]:
         "analysis/strategy_effectiveness_gates.json",
         "analysis/strategy_experiment_material.md",
     ]
+
+
+def _write_onchain_flow_context(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "onchain_flow_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": (
+                        "onchain_flow_context:stablecoin_liquidity:defillama_stablecoins:"
+                        "ALL_STABLECOINS:all:2026-06-05T00:00:00Z"
+                    ),
+                    "context_type": "stablecoin_liquidity",
+                    "data_class": "stablecoin_supply",
+                    "source": "defillama_stablecoins",
+                    "asset": "ALL_STABLECOINS",
+                    "chain": "all",
+                    "as_of": "2026-06-05T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "sharp_stablecoin_supply_contraction",
+                    "severity": "high",
+                    "confidence": "medium",
+                    "source_availability": "succeeded",
+                    "metrics": {"stablecoin_supply_change_pct": -0.1},
+                    "thresholds": {"sharp_supply_contraction_change_pct": -0.05},
+                    "evidence": [{"source_artifact": "raw/onchain_flow_views.json", "value": -0.1}],
+                    "uncertainty": ["stablecoin supply is liquidity context, not a price forecast."],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": ["analysis/onchain_flow_context.json", "raw/onchain_flow_views.json"],
+                    "raw_payload": "PRIVATE_RAW_SENTINEL_SHOULD_NOT_APPEAR",
+                }
+            ],
+            "counts": {"records": 1},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/onchain_flow_views.json", "raw/onchain_flow.json"],
+        },
+    )
+    run.manifest["artifacts"]["onchain_flow_context"] = "analysis/onchain_flow_context.json"
+    return ["analysis/onchain_flow_context.json"]
 
 
 def _skip_analysis_materials(config, run) -> list[str]:

@@ -13,8 +13,11 @@ DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
 DERIVATIVES_MARKET_MATERIAL_ARTIFACT = "analysis/derivatives_market_material.md"
 MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 MACRO_CALENDAR_MATERIAL_ARTIFACT = "analysis/macro_calendar_material.md"
+ONCHAIN_FLOW_CONTEXT_ARTIFACT = "analysis/onchain_flow_context.json"
+ONCHAIN_FLOW_MATERIAL_ARTIFACT = "analysis/onchain_flow_material.md"
 MAX_DERIVATIVES_REPORT_ROWS = 8
 MAX_MACRO_CALENDAR_REPORT_ROWS = 8
+MAX_ONCHAIN_FLOW_REPORT_ROWS = 8
 
 
 def inject_derivatives_market_section(report: str, run: RunContext) -> str:
@@ -54,6 +57,31 @@ def inject_macro_calendar_section(report: str, run: RunContext) -> str:
                 "\u548c Halpha \u786e\u5b9a\u6027\u5b8f\u89c2\u65e5\u5386\u4e0a\u4e0b\u6587\uff1b"
                 "\u8ba1\u5212\u4e2d\u50ac\u5316\u5242\u4ec5\u4ee3\u8868\u65f6\u70b9\u548c\u4e0d\u786e\u5b9a\u6027\uff0c"
                 "\u4e0d\u4ee3\u8868\u5df2\u786e\u8ba4\u7684\u5e02\u573a\u5f71\u54cd\u3001"
+                "\u98ce\u9669\u7b49\u7ea7\u3001\u4ea4\u6613\u6307\u4ee4\u6216\u4ef7\u683c\u9884\u6d4b\u3002"
+            ),
+            "",
+            table,
+            "",
+        ]
+    )
+    return _insert_report_section(report, section)
+
+
+def inject_onchain_flow_section(report: str, run: RunContext) -> str:
+    table = _onchain_flow_markdown_table(run)
+    if table is None:
+        return report
+    section = "\n".join(
+        [
+            "## \u94fe\u4e0a\u6d41\u4e0e\u6765\u6e90\u53ef\u7528\u6027\u8bc1\u636e",
+            "",
+            (
+                "\u4ee5\u4e0b\u5185\u5bb9\u6765\u81ea "
+                f"`{ONCHAIN_FLOW_MATERIAL_ARTIFACT}` "
+                "\u548c Halpha \u786e\u5b9a\u6027\u94fe\u4e0a\u6d41\u4e0a\u4e0b\u6587\uff1b"
+                "\u53ea\u7528\u4e8e\u89e3\u91ca\u6d41\u52a8\u6027\u3001\u4f7f\u7528\u5ea6\u3001"
+                "\u7f51\u7edc\u62e5\u5835\u548c\u6765\u6e90\u4e0d\u786e\u5b9a\u6027\uff0c"
+                "\u4e0d\u751f\u6210\u94fe\u4e0a\u8bb0\u5f55\u3001\u5730\u5740\u6807\u7b7e\u3001"
                 "\u98ce\u9669\u7b49\u7ea7\u3001\u4ea4\u6613\u6307\u4ee4\u6216\u4ef7\u683c\u9884\u6d4b\u3002"
             ),
             "",
@@ -167,6 +195,49 @@ def _derivatives_market_markdown_table(run: RunContext) -> str | None:
     return "\n".join(lines)
 
 
+def _onchain_flow_markdown_table(run: RunContext) -> str | None:
+    material_path = run.analysis_dir / "onchain_flow_material.md"
+    if not material_path.exists():
+        return None
+    artifact = _read_onchain_flow_context(run)
+    records = artifact.get("records")
+    if not isinstance(records, list):
+        raise PipelineError(
+            f"{ONCHAIN_FLOW_CONTEXT_ARTIFACT} must contain records as a list.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    rows = [_onchain_flow_report_row(record) for record in _selected_onchain_flow_records(records)]
+    if not rows:
+        rows = [
+            [
+                "\u65e0\u53ef\u7528\u8bb0\u5f55",
+                "",
+                "",
+                _text(artifact.get("status")),
+                "",
+                "\u94fe\u4e0a\u6d41 material \u5b58\u5728\uff0c\u4f46\u672a\u63d0\u4f9b\u53ef\u62a5\u544a\u7684 context record\u3002",
+                ONCHAIN_FLOW_MATERIAL_ARTIFACT,
+            ]
+        ]
+    header = [
+        "\u7c7b\u578b",
+        "\u6807\u7684/\u94fe",
+        "\u65f6\u95f4",
+        "\u72b6\u6001",
+        "\u5f3a\u5ea6",
+        "\u89e3\u91ca\u53e3\u5f84",
+        "\u6765\u6e90",
+    ]
+    lines = [
+        _markdown_row(header),
+        _markdown_row(["---"] * len(header)),
+    ]
+    for row in rows:
+        lines.append(_markdown_row(row))
+    return "\n".join(lines)
+
+
 def _read_macro_calendar_context(run: RunContext) -> dict[str, Any]:
     path = run.analysis_dir / "macro_calendar_context.json"
     try:
@@ -217,6 +288,31 @@ def _read_derivatives_market_context(run: RunContext) -> dict[str, Any]:
     return artifact
 
 
+def _read_onchain_flow_context(run: RunContext) -> dict[str, Any]:
+    path = run.analysis_dir / "onchain_flow_context.json"
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise PipelineError(
+            f"{ONCHAIN_FLOW_CONTEXT_ARTIFACT} was not found but on-chain flow material exists.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"{ONCHAIN_FLOW_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict):
+        raise PipelineError(
+            f"{ONCHAIN_FLOW_CONTEXT_ARTIFACT} must be a mapping.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        )
+    return artifact
+
+
 def _selected_macro_calendar_records(records: list[Any]) -> list[dict[str, Any]]:
     mappings = [record for record in records if isinstance(record, dict)]
     return sorted(mappings, key=_macro_calendar_record_sort_key)[:MAX_MACRO_CALENDAR_REPORT_ROWS]
@@ -225,6 +321,11 @@ def _selected_macro_calendar_records(records: list[Any]) -> list[dict[str, Any]]
 def _selected_derivatives_records(records: list[Any]) -> list[dict[str, Any]]:
     mappings = [record for record in records if isinstance(record, dict)]
     return sorted(mappings, key=_derivatives_record_sort_key)[:MAX_DERIVATIVES_REPORT_ROWS]
+
+
+def _selected_onchain_flow_records(records: list[Any]) -> list[dict[str, Any]]:
+    mappings = [record for record in records if isinstance(record, dict)]
+    return sorted(mappings, key=_onchain_flow_record_sort_key)[:MAX_ONCHAIN_FLOW_REPORT_ROWS]
 
 
 def _macro_calendar_record_sort_key(record: dict[str, Any]) -> tuple[int, int, int, float, str, str]:
@@ -281,6 +382,37 @@ def _derivatives_record_sort_key(record: dict[str, Any]) -> tuple[int, int, str,
     )
 
 
+def _onchain_flow_record_sort_key(record: dict[str, Any]) -> tuple[int, int, int, str, str, str]:
+    severity_order = {"high": 0, "medium": 1, "unknown": 2, "low": 3}
+    status_order = {
+        "failed": 0,
+        "unavailable": 1,
+        "stale": 2,
+        "degraded": 3,
+        "partial": 4,
+        "insufficient": 5,
+        "bounded": 6,
+        "succeeded": 7,
+    }
+    type_order = {
+        "stablecoin_liquidity": 0,
+        "network_congestion": 1,
+        "chain_activity": 2,
+        "exchange_flow_source_availability": 3,
+    }
+    severity = _text(record.get("severity")) or "unknown"
+    status = _text(record.get("status")) or "unknown"
+    context_type = _text(record.get("context_type")) or "unknown"
+    return (
+        severity_order.get(severity, 2),
+        status_order.get(status, 8),
+        type_order.get(context_type, 4),
+        _text(record.get("asset")),
+        _text(record.get("chain")),
+        _text(record.get("context_id")),
+    )
+
+
 def _macro_calendar_report_row(record: dict[str, Any]) -> list[str]:
     return [
         _macro_calendar_type_label(record.get("context_type")),
@@ -306,6 +438,21 @@ def _derivatives_report_row(record: dict[str, Any]) -> list[str]:
     ]
 
 
+def _onchain_flow_report_row(record: dict[str, Any]) -> list[str]:
+    target = "/".join(
+        part for part in [_text(record.get("asset")), _text(record.get("chain"))] if part
+    )
+    return [
+        _onchain_flow_type_label(record.get("context_type")),
+        target,
+        _text(record.get("as_of")) or "-",
+        _onchain_flow_status(record),
+        _text(record.get("severity")),
+        _onchain_flow_interpretation(record),
+        _onchain_flow_sources(record),
+    ]
+
+
 def _macro_calendar_type_label(value: Any) -> str:
     labels = {
         "scheduled_catalyst": "\u8ba1\u5212\u4e2d\u50ac\u5316\u5242",
@@ -327,6 +474,16 @@ def _derivatives_type_label(value: Any) -> str:
     return labels.get(value, _text(value))
 
 
+def _onchain_flow_type_label(value: Any) -> str:
+    labels = {
+        "stablecoin_liquidity": "\u7a33\u5b9a\u5e01\u6d41\u52a8\u6027",
+        "chain_activity": "\u94fe\u4e0a\u6d3b\u52a8",
+        "network_congestion": "\u7f51\u7edc\u62e5\u5835",
+        "exchange_flow_source_availability": "\u4ea4\u6613\u6240\u6d41\u6765\u6e90\u53ef\u7528\u6027",
+    }
+    return labels.get(value, _text(value))
+
+
 def _macro_calendar_status(record: dict[str, Any]) -> str:
     status = _text(record.get("status")) or "unknown"
     state = _text(record.get("state")) or "unknown"
@@ -334,6 +491,12 @@ def _macro_calendar_status(record: dict[str, Any]) -> str:
 
 
 def _derivatives_status(record: dict[str, Any]) -> str:
+    status = _text(record.get("status")) or "unknown"
+    state = _text(record.get("state")) or "unknown"
+    return f"{status}/{state}"
+
+
+def _onchain_flow_status(record: dict[str, Any]) -> str:
     status = _text(record.get("status")) or "unknown"
     state = _text(record.get("state")) or "unknown"
     return f"{status}/{state}"
@@ -416,6 +579,52 @@ def _derivatives_interpretation(record: dict[str, Any]) -> str:
     )
 
 
+def _onchain_flow_interpretation(record: dict[str, Any]) -> str:
+    status = _text(record.get("status")) or "unknown"
+    state = _text(record.get("state")) or "unknown"
+    context_type = _text(record.get("context_type")) or "unknown"
+    severity = _text(record.get("severity")) or "unknown"
+    if status in {"failed", "unavailable", "stale", "degraded", "partial", "insufficient"} or state in {
+        "unavailable",
+        "stale",
+        "partial",
+        "failed",
+        "insufficient_evidence",
+    }:
+        return (
+            f"Halpha material \u6807\u8bb0\u4e3a {status}/{state}\uff1b"
+            "\u8fd9\u662f\u6765\u6e90\u3001\u65f6\u6548\u6216\u8bc1\u636e\u4e0d\u8db3\uff0c"
+            "\u4e0d\u4ee3\u8868\u4f4e\u98ce\u9669\u3002"
+        )
+    if context_type == "stablecoin_liquidity":
+        return (
+            f"Halpha material \u663e\u793a {state}/{severity}\uff1b"
+            "\u4ec5\u4f5c\u4e3a\u7a33\u5b9a\u5e01\u6d41\u52a8\u6027\u80cc\u666f\uff0c"
+            "\u4e0d\u7b49\u4e8e\u4ef7\u683c\u9884\u6d4b\u3002"
+        )
+    if context_type == "chain_activity":
+        return (
+            f"Halpha material \u663e\u793a {state}/{severity}\uff1b"
+            "\u4ec5\u4f5c\u4e3a\u4f7f\u7528\u5ea6\u80cc\u666f\uff0c"
+            "\u4e0d\u4ea7\u751f\u64cd\u4f5c\u6307\u4ee4\u3002"
+        )
+    if context_type == "network_congestion":
+        return (
+            f"Halpha material \u663e\u793a {state}/{severity}\uff1b"
+            "\u4ec5\u4f5c\u4e3a\u7ed3\u7b97\u6469\u64e6\u6216\u62e5\u5835\u80cc\u666f\uff0c"
+            "\u4e0d\u4ee3\u8868\u5e02\u573a\u65b9\u5411\u3002"
+        )
+    if context_type == "exchange_flow_source_availability":
+        return (
+            "\u4ea4\u6613\u6240\u6d41\u6765\u6e90\u53ef\u7528\u6027\u53ea\u63cf\u8ff0\u8986\u76d6\u72b6\u6001\uff1b"
+            "\u4e0d\u63a8\u65ad\u4ea4\u6613\u6240\u5145\u63d0\u538b\u529b\u6216\u5730\u5740\u6807\u7b7e\u3002"
+        )
+    return (
+        "\u4ec5\u6309 Halpha \u5df2\u751f\u6210\u7684\u94fe\u4e0a\u6d41 context \u89e3\u91ca\uff1b"
+        "\u4e0d\u751f\u6210\u5730\u5740\u6807\u7b7e\u3001\u4ea4\u6613\u6307\u4ee4\u6216\u9884\u6d4b\u3002"
+    )
+
+
 def _macro_calendar_sources(record: dict[str, Any]) -> str:
     artifacts = [
         MACRO_CALENDAR_MATERIAL_ARTIFACT,
@@ -431,6 +640,18 @@ def _macro_calendar_sources(record: dict[str, Any]) -> str:
 def _derivatives_sources(record: dict[str, Any]) -> str:
     artifacts = [
         DERIVATIVES_MARKET_MATERIAL_ARTIFACT,
+        *[
+            artifact
+            for artifact in record.get("source_artifacts", [])
+            if isinstance(artifact, str) and artifact
+        ],
+    ]
+    return "; ".join(_unique(artifacts)[:4])
+
+
+def _onchain_flow_sources(record: dict[str, Any]) -> str:
+    artifacts = [
+        ONCHAIN_FLOW_MATERIAL_ARTIFACT,
         *[
             artifact
             for artifact in record.get("source_artifacts", [])

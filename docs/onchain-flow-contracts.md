@@ -57,7 +57,7 @@ Contract set:
 | Shared on-chain flow history | initial adoption | on-chain flow history writer | current-run views, data inspection |
 | On-chain flow current-run views | initial adoption | on-chain flow view builder | context, data quality |
 | On-chain flow context | initial adoption | context builder | regime, risk, decisions, watches, alerts, outcomes, material |
-| On-chain flow material | planned | material builder | research context, Codex context, report |
+| On-chain flow material | initial adoption | material builder | research context, Codex context, report |
 
 ## Scope
 
@@ -134,7 +134,7 @@ configured public on-chain or flow source
   -> on-chain flow current-run views [initial adoption]
   -> on-chain flow context [initial adoption]
   -> regime, risk, decision, watch, alert, outcome, and strategy interpretation
-  -> on-chain flow material [planned]
+  -> on-chain flow material [initial adoption]
   -> research context
   -> Codex context + prompt
   -> Simplified Chinese Markdown report
@@ -405,10 +405,10 @@ Record fields:
 Context types:
 
 ```text
-stablecoin_liquidity [planned]
-chain_activity_state [planned]
-network_congestion_state [planned]
-exchange_flow_availability [planned]
+stablecoin_liquidity
+chain_activity
+network_congestion
+exchange_flow_source_availability
 ```
 
 Rules:
@@ -461,7 +461,7 @@ Strategy interpretation:
 
 ## On-Chain Flow Material
 
-Planned artifact:
+Artifact:
 
 ```text
 analysis/onchain_flow_material.md
@@ -479,6 +479,7 @@ Required sections:
 ```text
 source_policy
 onchain_flow_overview
+material_budget
 stablecoin_liquidity
 chain_activity
 network_congestion
@@ -538,8 +539,7 @@ trading instructions.
 
 ## Manifest Expectations
 
-`run_manifest.json` should record implemented on-chain flow summaries after the
-relevant producers exist:
+`run_manifest.json` records implemented on-chain flow summaries:
 
 - raw on-chain flow artifact path and counts;
 - reusable on-chain flow history state and store counts;

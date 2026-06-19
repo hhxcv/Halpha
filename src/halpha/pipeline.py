@@ -24,6 +24,7 @@ STAGE_ORDER = (
     "sync_onchain_flow_history",
     "build_onchain_flow_views",
     "build_onchain_flow_context",
+    "build_onchain_flow_material",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -348,6 +349,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["sync_onchain_flow_history"] = _sync_onchain_flow_history
     handlers["build_onchain_flow_views"] = _build_onchain_flow_views
     handlers["build_onchain_flow_context"] = _build_onchain_flow_context
+    handlers["build_onchain_flow_material"] = _build_onchain_flow_material
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -597,6 +599,12 @@ def _build_onchain_flow_context(config: dict[str, Any], run: RunContext) -> list
     from .onchain_flow_context import build_onchain_flow_context
 
     return build_onchain_flow_context(config, run)
+
+
+def _build_onchain_flow_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .analysis.onchain_flow_material import build_onchain_flow_material
+
+    return build_onchain_flow_material(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
