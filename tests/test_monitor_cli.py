@@ -33,6 +33,8 @@ def test_monitor_run_help_mentions_dry_run(capsys) -> None:
     assert "--config" in output
     assert "--dry-run" in output
     assert "--once" in output
+    assert "--max-cycles" in output
+    assert "--interval-seconds" in output
 
 
 def test_monitor_inspect_help_does_not_require_state(capsys) -> None:
@@ -118,7 +120,7 @@ def test_monitor_run_without_dry_run_does_not_execute_pipeline(
     assert exit_code == 3
     assert "Halpha monitor run failed." in output
     assert "stage: monitor" in output
-    assert "choose --dry-run or --once" in output
+    assert "choose --dry-run, --once, or --max-cycles" in output
 
 
 def test_monitor_run_once_creates_one_product_run_and_cycle_manifest(

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 from pathlib import Path
+import time
 from typing import Any, Callable
 
 from .pipeline import RunResult, StageSelectionError, run_pipeline
@@ -21,6 +22,7 @@ DEFAULT_MONITOR_NO_CODEX = True
 ALERT_ARCHIVE_FILENAME = "alert_archive.jsonl"
 ALERT_COOLDOWN_STATE_FILENAME = "alert_cooldown_state.json"
 ALERT_ARCHIVE_STATE_FILENAME = "alert_archive_state.json"
+MONITOR_HEALTH_STATE_FILENAME = "monitor_health_state.json"
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 SUPPORTED_MONITOR_FIELDS = {
     "cooldown_seconds",
@@ -59,7 +61,29 @@ class MonitorCycleResult:
     reason: str | None
 
 
+@dataclass(frozen=True)
+class MonitorLoopResult:
+    succeeded: bool
+    exit_code: int
+    loop_id: str
+    status: str
+    max_cycles: int
+    completed_cycles: int
+    stop_reason: str
+    cycle_results: list[MonitorCycleResult]
+    health_state_path: Path
+    reason: str | None
+
+
+@dataclass(frozen=True)
+class MonitorInspectionResult:
+    succeeded: bool
+    exit_code: int
+    lines: list[str]
+
+
 PipelineRunner = Callable[..., RunResult]
+Sleeper = Callable[[float], None]
 
 
 def load_monitor_config(config: dict[str, Any]) -> MonitorConfig:
@@ -84,6 +108,9 @@ def run_monitor_cycle(
     config_path: Path,
     now: datetime | None = None,
     pipeline_runner: PipelineRunner = run_pipeline,
+    cycle_mode: str = "once",
+    loop_id: str | None = None,
+    cycle_sequence: int | None = None,
 ) -> MonitorCycleResult:
     settings = load_monitor_config(config)
     fixed_time = now is not None
@@ -99,7 +126,9 @@ def run_monitor_cycle(
         "schema_version": 1,
         "artifact_type": "monitor_cycle_manifest",
         "cycle_id": cycle_id,
-        "cycle_mode": "once",
+        "cycle_mode": cycle_mode,
+        "loop_id": loop_id,
+        "cycle_sequence": cycle_sequence,
         "trigger_source": "cli",
         "status": "running",
         "started_at": _utc_timestamp(started_at),
@@ -147,6 +176,7 @@ def run_monitor_cycle(
             }
         )
         write_json(manifest_path, manifest)
+        _write_monitor_health_state(output_dir, config_base=base, timestamp=finished_at)
         return MonitorCycleResult(
             succeeded=False,
             exit_code=2,
@@ -189,6 +219,7 @@ def run_monitor_cycle(
         }
     )
     write_json(manifest_path, manifest)
+    _write_monitor_health_state(output_dir, config_base=base, timestamp=finished_at)
 
     return MonitorCycleResult(
         succeeded=pipeline_result.succeeded,
@@ -203,6 +234,120 @@ def run_monitor_cycle(
         run_manifest_path=pipeline_result.run.manifest_path,
         reason=pipeline_result.reason,
     )
+
+
+def run_monitor_loop(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    max_cycles: int,
+    interval_seconds: int,
+    now: datetime | None = None,
+    pipeline_runner: PipelineRunner = run_pipeline,
+    sleeper: Sleeper = time.sleep,
+) -> MonitorLoopResult:
+    settings = load_monitor_config(config)
+    if max_cycles <= 0:
+        raise ValueError("max_cycles must be a positive integer.")
+    if interval_seconds <= 0:
+        raise ValueError("interval_seconds must be a positive integer.")
+
+    output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
+    base = _config_base(config_path)
+    started_at = _coerce_utc(now or datetime.now(timezone.utc))
+    loop_id = f"loop-{started_at.strftime('%Y%m%dT%H%M%S%fZ')}"
+    cycle_results: list[MonitorCycleResult] = []
+    status = "succeeded"
+    stop_reason = "max_cycles_reached"
+    reason: str | None = None
+
+    for index in range(max_cycles):
+        cycle_now = started_at + timedelta(seconds=interval_seconds * index) if now is not None else None
+        result = run_monitor_cycle(
+            config,
+            config_path=config_path,
+            now=cycle_now,
+            pipeline_runner=pipeline_runner,
+            cycle_mode="loop",
+            loop_id=loop_id,
+            cycle_sequence=index + 1,
+        )
+        cycle_results.append(result)
+        if not result.succeeded:
+            status = "failed"
+            stop_reason = "cycle_failed"
+            reason = result.reason or "monitor cycle failed"
+            break
+        if index < max_cycles - 1 and now is None:
+            sleeper(interval_seconds)
+
+    finished_at = started_at if now is not None else datetime.now(timezone.utc)
+    health_state_path = _write_monitor_health_state(
+        output_dir,
+        config_base=base,
+        timestamp=finished_at,
+        loop_summary={
+            "loop_id": loop_id,
+            "status": status,
+            "max_cycles": max_cycles,
+            "completed_cycles": len(cycle_results),
+            "stop_reason": stop_reason,
+            "started_at": _utc_timestamp(started_at),
+            "finished_at": _utc_timestamp(finished_at),
+            "latest_cycle_id": cycle_results[-1].cycle_id if cycle_results else None,
+        },
+    )
+    return MonitorLoopResult(
+        succeeded=status == "succeeded",
+        exit_code=0 if status == "succeeded" else (cycle_results[-1].exit_code if cycle_results else 3),
+        loop_id=loop_id,
+        status=status,
+        max_cycles=max_cycles,
+        completed_cycles=len(cycle_results),
+        stop_reason=stop_reason,
+        cycle_results=cycle_results,
+        health_state_path=health_state_path,
+        reason=reason,
+    )
+
+
+def inspect_monitor_health(config: dict[str, Any], *, config_path: Path) -> MonitorInspectionResult:
+    settings = load_monitor_config(config)
+    output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
+    base = _config_base(config_path)
+    health_state = _monitor_health_state(output_dir, config_base=base)
+    lines = [
+        "Halpha monitor inspection succeeded.",
+        f"monitor_output_dir: {_portable_path(output_dir, base=base)}",
+        f"latest_cycle_id: {health_state['latest_cycle_id']}",
+        f"latest_cycle_status: {health_state['latest_cycle_status']}",
+        f"latest_run_id: {health_state['latest_run_id']}",
+        f"latest_run_manifest: {health_state['latest_run_manifest']}",
+        f"cycle_count: {health_state['cycle_count']}",
+        f"failed_cycle_count: {health_state['failed_cycle_count']}",
+        f"alert_archive_status: {health_state['alert_archive_status']}",
+        f"alert_records: {health_state['alert_counts']['records']}",
+        f"alert_emitted: {health_state['alert_counts']['emitted']}",
+        f"alert_suppressed_duplicate: {health_state['alert_counts']['suppressed_duplicate']}",
+        f"alert_suppressed_cooldown: {health_state['alert_counts']['suppressed_cooldown']}",
+        f"alert_suppressed_no_alert: {health_state['alert_counts']['suppressed_no_alert']}",
+        f"alert_skipped: {health_state['alert_counts']['skipped']}",
+        f"cooldown_records: {health_state['cooldown_records']}",
+        f"warning_count: {health_state['warning_count']}",
+        f"error_count: {health_state['error_count']}",
+        f"health_state: {health_state['health_state_path']}",
+    ]
+    loop = health_state.get("latest_loop")
+    if isinstance(loop, dict) and loop:
+        lines.extend(
+            [
+                f"latest_loop_id: {loop.get('loop_id', 'none')}",
+                f"latest_loop_status: {loop.get('status', 'unknown')}",
+                f"latest_loop_completed_cycles: {loop.get('completed_cycles', 0)}",
+                f"latest_loop_stop_reason: {loop.get('stop_reason', 'unknown')}",
+            ]
+        )
+    return MonitorInspectionResult(True, 0, lines)
 
 
 def monitor_config_lines(settings: MonitorConfig) -> list[str]:
@@ -663,6 +808,126 @@ def _write_alert_archive_state(
         "errors": summary["errors"],
     }
     write_json(path, state)
+
+
+def _write_monitor_health_state(
+    output_dir: Path,
+    *,
+    config_base: Path,
+    timestamp: datetime,
+    loop_summary: dict[str, Any] | None = None,
+) -> Path:
+    health_state_path = output_dir / MONITOR_HEALTH_STATE_FILENAME
+    state = _monitor_health_state(output_dir, config_base=config_base, latest_loop=loop_summary)
+    state["updated_at"] = _utc_timestamp(timestamp)
+    write_json(health_state_path, state)
+    return health_state_path
+
+
+def _monitor_health_state(
+    output_dir: Path,
+    *,
+    config_base: Path,
+    latest_loop: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    health_state_path = output_dir / MONITOR_HEALTH_STATE_FILENAME
+    previous_health = _read_json_object(health_state_path)
+    cycle_manifests = _read_cycle_manifests(output_dir)
+    latest_cycle = cycle_manifests[0] if cycle_manifests else {}
+    archive_state = _read_json_object(output_dir / ALERT_ARCHIVE_STATE_FILENAME)
+    cooldown_state = _read_json_object(output_dir / ALERT_COOLDOWN_STATE_FILENAME)
+    alert_counts = _dict(archive_state.get("counts"))
+    if not alert_counts:
+        alert_counts = _empty_alert_archive_counts()
+    cooldown_records = _dict(cooldown_state.get("records"))
+    warning_count = _health_warning_count(cycle_manifests, archive_state)
+    error_count = _health_error_count(cycle_manifests, archive_state)
+
+    loop = latest_loop if latest_loop is not None else _dict(previous_health.get("latest_loop"))
+    return {
+        "schema_version": 1,
+        "artifact_type": "monitor_health_state",
+        "health_state_path": _portable_path(health_state_path, base=config_base),
+        "monitor_output_dir": _portable_path(output_dir, base=config_base),
+        "cycle_count": len(cycle_manifests),
+        "failed_cycle_count": sum(1 for manifest in cycle_manifests if manifest.get("status") == "failed"),
+        "latest_cycle_id": _clean_text(latest_cycle.get("cycle_id"), fallback="none"),
+        "latest_cycle_status": _clean_text(latest_cycle.get("status"), fallback="missing"),
+        "latest_run_id": _clean_text(latest_cycle.get("run_id"), fallback="none"),
+        "latest_run_manifest": _clean_text(latest_cycle.get("run_manifest"), fallback="none"),
+        "latest_cycle_manifest": _portable_path(Path(str(latest_cycle.get("_path", ""))), base=config_base)
+        if latest_cycle
+        else "none",
+        "alert_archive_status": _clean_text(archive_state.get("status"), fallback="missing"),
+        "alert_counts": {
+            "records": int(alert_counts.get("records", 0)),
+            "emitted": int(alert_counts.get("emitted", 0)),
+            "suppressed_duplicate": int(alert_counts.get("suppressed_duplicate", 0)),
+            "suppressed_cooldown": int(alert_counts.get("suppressed_cooldown", 0)),
+            "suppressed_no_alert": int(alert_counts.get("suppressed_no_alert", 0)),
+            "skipped": int(alert_counts.get("skipped", 0)),
+        },
+        "cooldown_records": int(cooldown_state.get("record_count", len(cooldown_records))),
+        "warning_count": warning_count,
+        "error_count": error_count,
+        "latest_loop": loop,
+    }
+
+
+def _read_cycle_manifests(output_dir: Path) -> list[dict[str, Any]]:
+    cycle_dir = output_dir / "cycles"
+    manifests: list[dict[str, Any]] = []
+    for path in sorted(cycle_dir.glob("*/monitor_cycle_manifest.json")):
+        manifest = _read_json_object(path)
+        if not manifest:
+            continue
+        manifest["_path"] = path
+        manifests.append(manifest)
+    return sorted(
+        manifests,
+        key=lambda manifest: str(manifest.get("finished_at") or manifest.get("started_at") or ""),
+        reverse=True,
+    )
+
+
+def _read_json_object(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _health_warning_count(cycle_manifests: list[dict[str, Any]], archive_state: dict[str, Any]) -> int:
+    count = 0
+    for manifest in cycle_manifests:
+        warnings = manifest.get("warnings", [])
+        if isinstance(warnings, list):
+            count += len(warnings)
+        archive = _dict(manifest.get("alert_archive"))
+        archive_warnings = archive.get("warnings", [])
+        if isinstance(archive_warnings, list):
+            count += len(archive_warnings)
+    state_warnings = archive_state.get("warnings", [])
+    if isinstance(state_warnings, list):
+        count += len(state_warnings)
+    return count
+
+
+def _health_error_count(cycle_manifests: list[dict[str, Any]], archive_state: dict[str, Any]) -> int:
+    count = 0
+    for manifest in cycle_manifests:
+        errors = manifest.get("errors", [])
+        if isinstance(errors, list):
+            count += len(errors)
+        archive = _dict(manifest.get("alert_archive"))
+        archive_errors = archive.get("errors", [])
+        if isinstance(archive_errors, list):
+            count += len(archive_errors)
+    state_errors = archive_state.get("errors", [])
+    if isinstance(state_errors, list):
+        count += len(state_errors)
+    return count
 
 
 def _empty_alert_archive_counts() -> dict[str, int]:
