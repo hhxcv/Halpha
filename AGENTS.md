@@ -167,6 +167,7 @@ Current bias:
 * Local research data contracts live in `docs/research-data-contracts.md`.
 * Outcome tracking contracts live in `docs/outcome-tracking-contracts.md`.
 * On-chain and exchange-flow contracts live in `docs/onchain-flow-contracts.md`.
+* User-state and personalized-risk contracts live in `docs/user-state-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
@@ -282,6 +283,7 @@ Current bias:
 * `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
 * `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
 * `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
+* `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
