@@ -21,6 +21,16 @@ from .storage import write_json
 STAGE_NAME = "build_data_quality_summary"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 DATA_QUALITY_SCHEMA_VERSION = 1
+FEATURE_SNAPSHOTS_ARTIFACT = "analysis/feature_snapshots.json"
+FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
+MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
+FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
+M13_CHECK_NAMES = {
+    "feature_snapshots",
+    "factor_states",
+    "multi_source_signals",
+    "factor_signal_material",
+}
 
 
 def build_data_quality_summary(
@@ -30,29 +40,73 @@ def build_data_quality_summary(
     now: datetime | str | None = None,
 ) -> list[str]:
     created_at = _format_utc(now)
+    checks = _data_quality_checks(config, run, now=created_at, m13_expected=False)
+    _write_data_quality_summary(run, created_at=created_at, checks=checks)
+    return [DATA_QUALITY_SUMMARY_ARTIFACT]
+
+
+def refresh_m13_data_quality_checks(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> list[str]:
+    """Refresh final-stage M13 artifact checks after feature/factor artifacts exist."""
+    created_at = _format_utc(now)
+    existing, error = _read_json(run.analysis_dir / "data_quality_summary.json")
+    if error:
+        checks = _data_quality_checks(config, run, now=created_at, m13_expected=True)
+    else:
+        checks = [
+            check
+            for check in _list(existing.get("checks"))
+            if isinstance(check, dict) and check.get("name") not in M13_CHECK_NAMES
+        ]
+        checks.extend(_m13_artifact_checks(run, expected=True))
+    _write_data_quality_summary(run, created_at=created_at, checks=checks)
+    return [DATA_QUALITY_SUMMARY_ARTIFACT]
+
+
+def _data_quality_checks(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: str,
+    m13_expected: bool,
+) -> list[dict[str, Any]]:
     checks = [
-        _raw_market_check(config, run, now=created_at),
-        _raw_derivatives_check(config, run, now=created_at),
-        _raw_macro_calendar_check(config, run, now=created_at),
-        _raw_onchain_flow_check(config, run, now=created_at),
-        _raw_text_check(config, run, now=created_at),
+        _raw_market_check(config, run, now=now),
+        _raw_derivatives_check(config, run, now=now),
+        _raw_macro_calendar_check(config, run, now=now),
+        _raw_onchain_flow_check(config, run, now=now),
+        _raw_text_check(config, run, now=now),
         _ohlcv_store_check(config, run),
         _derivatives_history_check(config, run),
-        _derivatives_views_check(config, run, now=created_at),
+        _derivatives_views_check(config, run, now=now),
         _macro_calendar_history_check(config, run),
-        _macro_calendar_views_check(config, run, now=created_at),
+        _macro_calendar_views_check(config, run, now=now),
         _macro_calendar_context_check(config, run),
         _macro_calendar_material_check(config, run),
         _onchain_flow_history_check(config, run),
-        _onchain_flow_views_check(config, run, now=created_at),
+        _onchain_flow_views_check(config, run, now=now),
         _onchain_flow_context_check(config, run),
         _onchain_flow_material_check(config, run),
-        _text_event_records_check(config, run, now=created_at),
+        _text_event_records_check(config, run, now=now),
         _text_event_history_check(run),
         _research_data_catalog_check(run),
         _run_index_check(run),
         _partial_collection_check(run),
+        *_m13_artifact_checks(run, expected=m13_expected),
     ]
+    return checks
+
+
+def _write_data_quality_summary(
+    run: RunContext,
+    *,
+    created_at: str,
+    checks: list[dict[str, Any]],
+) -> None:
     warnings = _unique_sorted(
         [
             str(warning)
@@ -104,7 +158,6 @@ def build_data_quality_summary(
     run.manifest["counts"]["data_quality_errors"] = summary["counts"]["errors"]
     run.manifest["counts"]["data_quality_degraded_checks"] = summary["counts"]["degraded"]
     run.manifest["counts"]["data_quality_failed_checks"] = summary["counts"]["failed"]
-    return [DATA_QUALITY_SUMMARY_ARTIFACT]
 
 
 def _raw_market_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
@@ -764,6 +817,268 @@ def _onchain_flow_material_check(config: dict[str, Any], run: RunContext) -> dic
             "codex_boundaries_present": not errors,
         },
     )
+
+
+def _m13_artifact_checks(run: RunContext, *, expected: bool) -> list[dict[str, Any]]:
+    return [
+        _feature_snapshots_check(run, expected=expected),
+        _factor_states_check(run, expected=expected),
+        _multi_source_signals_check(run, expected=expected),
+        _factor_signal_material_check(run, expected=expected),
+    ]
+
+
+def _feature_snapshots_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
+    artifact = FEATURE_SNAPSHOTS_ARTIFACT
+    if not expected:
+        return _post_data_quality_stage_check(
+            "feature_snapshots",
+            artifact,
+            producer_stage="build_feature_snapshots",
+        )
+    data, error = _read_json(run.analysis_dir / "feature_snapshots.json")
+    if error:
+        return _missing_m13_check("feature_snapshots", artifact, error)
+    records = _list(data.get("records"))
+    coverage = _list(data.get("coverage"))
+    warnings = _string_list(data.get("warnings"))
+    errors = _error_messages(data.get("errors"))
+    shape_errors = _json_artifact_shape_errors(
+        data,
+        artifact_type="feature_snapshots",
+        records_field="records",
+    )
+    errors.extend(shape_errors)
+    status = _analysis_artifact_status(str(data.get("status") or "unknown"), warnings, errors)
+    counts = _dict(data.get("counts"))
+    return _check(
+        "feature_snapshots",
+        "analysis",
+        status,
+        f"{len(records)} feature snapshot record(s), {len(coverage)} source coverage record(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "records": len(records),
+            "coverage_records": len(coverage),
+            "manifest_records": _int(_dict(run.manifest.get("feature_snapshots")).get("records")),
+            "manifest_coverage_records": _int(
+                _dict(run.manifest.get("feature_snapshots")).get("coverage_records")
+            ),
+            "warnings": _int(counts.get("warnings")),
+            "errors": _int(counts.get("errors")),
+            "stale_records": _status_count(records, "stale"),
+            "degraded_records": _status_count(records, "degraded"),
+            "failed_records": _status_count(records, "failed"),
+        },
+    )
+
+
+def _factor_states_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
+    artifact = FACTOR_STATES_ARTIFACT
+    if not expected:
+        return _post_data_quality_stage_check(
+            "factor_states",
+            artifact,
+            producer_stage="build_factor_states",
+        )
+    data, error = _read_json(run.analysis_dir / "factor_states.json")
+    if error:
+        return _missing_m13_check("factor_states", artifact, error)
+    records = _list(data.get("records"))
+    warnings = _string_list(data.get("warnings"))
+    errors = _error_messages(data.get("errors"))
+    shape_errors = _json_artifact_shape_errors(
+        data,
+        artifact_type="factor_states",
+        records_field="records",
+    )
+    errors.extend(shape_errors)
+    status = _analysis_artifact_status(str(data.get("status") or "unknown"), warnings, errors)
+    counts = _dict(data.get("counts"))
+    return _check(
+        "factor_states",
+        "analysis",
+        status,
+        f"{len(records)} factor state record(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "records": len(records),
+            "manifest_records": _int(_dict(run.manifest.get("factor_states")).get("records")),
+            "warnings": _int(counts.get("warnings")),
+            "errors": _int(counts.get("errors")),
+            "conflicting_records": _state_count(records, "conflicting"),
+            "degraded_records": _state_count(records, "degraded"),
+            "insufficient_evidence_records": _state_count(records, "insufficient_evidence"),
+            "failed_records": _state_count(records, "failed"),
+        },
+    )
+
+
+def _multi_source_signals_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
+    artifact = MULTI_SOURCE_SIGNALS_ARTIFACT
+    if not expected:
+        return _post_data_quality_stage_check(
+            "multi_source_signals",
+            artifact,
+            producer_stage="build_multi_source_signals",
+        )
+    data, error = _read_json(run.analysis_dir / "multi_source_signals.json")
+    if error:
+        return _missing_m13_check("multi_source_signals", artifact, error)
+    records = _list(data.get("records"))
+    warnings = _string_list(data.get("warnings"))
+    errors = _error_messages(data.get("errors"))
+    shape_errors = _json_artifact_shape_errors(
+        data,
+        artifact_type="multi_source_signals",
+        records_field="records",
+    )
+    errors.extend(shape_errors)
+    status = _analysis_artifact_status(str(data.get("status") or "unknown"), warnings, errors)
+    counts = _dict(data.get("counts"))
+    return _check(
+        "multi_source_signals",
+        "analysis",
+        status,
+        f"{len(records)} multi-source signal record(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "records": len(records),
+            "manifest_records": _int(_dict(run.manifest.get("multi_source_signals")).get("records")),
+            "warnings": _int(counts.get("warnings")),
+            "errors": _int(counts.get("errors")),
+            "conflicting_records": _state_count(records, "conflicting"),
+            "degraded_records": _state_count(records, "degraded"),
+            "insufficient_evidence_records": _state_count(records, "insufficient_evidence"),
+            "failed_records": _state_count(records, "failed"),
+        },
+    )
+
+
+def _factor_signal_material_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
+    artifact = FACTOR_SIGNAL_MATERIAL_ARTIFACT
+    if not expected:
+        return _post_data_quality_stage_check(
+            "factor_signal_material",
+            artifact,
+            producer_stage="build_analysis_materials",
+        )
+    path = run.analysis_dir / "factor_signal_material.md"
+    if not path.exists():
+        return _missing_m13_check("factor_signal_material", artifact, f"{path.name} was not found.")
+    material = path.read_text(encoding="utf-8")
+    errors = []
+    required_boundaries = [
+        "artifact_type: analysis_factor_signal_material",
+        "codex_may_generate_feature_records: false",
+        "codex_may_generate_factor_scores: false",
+        "codex_may_generate_signal_states: false",
+        "full_feature_snapshots_json_embedded: false",
+        "full_factor_states_json_embedded: false",
+        "full_multi_source_signals_json_embedded: false",
+        "selected_records_only: true",
+    ]
+    for boundary in required_boundaries:
+        if boundary not in material:
+            errors.append(f"factor signal material missing boundary: {boundary}")
+    material_summary = _dict(run.manifest.get("factor_signal_material"))
+    budget = _factor_signal_material_budget(run)
+    status = "failed" if errors else _analysis_artifact_status(str(material_summary.get("status") or "ok"), [], [])
+    return _check(
+        "factor_signal_material",
+        "analysis",
+        status,
+        "factor signal material is present with Codex boundary metadata.",
+        [artifact, FEATURE_SNAPSHOTS_ARTIFACT, FACTOR_STATES_ARTIFACT, MULTI_SOURCE_SIGNALS_ARTIFACT],
+        errors=errors,
+        details={
+            "chars": len(material),
+            "selected_records": _int(run.manifest.get("counts", {}).get("factor_signal_material_records")),
+            "omitted_records": _int(run.manifest.get("counts", {}).get("factor_signal_material_omitted_records")),
+            "codex_boundaries_present": not errors,
+            "codex_budget_checked": bool(budget),
+            "codex_budget_status": budget.get("status") if budget else "not_available_before_codex_context",
+            "codex_budget_chars": _int(budget.get("chars")) if budget else 0,
+            "codex_budget_over_budget": bool(budget.get("over_budget")) if budget else False,
+            "codex_budget_warnings": len(_list(budget.get("warnings"))) if budget else 0,
+        },
+    )
+
+
+def _post_data_quality_stage_check(name: str, artifact: str, *, producer_stage: str) -> dict[str, Any]:
+    return _check(
+        name,
+        "analysis",
+        "skipped",
+        f"{artifact} is produced by {producer_stage} after the data-quality stage; this stage-time skip is expected.",
+        [artifact],
+        details={
+            "producer_stage": producer_stage,
+            "written_after_data_quality_stage": True,
+            "stage_time_skip_is_expected": True,
+            "report_as_final_missing": False,
+        },
+    )
+
+
+def _missing_m13_check(name: str, artifact: str, error: str) -> dict[str, Any]:
+    message = f"{artifact} was expected for final M13 audit but could not be inspected: {error}"
+    return _check(
+        name,
+        "analysis",
+        "failed",
+        message,
+        [artifact],
+        errors=[message],
+        details={
+            "stage_time_skip_is_expected": False,
+            "report_as_final_missing": True,
+        },
+    )
+
+
+def _json_artifact_shape_errors(data: dict[str, Any], *, artifact_type: str, records_field: str) -> list[str]:
+    errors = []
+    if data.get("artifact_type") != artifact_type:
+        errors.append(f"artifact_type must be {artifact_type}.")
+    if not isinstance(data.get(records_field), list):
+        errors.append(f"{records_field} must be a list.")
+    return errors
+
+
+def _analysis_artifact_status(status: str, warnings: list[str], errors: list[str]) -> str:
+    normalized = status.strip().lower()
+    if errors or normalized == "failed":
+        return "failed"
+    if normalized in {"degraded", "warning", "skipped"}:
+        return normalized
+    if warnings:
+        return "warning"
+    return "ok"
+
+
+def _state_count(records: list[Any], state: str) -> int:
+    return sum(1 for item in records if isinstance(item, dict) and item.get("state") == state)
+
+
+def _factor_signal_material_budget(run: RunContext) -> dict[str, Any]:
+    codex_input = _dict(run.manifest.get("codex_input"))
+    materials = codex_input.get("materials")
+    if isinstance(materials, dict):
+        budget = materials.get(FACTOR_SIGNAL_MATERIAL_ARTIFACT)
+        return budget if isinstance(budget, dict) else {}
+    if isinstance(materials, list):
+        for item in materials:
+            record = _dict(item)
+            if record.get("artifact") == FACTOR_SIGNAL_MATERIAL_ARTIFACT:
+                return record
+    return {}
 
 
 def _text_event_records_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
