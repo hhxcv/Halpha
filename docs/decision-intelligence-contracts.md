@@ -330,6 +330,17 @@ Record fields:
   "do_not_do": [],
   "risk_conditions": [],
   "downgrade_reasons": [],
+  "pre_fusion_action_level": "TRY_SMALL",
+  "fusion_record_id": "fusion:btcusdt:1d",
+  "fusion_state": "conflicting",
+  "fusion_conflict_state": "severe",
+  "fusion_risk_override_state": "none",
+  "fusion_event_override_state": "none",
+  "fusion_outcome_feedback_state": "unknown",
+  "fusion_adjustment_reasons": [],
+  "fusion_evidence": [],
+  "fusion_uncertainty": [],
+  "fusion_source_artifacts": [],
   "invalidation_conditions": [],
   "evidence": [],
   "conflicts": [],
@@ -360,6 +371,8 @@ Rules:
 - Evidence insufficient means `WATCH`, `NO_ACTION`, or a non-actionable status.
 - High or extreme risk must downgrade or block stronger action levels.
 - Major conflicts must cap action strength.
+- Optional fusion context may conservatively downgrade stronger action language
+  while preserving pre-fusion action fields and source refs.
 - Every actionable recommendation must include evidence references.
 - Every actionable recommendation must include invalidation conditions or be downgraded to a non-actionable or watch state.
 - Codex and other LLMs must not generate the structured action level.
@@ -466,6 +479,7 @@ analysis/watch_triggers.json
 analysis/derivatives_market_context.json
 analysis/macro_calendar_context.json
 analysis/onchain_flow_context.json
+analysis/intelligence_fusion.json
 analysis/market_regime_assessment.json
 analysis/market_signals.json
 analysis/text_event_signals.json
@@ -493,6 +507,17 @@ Record contract:
   "evidence_strength": "low",
   "downgrade_reasons": [],
   "suppression_reasons": [],
+  "pre_fusion_priority": "P1",
+  "fusion_record_id": "fusion:btcusdt:1d",
+  "fusion_state": "insufficient_evidence",
+  "fusion_conflict_state": "none",
+  "fusion_risk_override_state": "none",
+  "fusion_event_override_state": "none",
+  "fusion_outcome_feedback_state": "unknown",
+  "fusion_attention_annotation": "insufficient_evidence_watch_only",
+  "fusion_evidence": [],
+  "fusion_uncertainty": [],
+  "fusion_source_artifacts": [],
   "uncertainty": [],
   "warnings": [],
   "linked_event_assessment_ids": [],

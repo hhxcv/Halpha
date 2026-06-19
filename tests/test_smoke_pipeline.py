@@ -177,6 +177,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_factor_states", "succeeded"),
         ("build_multi_source_signals", "succeeded"),
         ("build_intelligence_fusion", "succeeded"),
+        ("integrate_intelligence_fusion", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
