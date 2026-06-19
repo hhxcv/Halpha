@@ -187,10 +187,10 @@ Current bias:
 * `analysis/macro_calendar_material.md` records bounded AI-readable macro/calendar context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
 * M12 on-chain flow artifacts are governed by `docs/onchain-flow-contracts.md`; do not describe planned artifacts as implemented until producers exist.
 * `raw/onchain_flow.json` records current-run public on-chain and exchange-flow observations, endpoint availability, warnings, and errors.
-* Planned `data/onchain/flow/` stores reusable on-chain flow history; it is input data, not AI context.
-* Planned `data/onchain/metadata/onchain_flow_schema.json` records reusable on-chain flow history schema and logical keys.
-* Planned `data/onchain/metadata/onchain_flow_state.json` records reusable on-chain flow history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
-* Planned `raw/onchain_flow_views.json` records current-run on-chain flow input windows and storage refs, not full reusable on-chain flow history.
+* `data/onchain/flow/` stores reusable on-chain flow history; it is input data, not AI context.
+* `data/onchain/metadata/onchain_flow_schema.json` records reusable on-chain flow history schema and logical keys.
+* `data/onchain/metadata/onchain_flow_state.json` records reusable on-chain flow history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
+* `raw/onchain_flow_views.json` records current-run on-chain flow input windows and storage refs, not full reusable on-chain flow history.
 * Planned `analysis/onchain_flow_context.json` records deterministic stablecoin liquidity, chain activity, network congestion, exchange-flow source-availability, stale, unavailable, partial, degraded, insufficient-data, warning, and failed context states, not forecasts or trading signals.
 * Planned `analysis/onchain_flow_material.md` records bounded AI-readable on-chain flow context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
 * `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
@@ -268,7 +268,7 @@ Current bias:
 * `docs/artifact-governance.md`: artifact map, artifact layer rules, Codex input policy, and doc index.
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
-* `docs/onchain-flow-contracts.md`: planned on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
+* `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, planned context, material, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.

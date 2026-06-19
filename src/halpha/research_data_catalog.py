@@ -53,6 +53,7 @@ def build_research_data_catalog(
         _ohlcv_store_record(config, run),
         _derivatives_market_history_store_record(run),
         _macro_calendar_history_store_record(run),
+        _onchain_flow_history_store_record(run),
         _run_index_store_record(run),
         _text_event_history_store_record(run),
         _outcome_history_store_record(run),
@@ -333,6 +334,71 @@ def _macro_calendar_history_store_record(run: RunContext) -> dict[str, Any] | No
     }
 
 
+def _onchain_flow_history_store_record(run: RunContext) -> dict[str, Any] | None:
+    state_path = run.config_path.parent / "data" / "onchain" / "metadata" / "onchain_flow_state.json"
+    schema_path = run.config_path.parent / "data" / "onchain" / "metadata" / "onchain_flow_schema.json"
+    storage_path = run.config_path.parent / "data" / "onchain" / "flow"
+    state = _read_json_object(state_path)
+    summary = run.manifest.get("onchain_flow_history")
+    if state is None and (
+        not isinstance(summary, dict) or summary.get("status") != "failed"
+    ):
+        return None
+
+    warnings = _string_list(state.get("warnings")) if isinstance(state, dict) else []
+    errors = _error_list(state.get("errors")) if isinstance(state, dict) else []
+    if state is None:
+        errors.append({"message": "on-chain flow state metadata is missing."})
+    totals = state.get("totals") if isinstance(state, dict) else {}
+    groups = state.get("groups") if isinstance(state, dict) else []
+    schema = _read_json_object(schema_path)
+    if schema is None and isinstance(state, dict) and state.get("status") != "skipped":
+        warnings.append("on-chain flow schema metadata is missing.")
+
+    return {
+        "name": "onchain_flow_history",
+        "kind": "onchain_flow_history",
+        "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
+        "format": "json",
+        "storage_path": display_path(storage_path, base=run.config_path.parent),
+        "schema_path": display_path(schema_path, base=run.config_path.parent),
+        "state_path": display_path(state_path, base=run.config_path.parent),
+        "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
+        "partition_fields": ["source", "data_class", "asset", "chain"],
+        "unique_key_fields": _string_list(schema.get("identity")) if isinstance(schema, dict) else [
+            "source",
+            "data_class",
+            "asset",
+            "chain",
+            "as_of",
+        ],
+        "source_fields": ["source", "data_class", "asset", "chain"],
+        "sources": _onchain_flow_sources(state),
+        "latest_update_at": state.get("updated_at") if isinstance(state, dict) else None,
+        "record_count": _int(totals.get("records")) if isinstance(totals, dict) else 0,
+        "warning_count": len(warnings),
+        "error_count": len(errors),
+        "consumers": [
+            "raw/onchain_flow_views.json",
+            "future_onchain_flow_context",
+            "data_quality_summary",
+            "data_inspection",
+        ],
+        "source_artifacts": [
+            display_path(schema_path, base=run.config_path.parent),
+            display_path(state_path, base=run.config_path.parent),
+        ],
+        "details": {
+            "groups": len(groups) if isinstance(groups, list) else 0,
+            "incoming_records": _int(totals.get("incoming_records")) if isinstance(totals, dict) else 0,
+            "duplicate_records": _int(totals.get("duplicate_records")) if isinstance(totals, dict) else 0,
+            "conflicting_duplicates": _int(totals.get("conflicting_duplicates")) if isinstance(totals, dict) else 0,
+        },
+        "warnings": _unique_sorted(warnings),
+        "errors": errors,
+    }
+
+
 def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
     state_path = run.config_path.parent / "data" / "research" / "metadata" / "text_event_history_state.json"
     storage_path = run.config_path.parent / "data" / "research" / "text_events"
@@ -462,6 +528,19 @@ def _derivatives_sources(state: dict[str, Any] | None) -> list[str]:
 
 
 def _macro_calendar_sources(state: dict[str, Any] | None) -> list[str]:
+    groups = state.get("groups") if isinstance(state, dict) else None
+    if not isinstance(groups, list):
+        return []
+    return sorted(
+        {
+            str(group.get("source"))
+            for group in groups
+            if isinstance(group, dict) and isinstance(group.get("source"), str) and group.get("source")
+        }
+    )
+
+
+def _onchain_flow_sources(state: dict[str, Any] | None) -> list[str]:
     groups = state.get("groups") if isinstance(state, dict) else None
     if not isinstance(groups, list):
         return []

@@ -162,6 +162,8 @@ build_macro_calendar_views
 build_macro_calendar_context
 build_macro_calendar_material
 collect_onchain_flow_data
+sync_onchain_flow_history
+build_onchain_flow_views
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
@@ -239,6 +241,7 @@ A successful configured run can write:
 - `raw/macro_calendar.json`: public macro and scheduled-event observations when enabled.
 - `raw/onchain_flow.json`: public on-chain flow observations when enabled.
 - `raw/macro_calendar_views.json`: current-run macro/calendar input window metadata and bounded records.
+- `raw/onchain_flow_views.json`: current-run on-chain flow input window metadata and bounded records.
 - `analysis/macro_calendar_context.json`: deterministic macro/calendar timing, source-availability, and catalyst context.
 - `analysis/macro_calendar_material.md`: bounded AI-readable macro/calendar context for Codex and report generation.
 - `raw/text_events.json`: public RSS text events.
@@ -252,12 +255,15 @@ A successful configured run can write:
 - `data/market/ohlcv/`: shared finalized OHLCV history.
 - `data/market/derivatives/`: shared reusable derivatives market history.
 - `data/macro/calendar/`: shared reusable macro/calendar history.
+- `data/onchain/flow/`: shared reusable on-chain flow history.
 - `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
 - `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
 - `data/market/metadata/derivatives_market_schema.json`: shared derivatives history schema metadata.
 - `data/market/metadata/derivatives_market_state.json`: shared derivatives history state metadata.
 - `data/macro/metadata/macro_calendar_schema.json`: shared macro/calendar history schema metadata.
 - `data/macro/metadata/macro_calendar_state.json`: shared macro/calendar history state metadata.
+- `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
+- `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
 - `data/research/index.sqlite`: local run index with run, stage, artifact, and latest-run metadata.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
@@ -491,7 +497,7 @@ they are not proof of a real-source product run.
   - `docs/quant-contracts.md`: quantitative research contracts.
   - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
   - `docs/macro-calendar-contracts.md`: macro and scheduled-event data contracts.
-  - `docs/onchain-flow-contracts.md`: planned on-chain and exchange-flow data contracts.
+  - `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.
