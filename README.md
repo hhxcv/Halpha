@@ -315,6 +315,7 @@ A successful configured run can write:
 - `analysis/factor_states.json`: deterministic factor states, bounded scores, directions, confidence, and degraded-state evidence from feature snapshots.
 - `analysis/multi_source_signals.json`: conservative normalized research signals derived from factor states.
 - `analysis/intelligence_fusion.json`: deterministic cross-source fusion records for confluence, conflict, risk overrides, event overrides, outcome feedback, uncertainty, and source refs.
+- `analysis/intelligence_fusion_material.md`: AI-readable bounded fusion material for Codex/report input.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
