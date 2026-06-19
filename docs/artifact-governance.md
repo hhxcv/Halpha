@@ -214,7 +214,9 @@ These contracts are defined in `docs/intelligence-fusion-contracts.md`.
 Product runs generate `analysis/intelligence_fusion.json`. Fusion JSON remains
 intermediate evidence and should not be embedded in full Codex input. Bounded
 Codex-facing fusion material is planned as
-`analysis/intelligence_fusion_material.md` and is not implemented yet.
+`analysis/intelligence_fusion_material.md` and is not implemented yet. Product
+runs also integrate bounded fusion fields into decision recommendations and
+alert decisions before research context is built.
 
 ### Decision And Risk Evidence
 

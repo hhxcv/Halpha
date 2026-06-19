@@ -6,6 +6,8 @@ project documentation, not a milestone plan.
 Implementation status:
 
 - `analysis/intelligence_fusion.json` is implemented in product runs.
+- Decision recommendation and alert decision fusion integration is implemented
+  in product runs.
 - `analysis/intelligence_fusion_material.md` is planned for the active
   milestone and is not implemented yet.
 - Fusion artifacts must remain additive. They must not replace strategy
@@ -249,8 +251,8 @@ Material selection rules:
 
 ## Decision And Alert Integration
 
-Decision recommendations and alert decisions may consume fusion evidence by
-adding bounded fusion context fields such as:
+Product runs integrate fusion evidence into decision recommendations and alert
+decisions by adding bounded fusion context fields such as:
 
 - `fusion_record_id`
 - `fusion_state`
@@ -265,11 +267,16 @@ adding bounded fusion context fields such as:
 Integration rules:
 
 - Preserve original deterministic decision and alert source evidence.
-- Do not remove upstream action levels, alert priorities, downgrade reasons, or
-  source refs.
-- Conservative downgrades are allowed only when fusion records include
-  source-backed blocking risk, severe conflict, event override, or insufficient
-  evidence.
+- Preserve pre-fusion action levels or priorities when integration changes a
+  record.
+- Do not remove upstream downgrade reasons, warnings, uncertainty, or source
+  refs.
+- Conservative decision downgrades are allowed only when fusion records include
+  source-backed blocking risk, event override, severe conflict, degraded
+  evidence, or insufficient evidence.
+- Conservative alert attention downgrades are allowed only for severe conflict,
+  degraded evidence, or insufficient evidence. Blocking risk and event override
+  require reassessment annotations instead of hidden priority upgrades.
 - Integration must be visible in material artifacts before research context is
   built.
 
