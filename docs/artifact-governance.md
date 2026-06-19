@@ -24,6 +24,8 @@ milestone plan.
   personalized-risk, material, privacy, and Codex-boundary contracts.
 - `docs/monitoring-contracts.md`: local monitor configuration, cycle,
   alert archive, health, privacy, and Codex-boundary contracts.
+- `docs/delivery-workbench-contracts.md`: local delivery and workbench summary,
+  index, source-ref, privacy, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
