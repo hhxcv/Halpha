@@ -40,6 +40,8 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "feature_snapshots: analysis/feature_snapshots.json" in context
     assert "factor_states: analysis/factor_states.json" in context
     assert "multi_source_signals: analysis/multi_source_signals.json" in context
+    assert "intelligence_fusion: analysis/intelligence_fusion.json" in context
+    assert "intelligence_fusion_material: analysis/intelligence_fusion_material.md" in context
     assert "factor_signal_material: analysis/factor_signal_material.md" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
@@ -56,13 +58,17 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "artifact_type: analysis_data_quality_material" in context
     assert "artifact_type: analysis_outcome_tracking_material" in context
     assert "artifact_type: analysis_factor_signal_material" in context
+    assert "artifact_type: analysis_intelligence_fusion_material" in context
     assert "outcome_tracking_material: analysis/outcome_tracking_material.md" in research_context
     assert "artifact_type: analysis_outcome_tracking_material" in research_context
     assert "factor_signal_material: analysis/factor_signal_material.md" in research_context
+    assert "intelligence_fusion_material: analysis/intelligence_fusion_material.md" in research_context
     assert "artifact_type: analysis_factor_signal_material" in research_context
+    assert "artifact_type: analysis_intelligence_fusion_material" in research_context
     assert "codex_may_generate_quality_checks: false" in context
     assert "codex_may_generate_factor_scores: false" in context
     assert "codex_may_generate_signal_states: false" in context
+    assert "codex_may_generate_fusion_states: false" in context
     assert "full_reusable_history_embedded: false" in context
     assert "full_catalog_embedded: false" in context
     assert "full_run_index_embedded: false" in context
@@ -98,7 +104,9 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Data quality material rules:" in prompt
     assert "Outcome tracking material rules:" in prompt
     assert "Factor signal material rules:" in prompt
+    assert "Intelligence fusion material rules:" in prompt
     assert "When factor/signal material is present" in prompt
+    assert "When intelligence fusion material is present" in prompt
     assert "Do not generate or revise feature records" in prompt
     assert "When data quality material is present" in prompt
     assert "Do not generate or revise data-quality checks" in prompt
@@ -121,12 +129,14 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "artifact_type: analysis_data_quality_material" in prompt
     assert "artifact_type: analysis_outcome_tracking_material" in prompt
     assert "artifact_type: analysis_factor_signal_material" in prompt
+    assert "artifact_type: analysis_intelligence_fusion_material" in prompt
     assert "codex_may_generate_event_categories: false" in prompt
     assert "codex_may_generate_alert_priority: false" in prompt
     assert "codex_may_generate_quality_checks: false" in prompt
     assert "codex_may_generate_outcome_labels: false" in prompt
     assert "codex_may_generate_factor_scores: false" in prompt
     assert "codex_may_generate_signal_states: false" in prompt
+    assert "codex_may_generate_fusion_states: false" in prompt
     assert "codex_may_generate_price_forecasts: false" in prompt
     assert "- 核心摘要" in prompt
     assert "- 标题" not in prompt
@@ -138,6 +148,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
     assert manifest["artifacts"]["outcome_tracking_material"] == "analysis/outcome_tracking_material.md"
     assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
+    assert manifest["artifacts"]["intelligence_fusion_material"] == "analysis/intelligence_fusion_material.md"
     assert manifest["codex_input"]["codex_context"]["artifact"] == "codex_context/context.md"
     assert manifest["codex_input"]["codex_context"]["status"] == "included"
     assert manifest["codex_input"]["codex_context"]["chars"] == len(context)
@@ -153,6 +164,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert material_records["analysis/data_quality_material.md"]["status"] == "included"
     assert material_records["analysis/outcome_tracking_material.md"]["status"] == "included"
     assert material_records["analysis/factor_signal_material.md"]["status"] == "included"
+    assert material_records["analysis/intelligence_fusion_material.md"]["status"] == "included"
     codex_context_stage = _stage(manifest, "build_codex_context")
     report_stage = _stage(manifest, "run_codex_report")
     assert codex_context_stage["status"] == "succeeded"

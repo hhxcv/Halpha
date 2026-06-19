@@ -8,8 +8,7 @@ Implementation status:
 - `analysis/intelligence_fusion.json` is implemented in product runs.
 - Decision recommendation and alert decision fusion integration is implemented
   in product runs.
-- `analysis/intelligence_fusion_material.md` is planned for the active
-  milestone and is not implemented yet.
+- `analysis/intelligence_fusion_material.md` is implemented in product runs.
 - Fusion artifacts must remain additive. They must not replace strategy
   evaluation, feature/factor, event intelligence, risk assessment, decision
   recommendations, alert decisions, data quality, outcome tracking, or final

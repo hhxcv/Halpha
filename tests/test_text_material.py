@@ -51,6 +51,7 @@ def test_pipeline_generates_ai_readable_text_material(tmp_path: Path) -> None:
     assert stage["status"] == "succeeded"
     assert stage["artifacts"] == [
         "analysis/factor_signal_material.md",
+        "analysis/intelligence_fusion_material.md",
         "analysis/data_quality_material.md",
         "analysis/text_material.md",
     ]
@@ -130,6 +131,7 @@ def test_text_material_skips_when_text_disabled(tmp_path: Path) -> None:
     assert analysis_stage["status"] == "succeeded"
     assert analysis_stage["artifacts"] == [
         "analysis/factor_signal_material.md",
+        "analysis/intelligence_fusion_material.md",
         "analysis/data_quality_material.md",
     ]
 
@@ -194,6 +196,7 @@ def test_analysis_stage_records_market_artifact_before_text_material_failure(tmp
     assert stage["status"] == "failed"
     assert stage["artifacts"] == [
         "analysis/factor_signal_material.md",
+        "analysis/intelligence_fusion_material.md",
         "analysis/data_quality_material.md",
         "analysis/market_material.md",
     ]

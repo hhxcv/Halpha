@@ -78,6 +78,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
         "analysis/intelligence_fusion.json",
+        "analysis/intelligence_fusion_material.md",
         "analysis/factor_signal_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -108,6 +109,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "factor_states": "analysis/factor_states.json",
             "multi_source_signals": "analysis/multi_source_signals.json",
             "intelligence_fusion": "analysis/intelligence_fusion.json",
+            "intelligence_fusion_material": "analysis/intelligence_fusion_material.md",
             "factor_signal_material": "analysis/factor_signal_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
@@ -341,6 +343,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
         "analysis/intelligence_fusion.json",
+        "analysis/intelligence_fusion_material.md",
         "analysis/factor_signal_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
@@ -473,6 +476,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["factor_states"] == "analysis/factor_states.json"
     assert manifest["artifacts"]["multi_source_signals"] == "analysis/multi_source_signals.json"
     assert manifest["artifacts"]["intelligence_fusion"] == "analysis/intelligence_fusion.json"
+    assert manifest["artifacts"]["intelligence_fusion_material"] == "analysis/intelligence_fusion_material.md"
     assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"

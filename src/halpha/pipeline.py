@@ -825,6 +825,7 @@ def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[s
     from .analysis.data_quality_material import build_data_quality_material
     from .analysis.derivatives_market_material import build_derivatives_market_material
     from .analysis.factor_signal_material import build_factor_signal_material
+    from .analysis.intelligence_fusion_material import build_intelligence_fusion_material
     from .analysis.market_material import build_market_material
     from .analysis.outcome_tracking_material import build_outcome_tracking_material
     from .analysis.text_material import build_text_material
@@ -833,6 +834,7 @@ def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[s
     artifacts = []
     try:
         artifacts.extend(build_factor_signal_material(config, run))
+        artifacts.extend(build_intelligence_fusion_material(config, run))
         refresh_m13_data_quality_checks(config, run)
         artifacts.extend(build_data_quality_material(config, run))
         artifacts.extend(build_derivatives_market_material(config, run))
