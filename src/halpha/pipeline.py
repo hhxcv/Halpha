@@ -20,6 +20,7 @@ STAGE_ORDER = (
     "build_macro_calendar_views",
     "build_macro_calendar_context",
     "build_macro_calendar_material",
+    "collect_onchain_flow_data",
     "collect_text_events",
     "build_text_event_records",
     "build_text_entity_evidence",
@@ -340,6 +341,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_macro_calendar_views"] = _build_macro_calendar_views
     handlers["build_macro_calendar_context"] = _build_macro_calendar_context
     handlers["build_macro_calendar_material"] = _build_macro_calendar_material
+    handlers["collect_onchain_flow_data"] = _collect_onchain_flow_data
     handlers["collect_text_events"] = _collect_text_events
     handlers["build_text_event_records"] = _build_text_event_records
     handlers["build_text_entity_evidence"] = _build_text_entity_evidence
@@ -565,6 +567,12 @@ def _build_macro_calendar_material(config: dict[str, Any], run: RunContext) -> l
     from .analysis.macro_calendar_material import build_macro_calendar_material
 
     return build_macro_calendar_material(config, run)
+
+
+def _collect_onchain_flow_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .collectors.onchain_flow import collect_onchain_flow_data
+
+    return collect_onchain_flow_data(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
@@ -919,6 +927,7 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
     text = config.get("text", {})
     derivatives = market.get("derivatives") if isinstance(market, dict) else {}
     macro_calendar = config.get("macro_calendar", {})
+    onchain_flow = config.get("onchain_flow", {})
     derivatives_summary = {}
     if isinstance(derivatives, dict):
         derivatives_summary = {
@@ -936,6 +945,15 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
             "data_classes": list(macro_calendar.get("data_classes", [])),
             "regions": list(macro_calendar.get("regions", [])),
         }
+    onchain_flow_summary = {}
+    if isinstance(onchain_flow, dict):
+        onchain_flow_summary = {
+            "enabled": onchain_flow.get("enabled"),
+            "source": onchain_flow.get("source"),
+            "data_classes": list(onchain_flow.get("data_classes", [])),
+            "assets": list(onchain_flow.get("assets", [])),
+            "chains": list(onchain_flow.get("chains", [])),
+        }
 
     return {
         "market": {
@@ -945,6 +963,7 @@ def _source_summary(config: dict[str, Any]) -> dict[str, Any]:
             "derivatives": derivatives_summary,
         },
         "macro_calendar": macro_calendar_summary,
+        "onchain_flow": onchain_flow_summary,
         "text": [
             {
                 "name": source.get("name"),

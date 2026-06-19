@@ -12,6 +12,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 
 - Collects public Binance ticker data for configured symbols.
 - Collects configured public macro/calendar evidence when enabled.
+- Collects configured public on-chain flow evidence when enabled.
 - Collects public RSS text events from configured sources.
 - Normalizes raw text events into source-aware event records for later text intelligence stages.
 - Extracts traceable entity evidence and configured-asset relevance from normalized text events.
@@ -160,6 +161,7 @@ sync_macro_calendar_history
 build_macro_calendar_views
 build_macro_calendar_context
 build_macro_calendar_material
+collect_onchain_flow_data
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
@@ -208,6 +210,7 @@ run_codex_report
   `bollinger_rsi_reversion`.
 - Bounded backtest and parameter diagnostics.
 - Optional Federal Reserve FOMC public calendar collection.
+- Optional public on-chain flow collection.
 - Optional deterministic strategy effectiveness gate thresholds.
 - Codex CLI command and arguments for final report generation.
 
@@ -234,6 +237,7 @@ A successful configured run can write:
 - `raw/market.json`: public market observations.
 - `raw/derivatives_market.json`: public derivatives and market-structure observations.
 - `raw/macro_calendar.json`: public macro and scheduled-event observations when enabled.
+- `raw/onchain_flow.json`: public on-chain flow observations when enabled.
 - `raw/macro_calendar_views.json`: current-run macro/calendar input window metadata and bounded records.
 - `analysis/macro_calendar_context.json`: deterministic macro/calendar timing, source-availability, and catalyst context.
 - `analysis/macro_calendar_material.md`: bounded AI-readable macro/calendar context for Codex and report generation.

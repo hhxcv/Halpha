@@ -37,6 +37,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["market"]["ohlcv"]["lookback"] == {"1d": 500, "1h": 720}
     assert config["market"]["derivatives"] == {"enabled": False}
     assert config["macro_calendar"] == {"enabled": False}
+    assert config["onchain_flow"] == {"enabled": False}
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
@@ -404,6 +405,27 @@ def test_load_config_accepts_enabled_macro_calendar_config(tmp_path: Path) -> No
     }
 
 
+def test_load_config_accepts_enabled_onchain_flow_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_onchain_flow_config(config_path)
+
+    config = load_config(config_path)
+
+    assert config["onchain_flow"] == {
+        "enabled": True,
+        "source": "public_aggregate",
+        "data_classes": [
+            "stablecoin_supply",
+            "chain_activity",
+            "network_congestion",
+            "exchange_flow_availability",
+        ],
+        "assets": ["ALL_STABLECOINS", "BTC"],
+        "chains": ["all", "bitcoin"],
+        "lookback_days": 7,
+    }
+
+
 @pytest.mark.parametrize(
     ("old", "new", "expected"),
     [
@@ -456,6 +478,71 @@ def test_load_config_rejects_non_mapping_macro_calendar_config(tmp_path: Path) -
     )
 
     with pytest.raises(ConfigError, match="macro_calendar must be a mapping"):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("onchain_flow:\n  enabled: true", "onchain_flow:\n  enabled: \"yes\"", "onchain_flow.enabled"),
+        ("  source: public_aggregate", "  source: unsupported", "onchain_flow.source"),
+        (
+            "  data_classes:\n    - stablecoin_supply\n    - chain_activity\n    - network_congestion\n    - exchange_flow_availability",
+            "  data_classes: []",
+            "onchain_flow.data_classes",
+        ),
+        ("    - stablecoin_supply", "    - unsupported", r"onchain_flow\.data_classes\[0\]"),
+        ("  assets:\n    - ALL_STABLECOINS\n    - BTC", "  assets: []", "onchain_flow.assets"),
+        ("    - ALL_STABLECOINS", "    - DOGE", r"onchain_flow\.assets\[0\]"),
+        ("  chains:\n    - all\n    - bitcoin", "  chains: []", "onchain_flow.chains"),
+        ("    - all", "    - ethereum", r"onchain_flow\.chains\[0\]"),
+        ("  lookback_days: 7", "  lookback_days: 0", "onchain_flow.lookback_days"),
+        ("  source: public_aggregate", "  source: public_aggregate\n  unsupported: true", "unsupported onchain_flow field"),
+        (
+            "  source: public_aggregate",
+            "  source: public_aggregate\n  stablecoin_source_url: file:///tmp/stablecoins.json",
+            "onchain_flow.stablecoin_source_url",
+        ),
+        (
+            "  source: public_aggregate",
+            "  source: public_aggregate\n  chain_activity_source_url: http://user:secret@example.com/chart",
+            "onchain_flow.chain_activity_source_url must not include credentials",
+        ),
+        (
+            "  source: public_aggregate",
+            "  source: public_aggregate\n  network_congestion_source_url: socks5://proxy.example/chart",
+            "onchain_flow.network_congestion_source_url",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_onchain_flow_config(
+    tmp_path: Path,
+    old: str,
+    new: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_onchain_flow_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(old, new, 1),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+def test_load_config_rejects_non_mapping_onchain_flow_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "quant:\n",
+            "onchain_flow: invalid\n\nquant:\n",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="onchain_flow must be a mapping"):
         load_config(config_path)
 
 
@@ -1171,6 +1258,34 @@ macro_calendar:
     - US
   lookback_days: 7
   lookahead_days: 45
+
+quant:
+""",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _add_onchain_flow_config(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "quant:\n",
+            """
+onchain_flow:
+  enabled: true
+  source: public_aggregate
+  data_classes:
+    - stablecoin_supply
+    - chain_activity
+    - network_congestion
+    - exchange_flow_availability
+  assets:
+    - ALL_STABLECOINS
+    - BTC
+  chains:
+    - all
+    - bitcoin
+  lookback_days: 7
 
 quant:
 """,

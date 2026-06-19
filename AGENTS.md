@@ -185,8 +185,8 @@ Current bias:
 * `raw/macro_calendar_views.json` records current-run macro/calendar input windows, bounded records, and storage refs, not full reusable macro/calendar history.
 * `analysis/macro_calendar_context.json` records deterministic macro/calendar scheduled-catalyst, recent-catalyst, no-event, stale, unavailable, partial, degraded, failed, source-availability, uncertainty, and realized-impact-not-evaluated context states, not forecasts or trading signals.
 * `analysis/macro_calendar_material.md` records bounded AI-readable macro/calendar context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
-* Planned M12 on-chain flow artifacts are governed by `docs/onchain-flow-contracts.md`; do not describe them as implemented until producers exist.
-* Planned `raw/onchain_flow.json` records current-run public on-chain and exchange-flow observations, endpoint availability, warnings, and errors.
+* M12 on-chain flow artifacts are governed by `docs/onchain-flow-contracts.md`; do not describe planned artifacts as implemented until producers exist.
+* `raw/onchain_flow.json` records current-run public on-chain and exchange-flow observations, endpoint availability, warnings, and errors.
 * Planned `data/onchain/flow/` stores reusable on-chain flow history; it is input data, not AI context.
 * Planned `data/onchain/metadata/onchain_flow_schema.json` records reusable on-chain flow history schema and logical keys.
 * Planned `data/onchain/metadata/onchain_flow_state.json` records reusable on-chain flow history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
