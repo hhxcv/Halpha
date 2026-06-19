@@ -395,6 +395,7 @@ Do not claim success without running the relevant command.
 * For Codex input acceptance, inspect `run_manifest.json` `codex_input`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`.
 * For Codex input acceptance, verify full intermediate JSON, raw streams, shared OHLCV history, and full run manifests are referenced by path, not embedded wholesale.
 * For on-chain flow acceptance, inspect `raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`, `raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, `analysis/onchain_flow_material.md`, `analysis/data_quality_summary.json`, and `python -m halpha data inspect --config config.example.yaml`.
+* For intelligence-fusion acceptance, inspect `analysis/intelligence_fusion.json`, `analysis/intelligence_fusion_material.md`, decision and alert fusion fields, `analysis/data_quality_summary.json`, `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>`, Codex context boundaries, and the final report when Codex CLI validation is allowed.
 * Treat critical asset-mapping errors, false duplicate merges, missing traceability, or unsafe event upgrades as regression-fixture candidates.
 * Treat unsafe alert escalation, missing no-alert suppression, or Codex-boundary leakage as regression-fixture candidates.
 * For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
