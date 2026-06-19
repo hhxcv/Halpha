@@ -18,6 +18,8 @@ milestone plan.
   material, and Codex-boundary contracts.
 - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal,
   material, and Codex-boundary contracts.
+- `docs/intelligence-fusion-contracts.md`: planned fusion artifact, material,
+  integration, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
@@ -200,6 +202,19 @@ generate `analysis/feature_snapshots.json`, `analysis/factor_states.json`,
 `analysis/factor_signal_material.md`. Feature, factor, and multi-source signal
 JSON artifacts are intermediate evidence and should not be embedded in full
 Codex input. Codex should consume bounded `analysis/factor_signal_material.md`.
+
+### Intelligence Fusion Evidence
+
+Planned fusion artifacts:
+
+- `analysis/intelligence_fusion.json`
+- `analysis/intelligence_fusion_material.md`
+
+These contracts are defined in `docs/intelligence-fusion-contracts.md`.
+Intelligence fusion is planned for the active milestone and is not implemented
+yet. When implemented, fusion JSON should remain intermediate evidence and
+should not be embedded in full Codex input. Codex should consume bounded
+`analysis/intelligence_fusion_material.md`.
 
 ### Decision And Risk Evidence
 

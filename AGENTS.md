@@ -277,6 +277,7 @@ Current bias:
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
 * `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
 * `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
+* `docs/intelligence-fusion-contracts.md`: planned fusion artifact, material, integration, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
