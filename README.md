@@ -201,6 +201,7 @@ build_outcome_targets
 evaluate_outcomes
 build_feature_snapshots
 build_factor_states
+build_multi_source_signals
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -310,6 +311,7 @@ A successful configured run can write:
 - `analysis/outcome_tracking_material.md`: AI-readable bounded outcome accountability material.
 - `analysis/feature_snapshots.json`: normalized source-aware feature records and source coverage from implemented current-run evidence.
 - `analysis/factor_states.json`: deterministic factor states, bounded scores, directions, confidence, and degraded-state evidence from feature snapshots.
+- `analysis/multi_source_signals.json`: conservative normalized research signals derived from factor states.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
@@ -339,10 +341,9 @@ analysis, or placeholder reports.
 
 Feature, factor, and multi-source signal contracts are defined in
 `docs/feature-factor-contracts.md`. Product runs generate
-`analysis/feature_snapshots.json` and `analysis/factor_states.json`.
-`analysis/multi_source_signals.json` and
-`analysis/factor_signal_material.md` are not generated until their pipeline
-stages are implemented.
+`analysis/feature_snapshots.json`, `analysis/factor_states.json`, and
+`analysis/multi_source_signals.json`. `analysis/factor_signal_material.md` is
+not generated until its pipeline stage is implemented.
 
 ## Quantitative Research
 

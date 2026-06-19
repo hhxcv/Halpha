@@ -56,6 +56,7 @@ STAGE_ORDER = (
     "evaluate_outcomes",
     "build_feature_snapshots",
     "build_factor_states",
+    "build_multi_source_signals",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -383,6 +384,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["evaluate_outcomes"] = _evaluate_outcomes
     handlers["build_feature_snapshots"] = _build_feature_snapshots
     handlers["build_factor_states"] = _build_factor_states
+    handlers["build_multi_source_signals"] = _build_multi_source_signals
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -795,6 +797,12 @@ def _build_factor_states(config: dict[str, Any], run: RunContext) -> list[str] |
     from .factor_states import build_factor_states
 
     return build_factor_states(config, run)
+
+
+def _build_multi_source_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .multi_source_signals import build_multi_source_signals
+
+    return build_multi_source_signals(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

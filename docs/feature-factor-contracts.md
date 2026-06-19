@@ -8,8 +8,9 @@ Implementation status:
 
 - `analysis/feature_snapshots.json` is implemented in product runs.
 - `analysis/factor_states.json` is implemented in product runs.
-- `analysis/multi_source_signals.json` and `analysis/factor_signal_material.md`
-  are intended contracts until their pipeline stages are implemented.
+- `analysis/multi_source_signals.json` is implemented in product runs.
+- `analysis/factor_signal_material.md` is an intended contract until its
+  pipeline stage is implemented.
 - These artifacts remain additive. They do not replace market
   signals, strategy evaluation, derivatives context, macro/calendar context,
   on-chain flow context, event intelligence, decision intelligence, alert
