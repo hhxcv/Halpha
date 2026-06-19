@@ -8,7 +8,7 @@ from typing import Any
 from halpha.pipeline import RunContext
 from halpha.run_index import write_run_index
 from halpha.storage import write_json
-from halpha.workbench import build_workbench_summary
+from halpha.workbench import build_workbench_summary, render_workbench_html
 
 
 def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
@@ -27,7 +27,14 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     summary = result.summary
     assert result.summary_path == tmp_path / "runs" / "workbench" / "latest" / "workbench_summary.json"
     assert json.loads(result.summary_path.read_text(encoding="utf-8")) == summary
+    assert (tmp_path / "runs" / "workbench" / "latest" / "index.md").is_file()
+    assert (tmp_path / "runs" / "workbench" / "latest" / "index.html").is_file()
     assert summary["status"] == "available"
+    assert summary["index_outputs"] == {
+        "status": "available",
+        "markdown": "runs/workbench/latest/index.md",
+        "html": "runs/workbench/latest/index.html",
+    }
     assert summary["source_selection"]["status"] == "available"
     assert summary["latest_run"]["fields"]["run_id"] == "run-1"
     assert summary["latest_run"]["fields"]["report"]["status"] == "available"
@@ -41,6 +48,13 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert summary["source_artifacts"]["analysis"]["decision_recommendations"] == "analysis/decision_recommendations.json"
     assert summary["omitted"]["full_intermediate_json_embedded"] is False
     assert summary["codex_boundary"]["codex_input_by_default"] is False
+    markdown = (tmp_path / "runs" / "workbench" / "latest" / "index.md").read_text(encoding="utf-8")
+    html = (tmp_path / "runs" / "workbench" / "latest" / "index.html").read_text(encoding="utf-8")
+    assert "# Halpha Workbench" in markdown
+    assert "../../run-1/report/report.md" in markdown
+    assert "Decision and watch" in markdown
+    assert "<table>" in html
+    assert "../../run-1/report/report.md" in html
 
 
 def test_workbench_summary_handles_missing_run_index(tmp_path: Path) -> None:
@@ -60,6 +74,9 @@ def test_workbench_summary_handles_missing_run_index(tmp_path: Path) -> None:
     assert summary["latest_run"]["status"] == "missing"
     assert "local run index was not found." in summary["warnings"]
     assert summary["source_artifacts"] == {}
+    markdown = (tmp_path / "runs" / "workbench" / "latest" / "index.md").read_text(encoding="utf-8")
+    assert "Status: `missing`" in markdown
+    assert "- none" in markdown
 
 
 def test_workbench_summary_marks_invalid_artifacts_failed(tmp_path: Path) -> None:
@@ -95,6 +112,37 @@ def test_workbench_summary_marks_invalid_artifacts_failed(tmp_path: Path) -> Non
     assert "analysis/decision_recommendations.json decision_recommendations.json is not valid JSON" in " ".join(
         summary["errors"]
     )
+
+
+def test_workbench_html_escapes_summary_text() -> None:
+    html = render_workbench_html(
+        {
+            "status": "<script>alert(1)</script>",
+            "generated_at": "2026-06-20T00:00:00Z",
+            "source_selection": {"run_dir": "runs/run-1"},
+            "latest_run": {
+                "fields": {
+                    "run_id": "<script>alert(2)</script>",
+                    "run_status": "succeeded",
+                    "report": {"status": "available", "artifact": "report/report.md"},
+                }
+            },
+            "decision_state": {"status": "available", "fields": {"decision_records": 1}},
+            "alert_state": {"status": "missing", "fields": {}},
+            "monitor_state": {"status": "missing", "fields": {}},
+            "outcome_state": {"status": "missing", "fields": {}},
+            "strategy_state": {"status": "available", "fields": {"strategy_gate_effective": 3}},
+            "data_quality_state": {"status": "available", "fields": {"warnings": 0}},
+            "source_artifacts": {},
+            "warnings": ["<private-note>"],
+            "errors": [],
+        }
+    )
+
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
+    assert "&lt;private-note&gt;" in html
+    assert "<script>" not in html
 
 
 def _write_config(tmp_path: Path) -> Path:
