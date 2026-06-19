@@ -140,6 +140,47 @@ def test_watch_triggers_include_derivatives_risk_conditions(tmp_path: Path) -> N
     assert manifest["counts"]["watch_trigger_derivatives_linked_records"] == len(derivatives_triggers)
 
 
+def test_watch_triggers_include_macro_calendar_observation_conditions(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_watch_triggers",
+        stage_handlers={
+            "collect_market_data": _noop_stage,
+            "collect_text_events": _noop_stage,
+            "sync_ohlcv": _noop_stage,
+            "build_market_data_views": _noop_stage,
+            "build_macro_calendar_context": _write_upcoming_macro_calendar_context,
+            "evaluate_quant_strategies": _noop_stage,
+            "evaluate_strategy_evaluation": _noop_stage,
+            "evaluate_market_strategy_signals": _noop_stage,
+            "build_market_signals": _write_market_signals,
+            "build_market_signal_material": _noop_stage,
+            "build_market_regime_assessment": _write_market_regime_assessment,
+            "build_risk_assessment": _write_risk_assessment,
+            "build_decision_recommendations": _write_decision_recommendations,
+        },
+    )
+
+    assert result.succeeded is True
+    artifact = _watch_triggers(result)
+    manifest = _manifest(result)
+    eth_triggers = [record for record in artifact["records"] if record["symbol"] == "ETHUSDT"]
+    macro_triggers = [record for record in eth_triggers if record["linked_macro_calendar_context_ids"]]
+
+    assert macro_triggers
+    assert any(record["type"] == "wait_condition" for record in macro_triggers)
+    assert any(record["type"] == "confirmation" for record in macro_triggers)
+    assert any("post-event" in record["condition"] for record in macro_triggers)
+    assert any("do not infer realized impact" in record["condition"] for record in macro_triggers)
+    assert all("analysis/macro_calendar_context.json" in record["source_artifacts"] for record in macro_triggers)
+    assert manifest["counts"]["watch_trigger_macro_calendar_context_records"] == 1
+    assert manifest["counts"]["watch_trigger_macro_calendar_linked_records"] == len(macro_triggers)
+
+
 def test_watch_triggers_do_not_fabricate_conditions_without_evidence(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -522,6 +563,56 @@ def _write_stressed_derivatives_context(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["derivatives_market_context"] = "analysis/derivatives_market_context.json"
     return ["analysis/derivatives_market_context.json"]
+
+
+def _write_upcoming_macro_calendar_context(config, run) -> list[str]:
+    scheduled_at = "2026-06-06T18:00:00Z"
+    write_json(
+        run.analysis_dir / "macro_calendar_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": [
+                {
+                    "context_id": (
+                        "macro_calendar_context:scheduled_catalyst:federal_reserve_fomc:US:"
+                        f"Federal Reserve policy decision:{scheduled_at}"
+                    ),
+                    "context_type": "scheduled_catalyst",
+                    "data_class": "central_bank_event",
+                    "source": "federal_reserve_fomc",
+                    "event_name": "Federal Reserve policy decision",
+                    "region": "US",
+                    "scheduled_at": scheduled_at,
+                    "as_of": "2026-06-05T00:00:00Z",
+                    "status": "succeeded",
+                    "state": "upcoming",
+                    "severity": "medium",
+                    "confidence": "medium",
+                    "time_to_event_hours": 42.0,
+                    "affected_assets": ["ETHUSDT"],
+                    "importance": "high",
+                    "evidence": ["Federal Reserve policy decision calendar evidence."],
+                    "uncertainty": ["Federal Reserve policy decision source uncertainty."],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "analysis/macro_calendar_context.json",
+                        "raw/macro_calendar_views.json",
+                    ],
+                }
+            ],
+            "counts": {"records": 1},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/macro_calendar_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["macro_calendar_context"] = "analysis/macro_calendar_context.json"
+    return ["analysis/macro_calendar_context.json"]
 
 
 def _signal(symbol: str, direction: str, confidence: str, latest_regime: str) -> dict[str, Any]:

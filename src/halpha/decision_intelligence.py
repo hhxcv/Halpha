@@ -27,6 +27,7 @@ MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_DATA_VIEWS_ARTIFACT = "raw/market_data_views.json"
 DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
+MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 SCHEMA_VERSION = 1
 NO_PREVIOUS_RUN_WARNING = "No previous successful decision-intelligence run found."
 DECISION_DELTA_INPUT_ARTIFACTS = {
@@ -160,8 +161,11 @@ def build_risk_assessment(
     )
     strategy_runs, run_warnings = _strategy_runs_from_optional_artifact(strategy_artifact)
     derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    macro_artifact, macro_warnings = _read_optional_macro_calendar_context(run)
     derivatives_records = _records_from_optional_artifact(derivatives_artifact)
     derivatives_groups = _derivatives_by_symbol(derivatives_records)
+    macro_records = _records_from_optional_artifact(macro_artifact)
+    macro_groups = _macro_calendar_context_by_symbol(macro_records)
     created_at = _created_at(market_regime, now)
     signal_groups = _signals_by_tuple(signals)
     regime_groups = _regime_by_tuple(regime_records)
@@ -173,6 +177,7 @@ def build_risk_assessment(
             regime_groups.get(key),
             strategy_groups.get(key, []),
             derivatives_groups.get(key[1], []),
+            _macro_calendar_records_for_symbol(macro_groups, key[1]),
         )
         for key in _risk_group_keys(signals, regime_records, strategy_runs)
     ]
@@ -187,9 +192,13 @@ def build_risk_assessment(
             market_regime,
             strategy_artifact,
             derivatives_artifact,
+            macro_artifact,
         ),
         "records": records,
-        "warnings": _risk_artifact_warnings(records, [*strategy_warnings, *run_warnings, *derivatives_warnings]),
+        "warnings": _risk_artifact_warnings(
+            records,
+            [*strategy_warnings, *run_warnings, *derivatives_warnings, *macro_warnings],
+        ),
         "errors": [],
     }
     write_json(run.analysis_dir / "risk_assessment.json", artifact)
@@ -207,6 +216,12 @@ def build_risk_assessment(
     run.manifest["counts"]["risk_assessment_derivatives_context_records"] = len(derivatives_records)
     run.manifest["counts"]["risk_assessment_derivatives_influenced_records"] = sum(
         1 for record in records if any("Derivatives context" in item for item in _string_list(record.get("rising_risks")))
+    )
+    run.manifest["counts"]["risk_assessment_macro_calendar_context_records"] = len(macro_records)
+    run.manifest["counts"]["risk_assessment_macro_calendar_influenced_records"] = sum(
+        1
+        for record in records
+        if any("Macro calendar context" in item for item in _string_list(record.get("rising_risks")))
     )
     return [RISK_ASSESSMENT_ARTIFACT]
 
@@ -256,8 +271,11 @@ def build_decision_recommendations(
         stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
     )
     derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    macro_artifact, macro_warnings = _read_optional_macro_calendar_context(run)
     derivatives_records = _records_from_optional_artifact(derivatives_artifact)
     derivatives_groups = _derivatives_by_symbol(derivatives_records)
+    macro_records = _records_from_optional_artifact(macro_artifact)
+    macro_groups = _macro_calendar_context_by_symbol(macro_records)
     created_at = _created_at(risk_assessment, now)
     signal_groups = _signals_by_tuple(signals)
     regime_groups = _regime_by_tuple(regime_records)
@@ -269,6 +287,7 @@ def build_decision_recommendations(
             regime_groups.get(key),
             risk_groups.get(key),
             derivatives_groups.get(key[1], []),
+            _macro_calendar_records_for_symbol(macro_groups, key[1]),
         )
         for key in _decision_group_keys(signals, regime_records, risk_records)
     ]
@@ -285,9 +304,10 @@ def build_decision_recommendations(
             risk_assessment,
             strategy_artifact,
             derivatives_artifact,
+            macro_artifact,
         ),
         "records": records,
-        "warnings": _decision_artifact_warnings(records, [*strategy_warnings, *derivatives_warnings]),
+        "warnings": _decision_artifact_warnings(records, [*strategy_warnings, *derivatives_warnings, *macro_warnings]),
         "errors": [],
     }
     write_json(run.analysis_dir / "decision_recommendations.json", artifact)
@@ -307,6 +327,10 @@ def build_decision_recommendations(
     run.manifest["counts"]["decision_recommendation_derivatives_context_records"] = len(derivatives_records)
     run.manifest["counts"]["decision_recommendation_derivatives_linked_records"] = sum(
         1 for record in records if record.get("linked_derivatives_context_ids")
+    )
+    run.manifest["counts"]["decision_recommendation_macro_calendar_context_records"] = len(macro_records)
+    run.manifest["counts"]["decision_recommendation_macro_calendar_linked_records"] = sum(
+        1 for record in records if record.get("linked_macro_calendar_context_ids")
     )
     return [DECISION_RECOMMENDATIONS_ARTIFACT]
 
@@ -362,8 +386,11 @@ def build_watch_triggers(
         stage=BUILD_WATCH_TRIGGERS_STAGE,
     )
     derivatives_artifact, derivatives_warnings = _read_optional_derivatives_context(run)
+    macro_artifact, macro_warnings = _read_optional_macro_calendar_context(run)
     derivatives_records = _records_from_optional_artifact(derivatives_artifact)
     derivatives_groups = _derivatives_by_symbol(derivatives_records)
+    macro_records = _records_from_optional_artifact(macro_artifact)
+    macro_groups = _macro_calendar_context_by_symbol(macro_records)
 
     created_at = _created_at(decision_recommendations, now)
     signal_groups = _signals_by_tuple(signals)
@@ -378,6 +405,7 @@ def build_watch_triggers(
             regime_groups.get(_tuple_key(decision)),
             risk_groups.get(_tuple_key(decision)),
             derivatives_groups.get(_tuple_key(decision)[1], []),
+            _macro_calendar_records_for_symbol(macro_groups, _tuple_key(decision)[1]),
         )
     ]
 
@@ -393,9 +421,12 @@ def build_watch_triggers(
             risk_assessment,
             decision_recommendations,
             derivatives_artifact,
+            macro_artifact,
         ),
         "records": records,
-        "warnings": _unique_ordered([*_watch_artifact_warnings(decision_records, records), *derivatives_warnings]),
+        "warnings": _unique_ordered(
+            [*_watch_artifact_warnings(decision_records, records), *derivatives_warnings, *macro_warnings]
+        ),
         "errors": [],
     }
     write_json(run.analysis_dir / "watch_triggers.json", artifact)
@@ -404,6 +435,10 @@ def build_watch_triggers(
     run.manifest["counts"]["watch_trigger_derivatives_context_records"] = len(derivatives_records)
     run.manifest["counts"]["watch_trigger_derivatives_linked_records"] = sum(
         1 for record in records if record.get("linked_derivatives_context_ids")
+    )
+    run.manifest["counts"]["watch_trigger_macro_calendar_context_records"] = len(macro_records)
+    run.manifest["counts"]["watch_trigger_macro_calendar_linked_records"] = sum(
+        1 for record in records if record.get("linked_macro_calendar_context_ids")
     )
     return [WATCH_TRIGGERS_ARTIFACT]
 
@@ -1815,6 +1850,7 @@ def _risk_record(
     regime: dict[str, Any] | None,
     strategy_runs: list[dict[str, Any]],
     derivatives_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source, symbol, timeframe = key
     latest = _latest_risk_candle_time(signals, regime, strategy_runs)
@@ -1824,7 +1860,12 @@ def _risk_record(
     strategy = _strategy_warning_risk(strategy_runs, signals)
     regime_risks = _regime_risks(regime)
     derivatives = _derivatives_context_effects(derivatives_records)
-    usable_evidence = _has_usable_risk_evidence(signals, regime) or derivatives["supports_risk_assessment"]
+    macro = _macro_calendar_context_effects(macro_records)
+    usable_evidence = (
+        _has_usable_risk_evidence(signals, regime)
+        or derivatives["supports_risk_assessment"]
+        or macro["supports_risk_assessment"]
+    )
     warnings = _risk_record_warnings(regime, usable_evidence)
 
     rising_risks = _unique_ordered(
@@ -1833,6 +1874,7 @@ def _risk_record(
             *strategy["rising"],
             *regime_risks["rising"],
             *derivatives["rising"],
+            *macro["rising"],
             *([] if usable_evidence else ["Upstream evidence is insufficient for a supported low-risk conclusion."]),
         ]
     )
@@ -1842,6 +1884,7 @@ def _risk_record(
             *volatility["blocking"],
             *regime_risks["blocking"],
             *derivatives["blocking"],
+            *macro["blocking"],
             *([] if usable_evidence else ["Insufficient upstream evidence blocks stronger action levels."]),
         ]
     )
@@ -1850,6 +1893,7 @@ def _risk_record(
         *strategy["severities"],
         *regime_risks["severities"],
         *derivatives["severities"],
+        *macro["severities"],
         *(["high"] if signal_conflict_risks else []),
         *(["medium"] if data_quality_risks and usable_evidence else []),
     ]
@@ -1874,11 +1918,18 @@ def _risk_record(
             strategy=strategy,
             regime_risks=regime_risks,
             derivatives=derivatives,
+            macro=macro,
             risk_level=risk_level,
         ),
-        "warnings": _unique_ordered([*warnings, *derivatives["warnings"]]),
+        "warnings": _unique_ordered([*warnings, *derivatives["warnings"], *macro["warnings"]]),
         "errors": [],
-        "source_artifacts": _risk_record_source_artifacts(signals, regime, strategy_runs, derivatives_records),
+        "source_artifacts": _risk_record_source_artifacts(
+            signals,
+            regime,
+            strategy_runs,
+            derivatives_records,
+            macro_records,
+        ),
     }
 
 
@@ -1888,6 +1939,7 @@ def _decision_recommendation_record(
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source, symbol, timeframe = key
     latest = _latest_decision_candle_time(signals, regime, risk)
@@ -1898,21 +1950,29 @@ def _decision_recommendation_record(
     regime_value = _clean_text(regime.get("regime") if regime else None, fallback="unknown")
     has_evidence = _has_decision_evidence(usable_signals, regime, risk)
     derivatives = _derivatives_context_effects(derivatives_records)
+    macro = _macro_calendar_context_effects(macro_records)
 
-    action_level = _base_action_level(
+    base_action_level = _base_action_level(
         usable_signals,
         regime,
         risk,
         conflicts=conflicts,
         has_evidence=has_evidence,
     )
-    action_level = _apply_decision_gates(action_level, risk, conflicts=conflicts, has_evidence=has_evidence)
+    action_level = _apply_decision_gates(base_action_level, risk, conflicts=conflicts, has_evidence=has_evidence)
     action_level, derivatives_downgrade_reasons = _apply_derivatives_decision_gate(
         action_level,
         derivatives,
         has_evidence=has_evidence,
     )
-    evidence = _decision_evidence(usable_signals, regime, risk, derivatives=derivatives)
+    action_level, macro_downgrade_reasons = _apply_macro_calendar_decision_gate(
+        action_level,
+        macro,
+        base_action_level=base_action_level,
+        has_evidence=has_evidence,
+    )
+    downgrade_reasons = _unique_ordered([*derivatives_downgrade_reasons, *macro_downgrade_reasons])
+    evidence = _decision_evidence(usable_signals, regime, risk, derivatives=derivatives, macro=macro)
     invalidation_conditions = _decision_invalidation_conditions(
         action_level,
         symbol=symbol,
@@ -1926,6 +1986,7 @@ def _decision_recommendation_record(
             [
                 *invalidation_conditions,
                 *_derivatives_invalidation_conditions(symbol=symbol, derivatives=derivatives),
+                *_macro_calendar_invalidation_conditions(symbol=symbol, macro=macro),
             ]
         )
     warnings = _decision_warnings(
@@ -1937,7 +1998,9 @@ def _decision_recommendation_record(
         has_evidence=has_evidence,
         risk=risk,
         derivatives=derivatives,
+        macro=macro,
         derivatives_downgrade_reasons=derivatives_downgrade_reasons,
+        macro_downgrade_reasons=macro_downgrade_reasons,
     )
     if action_level in ACTIONABLE_ACTION_LEVELS and (not evidence or not invalidation_conditions):
         action_level = "WATCH"
@@ -1961,14 +2024,15 @@ def _decision_recommendation_record(
         "status": _decision_status(action_level, risk_level, risk_status, conflicts, has_evidence),
         "recommended_actions": _recommended_actions(action_level, symbol=symbol, conflicts=conflicts, risk_level=risk_level),
         "do_not_do": _do_not_do_guidance(action_level, risk_level=risk_level, conflicts=conflicts, has_evidence=has_evidence),
-        "risk_conditions": _risk_conditions(risk, derivatives=derivatives),
-        "downgrade_reasons": derivatives_downgrade_reasons,
+        "risk_conditions": _risk_conditions(risk, derivatives=derivatives, macro=macro),
+        "downgrade_reasons": downgrade_reasons,
         "invalidation_conditions": invalidation_conditions,
         "evidence": evidence,
         "conflicts": conflicts,
         "warnings": warnings,
         "linked_derivatives_context_ids": _derivatives_context_ids(derivatives_records),
-        "source_artifacts": _decision_record_source_artifacts(signals, regime, risk, derivatives_records),
+        "linked_macro_calendar_context_ids": _macro_calendar_context_ids(macro_records),
+        "source_artifacts": _decision_record_source_artifacts(signals, regime, risk, derivatives_records, macro_records),
     }
 
 
@@ -2048,6 +2112,26 @@ def _apply_derivatives_decision_gate(
     if "medium" in severities and action_level in {"STRONG_DO", "DO"}:
         return "TRY_SMALL", ["medium_severity_derivatives_context"]
     return action_level, []
+
+
+def _apply_macro_calendar_decision_gate(
+    action_level: str,
+    macro: dict[str, Any],
+    *,
+    base_action_level: str,
+    has_evidence: bool,
+) -> tuple[str, list[str]]:
+    if not has_evidence or not macro.get("supports_risk_assessment"):
+        return action_level, []
+    reasons: list[str] = []
+    if macro.get("availability_issue_ids") and action_level in {"STRONG_DO", "DO", "TRY_SMALL"}:
+        reasons.append("macro_calendar_source_uncertainty")
+        return "WATCH", reasons
+    if macro.get("scheduled_or_recent_ids") and base_action_level in {"STRONG_DO", "DO"}:
+        reasons.append("macro_calendar_catalyst_caution")
+        if action_level in {"STRONG_DO", "DO"}:
+            return "TRY_SMALL", reasons
+    return action_level, reasons
 
 
 def _decision_status(
@@ -2139,7 +2223,12 @@ def _do_not_do_guidance(action_level: str, *, risk_level: str, conflicts: list[s
     return _unique_ordered(guidance)
 
 
-def _risk_conditions(risk: dict[str, Any] | None, *, derivatives: dict[str, Any] | None = None) -> list[str]:
+def _risk_conditions(
+    risk: dict[str, Any] | None,
+    *,
+    derivatives: dict[str, Any] | None = None,
+    macro: dict[str, Any] | None = None,
+) -> list[str]:
     if risk is None:
         conditions = ["risk_assessment=missing."]
     else:
@@ -2166,6 +2255,13 @@ def _risk_conditions(risk: dict[str, Any] | None, *, derivatives: dict[str, Any]
             conditions.append(f"derivatives_context_blocking: {item}")
         for item in _string_list(derivatives.get("uncertainty"))[:2]:
             conditions.append(f"derivatives_context_uncertainty: {item}")
+    if macro:
+        for item in _string_list(macro.get("rising"))[:3]:
+            conditions.append(f"macro_calendar_context_risk: {item}")
+        for item in _string_list(macro.get("blocking"))[:2]:
+            conditions.append(f"macro_calendar_context_blocking: {item}")
+        for item in _string_list(macro.get("uncertainty"))[:2]:
+            conditions.append(f"macro_calendar_context_uncertainty: {item}")
     return _unique_ordered(conditions)
 
 
@@ -2213,12 +2309,21 @@ def _derivatives_invalidation_conditions(*, symbol: str, derivatives: dict[str, 
     ]
 
 
+def _macro_calendar_invalidation_conditions(*, symbol: str, macro: dict[str, Any]) -> list[str]:
+    if not macro.get("scheduled_or_recent_ids"):
+        return []
+    return [
+        f"{symbol} macro/calendar catalyst window changes, starts, or lacks post-event confirmation from market, risk, derivatives, or strategy evidence.",
+    ]
+
+
 def _decision_evidence(
     usable_signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
     *,
     derivatives: dict[str, Any] | None = None,
+    macro: dict[str, Any] | None = None,
 ) -> list[str]:
     evidence = [
         _counts_evidence("direction_counts", _direction_counts(usable_signals)),
@@ -2245,6 +2350,9 @@ def _decision_evidence(
     if derivatives:
         evidence.extend(_string_list(derivatives.get("evidence"))[:3])
         evidence.extend(_string_list(derivatives.get("uncertainty"))[:2])
+    if macro:
+        evidence.extend(_string_list(macro.get("evidence"))[:3])
+        evidence.extend(_string_list(macro.get("uncertainty"))[:2])
     evidence.extend(_bounded_signal_evidence(usable_signals))
     return _unique_ordered(evidence)
 
@@ -2259,7 +2367,9 @@ def _decision_warnings(
     has_evidence: bool,
     risk: dict[str, Any] | None,
     derivatives: dict[str, Any] | None = None,
+    macro: dict[str, Any] | None = None,
     derivatives_downgrade_reasons: list[str] | None = None,
+    macro_downgrade_reasons: list[str] | None = None,
 ) -> list[str]:
     warnings = []
     if not has_evidence or risk_status == "insufficient_data" or regime_value == "unknown":
@@ -2278,6 +2388,10 @@ def _decision_warnings(
         warnings.append("Derivatives context downgraded stronger action language.")
     if derivatives:
         warnings.extend(_string_list(derivatives.get("warnings")))
+    if macro_downgrade_reasons:
+        warnings.append("Macro calendar context downgraded stronger action language.")
+    if macro:
+        warnings.extend(_string_list(macro.get("warnings")))
     return _unique_ordered(warnings)
 
 
@@ -2355,11 +2469,23 @@ def _derivatives_context_ids(records: list[dict[str, Any]]) -> list[str]:
     )
 
 
+def _macro_calendar_context_ids(records: list[dict[str, Any]]) -> list[str]:
+    return _unique_ordered(
+        [
+            record_id
+            for record in records
+            for record_id in [_clean_text(record.get("context_id"), fallback="")]
+            if record_id
+        ]
+    )
+
+
 def _decision_record_source_artifacts(
     signals: list[dict[str, Any]],
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]] | None = None,
+    macro_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2372,6 +2498,12 @@ def _decision_record_source_artifacts(
             *[
                 artifact
                 for record in derivatives_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
+            *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_records else []),
+            *[
+                artifact
+                for record in macro_records or []
                 for artifact in _string_list(record.get("source_artifacts"))
             ],
             *[
@@ -2392,9 +2524,18 @@ def _watch_trigger_records(
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     derivatives = _derivatives_context_effects(derivatives_records)
-    evidence = _unique_ordered([*_watch_evidence(decision, signals, regime, risk), *_string_list(derivatives.get("evidence"))[:3]])
+    macro = _macro_calendar_context_effects(macro_records)
+    evidence = _unique_ordered(
+        [
+            *_watch_evidence(decision, signals, regime, risk),
+            *_string_list(derivatives.get("evidence"))[:3],
+            *_string_list(macro.get("evidence"))[:3],
+            *_string_list(macro.get("uncertainty"))[:2],
+        ]
+    )
     if not evidence:
         return []
 
@@ -2406,8 +2547,9 @@ def _watch_trigger_records(
     action_level = _clean_text(decision.get("action_level"), fallback="NO_ACTION")
     status = _clean_text(decision.get("status"), fallback="unknown")
     risk_level = _clean_text(risk.get("risk_level") if risk else None, fallback=_risk_level_from_decision(decision))
-    source_artifacts = _watch_record_source_artifacts(decision, signals, regime, risk, derivatives_records)
+    source_artifacts = _watch_record_source_artifacts(decision, signals, regime, risk, derivatives_records, macro_records)
     linked_derivatives_context_ids = _derivatives_context_ids(derivatives_records)
+    linked_macro_calendar_context_ids = _macro_calendar_context_ids(macro_records)
 
     if action_level in ACTIONABLE_ACTION_LEVELS:
         records.append(
@@ -2425,6 +2567,7 @@ def _watch_trigger_records(
                 warnings=[],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
             )
         )
         for index, condition in enumerate(_string_list(decision.get("invalidation_conditions"))[:2], start=1):
@@ -2443,6 +2586,7 @@ def _watch_trigger_records(
                     warnings=[],
                     source_artifacts=source_artifacts,
                     linked_derivatives_context_ids=linked_derivatives_context_ids,
+                    linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
                     sequence=index,
                 )
             )
@@ -2461,6 +2605,7 @@ def _watch_trigger_records(
                 warnings=[],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
             )
         )
 
@@ -2480,6 +2625,7 @@ def _watch_trigger_records(
                 warnings=[],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
                 sequence=1,
             )
         )
@@ -2498,6 +2644,68 @@ def _watch_trigger_records(
                 warnings=[],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                sequence=1,
+            )
+        )
+
+    if macro.get("scheduled_or_recent_ids"):
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="wait_condition",
+                condition=_macro_calendar_wait_condition(symbol=symbol, macro=macro),
+                priority="medium",
+                expected_decision_impact="keeps_stronger_action_capped_until_post_event_confirmation",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(macro.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                sequence=1,
+            )
+        )
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="confirmation",
+                condition=_macro_calendar_post_event_condition(symbol=symbol, macro=macro),
+                priority="medium",
+                expected_decision_impact="could_relieve_macro_calendar_caution_after_supported_follow_through",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=[],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
+                sequence=1,
+            )
+        )
+
+    if macro.get("availability_issue_ids"):
+        records.append(
+            _watch_trigger_record(
+                source=source,
+                symbol=symbol,
+                timeframe=timeframe,
+                latest=latest,
+                trigger_type="recheck_next_run",
+                condition=f"Recheck macro/calendar source availability for {symbol}; do not treat stale, unavailable, partial, or degraded calendar evidence as neutral.",
+                priority="medium",
+                expected_decision_impact="could_keep_or_relieve_macro_calendar_source_uncertainty",
+                linked_decision_record_id=_clean_text(decision.get("record_id"), fallback="missing"),
+                evidence=evidence,
+                warnings=_string_list(macro.get("warnings"))[:2],
+                source_artifacts=source_artifacts,
+                linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
                 sequence=1,
             )
         )
@@ -2519,6 +2727,7 @@ def _watch_trigger_records(
                     warnings=[],
                     source_artifacts=source_artifacts,
                     linked_derivatives_context_ids=linked_derivatives_context_ids,
+                    linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
                 )
             )
         records.append(
@@ -2536,6 +2745,7 @@ def _watch_trigger_records(
                 warnings=_string_list(decision.get("warnings"))[:2],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
             )
         )
 
@@ -2555,6 +2765,7 @@ def _watch_trigger_records(
                 warnings=_string_list(decision.get("warnings"))[:2],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
             )
         )
 
@@ -2574,6 +2785,7 @@ def _watch_trigger_records(
                 warnings=_string_list(decision.get("warnings"))[:2],
                 source_artifacts=source_artifacts,
                 linked_derivatives_context_ids=linked_derivatives_context_ids,
+                linked_macro_calendar_context_ids=linked_macro_calendar_context_ids,
             )
         )
 
@@ -2612,6 +2824,7 @@ def _watch_trigger_record(
     warnings: list[str],
     source_artifacts: list[str],
     linked_derivatives_context_ids: list[str] | None = None,
+    linked_macro_calendar_context_ids: list[str] | None = None,
     sequence: int | None = None,
 ) -> dict[str, Any]:
     suffix = f":{sequence}" if sequence is not None else ""
@@ -2628,6 +2841,7 @@ def _watch_trigger_record(
         "evidence": evidence,
         "warnings": _unique_ordered(warnings),
         "linked_derivatives_context_ids": linked_derivatives_context_ids or [],
+        "linked_macro_calendar_context_ids": linked_macro_calendar_context_ids or [],
         "source_artifacts": source_artifacts,
     }
 
@@ -2663,6 +2877,25 @@ def _no_action_wait_condition(decision: dict[str, Any], *, symbol: str) -> str:
     if "insufficient" in warnings or _clean_text(decision.get("status"), fallback="") == "insufficient_data":
         return f"Wait for {symbol} to have enough upstream evidence for a supported decision view."
     return f"Wait for {symbol} risk and decision records to move out of NO_ACTION."
+
+
+def _macro_calendar_wait_condition(*, symbol: str, macro: dict[str, Any]) -> str:
+    count = len(_string_list(macro.get("scheduled_or_recent_ids")))
+    suffix = f" ({count} linked macro/calendar context record{'s' if count != 1 else ''})." if count else "."
+    return (
+        f"{symbol} has scheduled or recent macro/calendar catalyst context; keep stronger action capped until the "
+        f"event window passes and post-event market, risk, derivatives, or strategy evidence confirms realized impact"
+        f"{suffix}"
+    )
+
+
+def _macro_calendar_post_event_condition(*, symbol: str, macro: dict[str, Any]) -> str:
+    count = len(_string_list(macro.get("scheduled_or_recent_ids")))
+    suffix = f" ({count} linked macro/calendar context record{'s' if count != 1 else ''})." if count else "."
+    return (
+        f"{symbol} post-event confirmation requires fresh market, risk, derivatives, or strategy evidence after the "
+        f"macro/calendar catalyst window; do not infer realized impact from the schedule alone{suffix}"
+    )
 
 
 def _needs_risk_relief(action_level: str, risk_level: str, decision: dict[str, Any]) -> bool:
@@ -2710,6 +2943,7 @@ def _watch_record_source_artifacts(
     regime: dict[str, Any] | None,
     risk: dict[str, Any] | None,
     derivatives_records: list[dict[str, Any]] | None = None,
+    macro_records: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2724,6 +2958,12 @@ def _watch_record_source_artifacts(
             *[
                 artifact
                 for record in derivatives_records or []
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
+            *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_records else []),
+            *[
+                artifact
+                for record in macro_records or []
                 for artifact in _string_list(record.get("source_artifacts"))
             ],
             *[
@@ -2744,6 +2984,7 @@ def _watch_source_artifacts(
     risk_assessment: dict[str, Any],
     decision_recommendations: dict[str, Any],
     derivatives_artifact: dict[str, Any] | None = None,
+    macro_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2757,6 +2998,8 @@ def _watch_source_artifacts(
             *_string_list(market_signals.get("source_artifacts")),
             *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
+            *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_artifact is not None else []),
+            *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
@@ -2786,6 +3029,7 @@ def _decision_source_artifacts(
     risk_assessment: dict[str, Any],
     strategy_artifact: dict[str, Any] | None,
     derivatives_artifact: dict[str, Any] | None = None,
+    macro_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -2799,6 +3043,8 @@ def _decision_source_artifacts(
             *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
             *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
+            *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_artifact is not None else []),
+            *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
@@ -2869,6 +3115,19 @@ def _read_optional_derivatives_context(run: RunContext) -> tuple[dict[str, Any] 
         return None, [f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}."]
     if not isinstance(loaded, dict):
         return None, [f"{DERIVATIVES_MARKET_CONTEXT_ARTIFACT} must be a JSON object."]
+    return loaded, []
+
+
+def _read_optional_macro_calendar_context(run: RunContext) -> tuple[dict[str, Any] | None, list[str]]:
+    path = run.analysis_dir / "macro_calendar_context.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None, []
+    except JSONDecodeError as exc:
+        return None, [f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} is not valid JSON: {exc.msg}."]
+    if not isinstance(loaded, dict):
+        return None, [f"{MACRO_CALENDAR_CONTEXT_ARTIFACT} must be a JSON object."]
     return loaded, []
 
 
@@ -3186,6 +3445,31 @@ def _derivatives_by_symbol(records: list[dict[str, Any]]) -> dict[str, list[dict
     return {symbol: sorted(items, key=_derivatives_sort_key) for symbol, items in groups.items()}
 
 
+def _macro_calendar_context_by_symbol(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        symbols = [
+            symbol
+            for symbol in (_clean_text(value, fallback="") for value in _string_list(record.get("affected_assets")))
+            if symbol
+        ]
+        if not symbols and _clean_text(record.get("context_type"), fallback="") in {
+            "no_event_window",
+            "source_availability",
+        }:
+            symbols = ["__global__"]
+        for symbol in symbols:
+            groups.setdefault(symbol, []).append(record)
+    return {symbol: sorted(items, key=_macro_calendar_sort_key) for symbol, items in groups.items()}
+
+
+def _macro_calendar_records_for_symbol(
+    groups: dict[str, list[dict[str, Any]]],
+    symbol: str,
+) -> list[dict[str, Any]]:
+    return _unique_macro_calendar_records([*groups.get(symbol, []), *groups.get("__global__", [])])
+
+
 def _tuple_key(item: dict[str, Any]) -> tuple[str, str, str]:
     return (
         _clean_text(item.get("source"), fallback="missing"),
@@ -3199,6 +3483,15 @@ def _derivatives_sort_key(record: dict[str, Any]) -> tuple[str, str, str]:
         _clean_text(record.get("context_type"), fallback=""),
         _clean_text(record.get("period"), fallback=""),
         _clean_text(record.get("as_of"), fallback=""),
+    )
+
+
+def _macro_calendar_sort_key(record: dict[str, Any]) -> tuple[str, str, str, str]:
+    return (
+        _clean_text(record.get("context_type"), fallback=""),
+        _clean_text(record.get("scheduled_at"), fallback=""),
+        _clean_text(record.get("as_of"), fallback=""),
+        _clean_text(record.get("context_id"), fallback=""),
     )
 
 
@@ -3437,6 +3730,7 @@ def _risk_evidence(
     strategy: dict[str, list[str]],
     regime_risks: dict[str, list[str]],
     derivatives: dict[str, Any],
+    macro: dict[str, Any],
     risk_level: str,
 ) -> list[str]:
     evidence = [
@@ -3446,6 +3740,8 @@ def _risk_evidence(
         *strategy["evidence"],
         *derivatives["evidence"],
         *derivatives["uncertainty"],
+        *macro["evidence"],
+        *macro["uncertainty"],
         *_bounded_signal_evidence([signal for signal in signals if _has_usable_signal_evidence(signal)]),
     ]
     if regime is None:
@@ -3516,6 +3812,111 @@ def _derivatives_context_effects(records: list[dict[str, Any]]) -> dict[str, Any
     }
 
 
+def _macro_calendar_context_effects(records: list[dict[str, Any]]) -> dict[str, Any]:
+    rising: list[str] = []
+    blocking: list[str] = []
+    evidence: list[str] = []
+    uncertainty: list[str] = []
+    warnings: list[str] = []
+    severities: list[str] = []
+    scheduled_or_recent_ids: list[str] = []
+    availability_issue_ids: list[str] = []
+    no_event_ids: list[str] = []
+    supports_risk_assessment = False
+
+    for record in _unique_macro_calendar_records(records):
+        context_type = _clean_text(record.get("context_type"), fallback="unknown")
+        state = _clean_text(record.get("state"), fallback="unknown")
+        status = _clean_text(record.get("status"), fallback="unknown")
+        severity = _clean_text(record.get("severity"), fallback="unknown")
+        event_name = _clean_text(record.get("event_name"), fallback=context_type)
+        scheduled_at = _clean_text(record.get("scheduled_at"), fallback="unknown_time")
+        context_id = _clean_text(record.get("context_id"), fallback="")
+        importance = _clean_text(record.get("importance"), fallback="unknown")
+        evidence_line = (
+            f"macro_calendar_context {context_type} state={state}; "
+            f"severity={severity}; status={status}; event={event_name}; scheduled_at={scheduled_at}."
+        )
+        evidence.append(evidence_line)
+        warnings.extend(_string_list(record.get("warnings")))
+        uncertainty.extend(_string_list(record.get("uncertainty")))
+
+        if context_type == "no_event_window" or status == "no_event":
+            if context_id:
+                no_event_ids.append(context_id)
+            uncertainty.append(
+                "Macro calendar context no_event_window means checked sources returned no configured event; it cannot support lower risk by itself."
+            )
+            continue
+
+        if context_type == "source_availability" or status in {"failed", "unavailable", "stale", "degraded", "partial"}:
+            if context_id:
+                availability_issue_ids.append(context_id)
+            uncertainty.append(_macro_calendar_uncertainty_message(context_type, state, status))
+            rising.append(
+                f"Macro calendar context {context_type} is {status}; missing or degraded calendar evidence cannot support lower risk."
+            )
+            severities.append("medium")
+            supports_risk_assessment = True
+            continue
+
+        if context_type in {"scheduled_catalyst", "recent_catalyst"}:
+            if context_id:
+                scheduled_or_recent_ids.append(context_id)
+            rising.append(
+                _macro_calendar_catalyst_risk_message(
+                    context_type=context_type,
+                    event_name=event_name,
+                    scheduled_at=scheduled_at,
+                    state=state,
+                    severity=severity,
+                    importance=importance,
+                )
+            )
+            blocking.append(
+                "Macro calendar context requires post-event confirmation before upgrading to stronger action levels."
+            )
+            if severity in {"high", "medium"} or importance in {"high", "medium"}:
+                severities.append("medium")
+            supports_risk_assessment = True
+
+    return {
+        "rising": _unique_ordered(rising),
+        "blocking": _unique_ordered(blocking),
+        "evidence": _unique_ordered(evidence),
+        "uncertainty": _unique_ordered(uncertainty),
+        "warnings": _unique_ordered(warnings),
+        "severities": _unique_ordered(severities),
+        "supports_risk_assessment": supports_risk_assessment,
+        "scheduled_or_recent_ids": _unique_ordered(scheduled_or_recent_ids),
+        "availability_issue_ids": _unique_ordered(availability_issue_ids),
+        "no_event_ids": _unique_ordered(no_event_ids),
+    }
+
+
+def _macro_calendar_uncertainty_message(context_type: str, state: str, status: str) -> str:
+    return (
+        f"Macro calendar context {context_type} is state={state}, status={status}; "
+        "missing or degraded scheduled-event evidence cannot support lower risk."
+    )
+
+
+def _macro_calendar_catalyst_risk_message(
+    *,
+    context_type: str,
+    event_name: str,
+    scheduled_at: str,
+    state: str,
+    severity: str,
+    importance: str,
+) -> str:
+    timing = "upcoming" if context_type == "scheduled_catalyst" else "recent"
+    return (
+        f"Macro calendar context: {timing} catalyst {event_name} at {scheduled_at} "
+        f"requires conservative interpretation (state={state}, severity={severity}, importance={importance})."
+    )
+
+
 def _derivatives_regime_conflicts(regime: str, derivatives: dict[str, Any]) -> list[str]:
     if not derivatives.get("supports_risk_assessment"):
         return []
@@ -3572,6 +3973,7 @@ def _risk_record_source_artifacts(
     regime: dict[str, Any] | None,
     strategy_runs: list[dict[str, Any]],
     derivatives_records: list[dict[str, Any]],
+    macro_records: list[dict[str, Any]],
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -3586,6 +3988,16 @@ def _risk_record_source_artifacts(
             *[
                 artifact
                 for record in derivatives_records
+                for artifact in _string_list(record.get("source_artifacts"))
+            ],
+            *(
+                [MACRO_CALENDAR_CONTEXT_ARTIFACT]
+                if macro_records
+                else []
+            ),
+            *[
+                artifact
+                for record in macro_records
                 for artifact in _string_list(record.get("source_artifacts"))
             ],
             *[
@@ -3607,6 +4019,7 @@ def _risk_source_artifacts(
     market_regime: dict[str, Any],
     strategy_artifact: dict[str, Any] | None,
     derivatives_artifact: dict[str, Any] | None = None,
+    macro_artifact: dict[str, Any] | None = None,
 ) -> list[str]:
     return _unique_ordered(
         [
@@ -3618,6 +4031,8 @@ def _risk_source_artifacts(
             *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
             *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
+            *([MACRO_CALENDAR_CONTEXT_ARTIFACT] if macro_artifact is not None else []),
+            *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
             MARKET_STRATEGY_SIGNALS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -3708,6 +4123,8 @@ def _record_zero_risk_counts(run: RunContext) -> None:
     run.manifest["counts"]["risk_assessment_blocking_records"] = 0
     run.manifest["counts"]["risk_assessment_derivatives_context_records"] = 0
     run.manifest["counts"]["risk_assessment_derivatives_influenced_records"] = 0
+    run.manifest["counts"]["risk_assessment_macro_calendar_context_records"] = 0
+    run.manifest["counts"]["risk_assessment_macro_calendar_influenced_records"] = 0
 
 
 def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
@@ -3717,6 +4134,8 @@ def _record_zero_decision_recommendation_counts(run: RunContext) -> None:
     run.manifest["counts"]["decision_recommendation_risk_blocked_records"] = 0
     run.manifest["counts"]["decision_recommendation_derivatives_context_records"] = 0
     run.manifest["counts"]["decision_recommendation_derivatives_linked_records"] = 0
+    run.manifest["counts"]["decision_recommendation_macro_calendar_context_records"] = 0
+    run.manifest["counts"]["decision_recommendation_macro_calendar_linked_records"] = 0
 
 
 def _record_watch_trigger_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
@@ -3735,6 +4154,8 @@ def _record_zero_watch_trigger_counts(run: RunContext) -> None:
     run.manifest["counts"]["watch_trigger_linked_records"] = 0
     run.manifest["counts"]["watch_trigger_derivatives_context_records"] = 0
     run.manifest["counts"]["watch_trigger_derivatives_linked_records"] = 0
+    run.manifest["counts"]["watch_trigger_macro_calendar_context_records"] = 0
+    run.manifest["counts"]["watch_trigger_macro_calendar_linked_records"] = 0
     for trigger_type in TRIGGER_TYPES:
         run.manifest["counts"][f"watch_trigger_{trigger_type}_records"] = 0
 
@@ -3801,6 +4222,23 @@ def _unique_ordered(values: list[str]) -> list[str]:
             continue
         seen.add(value)
         result.append(value)
+    return result
+
+
+def _unique_macro_calendar_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for record in records:
+        key = _clean_text(record.get("context_id"), fallback="")
+        if not key:
+            key = ":".join(
+                _clean_text(record.get(field), fallback="")
+                for field in ("context_type", "scheduled_at", "status")
+            )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(record)
     return result
 
 

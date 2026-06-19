@@ -269,6 +269,8 @@ Record fields:
 Rules:
 
 - Derive risk from upstream strategy warnings, normalized signal conflicts, volatility or risk notes exposed by upstream artifacts, regime uncertainty, and data-quality gaps.
+- Supported macro/calendar context may appear as catalyst risk, source uncertainty, evidence, blocking risk, or source artifact references.
+- Missing, stale, unavailable, degraded, partial, or no-event macro/calendar context must not produce unsupported low risk.
 - Missing or weak upstream evidence must not produce unsupported `low` risk.
 - High or extreme risk must be machine-readable as a downgrade or blocking condition for decision recommendations.
 - Do not include user holdings, account state, portfolio risk, VaR, stress testing, or position sizing.
@@ -333,6 +335,7 @@ Record fields:
   "conflicts": [],
   "warnings": [],
   "linked_derivatives_context_ids": [],
+  "linked_macro_calendar_context_ids": [],
   "source_artifacts": []
 }
 ```
@@ -346,6 +349,14 @@ Rules:
   downgrade or block stronger action levels.
 - Missing, stale, degraded, unavailable, or partial derivatives context must
   remain uncertainty or warning evidence and must not upgrade action language.
+- Supported macro/calendar context may appear as risk conditions, evidence,
+  invalidation conditions, or `linked_macro_calendar_context_ids`.
+- Scheduled or recent macro/calendar catalysts may conservatively downgrade
+  stronger constructive action language until post-event confirmation exists.
+- Stale, unavailable, degraded, or partial macro/calendar source states may cap
+  stronger action language at `WATCH`.
+- No-event macro/calendar context must not upgrade action language or support a
+  low-risk conclusion by itself.
 - Evidence insufficient means `WATCH`, `NO_ACTION`, or a non-actionable status.
 - High or extreme risk must downgrade or block stronger action levels.
 - Major conflicts must cap action strength.
@@ -399,6 +410,7 @@ Record fields:
   "evidence": [],
   "warnings": [],
   "linked_derivatives_context_ids": [],
+  "linked_macro_calendar_context_ids": [],
   "source_artifacts": []
 }
 ```
@@ -406,12 +418,17 @@ Record fields:
 Rules:
 
 - Derive triggers from current upstream signals, regime, risk, decision, and
-  supported derivatives context artifacts.
+  supported derivatives and macro/calendar context artifacts.
 - Link triggers to decision recommendations when evidence supports the link.
 - Supported derivatives stress may create `risk_escalation` and `risk_relief`
   triggers with linked derivatives context ids.
 - Missing, stale, degraded, unavailable, or partial derivatives context must not
   fabricate stronger decision conditions.
+- Supported scheduled or recent macro/calendar catalysts may create
+  `wait_condition` and `confirmation` triggers with linked macro/calendar
+  context ids and post-event confirmation wording.
+- Stale, unavailable, degraded, or partial macro/calendar source states may
+  create `recheck_next_run` triggers and must not be treated as neutral.
 - Missing evidence produces warnings or no-trigger records, not fabricated conditions.
 - Static trigger generation does not implement monitoring.
 - Do not add scheduler, daemon, websocket, polling, notifications, or alert delivery.
