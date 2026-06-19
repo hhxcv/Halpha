@@ -53,7 +53,7 @@ Contract set:
 | Raw macro calendar artifact | initial adoption | macro/calendar collection stage | reusable state, data quality |
 | Shared macro calendar state or history | initial adoption | macro/calendar history writer | current-run views, data inspection |
 | Macro calendar current-run views | initial adoption | macro/calendar view builder | context, data quality |
-| Macro calendar context | planned | context builder | regime, risk, decisions, watches, alerts, outcomes, material |
+| Macro calendar context | initial adoption | context builder | regime, risk, decisions, watches, alerts, outcomes, material |
 | Macro calendar material | planned | material builder | research context, Codex context, report |
 
 ## Scope
@@ -121,7 +121,7 @@ configured public macro/calendar source
   -> raw macro calendar artifact [initial adoption]
   -> shared macro calendar state or history [initial adoption]
   -> macro calendar current-run views [initial adoption]
-  -> macro calendar context [planned]
+  -> macro calendar context [initial adoption]
   -> regime, risk, decision, watch, alert, outcome, and strategy interpretation
   -> macro calendar material [planned]
   -> research context
@@ -367,7 +367,7 @@ Rules:
 
 ## Macro Calendar Context
 
-Planned artifact:
+Implemented artifact:
 
 ```text
 analysis/macro_calendar_context.json
@@ -425,11 +425,11 @@ Record fields:
 Context types:
 
 ```text
-scheduled_catalyst [planned]
-recent_catalyst [planned]
-no_event_window [planned]
+scheduled_catalyst [initial adoption]
+recent_catalyst [initial adoption]
+no_event_window [initial adoption]
 macro_proxy_state [planned]
-source_availability [planned]
+source_availability [initial adoption]
 ```
 
 Rules:
