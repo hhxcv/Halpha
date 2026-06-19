@@ -59,6 +59,7 @@ STAGE_ORDER = (
     "build_multi_source_signals",
     "build_intelligence_fusion",
     "integrate_intelligence_fusion",
+    "build_user_state_context",
     "build_analysis_materials",
     "build_research_context",
     "build_codex_context",
@@ -389,6 +390,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_multi_source_signals"] = _build_multi_source_signals
     handlers["build_intelligence_fusion"] = _build_intelligence_fusion
     handlers["integrate_intelligence_fusion"] = _integrate_intelligence_fusion
+    handlers["build_user_state_context"] = _build_user_state_context
     handlers["build_analysis_materials"] = _build_analysis_materials
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
@@ -819,6 +821,12 @@ def _integrate_intelligence_fusion(config: dict[str, Any], run: RunContext) -> l
     from .fusion_integration import integrate_intelligence_fusion
 
     return integrate_intelligence_fusion(config, run)
+
+
+def _build_user_state_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .user_state import build_user_state_context
+
+    return build_user_state_context(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:

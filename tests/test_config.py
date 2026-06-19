@@ -38,6 +38,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["market"]["derivatives"] == {"enabled": False}
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
+    assert config["user_state"] == {"enabled": False, "path": "user_state.local.yaml"}
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
@@ -198,6 +199,39 @@ profiles:
     )
 
     with pytest.raises(ConfigError, match="unsupported top-level config section"):
+        load_config(config_path)
+
+
+def test_load_config_accepts_enabled_user_state_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    _add_user_state_config(config_path)
+
+    config = load_config(config_path)
+
+    assert config["user_state"] == {"enabled": True, "path": "user_state.local.yaml"}
+
+
+@pytest.mark.parametrize(
+    ("block", "expected"),
+    [
+        ("user_state: invalid", "user_state must be a mapping"),
+        ("user_state:\n  enabled: \"yes\"", "user_state.enabled"),
+        ("user_state:\n  enabled: true", "user_state.path"),
+        ("user_state:\n  enabled: false\n  unsupported: true", "unsupported user_state field"),
+    ],
+)
+def test_load_config_rejects_invalid_user_state_config(
+    tmp_path: Path,
+    block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("quant:\n", f"{block}\n\nquant:\n"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
         load_config(config_path)
 
 
@@ -1289,6 +1323,16 @@ onchain_flow:
 
 quant:
 """,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _add_user_state_config(config_path: Path) -> None:
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "quant:\n",
+            "user_state:\n  enabled: true\n  path: user_state.local.yaml\n\nquant:\n",
         ),
         encoding="utf-8",
     )

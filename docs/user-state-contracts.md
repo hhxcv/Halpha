@@ -7,9 +7,10 @@ The contracts below are intended for local-first personalization. They do not
 create account integration, portfolio automation, position sizing, order
 placement, or trading execution.
 
-Until the corresponding pipeline stages are implemented, product runs may not
-write every artifact described here. Implementations should update this document
-as behavior evolves.
+Product runs generate `analysis/user_state_context.json`. The personalized-risk
+constraints and material artifacts below are downstream contracts and may not be
+written until their stages are implemented. Implementations should update this
+document as behavior evolves.
 
 ## Scope
 
