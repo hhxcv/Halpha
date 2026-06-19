@@ -475,6 +475,9 @@ Market regime and risk:
 - Missing or unavailable macro/calendar context must not lower risk.
 - Upcoming high-importance catalysts may cap confidence or raise blocking
   risks when source quality is sufficient.
+- Initial adoption implements risk-assessment citation, source refs, and
+  conservative risk gates for scheduled, recent, stale, unavailable, partial,
+  degraded, and no-event macro/calendar context states.
 
 Decision recommendations and watch triggers:
 
@@ -482,6 +485,9 @@ Decision recommendations and watch triggers:
   invalidation pressure, recheck triggers, or post-event confirmation windows.
 - Must not create account actions, orders, position sizing, hedging
   instructions, or trading execution.
+- Initial adoption implements decision risk conditions, downgrade reasons,
+  linked context ids, invalidation conditions, watch wait conditions, watch
+  post-event confirmation conditions, and source-availability recheck triggers.
 
 Event intelligence and alert decisions:
 

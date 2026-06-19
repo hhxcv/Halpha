@@ -118,10 +118,12 @@ Macro/calendar artifacts:
 These artifacts preserve configured public macro and scheduled-event
 observations such as Federal Reserve FOMC meeting calendar records when enabled.
 The reusable history, current-run views, and deterministic context are
-source-aware input or analysis data, not Codex context by themselves. Until
-later macro/calendar material exists, Codex input must not embed raw
-macro/calendar artifacts, reusable macro/calendar history, macro/calendar views,
-or full macro/calendar context JSON by default.
+source-aware input or analysis data, not Codex context by themselves.
+Risk, decision, and watch-trigger artifacts may cite bounded macro/calendar
+context records as conservative source-linked evidence. Until later
+macro/calendar material exists, Codex input must not embed raw macro/calendar
+artifacts, reusable macro/calendar history, macro/calendar views, or full
+macro/calendar context JSON by default.
 
 ### Text Intelligence Evidence
 

@@ -205,9 +205,9 @@ Current bias:
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
-* `analysis/risk_assessment.json` records deterministic risk-state assessment.
-* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives context links, not trading instructions.
-* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported risk escalation and risk relief conditions, not monitoring or alerts.
+* `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional macro/calendar and derivatives context references.
+* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives and macro/calendar context links, not trading instructions.
+* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported macro/calendar observation, risk escalation, and risk relief conditions, not monitoring or alerts.
 * `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
 * `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, and decision-impact assessment records.
 * `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives relevance links, not alert delivery or trading execution.
