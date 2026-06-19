@@ -9,8 +9,7 @@ Implementation status:
 - `analysis/feature_snapshots.json` is implemented in product runs.
 - `analysis/factor_states.json` is implemented in product runs.
 - `analysis/multi_source_signals.json` is implemented in product runs.
-- `analysis/factor_signal_material.md` is an intended contract until its
-  pipeline stage is implemented.
+- `analysis/factor_signal_material.md` is implemented in product runs.
 - These artifacts remain additive. They do not replace market
   signals, strategy evaluation, derivatives context, macro/calendar context,
   on-chain flow context, event intelligence, decision intelligence, alert
@@ -403,18 +402,18 @@ Material selection rules:
 
 ## Manifest Expectations
 
-When implemented, `run_manifest.json` should record:
+`run_manifest.json` records:
 
-- feature, factor, and multi-source signal artifact paths as their stages are
-  implemented;
-- implemented feature, factor, and multi-source signal record counts;
+- feature, factor, multi-source signal, and factor/signal material artifact
+  paths;
+- feature, factor, multi-source signal, and material record counts;
 - status counts, conflict counts, warning counts, and error counts;
 - Codex input budget metadata for `analysis/factor_signal_material.md`;
 - source coverage for the implemented upstream artifacts.
 
 ## Data Quality And Inspection
 
-When implemented, data-quality and inspection should cover:
+Data-quality and inspection should cover:
 
 - `analysis/feature_snapshots.json` presence, shape, counts, and source
   coverage;
@@ -425,7 +424,8 @@ When implemented, data-quality and inspection should cover:
 - `analysis/factor_signal_material.md` Codex boundaries and budget state.
 
 `python -m halpha data inspect --config config.example.yaml` should summarize
-M13 artifact status without dumping feature, factor, or signal records.
+feature/factor artifact status without dumping feature, factor, or signal
+records.
 
 ## Codex And Report Boundary
 

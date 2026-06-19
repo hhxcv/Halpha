@@ -49,6 +49,7 @@ def test_pipeline_generates_ai_readable_market_material(tmp_path: Path) -> None:
     stage = _stage(manifest, "build_analysis_materials")
     assert stage["status"] == "succeeded"
     assert stage["artifacts"] == [
+        "analysis/factor_signal_material.md",
         "analysis/data_quality_material.md",
         "analysis/market_material.md",
     ]
@@ -129,7 +130,10 @@ def test_market_material_skips_when_market_disabled(tmp_path: Path) -> None:
     assert market_stage["status"] == "succeeded"
     assert market_stage["artifacts"] == []
     assert analysis_stage["status"] == "succeeded"
-    assert analysis_stage["artifacts"] == ["analysis/data_quality_material.md"]
+    assert analysis_stage["artifacts"] == [
+        "analysis/factor_signal_material.md",
+        "analysis/data_quality_material.md",
+    ]
 
 
 def test_market_material_rejects_invalid_raw_market_artifact(tmp_path: Path) -> None:

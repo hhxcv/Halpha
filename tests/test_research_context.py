@@ -34,6 +34,10 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "raw_text_events: raw/text_events.json" in context
     assert "data_quality_summary: analysis/data_quality_summary.json" in context
     assert "data_quality_material: analysis/data_quality_material.md" in context
+    assert "feature_snapshots: analysis/feature_snapshots.json" in context
+    assert "factor_states: analysis/factor_states.json" in context
+    assert "multi_source_signals: analysis/multi_source_signals.json" in context
+    assert "factor_signal_material: analysis/factor_signal_material.md" in context
     assert "market_material: analysis/market_material.md" in context
     assert "text_material: analysis/text_material.md" in context
     assert "event_intelligence_material: analysis/event_intelligence_material.md" in context
@@ -65,6 +69,12 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "include_risk_notes: true" in context
     assert "do_not_calculate_signals_from_raw_ohlcv_history: true" in context
     assert "do_not_inspect_shared_ohlcv_storage: true" in context
+    assert "factor_signal_requirements:" in context
+    assert "include_when_factor_signal_material_exists: true" in context
+    assert "use_halpha_factor_states_only: true" in context
+    assert "use_halpha_multi_source_signal_states_only: true" in context
+    assert "do_not_generate_factor_scores: true" in context
+    assert "do_not_generate_signal_states: true" in context
     assert "event_intelligence_requirements:" in context
     assert "data_quality_requirements:" in context
     assert "use_halpha_quality_statuses_only: true" in context
@@ -89,11 +99,18 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert '<embed path="analysis/event_intelligence_material.md">' in context
     assert '<embed path="analysis/alert_decision_material.md">' in context
     assert '<embed path="analysis/data_quality_material.md">' in context
+    assert '<embed path="analysis/factor_signal_material.md">' in context
     assert "artifact_type: analysis_event_intelligence_material" in context
     assert "artifact_type: analysis_alert_decision_material" in context
     assert "artifact_type: analysis_data_quality_material" in context
+    assert "artifact_type: analysis_factor_signal_material" in context
     assert "codex_may_generate_quality_checks: false" in context
+    assert "codex_may_generate_factor_scores: false" in context
+    assert "codex_may_generate_signal_states: false" in context
     assert "full_reusable_history_embedded: false" in context
+    assert "full_feature_snapshots_json_embedded: false" in context
+    assert "full_factor_states_json_embedded: false" in context
+    assert "full_multi_source_signals_json_embedded: false" in context
     assert "full_catalog_embedded: false" in context
     assert "full_run_index_embedded: false" in context
     assert "codex_may_generate_alert_priority: false" in context
@@ -104,6 +121,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["event_intelligence_material"] == "analysis/event_intelligence_material.md"
     assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
+    assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
     assert manifest["codex_input"]["policy"]["bounded_report_facing_material_only"] is True
     assert manifest["codex_input"]["policy"]["full_intermediate_json_embedded"] is False
@@ -117,6 +135,7 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert material_records["analysis/alert_decision_material.md"]["status"] == "included"
     assert material_records["analysis/event_intelligence_material.md"]["status"] == "included"
     assert material_records["analysis/data_quality_material.md"]["status"] == "included"
+    assert material_records["analysis/factor_signal_material.md"]["status"] == "included"
     assert material_records["analysis/text_material.md"]["status"] == "included"
     research_stage = _stage(manifest, "build_research_context")
     codex_context_stage = _stage(manifest, "build_codex_context")
