@@ -20,9 +20,55 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M14 - Intelligence Fusion Engine v1
+### M15 - User State and Personalized Risk Constraints v1
 
 Status: active.
+
+Goal:
+
+```text
+Make Halpha recommendations sensitive to optional local user state and personal risk constraints without connecting to trading accounts or exposing private local values.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M14 intelligence fusion, M13 feature/factor, M12 on-chain flow, M11 macro/calendar, M10 derivatives, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable user-state and personalized-risk contracts for optional local input, normalized user context, watchlist relevance, disabled assets, manual exposure notes, risk preference, preferred timeframes, strategy preferences, constraint actions, warning states, errors, and Codex boundaries;
+* support both omitted user state and configured local user state through explicit config fields without hidden defaults, hidden network calls, account access, or printed private machine-local values;
+* produce `analysis/user_state_context.json` from optional local YAML or JSON user-state input with schema validation, sanitized report-facing fields, omitted private notes, warnings, errors, and privacy boundary metadata;
+* produce `analysis/personalized_risk_constraints.json` from user-state context, intelligence fusion, decision recommendations, watch triggers, and alert decisions, with deterministic states such as general, watchlist_relevant, disabled_asset_blocked, risk_limit_downgraded, timeframe_mismatch, strategy_preference_note, insufficient_user_state, skipped, degraded, and failed;
+* connect personalized constraints into decision recommendations, watch triggers, and alert decisions as conservative source-aware evidence while preserving pre-personalization actions, priorities, trigger states, downgrade reasons, and upstream traceability;
+* produce bounded `analysis/personalized_risk_material.md` for Codex and final report generation without embedding full local user-state files, private notes, machine paths, account identifiers, raw reusable histories, or full intermediate JSON by default;
+* update data-quality, data inspection, research-context, Codex-context, and final-report paths so reports can distinguish general intelligence from personalized constraints when user state is configured;
+* ensure Codex may explain Halpha-generated personalized constraint records but must not infer hidden user state, create user holdings, assign portfolio allocations, create action levels, size positions, forecast prices, or provide trading instructions;
+* support focused validation through existing run, until-stage, single-stage, data inspection, no-Codex, and full Codex product paths;
+* add tests for omitted user state, valid local user state, invalid schema, watchlist match, disabled asset, risk-limit downgrade, timeframe mismatch, material privacy boundaries, Codex input boundaries, data-quality visibility, decision/watch/alert integration, and report constraints;
+* verify the M15 product path with automated tests and real-source local runs.
+
+M15 favors:
+
+* optional local user-state files over account integrations or hidden services;
+* explicit general-versus-personalized records over implicit report wording;
+* conservative blocks, downgrades, and annotations over automatic stronger actions;
+* sanitized AI-readable personalization material over raw local user-state dumps;
+* preserving upstream decision, alert, watch, fusion, risk, event, and factor traceability over rewriting source evidence;
+* privacy-preserving validation that proves behavior without printing local private values;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M15 does not require:
+
+* broker, exchange, wallet, or account integration;
+* automatic portfolio allocation, position sizing, trade execution, order placement, or account operations;
+* importing real holdings from external services, portfolio optimization, tax lots, PnL accounting, or risk model VaR;
+* dashboard UI, hosted services, scheduler, daemon, websocket, push notification, or alert delivery runtime;
+* black-box personalization models, ML ranking, vector databases, hidden profile services, or hidden model state;
+* making Codex or another LLM the source of user state, constraints, holdings, allocations, action recommendations, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M14 - Intelligence Fusion Engine v1
+
+Status: completed.
 
 Goal:
 
@@ -61,8 +107,6 @@ M14 does not require:
 * new derivatives, macro, on-chain, event, or market data sources beyond existing implemented sources;
 * portfolio automation, position sizing, trading execution, broker integration, or exchange account operations;
 * making Codex or another LLM the source of fusion states, risk overrides, alert priorities, action recommendations, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M13 - Feature, Factor, and Multi-Source Signal Engine
 
