@@ -14,6 +14,8 @@ milestone plan.
   market-structure data, context, material, and Codex-boundary contracts.
 - `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context,
   material, and Codex-boundary contracts.
+- `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context,
+  material, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
@@ -51,6 +53,7 @@ Produced early in a product run:
 
 - `raw/market.json`
 - `raw/macro_calendar.json`
+- `raw/onchain_flow.json` [planned]
 - `raw/text_events.json`
 
 These preserve public collection results. They are not Codex context by
@@ -66,6 +69,9 @@ Reusable input data:
 - `data/macro/calendar/`
 - `data/macro/metadata/macro_calendar_schema.json`
 - `data/macro/metadata/macro_calendar_state.json`
+- `data/onchain/flow/` [planned]
+- `data/onchain/metadata/onchain_flow_schema.json` [planned]
+- `data/onchain/metadata/onchain_flow_state.json` [planned]
 - `data/research/metadata/research_data_catalog.json`
 - `data/research/metadata/text_event_history_state.json`
 - `data/research/text_events/`
@@ -81,6 +87,7 @@ Current-run market windows and storage references:
 - `raw/market_data_views.json`
 - `raw/derivatives_market_views.json`
 - `raw/macro_calendar_views.json`
+- `raw/onchain_flow_views.json` [planned]
 
 These artifacts record view metadata and bounded current-run windows, not full
 raw OHLCV, derivatives history, or macro/calendar history.
@@ -125,6 +132,26 @@ context records as conservative source-linked evidence. Codex should consume
 bounded `analysis/macro_calendar_material.md` instead of raw macro/calendar
 artifacts, reusable macro/calendar history, macro/calendar views, or full
 macro/calendar context JSON.
+
+### On-Chain And Exchange-Flow Evidence
+
+Planned on-chain flow artifacts:
+
+- `raw/onchain_flow.json`
+- `data/onchain/flow/`
+- `data/onchain/metadata/onchain_flow_schema.json`
+- `data/onchain/metadata/onchain_flow_state.json`
+- `raw/onchain_flow_views.json`
+- `analysis/onchain_flow_context.json`
+- `analysis/onchain_flow_material.md`
+
+These artifacts will preserve configured public stablecoin supply, broad chain
+activity, network congestion, and exchange-flow source-availability evidence
+when implemented. Reusable history, current-run views, and deterministic
+context are source-aware input or analysis data, not Codex context by
+themselves. Codex should consume bounded `analysis/onchain_flow_material.md`
+instead of raw on-chain flow artifacts, reusable on-chain flow history,
+on-chain flow views, or full on-chain flow context JSON.
 
 ### Text Intelligence Evidence
 
@@ -226,6 +253,7 @@ Eligible Codex input:
 - `analysis/strategy_experiment_material.md`
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
+- `analysis/onchain_flow_material.md` [planned]
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
@@ -264,10 +292,12 @@ Codex input policy:
 - Do not embed full intermediate JSON evidence.
 - Do not embed full shared OHLCV history.
 - Do not embed full reusable outcome history.
+- Do not embed full reusable on-chain flow history.
 - Do not embed full run manifests.
 - Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
 - Prefer high-signal derivatives and market-structure context.
 - Prefer scheduled-catalyst, no-event, and source-availability macro/calendar context.
+- Prefer high-signal on-chain flow context after it is implemented.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:
@@ -334,6 +364,17 @@ Macro calendar material:
 - Do not embed full raw macro/calendar payloads, reusable macro/calendar
   history, current-run views, or full context JSON.
 
+On-chain flow material:
+
+- Prefer high-severity stablecoin liquidity, chain activity, network
+  congestion, and exchange-flow source-availability records first.
+- Summarize normal, skipped, unavailable, stale, partial, degraded, and
+  low-severity records with counts and representative examples only when useful.
+- Record unavailable source classes explicitly so missing exchange-flow evidence
+  is not treated as neutral.
+- Do not embed full raw on-chain flow payloads, address-level records, reusable
+  on-chain flow history, current-run views, or full context JSON.
+
 ## Validation
 
 Automated validation:
@@ -364,6 +405,7 @@ Inspect:
 - `analysis/event_intelligence_material.md`
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
+- `analysis/onchain_flow_material.md` when implemented
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or
