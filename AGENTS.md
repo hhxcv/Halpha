@@ -185,14 +185,13 @@ Current bias:
 * `raw/macro_calendar_views.json` records current-run macro/calendar input windows, bounded records, and storage refs, not full reusable macro/calendar history.
 * `analysis/macro_calendar_context.json` records deterministic macro/calendar scheduled-catalyst, recent-catalyst, no-event, stale, unavailable, partial, degraded, failed, source-availability, uncertainty, and realized-impact-not-evaluated context states, not forecasts or trading signals.
 * `analysis/macro_calendar_material.md` records bounded AI-readable macro/calendar context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
-* M12 on-chain flow artifacts are governed by `docs/onchain-flow-contracts.md`; do not describe planned artifacts as implemented until producers exist.
 * `raw/onchain_flow.json` records current-run public on-chain and exchange-flow observations, endpoint availability, warnings, and errors.
 * `data/onchain/flow/` stores reusable on-chain flow history; it is input data, not AI context.
 * `data/onchain/metadata/onchain_flow_schema.json` records reusable on-chain flow history schema and logical keys.
 * `data/onchain/metadata/onchain_flow_state.json` records reusable on-chain flow history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
 * `raw/onchain_flow_views.json` records current-run on-chain flow input windows and storage refs, not full reusable on-chain flow history.
 * `analysis/onchain_flow_context.json` records deterministic stablecoin liquidity, chain activity, network congestion, exchange-flow source-availability, stale, unavailable, partial, degraded, insufficient-data, warning, and failed context states, not forecasts or trading signals.
-* Planned `analysis/onchain_flow_material.md` records bounded AI-readable on-chain flow context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
+* `analysis/onchain_flow_material.md` records bounded AI-readable on-chain flow context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
 * `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
 * `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
 * `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
@@ -233,9 +232,9 @@ Current bias:
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, macro/calendar, on-chain flow when implemented, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, or full on-chain flow context JSON.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, macro/calendar, on-chain flow, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, or full on-chain flow context JSON.
 * Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
-* Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, macro/calendar, on-chain flow when implemented, event, and data-quality evidence over low-priority record dumps.
+* Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, macro/calendar, on-chain flow, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Codex prompt may ask for derivatives market explanation when derivatives material exists.
@@ -252,6 +251,7 @@ Current bias:
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
 * Final reports may include a deterministic derivatives and market-structure evidence section inserted from `analysis/derivatives_market_context.json` when `analysis/derivatives_market_material.md` exists after Codex stdout validation.
 * Final reports may include a deterministic macro/calendar evidence section inserted from `analysis/macro_calendar_context.json` when `analysis/macro_calendar_material.md` exists after Codex stdout validation.
+* Final reports may include a deterministic on-chain flow evidence section inserted from `analysis/onchain_flow_context.json` when `analysis/onchain_flow_material.md` exists after Codex stdout validation.
 * Codex prompt should not ask Codex to recreate the complete strategy run table.
 * Codex prompt should not ask Codex to recreate the complete derivatives context table.
 * Codex prompt should not ask Codex to recreate the complete macro/calendar context table.
@@ -268,7 +268,7 @@ Current bias:
 * `docs/artifact-governance.md`: artifact map, artifact layer rules, Codex input policy, and doc index.
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
-* `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, planned context, material, and Codex-boundary contracts.
+* `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.

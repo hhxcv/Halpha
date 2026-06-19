@@ -144,14 +144,13 @@ On-chain flow artifacts:
 - `data/onchain/metadata/onchain_flow_state.json`
 - `raw/onchain_flow_views.json`
 - `analysis/onchain_flow_context.json`
-- `analysis/onchain_flow_material.md` [planned]
+- `analysis/onchain_flow_material.md`
 
 `raw/onchain_flow.json` preserves configured public stablecoin supply, broad
 chain activity, network congestion, and exchange-flow source-availability
 evidence when enabled. Reusable history, current-run views, and deterministic
 context are source-aware input or analysis data, not Codex context by
-themselves. The material artifact is not implemented yet. Codex should consume
-bounded `analysis/onchain_flow_material.md` after it is implemented instead of
+themselves. Codex should consume bounded `analysis/onchain_flow_material.md` instead of
 raw on-chain flow artifacts, reusable on-chain flow history, on-chain flow
 views, or full on-chain flow context JSON.
 
@@ -255,7 +254,7 @@ Eligible Codex input:
 - `analysis/strategy_experiment_material.md`
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
-- `analysis/onchain_flow_material.md` [planned]
+- `analysis/onchain_flow_material.md`
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
@@ -299,7 +298,7 @@ Codex input policy:
 - Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
 - Prefer high-signal derivatives and market-structure context.
 - Prefer scheduled-catalyst, no-event, and source-availability macro/calendar context.
-- Prefer high-signal on-chain flow context after it is implemented.
+- Prefer high-signal on-chain flow context.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:
@@ -407,7 +406,7 @@ Inspect:
 - `analysis/event_intelligence_material.md`
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
-- `analysis/onchain_flow_material.md` when implemented
+- `analysis/onchain_flow_material.md`
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or

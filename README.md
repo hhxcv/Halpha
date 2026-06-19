@@ -165,6 +165,7 @@ collect_onchain_flow_data
 sync_onchain_flow_history
 build_onchain_flow_views
 build_onchain_flow_context
+build_onchain_flow_material
 collect_text_events
 build_text_event_records
 build_text_entity_evidence
@@ -244,6 +245,7 @@ A successful configured run can write:
 - `raw/macro_calendar_views.json`: current-run macro/calendar input window metadata and bounded records.
 - `raw/onchain_flow_views.json`: current-run on-chain flow input window metadata and bounded records.
 - `analysis/onchain_flow_context.json`: deterministic on-chain flow context when enabled.
+- `analysis/onchain_flow_material.md`: bounded AI-readable on-chain flow context for Codex and report generation.
 - `analysis/macro_calendar_context.json`: deterministic macro/calendar timing, source-availability, and catalyst context.
 - `analysis/macro_calendar_material.md`: bounded AI-readable macro/calendar context for Codex and report generation.
 - `raw/text_events.json`: public RSS text events.
@@ -357,17 +359,18 @@ calculate new metrics.
 
 Codex consumes generated research context and prompt artifacts. It does not
 generate action levels, strategy signals, structured decision artifacts,
-derivatives states, risk levels, event categories, event impacts,
+derivatives states, macro/calendar states, on-chain records, flow states,
+address labels, risk levels, event categories, event impacts,
 event-market relationships, or price forecasts. Those are produced
 deterministically before report generation.
 
 Codex input is governed by `docs/artifact-governance.md`: complete evidence
 artifacts stay inspectable on disk, while Codex receives bounded report-facing
 material plus explicit budget metadata in `run_manifest.json`.
-Derivatives and data-quality evidence follow the same rule: Codex receives
-concise `analysis/derivatives_market_material.md` and
-`analysis/data_quality_material.md`, not full local histories, raw archives,
-catalog contents, SQLite tables, Parquet data, or full derivatives context JSON.
+Derivatives, macro/calendar, on-chain flow, and data-quality evidence follow
+the same rule: Codex receives concise report-facing material files, not full
+local histories, raw archives, current-run views, catalog contents, SQLite
+tables, Parquet data, or full context JSON.
 
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
@@ -376,7 +379,8 @@ artifacts are available, Halpha also inserts a deterministic strategy
 effectiveness table from `analysis/strategy_effectiveness_gates.json`.
 When derivatives market material exists, Halpha inserts a bounded derivatives
 and market-structure evidence section from deterministic artifacts after Codex
-output validation.
+output validation. Macro/calendar and on-chain flow material follow the same
+pattern with bounded deterministic evidence sections.
 
 ## Validation
 

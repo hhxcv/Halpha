@@ -8,6 +8,7 @@ from typing import Any
 from halpha.codex.report_postprocess import (
     inject_derivatives_market_section,
     inject_macro_calendar_section,
+    inject_onchain_flow_section,
     inject_quant_strategy_table,
     inject_strategy_effectiveness_table,
 )
@@ -92,6 +93,7 @@ def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
 
     report = inject_derivatives_market_section(completed.stdout, run)
     report = inject_macro_calendar_section(report, run)
+    report = inject_onchain_flow_section(report, run)
     report = inject_quant_strategy_table(report, run)
     report = inject_strategy_effectiveness_table(report, run)
     report_path = run.report_dir / "report.md"
