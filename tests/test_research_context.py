@@ -315,6 +315,10 @@ def test_research_context_embeds_onchain_flow_material_when_enabled(tmp_path: Pa
     assert "full_onchain_flow_context_json_embedded: false" in context
     assert "PRIVATE_RAW_SENTINEL_SHOULD_NOT_APPEAR" not in context
     assert manifest["artifacts"]["onchain_flow_material"] == "analysis/onchain_flow_material.md"
+    assert manifest["codex_input"]["policy"]["full_raw_onchain_flow_artifacts_embedded"] is False
+    assert manifest["codex_input"]["policy"]["full_reusable_onchain_flow_history_embedded"] is False
+    assert manifest["codex_input"]["policy"]["full_onchain_flow_views_embedded"] is False
+    assert manifest["codex_input"]["policy"]["full_onchain_flow_context_json_embedded"] is False
     material_records = {
         record["artifact"]: record for record in manifest["codex_input"]["materials"]
     }

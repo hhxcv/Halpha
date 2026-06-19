@@ -91,6 +91,10 @@ python -m halpha data inspect --config config.example.yaml
 python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
+The inspection command summarizes shared OHLCV, derivatives, macro/calendar,
+on-chain flow, text-event, run-index, and data-quality state without dumping
+full reusable histories or raw records.
+
 Inspect outcome tracking artifacts and shared outcome history state without
 collection or Codex:
 
@@ -297,7 +301,7 @@ A successful configured run can write:
 - `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
-- `analysis/data_quality_summary.json`: current-run data quality checks, statuses, warnings, and source artifact references.
+- `analysis/data_quality_summary.json`: current-run market, text, derivatives, macro/calendar, on-chain flow, shared-store, and Codex-boundary quality checks.
 - `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
 - `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
 - `analysis/outcome_evaluations.json`: deterministic market, strategy, event, alert, decision, and watch outcome evaluations.
@@ -403,6 +407,10 @@ python -m halpha data inspect --config config.example.yaml
 python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
+Use this output to check on-chain flow history state, current-run on-chain view
+coverage, and latest data-quality counts without exposing reusable record
+contents.
+
 Inspect outcome tracking state without collection or Codex CLI:
 
 ```bash
@@ -471,7 +479,11 @@ For Codex input-budget review, inspect `run_manifest.json` `codex_input`,
 referenced by path and summarized through bounded material, not embedded
 wholesale. For data-quality review, inspect
 `analysis/data_quality_summary.json` as the structured evidence and
-`analysis/data_quality_material.md` as the bounded Codex-facing summary.
+`analysis/data_quality_material.md` as the bounded Codex-facing summary. When
+on-chain flow is enabled, data-quality review should include
+`raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`,
+`raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, and
+`analysis/onchain_flow_material.md` status checks.
 
 To rerun only the report-facing alert material after inspecting or regenerating
 upstream artifacts:

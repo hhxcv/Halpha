@@ -10,7 +10,7 @@ from halpha.pipeline import PipelineError, RunContext
 STAGE_NAME = "build_analysis_materials"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 DATA_QUALITY_MATERIAL_ARTIFACT = "analysis/data_quality_material.md"
-MAX_CHECKS = 20
+MAX_CHECKS = 32
 MAX_MESSAGES = 8
 MAX_SOURCE_ARTIFACTS = 20
 MAX_MESSAGE_CHARS = 240

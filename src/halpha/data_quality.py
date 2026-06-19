@@ -12,6 +12,7 @@ from .raw_artifacts import (
     validate_derivatives_market_raw_artifact,
     validate_macro_calendar_raw_artifact,
     validate_market_raw_artifact,
+    validate_onchain_flow_raw_artifact,
     validate_text_events_raw_artifact,
 )
 from .storage import write_json
@@ -33,6 +34,7 @@ def build_data_quality_summary(
         _raw_market_check(config, run, now=created_at),
         _raw_derivatives_check(config, run, now=created_at),
         _raw_macro_calendar_check(config, run, now=created_at),
+        _raw_onchain_flow_check(config, run, now=created_at),
         _raw_text_check(config, run, now=created_at),
         _ohlcv_store_check(config, run),
         _derivatives_history_check(config, run),
@@ -41,6 +43,10 @@ def build_data_quality_summary(
         _macro_calendar_views_check(config, run, now=created_at),
         _macro_calendar_context_check(config, run),
         _macro_calendar_material_check(config, run),
+        _onchain_flow_history_check(config, run),
+        _onchain_flow_views_check(config, run, now=created_at),
+        _onchain_flow_context_check(config, run),
+        _onchain_flow_material_check(config, run),
         _text_event_records_check(config, run, now=created_at),
         _text_event_history_check(run),
         _research_data_catalog_check(run),
@@ -256,6 +262,59 @@ def _raw_macro_calendar_check(config: dict[str, Any], run: RunContext, *, now: s
     )
 
 
+def _raw_onchain_flow_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
+    onchain_flow = _onchain_flow_config(config)
+    if not onchain_flow.get("enabled"):
+        return _check("raw_onchain_flow", "raw", "skipped", "onchain_flow.enabled is false.", [])
+    artifact = "raw/onchain_flow.json"
+    raw, error = _read_json(run.raw_dir / "onchain_flow.json")
+    if error:
+        return _check("raw_onchain_flow", "raw", "failed", error, [artifact], errors=[error])
+    try:
+        validate_onchain_flow_raw_artifact(raw, artifact)
+    except RawArtifactError as exc:
+        return _check("raw_onchain_flow", "raw", "failed", str(exc), [artifact], errors=[str(exc)])
+
+    errors = _error_messages(raw.get("errors"))
+    timestamps = _onchain_flow_timestamps(raw)
+    timestamp_warnings = _timestamp_warnings(timestamps, now=now)
+    stale_warnings = _stale_timestamp_warnings(timestamps, now=now, max_age_hours=72)
+    value_warnings = _onchain_flow_missing_value_warnings(raw)
+    availability_warnings = _onchain_flow_availability_warnings(raw)
+    item_warnings = _onchain_flow_item_warnings(raw)
+    warnings = _unique_sorted(
+        [
+            *_string_list(raw.get("warnings")),
+            *timestamp_warnings,
+            *stale_warnings,
+            *value_warnings,
+            *availability_warnings,
+            *item_warnings,
+        ]
+    )
+    availability = _list(raw.get("availability"))
+    status = "degraded" if errors else "warning" if warnings else "ok"
+    return _check(
+        "raw_onchain_flow",
+        "raw",
+        status,
+        f"{len(raw.get('items', []))} on-chain flow item(s), {len(errors)} collection error(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "items": len(raw.get("items", [])),
+            "availability_records": len(availability),
+            "unavailable_records": _availability_status_count(availability, "unavailable"),
+            "partial_records": _availability_status_count(availability, "partial"),
+            "failed_records": _availability_status_count(availability, "failed"),
+            "stale_records": _availability_status_count(availability, "stale"),
+            "degraded_records": _availability_status_count(availability, "degraded"),
+            "insufficient_data_records": _availability_status_count(availability, "insufficient_data"),
+        },
+    )
+
+
 def _ohlcv_store_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
     market = config.get("market", {})
     if not isinstance(market.get("ohlcv"), dict):
@@ -354,6 +413,48 @@ def _macro_calendar_history_check(config: dict[str, Any], run: RunContext) -> di
     )
 
 
+def _onchain_flow_history_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    onchain_flow = _onchain_flow_config(config)
+    if not onchain_flow.get("enabled"):
+        return _check("onchain_flow_history", "shared_data", "skipped", "onchain_flow.enabled is false.", [])
+    artifact = "data/onchain/metadata/onchain_flow_state.json"
+    summary = run.manifest.get("onchain_flow_history")
+    if not isinstance(summary, dict):
+        return _check("onchain_flow_history", "shared_data", "skipped", "on-chain flow history was not produced.", [])
+    state, error = _read_json(run.config_path.parent / artifact)
+    if error:
+        return _check("onchain_flow_history", "shared_data", "failed", error, [artifact], errors=[error])
+    warnings = _string_list(state.get("warnings"))
+    errors = _error_messages(state.get("errors"))
+    totals_value = state.get("totals")
+    totals = dict(totals_value) if isinstance(totals_value, dict) else {}
+    availability = _list(state.get("availability"))
+    status = _status_from_summary(str(state.get("status") or summary.get("status")), warnings, errors)
+    return _check(
+        "onchain_flow_history",
+        "shared_data",
+        status,
+        f"on-chain flow history status: {state.get('status') or 'unknown'}.",
+        [
+            artifact,
+            "data/onchain/metadata/onchain_flow_schema.json",
+        ],
+        warnings=warnings,
+        errors=errors,
+        details={
+            **totals,
+            "groups": len(_list(state.get("groups"))),
+            "availability_records": len(availability),
+            "unavailable_records": _availability_status_count(availability, "unavailable"),
+            "partial_records": _availability_status_count(availability, "partial"),
+            "failed_records": _availability_status_count(availability, "failed"),
+            "stale_records": _availability_status_count(availability, "stale"),
+            "degraded_records": _availability_status_count(availability, "degraded"),
+            "insufficient_data_records": _availability_status_count(availability, "insufficient_data"),
+        },
+    )
+
+
 def _derivatives_views_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
     derivatives = _derivatives_config(config)
     if not derivatives.get("enabled"):
@@ -435,6 +536,48 @@ def _macro_calendar_views_check(config: dict[str, Any], run: RunContext, *, now:
     )
 
 
+def _onchain_flow_views_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:
+    onchain_flow = _onchain_flow_config(config)
+    if not onchain_flow.get("enabled"):
+        return _check("onchain_flow_views", "raw", "skipped", "onchain_flow.enabled is false.", [])
+    artifact = "raw/onchain_flow_views.json"
+    views_artifact, error = _read_json(run.raw_dir / "onchain_flow_views.json")
+    if error:
+        return _check("onchain_flow_views", "raw", "failed", error, [artifact], errors=[error])
+    views = _list(views_artifact.get("views"))
+    warnings = _unique_sorted(
+        [
+            *_string_list(views_artifact.get("warnings")),
+            *_onchain_flow_view_warnings(views),
+            *_timestamp_warnings(_onchain_flow_view_timestamps(views), now=now),
+            *_stale_timestamp_warnings(_onchain_flow_view_timestamps(views), now=now, max_age_hours=72),
+        ]
+    )
+    errors = _error_messages(views_artifact.get("errors"))
+    status = "failed" if errors else "warning" if warnings else "ok"
+    return _check(
+        "onchain_flow_views",
+        "raw",
+        status,
+        f"{len(views)} on-chain flow view(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "views": len(views),
+            "records": sum(_int(view.get("included_record_count")) for view in views if isinstance(view, dict)),
+            "bounded_views": _status_count(views, "bounded"),
+            "partial_views": _status_count(views, "partial"),
+            "stale_views": _status_count(views, "stale"),
+            "unavailable_views": _status_count(views, "unavailable"),
+            "failed_views": _status_count(views, "failed"),
+            "insufficient_data_views": _status_count(views, "insufficient_data"),
+            "missing_history_views": _status_count(views, "missing_history"),
+            "skipped_views": _status_count(views, "skipped"),
+        },
+    )
+
+
 def _macro_calendar_context_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
     macro_calendar = _macro_calendar_config(config)
     if not macro_calendar.get("enabled"):
@@ -482,6 +625,54 @@ def _macro_calendar_context_check(config: dict[str, Any], run: RunContext) -> di
     )
 
 
+def _onchain_flow_context_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    onchain_flow = _onchain_flow_config(config)
+    if not onchain_flow.get("enabled"):
+        return _check("onchain_flow_context", "analysis", "skipped", "onchain_flow.enabled is false.", [])
+    artifact = "analysis/onchain_flow_context.json"
+    context, error = _read_json(run.analysis_dir / "onchain_flow_context.json")
+    if error:
+        return _check("onchain_flow_context", "analysis", "failed", error, [artifact], errors=[error])
+    if context.get("artifact_type") != "onchain_flow_context" or not isinstance(context.get("records"), list):
+        return _check(
+            "onchain_flow_context",
+            "analysis",
+            "failed",
+            "analysis/onchain_flow_context.json is invalid.",
+            [artifact],
+            errors=["on-chain flow context artifact_type or records are invalid."],
+        )
+    records = _list(context.get("records"))
+    warnings = _unique_sorted([*_string_list(context.get("warnings")), *_onchain_flow_context_warnings(records)])
+    errors = _error_messages(context.get("errors"))
+    status = _status_from_summary(str(context.get("status") or "unknown"), warnings, errors)
+    counts = _dict(context.get("counts"))
+    return _check(
+        "onchain_flow_context",
+        "analysis",
+        status,
+        f"{len(records)} on-chain flow context record(s).",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "records": len(records),
+            "stablecoin_liquidity": _int(counts.get("stablecoin_liquidity")),
+            "chain_activity": _int(counts.get("chain_activity")),
+            "network_congestion": _int(counts.get("network_congestion")),
+            "exchange_flow_source_availability": _int(counts.get("exchange_flow_source_availability")),
+            "succeeded": _status_count(records, "succeeded"),
+            "bounded": _status_count(records, "bounded"),
+            "partial": _status_count(records, "partial"),
+            "stale": _status_count(records, "stale"),
+            "unavailable": _status_count(records, "unavailable"),
+            "insufficient_data": _status_count(records, "insufficient_data"),
+            "failed": _status_count(records, "failed"),
+            "degraded": _status_count(records, "degraded"),
+        },
+    )
+
+
 def _macro_calendar_material_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
     macro_calendar = _macro_calendar_config(config)
     if not macro_calendar.get("enabled"):
@@ -511,6 +702,57 @@ def _macro_calendar_material_check(config: dict[str, Any], run: RunContext) -> d
         "analysis",
         status,
         "macro calendar material is present with Codex boundary metadata.",
+        [artifact],
+        warnings=warnings,
+        errors=errors,
+        details={
+            "selected_records": _int(summary_mapping.get("selected_records")),
+            "omitted_records": _int(summary_mapping.get("omitted_records")),
+            "context_records": _int(summary_mapping.get("context_records")),
+            "chars": len(material),
+            "codex_boundaries_present": not errors,
+        },
+    )
+
+
+def _onchain_flow_material_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
+    onchain_flow = _onchain_flow_config(config)
+    if not onchain_flow.get("enabled"):
+        return _check("onchain_flow_material", "analysis", "skipped", "onchain_flow.enabled is false.", [])
+    artifact = "analysis/onchain_flow_material.md"
+    path = run.analysis_dir / "onchain_flow_material.md"
+    if not path.exists():
+        return _check(
+            "onchain_flow_material",
+            "analysis",
+            "failed",
+            f"{artifact} was not found.",
+            [artifact],
+            errors=[f"{artifact} was not found."],
+        )
+    material = path.read_text(encoding="utf-8")
+    warnings = []
+    errors = []
+    required_boundaries = [
+        "codex_may_generate_onchain_records: false",
+        "codex_may_generate_flow_states: false",
+        "codex_may_generate_address_labels: false",
+        "codex_may_generate_risk_levels: false",
+        "full_raw_onchain_flow_artifacts_embedded: false",
+        "full_reusable_onchain_flow_history_embedded: false",
+        "full_onchain_flow_context_json_embedded: false",
+    ]
+    for boundary in required_boundaries:
+        if boundary not in material:
+            errors.append(f"on-chain flow material missing boundary: {boundary}")
+    summary = run.manifest.get("onchain_flow_material")
+    summary_mapping = summary if isinstance(summary, dict) else {}
+    status = "failed" if errors else "warning" if warnings else "ok"
+    return _check(
+        "onchain_flow_material",
+        "analysis",
+        status,
+        "on-chain flow material is present with Codex boundary metadata.",
         [artifact],
         warnings=warnings,
         errors=errors,
@@ -648,7 +890,7 @@ def _run_index_check(run: RunContext) -> dict[str, Any]:
 def _partial_collection_check(run: RunContext) -> dict[str, Any]:
     warnings = []
     errors = []
-    for key in ("raw_market", "raw_derivatives_market", "raw_macro_calendar", "raw_text_events"):
+    for key in ("raw_market", "raw_derivatives_market", "raw_macro_calendar", "raw_onchain_flow", "raw_text_events"):
         path = run.manifest.get("artifacts", {}).get(key)
         if not isinstance(path, str):
             continue
@@ -796,6 +1038,27 @@ def _macro_calendar_view_timestamps(views: list[Any]) -> list[tuple[str, str]]:
     return values
 
 
+def _onchain_flow_timestamps(raw: dict[str, Any]) -> list[tuple[str, str]]:
+    values = []
+    if isinstance(raw.get("collected_at"), str):
+        values.append(("raw/onchain_flow.json collected_at", raw["collected_at"]))
+    for item in raw.get("items", []):
+        if isinstance(item, dict) and isinstance(item.get("as_of"), str):
+            values.append(("raw/onchain_flow.json as_of", item["as_of"]))
+    return values
+
+
+def _onchain_flow_view_timestamps(views: list[Any]) -> list[tuple[str, str]]:
+    values = []
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        value = view.get("latest_observation_time")
+        if isinstance(value, str):
+            values.append(("raw/onchain_flow_views.json latest_observation_time", value))
+    return values
+
+
 def _stale_timestamp_warnings(timestamps: list[tuple[str, str]], *, now: str, max_age_hours: int) -> list[str]:
     warnings = []
     now_value = _parse_utc(now)
@@ -867,6 +1130,47 @@ def _macro_calendar_item_warnings(raw: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def _onchain_flow_missing_value_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in raw.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        metrics = item.get("metrics")
+        if not isinstance(metrics, dict) or not metrics:
+            warnings.append(f"on-chain flow item {item.get('item_id') or 'unknown'} has no metrics.")
+            continue
+        for key, value in metrics.items():
+            if value is None:
+                warnings.append(f"on-chain flow item {item.get('item_id') or 'unknown'} metric {key} is missing.")
+    return warnings
+
+
+def _onchain_flow_availability_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in _list(raw.get("availability")):
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status")
+        if status not in {"failed", "partial", "unavailable", "stale", "degraded", "insufficient_data"}:
+            continue
+        source = item.get("source") or "unknown_source"
+        data_class = item.get("data_class") or "unknown"
+        asset = item.get("asset") or "all_assets"
+        chain = item.get("chain") or "all_chains"
+        reason = item.get("reason") or status
+        warnings.append(f"on-chain flow availability {source} {data_class} {asset} {chain}: {reason}.")
+    return warnings
+
+
+def _onchain_flow_item_warnings(raw: dict[str, Any]) -> list[str]:
+    warnings = []
+    for item in raw.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        warnings.extend(_string_list(item.get("warnings")))
+    return warnings
+
+
 def _derivatives_view_warnings(views: list[Any]) -> list[str]:
     warnings = []
     for view in views:
@@ -886,6 +1190,24 @@ def _macro_calendar_view_warnings(views: list[Any]) -> list[str]:
 
 
 def _macro_calendar_context_warnings(records: list[Any]) -> list[str]:
+    warnings = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        warnings.extend(_string_list(record.get("warnings")))
+    return warnings
+
+
+def _onchain_flow_view_warnings(views: list[Any]) -> list[str]:
+    warnings = []
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        warnings.extend(_string_list(view.get("warnings")))
+    return warnings
+
+
+def _onchain_flow_context_warnings(records: list[Any]) -> list[str]:
     warnings = []
     for record in records:
         if not isinstance(record, dict):
@@ -1010,6 +1332,11 @@ def _derivatives_config(config: dict[str, Any]) -> dict[str, Any]:
 def _macro_calendar_config(config: dict[str, Any]) -> dict[str, Any]:
     macro_calendar = config.get("macro_calendar")
     return macro_calendar if isinstance(macro_calendar, dict) else {}
+
+
+def _onchain_flow_config(config: dict[str, Any]) -> dict[str, Any]:
+    onchain_flow = config.get("onchain_flow")
+    return onchain_flow if isinstance(onchain_flow, dict) else {}
 
 
 def _dict(value: Any) -> dict[str, Any]:
