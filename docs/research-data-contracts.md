@@ -311,6 +311,8 @@ Required check coverage:
 - raw market artifact presence and schema;
 - raw text artifact presence and schema;
 - OHLCV store metadata and current-run view coverage;
+- derivatives market raw, history, current-run view, and context/material coverage;
+- macro/calendar raw, history, current-run view, context, and material coverage;
 - timestamp parseability and future timestamp warnings;
 - stale source observations where timestamps are available;
 - duplicate or conflicting text records where detectable;

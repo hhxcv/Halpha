@@ -32,6 +32,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "text_event_history: skipped" in output
     assert "ohlcv_history: skipped" in output
     assert "derivatives_market_history: skipped" in output
+    assert "macro_calendar_history: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -62,9 +63,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "ohlcv_history: ok" in output
     assert "items=1" in output
     assert "derivatives_market_history: skipped" in output
+    assert "macro_calendar_history: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
-    assert "checks=11" in output
+    assert "checks=16" in output
     assert "degraded=1" in output
     assert "runs/run-1/analysis/data_quality_summary.json" in output
     assert "CREATE TABLE" not in output
@@ -136,6 +138,39 @@ def test_data_inspect_reports_derivatives_store_and_current_run_views(
     assert str(tmp_path) not in output
 
 
+def test_data_inspect_reports_macro_calendar_store_and_current_run_views(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False, macro_enabled=True)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_macro_store_metadata(tmp_path)
+    _write_macro_calendar_views(run)
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "status: ok" in output
+    assert "macro_calendar_history: ok" in output
+    assert "records=2" in output
+    assert "groups=1" in output
+    assert "schema_version=1" in output
+    assert "duplicate_records=1" in output
+    assert "conflicting_duplicates=1" in output
+    assert "availability_records=2" in output
+    assert "no_event_records=1" in output
+    assert "partial_records=1" in output
+    assert "views=4" in output
+    assert "view_records=1" in output
+    assert "no_event_views=1" in output
+    assert "stale_views=1" in output
+    assert "skipped_views=1" in output
+    assert "macro_calendar_state.json" in output
+    assert "fomc_meeting" not in output
+    assert str(tmp_path) not in output
+
+
 def test_data_inspect_returns_error_for_missing_requested_run_dir(tmp_path: Path, capsys) -> None:
     config_path = _write_config(tmp_path, ohlcv_enabled=False)
 
@@ -173,6 +208,7 @@ def _write_config(
     *,
     ohlcv_enabled: bool,
     derivatives_enabled: bool = False,
+    macro_enabled: bool = False,
     proxy_url: str | None = None,
 ) -> Path:
     proxy_block = (
@@ -217,6 +253,24 @@ def _write_config(
         if derivatives_enabled
         else ""
     )
+    macro_block = (
+        """
+macro_calendar:
+  enabled: true
+  source: federal_reserve_fomc
+  data_classes:
+    - central_bank_event
+  regions:
+    - US
+  lookback_days: 7
+  lookahead_days: 45
+"""
+        if macro_enabled
+        else """
+macro_calendar:
+  enabled: false
+"""
+    )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -231,6 +285,7 @@ market:
     - BTCUSDT
 {ohlcv_block.rstrip()}
 {derivatives_block.rstrip()}
+{macro_block.rstrip()}
 text:
   enabled: false
 report:
@@ -288,8 +343,8 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
             "created_at": "2026-06-05T00:10:00Z",
             "status": quality_status,
             "counts": {
-                "checks": 11,
-                "ok": 11 - degraded_count - warning_count,
+                "checks": 16,
+                "ok": 16 - degraded_count - warning_count,
                 "warning": warning_count,
                 "degraded": degraded_count,
                 "skipped": 0,
@@ -355,6 +410,111 @@ def _write_derivatives_views(run: RunContext) -> None:
                     "latest_observation_time": None,
                     "insufficient_data": True,
                     "warnings": ["spread_depth derivatives views are not implemented."],
+                    "errors": [],
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_macro_store_metadata(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "macro" / "metadata" / "macro_calendar_schema.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_schema",
+            "identity": ["source", "data_class", "region", "event_name", "scheduled_at"],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "macro" / "metadata" / "macro_calendar_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_state",
+            "updated_at": "2026-06-05T00:10:00Z",
+            "status": "ok",
+            "storage_path": "data/macro/calendar",
+            "totals": {
+                "records": 2,
+                "duplicate_records": 1,
+                "conflicting_duplicates": 1,
+            },
+            "groups": [
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "row_count": 2,
+                }
+            ],
+            "availability": [
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "no_event",
+                },
+                {
+                    "source": "federal_reserve_fomc",
+                    "data_class": "central_bank_event",
+                    "region": "US",
+                    "status": "partial",
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_macro_calendar_views(run: RunContext) -> None:
+    write_json(
+        run.raw_dir / "macro_calendar_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_views",
+            "created_at": "2026-06-05T00:10:00Z",
+            "views": [
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:latest",
+                    "status": "succeeded",
+                    "latest_observation_time": "2026-06-05T00:00:00Z",
+                    "event_count": 1,
+                    "included_record_count": 1,
+                    "records": [{"event_type": "fomc_meeting"}],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:no_event",
+                    "status": "no_event",
+                    "latest_observation_time": None,
+                    "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:stale",
+                    "status": "stale",
+                    "latest_observation_time": None,
+                    "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
+                    "errors": [],
+                },
+                {
+                    "view_id": "macro_calendar_view:central_bank_event:federal_reserve_fomc:US:skipped",
+                    "status": "skipped",
+                    "latest_observation_time": None,
+                    "event_count": 0,
+                    "included_record_count": 0,
+                    "records": [],
+                    "warnings": [],
                     "errors": [],
                 },
             ],

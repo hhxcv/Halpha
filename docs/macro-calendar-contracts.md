@@ -123,7 +123,7 @@ configured public macro/calendar source
   -> macro calendar current-run views [initial adoption]
   -> macro calendar context [initial adoption]
   -> regime, risk, decision, watch, alert, outcome, and strategy interpretation
-  -> macro calendar material [planned]
+  -> macro calendar material [initial adoption]
   -> research context
   -> Codex context + prompt
   -> Simplified Chinese Markdown report
