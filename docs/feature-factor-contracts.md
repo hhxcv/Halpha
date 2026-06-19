@@ -6,11 +6,11 @@ plan.
 
 Implementation status:
 
-- The contracts in this document are intended for the current feature/factor
-  implementation work.
-- Product runs do not generate these artifacts until their pipeline stages are
-  implemented.
-- When implemented, these artifacts remain additive. They do not replace market
+- `analysis/feature_snapshots.json` is implemented in product runs.
+- `analysis/factor_states.json`, `analysis/multi_source_signals.json`, and
+  `analysis/factor_signal_material.md` are intended contracts until their
+  pipeline stages are implemented.
+- These artifacts remain additive. They do not replace market
   signals, strategy evaluation, derivatives context, macro/calendar context,
   on-chain flow context, event intelligence, decision intelligence, alert
   decisions, data quality, outcome tracking, or final reports.
@@ -97,12 +97,15 @@ Artifact shape:
   "records": [],
   "counts": {
     "records": 0,
+    "coverage_records": 0,
     "features_by_type": {},
     "features_by_source_layer": {},
     "status_counts": {},
+    "source_status_counts": {},
     "warnings": 0,
     "errors": 0
   },
+  "coverage": [],
   "warnings": [],
   "errors": [],
   "source_artifacts": []
@@ -401,8 +404,9 @@ Material selection rules:
 
 When implemented, `run_manifest.json` should record:
 
-- M13 artifact paths;
-- feature, factor, and multi-source signal record counts;
+- feature, factor, and multi-source signal artifact paths as their stages are
+  implemented;
+- implemented feature, factor, and multi-source signal record counts;
 - status counts, conflict counts, warning counts, and error counts;
 - Codex input budget metadata for `analysis/factor_signal_material.md`;
 - source coverage for the implemented upstream artifacts.

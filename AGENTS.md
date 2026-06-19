@@ -213,8 +213,9 @@ Current bias:
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
-* Planned feature/factor contracts live in `docs/feature-factor-contracts.md`.
-* Intended feature/factor artifacts are `analysis/feature_snapshots.json`, `analysis/factor_states.json`, `analysis/multi_source_signals.json`, and `analysis/factor_signal_material.md`; they are not implemented until their pipeline stages exist.
+* Feature/factor contracts live in `docs/feature-factor-contracts.md`.
+* `analysis/feature_snapshots.json` records normalized source-aware feature records and source coverage from implemented current-run evidence.
+* Intended feature/factor artifacts are `analysis/factor_states.json`, `analysis/multi_source_signals.json`, and `analysis/factor_signal_material.md`; they are not implemented until their pipeline stages exist.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
 * `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives, macro/calendar, and on-chain flow context links, not trading instructions.

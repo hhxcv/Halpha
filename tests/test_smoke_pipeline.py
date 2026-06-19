@@ -74,6 +74,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/data_quality_material.md",
         "analysis/outcome_targets.json",
         "analysis/outcome_evaluations.json",
+        "analysis/feature_snapshots.json",
         "analysis/market_material.md",
         "analysis/text_material.md",
         "analysis/research_context.md",
@@ -99,6 +100,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "data_quality_material": "analysis/data_quality_material.md",
             "outcome_targets": "analysis/outcome_targets.json",
             "outcome_evaluations": "analysis/outcome_evaluations.json",
+            "feature_snapshots": "analysis/feature_snapshots.json",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
         "raw_text_events": "raw/text_events.json",
@@ -163,6 +165,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_data_quality_summary", "succeeded"),
         ("build_outcome_targets", "succeeded"),
         ("evaluate_outcomes", "succeeded"),
+        ("build_feature_snapshots", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -317,6 +320,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/decision_intelligence_material.md",
         "analysis/data_quality_summary.json",
         "analysis/data_quality_material.md",
+        "analysis/feature_snapshots.json",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
         "analysis/text_event_classification_evidence.json",
@@ -414,6 +418,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["event_intelligence_material_records"] == 1
     assert manifest["counts"]["decision_delta_changed_records"] == 0
     assert manifest["counts"]["decision_intelligence_material_records"] == 4
+    assert manifest["counts"]["feature_snapshots"] >= 4
+    assert manifest["counts"]["feature_snapshot_coverage_records"] >= 1
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
@@ -438,6 +444,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["event_intelligence_material"] == "analysis/event_intelligence_material.md"
     assert manifest["artifacts"]["decision_intelligence_delta"] == "analysis/decision_intelligence_delta.json"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
+    assert manifest["artifacts"]["feature_snapshots"] == "analysis/feature_snapshots.json"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"
     assert manifest["artifacts"]["text_event_classification_evidence"] == (
