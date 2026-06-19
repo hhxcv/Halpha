@@ -174,3 +174,25 @@ default. Codex may explain monitor evidence only when a future explicit report
 path includes bounded monitor material. Codex must not generate alert priority,
 duplicate decisions, cooldown decisions, forecasts, trading advice, position
 sizing, or account actions.
+
+## Validation
+
+Monitor validation should use the narrowest command that proves the changed
+behavior:
+
+```bash
+python -m pytest
+python -m halpha monitor run --config config.example.yaml --dry-run
+python -m halpha monitor run --config config.example.yaml --once
+python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>
+python -m halpha monitor inspect --config config.example.yaml
+```
+
+`--dry-run` validates configuration only. `--once` validates one bounded cycle,
+cycle manifest, alert archive, cooldown state, and health state. `--max-cycles`
+validates finite loop behavior. `monitor inspect` validates read-only aggregate
+health output.
+
+Full product validation with Codex is required only when a monitor change alters
+Codex context, report generation, or final report content. The implemented
+monitor artifacts are not Codex input by default.
