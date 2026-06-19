@@ -20,8 +20,8 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
             "created_at": "2026-06-05T00:00:00Z",
             "status": "warning",
             "counts": {
-                "checks": 3,
-                "ok": 1,
+                "checks": 4,
+                "ok": 2,
                 "warning": 2,
                 "degraded": 0,
                 "skipped": 0,
@@ -74,6 +74,22 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
                         "errors": [],
                     },
                 },
+                {
+                    "name": "personalized_risk_constraints",
+                    "status": "ok",
+                    "scope": "analysis",
+                    "summary": "1 personalized risk constraint record(s), 1 source coverage record(s).",
+                    "warning_count": 0,
+                    "error_count": 0,
+                    "source_artifacts": ["analysis/personalized_risk_constraints.json"],
+                    "details": {
+                        "records": 1,
+                        "state_counts": {"watchlist_relevant": 1},
+                        "action_counts": {"annotate": 1},
+                        "warnings": [],
+                        "errors": [],
+                    },
+                },
             ],
             "warnings": [
                 "index was rebuilt from current manifest.",
@@ -113,6 +129,11 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
     assert "data/market/metadata/derivatives_market_state.json" in material
     assert "derivatives_market_views" in material
     assert "insufficient_views: 1" in material
+    assert "personalized_risk_constraints" in material
+    assert "state_counts:" in material
+    assert "watchlist_relevant: 1" in material
+    assert "action_counts:" in material
+    assert "annotate: 1" in material
     assert "data/research/metadata/research_data_catalog.json" in material
     assert "funding_rate:" not in material
     assert "CREATE TABLE" not in material
@@ -120,7 +141,7 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
     assert "content_text:" not in material
 
     assert run.manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
-    assert run.manifest["counts"]["data_quality_material_checks"] == 3
+    assert run.manifest["counts"]["data_quality_material_checks"] == 4
 
 
 def test_data_quality_material_requires_summary_first(tmp_path: Path) -> None:

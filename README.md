@@ -433,9 +433,10 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 ```
 
 Use this output to check on-chain flow history state, current-run on-chain view
-coverage, feature/factor artifact status, intelligence-fusion status, Codex
-input budget state, and latest data-quality counts without exposing reusable
-record contents.
+coverage, feature/factor artifact status, intelligence-fusion status,
+personalized-risk aggregate status, Codex input budget state, and latest
+data-quality counts without exposing reusable record contents or raw local
+user-state values.
 
 Inspect outcome tracking state without collection or Codex CLI:
 

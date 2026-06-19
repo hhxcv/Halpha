@@ -31,6 +31,22 @@ EVENT_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/event_intelligence_material.md"
 TEXT_MATERIAL_ARTIFACT = "analysis/text_material.md"
 DATA_QUALITY_MATERIAL_ARTIFACT = "analysis/data_quality_material.md"
 OUTCOME_TRACKING_MATERIAL_ARTIFACT = "analysis/outcome_tracking_material.md"
+MATERIAL_CONTEXT_TARGET_CHARS = 120_000
+TOTAL_BUDGET_COMPRESSED_MATERIAL_CHARS = 9_000
+TOTAL_BUDGET_COMPRESSION_ORDER = (
+    TEXT_MATERIAL_ARTIFACT,
+    STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
+    STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
+    OUTCOME_TRACKING_MATERIAL_ARTIFACT,
+    MARKET_SIGNAL_MATERIAL_ARTIFACT,
+    EVENT_INTELLIGENCE_MATERIAL_ARTIFACT,
+    ALERT_DECISION_MATERIAL_ARTIFACT,
+    DECISION_INTELLIGENCE_MATERIAL_ARTIFACT,
+    DATA_QUALITY_MATERIAL_ARTIFACT,
+    INTELLIGENCE_FUSION_MATERIAL_ARTIFACT,
+    FACTOR_SIGNAL_MATERIAL_ARTIFACT,
+    PERSONALIZED_RISK_MATERIAL_ARTIFACT,
+)
 
 
 def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -149,6 +165,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         outcome_tracking_material=outcome_tracking_material,
         text_material=text_material,
     )
+    material_inputs = _balance_material_inputs(material_inputs)
 
     context = render_research_context(
         config,
@@ -771,6 +788,71 @@ def _prepare_material_inputs(
     return {artifact: _prepare_material_input(artifact, content) for artifact, content in materials}
 
 
+def _balance_material_inputs(inputs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    if _material_input_chars(inputs) <= MATERIAL_CONTEXT_TARGET_CHARS:
+        return inputs
+    balanced = {artifact: dict(record) for artifact, record in inputs.items()}
+    for artifact in TOTAL_BUDGET_COMPRESSION_ORDER:
+        if _material_input_chars(balanced) <= MATERIAL_CONTEXT_TARGET_CHARS:
+            break
+        record = balanced.get(artifact)
+        if not isinstance(record, dict):
+            continue
+        content = record.get("content")
+        if not isinstance(content, str) or len(content) <= TOTAL_BUDGET_COMPRESSED_MATERIAL_CHARS:
+            continue
+        balanced[artifact] = _compress_material_for_total_budget(
+            artifact,
+            content,
+            previous_budget=_dict(record.get("budget")),
+        )
+    return balanced
+
+
+def _material_input_chars(inputs: dict[str, dict[str, Any]]) -> int:
+    return sum(
+        len(content)
+        for record in inputs.values()
+        for content in [record.get("content")]
+        if isinstance(content, str)
+    )
+
+
+def _compress_material_for_total_budget(
+    artifact: str,
+    content: str,
+    *,
+    previous_budget: dict[str, Any],
+) -> dict[str, Any]:
+    compressed = _compressed_material(
+        artifact,
+        content,
+        max_chars=TOTAL_BUDGET_COMPRESSED_MATERIAL_CHARS,
+    )
+    record = text_budget_record(
+        artifact,
+        compressed,
+        status="compressed",
+        max_chars=TOTAL_BUDGET_COMPRESSED_MATERIAL_CHARS,
+        role="report_facing_material",
+    )
+    original_chars = _int(previous_budget.get("original_chars")) or len(content)
+    record["original_chars"] = original_chars
+    record["omitted_chars"] = max(0, original_chars - len(compressed))
+    record["compression_reason"] = "material_context_total_budget_exceeded"
+    record["context_material_target_chars"] = MATERIAL_CONTEXT_TARGET_CHARS
+    record["previous_status"] = previous_budget.get("status") or "included"
+    warnings = _unique_strings(
+        [
+            *_string_list(previous_budget.get("warnings")),
+            "material_compressed_for_codex_input",
+            "material_compressed_for_context_budget",
+        ]
+    )
+    record["warnings"] = warnings
+    return {"content": compressed, "budget": record}
+
+
 def _prepare_material_input(artifact: str, content: str | None) -> dict[str, Any]:
     if content is None:
         return {
@@ -840,6 +922,31 @@ def _compressed_material(artifact: str, content: str, *, max_chars: int) -> str:
     if len(compressed) > max_chars:
         compressed = compressed[: max_chars - len(footer)].rstrip() + footer
     return compressed
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    return value if isinstance(value, int) else 0
+
+
+def _string_list(value: Any) -> list[str]:
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def _unique_strings(values: list[str]) -> list[str]:
+    seen = set()
+    result = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
 
 
 def _yaml_list(values: list[str]) -> list[str]:

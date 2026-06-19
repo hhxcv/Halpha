@@ -376,6 +376,7 @@ Default size budgets:
 | Input | Budget |
 | --- | ---: |
 | Each material block | 12,000 characters |
+| Combined material blocks in research context | 120,000 characters |
 | `analysis/research_context.md` | 140,000 characters |
 | `codex_context/context.md` | 150,000 characters |
 | `codex_context/prompt.md` | 170,000 characters |
@@ -383,6 +384,10 @@ Default size budgets:
 Material blocks above the per-block budget are compressed into explicit
 head-and-tail excerpts in Codex input. The budget records are safeguards and
 audit metadata. They do not remove the complete evidence artifacts from disk.
+When combined material blocks exceed the research-context material target,
+lower-priority material may be compressed again to preserve the full Codex
+context and prompt budgets. `run_manifest.json` records this as
+`material_compressed_for_context_budget`.
 
 ## Material Selection
 

@@ -31,7 +31,7 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
 
     assert summary["artifact_type"] == "data_quality_summary"
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 27
+    assert summary["counts"]["checks"] == 30
     assert summary["counts"]["failed"] == 0
     assert summary["counts"]["degraded"] == 0
     assert manifest["artifacts"]["data_quality_summary"] == "analysis/data_quality_summary.json"
@@ -59,6 +59,9 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
         "factor_signal_material",
         "intelligence_fusion",
         "intelligence_fusion_material",
+        "user_state_context",
+        "personalized_risk_constraints",
+        "personalized_risk_material",
     ):
         m13_check = _check(summary, name)
         assert m13_check["status"] == "skipped"
@@ -150,12 +153,13 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run)
     _write_fusion_artifacts(run)
+    _write_m15_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 6
+    assert summary["counts"]["checks"] == 9
     assert _check(summary, "feature_snapshots")["status"] == "ok"
     assert _check(summary, "factor_states")["status"] == "ok"
     assert _check(summary, "multi_source_signals")["status"] == "ok"
@@ -171,7 +175,20 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -
     assert fusion_material["status"] == "ok"
     assert fusion_material["details"]["codex_boundaries_present"] is True
     assert fusion_material["details"]["codex_budget_status"] == "not_available_before_codex_context"
-    assert run.manifest["counts"]["data_quality_checks"] == 6
+    user_state = _check(summary, "user_state_context")
+    assert user_state["status"] == "ok"
+    assert user_state["details"]["mode"] == "personalized"
+    assert user_state["details"]["privacy_boundaries_present"] is True
+    personalized = _check(summary, "personalized_risk_constraints")
+    assert personalized["status"] == "ok"
+    assert personalized["details"]["state_counts"]["watchlist_relevant"] == 1
+    assert personalized["details"]["action_counts"]["annotate"] == 1
+    assert personalized["details"]["decision_linked_records"] == 1
+    risk_material = _check(summary, "personalized_risk_material")
+    assert risk_material["status"] == "ok"
+    assert risk_material["details"]["codex_boundaries_present"] is True
+    assert risk_material["details"]["codex_budget_status"] == "pending_research_context_inclusion"
+    assert run.manifest["counts"]["data_quality_checks"] == 9
 
 
 def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Path) -> None:
@@ -180,6 +197,7 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Pa
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run, feature_status="warning", feature_warnings=["one source was partial."])
     _write_fusion_artifacts(run)
+    _write_m15_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -196,6 +214,7 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_degraded(tmp_path: P
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run, factor_status="degraded")
     _write_fusion_artifacts(run)
+    _write_m15_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -210,6 +229,7 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run)
     _write_fusion_artifacts(run, status="warning", state="conflicting", conflict_state="severe")
+    _write_m15_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -224,6 +244,7 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run)
     _write_fusion_artifacts(run, status="warning", state="degraded")
+    _write_m15_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -237,6 +258,7 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
     _write_initial_quality_summary(run)
     _write_m13_artifacts(run)
     _write_fusion_artifacts(run, status="failed", state="failed", errors=["fusion failed"])
+    _write_m15_artifacts(run)
 
     refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -257,9 +279,10 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_missing_as_failed(tm
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "failed"
-    assert summary["counts"]["failed"] == 6
+    assert summary["counts"]["failed"] == 9
     assert _check(summary, "feature_snapshots")["details"]["report_as_final_missing"] is True
     assert _check(summary, "intelligence_fusion")["details"]["report_as_final_missing"] is True
+    assert _check(summary, "personalized_risk_material")["details"]["report_as_final_missing"] is True
 
 
 def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path) -> None:
@@ -843,6 +866,203 @@ def _write_fusion_artifacts(
     }
     run.manifest["counts"]["intelligence_fusion_material_records"] = 2
     run.manifest["counts"]["intelligence_fusion_material_omitted_records"] = 0
+
+
+def _write_m15_artifacts(run: RunContext) -> None:
+    write_json(
+        run.analysis_dir / "user_state_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "user_state_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "ok",
+            "mode": "personalized",
+            "source": {
+                "configured": True,
+                "source_ref": "configured_user_state",
+                "raw_path_embedded": False,
+                "raw_file_embedded": False,
+            },
+            "privacy": {
+                "private_notes_embedded": False,
+                "machine_paths_embedded": False,
+                "account_identifiers_embedded": False,
+                "holdings_values_embedded": False,
+                "omitted_private_values": 1,
+            },
+            "watchlist": [{"symbol": "BTCUSDT", "timeframes": ["1d"], "relevance": "high"}],
+            "disabled_assets": [],
+            "risk": {"preference": "conservative", "max_action_level": "WATCH"},
+            "preferred_timeframes": ["1d"],
+            "strategy_preferences": {"preferred": [], "disabled": []},
+            "manual_exposure_summary": [
+                {"symbol": "BTCUSDT", "exposure_state": "watch", "private_note_omitted": True}
+            ],
+            "counts": {
+                "watchlist_records": 1,
+                "disabled_assets": 0,
+                "preferred_timeframes": 1,
+                "strategy_preference_records": 0,
+                "manual_exposure_summary_records": 1,
+                "omitted_private_values": 1,
+                "warnings": 0,
+                "errors": 0,
+            },
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": [],
+        },
+    )
+    run.manifest["artifacts"]["user_state_context"] = "analysis/user_state_context.json"
+    run.manifest["user_state_context"] = {
+        "status": "ok",
+        "mode": "personalized",
+        "artifact": "analysis/user_state_context.json",
+        "watchlist_records": 1,
+        "disabled_assets": 0,
+        "preferred_timeframes": 1,
+        "strategy_preference_records": 0,
+        "manual_exposure_summary_records": 1,
+        "omitted_private_values": 1,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"]["user_state_watchlist_records"] = 1
+    run.manifest["counts"]["user_state_disabled_assets"] = 0
+    run.manifest["counts"]["user_state_preferred_timeframes"] = 1
+    run.manifest["counts"]["user_state_strategy_preference_records"] = 0
+    run.manifest["counts"]["user_state_manual_exposure_summary_records"] = 1
+    run.manifest["counts"]["user_state_omitted_private_values"] = 1
+    run.manifest["counts"]["user_state_warnings"] = 0
+    run.manifest["counts"]["user_state_errors"] = 0
+
+    state_counts = {
+        "general": 0,
+        "watchlist_relevant": 1,
+        "disabled_asset_blocked": 0,
+        "risk_limit_downgraded": 0,
+        "timeframe_mismatch": 0,
+        "strategy_preference_note": 0,
+        "insufficient_user_state": 0,
+        "skipped": 0,
+        "degraded": 0,
+        "failed": 0,
+    }
+    action_counts = {"annotate": 1, "downgrade": 0, "block": 0, "none": 0, "skip": 0}
+    write_json(
+        run.analysis_dir / "personalized_risk_constraints.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "personalized_risk_constraints",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "ok",
+            "records": [
+                {
+                    "constraint_id": "personalized:btcusdt:1d:watchlist_relevant",
+                    "scope": {"symbol": "BTCUSDT", "timeframe": "1d"},
+                    "state": "watchlist_relevant",
+                    "action": "annotate",
+                    "severity": "info",
+                    "confidence": "high",
+                    "reason_codes": ["watchlist_match"],
+                    "matched_user_state": {"watchlist": True},
+                    "upstream_records": [],
+                    "evidence": ["bounded personalized evidence"],
+                    "uncertainty": [],
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": ["analysis/user_state_context.json"],
+                }
+            ],
+            "coverage": [{"source_layer": "decision_recommendations", "status": "ok"}],
+            "counts": {
+                "records": 1,
+                "state_counts": state_counts,
+                "action_counts": action_counts,
+                "warnings": 0,
+                "errors": 0,
+            },
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["analysis/user_state_context.json"],
+        },
+    )
+    run.manifest["artifacts"]["personalized_risk_constraints"] = "analysis/personalized_risk_constraints.json"
+    run.manifest["personalized_risk_constraints"] = {
+        "status": "ok",
+        "artifact": "analysis/personalized_risk_constraints.json",
+        "records": 1,
+        "state_counts": state_counts,
+        "action_counts": action_counts,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"]["personalized_risk_constraint_records"] = 1
+    run.manifest["counts"]["personalized_risk_decision_linked_records"] = 1
+    run.manifest["counts"]["personalized_risk_decision_adjusted_records"] = 0
+    run.manifest["counts"]["personalized_risk_watch_linked_records"] = 1
+    run.manifest["counts"]["personalized_risk_watch_adjusted_records"] = 0
+    run.manifest["counts"]["personalized_risk_alert_linked_records"] = 1
+    run.manifest["counts"]["personalized_risk_alert_adjusted_records"] = 0
+    run.manifest["personalized_risk_integration"] = {
+        "status": "succeeded",
+        "source_artifact": "analysis/personalized_risk_constraints.json",
+        "decision_records": 1,
+        "decision_linked_records": 1,
+        "decision_adjusted_records": 0,
+        "watch_records": 1,
+        "watch_linked_records": 1,
+        "watch_adjusted_records": 0,
+        "alert_records": 1,
+        "alert_linked_records": 1,
+        "alert_adjusted_records": 0,
+        "warnings": 0,
+        "errors": 0,
+    }
+
+    material = "\n".join(
+        [
+            "---",
+            "artifact_type: analysis_personalized_risk_material",
+            "schema_version: 1",
+            "---",
+            "",
+            "full_user_state_file_embedded: false",
+            "private_notes_embedded: false",
+            "machine_paths_embedded: false",
+            "account_identifiers_embedded: false",
+            "holdings_values_embedded: false",
+            "full_user_state_context_json_embedded: false",
+            "full_personalized_risk_constraints_json_embedded: false",
+            "codex_may_generate_user_state: false",
+            "codex_may_generate_allocations: false",
+            "codex_may_size_positions: false",
+            "codex_may_generate_action_levels: false",
+            "codex_may_create_trading_instructions: false",
+            "",
+        ]
+    )
+    (run.analysis_dir / "personalized_risk_material.md").write_text(material, encoding="utf-8")
+    run.manifest["artifacts"]["personalized_risk_material"] = "analysis/personalized_risk_material.md"
+    run.manifest["personalized_risk_material"] = {
+        "status": "ok",
+        "artifact": "analysis/personalized_risk_material.md",
+        "selected_records": 1,
+        "omitted_records": 0,
+        "warnings": 0,
+        "errors": 0,
+        "codex_input_budget": {
+            "artifact": "analysis/personalized_risk_material.md",
+            "status": "pending_research_context_inclusion",
+            "chars": len(material),
+            "over_budget": False,
+            "warnings": [],
+        },
+    }
+    run.manifest["counts"]["personalized_risk_material_records"] = 1
+    run.manifest["counts"]["personalized_risk_material_omitted_records"] = 0
 
 
 def _write_market_raw(config, run) -> list[str]:
