@@ -20,9 +20,55 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M12 - On-Chain and Exchange Flow Context Foundation
+### M13 - Feature, Factor, and Multi-Source Signal Engine
 
 Status: active.
+
+Goal:
+
+```text
+Convert implemented price, strategy, derivatives, macro/calendar, on-chain flow, event, outcome, and data-quality evidence into deterministic feature, factor, and normalized multi-source signal artifacts that later fusion can consume without source-specific special cases.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M12 on-chain flow, M11 macro/calendar, M10 derivatives, market-structure, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable feature, factor, and multi-source signal contracts for source references, calculation windows, factor taxonomy, score, direction, confidence, uncertainty, warnings, errors, degraded states, and Codex boundaries;
+* produce `analysis/feature_snapshots.json` from implemented current-run bounded inputs such as market views, strategy evidence, derivatives context, macro/calendar context, on-chain flow context, event intelligence, outcome tracking, and data quality where available;
+* produce `analysis/factor_states.json` with a small initial deterministic taxonomy for trend, volatility, liquidity, leverage, macro risk, event pressure, on-chain flow, and evidence quality;
+* produce `analysis/multi_source_signals.json` as normalized research signals derived from factor states, not trading instructions, action levels, price forecasts, or position sizing;
+* produce bounded `analysis/factor_signal_material.md` for Codex and final report generation without embedding full raw streams, reusable histories, current-run views, or full intermediate JSON by default;
+* explicitly distinguish available, missing, stale, partial, degraded, insufficient-evidence, conflicting, neutral, supportive, cautionary, and failed factor or signal states instead of silently omitting weak inputs;
+* connect factor and multi-source signal evidence into report context and strategy interpretation as conservative source-aware evidence while leaving M14 intelligence fusion and decision-policy replacement out of scope;
+* ensure Codex may explain Halpha-generated feature, factor, and signal material but must not create feature records, factor scores, signal states, action levels, forecasts, or trading advice;
+* support focused validation through existing run, until-stage, single-stage, data inspection, no-Codex, and full Codex product paths;
+* add tests for contract shape, multi-source feature extraction, factor scoring, source agreement, source conflict, missing input, stale input, material boundaries, Codex input boundaries, data-quality visibility, and report constraints;
+* verify the M13 product path with automated tests and real-source local runs.
+
+M13 favors:
+
+* deterministic, inspectable feature and factor records over hidden scoring logic;
+* a small useful factor taxonomy over a broad premature factor library;
+* source-aware and uncertainty-aware records over blended black-box scores;
+* additive artifacts over replacing existing strategy, risk, event, macro, derivatives, on-chain, outcome, or data-quality artifacts;
+* bounded AI-readable material over raw record dumps;
+* conservative normalized research signals over trading advice or portfolio actions;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M13 does not require:
+
+* broad factor libraries, ML factor discovery, factor optimization, feature-store services, vector databases, or hidden model state;
+* M14 intelligence fusion, fusion-driven decision-policy replacement, automatic strategy promotion, or strategy lifecycle automation;
+* user-state personalization, dashboard UI, hosted services, scheduler, daemon, websocket, push notification, or alert delivery runtime;
+* new derivatives, macro, on-chain, event, or market data sources beyond existing implemented sources;
+* portfolio automation, position sizing, trading execution, broker integration, or exchange account operations;
+* making Codex or another LLM the source of feature records, factor scores, normalized signal states, risk levels, action recommendations, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M12 - On-Chain and Exchange Flow Context Foundation
+
+Status: completed.
 
 Goal:
 
@@ -65,8 +111,6 @@ M12 does not require:
 * portfolio automation, position sizing, trading execution, broker integration, or exchange account operations;
 * user-state personalization, unified feature and factor engine, intelligence fusion layer, or strategy lifecycle automation;
 * making Codex or another LLM the source of on-chain records, flow states, risk levels, watch triggers, alert priorities, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M11 - Macro and Calendar Context Foundation
 
