@@ -225,11 +225,11 @@ Current bias:
 * `analysis/personalized_risk_constraints.json` records deterministic general, watchlist, disabled asset, risk-limit, timeframe, strategy-preference, insufficient-user-state, skipped, degraded, and failed constraint states from sanitized user-state context and current-run intelligence; not trading instructions, holdings, allocations, or position sizing.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
 * `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
-* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, optional derivatives, macro/calendar, on-chain flow context links, and optional fusion context, not trading instructions.
-* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported derivatives, macro/calendar, and on-chain flow observation, risk escalation, and risk relief conditions, not monitoring or alerts.
+* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, optional derivatives, macro/calendar, on-chain flow context links, optional fusion context, and optional personalized constraint fields, not trading instructions.
+* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported derivatives, macro/calendar, on-chain flow observation, risk escalation, risk relief conditions, and optional personalized constraint fields, not monitoring or alerts.
 * `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
 * `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, decision-impact, optional macro/calendar proximity, and optional on-chain flow relevance assessment records.
-* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives, macro/calendar, on-chain flow relevance links, and optional fusion context, not alert delivery or trading execution.
+* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives, macro/calendar, on-chain flow relevance links, optional fusion context, and optional personalized constraint fields, not alert delivery or trading execution.
 * `analysis/alert_decision_material.md` records bounded AI-readable alert priority, downgrade, suppression, and uncertainty material.
 * `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
 * `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.

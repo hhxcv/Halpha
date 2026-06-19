@@ -242,6 +242,8 @@ def _alert_overview(
         "suppressed_records": sum(1 for record in records if _string_list(record.get("suppression_reasons"))),
         "fusion_linked_records": sum(1 for record in records if record.get("fusion_record_id")),
         "fusion_adjusted_records": sum(1 for record in records if record.get("pre_fusion_priority")),
+        "personalized_linked_records": sum(1 for record in records if record.get("personalized_constraint_id")),
+        "personalized_adjusted_records": sum(1 for record in records if record.get("pre_personalized_priority")),
         "warnings": warnings,
     }
 
@@ -261,6 +263,9 @@ def _priority_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "fusion_state": record.get("fusion_state"),
                 "fusion_attention_annotation": record.get("fusion_attention_annotation"),
                 "pre_fusion_priority": record.get("pre_fusion_priority"),
+                "personalized_state": record.get("personalized_state"),
+                "personalized_action": record.get("personalized_action"),
+                "pre_personalized_priority": record.get("pre_personalized_priority"),
             }
             for record in records[:MAX_LIST_ITEMS]
         ],
@@ -366,6 +371,16 @@ def _material_record(record: dict[str, Any], assessment: dict[str, Any] | None) 
             "fusion_attention_annotation": record.get("fusion_attention_annotation"),
             "fusion_evidence": _string_list(record.get("fusion_evidence"))[:MAX_LIST_ITEMS],
             "fusion_uncertainty": _string_list(record.get("fusion_uncertainty"))[:MAX_LIST_ITEMS],
+        },
+        "personalized_context": {
+            "personalized_constraint_id": record.get("personalized_constraint_id"),
+            "personalized_state": record.get("personalized_state"),
+            "personalized_action": record.get("personalized_action"),
+            "personalized_severity": record.get("personalized_severity"),
+            "personalized_reason_codes": _string_list(record.get("personalized_reason_codes"))[:MAX_LIST_ITEMS],
+            "personalized_evidence": _string_list(record.get("personalized_evidence"))[:MAX_LIST_ITEMS],
+            "personalized_uncertainty": _string_list(record.get("personalized_uncertainty"))[:MAX_LIST_ITEMS],
+            "pre_personalized_priority": record.get("pre_personalized_priority"),
         },
         "watch_trigger_relevance": _string_list(record.get("watch_trigger_relevance")),
         "reason": _bounded_text(record.get("reason")),

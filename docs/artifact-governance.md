@@ -240,6 +240,9 @@ files, private notes, account identifiers, exact holdings, balances, machine
 paths, full user-state JSON, and full personalized-risk JSON must not be
 embedded in Codex input. Codex should consume bounded
 `analysis/personalized_risk_material.md` once implemented.
+Product runs integrate constraints into decision recommendations, watch
+triggers, and alert decisions as conservative fields while preserving
+pre-personalization values when a record is downgraded or blocked.
 
 ### Decision And Risk Evidence
 

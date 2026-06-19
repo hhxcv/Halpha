@@ -322,8 +322,8 @@ Rules:
 
 ## Decision, Watch, And Alert Integration
 
-Downstream artifacts may include personalization fields after constraints are
-generated.
+Product runs integrate personalization fields into downstream artifacts after
+constraints are generated.
 
 Expected fields:
 
