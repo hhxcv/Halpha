@@ -28,11 +28,17 @@ FEATURE_SNAPSHOTS_ARTIFACT = "analysis/feature_snapshots.json"
 FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
 MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
 FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
+INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
+INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.md"
 M13_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
     "multi_source_signals",
     "factor_signal_material",
+}
+FUSION_CHECK_NAMES = {
+    "intelligence_fusion",
+    "intelligence_fusion_material",
 }
 
 
@@ -64,6 +70,7 @@ def inspect_local_data(
         _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
         _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
         _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
+        _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -397,7 +404,7 @@ def _feature_factor_artifacts_section(
             reason="M13 feature/factor artifacts were not found in this run.",
         )
 
-    budget = _codex_material_budget(manifest)
+    budget = _codex_material_budget(manifest, FACTOR_SIGNAL_MATERIAL_ARTIFACT)
     fields = {
         "run_id": manifest.get("run_id"),
         "run_status": manifest.get("status"),
@@ -502,6 +509,114 @@ def _quality_section_from_run_dir(run_dir: Path, *, base: Path) -> dict[str, Any
             "failed": _int(counts.get("failed")),
             "manifest": _safe_path(manifest_path, base=base),
         },
+    )
+
+
+def _intelligence_fusion_section(
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    if run_dir is not None:
+        resolved_run_dir = _resolve_run_dir(run_dir, base=base)
+    else:
+        resolved_run_dir = _latest_run_from_index(config_path)
+    if resolved_run_dir is None:
+        return _section(
+            "intelligence_fusion",
+            "skipped",
+            reason="no latest run was found in the local run index.",
+        )
+
+    manifest_path = resolved_run_dir / "run_manifest.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    if manifest_error:
+        raise DataInspectionError(f"run_manifest.json could not be inspected: {manifest_error}")
+
+    artifacts = _dict(manifest.get("artifacts"))
+    counts = _dict(manifest.get("counts"))
+    fusion_summary = _dict(manifest.get("intelligence_fusion"))
+    integration_summary = _dict(manifest.get("intelligence_fusion_integration"))
+    material_summary = _dict(manifest.get("intelligence_fusion_material"))
+    has_fusion_artifacts = any(
+        artifacts.get(key) for key in ("intelligence_fusion", "intelligence_fusion_material")
+    ) or any((fusion_summary, integration_summary, material_summary))
+
+    quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
+    quality_counts = _fusion_quality_check_counts(quality)
+    if not has_fusion_artifacts and not any(quality_counts.values()):
+        return _section(
+            "intelligence_fusion",
+            "skipped",
+            artifact=_safe_path(manifest_path, base=base),
+            fields={
+                "run_id": manifest.get("run_id"),
+                "run_status": manifest.get("status"),
+            },
+            reason="intelligence fusion artifacts were not found in this run.",
+        )
+
+    budget = _codex_material_budget(manifest, INTELLIGENCE_FUSION_MATERIAL_ARTIFACT)
+    fields = {
+        "run_id": manifest.get("run_id"),
+        "run_status": manifest.get("status"),
+        "fusion_records": _int(counts.get("intelligence_fusion_records")),
+        "fusion_warnings": _int(counts.get("intelligence_fusion_warnings")),
+        "fusion_errors": _int(counts.get("intelligence_fusion_errors")),
+        "fusion_state_counts": _compact_counts(_dict(fusion_summary.get("state_counts"))),
+        "fusion_conflict_counts": _compact_counts(_dict(fusion_summary.get("conflict_counts"))),
+        "fusion_risk_override_counts": _compact_counts(_dict(fusion_summary.get("risk_override_counts"))),
+        "fusion_event_override_counts": _compact_counts(_dict(fusion_summary.get("event_override_counts"))),
+        "fusion_outcome_feedback_counts": _compact_counts(_dict(fusion_summary.get("outcome_feedback_counts"))),
+        "decision_linked_records": _int(counts.get("intelligence_fusion_decision_linked_records")),
+        "decision_adjusted_records": _int(counts.get("intelligence_fusion_decision_adjusted_records")),
+        "alert_linked_records": _int(counts.get("intelligence_fusion_alert_linked_records")),
+        "alert_adjusted_records": _int(counts.get("intelligence_fusion_alert_adjusted_records")),
+        "material_records": _int(counts.get("intelligence_fusion_material_records")),
+        "material_omitted_records": _int(counts.get("intelligence_fusion_material_omitted_records")),
+        "fusion_quality_ok": quality_counts["ok"],
+        "fusion_quality_warning": quality_counts["warning"],
+        "fusion_quality_degraded": quality_counts["degraded"],
+        "fusion_quality_skipped": quality_counts["skipped"],
+        "fusion_quality_failed": quality_counts["failed"],
+        "manifest": _safe_path(manifest_path, base=base),
+    }
+    if budget:
+        fields.update(
+            {
+                "codex_budget_status": budget.get("status") or "unknown",
+                "codex_budget_chars": _int(budget.get("chars")),
+                "codex_budget_over_budget": bool(budget.get("over_budget")),
+                "codex_budget_warnings": len(_list(budget.get("warnings"))),
+            }
+        )
+    else:
+        fields["codex_budget_status"] = "not_available"
+
+    statuses = [
+        str(summary.get("status"))
+        for summary in (fusion_summary, material_summary)
+        if isinstance(summary.get("status"), str) and summary.get("status")
+    ]
+    integration_status = integration_summary.get("status")
+    if integration_status == "failed":
+        statuses.append("failed")
+    if integration_summary.get("errors"):
+        statuses.append("failed")
+    elif integration_summary.get("warnings"):
+        statuses.append("warning")
+    statuses.extend(status for status, value in quality_counts.items() for _ in range(value))
+    if budget and (budget.get("over_budget") or budget.get("status") not in {None, "included"}):
+        statuses.append("warning")
+    status = _status_from_values(statuses)
+    reason = quality_error if quality_error else None
+    return _section(
+        "intelligence_fusion",
+        status,
+        artifact=_safe_path(manifest_path, base=base),
+        fields=fields,
+        reason=reason,
     )
 
 
@@ -619,9 +734,17 @@ def _store_statuses(catalog: dict[str, Any]) -> str | None:
 
 
 def _m13_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
+    return _named_quality_check_counts(quality, M13_CHECK_NAMES)
+
+
+def _fusion_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
+    return _named_quality_check_counts(quality, FUSION_CHECK_NAMES)
+
+
+def _named_quality_check_counts(quality: dict[str, Any], names: set[str]) -> dict[str, int]:
     counts = {"ok": 0, "warning": 0, "degraded": 0, "skipped": 0, "failed": 0}
     for check in _list(quality.get("checks")):
-        if not isinstance(check, dict) or check.get("name") not in M13_CHECK_NAMES:
+        if not isinstance(check, dict) or check.get("name") not in names:
             continue
         status = str(check.get("status") or "unknown")
         if status in counts:
@@ -629,18 +752,27 @@ def _m13_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
     return counts
 
 
-def _codex_material_budget(manifest: dict[str, Any]) -> dict[str, Any]:
+def _codex_material_budget(manifest: dict[str, Any], artifact: str) -> dict[str, Any]:
     codex_input = _dict(manifest.get("codex_input"))
     materials = codex_input.get("materials")
     if isinstance(materials, dict):
-        budget = materials.get(FACTOR_SIGNAL_MATERIAL_ARTIFACT)
+        budget = materials.get(artifact)
         return budget if isinstance(budget, dict) else {}
     if isinstance(materials, list):
         for item in materials:
             record = _dict(item)
-            if record.get("artifact") == FACTOR_SIGNAL_MATERIAL_ARTIFACT:
+            if record.get("artifact") == artifact:
                 return record
     return {}
+
+
+def _compact_counts(counts: dict[str, Any]) -> str | None:
+    values = [
+        f"{key}:{_int(value)}"
+        for key, value in sorted(counts.items())
+        if isinstance(key, str) and _int(value) > 0
+    ]
+    return ",".join(values) if values else None
 
 
 def _status_from_values(statuses: list[str]) -> str:
