@@ -228,13 +228,15 @@ Personalization contracts:
 - `analysis/personalized_risk_constraints.json`
 - `analysis/personalized_risk_material.md`
 
-These contracts are defined in `docs/user-state-contracts.md`. They are intended
-for optional local user-state input and deterministic personalized-risk
-constraints. Until the corresponding stages are implemented, product runs may
-not write these artifacts. When implemented, raw local user-state files,
+These contracts are defined in `docs/user-state-contracts.md`. Product runs
+generate `analysis/user_state_context.json` as optional sanitized local
+user-state status and context. `analysis/personalized_risk_constraints.json`
+and `analysis/personalized_risk_material.md` are downstream contracts and may
+not be written until their stages are implemented. Raw local user-state files,
 private notes, account identifiers, exact holdings, balances, machine paths,
-and full personalized-risk JSON must not be embedded in Codex input. Codex
-should consume bounded `analysis/personalized_risk_material.md`.
+full user-state JSON, and full personalized-risk JSON must not be embedded in
+Codex input. Codex should consume bounded
+`analysis/personalized_risk_material.md` once implemented.
 
 ### Decision And Risk Evidence
 

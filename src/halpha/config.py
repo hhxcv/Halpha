@@ -9,7 +9,18 @@ from urllib.parse import urlparse
 from .quant.registry import SUPPORTED_STRATEGY_NAMES
 
 
-CONFIG_SECTIONS = {"codex", "macro_calendar", "market", "onchain_flow", "quant", "report", "run", "text"}
+CONFIG_SECTIONS = {
+    "codex",
+    "macro_calendar",
+    "market",
+    "onchain_flow",
+    "quant",
+    "report",
+    "run",
+    "text",
+    "user_state",
+}
+SUPPORTED_USER_STATE_FIELDS = {"enabled", "path"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
 SUPPORTED_DERIVATIVES_MARKET_SOURCES = {"binance_usdm"}
@@ -168,6 +179,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
         _validate_macro_calendar_config(config["macro_calendar"])
     if "onchain_flow" in config:
         _validate_onchain_flow_config(config["onchain_flow"])
+    if "user_state" in config:
+        _validate_user_state_config(config["user_state"])
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -246,6 +259,19 @@ def _validate_text_intelligence_config(text: dict[str, Any], *, text_enabled: bo
         _validate_text_intelligence_models(intelligence, required=enabled)
     if "thresholds" in intelligence or enabled:
         _validate_text_intelligence_thresholds(intelligence, required=enabled)
+
+
+def _validate_user_state_config(user_state: dict[str, Any]) -> None:
+    if not isinstance(user_state, dict):
+        raise ConfigError("user_state must be a mapping.")
+    _reject_unsupported_fields(
+        user_state,
+        path="user_state",
+        supported_fields=SUPPORTED_USER_STATE_FIELDS,
+    )
+    enabled = _require_bool(user_state, "enabled", "user_state.enabled")
+    if enabled or "path" in user_state:
+        _require_non_empty_string(user_state, "path", "user_state.path")
 
 
 def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:
