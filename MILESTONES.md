@@ -20,9 +20,55 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M17 - Local Delivery and Workbench Foundation v1
+### M18 - Strategy Lifecycle and Continuous Research v1
 
 Status: active.
+
+Goal:
+
+```text
+Turn strategy work into a controlled lifecycle with versioning, health checks, degradation detection, and reviewable promotion or retirement.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M17 local delivery and workbench paths, M16 monitor and alert runtime, M15 user-state and personalized-risk paths, M14 intelligence fusion, M13 feature/factor, M12 on-chain flow, M11 macro/calendar, M10 derivatives, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable strategy lifecycle contracts for strategy identity, strategy contract version, parameter version, parameter digest, active candidate, effective, watchlisted, rejected, degraded, insufficient-evidence, and retired states, explicit promotion or retirement records, regime weakness, source refs, warnings, errors, and Codex boundaries;
+* produce `analysis/strategy_lifecycle_state.json` from current strategy runs, strategy effectiveness gates, strategy evaluation summaries, outcome tracking, available regime or market-state evidence, and explicit lifecycle policy records without inventing strategy performance;
+* produce bounded `analysis/strategy_lifecycle_material.md` that summarizes strategy health, degradation warnings, watchlisted and rejected strategy status, retired strategy status, evidence limits, source refs, and Codex/report boundaries;
+* support reviewable lifecycle policy input for explicit strategy promotion or retirement intent without connecting to accounts, executing trades, mutating exchange state, or silently changing active strategy sets;
+* detect deterministic degradation and regime-specific weakness from available evaluation and outcome evidence, and record insufficient-evidence states when the evidence is not strong enough;
+* preserve rejected, watchlisted, degraded, and retired strategies for review instead of silently deleting them from downstream evidence;
+* allow strategy gates, intelligence fusion, decision material, Codex context, reports, data inspection, and local workbench output to consume lifecycle evidence as deterministic source-aware context;
+* ensure Codex may explain Halpha-generated lifecycle records but must not create lifecycle states, promote or retire strategies, optimize parameters, select strategies, forecast prices, or issue trading instructions;
+* update documentation and artifact governance so humans and AI agents can find lifecycle contracts, lifecycle artifacts, lifecycle policy boundaries, Codex input rules, and inspection behavior quickly;
+* add tests for version change, parameter digest change, degraded performance, regime weakness, insufficient evidence, explicit retirement, watchlisted or rejected preservation, material boundaries, downstream integration, and Codex input policy;
+* verify the M18 product path with automated tests and real-source local runs, including Codex where report behavior is affected.
+
+M18 favors:
+
+* deterministic lifecycle evidence over automatic optimization;
+* explicit strategy and parameter versions over hidden strategy state;
+* plain local lifecycle artifacts over service infrastructure;
+* degradation and insufficient-evidence warnings over silent strategy removal;
+* reviewable promotion and retirement records over implicit active-set changes;
+* bounded Codex material over raw strategy dumps;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M18 does not require:
+
+* automatic parameter optimization, autonomous strategy generation, ML strategy selection, or reinforcement learning;
+* a hosted strategy registry, remote experiment tracker, notebook platform, cloud scheduler, or multi-user strategy governance workflow;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* new public data sources beyond the already configured product sources;
+* automatic mutation of the active strategy set without explicit local lifecycle policy records;
+* making Codex or another LLM the source of lifecycle state, degradation detection, promotion decisions, retirement decisions, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M17 - Local Delivery and Workbench Foundation v1
+
+Status: completed.
 
 Goal:
 
@@ -64,8 +110,6 @@ M17 does not require:
 * new public data sources beyond the already configured product sources;
 * automatic strategy promotion, alert subscription management, search engine indexing, semantic retrieval, or notebook/workbench authoring tools;
 * making Codex or another LLM the source of workbench state, alert priority, decision state, strategy status, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M16 - Local Monitoring and Alert Runtime v1
 
