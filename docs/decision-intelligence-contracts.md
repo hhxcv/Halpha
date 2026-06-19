@@ -465,6 +465,7 @@ analysis/decision_recommendations.json
 analysis/watch_triggers.json
 analysis/derivatives_market_context.json
 analysis/macro_calendar_context.json
+analysis/onchain_flow_context.json
 analysis/market_regime_assessment.json
 analysis/market_signals.json
 analysis/text_event_signals.json
@@ -501,6 +502,8 @@ Record contract:
   "derivatives_relevance": [],
   "linked_macro_calendar_context_ids": [],
   "macro_calendar_relevance": [],
+  "linked_onchain_flow_context_ids": [],
+  "onchain_flow_relevance": [],
   "source_artifacts": []
 }
 ```
@@ -558,6 +561,11 @@ Rules:
   downgrade or suppression reasons.
 - No-event macro/calendar windows must not upgrade alert priority or be treated
   as confirmed absence of risk.
+- On-chain flow relevance may be linked from event assessment context IDs or
+  same-symbol context evidence, but flow context alone must not create P0/P1
+  alert priority.
+- Stale, unavailable, degraded, or partial on-chain flow source states may add
+  downgrade or suppression reasons.
 - Derivatives context is supporting evidence for attention priority; it must not
   independently upgrade stale, duplicate, unrelated, or insufficient-evidence
   events.

@@ -781,6 +781,7 @@ analysis/risk_assessment.json
 analysis/decision_recommendations.json
 analysis/watch_triggers.json
 analysis/macro_calendar_context.json
+analysis/onchain_flow_context.json
 ```
 
 Record contract:
@@ -810,6 +811,8 @@ Record contract:
   "warnings": [],
   "linked_macro_calendar_context_ids": [],
   "macro_calendar_relevance": [],
+  "linked_onchain_flow_context_ids": [],
+  "onchain_flow_relevance": [],
   "source_artifacts": []
 }
 ```
@@ -894,6 +897,13 @@ Rules:
   source uncertainty or downgrade reasons.
 - No-event macro/calendar windows must not be treated as low-risk evidence and
   must not create event relevance by themselves.
+- On-chain flow context may appear as liquidity, network-activity, congestion,
+  or source-availability relevance only when accepted event evidence is linked
+  to the same asset scope.
+- Stale, unavailable, degraded, or partial on-chain flow source states may add
+  source uncertainty or downgrade reasons.
+- Normal or unrelated on-chain flow context must not create event relevance by
+  itself.
 - Event assessment must not assign alert priority, action level, trading advice,
   position sizing, price targets, or return forecasts.
 - Alert priority is assigned by `analysis/alert_decisions.json`, not by this

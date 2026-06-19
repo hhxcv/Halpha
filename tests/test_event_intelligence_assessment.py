@@ -246,6 +246,80 @@ def test_event_intelligence_assessment_downgrades_stale_macro_calendar_source(tm
     assert any("source_availability" in item for item in record["macro_calendar_relevance"])
 
 
+def test_event_intelligence_assessment_records_onchain_flow_relevance(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_assessment_pipeline(config, config_path, onchain_stage=_write_stressed_onchain_flow_context)
+
+    record = _assessment(result)["records"][0]
+    manifest = _manifest(result)
+
+    assert record["risk_effect"] == "risk_up"
+    assert record["decision_impact"] == "could_downgrade"
+    assert record["event_severity"] == "high"
+    assert record["linked_onchain_flow_context_ids"] == [
+        "onchain_flow_context:stablecoin_liquidity:defillama_stablecoins:ALL_STABLECOINS:all:2026-06-05T00:00:00Z"
+    ]
+    assert any("stablecoin_liquidity" in item for item in record["onchain_flow_relevance"])
+    assert any(item["type"] == "onchain_flow_context" for item in record["evidence"])
+    assert "analysis/onchain_flow_context.json" in record["source_artifacts"]
+    assert manifest["counts"]["event_intelligence_assessment_onchain_flow_context_records"] == 1
+    assert manifest["counts"]["event_intelligence_assessment_onchain_flow_linked_records"] == 1
+
+
+def test_event_intelligence_assessment_downgrades_unavailable_onchain_flow_source(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_assessment_pipeline(config, config_path, onchain_stage=_write_unavailable_onchain_flow_context)
+
+    record = _assessment(result)["records"][0]
+
+    assert record["status"] == "degraded"
+    assert "onchain_flow_source_uncertainty" in record["downgrade_reasons"]
+    assert record["linked_onchain_flow_context_ids"] == [
+        "onchain_flow_context:exchange_flow_source_availability:public_exchange_flow_aggregate:ALL_CONFIGURED_ASSETS:all:2026-06-05T00:00:00Z"
+    ]
+    assert any("source_availability" in item for item in record["onchain_flow_relevance"])
+    assert any("missing flow evidence cannot be treated as neutral" in item for item in record["uncertainty"])
+
+
+def test_event_intelligence_assessment_downgrades_stale_onchain_flow_source(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_assessment_pipeline(config, config_path, onchain_stage=_write_stale_onchain_flow_context)
+
+    record = _assessment(result)["records"][0]
+
+    assert record["status"] == "degraded"
+    assert "onchain_flow_source_uncertainty" in record["downgrade_reasons"]
+    assert record["linked_onchain_flow_context_ids"] == [
+        "onchain_flow_context:stablecoin_liquidity:defillama_stablecoins:ALL_STABLECOINS:all:2026-06-05T00:00:00Z"
+    ]
+
+
+def test_event_intelligence_assessment_does_not_link_onchain_flow_to_unrelated_event(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = _run_assessment_pipeline(
+        config,
+        config_path,
+        include_market_decision=False,
+        symbol=None,
+        onchain_stage=_write_stressed_onchain_flow_context,
+    )
+
+    record = _assessment(result)["records"][0]
+
+    assert "unrelated_event" in record["downgrade_reasons"]
+    assert record["event_severity"] == "noise"
+    assert record["linked_onchain_flow_context_ids"] == []
+    assert record["onchain_flow_relevance"] == []
+
+
 def _run_assessment_pipeline(
     config: dict[str, Any],
     config_path: Path,
@@ -256,6 +330,7 @@ def _run_assessment_pipeline(
     include_market_decision: bool = True,
     symbol: str | None = "BTCUSDT",
     macro_stage=None,
+    onchain_stage=None,
 ):
     overrides = {
         "build_text_event_topics": lambda config, run: _write_topics(
@@ -279,6 +354,8 @@ def _run_assessment_pipeline(
     }
     if macro_stage is not None:
         overrides["build_macro_calendar_context"] = macro_stage
+    if onchain_stage is not None:
+        overrides["build_onchain_flow_context"] = onchain_stage
     return run_pipeline(
         config,
         config_path=config_path,
@@ -291,11 +368,14 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
     handlers: dict[str, Any] = {
         "collect_market_data": _noop_stage,
         "collect_text_events": _noop_stage,
+        "collect_onchain_flow_data": _noop_stage,
         "build_text_event_records": _noop_stage,
         "build_text_entity_evidence": _noop_stage,
         "build_text_event_classification_evidence": _noop_stage,
         "sync_ohlcv": _noop_stage,
+        "sync_onchain_flow_history": _noop_stage,
         "build_market_data_views": _noop_stage,
+        "build_onchain_flow_views": _noop_stage,
         "build_strategy_benchmark_suite": _noop_stage,
         "evaluate_quant_strategies": _noop_stage,
         "evaluate_strategy_evaluation": _noop_stage,
@@ -655,6 +735,63 @@ def _write_stale_macro_calendar_context(config, run) -> list[str]:
     return ["analysis/macro_calendar_context.json"]
 
 
+def _write_stressed_onchain_flow_context(config, run) -> list[str]:
+    _write_onchain_flow_context(
+        run,
+        [
+            _onchain_flow_context_record(
+                context_type="stablecoin_liquidity",
+                data_class="stablecoin_supply",
+                source="defillama_stablecoins",
+                asset="ALL_STABLECOINS",
+                chain="all",
+                state="sharp_stablecoin_supply_contraction",
+                severity="high",
+                status="succeeded",
+            )
+        ],
+    )
+    return ["analysis/onchain_flow_context.json"]
+
+
+def _write_unavailable_onchain_flow_context(config, run) -> list[str]:
+    _write_onchain_flow_context(
+        run,
+        [
+            _onchain_flow_context_record(
+                context_type="exchange_flow_source_availability",
+                data_class="exchange_flow_availability",
+                source="public_exchange_flow_aggregate",
+                asset="ALL_CONFIGURED_ASSETS",
+                chain="all",
+                state="source_unavailable",
+                severity="medium",
+                status="unavailable",
+            )
+        ],
+    )
+    return ["analysis/onchain_flow_context.json"]
+
+
+def _write_stale_onchain_flow_context(config, run) -> list[str]:
+    _write_onchain_flow_context(
+        run,
+        [
+            _onchain_flow_context_record(
+                context_type="stablecoin_liquidity",
+                data_class="stablecoin_supply",
+                source="defillama_stablecoins",
+                asset="ALL_STABLECOINS",
+                chain="all",
+                state="stale",
+                severity="medium",
+                status="stale",
+            )
+        ],
+    )
+    return ["analysis/onchain_flow_context.json"]
+
+
 def _write_macro_calendar_context(run, records: list[dict[str, Any]]) -> None:
     write_json(
         run.analysis_dir / "macro_calendar_context.json",
@@ -672,6 +809,25 @@ def _write_macro_calendar_context(run, records: list[dict[str, Any]]) -> None:
         },
     )
     run.manifest["artifacts"]["macro_calendar_context"] = "analysis/macro_calendar_context.json"
+
+
+def _write_onchain_flow_context(run, records: list[dict[str, Any]]) -> None:
+    write_json(
+        run.analysis_dir / "onchain_flow_context.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_context",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "status": "warning",
+            "records": records,
+            "counts": {"records": len(records)},
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": ["raw/onchain_flow_views.json"],
+        },
+    )
+    run.manifest["artifacts"]["onchain_flow_context"] = "analysis/onchain_flow_context.json"
 
 
 def _macro_calendar_context_record(
@@ -705,6 +861,41 @@ def _macro_calendar_context_record(
         "warnings": [],
         "errors": [],
         "source_artifacts": ["analysis/macro_calendar_context.json", "raw/macro_calendar_views.json"],
+    }
+
+
+def _onchain_flow_context_record(
+    *,
+    context_type: str,
+    data_class: str,
+    source: str,
+    asset: str,
+    chain: str,
+    state: str,
+    severity: str,
+    status: str,
+) -> dict[str, Any]:
+    as_of = "2026-06-05T00:00:00Z"
+    return {
+        "context_id": f"onchain_flow_context:{context_type}:{source}:{asset}:{chain}:{as_of}",
+        "context_type": context_type,
+        "data_class": data_class,
+        "source": source,
+        "asset": asset,
+        "chain": chain,
+        "as_of": as_of,
+        "status": status,
+        "state": state,
+        "severity": severity,
+        "confidence": "medium",
+        "source_availability": status,
+        "metrics": {},
+        "thresholds": {},
+        "evidence": [{"source_artifact": "raw/onchain_flow_views.json", "summary": f"{context_type} evidence."}],
+        "uncertainty": [f"{context_type} uncertainty."],
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": ["analysis/onchain_flow_context.json", "raw/onchain_flow_views.json"],
     }
 
 
