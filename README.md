@@ -202,6 +202,7 @@ evaluate_outcomes
 build_feature_snapshots
 build_factor_states
 build_multi_source_signals
+build_intelligence_fusion
 build_analysis_materials
 build_research_context
 build_codex_context
@@ -312,6 +313,7 @@ A successful configured run can write:
 - `analysis/feature_snapshots.json`: normalized source-aware feature records and source coverage from implemented current-run evidence.
 - `analysis/factor_states.json`: deterministic factor states, bounded scores, directions, confidence, and degraded-state evidence from feature snapshots.
 - `analysis/multi_source_signals.json`: conservative normalized research signals derived from factor states.
+- `analysis/intelligence_fusion.json`: deterministic cross-source fusion records for confluence, conflict, risk overrides, event overrides, outcome feedback, uncertainty, and source refs.
 - `analysis/market_material.md`: AI-readable market material.
 - `analysis/text_material.md`: AI-readable text material.
 - `analysis/research_context.md`: structured local research context.
@@ -529,7 +531,7 @@ they are not proof of a real-source product run.
   - `docs/macro-calendar-contracts.md`: macro and scheduled-event data contracts.
   - `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data contracts.
   - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
-  - `docs/intelligence-fusion-contracts.md`: planned fusion artifact, material, integration, and Codex-boundary contracts.
+  - `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.

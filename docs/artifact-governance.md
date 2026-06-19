@@ -18,7 +18,7 @@ milestone plan.
   material, and Codex-boundary contracts.
 - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal,
   material, and Codex-boundary contracts.
-- `docs/intelligence-fusion-contracts.md`: planned fusion artifact, material,
+- `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material,
   integration, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
@@ -205,16 +205,16 @@ Codex input. Codex should consume bounded `analysis/factor_signal_material.md`.
 
 ### Intelligence Fusion Evidence
 
-Planned fusion artifacts:
+Fusion artifacts:
 
 - `analysis/intelligence_fusion.json`
-- `analysis/intelligence_fusion_material.md`
+- `analysis/intelligence_fusion_material.md` (planned; not implemented yet)
 
 These contracts are defined in `docs/intelligence-fusion-contracts.md`.
-Intelligence fusion is planned for the active milestone and is not implemented
-yet. When implemented, fusion JSON should remain intermediate evidence and
-should not be embedded in full Codex input. Codex should consume bounded
-`analysis/intelligence_fusion_material.md`.
+Product runs generate `analysis/intelligence_fusion.json`. Fusion JSON remains
+intermediate evidence and should not be embedded in full Codex input. Bounded
+Codex-facing fusion material is planned as
+`analysis/intelligence_fusion_material.md` and is not implemented yet.
 
 ### Decision And Risk Evidence
 
