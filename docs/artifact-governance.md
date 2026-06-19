@@ -20,6 +20,8 @@ milestone plan.
   material, and Codex-boundary contracts.
 - `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material,
   integration, and Codex-boundary contracts.
+- `docs/user-state-contracts.md`: optional local user-state,
+  personalized-risk, material, privacy, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
@@ -218,6 +220,22 @@ runs generate bounded Codex-facing fusion material as
 fusion fields into decision recommendations and alert decisions before research
 context is built.
 
+### User State And Personalized Risk Evidence
+
+Personalization contracts:
+
+- `analysis/user_state_context.json`
+- `analysis/personalized_risk_constraints.json`
+- `analysis/personalized_risk_material.md`
+
+These contracts are defined in `docs/user-state-contracts.md`. They are intended
+for optional local user-state input and deterministic personalized-risk
+constraints. Until the corresponding stages are implemented, product runs may
+not write these artifacts. When implemented, raw local user-state files,
+private notes, account identifiers, exact holdings, balances, machine paths,
+and full personalized-risk JSON must not be embedded in Codex input. Codex
+should consume bounded `analysis/personalized_risk_material.md`.
+
 ### Decision And Risk Evidence
 
 Decision-support artifacts:
@@ -292,6 +310,7 @@ Eligible Codex input:
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
 - `analysis/factor_signal_material.md`
+- `analysis/personalized_risk_material.md`
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
@@ -333,6 +352,8 @@ Codex input policy:
 - Do not embed full reusable on-chain flow history.
 - Do not embed full feature snapshots, factor states, or multi-source signal
   JSON.
+- Do not embed full local user-state files, private notes, account identifiers,
+  machine paths, or full personalized-risk JSON.
 - Do not embed full run manifests.
 - Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
 - Prefer high-signal derivatives and market-structure context.
@@ -428,6 +449,16 @@ Feature/factor material:
 - Do not embed full raw streams, reusable histories, current-run views,
   `analysis/feature_snapshots.json`, `analysis/factor_states.json`, or
   `analysis/multi_source_signals.json`.
+
+Personalized-risk material:
+
+- Prefer disabled-asset blocks, risk-limit downgrades, and timeframe mismatches
+  before low-impact watchlist or strategy preference annotations.
+- Preserve whether output is general or personalized.
+- Summarize omitted private values with counts only.
+- Do not embed full local user-state files, private notes, account identifiers,
+  exact holdings, balances, machine paths, `analysis/user_state_context.json`,
+  or `analysis/personalized_risk_constraints.json`.
 
 ## Validation
 
