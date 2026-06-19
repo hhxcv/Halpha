@@ -20,9 +20,53 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M13 - Feature, Factor, and Multi-Source Signal Engine
+### M14 - Intelligence Fusion Engine v1
 
 Status: active.
+
+Goal:
+
+```text
+Create a deterministic fusion layer that combines strategy evidence, feature/factor states, multi-source signals, event intelligence, risk, regime, and outcome history into decision-grade intelligence without making AI the decision engine.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M13 feature/factor, M12 on-chain flow, M11 macro/calendar, M10 derivatives, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable intelligence fusion contracts for source evidence, scope, confluence, conflict, independence, risk override, event override, outcome feedback, confidence, uncertainty, warnings, errors, and Codex boundaries;
+* produce `analysis/intelligence_fusion.json` from implemented current-run bounded inputs such as strategy evaluation, strategy gates, market signals, market regime, risk assessment, factor states, multi-source signals, event intelligence assessment, alert decisions, and outcome tracking where available;
+* produce deterministic fusion records that explicitly separate supportive confluence, cautionary conflict, insufficient evidence, stale or degraded evidence, risk blockers, event overrides, and outcome feedback instead of silently blending inputs into one score;
+* connect fusion output into decision recommendations and alert decisions as source-aware evidence without losing existing strategy, risk, event, and factor traceability;
+* produce bounded `analysis/intelligence_fusion_material.md` for Codex and final report generation without embedding full raw streams, reusable histories, current-run views, or full intermediate JSON by default;
+* update decision, alert, data-quality, research-context, Codex-context, and final-report paths so fusion is visible as conservative cross-source evidence while existing deterministic artifacts remain inspectable;
+* ensure Codex may explain Halpha-generated fusion records but must not create fusion states, risk overrides, alert priorities, action levels, forecasts, or trading advice;
+* support focused validation through existing run, until-stage, single-stage, data inspection, no-Codex, and full Codex product paths;
+* add tests for contract shape, source agreement, source conflict, source independence, risk override, event override, outcome feedback, missing input, stale input, degraded input, material boundaries, Codex input boundaries, data-quality visibility, decision/alert integration, and report constraints;
+* verify the M14 product path with automated tests and real-source local runs.
+
+M14 favors:
+
+* deterministic, inspectable fusion records over hidden blended scores;
+* source-aware confluence and conflict reasoning over broad AI-generated synthesis;
+* additive fusion artifacts over replacing existing strategy, risk, event, factor, outcome, or alert artifacts;
+* conservative decision-grade evidence over automatic decision-policy replacement;
+* bounded AI-readable fusion material over raw record dumps;
+* preserving upstream traceability and uncertainty over simplified one-line conclusions;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M14 does not require:
+
+* black-box scoring models, ML fusion, LLM fusion, vector databases, hidden feature stores, or hidden model state;
+* full decision-policy replacement, automatic strategy promotion, user-state personalization, dashboard UI, hosted services, scheduler, daemon, websocket, push notification, or alert delivery runtime;
+* new derivatives, macro, on-chain, event, or market data sources beyond existing implemented sources;
+* portfolio automation, position sizing, trading execution, broker integration, or exchange account operations;
+* making Codex or another LLM the source of fusion states, risk overrides, alert priorities, action recommendations, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M13 - Feature, Factor, and Multi-Source Signal Engine
+
+Status: completed.
 
 Goal:
 
@@ -63,8 +107,6 @@ M13 does not require:
 * new derivatives, macro, on-chain, event, or market data sources beyond existing implemented sources;
 * portfolio automation, position sizing, trading execution, broker integration, or exchange account operations;
 * making Codex or another LLM the source of feature records, factor scores, normalized signal states, risk levels, action recommendations, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M12 - On-Chain and Exchange Flow Context Foundation
 
