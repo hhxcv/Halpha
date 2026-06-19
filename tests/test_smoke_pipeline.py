@@ -80,6 +80,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "analysis/intelligence_fusion.json",
         "analysis/intelligence_fusion_material.md",
         "analysis/user_state_context.json",
+        "analysis/personalized_risk_constraints.json",
         "analysis/factor_signal_material.md",
         "analysis/market_material.md",
         "analysis/text_material.md",
@@ -99,6 +100,8 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert manifest["ohlcv_sync"]["status"] == "skipped"
     assert manifest["user_state_context"]["status"] == "skipped"
     assert manifest["counts"]["user_state_watchlist_records"] == 0
+    assert manifest["personalized_risk_constraints"]["status"] == "skipped"
+    assert manifest["counts"]["personalized_risk_constraint_records"] >= 1
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"] == {
@@ -114,6 +117,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "intelligence_fusion": "analysis/intelligence_fusion.json",
             "intelligence_fusion_material": "analysis/intelligence_fusion_material.md",
             "user_state_context": "analysis/user_state_context.json",
+            "personalized_risk_constraints": "analysis/personalized_risk_constraints.json",
             "factor_signal_material": "analysis/factor_signal_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
@@ -185,6 +189,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_intelligence_fusion", "succeeded"),
         ("integrate_intelligence_fusion", "succeeded"),
         ("build_user_state_context", "succeeded"),
+        ("build_personalized_risk_constraints", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -350,6 +355,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/intelligence_fusion.json",
         "analysis/intelligence_fusion_material.md",
         "analysis/user_state_context.json",
+        "analysis/personalized_risk_constraints.json",
         "analysis/factor_signal_material.md",
         "analysis/text_event_records.json",
         "analysis/text_entity_evidence.json",
@@ -456,6 +462,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["factor_signal_material_records"] >= 1
     assert manifest["user_state_context"]["status"] == "skipped"
     assert manifest["counts"]["user_state_watchlist_records"] == 0
+    assert manifest["personalized_risk_constraints"]["status"] == "skipped"
+    assert manifest["counts"]["personalized_risk_constraint_records"] >= 1
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
@@ -486,6 +494,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["intelligence_fusion"] == "analysis/intelligence_fusion.json"
     assert manifest["artifacts"]["intelligence_fusion_material"] == "analysis/intelligence_fusion_material.md"
     assert manifest["artifacts"]["user_state_context"] == "analysis/user_state_context.json"
+    assert manifest["artifacts"]["personalized_risk_constraints"] == "analysis/personalized_risk_constraints.json"
     assert manifest["artifacts"]["factor_signal_material"] == "analysis/factor_signal_material.md"
     assert manifest["artifacts"]["text_event_records"] == "analysis/text_event_records.json"
     assert manifest["artifacts"]["text_entity_evidence"] == "analysis/text_entity_evidence.json"
