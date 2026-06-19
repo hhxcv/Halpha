@@ -245,6 +245,7 @@ Current bias:
 * `runs/monitor/alert_archive.jsonl` records emitted, suppressed_duplicate, suppressed_cooldown, suppressed_no_alert, and skipped alert archive records from generated alert decisions; it stores bounded refs and sanitized personalized linkage only.
 * `runs/monitor/alert_cooldown_state.json` records deterministic alert cooldown state keyed by alert key.
 * `runs/monitor/alert_archive_state.json` records latest local alert archive metadata, counts, warnings, and errors.
+* `runs/monitor/monitor_health_state.json` records latest local monitor health metadata, cycle counts, latest cycle refs, alert archive counts, cooldown counts, warning counts, error counts, and latest finite-loop status.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
@@ -334,6 +335,8 @@ python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/
 python -m halpha monitor --help
 python -m halpha monitor run --config config.example.yaml --dry-run
 python -m halpha monitor run --config config.example.yaml --once
+python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>
+python -m halpha monitor inspect --config config.example.yaml
 python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>
 python -m halpha experiment --config config.example.yaml
 python -m halpha text-models prepare --config config.example.yaml
@@ -368,6 +371,10 @@ They must not fabricate skipped artifacts.
 `monitor run --once` defaults to no Codex report generation through `monitor.no_codex: true`.
 
 `monitor run --once` does not start a background process, run a multi-cycle loop, deliver notifications, trade, or access accounts.
+
+`monitor run --max-cycles <n> --interval-seconds <seconds>` runs a finite local monitor loop and stops after the configured cycle count or the first failed cycle.
+
+`monitor inspect` is read-only. It summarizes latest cycle status, linked run refs, alert archive counts, cooldown counts, warning counts, error counts, and latest loop status without collection, pipeline execution, Codex CLI, notification delivery, raw alert dumps, private user-state values, trading, or account access.
 
 `backtest` runs one configured strategy against shared local OHLCV history.
 
@@ -408,6 +415,8 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
 * Use `python -m halpha monitor run --config config.example.yaml --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
 * Use `python -m halpha monitor run --config config.example.yaml --once` to validate one bounded monitor cycle, monitor cycle manifest, alert archive, and cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
+* Use `python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.
+* Use `python -m halpha monitor inspect --config config.example.yaml` to validate read-only monitor health output without running collection, pipeline stages, Codex CLI, or raw archive export.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
 * Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment and gate artifacts when shared OHLCV history exists.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.

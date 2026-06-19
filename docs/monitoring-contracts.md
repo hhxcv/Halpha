@@ -15,9 +15,9 @@ It must remain observable, bounded, and local-first:
 - no private user-state values in public artifacts, logs, issues, PRs, or docs.
 
 The current command surface validates monitor configuration, runs one bounded
-local monitor cycle, and writes local alert archive and cooldown state from
-generated alert decisions. Health inspection is defined here as a contract and
-is implemented by later monitor runtime changes.
+local monitor cycle or finite local loop, writes local alert archive and
+cooldown state from generated alert decisions, and exposes read-only monitor
+health inspection.
 
 ## Configuration
 
@@ -54,6 +54,26 @@ pipeline target stage and writes one monitor cycle manifest. The default
 `no_codex: true` setting keeps the monitor path before Codex report generation.
 When generated `analysis/alert_decisions.json` exists, the cycle also appends
 local alert archive records and updates cooldown state.
+
+Current implemented finite-loop command:
+
+```bash
+python -m halpha monitor run --config config.example.yaml --max-cycles 3 --interval-seconds 300
+```
+
+This command runs a finite local loop. It stops after the requested maximum
+cycle count or after the first failed cycle. It is not a daemon, service, cron
+job, scheduler, or notification worker.
+
+Current implemented read-only health command:
+
+```bash
+python -m halpha monitor inspect --config config.example.yaml
+```
+
+This command reads local monitor artifacts only. It must not collect network
+data, run processors, run pipeline stages, invoke Codex CLI, repair archives,
+export raw alert records, deliver notifications, trade, or access accounts.
 
 ## Cycle Manifest
 
@@ -131,11 +151,21 @@ information:
 - recent failure count;
 - emitted, suppressed, duplicate, and cooldown counts;
 - latest warning and error summaries;
-- archive path refs;
-- data availability status.
+- archive path refs.
 
 Inspection is read-only. It must not collect network data, run processors, run
 pipeline stages, invoke Codex CLI, repair archives, or dump raw alert records.
+
+The local health state path is:
+
+```text
+runs/monitor/monitor_health_state.json
+```
+
+It records aggregate cycle, alert archive, cooldown, warning, error, and latest
+finite-loop metadata. It must not store raw alert records, raw user-state files,
+private notes, account identifiers, holdings, balances, allocations, position
+sizes, or private endpoints.
 
 ## Codex Boundary
 

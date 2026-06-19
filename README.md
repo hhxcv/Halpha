@@ -101,12 +101,24 @@ Run exactly one bounded local monitor cycle:
 python -m halpha monitor run --config config.example.yaml --once
 ```
 
+Run a finite local monitor loop:
+
+```bash
+python -m halpha monitor run --config config.example.yaml --max-cycles 3 --interval-seconds 300
+```
+
+Inspect local monitor health without collection, pipeline execution, or Codex:
+
+```bash
+python -m halpha monitor inspect --config config.example.yaml
+```
+
 The default monitor cycle reuses the configured product pipeline through the
 configured monitor target stage and stops before Codex report generation unless
 monitor config explicitly changes that boundary. The cycle also updates the
 local alert archive and cooldown state from generated alert decisions. Monitor
-health inspection and notification delivery are not implemented by the current
-command.
+notification delivery, daemon/service behavior, and dashboard UI are not
+implemented by the current command.
 
 Inspect local research data and data-quality state without collection or Codex:
 
