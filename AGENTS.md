@@ -213,6 +213,8 @@ Current bias:
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
+* Planned feature/factor contracts live in `docs/feature-factor-contracts.md`.
+* Intended feature/factor artifacts are `analysis/feature_snapshots.json`, `analysis/factor_states.json`, `analysis/multi_source_signals.json`, and `analysis/factor_signal_material.md`; they are not implemented until their pipeline stages exist.
 * `analysis/market_regime_assessment.json` records deterministic market-state assessment.
 * `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
 * `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, and optional derivatives, macro/calendar, and on-chain flow context links, not trading instructions.
@@ -232,20 +234,22 @@ Current bias:
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, macro/calendar, on-chain flow, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, or full on-chain flow context JSON.
-* Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
+* Codex context may include bounded signal, strategy evaluation, strategy experiment, derivatives market, macro/calendar, on-chain flow, feature/factor when implemented, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, or full on-chain flow context JSON.
+* Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full feature snapshots JSON, full factor states JSON, full multi-source signals JSON, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, or full run manifests by default.
 * Codex input should prioritize high-signal decision, risk, alert, strategy gate, derivatives, macro/calendar, on-chain flow, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
 * Codex prompt may ask for derivatives market explanation when derivatives material exists.
 * Codex prompt may ask for macro/calendar scheduled-catalyst, no-event, source-availability, freshness, time-zone, and realized-impact-not-evaluated explanation when macro calendar material exists.
 * Codex prompt may ask for on-chain flow explanation when on-chain flow material exists.
+* Codex prompt may ask for feature, factor, and multi-source signal explanation when factor signal material exists.
 * Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
 * Codex prompt may ask for data-quality status explanation when data quality material exists.
 * Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
 * Codex prompt must not ask Codex to generate derivatives states, risk levels, signals, source availability, liquidation summaries, price forecasts, trading instructions, or position sizing.
 * Codex prompt must not ask Codex to generate macro/calendar events, states, source availability, risk levels, watch triggers, alert priorities, release outcomes, policy outcomes, price forecasts, trading instructions, or position sizing.
 * Codex prompt must not ask Codex to generate on-chain records, flow states, address labels, source availability, risk levels, watch triggers, alert priorities, price forecasts, trading instructions, wallet actions, or position sizing.
+* Codex prompt must not ask Codex to generate feature records, factor scores, normalized signal states, action levels, price forecasts, trading instructions, or position sizing.
 * Codex prompt must not ask Codex to generate data-quality checks, validation results, catalog contents, run-index contents, or reusable history contents.
 * Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
 * Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
@@ -269,6 +273,7 @@ Current bias:
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
 * `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
+* `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.

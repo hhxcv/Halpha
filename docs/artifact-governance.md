@@ -16,6 +16,8 @@ milestone plan.
   material, and Codex-boundary contracts.
 - `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context,
   material, and Codex-boundary contracts.
+- `docs/feature-factor-contracts.md`: feature, factor, multi-source signal,
+  material, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
@@ -183,6 +185,21 @@ Strategy and signal artifacts:
 Codex should consume bounded strategy and signal material instead of full
 strategy run, benchmark, or experiment JSON.
 
+### Feature, Factor, And Multi-Source Signal Evidence
+
+Intended feature/factor artifacts:
+
+- `analysis/feature_snapshots.json`
+- `analysis/factor_states.json`
+- `analysis/multi_source_signals.json`
+- `analysis/factor_signal_material.md`
+
+These contracts are defined in `docs/feature-factor-contracts.md`. Product runs
+do not generate these artifacts until their pipeline stages are implemented.
+When implemented, feature, factor, and multi-source signal JSON artifacts are
+intermediate evidence and should not be embedded in full Codex input. Codex
+should consume bounded `analysis/factor_signal_material.md` instead.
+
 ### Decision And Risk Evidence
 
 Decision-support artifacts:
@@ -255,6 +272,7 @@ Eligible Codex input:
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
+- `analysis/factor_signal_material.md`
 - `analysis/decision_intelligence_material.md`
 - `analysis/alert_decision_material.md`
 - `analysis/event_intelligence_material.md`
@@ -294,11 +312,15 @@ Codex input policy:
 - Do not embed full shared OHLCV history.
 - Do not embed full reusable outcome history.
 - Do not embed full reusable on-chain flow history.
+- Do not embed full feature snapshots, factor states, or multi-source signal
+  JSON.
 - Do not embed full run manifests.
 - Prefer high-signal decision, risk, alert, event, strategy, gate, outcome, and quality evidence.
 - Prefer high-signal derivatives and market-structure context.
 - Prefer scheduled-catalyst, no-event, and source-availability macro/calendar context.
 - Prefer high-signal on-chain flow context.
+- Prefer conflicting, cautionary, degraded, and high-confidence feature/factor
+  evidence when factor signal material exists.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:
@@ -376,6 +398,18 @@ On-chain flow material:
 - Do not embed full raw on-chain flow payloads, address-level records, reusable
   on-chain flow history, current-run views, or full context JSON.
 
+Feature/factor material:
+
+- Prefer conflicting, cautionary, degraded, failed, and
+  insufficient-evidence factor or signal records before neutral records.
+- Preserve high-confidence supportive factor states only when they materially
+  explain the current context.
+- Summarize omitted low-priority features, factors, and signals with counts and
+  reasons.
+- Do not embed full raw streams, reusable histories, current-run views,
+  `analysis/feature_snapshots.json`, `analysis/factor_states.json`, or
+  `analysis/multi_source_signals.json`.
+
 ## Validation
 
 Automated validation:
@@ -407,6 +441,7 @@ Inspect:
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
+- `analysis/factor_signal_material.md`
 
 Validation should confirm that full intermediate JSON records are referenced by
 path, not embedded wholesale, and that low-priority material is summarized or

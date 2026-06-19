@@ -333,6 +333,12 @@ Failed runs preserve artifacts created before the failure and record errors in
 `run_manifest.json`. The product command must not emit fake raw data, fake
 analysis, or placeholder reports.
 
+Feature, factor, and multi-source signal contracts are defined in
+`docs/feature-factor-contracts.md`. Product runs do not generate
+`analysis/feature_snapshots.json`, `analysis/factor_states.json`,
+`analysis/multi_source_signals.json`, or `analysis/factor_signal_material.md`
+until the corresponding pipeline stages are implemented.
+
 ## Quantitative Research
 
 Built-in strategies use vectorbt as an implementation helper for indicator,
@@ -516,6 +522,7 @@ they are not proof of a real-source product run.
   - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
   - `docs/macro-calendar-contracts.md`: macro and scheduled-event data contracts.
   - `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data contracts.
+  - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.
