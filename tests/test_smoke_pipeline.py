@@ -102,6 +102,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert manifest["counts"]["user_state_watchlist_records"] == 0
     assert manifest["personalized_risk_constraints"]["status"] == "skipped"
     assert manifest["counts"]["personalized_risk_constraint_records"] >= 1
+    assert manifest["personalized_risk_integration"]["status"] == "succeeded"
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"] == {
@@ -190,6 +191,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("integrate_intelligence_fusion", "succeeded"),
         ("build_user_state_context", "succeeded"),
         ("build_personalized_risk_constraints", "succeeded"),
+        ("integrate_personalized_risk_constraints", "succeeded"),
         ("build_analysis_materials", "succeeded"),
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
@@ -464,6 +466,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["user_state_watchlist_records"] == 0
     assert manifest["personalized_risk_constraints"]["status"] == "skipped"
     assert manifest["counts"]["personalized_risk_constraint_records"] >= 1
+    assert manifest["personalized_risk_integration"]["status"] == "succeeded"
+    assert manifest["counts"]["personalized_risk_decision_linked_records"] >= 1
+    assert manifest["counts"]["personalized_risk_decision_adjusted_records"] == 0
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
