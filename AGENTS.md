@@ -168,6 +168,7 @@ Current bias:
 * Outcome tracking contracts live in `docs/outcome-tracking-contracts.md`.
 * On-chain and exchange-flow contracts live in `docs/onchain-flow-contracts.md`.
 * User-state and personalized-risk contracts live in `docs/user-state-contracts.md`.
+* Local monitoring contracts live in `docs/monitoring-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
@@ -289,6 +290,7 @@ Current bias:
 * `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
 * `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
 * `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
+* `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
@@ -325,6 +327,8 @@ python -m halpha run --config config.example.yaml
 python -m halpha run --config config.example.yaml --no-codex
 python -m halpha run --config config.example.yaml --until <stage_name>
 python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha monitor --help
+python -m halpha monitor run --config config.example.yaml --dry-run
 python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>
 python -m halpha experiment --config config.example.yaml
 python -m halpha text-models prepare --config config.example.yaml
@@ -347,6 +351,12 @@ They must not fabricate skipped artifacts.
 `--until` runs through the named stage and records later stages as not run.
 
 `stage` runs one named stage against an existing run directory.
+
+`monitor --help` exposes the local monitor command family.
+
+`monitor run --dry-run` validates effective monitor configuration and prints `cycle_execution: not_run`.
+
+`monitor run --dry-run` does not collect network data, run processors, run pipeline stages, run Codex CLI, write monitor artifacts, or start a background process.
 
 `backtest` runs one configured strategy against shared local OHLCV history.
 
@@ -385,6 +395,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha run --config config.example.yaml --no-codex` for real-source product acceptance when Codex CLI use is not needed.
 * Use `python -m halpha run --config config.example.yaml --until <stage_name>` for bounded stage-through acceptance.
 * Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
+* Use `python -m halpha monitor run --config config.example.yaml --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
 * Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment and gate artifacts when shared OHLCV history exists.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
