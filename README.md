@@ -487,6 +487,7 @@ they are not proof of a real-source product run.
   - `docs/quant-contracts.md`: quantitative research contracts.
   - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
   - `docs/macro-calendar-contracts.md`: macro and scheduled-event data contracts.
+  - `docs/onchain-flow-contracts.md`: planned on-chain and exchange-flow data contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.
