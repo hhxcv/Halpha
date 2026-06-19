@@ -514,7 +514,7 @@ Strategy interpretation:
 
 ## Macro Calendar Material
 
-Planned artifact:
+Implemented artifact:
 
 ```text
 analysis/macro_calendar_material.md
@@ -525,6 +525,17 @@ Purpose:
 - provide bounded AI-readable macro/calendar context for Codex report
   generation;
 - avoid embedding raw source payloads or full reusable macro/calendar history.
+- preserve selected-record and omitted-record counts for Codex input budgeting
+  and report traceability.
+
+Pipeline stage:
+
+```text
+build_macro_calendar_material
+```
+
+The stage runs after `build_macro_calendar_context` and before text-event
+processing. It consumes `analysis/macro_calendar_context.json` only.
 
 Required sections:
 
@@ -555,6 +566,16 @@ Rules:
   `full_macro_calendar_context_json_embedded: false`.
 - Record selected-record and omitted-record counts in `run_manifest.json` and
   Codex input budget metadata through the standard material budget mechanism.
+
+Implemented manifest keys:
+
+- `artifacts.macro_calendar_material`
+- `counts.macro_calendar_material_records`
+- `counts.macro_calendar_material_omitted_records`
+- `macro_calendar_material.status`
+- `macro_calendar_material.context_records`
+- `macro_calendar_material.selected_records`
+- `macro_calendar_material.omitted_records`
 
 ## Codex Boundary
 

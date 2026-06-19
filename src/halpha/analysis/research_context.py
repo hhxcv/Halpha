@@ -18,6 +18,7 @@ RESEARCH_CONTEXT_ARTIFACT = "analysis/research_context.md"
 MARKET_MATERIAL_ARTIFACT = "analysis/market_material.md"
 MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
 DERIVATIVES_MARKET_MATERIAL_ARTIFACT = "analysis/derivatives_market_material.md"
+MACRO_CALENDAR_MATERIAL_ARTIFACT = "analysis/macro_calendar_material.md"
 STRATEGY_EVALUATION_MATERIAL_ARTIFACT = "analysis/strategy_evaluation_material.md"
 STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT = "analysis/strategy_experiment_material.md"
 DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
@@ -66,6 +67,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=bool(run.manifest.get("artifacts", {}).get("derivatives_market_material")),
         producer_stage="build_analysis_materials",
     )
+    macro_calendar_material = _read_material(
+        run.analysis_dir / "macro_calendar_material.md",
+        MACRO_CALENDAR_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("macro_calendar_material")),
+        producer_stage="build_macro_calendar_material",
+    )
     strategy_evaluation_material = _read_material(
         run.analysis_dir / "strategy_evaluation_material.md",
         STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
@@ -100,6 +107,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         market_material=market_material,
         market_signal_material=market_signal_material,
         derivatives_market_material=derivatives_market_material,
+        macro_calendar_material=macro_calendar_material,
         strategy_evaluation_material=strategy_evaluation_material,
         strategy_experiment_material=strategy_experiment_material,
         decision_intelligence_material=decision_intelligence_material,
@@ -117,6 +125,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         market_material=material_inputs[MARKET_MATERIAL_ARTIFACT]["content"],
         market_signal_material=material_inputs[MARKET_SIGNAL_MATERIAL_ARTIFACT]["content"],
         derivatives_market_material=material_inputs[DERIVATIVES_MARKET_MATERIAL_ARTIFACT]["content"],
+        macro_calendar_material=material_inputs[MACRO_CALENDAR_MATERIAL_ARTIFACT]["content"],
         strategy_evaluation_material=material_inputs[STRATEGY_EVALUATION_MATERIAL_ARTIFACT]["content"],
         strategy_experiment_material=material_inputs[STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT]["content"],
         decision_intelligence_material=material_inputs[DECISION_INTELLIGENCE_MATERIAL_ARTIFACT]["content"],
@@ -151,6 +160,7 @@ def render_research_context(
     market_material: str | None,
     market_signal_material: str | None,
     derivatives_market_material: str | None,
+    macro_calendar_material: str | None,
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
     decision_intelligence_material: str | None,
@@ -211,6 +221,8 @@ def render_research_context(
     lines.extend(_embedded_material(MARKET_SIGNAL_MATERIAL_ARTIFACT, market_signal_material))
     lines.extend(["", "## derivatives_market_material", ""])
     lines.extend(_embedded_material(DERIVATIVES_MARKET_MATERIAL_ARTIFACT, derivatives_market_material))
+    lines.extend(["", "## macro_calendar_material", ""])
+    lines.extend(_embedded_material(MACRO_CALENDAR_MATERIAL_ARTIFACT, macro_calendar_material))
     lines.extend(["", "## strategy_evaluation_material", ""])
     lines.extend(_embedded_material(STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material))
     lines.extend(["", "## strategy_experiment_material", ""])
@@ -237,6 +249,7 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "raw_text_events": artifacts.get("raw_text_events"),
         "market_signal_material": artifacts.get("market_signal_material"),
         "derivatives_market_material": artifacts.get("derivatives_market_material"),
+        "macro_calendar_material": artifacts.get("macro_calendar_material"),
         "data_quality_summary": artifacts.get("data_quality_summary"),
         "data_quality_material": artifacts.get("data_quality_material"),
         "outcome_tracking_material": artifacts.get("outcome_tracking_material"),
@@ -274,6 +287,13 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "derivatives_market_views": artifacts.get("derivatives_market_views"),
                 "derivatives_market_context": artifacts.get("derivatives_market_context"),
                 "derivatives_market_material": artifacts.get("derivatives_market_material"),
+            }
+        )
+    if artifacts.get("macro_calendar_material"):
+        index.update(
+            {
+                "macro_calendar_context": artifacts.get("macro_calendar_context"),
+                "macro_calendar_material": artifacts.get("macro_calendar_material"),
             }
         )
     if artifacts.get("decision_intelligence_material"):
@@ -350,9 +370,13 @@ def _source_policy() -> dict[str, Any]:
         "full_reusable_history_embedded": False,
         "full_outcome_history_embedded": False,
         "full_raw_derivatives_artifacts_embedded": False,
+        "full_raw_macro_calendar_artifacts_embedded": False,
         "full_reusable_derivatives_history_embedded": False,
+        "full_reusable_macro_calendar_history_embedded": False,
         "full_derivatives_views_embedded": False,
+        "full_macro_calendar_views_embedded": False,
         "full_derivatives_context_json_embedded": False,
+        "full_macro_calendar_context_json_embedded": False,
         "full_catalog_embedded": False,
         "full_run_index_embedded": False,
         "full_intermediate_json_embedded": False,
@@ -422,6 +446,26 @@ def _generation_constraints() -> dict[str, Any]:
             "full_raw_derivatives_artifacts_embedded": False,
             "full_reusable_derivatives_history_embedded": False,
             "full_derivatives_context_json_embedded": False,
+        },
+        "macro_calendar_requirements": {
+            "include_when_macro_calendar_material_exists": True,
+            "use_halpha_macro_calendar_context_states_only": True,
+            "explain_scheduled_catalyst_timing_risk": True,
+            "distinguish_scheduled_catalyst_from_realized_market_impact": True,
+            "explain_source_availability_freshness_time_zone_and_quality_limits": True,
+            "do_not_generate_macro_events": True,
+            "do_not_generate_macro_states": True,
+            "do_not_generate_risk_levels": True,
+            "do_not_generate_watch_triggers": True,
+            "do_not_generate_alert_priorities": True,
+            "do_not_infer_missing_source_data": True,
+            "do_not_forecast_macro_outcomes": True,
+            "do_not_generate_price_forecasts": True,
+            "do_not_create_trading_instructions": True,
+            "full_raw_macro_calendar_artifacts_embedded": False,
+            "full_reusable_macro_calendar_history_embedded": False,
+            "full_macro_calendar_views_embedded": False,
+            "full_macro_calendar_context_json_embedded": False,
         },
         "decision_intelligence_requirements": {
             "include_when_decision_intelligence_material_exists": True,
@@ -518,6 +562,7 @@ def _prepare_material_inputs(
     market_material: str | None,
     market_signal_material: str | None,
     derivatives_market_material: str | None,
+    macro_calendar_material: str | None,
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
     decision_intelligence_material: str | None,
@@ -531,6 +576,7 @@ def _prepare_material_inputs(
         (MARKET_MATERIAL_ARTIFACT, market_material),
         (MARKET_SIGNAL_MATERIAL_ARTIFACT, market_signal_material),
         (DERIVATIVES_MARKET_MATERIAL_ARTIFACT, derivatives_market_material),
+        (MACRO_CALENDAR_MATERIAL_ARTIFACT, macro_calendar_material),
         (STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material),
         (STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material),
         (DECISION_INTELLIGENCE_MATERIAL_ARTIFACT, decision_intelligence_material),
