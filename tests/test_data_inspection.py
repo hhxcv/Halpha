@@ -36,6 +36,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "onchain_flow_history: skipped" in output
     assert "feature_factor_artifacts: skipped" in output
     assert "intelligence_fusion: skipped" in output
+    assert "personalized_risk: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -70,9 +71,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "onchain_flow_history: skipped" in output
     assert "feature_factor_artifacts: skipped" in output
     assert "intelligence_fusion: skipped" in output
+    assert "personalized_risk: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
-    assert "checks=27" in output
+    assert "checks=30" in output
     assert "degraded=1" in output
     assert "runs/run-1/analysis/data_quality_summary.json" in output
     assert "CREATE TABLE" not in output
@@ -115,6 +117,7 @@ def test_data_inspect_uses_specific_run_dir_and_reports_missing_quality_as_skipp
     output = capsys.readouterr().out
     assert exit_code == 0
     assert "data_quality_summary: skipped" in output
+    assert "personalized_risk: skipped" in output
     assert "run_id=run-without-quality" in output
     assert "run_status=succeeded" in output
 
@@ -196,6 +199,52 @@ def test_data_inspect_reports_intelligence_fusion_artifacts_and_codex_budget(
     assert "codex_budget_chars=3072" in output
     assert "fusion_record_id" not in output
     assert "bounded fusion evidence" not in output
+
+
+def test_data_inspect_reports_personalized_risk_artifacts_and_codex_budget(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_m15_inspection_artifacts(run)
+
+    exit_code = main(
+        [
+            "data",
+            "inspect",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            "runs/run-1",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "personalized_risk: warning" in output
+    assert "user_state_status=ok" in output
+    assert "user_state_mode=personalized" in output
+    assert "user_state_watchlist_records=2" in output
+    assert "user_state_disabled_assets=1" in output
+    assert "user_state_omitted_private_values=1" in output
+    assert "constraint_records=3" in output
+    assert "constraint_state_counts=risk_limit_downgraded:1,watchlist_relevant:2" in output
+    assert "constraint_action_counts=annotate:2,downgrade:1" in output
+    assert "integration_status=succeeded" in output
+    assert "decision_linked_records=2" in output
+    assert "decision_adjusted_records=1" in output
+    assert "watch_linked_records=1" in output
+    assert "alert_adjusted_records=1" in output
+    assert "material_records=3" in output
+    assert "material_omitted_records=1" in output
+    assert "m15_quality_ok=2" in output
+    assert "m15_quality_warning=1" in output
+    assert "codex_budget_status=included" in output
+    assert "codex_budget_chars=1536" in output
+    assert "configured_user_state" not in output
+    assert "private_note" not in output
+    assert str(tmp_path) not in output
 
 
 def test_data_inspect_reports_derivatives_store_and_current_run_views(
@@ -485,8 +534,8 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
             "created_at": "2026-06-05T00:10:00Z",
             "status": quality_status,
             "counts": {
-                "checks": 27,
-                "ok": 27 - degraded_count - warning_count,
+                "checks": 30,
+                "ok": 30 - degraded_count - warning_count,
                 "warning": warning_count,
                 "degraded": degraded_count,
                 "skipped": 0,
@@ -678,6 +727,112 @@ def _write_fusion_inspection_artifacts(run: RunContext) -> None:
     }
     quality["status"] = "warning"
     quality["warnings"] = ["one intelligence fusion record is conflicting."]
+    write_json(quality_path, quality)
+
+
+def _write_m15_inspection_artifacts(run: RunContext) -> None:
+    run.manifest["artifacts"].update(
+        {
+            "user_state_context": "analysis/user_state_context.json",
+            "personalized_risk_constraints": "analysis/personalized_risk_constraints.json",
+            "personalized_risk_material": "analysis/personalized_risk_material.md",
+        }
+    )
+    run.manifest["user_state_context"] = {
+        "status": "ok",
+        "mode": "personalized",
+        "artifact": "analysis/user_state_context.json",
+        "watchlist_records": 2,
+        "disabled_assets": 1,
+        "preferred_timeframes": 2,
+        "strategy_preference_records": 1,
+        "manual_exposure_summary_records": 1,
+        "omitted_private_values": 1,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["personalized_risk_constraints"] = {
+        "status": "warning",
+        "artifact": "analysis/personalized_risk_constraints.json",
+        "records": 3,
+        "state_counts": {"watchlist_relevant": 2, "risk_limit_downgraded": 1},
+        "action_counts": {"annotate": 2, "downgrade": 1},
+        "warnings": 1,
+        "errors": 0,
+    }
+    run.manifest["personalized_risk_integration"] = {
+        "status": "succeeded",
+        "source_artifact": "analysis/personalized_risk_constraints.json",
+        "decision_records": 2,
+        "decision_linked_records": 2,
+        "decision_adjusted_records": 1,
+        "watch_records": 1,
+        "watch_linked_records": 1,
+        "watch_adjusted_records": 0,
+        "alert_records": 2,
+        "alert_linked_records": 2,
+        "alert_adjusted_records": 1,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["personalized_risk_material"] = {
+        "status": "ok",
+        "artifact": "analysis/personalized_risk_material.md",
+        "selected_records": 3,
+        "omitted_records": 1,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"].update(
+        {
+            "user_state_watchlist_records": 2,
+            "user_state_disabled_assets": 1,
+            "user_state_preferred_timeframes": 2,
+            "user_state_strategy_preference_records": 1,
+            "user_state_manual_exposure_summary_records": 1,
+            "user_state_omitted_private_values": 1,
+            "personalized_risk_constraint_records": 3,
+            "personalized_risk_decision_linked_records": 2,
+            "personalized_risk_decision_adjusted_records": 1,
+            "personalized_risk_watch_linked_records": 1,
+            "personalized_risk_watch_adjusted_records": 0,
+            "personalized_risk_alert_linked_records": 2,
+            "personalized_risk_alert_adjusted_records": 1,
+            "personalized_risk_material_records": 3,
+            "personalized_risk_material_omitted_records": 1,
+        }
+    )
+    run.manifest["codex_input"] = {
+        "materials": {
+            "analysis/personalized_risk_material.md": {
+                "status": "included",
+                "chars": 1536,
+                "over_budget": False,
+                "warnings": [],
+            }
+        }
+    }
+    write_json(run.manifest_path, run.manifest)
+
+    quality_path = run.analysis_dir / "data_quality_summary.json"
+    quality = json.loads(quality_path.read_text(encoding="utf-8"))
+    quality["checks"] = [
+        _quality_check("user_state_context", "ok"),
+        _quality_check("personalized_risk_constraints", "warning"),
+        _quality_check("personalized_risk_material", "ok"),
+    ]
+    quality["counts"] = {
+        "checks": 3,
+        "ok": 2,
+        "warning": 1,
+        "degraded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "warnings": 1,
+        "errors": 0,
+    }
+    quality["status"] = "warning"
+    quality["warnings"] = ["one personalized constraint is conservative."]
     write_json(quality_path, quality)
 
 

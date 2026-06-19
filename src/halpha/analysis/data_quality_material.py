@@ -10,10 +10,26 @@ from halpha.pipeline import PipelineError, RunContext
 STAGE_NAME = "build_analysis_materials"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 DATA_QUALITY_MATERIAL_ARTIFACT = "analysis/data_quality_material.md"
-MAX_CHECKS = 32
+MAX_CHECKS = 15
 MAX_MESSAGES = 8
 MAX_SOURCE_ARTIFACTS = 20
 MAX_MESSAGE_CHARS = 240
+PRIORITY_CHECK_NAMES = {
+    "raw_market",
+    "raw_text",
+    "partial_collection",
+    "research_data_catalog",
+    "run_index",
+    "feature_snapshots",
+    "factor_states",
+    "multi_source_signals",
+    "factor_signal_material",
+    "intelligence_fusion",
+    "intelligence_fusion_material",
+    "user_state_context",
+    "personalized_risk_constraints",
+    "personalized_risk_material",
+}
 
 
 def build_data_quality_material(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -25,10 +41,7 @@ def build_data_quality_material(config: dict[str, Any], run: RunContext) -> list
     output_path = run.analysis_dir / "data_quality_material.md"
     output_path.write_text(material, encoding="utf-8")
     run.manifest["artifacts"]["data_quality_material"] = DATA_QUALITY_MATERIAL_ARTIFACT
-    run.manifest["counts"]["data_quality_material_checks"] = min(
-        len(_list(summary.get("checks"))),
-        MAX_CHECKS,
-    )
+    run.manifest["counts"]["data_quality_material_checks"] = len(_selected_checks(_list(summary.get("checks"))))
     run.manifest["data_quality_material"] = {
         "status": summary.get("status") or "unknown",
         "artifact": DATA_QUALITY_MATERIAL_ARTIFACT,
@@ -109,8 +122,9 @@ def _record_from_summary(
     *,
     manifest_artifacts: dict[str, Any],
 ) -> dict[str, Any]:
-    checks = [_check_record(check) for check in _list(summary.get("checks"))[:MAX_CHECKS]]
     total_checks = len(_list(summary.get("checks")))
+    selected_checks = _selected_checks(_list(summary.get("checks")))
+    checks = [_check_record(check) for check in selected_checks]
     return {
         "record_type": "data_quality_context",
         "run_id": summary.get("run_id"),
@@ -137,6 +151,30 @@ def _record_from_summary(
         "warnings": _bounded_messages(_list(summary.get("warnings"))),
         "errors": _bounded_errors(_list(summary.get("errors"))),
     }
+
+
+def _selected_checks(checks: list[Any]) -> list[Any]:
+    selected: list[Any] = []
+    selected_ids: set[int] = set()
+
+    def add(check: Any) -> None:
+        if len(selected) >= MAX_CHECKS:
+            return
+        identifier = id(check)
+        if identifier in selected_ids:
+            return
+        selected.append(check)
+        selected_ids.add(identifier)
+
+    for check in checks:
+        if isinstance(check, dict) and check.get("name") in PRIORITY_CHECK_NAMES:
+            add(check)
+    for check in checks:
+        if isinstance(check, dict) and check.get("status") in {"failed", "degraded", "warning"}:
+            add(check)
+    for check in checks:
+        add(check)
+    return selected
 
 
 def _check_record(check: Any) -> dict[str, Any]:
@@ -195,7 +233,23 @@ def _detail_counts(details: dict[str, Any]) -> dict[str, Any]:
             continue
         if isinstance(value, bool | int | float | str) or value is None:
             selected[key] = value
+        elif key in {"state_counts", "action_counts"} and isinstance(value, dict):
+            count_values = {
+                str(count_key): count_value
+                for count_key, count_value in sorted(value.items())
+                if isinstance(count_key, str) and _is_nonzero_count(count_value)
+            }
+            if count_values:
+                selected[key] = count_values
     return selected
+
+
+def _is_nonzero_count(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int | float):
+        return value != 0
+    return isinstance(value, str) and bool(value)
 
 
 def _store_references(summary: dict[str, Any], manifest_artifacts: dict[str, Any]) -> list[str]:

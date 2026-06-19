@@ -30,6 +30,9 @@ MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
 FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
 INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
 INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.md"
+USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
+PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
+PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
 M13_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
@@ -39,6 +42,11 @@ M13_CHECK_NAMES = {
 FUSION_CHECK_NAMES = {
     "intelligence_fusion",
     "intelligence_fusion_material",
+}
+M15_CHECK_NAMES = {
+    "user_state_context",
+    "personalized_risk_constraints",
+    "personalized_risk_material",
 }
 
 
@@ -71,6 +79,7 @@ def inspect_local_data(
         _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
         _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
         _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
+        _personalized_risk_section(config_path, run_dir=run_dir, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -620,6 +629,129 @@ def _intelligence_fusion_section(
     )
 
 
+def _personalized_risk_section(
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    if run_dir is not None:
+        resolved_run_dir = _resolve_run_dir(run_dir, base=base)
+    else:
+        resolved_run_dir = _latest_run_from_index(config_path)
+    if resolved_run_dir is None:
+        return _section(
+            "personalized_risk",
+            "skipped",
+            reason="no latest run was found in the local run index.",
+        )
+
+    manifest_path = resolved_run_dir / "run_manifest.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    if manifest_error:
+        raise DataInspectionError(f"run_manifest.json could not be inspected: {manifest_error}")
+
+    artifacts = _dict(manifest.get("artifacts"))
+    counts = _dict(manifest.get("counts"))
+    user_state_summary = _dict(manifest.get("user_state_context"))
+    constraint_summary = _dict(manifest.get("personalized_risk_constraints"))
+    integration_summary = _dict(manifest.get("personalized_risk_integration"))
+    material_summary = _dict(manifest.get("personalized_risk_material"))
+    has_personalized_artifacts = any(
+        artifacts.get(key)
+        for key in ("user_state_context", "personalized_risk_constraints", "personalized_risk_material")
+    ) or any((user_state_summary, constraint_summary, integration_summary, material_summary))
+
+    quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
+    quality_counts = _m15_quality_check_counts(quality)
+    if not has_personalized_artifacts and not any(quality_counts.values()):
+        return _section(
+            "personalized_risk",
+            "skipped",
+            artifact=_safe_path(manifest_path, base=base),
+            fields={
+                "run_id": manifest.get("run_id"),
+                "run_status": manifest.get("status"),
+            },
+            reason="personalized risk artifacts were not found in this run.",
+        )
+
+    budget = _codex_material_budget(manifest, PERSONALIZED_RISK_MATERIAL_ARTIFACT)
+    if not budget:
+        budget = _dict(material_summary.get("codex_input_budget"))
+    fields = {
+        "run_id": manifest.get("run_id"),
+        "run_status": manifest.get("status"),
+        "user_state_status": user_state_summary.get("status") or "unknown",
+        "user_state_mode": user_state_summary.get("mode") or "unknown",
+        "user_state_watchlist_records": _int(counts.get("user_state_watchlist_records")),
+        "user_state_disabled_assets": _int(counts.get("user_state_disabled_assets")),
+        "user_state_preferred_timeframes": _int(counts.get("user_state_preferred_timeframes")),
+        "user_state_strategy_preference_records": _int(
+            counts.get("user_state_strategy_preference_records")
+        ),
+        "user_state_manual_exposure_summary_records": _int(
+            counts.get("user_state_manual_exposure_summary_records")
+        ),
+        "user_state_omitted_private_values": _int(counts.get("user_state_omitted_private_values")),
+        "constraint_status": constraint_summary.get("status") or "unknown",
+        "constraint_records": _int(counts.get("personalized_risk_constraint_records")),
+        "constraint_state_counts": _compact_counts(_dict(constraint_summary.get("state_counts"))),
+        "constraint_action_counts": _compact_counts(_dict(constraint_summary.get("action_counts"))),
+        "integration_status": integration_summary.get("status") or "unknown",
+        "decision_linked_records": _int(counts.get("personalized_risk_decision_linked_records")),
+        "decision_adjusted_records": _int(counts.get("personalized_risk_decision_adjusted_records")),
+        "watch_linked_records": _int(counts.get("personalized_risk_watch_linked_records")),
+        "watch_adjusted_records": _int(counts.get("personalized_risk_watch_adjusted_records")),
+        "alert_linked_records": _int(counts.get("personalized_risk_alert_linked_records")),
+        "alert_adjusted_records": _int(counts.get("personalized_risk_alert_adjusted_records")),
+        "material_status": material_summary.get("status") or "unknown",
+        "material_records": _int(counts.get("personalized_risk_material_records")),
+        "material_omitted_records": _int(counts.get("personalized_risk_material_omitted_records")),
+        "m15_quality_ok": quality_counts["ok"],
+        "m15_quality_warning": quality_counts["warning"],
+        "m15_quality_degraded": quality_counts["degraded"],
+        "m15_quality_skipped": quality_counts["skipped"],
+        "m15_quality_failed": quality_counts["failed"],
+        "manifest": _safe_path(manifest_path, base=base),
+    }
+    if budget:
+        fields.update(
+            {
+                "codex_budget_status": budget.get("status") or "unknown",
+                "codex_budget_chars": _int(budget.get("chars")),
+                "codex_budget_over_budget": bool(budget.get("over_budget")),
+                "codex_budget_warnings": len(_list(budget.get("warnings"))),
+            }
+        )
+    else:
+        fields["codex_budget_status"] = "not_available"
+
+    statuses = [
+        str(summary.get("status"))
+        for summary in (user_state_summary, constraint_summary, material_summary)
+        if isinstance(summary.get("status"), str) and summary.get("status")
+    ]
+    if integration_summary.get("status") == "failed":
+        statuses.append("failed")
+    if integration_summary.get("errors"):
+        statuses.append("failed")
+    elif integration_summary.get("warnings"):
+        statuses.append("warning")
+    statuses.extend(status for status, value in quality_counts.items() for _ in range(value))
+    if budget and (budget.get("over_budget") or budget.get("status") not in {None, "included"}):
+        statuses.append("warning")
+    status = _status_from_values(statuses)
+    reason = quality_error if quality_error else None
+    return _section(
+        "personalized_risk",
+        status,
+        artifact=_safe_path(manifest_path, base=base),
+        fields=fields,
+        reason=reason,
+    )
+
+
 def _latest_run_from_index(config_path: Path) -> Path | None:
     path = run_index_path(config_path)
     if not path.exists():
@@ -739,6 +871,10 @@ def _m13_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
 
 def _fusion_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
     return _named_quality_check_counts(quality, FUSION_CHECK_NAMES)
+
+
+def _m15_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
+    return _named_quality_check_counts(quality, M15_CHECK_NAMES)
 
 
 def _named_quality_check_counts(quality: dict[str, Any], names: set[str]) -> dict[str, int]:
