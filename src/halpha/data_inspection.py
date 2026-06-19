@@ -9,6 +9,12 @@ from typing import Any
 
 from .research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
+from .workbench import (
+    DEFAULT_WORKBENCH_OUTPUT_DIR,
+    WORKBENCH_HTML_FILENAME,
+    WORKBENCH_MARKDOWN_FILENAME,
+    WORKBENCH_SUMMARY_FILENAME,
+)
 
 
 TEXT_EVENT_HISTORY_STATE_ARTIFACT = "data/research/metadata/text_event_history_state.json"
@@ -80,6 +86,7 @@ def inspect_local_data(
         _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
         _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
         _personalized_risk_section(config_path, run_dir=run_dir, base=base),
+        _workbench_section(config_path, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections] + [quality["status"]])
@@ -752,6 +759,51 @@ def _personalized_risk_section(
     )
 
 
+def _workbench_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    _ = config_path
+    output_dir = base / DEFAULT_WORKBENCH_OUTPUT_DIR
+    summary_path = output_dir / WORKBENCH_SUMMARY_FILENAME
+    markdown_path = output_dir / WORKBENCH_MARKDOWN_FILENAME
+    html_path = output_dir / WORKBENCH_HTML_FILENAME
+    summary, error = _read_json(summary_path)
+    if error:
+        return _section(
+            "workbench",
+            "skipped",
+            artifact=_safe_path(summary_path, base=base),
+            fields={
+                "index_markdown": _safe_path(markdown_path, base=base),
+                "index_html": _safe_path(html_path, base=base),
+            },
+            reason=error,
+        )
+
+    latest_run = _dict(summary.get("latest_run"))
+    latest_fields = _dict(latest_run.get("fields"))
+    index_outputs = _dict(summary.get("index_outputs"))
+    fields = {
+        "generated_at": summary.get("generated_at"),
+        "latest_run_id": latest_fields.get("run_id"),
+        "latest_run_status": latest_fields.get("run_status"),
+        "decision_state": _inspection_section_status(summary, "decision_state"),
+        "alert_state": _inspection_section_status(summary, "alert_state"),
+        "monitor_state": _inspection_section_status(summary, "monitor_state"),
+        "outcome_state": _inspection_section_status(summary, "outcome_state"),
+        "strategy_state": _inspection_section_status(summary, "strategy_state"),
+        "data_quality_state": _inspection_section_status(summary, "data_quality_state"),
+        "index_markdown": index_outputs.get("markdown") or _safe_path(markdown_path, base=base),
+        "index_html": index_outputs.get("html") or _safe_path(html_path, base=base),
+        "warnings": len(_list(summary.get("warnings"))),
+        "errors": len(_list(summary.get("errors"))),
+    }
+    return _section(
+        "workbench",
+        str(summary.get("status") or "unknown"),
+        artifact=_safe_path(summary_path, base=base),
+        fields=fields,
+    )
+
+
 def _latest_run_from_index(config_path: Path) -> Path | None:
     path = run_index_path(config_path)
     if not path.exists():
@@ -950,3 +1002,7 @@ def _int(value: Any) -> int:
 
 def _status_count(records: list[Any], status: str) -> int:
     return sum(1 for item in records if isinstance(item, dict) and item.get("status") == status)
+
+
+def _inspection_section_status(summary: dict[str, Any], key: str) -> str:
+    return str(_dict(summary.get(key)).get("status") or "unknown")

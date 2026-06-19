@@ -49,6 +49,7 @@ bounded report-facing material.
 | Research context | Combine selected material and generation constraints. | Embedded into Codex context. |
 | Codex prompt | Wrap research context with report-generation rules. | Sent to Codex CLI through stdin. |
 | Final report | Generated Simplified Chinese Markdown plus deterministic post-processing tables. | Output, not upstream input. |
+| Delivery/workbench output | Surface existing evidence and report links for local consumption. | Not embedded by default. Not upstream input. |
 | Manifest | Record lifecycle, artifacts, counts, warnings, errors, and Codex input budget. | Not embedded in full. Used for audit. |
 
 Shared reusable data contracts are defined in
@@ -309,6 +310,31 @@ reusable outcome history. They are not Codex context by themselves. Codex should
 consume bounded `analysis/outcome_tracking_material.md` instead of full target,
 evaluation, or history records.
 
+### Local Monitor And Workbench Outputs
+
+Monitor artifacts:
+
+- `runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json`
+- `runs/monitor/alert_archive.jsonl`
+- `runs/monitor/alert_cooldown_state.json`
+- `runs/monitor/alert_archive_state.json`
+- `runs/monitor/monitor_health_state.json`
+
+Monitor artifacts are local operational state. They are not Codex input by
+default.
+
+Workbench delivery artifacts:
+
+- `runs/workbench/latest/workbench_summary.json`
+- `runs/workbench/latest/index.md`
+- `runs/workbench/latest/index.html`
+
+Workbench artifacts summarize and link to existing deterministic artifacts for
+local consumption. They are delivery outputs, not upstream analysis inputs,
+decision artifacts, alert-priority sources, strategy-gate inputs, or Codex
+context by default. Codex should continue to consume bounded report-facing
+material rather than full workbench summaries or generated indexes.
+
 ### Report-Facing Material
 
 Eligible Codex input:
@@ -361,6 +387,7 @@ Codex input policy:
 - Do not embed full intermediate JSON evidence.
 - Do not embed full shared OHLCV history.
 - Do not embed full reusable outcome history.
+- Do not embed full workbench summaries or generated workbench indexes.
 - Do not embed full reusable on-chain flow history.
 - Do not embed full feature snapshots, factor states, or multi-source signal
   JSON.

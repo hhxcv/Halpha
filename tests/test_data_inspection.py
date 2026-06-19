@@ -37,6 +37,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "feature_factor_artifacts: skipped" in output
     assert "intelligence_fusion: skipped" in output
     assert "personalized_risk: skipped" in output
+    assert "workbench: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
@@ -72,6 +73,7 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "feature_factor_artifacts: skipped" in output
     assert "intelligence_fusion: skipped" in output
     assert "personalized_risk: skipped" in output
+    assert "workbench: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
     assert "checks=30" in output
@@ -118,8 +120,57 @@ def test_data_inspect_uses_specific_run_dir_and_reports_missing_quality_as_skipp
     assert exit_code == 0
     assert "data_quality_summary: skipped" in output
     assert "personalized_risk: skipped" in output
+    assert "workbench: skipped" in output
     assert "run_id=run-without-quality" in output
     assert "run_status=succeeded" in output
+
+
+def test_data_inspect_reports_workbench_outputs_without_dumping_summary(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    workbench_dir = tmp_path / "runs" / "workbench" / "latest"
+    write_json(
+        workbench_dir / "workbench_summary.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "workbench_summary",
+            "status": "partial",
+            "generated_at": "2026-06-20T00:00:00Z",
+            "latest_run": {"fields": {"run_id": "run-1", "run_status": "succeeded"}},
+            "decision_state": {"status": "available"},
+            "alert_state": {"status": "available"},
+            "monitor_state": {"status": "available"},
+            "outcome_state": {"status": "partial"},
+            "strategy_state": {"status": "available"},
+            "data_quality_state": {"status": "partial"},
+            "index_outputs": {
+                "status": "available",
+                "markdown": "runs/workbench/latest/index.md",
+                "html": "runs/workbench/latest/index.html",
+            },
+            "warnings": ["bounded warning"],
+            "errors": [],
+            "source_artifacts": {"analysis": {"decision": "analysis/decision_recommendations.json"}},
+        },
+    )
+    (workbench_dir / "index.md").write_text("# Halpha Workbench\n", encoding="utf-8")
+    (workbench_dir / "index.html").write_text("<!doctype html>\n", encoding="utf-8")
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "workbench: partial" in output
+    assert "artifact=runs/workbench/latest/workbench_summary.json" in output
+    assert "latest_run_id=run-1" in output
+    assert "decision_state=available" in output
+    assert "outcome_state=partial" in output
+    assert "index_markdown=runs/workbench/latest/index.md" in output
+    assert "index_html=runs/workbench/latest/index.html" in output
+    assert "bounded warning" not in output
+    assert "analysis/decision_recommendations.json" not in output
 
 
 def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(

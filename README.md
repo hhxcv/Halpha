@@ -42,9 +42,11 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Validates local monitor configuration without starting hidden background execution.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
+- Builds local workbench summary, Markdown index, and static HTML index files from existing artifacts.
 
 Halpha does not implement account access, exchange trading, order placement,
-portfolio automation, real-time alerts, dashboards, or hosted services.
+portfolio automation, real-time alert delivery, hosted dashboards, or hosted
+services.
 
 ## Install
 
@@ -129,7 +131,8 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 
 The inspection command summarizes shared OHLCV, derivatives, macro/calendar,
 on-chain flow, text-event, run-index, intelligence-fusion, and data-quality
-state without dumping full reusable histories or raw records.
+state, plus workbench output refs when available, without dumping full reusable
+histories or raw records.
 
 Inspect outcome tracking artifacts and shared outcome history state without
 collection or Codex:
@@ -138,6 +141,24 @@ collection or Codex:
 python -m halpha outcomes inspect --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
+
+Build local workbench delivery outputs from existing artifacts:
+
+```bash
+python -m halpha workbench build --config config.example.yaml
+python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
+```
+
+Inspect the latest workbench summary without running collection, pipeline
+stages, monitor cycles, or Codex:
+
+```bash
+python -m halpha workbench inspect --config config.example.yaml
+```
+
+Workbench outputs are local delivery artifacts under `runs/workbench/latest/`.
+They summarize and link to existing deterministic artifacts. They do not become
+upstream decision inputs or Codex context by default.
 
 Run one configured strategy backtest from shared local OHLCV history:
 
@@ -381,6 +402,9 @@ A successful configured run can write:
 - `runs/text_intelligence/<id>/analysis/event_intelligence_material.md`: standalone AI-readable event intelligence material.
 - `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
+- `runs/workbench/latest/workbench_summary.json`: bounded local delivery summary with latest run, report, decision, alert, monitor, outcome, strategy, data-quality, source-ref, warning, error, and Codex-boundary metadata.
+- `runs/workbench/latest/index.md`: local Markdown workbench index generated from the summary.
+- `runs/workbench/latest/index.html`: local static HTML workbench index generated from the summary.
 
 Failed runs preserve artifacts created before the failure and record errors in
 `run_manifest.json`. The product command must not emit fake raw data, fake
@@ -479,6 +503,15 @@ Inspect outcome tracking state without collection or Codex CLI:
 ```bash
 python -m halpha outcomes inspect --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
+```
+
+Build and inspect local workbench delivery outputs without collection, pipeline
+execution, monitor cycles, or Codex CLI:
+
+```bash
+python -m halpha workbench build --config config.example.yaml
+python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha workbench inspect --config config.example.yaml
 ```
 
 Run standalone strategy experiment acceptance:

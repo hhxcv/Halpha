@@ -23,7 +23,7 @@ analysis inputs, Codex context, or product state authority.
 
 ## Output Layers
 
-The workbench layer has three intended output types:
+The workbench layer has three implemented output types:
 
 | Output | Purpose | Consumer |
 | --- | --- | --- |
@@ -34,6 +34,25 @@ The workbench layer has three intended output types:
 All workbench outputs must be reproducible from existing artifacts. They must
 not trigger network collection, analysis stages, monitor cycles, Codex CLI, or
 report generation by themselves.
+
+Current implemented commands:
+
+```bash
+python -m halpha workbench build --config config.example.yaml
+python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha workbench inspect --config config.example.yaml
+```
+
+`workbench build` writes:
+
+```text
+runs/workbench/latest/workbench_summary.json
+runs/workbench/latest/index.md
+runs/workbench/latest/index.html
+```
+
+`workbench inspect` is read-only and prints a bounded summary of the latest
+workbench state.
 
 ## Summary JSON Contract
 
@@ -148,6 +167,15 @@ Workbench validation should prove:
 - generated indexes are deterministic from the summary;
 - output does not expose raw private user-state values;
 - workbench artifacts are not admitted into Codex context by default.
+
+Current command validation:
+
+```bash
+python -m halpha workbench build --config config.example.yaml
+python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha workbench inspect --config config.example.yaml
+python -m halpha data inspect --config config.example.yaml
+```
 
 Full product validation with Codex is required only when a workbench change
 alters Codex context, report generation, or final report content.
