@@ -20,9 +20,57 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M11 - Macro and Calendar Context Foundation
+### M12 - On-Chain and Exchange Flow Context Foundation
 
 Status: active.
+
+Goal:
+
+```text
+Add conservative on-chain and exchange-flow context for crypto-specific liquidity, network-activity, and source-availability risk evidence without turning Halpha into an on-chain analytics platform, address-labeling system, or predictive flow model.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M11 macro/calendar, M10 derivatives, market-structure, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable on-chain and exchange-flow contracts for stablecoin supply, broad chain activity, network congestion, exchange-flow source availability, source metadata, freshness, warnings, errors, and Codex boundaries;
+* collect configured public on-chain or flow evidence from stable unauthenticated sources where available;
+* produce inspectable raw, reusable local-history, current-run view, analysis, and material artifacts without embedding full reusable stores into Codex input;
+* normalize flow evidence with asset or chain scope, data class, source refs, observation timestamp, metric units, freshness state, warnings, and errors;
+* explicitly distinguish implemented, skipped, unavailable, stale, partial, degraded, normal, abnormal, insufficient-data, and failed data classes instead of silently treating missing flow evidence as neutral;
+* generate deterministic on-chain flow context artifacts such as `analysis/onchain_flow_context.json` with stablecoin liquidity, chain activity, network congestion, and exchange-flow source-availability states;
+* generate bounded `analysis/onchain_flow_material.md` for Codex and final report generation;
+* connect on-chain flow context into market regime, risk assessment, decision recommendations, watch triggers, alert decisions, outcome accountability, and strategy interpretation only as conservative evidence;
+* ensure Codex may explain Halpha-generated on-chain flow context but must not create on-chain events, address labels, exchange-flow states, risk levels, price forecasts, or trading instructions;
+* support focused validation through existing run, until-stage, single-stage, data inspection, no-Codex, and full Codex product paths;
+* add tests for config validation, public source parsing, disabled source, missing source, stale data, partial collection, abnormal stablecoin supply change, elevated network activity, network congestion, exchange-flow unavailable behavior, risk integration, watch trigger integration, material boundaries, and report constraints;
+* verify the M12 product path with automated tests and real-source local runs.
+
+M12 favors:
+
+* stable public unauthenticated sources over paid terminals, account APIs, address-labeling vendors, or fragile scraped pages;
+* broad liquidity and network-activity context over address-level forensic analytics;
+* deterministic Halpha-owned context states over AI-generated flow interpretation;
+* source availability and degraded-state records over fabricated exchange-flow metrics;
+* bounded on-chain context over large raw chain or address dumps;
+* conservative use in risk, watch, alert, and report interpretation over directional prediction;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M12 does not require:
+
+* full on-chain analytics, wallet clustering, address labeling, entity attribution, token transfer graph analysis, or exchange reserve proof;
+* authenticated APIs, paid data vendors, hosted services, account-specific data, exchange account access, balances, orders, deposits, withdrawals, or user wallet access;
+* reliable exchange netflow where only paid, account-bound, proprietary, or non-periodic sources are available;
+* websocket streaming, mempool monitoring runtime, scheduler, daemon, push notification, dashboard, or alert delivery runtime;
+* portfolio automation, position sizing, trading execution, broker integration, or exchange account operations;
+* user-state personalization, unified feature and factor engine, intelligence fusion layer, or strategy lifecycle automation;
+* making Codex or another LLM the source of on-chain records, flow states, risk levels, watch triggers, alert priorities, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M11 - Macro and Calendar Context Foundation
+
+Status: completed.
 
 Goal:
 
@@ -64,8 +112,6 @@ M11 does not require:
 * portfolio automation, position sizing, trading execution, exchange account access, or broker integration;
 * on-chain flow, user-state personalization, unified feature and factor engine, intelligence fusion layer, or strategy lifecycle automation;
 * making Codex or another LLM the source of macro events, risk levels, watch triggers, alert priorities, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M10 - Derivatives and Market Structure Data Foundation
 
