@@ -20,9 +20,56 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M16 - Local Monitoring and Alert Runtime v1
+### M17 - Local Delivery and Workbench Foundation v1
 
 Status: active.
+
+Goal:
+
+```text
+Give Halpha a local, inspectable entry point for consuming current intelligence, historical reports, alert archive, outcome evidence, monitor health, and strategy state without making the workbench a decision engine.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M16 monitor and alert runtime, M15 user-state and personalized-risk paths, M14 intelligence fusion, M13 feature/factor, M12 on-chain flow, M11 macro/calendar, M10 derivatives, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable local-delivery and workbench contracts for workbench configuration, source artifact refs, latest-run selection, report refs, alert archive summaries, monitor health, outcome evidence, strategy state, data-quality status, missing-artifact states, warnings, errors, and privacy boundaries;
+* support an explicit local workbench command path that can build or inspect a bounded local summary from existing artifacts without collecting network data, running analysis stages, running Codex, or mutating decision artifacts;
+* produce a machine-readable workbench summary artifact that records latest run metadata, report links, current decision and risk summaries, watch trigger summaries, alert archive counts, latest monitor health, outcome tracking status, strategy gate status, data-quality status, source artifact refs, warnings, and errors;
+* produce a human-readable local index, such as Markdown or static HTML, that makes the latest market state, recommendations, alerts, watch triggers, outcomes, strategy state, report links, and key source artifact links reachable from one local entry point;
+* handle complete, partial, missing, stale, and failed upstream artifact states explicitly instead of treating absent evidence as neutral or silently dropping sections;
+* ensure workbench output displays existing deterministic evidence and links only, and never becomes the upstream source for strategy gates, fusion, recommendations, alert priorities, forecasts, or trading instructions;
+* keep Codex input policy unchanged by default: workbench artifacts are delivery outputs and must not be fed back into Codex context as raw context unless a later explicit contract says so;
+* update data inspection or documentation paths where needed so humans and AI agents can find workbench outputs, contracts, commands, and artifact boundaries quickly;
+* add tests for summary generation, index rendering, complete artifacts, partial artifacts, missing artifacts, monitor and alert archive linkage, outcome linkage, strategy status linkage, privacy boundaries, and read-only command behavior;
+* verify the M17 product path with automated tests, local workbench generation against real local artifacts, and at least one full local product validation with Codex where report or delivery behavior is affected.
+
+M17 favors:
+
+* local CLI summaries and static files over hosted services or complex frontends;
+* linking and summarizing existing artifacts over generating new hidden judgments;
+* bounded, high-signal delivery artifacts over raw record dumps;
+* explicit missing, partial, stale, and failed states over polished but misleading pages;
+* source links and report links over duplicated artifact contents;
+* read-only workbench behavior over side effects in the analysis pipeline;
+* local plain artifacts over service infrastructure;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M17 does not require:
+
+* a complex React application, hosted web service, remote dashboard, multi-user authentication, cloud sync, or remote collaboration;
+* Kafka, Redis, Celery, Prefect, Airflow, websocket streams, hosted services, mobile push, email delivery, or notification delivery channels;
+* a persistent daemon, Windows service, system tray app, cloud worker, remote scheduler, browser automation requirement, or multi-user runtime;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* new public data sources beyond the already configured product sources;
+* automatic strategy promotion, alert subscription management, search engine indexing, semantic retrieval, or notebook/workbench authoring tools;
+* making Codex or another LLM the source of workbench state, alert priority, decision state, strategy status, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M16 - Local Monitoring and Alert Runtime v1
+
+Status: completed.
 
 Goal:
 
@@ -64,8 +111,6 @@ M16 does not require:
 * new public data sources beyond the already configured product sources;
 * automatic strategy promotion, alert subscription management, or user-notification delivery channels;
 * making Codex or another LLM the source of monitor state, alert priority, suppression decisions, cooldown decisions, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M15 - User State and Personalized Risk Constraints v1
 
