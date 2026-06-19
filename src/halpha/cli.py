@@ -20,6 +20,7 @@ from .standalone_text_intelligence import run_standalone_text_intelligence
 from .storage import display_path
 from .strategy_experiment import StrategyExperimentError, run_strategy_experiment
 from .text_models import prepare_text_models
+from .workbench import build_workbench_summary, inspect_workbench_summary
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -133,6 +134,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     monitor_inspect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
 
+    workbench_parser = subparsers.add_parser(
+        "workbench",
+        help="Build or inspect local workbench delivery artifacts.",
+        description="Build or inspect local workbench delivery artifacts.",
+    )
+    workbench_subparsers = workbench_parser.add_subparsers(dest="workbench_command", required=True)
+    workbench_build_parser = workbench_subparsers.add_parser(
+        "build",
+        help="Build a local workbench summary from existing artifacts.",
+        description="Build a local workbench summary from existing artifacts.",
+    )
+    workbench_build_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    workbench_build_parser.add_argument("--run-dir", help="Optional run directory to summarize.")
+    workbench_inspect_parser = workbench_subparsers.add_parser(
+        "inspect",
+        help="Inspect the latest local workbench summary.",
+        description="Inspect the latest local workbench summary.",
+    )
+    workbench_inspect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+
     return parser
 
 
@@ -185,6 +206,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "monitor" and args.monitor_command == "inspect":
         return _monitor_inspect(args.config)
+
+    if args.command == "workbench" and args.workbench_command == "build":
+        return _workbench_build(args.config, run_dir=args.run_dir)
+
+    if args.command == "workbench" and args.workbench_command == "inspect":
+        return _workbench_inspect(args.config)
 
     parser.error(f"unknown command: {args.command}")
     return 1
@@ -594,6 +621,51 @@ def _monitor_inspect(config_arg: str) -> int:
         return 2
 
     result = inspect_monitor_health(config, config_path=config_path)
+    for line in result.lines:
+        print(line)
+    return result.exit_code
+
+
+def _workbench_build(config_arg: str, *, run_dir: str | None) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha workbench build failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    result = build_workbench_summary(
+        config,
+        config_path=config_path,
+        run_dir=Path(run_dir) if run_dir else None,
+    )
+    print("Halpha workbench build succeeded.")
+    print(f"status: {result.summary.get('status') or 'unknown'}")
+    print(f"summary: {_safe_local_display_path(result.summary_path)}")
+    latest_run = result.summary.get("latest_run")
+    if isinstance(latest_run, dict):
+        fields = latest_run.get("fields")
+        if isinstance(fields, dict) and fields.get("run_id"):
+            print(f"latest_run_id: {fields['run_id']}")
+    print("codex: not_run")
+    return 0
+
+
+def _workbench_inspect(config_arg: str) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha workbench inspection failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    result = inspect_workbench_summary(config, config_path=config_path)
     for line in result.lines:
         print(line)
     return result.exit_code

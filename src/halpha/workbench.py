@@ -29,6 +29,13 @@ class WorkbenchSummaryResult:
 
 
 @dataclass(frozen=True)
+class WorkbenchInspectionResult:
+    succeeded: bool
+    exit_code: int
+    lines: list[str]
+
+
+@dataclass(frozen=True)
 class _RunSelection:
     mode: str
     status: str
@@ -126,6 +133,56 @@ def build_workbench_summary(
     }
     write_json(summary_path, summary)
     return WorkbenchSummaryResult(summary_path=summary_path, summary=summary)
+
+
+def inspect_workbench_summary(config: dict[str, Any], *, config_path: Path) -> WorkbenchInspectionResult:
+    base = _config_base(config_path)
+    summary_path = _workbench_output_dir(config, config_path=config_path) / WORKBENCH_SUMMARY_FILENAME
+    summary, error = _read_json(summary_path)
+    summary_ref = _portable_path(summary_path, base=base)
+    if error:
+        status = "missing" if "was not found" in error else "failed"
+        lines = [
+            "Halpha workbench inspection succeeded." if status == "missing" else "Halpha workbench inspection failed.",
+            f"status: {status}",
+            f"summary: {summary_ref}",
+            f"reason: {error}",
+        ]
+        return WorkbenchInspectionResult(status == "missing", 0 if status == "missing" else 3, lines)
+
+    latest_fields = _dict(_dict(summary.get("latest_run")).get("fields"))
+    latest_report = _dict(latest_fields.get("report"))
+    decision_fields = _dict(_dict(summary.get("decision_state")).get("fields"))
+    alert_fields = _dict(_dict(summary.get("alert_state")).get("fields"))
+    monitor_fields = _dict(_dict(summary.get("monitor_state")).get("fields"))
+    outcome_fields = _dict(_dict(summary.get("outcome_state")).get("fields"))
+    strategy_fields = _dict(_dict(summary.get("strategy_state")).get("fields"))
+    quality_fields = _dict(_dict(summary.get("data_quality_state")).get("fields"))
+    lines = [
+        "Halpha workbench inspection succeeded.",
+        f"status: {summary.get('status') or 'unknown'}",
+        f"summary: {summary_ref}",
+        f"latest_run_id: {latest_fields.get('run_id') or 'none'}",
+        f"latest_run_status: {latest_fields.get('run_status') or 'unknown'}",
+        f"report: {latest_report.get('artifact') or 'none'}",
+        f"report_status: {latest_report.get('status') or 'unknown'}",
+        f"decision_state: {_section_status_text(summary, 'decision_state')}",
+        f"decision_records: {_int(decision_fields.get('decision_records'))}",
+        f"watch_trigger_records: {_int(decision_fields.get('watch_trigger_records'))}",
+        f"alert_state: {_section_status_text(summary, 'alert_state')}",
+        f"alert_decision_records: {_int(alert_fields.get('alert_decision_records'))}",
+        f"monitor_state: {_section_status_text(summary, 'monitor_state')}",
+        f"monitor_cycle_count: {_int(monitor_fields.get('cycle_count'))}",
+        f"outcome_state: {_section_status_text(summary, 'outcome_state')}",
+        f"outcome_evaluation_records: {_int(outcome_fields.get('evaluation_records'))}",
+        f"strategy_state: {_section_status_text(summary, 'strategy_state')}",
+        f"strategy_gate_effective: {_int(strategy_fields.get('strategy_gate_effective'))}",
+        f"data_quality_state: {_section_status_text(summary, 'data_quality_state')}",
+        f"data_quality_warnings: {_int(quality_fields.get('warnings'))}",
+        f"warning_count: {len(_list(summary.get('warnings')))}",
+        f"error_count: {len(_list(summary.get('errors')))}",
+    ]
+    return WorkbenchInspectionResult(True, 0, lines)
 
 
 def _select_run(config_path: Path, *, run_dir: Path | None, base: Path) -> _RunSelection:
@@ -549,6 +606,11 @@ def _section_status(artifacts: list[dict[str, Any]]) -> str:
     return _overall_status([str(item.get("status") or "missing") for item in artifacts])
 
 
+def _section_status_text(summary: dict[str, Any], key: str) -> str:
+    section = _dict(summary.get(key))
+    return str(section.get("status") or "unknown")
+
+
 def _overall_status(statuses: list[str]) -> str:
     cleaned = [status for status in statuses if status]
     if not cleaned:
@@ -596,11 +658,8 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
 
 
 def _workbench_output_dir(config: dict[str, Any], *, config_path: Path) -> Path:
-    section = config.get("workbench")
-    output_dir = DEFAULT_WORKBENCH_OUTPUT_DIR
-    if isinstance(section, dict) and isinstance(section.get("output_dir"), str) and section["output_dir"]:
-        output_dir = section["output_dir"]
-    path = Path(output_dir)
+    _ = config
+    path = Path(DEFAULT_WORKBENCH_OUTPUT_DIR)
     if path.is_absolute():
         return path
     return _config_base(config_path) / path
