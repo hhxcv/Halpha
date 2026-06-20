@@ -45,6 +45,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["run_history_api"] == "available"
     assert payload["features"]["artifact_preview_api"] == "available"
     assert payload["features"]["data_store_api"] == "available"
+    assert payload["features"]["strategy_research_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "not_implemented"
 
@@ -417,6 +418,74 @@ def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path)
     assert outcome["fields"]["history"] == "data/research/outcomes/outcome_history.json"
     assert outcome["preview_path"] == "data/research/metadata/outcome_history_state.json"
     assert "data/research/outcomes/outcome_history.json" not in payload["source_artifacts"]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_strategies_endpoint_reports_missing_strategy_artifacts(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_strategy_research"
+    assert payload["status"] == "missing"
+    assert payload["notice"] == "Strategy output is historical research material, not trading advice."
+    assert payload["selected_run"]["run_id"] is None
+    assert payload["pipeline"]["status"] == "missing"
+    assert payload["standalone"]["status"] == "missing"
+    assert payload["omitted"]["full_equity_curves_embedded"] is False
+    assert payload["omitted"]["full_strategy_records_embedded"] is False
+    assert payload["omitted"]["full_strategy_lifecycle_json_embedded"] is False
+    assert payload["omitted"]["vectorbt_objects_embedded"] is False
+    assert payload["omitted"]["trading_instructions_embedded"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_strategy_artifacts(run)
+    _write_standalone_strategy_outputs(tmp_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["selected_run"]["run_id"] == "run-1"
+    assert payload["pipeline"]["status"] == "warning"
+    assert payload["standalone"]["status"] == "failed"
+    assert "runs/run-1/analysis/strategy_evaluation_summary.json" in payload["source_artifacts"]
+
+    pipeline = {item["name"]: item for item in payload["pipeline"]["artifacts"]}
+    assert pipeline["strategy_benchmark_suite"]["status"] == "available"
+    assert pipeline["quant_strategy_runs"]["records"]["runs"][0]["strategy_name"] == "tsmom_vol_scaled"
+    evaluation = pipeline["strategy_evaluation_summary"]["records"]["records"][0]
+    assert evaluation["strategy_metrics"]["net_return_pct"] == 4.2
+    assert evaluation["walk_forward"]["window_count"] == 1
+    assert "equity_curve" not in str(pipeline["strategy_evaluation_summary"]["records"])
+    assert pipeline["strategy_experiment"]["status"] == "warning"
+    assert pipeline["strategy_effectiveness_gates"]["records"]["gates"][0]["status"] == "effective"
+    lifecycle = pipeline["strategy_lifecycle_state"]["records"]["lifecycle"][0]
+    assert lifecycle["lifecycle_status"] == "degraded"
+    assert lifecycle["degradation_state"] == "degraded"
+
+    backtest = payload["standalone"]["backtests"][0]
+    assert backtest["status"] == "failed"
+    assert backtest["fields"]["evaluation_status"] == "failed"
+    assert backtest["fields"]["equity_curve_points"] == 2
+    assert "equity_curve" not in str(backtest["fields"]["metrics"])
+
+    experiment = payload["standalone"]["experiments"][0]
+    assert experiment["status"] == "available"
+    assert experiment["fields"]["counts"]["evaluations"] == 1
+    assert experiment["records"]["gates"][0]["reason_codes"] == ["benchmark_coverage_met"]
     assert str(tmp_path) not in response.text
 
 
@@ -795,6 +864,331 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
                 "error_count": 0,
             },
             "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_dashboard_strategy_artifacts(run: RunContext) -> None:
+    run.manifest["artifacts"].update(
+        {
+            "strategy_benchmark_suite": "analysis/strategy_benchmark_suite.json",
+            "quant_strategy_runs": "analysis/quant_strategy_runs.json",
+            "strategy_evaluation_summary": "analysis/strategy_evaluation_summary.json",
+            "strategy_experiment": "analysis/strategy_experiment.json",
+            "strategy_effectiveness_gates": "analysis/strategy_effectiveness_gates.json",
+            "strategy_lifecycle_state": "analysis/strategy_lifecycle_state.json",
+        }
+    )
+    write_json(run.manifest_path, run.manifest)
+    write_json(
+        run.analysis_dir / "strategy_benchmark_suite.json",
+        {
+            "artifact_type": "strategy_benchmark_suite",
+            "status": "ok",
+            "coverage": {
+                "benchmark_records": 1,
+                "succeeded": 1,
+                "insufficient_data": 0,
+                "failed": 0,
+            },
+            "benchmarks": [
+                {
+                    "benchmark_id": "benchmark:BTCUSDT:1d",
+                    "status": "succeeded",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "window_identity": "configured_lookback",
+                    "input_window_start": "2026-06-01T00:00:00Z",
+                    "input_window_end": "2026-06-05T00:00:00Z",
+                    "row_count": 5,
+                }
+            ],
+            "source_artifacts": ["raw/market_data_views.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "quant_strategy_runs.json",
+        {
+            "artifact_type": "quant_strategy_runs",
+            "status": "ok",
+            "runs": [
+                {
+                    "strategy_run_id": "run:tsmom_vol_scaled:BTCUSDT:1d",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "strategy_version": 2,
+                    "status": "succeeded",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "summary": {"records": 5},
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["raw/market_data_views.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "strategy_evaluation_summary.json",
+        {
+            "artifact_type": "strategy_evaluation_summary",
+            "status": "ok",
+            "records": [
+                {
+                    "evaluation_id": "evaluation:tsmom_vol_scaled:BTCUSDT:1d",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "strategy_version": 2,
+                    "status": "succeeded",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "single_window": {
+                        "strategy_metrics": {"net_return_pct": 4.2, "max_drawdown_pct": -1.0},
+                        "baseline_metrics": {"buy_and_hold_return_pct": 2.0},
+                        "relative_metrics": {"excess_return_vs_buy_and_hold_pct": 2.2},
+                        "trade_summary": {"trade_count": 3},
+                        "equity_curve": [
+                            {"timestamp": "2026-06-01T00:00:00Z", "equity": 10000},
+                            {"timestamp": "2026-06-02T00:00:00Z", "equity": 10010},
+                        ],
+                    },
+                    "walk_forward": {
+                        "enabled": True,
+                        "status": "succeeded",
+                        "summary": {"window_count": 1, "result_stability": "stable"},
+                        "windows": [{"window_id": "wf-1"}],
+                    },
+                    "parameter_stability": {"enabled": False, "status": "disabled"},
+                    "overfitting_risk": {"status": "low"},
+                    "assessment": {"reliability": "medium", "cost_sensitivity": "low"},
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["analysis/quant_strategy_runs.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "strategy_experiment.json",
+        {
+            "artifact_type": "strategy_experiment",
+            "created_at": "2026-06-20T00:04:00Z",
+            "coverage": {
+                "strategy_candidates": 1,
+                "evaluations": 1,
+                "evaluations_succeeded": 1,
+                "evaluations_failed": 0,
+            },
+            "candidates": [
+                {
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "succeeded",
+                    "summary": {"benchmark_records": 1, "succeeded": 1},
+                    "evaluations": [{"status": "succeeded"}],
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["analysis/strategy_benchmark_suite.json"],
+            "warnings": [{"code": "small_sample", "message": "sample is small."}],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "strategy_effectiveness_gates.json",
+        {
+            "artifact_type": "strategy_effectiveness_gates",
+            "status": "ok",
+            "coverage": {
+                "strategy_candidates": 1,
+                "effective": 1,
+                "watchlisted": 0,
+                "rejected": 0,
+                "insufficient_evidence": 0,
+            },
+            "records": [
+                {
+                    "gate_id": "gate:tsmom_vol_scaled:BTCUSDT:1d",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "effective",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "reasons": [{"code": "benchmark_coverage_met"}],
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["analysis/strategy_experiment.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "strategy_lifecycle_state.json",
+        {
+            "artifact_type": "strategy_lifecycle_state",
+            "status": "warning",
+            "counts": {"records": 1, "degraded": 1},
+            "records": [
+                {
+                    "lifecycle_record_id": "strategy_lifecycle:tsmom_vol_scaled:BTCUSDT:1d",
+                    "scope": {
+                        "strategy_name": "tsmom_vol_scaled",
+                        "source": "binance",
+                        "symbol": "BTCUSDT",
+                        "timeframe": "1d",
+                    },
+                    "lifecycle_status": "degraded",
+                    "degradation": {"state": "degraded"},
+                    "health_state": {"state": "degraded"},
+                    "retirement": {"state": "not_retired"},
+                    "strategy_contract_version": "2",
+                    "parameter_version": "1",
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["analysis/strategy_effectiveness_gates.json"],
+            "warnings": [{"code": "degraded_lifecycle", "message": "lifecycle degraded."}],
+            "errors": [],
+        },
+    )
+
+
+def _write_standalone_strategy_outputs(tmp_path: Path) -> None:
+    backtest_dir = tmp_path / "runs" / "strategy_backtests" / "20260620T000000Z_tsmom_binance_BTCUSDT_1d"
+    write_json(
+        backtest_dir / "strategy_backtest.json",
+        {
+            "artifact_type": "strategy_backtest",
+            "status": "failed",
+            "strategy_metrics": {"net_return_pct": -2.5},
+            "baseline_metrics": {"buy_and_hold_return_pct": 1.0},
+            "relative_metrics": {"excess_return_vs_buy_and_hold_pct": -3.5},
+            "trade_summary": {"trade_count": 1},
+            "sample": {"rows": 5},
+            "execution_model": {"lookahead_policy": "no_same_bar_execution"},
+            "cost_assumptions": {"fees_bps": 10.0},
+            "equity_curve": [
+                {"timestamp": "2026-06-01T00:00:00Z", "equity": 10000},
+                {"timestamp": "2026-06-02T00:00:00Z", "equity": 9900},
+            ],
+            "warnings": [],
+            "errors": [{"message": "strategy evaluation status is failed"}],
+        },
+    )
+    write_json(
+        backtest_dir / "manifest.json",
+        {
+            "artifact_type": "standalone_strategy_backtest_manifest",
+            "created_at": "2026-06-20T00:00:00Z",
+            "status": "failed",
+            "evaluation_status": "failed",
+            "inputs": {
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+            },
+            "artifacts": {
+                "strategy_backtest": "strategy_backtest.json",
+                "manifest": "manifest.json",
+            },
+            "warnings": [],
+            "errors": [{"message": "strategy evaluation status is failed"}],
+        },
+    )
+
+    experiment_dir = tmp_path / "runs" / "strategy_experiments" / "20260620T000000Z_strategy_experiment"
+    write_json(
+        experiment_dir / "strategy_benchmark_suite.json",
+        {
+            "artifact_type": "strategy_benchmark_suite",
+            "status": "ok",
+            "coverage": {"benchmark_records": 1, "succeeded": 1},
+            "benchmarks": [
+                {
+                    "benchmark_id": "benchmark:BTCUSDT:1d",
+                    "status": "succeeded",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "row_count": 5,
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        experiment_dir / "strategy_experiment.json",
+        {
+            "artifact_type": "strategy_experiment",
+            "coverage": {
+                "strategy_candidates": 1,
+                "evaluations": 1,
+                "evaluations_succeeded": 1,
+            },
+            "candidates": [
+                {
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "succeeded",
+                    "summary": {"benchmark_records": 1, "succeeded": 1},
+                    "evaluations": [{"status": "succeeded"}],
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        experiment_dir / "strategy_effectiveness_gates.json",
+        {
+            "artifact_type": "strategy_effectiveness_gates",
+            "status": "ok",
+            "coverage": {"strategy_candidates": 1, "effective": 1},
+            "records": [
+                {
+                    "gate_id": "gate:tsmom_vol_scaled:BTCUSDT:1d",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "effective",
+                    "reasons": [{"code": "benchmark_coverage_met"}],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        experiment_dir / "manifest.json",
+        {
+            "artifact_type": "strategy_experiment_manifest",
+            "created_at": "2026-06-20T00:00:00Z",
+            "status": "succeeded",
+            "inputs": {"strategy_names": ["tsmom_vol_scaled"], "benchmark_records": 1},
+            "counts": {
+                "strategy_candidates": 1,
+                "evaluations": 1,
+                "strategy_gate_effective": 1,
+            },
+            "artifacts": {
+                "strategy_experiment": "strategy_experiment.json",
+                "strategy_benchmark_suite": "strategy_benchmark_suite.json",
+                "strategy_effectiveness_gates": "strategy_effectiveness_gates.json",
+                "manifest": "manifest.json",
+            },
             "warnings": [],
             "errors": [],
         },

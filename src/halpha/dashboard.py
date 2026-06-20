@@ -8,6 +8,7 @@ import sqlite3
 from typing import Any
 
 from .data_inspection import DataInspectionError, inspect_local_store_state
+from .dashboard_strategy import dashboard_strategy_research
 from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
 from .outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
@@ -102,6 +103,10 @@ def create_dashboard_app(
     def data_stores_endpoint() -> dict[str, Any]:
         return dashboard_data_stores(config, config_path=config_path)
 
+    @app.get("/api/strategies")
+    def strategies_endpoint(run_id: str | None = None) -> dict[str, Any]:
+        return dashboard_strategy_research(config, config_path=config_path, run_id=run_id)
+
     return app
 
 
@@ -146,6 +151,7 @@ def dashboard_health(
             "run_history_api": "available",
             "artifact_preview_api": "available",
             "data_store_api": "available",
+            "strategy_research_api": "available",
             "job_runner": "not_implemented",
             "frontend_ui": "available",
         },
