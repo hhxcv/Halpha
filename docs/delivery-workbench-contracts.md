@@ -76,6 +76,8 @@ Required top-level fields:
 - `strategy_state`: bounded strategy gate, strategy evaluation, experiment,
   strategy-lifecycle artifact status, lifecycle status counts, degradation
   counts, retirement counts, warnings, and errors when available.
+- `product_validation_state`: bounded product contract validation status,
+  check counts, failed/degraded/warning counts, and source refs when available.
 - `data_quality_state`: bounded data-quality refs, quality level, warnings, and
   errors when available.
 - `index_outputs`: generated Markdown or HTML index refs when available.
@@ -109,6 +111,7 @@ They may display:
 - monitor health status;
 - outcome tracking status;
 - strategy gate, experiment, and bounded strategy-lifecycle status;
+- product contract validation status and bounded check counts;
 - data-quality status;
 - source artifact links;
 - warnings, errors, and omitted-section counts.

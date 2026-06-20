@@ -140,8 +140,8 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 
 The inspection command summarizes shared OHLCV, derivatives, macro/calendar,
 on-chain flow, text-event, run-index, intelligence-fusion, strategy-lifecycle,
-and data-quality state, plus workbench output refs when available, without
-dumping full reusable histories or raw records.
+product-validation, and data-quality state, plus workbench output refs when
+available, without dumping full reusable histories or raw records.
 
 Inspect outcome tracking artifacts and shared outcome history state without
 collection or Codex:
@@ -166,8 +166,9 @@ python -m halpha workbench inspect --config config.example.yaml
 ```
 
 Workbench outputs are local delivery artifacts under `runs/workbench/latest/`.
-They summarize and link to existing deterministic artifacts. They do not become
-upstream decision inputs or Codex context by default.
+They summarize and link to existing deterministic artifacts, including bounded
+product-validation health when available. They do not become upstream decision
+inputs or Codex context by default.
 
 Run one configured strategy backtest from shared local OHLCV history:
 
@@ -417,7 +418,7 @@ A successful configured run can write:
 - `runs/text_intelligence/<id>/analysis/event_intelligence_material.md`: standalone AI-readable event intelligence material.
 - `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
-- `runs/workbench/latest/workbench_summary.json`: bounded local delivery summary with latest run, report, decision, alert, monitor, outcome, strategy, data-quality, source-ref, warning, error, and Codex-boundary metadata.
+- `runs/workbench/latest/workbench_summary.json`: bounded local delivery summary with latest run, report, decision, alert, monitor, outcome, strategy, product-validation, data-quality, source-ref, warning, error, and Codex-boundary metadata.
 - `runs/workbench/latest/index.md`: local Markdown workbench index generated from the summary.
 - `runs/workbench/latest/index.html`: local static HTML workbench index generated from the summary.
 
@@ -529,9 +530,10 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 
 Use this output to check on-chain flow history state, current-run on-chain view
 coverage, feature/factor artifact status, intelligence-fusion status,
-strategy-lifecycle status, personalized-risk aggregate status, Codex input
-budget state, and latest data-quality counts without exposing reusable record
-contents, full lifecycle records, policy values, or raw local user-state values.
+strategy-lifecycle status, personalized-risk aggregate status,
+product-validation status, Codex input budget state, and latest data-quality
+counts without exposing reusable record contents, full lifecycle records, policy
+values, product validation checks, or raw local user-state values.
 
 Inspect outcome tracking state without collection or Codex CLI:
 

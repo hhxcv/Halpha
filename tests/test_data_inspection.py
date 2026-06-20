@@ -38,6 +38,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "intelligence_fusion: skipped" in output
     assert "strategy_lifecycle: skipped" in output
     assert "personalized_risk: skipped" in output
+    assert "product_validation: skipped" in output
     assert "workbench: skipped" in output
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
@@ -75,6 +76,7 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "intelligence_fusion: skipped" in output
     assert "strategy_lifecycle: skipped" in output
     assert "personalized_risk: skipped" in output
+    assert "product_validation: skipped" in output
     assert "workbench: skipped" in output
     assert "data_quality_summary: degraded" in output
     assert "run_id=run-1" in output
@@ -122,6 +124,7 @@ def test_data_inspect_uses_specific_run_dir_and_reports_missing_quality_as_skipp
     assert exit_code == 0
     assert "data_quality_summary: skipped" in output
     assert "personalized_risk: skipped" in output
+    assert "product_validation: skipped" in output
     assert "workbench: skipped" in output
     assert "run_id=run-without-quality" in output
     assert "run_status=succeeded" in output
@@ -173,6 +176,37 @@ def test_data_inspect_reports_workbench_outputs_without_dumping_summary(
     assert "index_html=runs/workbench/latest/index.html" in output
     assert "bounded warning" not in output
     assert "analysis/decision_recommendations.json" not in output
+
+
+def test_data_inspect_reports_product_validation_without_raw_records(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_product_validation_artifact(run, status="failed")
+
+    exit_code = main(
+        [
+            "data",
+            "inspect",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            "runs/run-1",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "product_validation: failed" in output
+    assert "checks=4" in output
+    assert "failed=1" in output
+    assert "warning=1" in output
+    assert "source_refs=run_manifest.json,analysis/risk_assessment.json" in output
+    assert "artifact=runs/run-1/analysis/product_contract_validation.json" in output
+    assert "private validation detail" not in output
+    assert "check_id" not in output
 
 
 def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(
@@ -642,6 +676,44 @@ def _write_run_with_quality(tmp_path: Path, config_path: Path, *, quality_status
     summary = write_run_index(run, now="2026-06-05T00:10:00Z")
     run.manifest["run_index"] = summary
     return run
+
+
+def _write_product_validation_artifact(run: RunContext, *, status: str) -> None:
+    run.manifest["artifacts"]["product_contract_validation"] = "analysis/product_contract_validation.json"
+    write_json(run.manifest_path, run.manifest)
+    write_json(
+        run.analysis_dir / "product_contract_validation.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "product_contract_validation",
+            "run_id": run.run_id,
+            "status": status,
+            "counts": {
+                "checks": 4,
+                "ok": 2,
+                "warning": 1,
+                "degraded": 0,
+                "failed": 1,
+                "skipped": 0,
+                "warnings": 1,
+                "errors": 1,
+            },
+            "checks": [
+                {
+                    "check_id": "artifact_ref:analysis/risk_assessment.json",
+                    "status": "failed",
+                    "message": "private validation detail",
+                }
+            ],
+            "source_artifacts": [
+                "run_manifest.json",
+                "analysis/risk_assessment.json",
+                "analysis/decision_recommendations.json",
+            ],
+            "warnings": ["private validation detail"],
+            "errors": ["private validation detail"],
+        },
+    )
 
 
 def _write_m13_inspection_artifacts(run: RunContext) -> None:

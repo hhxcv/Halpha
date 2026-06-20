@@ -41,6 +41,7 @@ STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT = "analysis/strategy_lifecycle_material.md"
 USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
+PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 M13_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
@@ -89,6 +90,7 @@ def inspect_local_data(
         _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
         _strategy_lifecycle_section(config_path, run_dir=run_dir, base=base),
         _personalized_risk_section(config_path, run_dir=run_dir, base=base),
+        _product_validation_section(config_path, run_dir=run_dir, base=base),
         _workbench_section(config_path, base=base),
     ]
     quality = _quality_section(config_path, run_dir=run_dir, base=base)
@@ -908,6 +910,7 @@ def _workbench_section(config_path: Path, *, base: Path) -> dict[str, Any]:
         "monitor_state": _inspection_section_status(summary, "monitor_state"),
         "outcome_state": _inspection_section_status(summary, "outcome_state"),
         "strategy_state": _inspection_section_status(summary, "strategy_state"),
+        "product_validation_state": _inspection_section_status(summary, "product_validation_state"),
         "data_quality_state": _inspection_section_status(summary, "data_quality_state"),
         "index_markdown": index_outputs.get("markdown") or _safe_path(markdown_path, base=base),
         "index_html": index_outputs.get("html") or _safe_path(html_path, base=base),
@@ -918,6 +921,71 @@ def _workbench_section(config_path: Path, *, base: Path) -> dict[str, Any]:
         "workbench",
         str(summary.get("status") or "unknown"),
         artifact=_safe_path(summary_path, base=base),
+        fields=fields,
+    )
+
+
+def _product_validation_section(
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    if run_dir is not None:
+        resolved_run_dir = _resolve_run_dir(run_dir, base=base)
+    else:
+        resolved_run_dir = _latest_run_from_index(config_path)
+    if resolved_run_dir is None:
+        return _section(
+            "product_validation",
+            "skipped",
+            reason="no latest run was found in the local run index.",
+        )
+
+    manifest_path = resolved_run_dir / "run_manifest.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    if manifest_error:
+        raise DataInspectionError(f"run_manifest.json could not be inspected: {manifest_error}")
+
+    artifacts = _dict(manifest.get("artifacts"))
+    ref = _artifact_ref(artifacts, "product_contract_validation", PRODUCT_CONTRACT_VALIDATION_ARTIFACT)
+    validation, validation_error = _read_json(resolved_run_dir / ref)
+    if validation_error:
+        return _section(
+            "product_validation",
+            "skipped",
+            artifact=_safe_path(resolved_run_dir / ref, base=base),
+            fields={
+                "run_id": manifest.get("run_id"),
+                "run_status": manifest.get("status"),
+                "validation_status": "missing",
+                "manifest": _safe_path(manifest_path, base=base),
+            },
+            reason=validation_error,
+        )
+
+    counts = _dict(validation.get("counts"))
+    source_refs = _bounded_source_refs(validation.get("source_artifacts"))
+    fields = {
+        "run_id": manifest.get("run_id"),
+        "run_status": manifest.get("status"),
+        "validation_status": validation.get("status") or "unknown",
+        "checks": _int(counts.get("checks")),
+        "ok": _int(counts.get("ok")),
+        "warning": _int(counts.get("warning")),
+        "degraded": _int(counts.get("degraded")),
+        "failed": _int(counts.get("failed")),
+        "skipped": _int(counts.get("skipped")),
+        "warnings": _int(counts.get("warnings")),
+        "errors": _int(counts.get("errors")),
+        "source_refs": source_refs["text"],
+        "source_refs_omitted": source_refs["omitted"],
+        "manifest": _safe_path(manifest_path, base=base),
+    }
+    return _section(
+        "product_validation",
+        _artifact_file_status(validation, validation_error),
+        artifact=_safe_path(resolved_run_dir / ref, base=base),
         fields=fields,
     )
 
@@ -1141,6 +1209,15 @@ def _compact_counts(counts: dict[str, Any]) -> str | None:
         if isinstance(key, str) and _int(value) > 0
     ]
     return ",".join(values) if values else None
+
+
+def _bounded_source_refs(value: Any, *, limit: int = 8) -> dict[str, Any]:
+    refs = [str(item) for item in _list(value) if isinstance(item, str) and item]
+    listed = refs[:limit]
+    return {
+        "text": ",".join(listed) if listed else None,
+        "omitted": max(0, len(refs) - len(listed)),
+    }
 
 
 def _status_from_values(statuses: list[str]) -> str:

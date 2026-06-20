@@ -251,7 +251,7 @@ Current bias:
 * `runs/monitor/alert_cooldown_state.json` records deterministic alert cooldown state keyed by alert key.
 * `runs/monitor/alert_archive_state.json` records latest local alert archive metadata, counts, warnings, and errors.
 * `runs/monitor/monitor_health_state.json` records latest local monitor health metadata, cycle counts, latest cycle refs, alert archive counts, cooldown counts, warning counts, error counts, and latest finite-loop status.
-* `runs/workbench/latest/workbench_summary.json` records bounded local delivery state, source artifact refs, latest report refs, decision/risk/watch summaries, alert archive status, monitor health, outcome state, strategy state, data-quality state, warnings, errors, and Codex-boundary metadata; it is delivery output, not upstream decision input or Codex input by default.
+* `runs/workbench/latest/workbench_summary.json` records bounded local delivery state, source artifact refs, latest report refs, decision/risk/watch summaries, alert archive status, monitor health, outcome state, strategy state, product-validation state, data-quality state, warnings, errors, and Codex-boundary metadata; it is delivery output, not upstream decision input or Codex input by default.
 * `runs/workbench/latest/index.md` records the human-readable local Markdown workbench index generated from `workbench_summary.json`.
 * `runs/workbench/latest/index.html` records the static local HTML workbench index generated from `workbench_summary.json`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
@@ -416,7 +416,7 @@ They must not fabricate skipped artifacts.
 
 `text-intel` does not run the full report pipeline or Codex CLI.
 
-`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, Codex input budget state, and data-quality summaries.
+`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, Codex input budget state, and data-quality summaries.
 
 `data inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
 
@@ -424,7 +424,7 @@ They must not fabricate skipped artifacts.
 
 `outcomes inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
 
-`workbench build` builds `runs/workbench/latest/workbench_summary.json`, `runs/workbench/latest/index.md`, and `runs/workbench/latest/index.html` from existing local artifacts, including bounded strategy-lifecycle status when available.
+`workbench build` builds `runs/workbench/latest/workbench_summary.json`, `runs/workbench/latest/index.md`, and `runs/workbench/latest/index.html` from existing local artifacts, including bounded strategy-lifecycle and product-validation status when available.
 
 `workbench build` does not collect network data, run processors, run pipeline stages, run monitor cycles, run Codex CLI, generate reports, change decision artifacts, or feed workbench output back into Codex context.
 
@@ -456,7 +456,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
-* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
+* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
 * Use `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect data-quality and strategy-lifecycle state for a specific run.
 * Use `python -m halpha outcomes inspect --config config.example.yaml` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
 * Use `python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect outcome state for a specific run.

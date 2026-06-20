@@ -10,8 +10,8 @@ inspection, and operational acceptance. It is not a milestone plan.
 - `analysis/product_contract_validation.json` is implemented in product runs.
 - A read-only `validate` command is implemented for local inspection of existing
   runs.
-- Data inspection and workbench surfacing for product validation are planned
-  for M19 and are not implemented yet.
+- Data inspection and workbench surfacing for product validation are
+  implemented.
 - Existing validation paths remain `python -m pytest`, `python -m halpha run`,
   `python -m halpha validate`, `python -m halpha data inspect`,
   `python -m halpha monitor inspect`, and `python -m halpha workbench inspect`.
@@ -226,9 +226,9 @@ Recommended backup groups:
 
 Restore is a local file operation, not an implemented Halpha command. After
 restoring files, users or AI agents should validate with read-only commands
-such as data inspection, monitor inspection, workbench inspection, and planned
-product validation. Restored local config or user-state files must not be
-printed or committed.
+such as product validation, data inspection, monitor inspection, and workbench
+inspection. Restored local config or user-state files must not be printed or
+committed.
 
 Backup and restore are out of scope for automated cloud sync, hosted storage,
 database services, account integrations, exchange connections, or trading
