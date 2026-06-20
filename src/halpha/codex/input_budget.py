@@ -29,6 +29,8 @@ CODEX_INPUT_POLICY = {
     "full_macro_calendar_context_json_embedded": False,
     "full_onchain_flow_context_json_embedded": False,
     "full_outcome_history_embedded": False,
+    "full_strategy_lifecycle_json_embedded": False,
+    "full_lifecycle_policy_input_embedded": False,
     "full_run_manifest_embedded": False,
     "prefer_high_signal_decision_risk_alert_event_strategy_material": True,
     "summarize_or_omit_low_priority_records_with_counts": True,

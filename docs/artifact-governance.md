@@ -201,7 +201,7 @@ strategy run, benchmark, or experiment JSON.
 Strategy lifecycle artifacts:
 
 - `analysis/strategy_lifecycle_state.json`
-- `analysis/strategy_lifecycle_material.md` (planned)
+- `analysis/strategy_lifecycle_material.md`
 
 These contracts are defined in `docs/strategy-lifecycle-contracts.md`. The
 implemented lifecycle state artifact records deterministic strategy identity,
@@ -209,8 +209,8 @@ contract version, parameter version, parameter digest, lifecycle status,
 degradation, insufficient-evidence, watchlist, rejection, retirement, policy,
 warnings, errors, and source refs from existing strategy and outcome evidence
 when quant strategy evidence is enabled.
-The planned lifecycle material artifact is the bounded Codex-facing summary.
-Codex should consume bounded lifecycle material instead of full lifecycle JSON,
+The lifecycle material artifact is the bounded Codex-facing summary. Codex
+should consume bounded lifecycle material instead of full lifecycle JSON,
 full strategy runs, full outcome history, or local lifecycle policy input.
 
 ### Feature, Factor, And Multi-Source Signal Evidence
@@ -363,7 +363,7 @@ Eligible Codex input:
 - `analysis/market_signal_material.md`
 - `analysis/strategy_evaluation_material.md`
 - `analysis/strategy_experiment_material.md`
-- `analysis/strategy_lifecycle_material.md` (planned)
+- `analysis/strategy_lifecycle_material.md`
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
@@ -407,6 +407,7 @@ Codex input policy:
 - Do not embed full intermediate JSON evidence.
 - Do not embed full shared OHLCV history.
 - Do not embed full reusable outcome history.
+- Do not embed full strategy lifecycle JSON or local lifecycle policy input.
 - Do not embed full workbench summaries or generated workbench indexes.
 - Do not embed full reusable on-chain flow history.
 - Do not embed full feature snapshots, factor states, or multi-source signal
@@ -420,6 +421,8 @@ Codex input policy:
 - Prefer high-signal on-chain flow context.
 - Prefer conflicting, cautionary, degraded, and high-confidence feature/factor
   evidence when factor signal material exists.
+- Prefer degraded, retired, watchlisted, rejected, insufficient-evidence, and
+  high-confidence strategy lifecycle records when lifecycle material exists.
 - Summarize or omit low-priority records with explicit counts and reasons.
 
 Default size budgets:
@@ -555,6 +558,7 @@ Inspect:
 - `analysis/derivatives_market_material.md`
 - `analysis/macro_calendar_material.md`
 - `analysis/onchain_flow_material.md`
+- `analysis/strategy_lifecycle_material.md`
 - `analysis/factor_signal_material.md`
 
 Validation should confirm that full intermediate JSON records are referenced by
