@@ -171,6 +171,7 @@ Current bias:
 * Local monitoring contracts live in `docs/monitoring-contracts.md`.
 * Local delivery and workbench contracts live in `docs/delivery-workbench-contracts.md`.
 * Product stability contracts live in `docs/product-stability-contracts.md`.
+* Local dashboard contracts live in `docs/dashboard-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
@@ -311,6 +312,7 @@ Current bias:
 * `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
 * `docs/delivery-workbench-contracts.md`: local delivery and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
 * `docs/product-stability-contracts.md`: product validation, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
+* `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.

@@ -31,6 +31,8 @@ milestone plan.
 - `docs/product-stability-contracts.md`: product validation, run health,
   backup boundary, operational acceptance, privacy, and Codex-boundary
   contracts.
+- `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule,
+  artifact preview, privacy, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
@@ -55,6 +57,7 @@ bounded report-facing material.
 | Codex prompt | Wrap research context with report-generation rules. | Sent to Codex CLI through stdin. |
 | Final report | Generated Simplified Chinese Markdown plus deterministic post-processing tables. | Output, not upstream input. |
 | Delivery/workbench output | Surface existing evidence and report links for local consumption. | Not embedded by default. Not upstream input. |
+| Dashboard control state | Record local web UI jobs, logs, schedule state, and UI control metadata. | Not embedded by default. Not upstream evidence. |
 | Manifest | Record lifecycle, artifacts, counts, warnings, errors, and Codex input budget. | Not embedded in full. Used for audit. |
 
 Shared reusable data contracts are defined in
@@ -358,6 +361,15 @@ alert-priority sources, strategy-gate inputs, validation authorities, or Codex
 context by default. Codex should continue to consume bounded report-facing
 material rather than full workbench summaries or generated indexes.
 
+### Local Dashboard Control State
+
+Dashboard contracts are defined in `docs/dashboard-contracts.md`. Dashboard
+state, when implemented, records local web UI control metadata such as
+dashboard-triggered jobs, bounded logs, schedule state, and linked source refs.
+It is control and delivery state, not upstream research evidence, validation
+authority, decision input, alert-priority source, strategy-gate input, or Codex
+context by default.
+
 ### Report-Facing Material
 
 Eligible Codex input:
@@ -421,6 +433,7 @@ Codex input policy:
 - Do not embed full reusable outcome history.
 - Do not embed full strategy lifecycle JSON or local lifecycle policy input.
 - Do not embed full workbench summaries or generated workbench indexes.
+- Do not embed full dashboard job histories, logs, or schedule state by default.
 - Do not embed full product contract validation artifacts by default.
 - Do not embed full reusable on-chain flow history.
 - Do not embed full feature snapshots, factor states, or multi-source signal
