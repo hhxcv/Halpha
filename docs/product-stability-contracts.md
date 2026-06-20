@@ -7,8 +7,7 @@ inspection, and operational acceptance. It is not a milestone plan.
 ## Implementation Status
 
 - Product-stability contracts are defined here.
-- `analysis/product_contract_validation.json` is planned for M19 and is not
-  implemented yet.
+- `analysis/product_contract_validation.json` is implemented in product runs.
 - A read-only `validate` command is planned for M19 and is not implemented yet.
 - Data inspection and workbench surfacing for product validation are planned
   for M19 and are not implemented yet.
@@ -41,7 +40,7 @@ contract pass/fail states, forecasts, or trading advice.
 
 ## Pipeline Position
 
-Planned product validation sits after implemented product artifacts exist:
+Product validation sits after implemented product artifacts exist:
 
 ```text
 collectors, shared stores, analysis stages, Codex context, report generation
@@ -57,7 +56,7 @@ trading actions.
 
 ## analysis/product_contract_validation.json
 
-Planned artifact path:
+Implemented artifact path:
 
 ```text
 analysis/product_contract_validation.json
@@ -71,7 +70,7 @@ Purpose:
 - make no-Codex and full-Codex product runs auditable through one bounded
   artifact.
 
-Planned top-level shape:
+Implemented top-level shape:
 
 ```json
 {
@@ -112,7 +111,7 @@ Planned top-level shape:
 }
 ```
 
-Planned check record shape:
+Implemented check record shape:
 
 ```json
 {
@@ -133,7 +132,7 @@ full reusable histories, full run manifests, full workbench summaries, local
 config contents, proxy values, credentials, account identifiers, private user
 notes, or exact private holdings.
 
-## Planned Validation Checks
+## Validation Checks
 
 Manifest checks:
 

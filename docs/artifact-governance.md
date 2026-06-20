@@ -400,14 +400,13 @@ Audit artifact:
 `run_manifest.json` records `codex_input` metadata, including material inclusion
 status, character counts, budgets, over-budget flags, and warnings.
 
-Planned product-stability artifact:
+Product-stability artifact:
 
 - `analysis/product_contract_validation.json`
 
-This planned artifact is defined in `docs/product-stability-contracts.md`. It
-will record deterministic product contract validation, run health, artifact
-contract checks, privacy boundaries, Codex boundaries, and operational
-diagnostics. It is not implemented yet.
+This artifact is defined in `docs/product-stability-contracts.md`. It records
+deterministic product contract validation, run health, artifact contract checks,
+privacy boundaries, Codex boundaries, and operational diagnostics.
 
 ## Codex Input Policy
 

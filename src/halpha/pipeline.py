@@ -69,6 +69,7 @@ STAGE_ORDER = (
     "build_research_context",
     "build_codex_context",
     "run_codex_report",
+    "validate_product_contracts",
 )
 DECISION_INTELLIGENCE_STAGES = {
     "build_market_regime_assessment",
@@ -405,6 +406,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_research_context"] = _build_research_context
     handlers["build_codex_context"] = _build_codex_context
     handlers["run_codex_report"] = _run_codex_report
+    handlers["validate_product_contracts"] = _validate_product_contracts
     if overrides:
         handlers.update(overrides)
     return handlers
@@ -912,6 +914,12 @@ def _run_codex_report(config: dict[str, Any], run: RunContext) -> list[str] | No
     from .codex.runner import run_codex_report
 
     return run_codex_report(config, run)
+
+
+def _validate_product_contracts(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .product_validation import build_product_contract_validation
+
+    return build_product_contract_validation(config, run)
 
 
 def _finish_manifest(
