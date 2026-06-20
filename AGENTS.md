@@ -214,7 +214,7 @@ Current bias:
 * `analysis/strategy_effectiveness_gates.json` records deterministic current-run strategy gate outcomes.
 * `analysis/strategy_experiment_material.md` records AI-readable strategy experiment and gate material.
 * Strategy lifecycle contracts live in `docs/strategy-lifecycle-contracts.md`.
-* Planned `analysis/strategy_lifecycle_state.json` will record deterministic strategy identity, contract version, parameter version, parameter digest, lifecycle status, degradation, insufficient-evidence, watchlist, rejection, retirement, policy, warnings, errors, and source refs from existing strategy and outcome evidence; not implemented yet.
+* `analysis/strategy_lifecycle_state.json` records deterministic strategy identity, contract version, parameter version, parameter digest, lifecycle status, degradation, insufficient-evidence, watchlist, rejection, retirement, policy, warnings, errors, and source refs from existing strategy and outcome evidence when quant strategy evidence is enabled.
 * Planned `analysis/strategy_lifecycle_material.md` will record bounded AI-readable lifecycle status, selected high-signal lifecycle records, omission counts, source refs, and Codex/report boundaries; not implemented yet.
 * `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.

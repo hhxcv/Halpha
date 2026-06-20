@@ -351,6 +351,7 @@ A successful configured run can write:
 - `analysis/strategy_experiment.json`: current-run strategy experiment output.
 - `analysis/strategy_effectiveness_gates.json`: deterministic strategy gate output.
 - `analysis/strategy_experiment_material.md`: AI-readable strategy experiment and gate material.
+- `analysis/strategy_lifecycle_state.json`: deterministic strategy lifecycle health, degradation, version, and explicit retirement state.
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
