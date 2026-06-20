@@ -28,6 +28,9 @@ milestone plan.
   alert archive, health, privacy, and Codex-boundary contracts.
 - `docs/delivery-workbench-contracts.md`: local delivery and workbench summary,
   index, source-ref, privacy, and Codex-boundary contracts.
+- `docs/product-stability-contracts.md`: product validation, run health,
+  backup boundary, operational acceptance, privacy, and Codex-boundary
+  contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
   text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
@@ -397,6 +400,15 @@ Audit artifact:
 `run_manifest.json` records `codex_input` metadata, including material inclusion
 status, character counts, budgets, over-budget flags, and warnings.
 
+Planned product-stability artifact:
+
+- `analysis/product_contract_validation.json`
+
+This planned artifact is defined in `docs/product-stability-contracts.md`. It
+will record deterministic product contract validation, run health, artifact
+contract checks, privacy boundaries, Codex boundaries, and operational
+diagnostics. It is not implemented yet.
+
 ## Codex Input Policy
 
 Codex input policy:
@@ -409,6 +421,7 @@ Codex input policy:
 - Do not embed full reusable outcome history.
 - Do not embed full strategy lifecycle JSON or local lifecycle policy input.
 - Do not embed full workbench summaries or generated workbench indexes.
+- Do not embed full product contract validation artifacts by default.
 - Do not embed full reusable on-chain flow history.
 - Do not embed full feature snapshots, factor states, or multi-source signal
   JSON.

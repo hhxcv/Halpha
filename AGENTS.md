@@ -170,6 +170,7 @@ Current bias:
 * User-state and personalized-risk contracts live in `docs/user-state-contracts.md`.
 * Local monitoring contracts live in `docs/monitoring-contracts.md`.
 * Local delivery and workbench contracts live in `docs/delivery-workbench-contracts.md`.
+* Product stability contracts live in `docs/product-stability-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
@@ -254,10 +255,12 @@ Current bias:
 * `runs/workbench/latest/index.md` records the human-readable local Markdown workbench index generated from `workbench_summary.json`.
 * `runs/workbench/latest/index.html` records the static local HTML workbench index generated from `workbench_summary.json`.
 * `run_manifest.json` records run lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
+* Planned `analysis/product_contract_validation.json` will record deterministic product contract validation, manifest health, artifact contract checks, Codex/report boundary checks, privacy boundaries, warnings, errors, and source refs; not implemented yet.
 * Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
 * Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
 * Codex context may include bounded signal, strategy evaluation, strategy experiment, strategy lifecycle, derivatives market, macro/calendar, on-chain flow, feature/factor, intelligence fusion, personalized risk, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, raw local user-state files, or full on-chain flow context JSON.
 * Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full local user-state files, private user notes, account identifiers, exact holdings, balances, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full feature snapshots JSON, full factor states JSON, full multi-source signals JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full strategy lifecycle JSON, full local lifecycle policy input, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, full workbench summaries or indexes, or full run manifests by default.
+* Codex context must not embed full product contract validation artifacts by default.
 * Codex input should prioritize high-signal decision, risk, alert, fusion, strategy gate, derivatives, macro/calendar, on-chain flow, event, and data-quality evidence over low-priority record dumps.
 * Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
 * Codex prompt may ask for decision-intelligence report sections when decision material exists.
@@ -307,6 +310,7 @@ Current bias:
 * `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
 * `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
 * `docs/delivery-workbench-contracts.md`: local delivery and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
+* `docs/product-stability-contracts.md`: product validation, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
