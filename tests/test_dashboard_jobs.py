@@ -71,6 +71,145 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     assert str(config_path) not in job_json
 
 
+def test_dashboard_job_manager_preserves_relative_config_ref(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = Path("config.yaml")
+    _write_config(tmp_path)
+    config = load_config(config_path)
+    monkeypatch.setattr(
+        "halpha.dashboard_jobs.subprocess.Popen",
+        lambda *args, **kwargs: _FakeProcess(stdout="config.yaml", stderr="", returncode=0),
+    )
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "config.yaml"]
+    stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
+    assert "config.yaml" in stdout_log
+
+
+def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    (tmp_path / "runs" / "run-1").mkdir(parents=True)
+    commands: list[list[str]] = []
+
+    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        commands.append(command)
+        return _FakeProcess(stdout="ok", stderr="", returncode=0)
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        ("validate", {}, ["python", "-m", "halpha", "validate", "--config", "<external-config>"]),
+        (
+            "data_inspect",
+            {"run_dir": "runs/run-1"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "data",
+                "inspect",
+                "--config",
+                "<external-config>",
+                "--run-dir",
+                "runs/run-1",
+            ],
+        ),
+        (
+            "outcomes_inspect",
+            {"run_dir": "runs/run-1"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "outcomes",
+                "inspect",
+                "--config",
+                "<external-config>",
+                "--run-dir",
+                "runs/run-1",
+            ],
+        ),
+        (
+            "workbench_build",
+            {"run_dir": "runs/run-1"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "workbench",
+                "build",
+                "--config",
+                "<external-config>",
+                "--run-dir",
+                "runs/run-1",
+            ],
+        ),
+        (
+            "workbench_inspect",
+            {},
+            ["python", "-m", "halpha", "workbench", "inspect", "--config", "<external-config>"],
+        ),
+        (
+            "monitor_inspect",
+            {},
+            ["python", "-m", "halpha", "monitor", "inspect", "--config", "<external-config>"],
+        ),
+    ]
+
+    for intent, params, preview in cases:
+        job = manager.create_job({"intent": intent, "params": params})
+        completed = _wait_for_terminal(manager, job["job_id"])
+        assert completed["status"] == "succeeded"
+        assert completed["intent"] == intent
+        assert completed["command"] == preview
+
+    assert len(commands) == len(cases)
+    assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
+
+
+def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("unsafe run_dir must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "data_inspect", "params": {"run_dir": "../outside"}})
+
+    assert job["status"] == "blocked"
+    assert "run_dir must stay within" in job["errors"][0]
+
+
+def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("unsupported params must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "monitor_inspect", "params": {"run_dir": "runs/run-1"}})
+
+    assert job["status"] == "blocked"
+    assert "unsupported monitor_inspect job parameter(s): run_dir" in job["errors"][0]
+
+
 def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
