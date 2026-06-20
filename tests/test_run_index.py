@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import sqlite3
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
+from halpha.product_validation_inspection import inspect_product_validation
 from halpha.run_index import write_run_index
 
 
@@ -28,7 +30,7 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
     assert manifest["artifacts"]["run_index"] == "data/research/index.sqlite"
     assert manifest["run_index"]["status"] == "ok"
 
-    with sqlite3.connect(index_path) as connection:
+    with closing(sqlite3.connect(index_path)) as connection:
         run_row = connection.execute(
             """
             SELECT run_id, run_dir, config_path, status, codex_status, manifest_path
@@ -68,7 +70,7 @@ def test_run_index_records_failed_runs(tmp_path: Path) -> None:
     )
 
     assert result.succeeded is False
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with closing(sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite")) as connection:
         row = connection.execute(
             "SELECT status, failed_stage, error_count FROM runs WHERE run_id = ?",
             (result.run.run_id,),
@@ -100,7 +102,7 @@ def test_run_index_reindexes_single_stage_rerun_without_duplicate_rows(tmp_path:
 
     assert result.succeeded is True
     manifest = _manifest(result.run.manifest_path)
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with closing(sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite")) as connection:
         stage_count = connection.execute(
             "SELECT COUNT(*) FROM run_stages WHERE run_id = ?",
             (result.run.run_id,),
@@ -117,7 +119,7 @@ def test_run_index_reindexes_single_stage_rerun_without_duplicate_rows(tmp_path:
     assert text_artifact == ("raw",)
 
     write_run_index(result.run, now="2026-06-05T00:00:00Z")
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with closing(sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite")) as connection:
         assert (
             connection.execute(
                 "SELECT COUNT(*) FROM run_stages WHERE run_id = ?",
@@ -125,6 +127,29 @@ def test_run_index_reindexes_single_stage_rerun_without_duplicate_rows(tmp_path:
             ).fetchone()[0]
             == len(manifest["stages"])
         )
+
+
+def test_run_index_releases_sqlite_file_after_write_and_read_access(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_market_data",
+        stage_handlers={"collect_market_data": _market_stage},
+    )
+
+    assert result.succeeded is True
+    validation = inspect_product_validation(config, config_path=config_path)
+    assert validation.status == "ok"
+    index_path = tmp_path / "data" / "research" / "index.sqlite"
+    moved_path = index_path.with_name("index-moved.sqlite")
+
+    index_path.rename(moved_path)
+    assert moved_path.is_file()
+    moved_path.unlink()
+    assert not moved_path.exists()
 
 
 def _write_config(tmp_path: Path) -> Path:

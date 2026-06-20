@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,14 +21,15 @@ def write_run_index(run: RunContext, *, now: datetime | str | None = None) -> di
     index_path.parent.mkdir(parents=True, exist_ok=True)
     updated_at = _format_utc(now)
 
-    with sqlite3.connect(index_path) as connection:
-        connection.execute("PRAGMA foreign_keys = ON")
-        _create_schema(connection)
-        _replace_run(connection, run)
-        _replace_run_stages(connection, run)
-        _replace_run_artifacts(connection, run)
-        _replace_latest(connection, run, updated_at=updated_at)
-        counts = _table_counts(connection)
+    with closing(sqlite3.connect(index_path)) as connection:
+        with connection:
+            connection.execute("PRAGMA foreign_keys = ON")
+            _create_schema(connection)
+            _replace_run(connection, run)
+            _replace_run_stages(connection, run)
+            _replace_run_artifacts(connection, run)
+            _replace_latest(connection, run, updated_at=updated_at)
+            counts = _table_counts(connection)
 
     return {
         "schema_version": RUN_INDEX_SCHEMA_VERSION,

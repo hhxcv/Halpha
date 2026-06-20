@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
@@ -614,7 +615,7 @@ def _select_run(config_path: Path, *, run_dir: Path | None, base: Path) -> _RunS
             reason="local run index was not found.",
         )
     try:
-        with sqlite3.connect(index_path) as connection:
+        with closing(sqlite3.connect(index_path)) as connection:
             row = _latest_run_row(connection)
     except sqlite3.Error as exc:
         return _RunSelection(

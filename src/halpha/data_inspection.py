@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import sqlite3
 from dataclasses import dataclass
@@ -144,7 +145,7 @@ def _run_index_section(config_path: Path, *, base: Path) -> dict[str, Any]:
             reason="run index was not found.",
         )
     try:
-        with sqlite3.connect(path) as connection:
+        with closing(sqlite3.connect(path)) as connection:
             counts = {
                 "runs": _table_count(connection, "runs"),
                 "run_stages": _table_count(connection, "run_stages"),
@@ -995,7 +996,7 @@ def _latest_run_from_index(config_path: Path) -> Path | None:
     if not path.exists():
         return None
     try:
-        with sqlite3.connect(path) as connection:
+        with closing(sqlite3.connect(path)) as connection:
             run_id = _latest_run_id(connection)
             if not run_id:
                 return None
