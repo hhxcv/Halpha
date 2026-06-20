@@ -44,6 +44,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["overview_api"] == "available"
     assert payload["features"]["run_history_api"] == "available"
     assert payload["features"]["artifact_preview_api"] == "available"
+    assert payload["features"]["data_store_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "not_implemented"
 
@@ -343,6 +344,80 @@ def test_dashboard_artifact_preview_rejects_unsupported_store_files(tmp_path: Pa
     assert "not expanded" in payload["warnings"][0]
 
 
+def test_dashboard_data_stores_endpoint_reports_missing_metadata(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/data/stores")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_data_stores"
+    assert payload["status"] == "partial"
+    stores = {store["name"]: store for store in payload["stores"]}
+    assert stores["research_data_catalog"]["status"] == "skipped"
+    assert stores["run_index"]["status"] == "skipped"
+    assert stores["text_event_history"]["status"] == "skipped"
+    assert stores["outcome_history"]["status"] == "skipped"
+    assert stores["run_index"]["preview_path"] is None
+    assert payload["omitted"]["full_raw_histories_embedded"] is False
+    assert payload["omitted"]["sqlite_table_contents_embedded"] is False
+    assert payload["omitted"]["parquet_table_contents_embedded"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path) -> None:
+    config_path = _write_data_store_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    _write_dashboard_data_store_metadata(tmp_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/data/stores")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "available"
+    stores = {store["name"]: store for store in payload["stores"]}
+
+    catalog = stores["research_data_catalog"]
+    assert catalog["status"] == "ok"
+    assert catalog["fields"]["stores"] == 7
+    assert catalog["preview_path"] == "data/research/metadata/research_data_catalog.json"
+
+    run_index = stores["run_index"]
+    assert run_index["status"] == "ok"
+    assert run_index["fields"]["runs"] == 1
+    assert run_index["preview_path"] is None
+
+    ohlcv = stores["ohlcv_history"]
+    assert ohlcv["status"] == "ok"
+    assert ohlcv["fields"]["records"] == 3
+    assert ohlcv["preview_path"] == "data/market/metadata/ohlcv_sync_state.json"
+
+    derivatives = stores["derivatives_market_history"]
+    assert derivatives["status"] == "ok"
+    assert derivatives["fields"]["records"] == 4
+
+    macro = stores["macro_calendar_history"]
+    assert macro["fields"]["records"] == 5
+
+    onchain = stores["onchain_flow_history"]
+    assert onchain["fields"]["records"] == 6
+
+    text = stores["text_event_history"]
+    assert text["fields"]["records"] == 2
+
+    outcome = stores["outcome_history"]
+    assert outcome["fields"]["records"] == 2
+    assert outcome["fields"]["history"] == "data/research/outcomes/outcome_history.json"
+    assert outcome["preview_path"] == "data/research/metadata/outcome_history_state.json"
+    assert "data/research/outcomes/outcome_history.json" not in payload["source_artifacts"]
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_command_loads_config_and_invokes_service(
     tmp_path: Path,
     capsys,
@@ -444,6 +519,73 @@ codex:
     return path
 
 
+def _write_data_store_config(tmp_path: Path) -> Path:
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  proxy:
+    enabled: false
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: 10
+  derivatives:
+    enabled: true
+    source: binance_usdm
+    symbols:
+      - BTCUSDT
+    data_classes:
+      - funding_rate
+      - open_interest
+    periods:
+      - 5m
+    lookback:
+      5m: 2
+macro_calendar:
+  enabled: true
+  source: federal_reserve_fomc
+  data_classes:
+    - central_bank_event
+  regions:
+    - US
+  lookback_days: 7
+  lookahead_days: 45
+onchain_flow:
+  enabled: true
+  source: public_aggregate
+  data_classes:
+    - stablecoin_supply
+    - exchange_flow_availability
+  assets:
+    - ALL_STABLECOINS
+    - BTC
+  chains:
+    - all
+    - bitcoin
+  lookback_days: 7
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return path
+
+
 def _write_run(tmp_path: Path, config_path: Path) -> RunContext:
     run_dir = tmp_path / "runs" / "run-1"
     raw_dir = run_dir / "raw"
@@ -498,6 +640,163 @@ def _write_run(tmp_path: Path, config_path: Path) -> RunContext:
     )
     write_json(run.manifest_path, run.manifest)
     return run
+
+
+def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "research" / "metadata" / "research_data_catalog.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "research_data_catalog",
+            "generated_at": "2026-06-20T00:10:00Z",
+            "status": "ok",
+            "stores": [
+                {"name": "ohlcv_history", "status": "ok"},
+                {"name": "run_index", "status": "ok"},
+                {"name": "text_event_history", "status": "ok"},
+                {"name": "derivatives_market_history", "status": "ok"},
+                {"name": "macro_calendar_history", "status": "ok"},
+                {"name": "onchain_flow_history", "status": "ok"},
+                {"name": "outcome_history", "status": "ok"},
+            ],
+            "counts": {"stores": 7, "records": 20, "warnings": 0, "errors": 0},
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "research" / "metadata" / "text_event_history_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "text_event_history_state",
+            "status": "ok",
+            "updated_at": "2026-06-20T00:10:00Z",
+            "totals": {"records": 2},
+            "sources": [{"source": "coindesk"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "ohlcv_schema.json",
+        {"schema_version": 1, "unique_key": ["source", "symbol", "timeframe", "open_time"]},
+    )
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "ohlcv_sync_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "ohlcv_sync_state",
+            "status": "ok",
+            "updated_at": "2026-06-20T00:10:00Z",
+            "items": [{"source": "binance", "symbol": "BTCUSDT", "timeframe": "1d", "row_count": 3}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "derivatives_market_schema.json",
+        {"schema_version": 1, "unique_key": ["source", "symbol", "metric", "timestamp"]},
+    )
+    write_json(
+        tmp_path / "data" / "market" / "metadata" / "derivatives_market_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_state",
+            "status": "ok",
+            "totals": {"records": 4},
+            "groups": [{"source": "binance_usdm", "symbol": "BTCUSDT"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "runs" / "run-1" / "raw" / "derivatives_market_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "derivatives_market_views",
+            "views": [{"status": "ok", "included_record_count": 2}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "macro" / "metadata" / "macro_calendar_schema.json",
+        {"schema_version": 1, "unique_key": ["source", "event_id"]},
+    )
+    write_json(
+        tmp_path / "data" / "macro" / "metadata" / "macro_calendar_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_state",
+            "status": "ok",
+            "totals": {"records": 5, "duplicate_records": 0, "conflicting_duplicates": 0},
+            "groups": [{"source": "federal_reserve_fomc", "region": "US"}],
+            "availability": [{"status": "ok"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "runs" / "run-1" / "raw" / "macro_calendar_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "macro_calendar_views",
+            "views": [{"status": "ok", "included_record_count": 3}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "onchain" / "metadata" / "onchain_flow_schema.json",
+        {"schema_version": 1, "unique_key": ["source", "asset", "metric", "timestamp"]},
+    )
+    write_json(
+        tmp_path / "data" / "onchain" / "metadata" / "onchain_flow_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_state",
+            "status": "ok",
+            "totals": {"records": 6, "duplicate_records": 0, "conflicting_duplicates": 0},
+            "groups": [{"source": "public_aggregate", "asset": "BTC"}],
+            "availability": [{"status": "ok"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "runs" / "run-1" / "raw" / "onchain_flow_views.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "onchain_flow_views",
+            "views": [{"status": "ok", "included_record_count": 4}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "outcome_history_state",
+            "status": "ok",
+            "updated_at": "2026-06-20T00:10:00Z",
+            "history_path": "data/research/outcomes/outcome_history.json",
+            "storage_path": "data/research/outcomes",
+            "totals": {
+                "records": 2,
+                "incoming_records": 2,
+                "inserted_records": 2,
+                "updated_records": 0,
+                "duplicate_records": 0,
+                "conflicting_duplicates": 0,
+                "warning_count": 0,
+                "error_count": 0,
+            },
+            "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
 
 
 def _write_dashboard_source_artifacts(tmp_path: Path, run: RunContext) -> None:
