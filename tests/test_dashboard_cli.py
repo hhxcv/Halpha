@@ -121,6 +121,101 @@ def test_dashboard_overview_endpoint_reads_artifact_backed_state(tmp_path: Path)
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_runs_endpoint_reports_missing_index(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/runs")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_run_list"
+    assert payload["status"] == "missing"
+    assert payload["runs"] == []
+    assert payload["warnings"] == ["local run index was not found."]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_source_artifacts(tmp_path, run)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    list_response = client.get("/api/runs")
+    detail_response = client.get("/api/runs/run-1")
+
+    assert list_response.status_code == 200
+    run_list = list_response.json()
+    assert run_list["artifact_type"] == "dashboard_run_list"
+    assert run_list["status"] == "available"
+    assert len(run_list["runs"]) == 1
+    listed = run_list["runs"][0]
+    assert listed["run_id"] == "run-1"
+    assert listed["run_dir"] == "runs/run-1"
+    assert listed["status"] == "succeeded"
+    assert listed["codex_status"] == "skipped"
+    assert listed["manifest"] == "runs/run-1/run_manifest.json"
+    assert listed["report"] == "report/report.md"
+
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail["artifact_type"] == "dashboard_run_detail"
+    assert detail["status"] == "available"
+    assert detail["run_id"] == "run-1"
+    assert detail["fields"]["manifest_status"] == "succeeded"
+    assert detail["fields"]["codex"]["status"] == "skipped"
+    assert detail["stages"] == [
+        {
+            "index": 0,
+            "name": "collect_market_data",
+            "status": "succeeded",
+            "started_at": "2026-06-20T00:00:00Z",
+            "finished_at": "2026-06-20T00:01:00Z",
+            "artifact_count": 0,
+            "warning_count": 0,
+            "error_count": 0,
+        },
+        {
+            "index": 1,
+            "name": "run_codex_report",
+            "status": "skipped",
+            "started_at": "2026-06-20T00:01:00Z",
+            "finished_at": "2026-06-20T00:02:00Z",
+            "artifact_count": 0,
+            "warning_count": 0,
+            "error_count": 0,
+        },
+    ]
+    assert {"key": "report", "path": "report/report.md", "kind": "report"} in detail["artifacts"]
+    assert {"key": "data_quality_summary", "path": "analysis/data_quality_summary.json", "kind": "analysis"} in detail[
+        "artifacts"
+    ]
+    assert str(tmp_path) not in detail_response.text
+
+
+def test_dashboard_run_detail_reports_missing_run_id(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/runs/missing-run")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_run_detail"
+    assert payload["status"] == "missing"
+    assert payload["run_id"] == "missing-run"
+    assert payload["stages"] == []
+    assert payload["artifacts"] == []
+    assert payload["warnings"] == ["run id was not found in the local run index."]
+
+
 def test_dashboard_command_loads_config_and_invokes_service(
     tmp_path: Path,
     capsys,
