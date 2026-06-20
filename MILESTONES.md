@@ -20,9 +20,57 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M19 - Local Product Stabilization v1
+### M20 - Local Web Dashboard and Operations Console v1
 
 Status: active.
+
+Goal:
+
+```text
+Make the local web UI the primary user entry point for running, inspecting, monitoring, and controlling Halpha's local-first research product.
+```
+
+The loop is complete when Halpha can:
+
+* launch a local-only web dashboard as the main user-facing product surface while preserving CLI commands as automation, validation, and recovery paths;
+* show latest product state from run index, run manifests, workbench summaries, product validation, data quality, monitor health, reports, and generated artifacts;
+* let users inspect historical reports, current and historical run artifacts, Codex context metadata, report-facing materials, and source refs through bounded previews;
+* expose reusable local stores for market, derivatives, macro/calendar, on-chain flow, text events, outcomes, strategies, and run indexes without dumping full raw histories by default;
+* provide strategy research views for pipeline strategy artifacts, standalone backtests, standalone experiments, gates, lifecycle state, warnings, and limitations;
+* show monitor cycles, alert archive aggregates, cooldown state, latest warnings, failures, and linked product runs;
+* provide controlled UI triggers for implemented Halpha commands, including run, no-Codex run, stage rerun, validation, data inspection, outcome inspection, workbench build, monitor commands, backtest, experiment, text model preparation, and text intelligence;
+* record dashboard-triggered jobs with command intent, config ref, status, timestamps, exit code, bounded logs, source refs, warnings, and errors without printing local private values;
+* support explicit start and stop controls for finite local monitor jobs and daily report schedules without introducing a hidden daemon, hosted scheduler, or remote service;
+* preserve artifact contracts as the source of product truth instead of making UI state authoritative;
+* keep Codex execution explicit and visible, with confirmation before a UI-triggered full report path invokes Codex;
+* add tests for read APIs, artifact previews, privacy redaction, command allowlists, job lifecycle, cancellation, monitor controls, schedule state, and core UI flows;
+* document dashboard operation, privacy boundaries, command boundaries, and validation paths.
+
+M20 favors:
+
+* primary user workflows over static index pages;
+* artifact-backed views over duplicated dashboard state;
+* controlled job execution over arbitrary shell access;
+* local-first operation over hosted infrastructure;
+* visible status, empty states, partial states, warnings, and errors over polished ambiguity;
+* stable tested slices over a quick demo;
+* preserving implemented artifact contracts and CLI recovery paths.
+
+M20 does not require:
+
+* hosted SaaS deployment, remote collaboration, cloud sync, or multi-user permissions;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* replacing CLI commands, run manifests, artifacts, or local stores as product contracts;
+* showing full raw streams, full reusable histories, full SQLite contents, full Parquet tables, full Codex prompts, or raw private user-state files by default;
+* mobile app support;
+* a hidden background service, external workflow engine, Redis, Celery, Prefect, Airflow, Kafka, or hosted scheduler;
+* complete UI coverage for every artifact field before the main dashboard workflows are stable.
+
+## Completed Milestones
+
+### M19 - Local Product Stabilization v1
+
+Status: completed.
 
 Goal:
 
@@ -65,8 +113,6 @@ M19 does not require:
 * background daemons, workflow engines, Kafka, Redis, Celery, Prefect, Airflow, websocket streams, or notification delivery channels;
 * exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
 * making Codex or another LLM the source of contract validation results, run health, recovery decisions, backup decisions, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M18 - Strategy Lifecycle and Continuous Research v1
 
