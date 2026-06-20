@@ -20,9 +20,57 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M18 - Strategy Lifecycle and Continuous Research v1
+### M19 - Local Product Stabilization v1
 
 Status: active.
+
+Goal:
+
+```text
+Stabilize the full local-first intelligence product around contracts, validation, recovery, and operational clarity.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M18 strategy lifecycle, M17 local delivery and workbench paths, M16 monitor and alert runtime, M15 user-state and personalized-risk paths, M14 intelligence fusion, M13 feature/factor, M12 on-chain flow, M11 macro/calendar, M10 derivatives, outcome tracking, data-quality, event intelligence, alert decision, strategy evaluation, decision-intelligence, Codex context, and report paths instead of replacing them;
+* define durable product-stability contracts for product contract validation, run manifest health, artifact contract checks, validation command behavior, backup and restore boundaries, operational acceptance, privacy boundaries, warnings, errors, and Codex boundaries;
+* produce a deterministic product contract validation artifact that checks implemented run artifacts, artifact refs, artifact types where applicable, status fields, manifest stage health, Codex input boundaries, report presence rules, workbench boundaries, and source refs without embedding raw records or private local values;
+* make product validation available both in the product pipeline and through a read-only local command that can inspect the latest run or an explicit run directory without collecting network data, running analysis stages, running Codex, or mutating decisions;
+* surface product validation state in local data inspection and workbench output so humans and AI agents can see whether the latest local product run is contract-consistent without opening every artifact manually;
+* improve run manifest and validation diagnostics so missing, failed, skipped, degraded, stale, partial, over-budget, and not-run states are explicit and actionable instead of silently ignored;
+* document local backup and restore boundaries for run archives, reusable local stores, monitor state, workbench outputs, local config, user-state inputs, and generated reports without exposing machine-local private values;
+* document operational validation paths for automated tests, focused integration checks, no-Codex product acceptance, full Codex report acceptance, monitor checks, workbench checks, and recovery through existing stage rerun commands;
+* keep compatibility rules strict: preserve only real implemented contracts, avoid speculative migrations, and reject aliases or fallbacks for imagined users;
+* ensure product stabilization does not introduce hosted services, background daemons, databases beyond implemented local stores, exchange account operations, trading execution, or hidden AI decision logic;
+* add tests for contract validation success and failure, missing artifacts, invalid artifact type, manifest stage failure, Codex skipped and Codex completed states, workbench/data inspection surfacing, backup boundary docs, privacy boundaries, and read-only command behavior;
+* verify the M19 product path with automated tests, local no-Codex product validation, local inspection/workbench checks, and full local Codex report validation when final report behavior or Codex context behavior is affected.
+
+M19 favors:
+
+* contract validation over adding new market intelligence features;
+* actionable diagnostics over polished but ambiguous success states;
+* read-only local validation commands over hidden repair behavior;
+* plain local artifacts and manifest health over service infrastructure;
+* documented backup boundaries over automatic cloud sync;
+* strict privacy boundaries over convenient local-value printing;
+* preserving implemented contracts over speculative compatibility layers;
+* preserving the main command path: `python -m halpha run --config config.example.yaml`.
+
+M19 does not require:
+
+* new market, text, derivatives, macro/calendar, on-chain, factor, fusion, user-state, monitor, workbench, or strategy-lifecycle features beyond validation and operational surfacing;
+* complete JSON Schema coverage for every historical artifact field before validation can add value;
+* automatic repair, automatic migration, automatic backup, cloud sync, hosted storage, or remote restore;
+* a hosted operations dashboard, SaaS hardening, multi-user permissions, remote collaboration, service health checks, or cloud deployment;
+* background daemons, workflow engines, Kafka, Redis, Celery, Prefect, Airflow, websocket streams, or notification delivery channels;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* making Codex or another LLM the source of contract validation results, run health, recovery decisions, backup decisions, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M18 - Strategy Lifecycle and Continuous Research v1
+
+Status: completed.
 
 Goal:
 
@@ -63,8 +111,6 @@ M18 does not require:
 * new public data sources beyond the already configured product sources;
 * automatic mutation of the active strategy set without explicit local lifecycle policy records;
 * making Codex or another LLM the source of lifecycle state, degradation detection, promotion decisions, retirement decisions, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M17 - Local Delivery and Workbench Foundation v1
 
