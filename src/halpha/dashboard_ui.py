@@ -432,14 +432,16 @@ def dashboard_index_html() -> str:
 
     .runs-layout,
     .data-layout,
-    .strategy-layout {
+    .strategy-layout,
+    .monitor-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
     }
 
     .run-list,
-    .strategy-list {
+    .strategy-list,
+    .job-list {
       display: grid;
       gap: 8px;
       max-height: 68vh;
@@ -683,6 +685,62 @@ def dashboard_index_html() -> str:
       overflow: visible;
     }
 
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .command-button {
+      display: grid;
+      gap: 5px;
+      min-height: 64px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .command-button:hover,
+    .command-button:focus-visible {
+      border-color: var(--border-strong);
+      background: #f1eee7;
+    }
+
+    .command-title {
+      font-weight: 720;
+    }
+
+    .command-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .number-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .job-row {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-soft);
+    }
+
+    .job-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
     .chart-label {
       color: var(--muted);
       font-size: 12px;
@@ -807,7 +865,8 @@ def dashboard_index_html() -> str:
       .layout-row,
       .runs-layout,
       .data-layout,
-      .strategy-layout {
+      .strategy-layout,
+      .monitor-layout {
         grid-template-columns: 1fr;
       }
 
@@ -841,7 +900,9 @@ def dashboard_index_html() -> str:
       .grid,
       .run-detail-grid,
       .store-grid,
-      .filter-bar {
+      .filter-bar,
+      .command-grid,
+      .number-row {
         grid-template-columns: 1fr;
       }
 
@@ -859,6 +920,8 @@ def dashboard_index_html() -> str:
     data-runs-endpoint="/api/runs"
     data-stores-endpoint="/api/data/stores"
     data-strategies-endpoint="/api/strategies"
+    data-monitor-endpoint="/api/monitor"
+    data-jobs-endpoint="/api/jobs"
     data-preview-endpoint="/api/artifacts/preview"
   >
     <aside class="sidebar" aria-label="Dashboard navigation">
@@ -887,10 +950,10 @@ def dashboard_index_html() -> str:
           <span>Strategy lab</span>
           <span class="nav-state">available</span>
         </a>
-        <span class="nav-item">
+        <a class="nav-item" href="#monitor" data-view-target="monitor">
           <span>Monitor</span>
-          <span class="nav-state">pending</span>
-        </span>
+          <span class="nav-state">available</span>
+        </a>
         <span class="nav-item">
           <span>Command center</span>
           <span class="nav-state">pending</span>
@@ -963,7 +1026,7 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Monitor control</span>
-                <span class="planned-state">planned</span>
+                <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
                 <span class="planned-title">Command center</span>
@@ -1153,6 +1216,103 @@ def dashboard_index_html() -> str:
           </article>
         </section>
       </section>
+
+      <section id="monitor-view" class="view hidden" data-view="monitor">
+        <section class="topbar" aria-labelledby="monitor-title">
+          <div>
+            <p class="eyebrow">Local monitoring operations</p>
+            <h1 id="monitor-title">Monitor control</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Monitor state</span>
+              <span id="monitor-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Monitor jobs</span>
+              <span id="monitor-job-status" class="status-value">Loading</span>
+            </div>
+          </div>
+        </section>
+        <section class="monitor-layout">
+          <article class="wide-panel" aria-labelledby="monitor-health-title">
+            <div class="panel-heading">
+              <h2 id="monitor-health-title" class="panel-title">Monitor health</h2>
+              <span id="monitor-health-badge" class="badge unknown">loading</span>
+            </div>
+            <div id="monitor-summary-grid" class="run-detail-grid"></div>
+            <div class="detail-sections">
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Alert counts</span>
+                  <span id="monitor-alert-badge" class="badge unknown">loading</span>
+                </h3>
+                <div id="monitor-alert-counts" class="run-detail-grid"></div>
+              </section>
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Explicit controls</span>
+                  <span class="badge partial">bounded local jobs</span>
+                </h3>
+                <div class="message warning">Monitor commands start explicit bounded local jobs from this dashboard; they are not hidden services.</div>
+                <div class="command-grid" aria-label="Monitor commands">
+                  <button class="command-button" type="button" data-monitor-action="dry-run">
+                    <span class="command-title">Dry run</span>
+                    <span class="command-meta">Validate monitor configuration without executing a cycle.</span>
+                  </button>
+                  <button class="command-button" type="button" data-monitor-action="once">
+                    <span class="command-title">Run one cycle</span>
+                    <span class="command-meta">Start one bounded monitor cycle.</span>
+                  </button>
+                </div>
+                <div class="number-row">
+                  <label>
+                    <span class="status-label">Max cycles</span>
+                    <input id="monitor-loop-cycles" class="filter-control" type="number" min="1" value="1">
+                  </label>
+                  <label>
+                    <span class="status-label">Interval seconds</span>
+                    <input id="monitor-loop-interval" class="filter-control" type="number" min="1" value="300">
+                  </label>
+                </div>
+                <button class="command-button" type="button" data-monitor-action="loop">
+                  <span class="command-title">Start finite loop</span>
+                  <span class="command-meta">Run the configured max cycles, then stop.</span>
+                </button>
+              </section>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="monitor-activity-title">
+            <div class="panel-heading">
+              <h2 id="monitor-activity-title" class="panel-title">Monitor activity</h2>
+              <span id="monitor-cycle-count" class="badge unknown">loading</span>
+            </div>
+            <div class="detail-sections">
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Recent cycles</span>
+                  <span id="monitor-cycle-badge" class="badge unknown">loading</span>
+                </h3>
+                <ul id="monitor-cycle-list" class="stage-list"></ul>
+              </section>
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Monitor jobs</span>
+                  <span id="monitor-job-count" class="badge unknown">loading</span>
+                </h3>
+                <div id="monitor-job-list" class="job-list"></div>
+              </section>
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Alert sample</span>
+                  <span id="monitor-alert-sample-badge" class="badge unknown">loading</span>
+                </h3>
+                <ul id="monitor-alert-sample" class="stage-list"></ul>
+              </section>
+            </div>
+          </article>
+        </section>
+      </section>
     </main>
   </div>
   <script>
@@ -1162,6 +1322,8 @@ def dashboard_index_html() -> str:
       runs: app.dataset.runsEndpoint,
       stores: app.dataset.storesEndpoint,
       strategies: app.dataset.strategiesEndpoint,
+      monitor: app.dataset.monitorEndpoint,
+      jobs: app.dataset.jobsEndpoint,
       preview: app.dataset.previewEndpoint
     };
     const statusLabels = {
@@ -1181,6 +1343,12 @@ def dashboard_index_html() -> str:
       insufficient_evidence: "Insufficient evidence",
       active_candidate: "Active candidate",
       retired: "Retired",
+      queued: "Queued",
+      running: "Running",
+      cancel_requested: "Cancel requested",
+      cancelled: "Cancelled",
+      blocked: "Blocked",
+      unsupported: "Unsupported",
       degraded: "Degraded",
       failed: "Failed",
       unknown: "Unknown"
@@ -1220,6 +1388,10 @@ def dashboard_index_html() -> str:
     let strategiesLoaded = false;
     let strategiesPayload = null;
     let selectedStrategyKey = null;
+    let monitorLoaded = false;
+    let monitorPayload = null;
+    let monitorJobPoll = null;
+    const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started", "missing"]);
 
     function text(value) {
       if (value === null || value === undefined || value === "") {
@@ -1260,7 +1432,13 @@ def dashboard_index_html() -> str:
       if (["watchlisted", "insufficient_evidence"].includes(value)) {
         return "partial";
       }
+      if (["queued", "running", "cancel_requested"].includes(value)) {
+        return "partial";
+      }
       if (["rejected", "retired"].includes(value)) {
+        return "degraded";
+      }
+      if (["cancelled", "blocked", "unsupported"].includes(value)) {
         return "degraded";
       }
       if (["not_run", "disabled", "skipped"].includes(value)) {
@@ -1303,6 +1481,18 @@ def dashboard_index_html() -> str:
       return response.json();
     }
 
+    async function postJson(url, body) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {})
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
     function viewFromHash() {
       if (window.location.hash === "#runs") {
         return "runs";
@@ -1312,6 +1502,9 @@ def dashboard_index_html() -> str:
       }
       if (window.location.hash === "#strategies") {
         return "strategies";
+      }
+      if (window.location.hash === "#monitor") {
+        return "monitor";
       }
       return "overview";
     }
@@ -1337,6 +1530,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "strategies" && !strategiesLoaded) {
         loadStrategies();
+      }
+      if (view === "monitor" && !monitorLoaded) {
+        loadMonitor();
       }
     }
 
@@ -2233,6 +2429,269 @@ def dashboard_index_html() -> str:
         .join(", ");
     }
 
+    async function loadMonitor() {
+      monitorLoaded = true;
+      document.querySelector("#monitor-status").textContent = "Loading";
+      try {
+        monitorPayload = await fetchJson(endpoints.monitor);
+        renderMonitor(monitorPayload);
+      } catch (error) {
+        renderMonitorFailure(error);
+      }
+      await refreshMonitorJobs();
+    }
+
+    function renderMonitor(payload) {
+      const health = payload.health || {};
+      const healthFields = health.fields || {};
+      document.querySelector("#monitor-status").textContent = label(payload.status);
+      const healthBadge = document.querySelector("#monitor-health-badge");
+      healthBadge.className = `badge ${normalizeStatus(health.status || payload.status)}`;
+      healthBadge.textContent = label(health.status || payload.status);
+      document.querySelector("#monitor-summary-grid").innerHTML = [
+        detailTile("Updated", healthFields.updated_at),
+        detailTile("Latest cycle", healthFields.latest_cycle_id),
+        detailTile("Latest status", healthFields.latest_cycle_status),
+        detailTile("Cycle count", healthFields.cycle_count),
+        detailTile("Failed cycles", healthFields.failed_cycle_count),
+        detailTile("Latest run", healthFields.latest_run_id),
+        detailTile("Cooldown records", healthFields.cooldown_records),
+        detailTile("Monitor output", payload.monitor_output_dir)
+      ].join("");
+      renderMonitorAlertCounts(payload);
+      renderMonitorCycles(payload);
+      renderMonitorAlertSample(payload);
+    }
+
+    function renderMonitorFailure(error) {
+      document.querySelector("#monitor-status").textContent = "Failed";
+      document.querySelector("#monitor-health-badge").className = "badge failed";
+      document.querySelector("#monitor-health-badge").textContent = "failed";
+      document.querySelector("#monitor-summary-grid").innerHTML = detailTile("Error", error.message);
+      document.querySelector("#monitor-alert-badge").className = "badge failed";
+      document.querySelector("#monitor-alert-badge").textContent = "failed";
+      document.querySelector("#monitor-alert-counts").innerHTML = "";
+      document.querySelector("#monitor-cycle-count").className = "badge failed";
+      document.querySelector("#monitor-cycle-count").textContent = "failed";
+      document.querySelector("#monitor-cycle-badge").className = "badge failed";
+      document.querySelector("#monitor-cycle-badge").textContent = "failed";
+      document.querySelector("#monitor-cycle-list").innerHTML = `<li class="message error">${escapeHtml(error.message)}</li>`;
+      document.querySelector("#monitor-alert-sample-badge").className = "badge failed";
+      document.querySelector("#monitor-alert-sample-badge").textContent = "failed";
+      document.querySelector("#monitor-alert-sample").innerHTML = "";
+    }
+
+    function renderMonitorAlertCounts(payload) {
+      const healthCounts = get("health.fields.alert_counts", payload) || {};
+      const archiveCounts = get("alert_archive.fields.counts", payload) || {};
+      const counts = Object.keys(healthCounts).length ? healthCounts : archiveCounts;
+      const order = ["records", "emitted", "suppressed_duplicate", "suppressed_cooldown", "suppressed_no_alert", "skipped"];
+      const badgeNode = document.querySelector("#monitor-alert-badge");
+      badgeNode.className = `badge ${Object.values(counts).some((value) => Number(value) > 0) ? "available" : normalizeStatus(get("alert_archive.status", payload))}`;
+      badgeNode.textContent = `${text(counts.records || 0)} records`;
+      document.querySelector("#monitor-alert-counts").innerHTML = order
+        .map((key) => detailTile(key, counts[key] || 0))
+        .join("");
+    }
+
+    function renderMonitorCycles(payload) {
+      const cyclesPayload = payload.cycles || {};
+      const cycles = Array.isArray(cyclesPayload.cycles) ? cyclesPayload.cycles : [];
+      const total = Number(cyclesPayload.cycle_count || cycles.length);
+      const count = document.querySelector("#monitor-cycle-count");
+      count.className = `badge ${cycles.length ? normalizeStatus(cyclesPayload.status) : "missing"}`;
+      count.textContent = `${total} cycle${total === 1 ? "" : "s"}`;
+      const badgeNode = document.querySelector("#monitor-cycle-badge");
+      badgeNode.className = `badge ${cycles.length ? normalizeStatus(cyclesPayload.status) : "missing"}`;
+      badgeNode.textContent = `${cycles.length} shown`;
+      if (!cycles.length) {
+        document.querySelector("#monitor-cycle-list").innerHTML = messages(cyclesPayload) || `<li class="message warning">No monitor cycles are recorded.</li>`;
+        return;
+      }
+      document.querySelector("#monitor-cycle-list").innerHTML = cycles.map((cycle) => {
+        const counts = cycle.alert_archive && cycle.alert_archive.counts ? cycle.alert_archive.counts : {};
+        return `
+          <li class="stage-item">
+            <div class="stage-top">
+              <span class="stage-name">${escapeHtml(text(cycle.cycle_id))}</span>
+              ${badge(cycle.status)}
+            </div>
+            <div class="run-meta">
+              <span>Mode: ${escapeHtml(text(cycle.cycle_mode))}</span>
+              <span>Started: ${escapeHtml(text(cycle.started_at))}</span>
+              <span>Finished: ${escapeHtml(text(cycle.finished_at))}</span>
+              <span>Run: ${escapeHtml(text(cycle.run_id))}</span>
+              <span>Alerts: ${escapeHtml(text(counts.emitted || 0))}</span>
+              <span>Warnings: ${escapeHtml(text(cycle.warning_count || 0))}</span>
+              <span>Errors: ${escapeHtml(text(cycle.error_count || 0))}</span>
+            </div>
+            ${cycle.cycle_manifest ? `<div class="artifact-actions"><button class="link-button" type="button" data-artifact-path="${escapeHtml(cycle.cycle_manifest)}">Open cycle manifest</button></div>` : ""}
+          </li>`;
+      }).join("");
+      wireArtifactButtons();
+    }
+
+    function renderMonitorAlertSample(payload) {
+      const archive = payload.alert_archive || {};
+      const fields = archive.fields || {};
+      const records = Array.isArray(fields.sample_records) ? fields.sample_records : [];
+      const badgeNode = document.querySelector("#monitor-alert-sample-badge");
+      badgeNode.className = `badge ${records.length ? normalizeStatus(archive.status) : "missing"}`;
+      badgeNode.textContent = `${records.length} sample${records.length === 1 ? "" : "s"}`;
+      if (!records.length) {
+        document.querySelector("#monitor-alert-sample").innerHTML = messages(archive) || `<li class="message warning">No alert archive sample is available.</li>`;
+        return;
+      }
+      document.querySelector("#monitor-alert-sample").innerHTML = records.slice(0, 8).map((record) => `
+        <li class="stage-item">
+          <div class="stage-top">
+            <span class="stage-name">${escapeHtml(text(record.record_id || record.decision_id || record.symbol || "alert"))}</span>
+            ${badge(record.status)}
+          </div>
+          <div class="run-meta">
+            <span>Created: ${escapeHtml(text(record.created_at))}</span>
+            <span>Symbol: ${escapeHtml(text(record.symbol))}</span>
+            <span>Timeframe: ${escapeHtml(text(record.timeframe))}</span>
+            <span>Priority: ${escapeHtml(text(record.priority))}</span>
+            <span>Attention: ${escapeHtml(text(record.attention_decision))}</span>
+            <span>Source refs: ${escapeHtml(text(record.source_artifact_count))}</span>
+          </div>
+        </li>`).join("");
+    }
+
+    async function refreshMonitorJobs() {
+      try {
+        const payload = await fetchJson(endpoints.jobs);
+        renderMonitorJobs(payload);
+      } catch (error) {
+        renderMonitorJobsFailure(error);
+      }
+    }
+
+    function renderMonitorJobs(payload) {
+      const allJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+      const jobs = allJobs.filter((job) => String(job.intent || "").startsWith("monitor_"));
+      const active = jobs.filter((job) => !terminalJobStatuses.has(String(job.status || "")));
+      document.querySelector("#monitor-job-status").textContent = active.length
+        ? `${active.length} active`
+        : jobs.length
+          ? "Idle"
+          : "No monitor jobs";
+      const count = document.querySelector("#monitor-job-count");
+      count.className = `badge ${jobs.length ? "available" : "missing"}`;
+      count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
+      if (!jobs.length) {
+        document.querySelector("#monitor-job-list").innerHTML = `<div class="message warning">No monitor jobs are recorded in the dashboard job history.</div>`;
+        scheduleMonitorJobPolling(false);
+        return;
+      }
+      document.querySelector("#monitor-job-list").innerHTML = jobs.slice(0, 10).map((job) => {
+        const running = !terminalJobStatuses.has(String(job.status || ""));
+        const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
+        return `
+          <div class="job-row">
+            <div class="stage-top">
+              <span class="stage-name">${escapeHtml(jobTitle(job.intent))}</span>
+              ${badge(job.status)}
+            </div>
+            <div class="run-meta">
+              <span>Created: ${escapeHtml(text(job.created_at))}</span>
+              <span>Started: ${escapeHtml(text(job.started_at))}</span>
+              <span>Finished: ${escapeHtml(text(job.finished_at))}</span>
+              <span>Exit: ${escapeHtml(text(job.exit_code))}</span>
+            </div>
+            <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
+            ${messages(job)}
+            <div class="job-actions">
+              ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
+              ${running && job.cancellable === false ? `<span class="badge partial">cancellation unsupported</span>` : ""}
+            </div>
+          </div>`;
+      }).join("");
+      document.querySelectorAll("[data-cancel-job-id]").forEach((button) => {
+        button.addEventListener("click", () => cancelMonitorJob(button.dataset.cancelJobId));
+      });
+      scheduleMonitorJobPolling(active.length > 0);
+    }
+
+    function renderMonitorJobsFailure(error) {
+      document.querySelector("#monitor-job-status").textContent = "Failed";
+      document.querySelector("#monitor-job-count").className = "badge failed";
+      document.querySelector("#monitor-job-count").textContent = "failed";
+      document.querySelector("#monitor-job-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      scheduleMonitorJobPolling(false);
+    }
+
+    function scheduleMonitorJobPolling(active) {
+      if (active && !monitorJobPoll) {
+        monitorJobPoll = window.setInterval(refreshMonitorJobs, 2000);
+        return;
+      }
+      if (!active && monitorJobPoll) {
+        window.clearInterval(monitorJobPoll);
+        monitorJobPoll = null;
+      }
+    }
+
+    function jobTitle(intent) {
+      const titles = {
+        monitor_dry_run: "Monitor dry run",
+        monitor_once: "Monitor one cycle",
+        monitor_loop: "Monitor finite loop",
+        monitor_inspect: "Monitor inspect"
+      };
+      return titles[intent] || intent || "Monitor job";
+    }
+
+    async function startMonitorJob(action) {
+      let request;
+      if (action === "dry-run") {
+        request = { intent: "monitor_dry_run", params: {} };
+      } else if (action === "once") {
+        request = { intent: "monitor_once", params: {} };
+      } else if (action === "loop") {
+        const maxCycles = positiveInputValue("#monitor-loop-cycles");
+        const intervalSeconds = positiveInputValue("#monitor-loop-interval");
+        if (!maxCycles || !intervalSeconds) {
+          document.querySelector("#monitor-job-status").textContent = "Invalid loop input";
+          document.querySelector("#monitor-job-list").innerHTML = `<div class="message error">Max cycles and interval seconds must be positive integers.</div>`;
+          return;
+        }
+        request = {
+          intent: "monitor_loop",
+          params: { max_cycles: maxCycles, interval_seconds: intervalSeconds }
+        };
+      } else {
+        return;
+      }
+      document.querySelector("#monitor-job-status").textContent = "Starting";
+      try {
+        const job = await postJson(endpoints.jobs, request);
+        document.querySelector("#monitor-job-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
+        await refreshMonitorJobs();
+      } catch (error) {
+        renderMonitorJobsFailure(error);
+      }
+    }
+
+    function positiveInputValue(selector) {
+      const value = Number.parseInt(document.querySelector(selector).value, 10);
+      return Number.isInteger(value) && value > 0 ? value : null;
+    }
+
+    async function cancelMonitorJob(jobId) {
+      if (!jobId) {
+        return;
+      }
+      document.querySelector("#monitor-job-status").textContent = "Cancelling";
+      try {
+        await postJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}/cancel`, {});
+        await refreshMonitorJobs();
+      } catch (error) {
+        renderMonitorJobsFailure(error);
+      }
+    }
+
     async function loadReportPreview(detail) {
       const path = reportPreviewPath(detail);
       if (!path) {
@@ -2394,6 +2853,9 @@ def dashboard_index_html() -> str:
     document.querySelector("#data-search-filter").addEventListener("input", renderDataStores);
     document.querySelector("#strategy-scope-filter").addEventListener("change", renderStrategies);
     document.querySelector("#strategy-search-filter").addEventListener("input", renderStrategies);
+    document.querySelectorAll("[data-monitor-action]").forEach((button) => {
+      button.addEventListener("click", () => startMonitorJob(button.dataset.monitorAction));
+    });
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 
     fetchJson(endpoints.overview).then(renderOverview).catch(renderOverviewFailure);

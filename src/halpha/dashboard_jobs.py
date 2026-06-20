@@ -23,6 +23,8 @@ RESULT_ARTIFACT_KEYS = {
     "event_intelligence_material",
     "manifest",
     "model_prepare_manifest",
+    "health_state",
+    "monitor_manifest",
     "report",
     "strategy_backtest",
     "strategy_benchmark_suite",
@@ -140,6 +142,27 @@ SUPPORTED_COMMANDS = {
         kind="monitor_inspection",
         cancellable=True,
         cli_parts=("monitor", "inspect"),
+    ),
+    "monitor_dry_run": CommandSpec(
+        intent="monitor_dry_run",
+        kind="monitor_dry_run",
+        cancellable=True,
+        cli_parts=("monitor", "run"),
+        extra_cli_parts=("--dry-run",),
+    ),
+    "monitor_once": CommandSpec(
+        intent="monitor_once",
+        kind="monitor_cycle",
+        cancellable=True,
+        cli_parts=("monitor", "run"),
+        extra_cli_parts=("--once",),
+    ),
+    "monitor_loop": CommandSpec(
+        intent="monitor_loop",
+        kind="monitor_loop",
+        cancellable=True,
+        cli_parts=("monitor", "run"),
+        param_mode="monitor_loop",
     ),
     "backtest": CommandSpec(
         intent="backtest",
@@ -449,6 +472,8 @@ class DashboardJobManager:
             return {"output_dir"}
         if param_mode == "text_intel":
             return {"input_path", "output_dir"}
+        if param_mode == "monitor_loop":
+            return {"max_cycles", "interval_seconds"}
         return set()
 
     def _extend_param_mode_args(
@@ -482,6 +507,15 @@ class DashboardJobManager:
                 command.extend(["--input", str(path)])
                 preview.extend(["--input", _safe_ref(path, base=self.base)])
             self._extend_optional_output_dir(params, command, preview)
+        elif param_mode == "monitor_loop":
+            max_cycles = self._validated_positive_int(params.get("max_cycles"), param_name="max_cycles")
+            command.extend(["--max-cycles", str(max_cycles)])
+            preview.extend(["--max-cycles", str(max_cycles)])
+            interval_seconds = params.get("interval_seconds")
+            if interval_seconds is not None:
+                interval = self._validated_positive_int(interval_seconds, param_name="interval_seconds")
+                command.extend(["--interval-seconds", str(interval)])
+                preview.extend(["--interval-seconds", str(interval)])
 
     def _extend_optional_output_dir(
         self,
@@ -529,6 +563,11 @@ class DashboardJobManager:
         if timeframe not in self._configured_timeframes():
             raise DashboardJobError(f"timeframe is not configured: {timeframe}.")
         return timeframe
+
+    def _validated_positive_int(self, value: Any, *, param_name: str) -> int:
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise DashboardJobError(f"{param_name} must be a positive integer.")
+        return value
 
     def _configured_strategy_names(self) -> set[str]:
         quant = self.config.get("quant") if isinstance(self.config.get("quant"), dict) else {}
