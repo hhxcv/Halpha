@@ -281,13 +281,16 @@ Implemented consumers:
 - Intelligence fusion may use lifecycle evidence as strategy-health context.
 - Decision material and final reports may explain lifecycle status as
   deterministic Halpha evidence.
+- Data inspection summarizes lifecycle artifact status, lifecycle counts,
+  degradation counts, retired counts, material budget status, and source refs
+  without dumping raw lifecycle records or local policy values.
+- Workbench output links and summarizes lifecycle artifact status and aggregate
+  counts for local review; missing lifecycle state remains explicit.
 
 Planned consumers:
 
 - Strategy gate overlays may use lifecycle evidence to qualify whether a
   gate-passing strategy is healthy, watchlisted, degraded, or retired.
-- Data inspection may summarize lifecycle artifact status and counts.
-- Workbench output may link and summarize lifecycle status for local review.
 
 Consumer rules:
 
@@ -340,4 +343,4 @@ Tests should cover:
 - material bounds and omission counts;
 - Codex input boundaries;
 - downstream source refs;
-- data inspection and workbench summaries when implemented.
+- data inspection and workbench summaries.

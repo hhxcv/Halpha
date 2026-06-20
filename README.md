@@ -130,9 +130,9 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 ```
 
 The inspection command summarizes shared OHLCV, derivatives, macro/calendar,
-on-chain flow, text-event, run-index, intelligence-fusion, and data-quality
-state, plus workbench output refs when available, without dumping full reusable
-histories or raw records.
+on-chain flow, text-event, run-index, intelligence-fusion, strategy-lifecycle,
+and data-quality state, plus workbench output refs when available, without
+dumping full reusable histories or raw records.
 
 Inspect outcome tracking artifacts and shared outcome history state without
 collection or Codex:
@@ -505,9 +505,9 @@ python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_i
 
 Use this output to check on-chain flow history state, current-run on-chain view
 coverage, feature/factor artifact status, intelligence-fusion status,
-personalized-risk aggregate status, Codex input budget state, and latest
-data-quality counts without exposing reusable record contents or raw local
-user-state values.
+strategy-lifecycle status, personalized-risk aggregate status, Codex input
+budget state, and latest data-quality counts without exposing reusable record
+contents, full lifecycle records, policy values, or raw local user-state values.
 
 Inspect outcome tracking state without collection or Codex CLI:
 

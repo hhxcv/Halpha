@@ -36,6 +36,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "onchain_flow_history: skipped" in output
     assert "feature_factor_artifacts: skipped" in output
     assert "intelligence_fusion: skipped" in output
+    assert "strategy_lifecycle: skipped" in output
     assert "personalized_risk: skipped" in output
     assert "workbench: skipped" in output
     assert "data_quality_summary: skipped" in output
@@ -72,6 +73,7 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "onchain_flow_history: skipped" in output
     assert "feature_factor_artifacts: skipped" in output
     assert "intelligence_fusion: skipped" in output
+    assert "strategy_lifecycle: skipped" in output
     assert "personalized_risk: skipped" in output
     assert "workbench: skipped" in output
     assert "data_quality_summary: degraded" in output
@@ -250,6 +252,43 @@ def test_data_inspect_reports_intelligence_fusion_artifacts_and_codex_budget(
     assert "codex_budget_chars=3072" in output
     assert "fusion_record_id" not in output
     assert "bounded fusion evidence" not in output
+
+
+def test_data_inspect_reports_strategy_lifecycle_artifacts_without_raw_records(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_lifecycle_inspection_artifacts(run)
+
+    exit_code = main(
+        [
+            "data",
+            "inspect",
+            "--config",
+            str(config_path),
+            "--run-dir",
+            "runs/run-1",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "strategy_lifecycle: warning" in output
+    assert "state_artifact=analysis/strategy_lifecycle_state.json" in output
+    assert "material_artifact=analysis/strategy_lifecycle_material.md" in output
+    assert "lifecycle_status_counts=degraded:1,effective:1,retired:1" in output
+    assert "lifecycle_records=3" in output
+    assert "lifecycle_degraded=1" in output
+    assert "lifecycle_retired=1" in output
+    assert "lifecycle_policy_records=1" in output
+    assert "material_records=3" in output
+    assert "material_omitted_records=0" in output
+    assert "codex_budget_status=included" in output
+    assert "strategy_lifecycle:private" not in output
+    assert "private lifecycle policy reason" not in output
+    assert str(tmp_path) not in output
 
 
 def test_data_inspect_reports_personalized_risk_artifacts_and_codex_budget(
@@ -779,6 +818,85 @@ def _write_fusion_inspection_artifacts(run: RunContext) -> None:
     quality["status"] = "warning"
     quality["warnings"] = ["one intelligence fusion record is conflicting."]
     write_json(quality_path, quality)
+
+
+def _write_lifecycle_inspection_artifacts(run: RunContext) -> None:
+    run.manifest["artifacts"].update(
+        {
+            "strategy_lifecycle_state": "analysis/strategy_lifecycle_state.json",
+            "strategy_lifecycle_material": "analysis/strategy_lifecycle_material.md",
+        }
+    )
+    run.manifest["strategy_lifecycle_state"] = {
+        "status": "warning",
+        "artifact": "analysis/strategy_lifecycle_state.json",
+        "records": 3,
+        "lifecycle_status_counts": {"effective": 1, "degraded": 1, "retired": 1},
+        "warnings": 1,
+        "errors": 0,
+    }
+    run.manifest["strategy_lifecycle_material"] = {
+        "status": "ok",
+        "artifact": "analysis/strategy_lifecycle_material.md",
+        "selected_records": 3,
+        "omitted_records": 0,
+        "warnings": 0,
+        "errors": 0,
+    }
+    run.manifest["counts"].update(
+        {
+            "strategy_lifecycle_records": 3,
+            "strategy_lifecycle_effective": 1,
+            "strategy_lifecycle_active_candidate": 0,
+            "strategy_lifecycle_watchlisted": 0,
+            "strategy_lifecycle_rejected": 0,
+            "strategy_lifecycle_degraded": 1,
+            "strategy_lifecycle_retired": 1,
+            "strategy_lifecycle_insufficient_evidence": 0,
+            "strategy_lifecycle_failed": 0,
+            "strategy_lifecycle_policy_records": 1,
+            "strategy_lifecycle_warnings": 1,
+            "strategy_lifecycle_errors": 0,
+            "strategy_lifecycle_material_records": 3,
+            "strategy_lifecycle_material_omitted_records": 0,
+        }
+    )
+    run.manifest["codex_input"] = {
+        "materials": {
+            "analysis/strategy_lifecycle_material.md": {
+                "status": "included",
+                "chars": 2048,
+                "over_budget": False,
+                "warnings": [],
+            }
+        }
+    }
+    write_json(
+        run.analysis_dir / "strategy_lifecycle_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_lifecycle_state",
+            "status": "warning",
+            "counts": {"by_lifecycle_status": {"effective": 1, "degraded": 1, "retired": 1}},
+            "records": [
+                {
+                    "lifecycle_record_id": "strategy_lifecycle:private:BTCUSDT:1d",
+                    "lifecycle_status": "retired",
+                    "retirement": {
+                        "state": "explicitly_retired",
+                        "policy_refs": ["private lifecycle policy reason"],
+                    },
+                }
+            ],
+            "warnings": ["one lifecycle record requires review."],
+            "errors": [],
+        },
+    )
+    (run.analysis_dir / "strategy_lifecycle_material.md").write_text(
+        "# strategy_lifecycle_material\n",
+        encoding="utf-8",
+    )
+    write_json(run.manifest_path, run.manifest)
 
 
 def _write_m15_inspection_artifacts(run: RunContext) -> None:

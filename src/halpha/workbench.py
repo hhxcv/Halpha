@@ -23,6 +23,8 @@ WORKBENCH_SUMMARY_FILENAME = "workbench_summary.json"
 WORKBENCH_MARKDOWN_FILENAME = "index.md"
 WORKBENCH_HTML_FILENAME = "index.html"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
+STRATEGY_LIFECYCLE_STATE_ARTIFACT = "analysis/strategy_lifecycle_state.json"
+STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT = "analysis/strategy_lifecycle_material.md"
 
 
 @dataclass(frozen=True)
@@ -205,6 +207,9 @@ def render_workbench_markdown(summary: dict[str, Any]) -> str:
                 "strategy_gate_effective": "effective",
                 "strategy_gate_watchlisted": "watchlisted",
                 "strategy_gate_rejected": "rejected",
+                "strategy_lifecycle_records": "lifecycle records",
+                "strategy_lifecycle_degraded": "degraded lifecycle",
+                "strategy_lifecycle_retired": "retired lifecycle",
             },
         ),
         _markdown_state_row(
@@ -286,6 +291,9 @@ def render_workbench_html(summary: dict[str, Any]) -> str:
                     "strategy_gate_effective": "effective",
                     "strategy_gate_watchlisted": "watchlisted",
                     "strategy_gate_rejected": "rejected",
+                    "strategy_lifecycle_records": "lifecycle records",
+                    "strategy_lifecycle_degraded": "degraded lifecycle",
+                    "strategy_lifecycle_retired": "retired lifecycle",
                 },
             ),
             _html_state_row(
@@ -400,6 +408,10 @@ def inspect_workbench_summary(config: dict[str, Any], *, config_path: Path) -> W
         f"outcome_evaluation_records: {_int(outcome_fields.get('evaluation_records'))}",
         f"strategy_state: {_section_status_text(summary, 'strategy_state')}",
         f"strategy_gate_effective: {_int(strategy_fields.get('strategy_gate_effective'))}",
+        f"strategy_lifecycle_state_status: {strategy_fields.get('strategy_lifecycle_state_status') or 'missing'}",
+        f"strategy_lifecycle_records: {_int(strategy_fields.get('strategy_lifecycle_records'))}",
+        f"strategy_lifecycle_degraded: {_int(strategy_fields.get('strategy_lifecycle_degraded'))}",
+        f"strategy_lifecycle_retired: {_int(strategy_fields.get('strategy_lifecycle_retired'))}",
         f"data_quality_state: {_section_status_text(summary, 'data_quality_state')}",
         f"data_quality_warnings: {_int(quality_fields.get('warnings'))}",
         f"warning_count: {len(_list(summary.get('warnings')))}",
@@ -779,13 +791,29 @@ def _strategy_state(selection: _RunSelection, manifest: dict[str, Any]) -> dict[
             "strategy_effectiveness_gates": "analysis/strategy_effectiveness_gates.json",
         },
     )
+    lifecycle_refs = _manifest_artifact_refs(
+        manifest,
+        {
+            "strategy_lifecycle_state": STRATEGY_LIFECYCLE_STATE_ARTIFACT,
+            "strategy_lifecycle_material": STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT,
+        },
+    )
     if selection.run_dir is None:
-        return _section("missing", source_artifacts=refs, reason="no selected run.")
+        return _section("missing", source_artifacts={**refs, **lifecycle_refs}, reason="no selected run.")
     artifacts = _artifact_statuses(selection.run_dir, refs)
+    lifecycle_artifacts = _artifact_statuses(selection.run_dir, lifecycle_refs)
     counts = _dict(manifest.get("counts"))
+    has_lifecycle = _has_strategy_lifecycle_artifacts(
+        _dict(manifest.get("artifacts")),
+        counts,
+        _dict(manifest.get("strategy_lifecycle_state")),
+        _dict(manifest.get("strategy_lifecycle_material")),
+    )
+    visible_artifacts = [*artifacts, *lifecycle_artifacts] if has_lifecycle else artifacts
+    lifecycle_status_fields = _lifecycle_artifact_status_fields(lifecycle_artifacts)
     return _section(
-        _section_status(artifacts),
-        source_artifacts=refs,
+        _section_status(visible_artifacts),
+        source_artifacts={**refs, **lifecycle_refs},
         fields={
             "strategy_evaluation_records": _int(counts.get("strategy_evaluation_records")),
             "strategy_evaluation_succeeded": _int(counts.get("strategy_evaluation_succeeded")),
@@ -794,10 +822,23 @@ def _strategy_state(selection: _RunSelection, manifest: dict[str, Any]) -> dict[
             "strategy_gate_watchlisted": _int(counts.get("strategy_gate_watchlisted")),
             "strategy_gate_rejected": _int(counts.get("strategy_gate_rejected")),
             "strategy_gate_insufficient_evidence": _int(counts.get("strategy_gate_insufficient_evidence")),
+            "strategy_lifecycle_records": _int(counts.get("strategy_lifecycle_records")),
+            "strategy_lifecycle_effective": _int(counts.get("strategy_lifecycle_effective")),
+            "strategy_lifecycle_active_candidate": _int(counts.get("strategy_lifecycle_active_candidate")),
+            "strategy_lifecycle_watchlisted": _int(counts.get("strategy_lifecycle_watchlisted")),
+            "strategy_lifecycle_rejected": _int(counts.get("strategy_lifecycle_rejected")),
+            "strategy_lifecycle_degraded": _int(counts.get("strategy_lifecycle_degraded")),
+            "strategy_lifecycle_retired": _int(counts.get("strategy_lifecycle_retired")),
+            "strategy_lifecycle_insufficient_evidence": _int(counts.get("strategy_lifecycle_insufficient_evidence")),
+            "strategy_lifecycle_failed": _int(counts.get("strategy_lifecycle_failed")),
+            "strategy_lifecycle_policy_records": _int(counts.get("strategy_lifecycle_policy_records")),
+            "strategy_lifecycle_warnings": _int(counts.get("strategy_lifecycle_warnings")),
+            "strategy_lifecycle_errors": _int(counts.get("strategy_lifecycle_errors")),
+            **lifecycle_status_fields,
         },
-        details={"artifacts": artifacts},
-        warnings=_artifact_warnings(artifacts),
-        errors=_artifact_errors(artifacts),
+        details={"artifacts": visible_artifacts},
+        warnings=_artifact_warnings(visible_artifacts),
+        errors=_artifact_errors(visible_artifacts),
     )
 
 
@@ -832,6 +873,27 @@ def _manifest_artifact_refs(manifest: dict[str, Any], defaults: dict[str, str]) 
     return refs
 
 
+def _has_strategy_lifecycle_artifacts(
+    artifacts: dict[str, Any],
+    counts: dict[str, Any],
+    lifecycle_summary: dict[str, Any],
+    material_summary: dict[str, Any],
+) -> bool:
+    if artifacts.get("strategy_lifecycle_state") or artifacts.get("strategy_lifecycle_material"):
+        return True
+    if lifecycle_summary or material_summary:
+        return True
+    return any(str(key).startswith("strategy_lifecycle_") for key in counts)
+
+
+def _lifecycle_artifact_status_fields(artifacts: list[dict[str, Any]]) -> dict[str, str]:
+    statuses = {item.get("name"): item.get("status") for item in artifacts}
+    return {
+        "strategy_lifecycle_state_status": str(statuses.get("strategy_lifecycle_state") or "missing"),
+        "strategy_lifecycle_material_status": str(statuses.get("strategy_lifecycle_material") or "missing"),
+    }
+
+
 def _artifact_statuses(run_dir: Path | None, refs: dict[str, str]) -> list[dict[str, Any]]:
     if run_dir is None:
         return [
@@ -845,6 +907,18 @@ def _artifact_statuses(run_dir: Path | None, refs: dict[str, str]) -> list[dict[
         ]
     statuses = []
     for key, ref in sorted(refs.items()):
+        if not ref.endswith(".json"):
+            path = run_dir / ref
+            status = "available" if path.is_file() else "missing"
+            item: dict[str, Any] = {
+                "name": key,
+                "artifact": ref,
+                "status": status,
+            }
+            if status == "missing":
+                item["reason"] = f"{path.name} was not found."
+            statuses.append(item)
+            continue
         artifact, error = _read_json(run_dir / ref)
         status = _json_status(artifact, error)
         item: dict[str, Any] = {
