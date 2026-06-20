@@ -47,6 +47,37 @@ def test_fusion_integration_downgrades_decision_on_severe_conflict(tmp_path: Pat
     assert _manifest_count(run, "intelligence_fusion_decision_adjusted_records") == 1
 
 
+def test_fusion_integration_downgrades_decision_on_lifecycle_retirement_context(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_decision_artifact(run, [_decision(action_level="DO", decision_bias="constructive")])
+    _write_fusion_artifact(
+        run,
+        [
+            _fusion(
+                state="conflicting",
+                conflict="material",
+                evidence=[
+                    "caution: strategy_lifecycle state=retired direction=cautionary lifecycle_status=retired retirement_state=explicitly_retired"
+                ],
+                source_artifacts=[
+                    "analysis/intelligence_fusion.json",
+                    "analysis/strategy_lifecycle_state.json",
+                ],
+            )
+        ],
+    )
+
+    integrate_intelligence_fusion({"quant": {"enabled": True}}, run)
+
+    decision = _decision_records(run)[0]
+    assert decision["action_level"] == "WATCH"
+    assert decision["pre_fusion_action_level"] == "DO"
+    assert "fusion_severe_conflict" in decision["downgrade_reasons"]
+    assert "analysis/strategy_lifecycle_state.json" in decision["source_artifacts"]
+    assert "analysis/strategy_lifecycle_state.json" in decision["fusion_source_artifacts"]
+    assert any("strategy_lifecycle state=retired" in item for item in decision["fusion_evidence"])
+
+
 def test_fusion_integration_blocks_decision_on_risk_override(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
     _write_decision_artifact(run, [_decision(action_level="TRY_SMALL")])
@@ -269,6 +300,8 @@ def _fusion(
     conflict: str = "none",
     risk_override: str = "none",
     event_override: str = "none",
+    evidence: list[str] | None = None,
+    source_artifacts: list[str] | None = None,
 ) -> dict[str, Any]:
     return {
         "fusion_record_id": "fusion:btcusdt:1d",
@@ -292,11 +325,11 @@ def _fusion(
         "risk_override": {"state": risk_override, "risk_level": "extreme", "reasons": ["risk block"]},
         "event_override": {"state": event_override, "severity": "critical", "reasons": ["event block"]},
         "outcome_feedback": {"state": "unknown", "source_records": 0},
-        "evidence": ["fusion evidence"],
+        "evidence": evidence or ["fusion evidence"],
         "uncertainty": ["fusion uncertainty"],
         "warnings": ["fusion warning"] if state in {"conflicting", "insufficient_evidence"} else [],
         "errors": [],
-        "source_artifacts": ["analysis/intelligence_fusion.json"],
+        "source_artifacts": source_artifacts or ["analysis/intelligence_fusion.json"],
         "source_record_refs": [],
         "created_at": "2026-06-05T00:00:00Z",
     }

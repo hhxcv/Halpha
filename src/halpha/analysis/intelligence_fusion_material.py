@@ -211,6 +211,7 @@ def _material_fusion_record(record: dict[str, Any]) -> dict[str, Any]:
         "uncertainty": _string_list(record.get("uncertainty"))[:MAX_MESSAGES],
         "warnings": _string_list(record.get("warnings"))[:MAX_MESSAGES],
         "source_artifacts": _string_list(record.get("source_artifacts"))[:MAX_ARTIFACTS],
+        "source_record_refs": _source_record_refs(record.get("source_record_refs")),
     }
 
 
@@ -330,6 +331,19 @@ def _error_messages(value: Any) -> list[str]:
         elif isinstance(item, str) and item:
             messages.append(item)
     return messages
+
+
+def _source_record_refs(value: Any) -> list[dict[str, Any]]:
+    refs = []
+    for item in _dict_list(value):
+        refs.append(
+            {
+                "source_layer": item.get("source_layer"),
+                "source_artifact": item.get("source_artifact"),
+                "source_record_id": item.get("source_record_id"),
+            }
+        )
+    return refs[:MAX_ARTIFACTS]
 
 
 def _unique_strings(values: list[str]) -> list[str]:

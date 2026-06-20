@@ -223,7 +223,7 @@ Current bias:
 * `analysis/feature_snapshots.json` records normalized source-aware feature records and source coverage from implemented current-run evidence.
 * `analysis/factor_states.json` records deterministic factor states, bounded scores, directions, confidence, warnings, errors, and degraded or insufficient-evidence states from feature snapshots.
 * `analysis/multi_source_signals.json` records conservative normalized research signals derived from factor states, not trading instructions.
-* `analysis/intelligence_fusion.json` records deterministic cross-source confluence, conflict, risk override, event override, outcome feedback, uncertainty, and source-ref evidence, not trading instructions or Codex-generated states.
+* `analysis/intelligence_fusion.json` records deterministic cross-source confluence, conflict, risk override, event override, strategy-lifecycle qualification, outcome feedback, uncertainty, and source-ref evidence, not trading instructions or Codex-generated states.
 * `analysis/factor_signal_material.md` records bounded AI-readable feature, factor, and multi-source signal evidence, selected records, omission counts, and Codex/report boundaries.
 * `analysis/intelligence_fusion_material.md` records bounded AI-readable fusion confluence, conflict, risk override, event override, outcome feedback, uncertainty, selected records, omission counts, and Codex/report boundaries.
 * `analysis/user_state_context.json` records optional local user-state status, sanitized watchlist, disabled asset, risk, timeframe, strategy preference, exposure-summary fields, omitted-private-value counts, privacy boundaries, warnings, and errors; not account state or trading instructions.

@@ -26,7 +26,8 @@ def test_intelligence_fusion_material_writes_bounded_records_and_boundaries(tmp_
     assert "record_type: selected_intelligence_fusion_records" in material
     assert "selected_record_count: 8" in material
     assert "omitted_record_count: 4" in material
-    assert "source_record_refs" not in material
+    assert "source_record_refs:" in material
+    assert "source_layer: strategy" in material
     assert "full_pairwise_topic_decisions" not in material
     assert run.manifest["artifacts"]["intelligence_fusion_material"] == "analysis/intelligence_fusion_material.md"
     assert run.manifest["counts"]["intelligence_fusion_material_records"] == 8
