@@ -7,8 +7,10 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from .data_inspection import DataInspectionError, inspect_local_store_state
 from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
+from .outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
 from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
 
@@ -22,6 +24,26 @@ MAX_STAGE_ARTIFACT_REFS = 20
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
+DATA_STORE_SECTION_NAMES = {
+    "research_data_catalog",
+    "run_index",
+    "text_event_history",
+    "ohlcv_history",
+    "derivatives_market_history",
+    "macro_calendar_history",
+    "onchain_flow_history",
+}
+DATA_STORE_TITLES = {
+    "research_data_catalog": "Research data catalog",
+    "run_index": "Run index",
+    "text_event_history": "Text event history",
+    "ohlcv_history": "OHLCV history",
+    "derivatives_market_history": "Derivatives market history",
+    "macro_calendar_history": "Macro/calendar history",
+    "onchain_flow_history": "On-chain flow history",
+    "outcome_history": "Outcome history",
+}
+SAFE_METADATA_PREVIEW_SUFFIXES = {".json", ".md", ".markdown", ".txt", ".yaml", ".yml"}
 
 
 class DashboardError(Exception):
@@ -76,6 +98,10 @@ def create_dashboard_app(
     def artifact_preview_endpoint(path: str) -> dict[str, Any]:
         return dashboard_artifact_preview(config_path=config_path, artifact_path=path)
 
+    @app.get("/api/data/stores")
+    def data_stores_endpoint() -> dict[str, Any]:
+        return dashboard_data_stores(config, config_path=config_path)
+
     return app
 
 
@@ -119,6 +145,7 @@ def dashboard_health(
             "overview_api": "available",
             "run_history_api": "available",
             "artifact_preview_api": "available",
+            "data_store_api": "available",
             "job_runner": "not_implemented",
             "frontend_ui": "available",
         },
@@ -332,6 +359,46 @@ def dashboard_artifact_preview(config_path: Path, *, artifact_path: str) -> dict
         "unsupported",
         f"{suffix or 'unknown'} files are not supported by the dashboard artifact preview API.",
     )
+
+
+def dashboard_data_stores(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
+    try:
+        state = inspect_local_store_state(config, config_path=config_path)
+    except DataInspectionError as exc:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_data_stores",
+            "status": "failed",
+            "source_artifacts": [],
+            "stores": [],
+            "warnings": [],
+            "errors": [str(exc)],
+            "omitted": _data_store_omissions(),
+        }
+
+    sections = [
+        _dashboard_store_section(section)
+        for section in _list(state.get("sections"))
+        if isinstance(section, dict) and section.get("name") in DATA_STORE_SECTION_NAMES
+    ]
+    sections.append(_outcome_history_store_section(config_path))
+    statuses = [str(section.get("status") or "unknown") for section in sections]
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_data_stores",
+        "status": _dashboard_store_overall_status(statuses),
+        "source_artifacts": sorted(
+            {
+                artifact
+                for section in sections
+                for artifact in _string_list(section.get("source_artifacts"))
+            }
+        ),
+        "stores": sections,
+        "warnings": [],
+        "errors": [],
+        "omitted": _data_store_omissions(),
+    }
 
 
 def validate_dashboard_host(host: str) -> None:
@@ -643,6 +710,107 @@ def _artifact_preview_error(path: str, status: str, message: str) -> dict[str, A
         "warnings": [message] if status in {"missing", "rejected", "unsupported"} else [],
         "errors": [message] if status == "failed" else [],
     }
+
+
+def _dashboard_store_section(section: dict[str, Any]) -> dict[str, Any]:
+    artifact = section.get("artifact")
+    reason = section.get("reason")
+    return {
+        "name": str(section.get("name") or "unknown"),
+        "title": DATA_STORE_TITLES.get(str(section.get("name") or ""), str(section.get("name") or "Unknown")),
+        "status": str(section.get("status") or "unknown"),
+        "artifact": artifact if isinstance(artifact, str) else None,
+        "preview_path": _metadata_preview_path(artifact),
+        "fields": _bounded_mapping(section.get("fields")),
+        "extra": _bounded_mapping(section.get("extra")),
+        "source_artifacts": [artifact] if isinstance(artifact, str) and artifact else [],
+        "warnings": [reason] if isinstance(reason, str) and reason else [],
+        "errors": [],
+    }
+
+
+def _outcome_history_store_section(config_path: Path) -> dict[str, Any]:
+    base = _config_base(config_path)
+    path = base / OUTCOME_HISTORY_STATE_ARTIFACT
+    data, error = _read_json(path)
+    if error:
+        return {
+            "name": "outcome_history",
+            "title": DATA_STORE_TITLES["outcome_history"],
+            "status": "skipped",
+            "artifact": OUTCOME_HISTORY_STATE_ARTIFACT,
+            "preview_path": None,
+            "fields": {
+                "history": OUTCOME_HISTORY_ARTIFACT,
+            },
+            "extra": {},
+            "source_artifacts": [OUTCOME_HISTORY_STATE_ARTIFACT],
+            "warnings": [error],
+            "errors": [],
+        }
+    totals = _dict(data.get("totals"))
+    fields = {
+        "updated_at": data.get("updated_at"),
+        "records": _int(totals.get("records")),
+        "incoming_records": _int(totals.get("incoming_records")),
+        "inserted_records": _int(totals.get("inserted_records")),
+        "updated_records": _int(totals.get("updated_records")),
+        "duplicate_records": _int(totals.get("duplicate_records")),
+        "conflicting_duplicates": _int(totals.get("conflicting_duplicates")),
+        "warnings": _int(totals.get("warning_count")),
+        "errors": _int(totals.get("error_count")),
+        "history": data.get("history_path") or OUTCOME_HISTORY_ARTIFACT,
+        "storage_path": data.get("storage_path"),
+    }
+    return {
+        "name": "outcome_history",
+        "title": DATA_STORE_TITLES["outcome_history"],
+        "status": str(data.get("status") or "unknown"),
+        "artifact": OUTCOME_HISTORY_STATE_ARTIFACT,
+        "preview_path": OUTCOME_HISTORY_STATE_ARTIFACT,
+        "fields": _bounded_mapping(fields),
+        "extra": {},
+        "source_artifacts": [OUTCOME_HISTORY_STATE_ARTIFACT, *_string_list(data.get("source_artifacts"))],
+        "warnings": _string_list(data.get("warnings")),
+        "errors": _string_list(data.get("errors")),
+    }
+
+
+def _metadata_preview_path(artifact: Any) -> str | None:
+    if not isinstance(artifact, str) or not artifact:
+        return None
+    if not (artifact.startswith("data/") or artifact.startswith("runs/")):
+        return None
+    suffix = Path(artifact).suffix.lower()
+    if suffix not in SAFE_METADATA_PREVIEW_SUFFIXES:
+        return None
+    return artifact
+
+
+def _data_store_omissions() -> dict[str, bool]:
+    return {
+        "full_research_catalog_embedded": False,
+        "full_raw_histories_embedded": False,
+        "full_reusable_histories_embedded": False,
+        "sqlite_table_contents_embedded": False,
+        "parquet_table_contents_embedded": False,
+        "raw_local_user_state_embedded": False,
+    }
+
+
+def _dashboard_store_overall_status(statuses: list[str]) -> str:
+    normalized = [status.lower() for status in statuses]
+    if any(status == "failed" for status in normalized):
+        return "failed"
+    if any(status == "degraded" for status in normalized):
+        return "degraded"
+    if any(status == "warning" for status in normalized):
+        return "warning"
+    if any(status in {"ok", "available", "succeeded", "success"} for status in normalized):
+        if any(status in {"skipped", "missing", "unknown"} for status in normalized):
+            return "partial"
+        return "available"
+    return "partial"
 
 
 def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -> dict[str, Any]:
@@ -1008,6 +1176,12 @@ def _list(value: Any) -> list[Any]:
 
 def _string_list(value: Any) -> list[str]:
     return [str(item) for item in _list(value)]
+
+
+def _int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    return value if isinstance(value, int) else 0
 
 
 def _warning_count(value: dict[str, Any]) -> int:

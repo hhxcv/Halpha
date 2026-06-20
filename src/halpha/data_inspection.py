@@ -78,24 +78,10 @@ def inspect_local_data(
     config_path: Path,
     run_dir: Path | None = None,
 ) -> DataInspectionResult:
-    base = config_path.parent
-    sections = [
-        _catalog_section(config_path, base=base),
-        _run_index_section(config_path, base=base),
-        _text_event_history_section(config_path, base=base),
-        _ohlcv_section(config, config_path, base=base),
-        _derivatives_section(config, config_path, run_dir=run_dir, base=base),
-        _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
-        _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
-        _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
-        _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
-        _strategy_lifecycle_section(config_path, run_dir=run_dir, base=base),
-        _personalized_risk_section(config_path, run_dir=run_dir, base=base),
-        _product_validation_section(config_path, run_dir=run_dir, base=base),
-        _workbench_section(config_path, base=base),
-    ]
-    quality = _quality_section(config_path, run_dir=run_dir, base=base)
-    status = _overall_status([section["status"] for section in sections] + [quality["status"]])
+    state = inspect_local_data_state(config, config_path=config_path, run_dir=run_dir)
+    sections = state["sections"]
+    quality = state["quality"]
+    status = state["status"]
 
     lines = [
         "Halpha data inspection succeeded.",
@@ -108,6 +94,57 @@ def inspect_local_data(
     lines.append("quality:")
     lines.extend(_section_lines(quality))
     return DataInspectionResult(status=status, lines=lines)
+
+
+def inspect_local_data_state(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_dir: Path | None = None,
+) -> dict[str, Any]:
+    base = config_path.parent
+    sections = [
+        *_local_store_sections(config, config_path=config_path, run_dir=run_dir, base=base),
+        _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
+        _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
+        _strategy_lifecycle_section(config_path, run_dir=run_dir, base=base),
+        _personalized_risk_section(config_path, run_dir=run_dir, base=base),
+        _product_validation_section(config_path, run_dir=run_dir, base=base),
+        _workbench_section(config_path, base=base),
+    ]
+    quality = _quality_section(config_path, run_dir=run_dir, base=base)
+    status = _overall_status([section["status"] for section in sections] + [quality["status"]])
+    return {"status": status, "sections": sections, "quality": quality}
+
+
+def inspect_local_store_state(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_dir: Path | None = None,
+) -> dict[str, Any]:
+    base = config_path.parent
+    sections = _local_store_sections(config, config_path=config_path, run_dir=run_dir, base=base)
+    status = _overall_status([section["status"] for section in sections])
+    return {"status": status, "sections": sections}
+
+
+def _local_store_sections(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_dir: Path | None,
+    base: Path,
+) -> list[dict[str, Any]]:
+    return [
+        _catalog_section(config_path, base=base),
+        _run_index_section(config_path, base=base),
+        _text_event_history_section(config_path, base=base),
+        _ohlcv_section(config, config_path, base=base),
+        _derivatives_section(config, config_path, run_dir=run_dir, base=base),
+        _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
+        _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
+    ]
 
 
 def _catalog_section(config_path: Path, *, base: Path) -> dict[str, Any]:
