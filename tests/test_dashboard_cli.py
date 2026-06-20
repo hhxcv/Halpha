@@ -41,7 +41,11 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["host"] == "127.0.0.1"
     assert payload["port"] == 8765
     assert payload["config"] == {"loaded": True, "ref": "config.example.yaml"}
-    assert payload["features"]["overview_api"] == "not_implemented"
+    assert payload["features"]["overview_api"] == "available"
+    assert payload["features"]["run_history_api"] == "available"
+    assert payload["features"]["artifact_preview_api"] == "available"
+    assert payload["features"]["frontend_ui"] == "available"
+    assert payload["features"]["job_runner"] == "not_implemented"
 
 
 def test_dashboard_health_omits_external_absolute_config_path(tmp_path: Path) -> None:
@@ -52,6 +56,24 @@ def test_dashboard_health_omits_external_absolute_config_path(tmp_path: Path) ->
 
     assert payload["config"] == {"loaded": True, "ref": "<external-config>"}
     assert str(tmp_path) not in str(payload)
+
+
+def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "halpha-dashboard-app" in response.text
+    assert "Operational overview" in response.text
+    assert 'data-endpoint="/api/overview"' in response.text
+    assert "Runs &amp; reports" in response.text
+    assert "Command center" in response.text
+    assert "pending" in response.text
+    assert str(tmp_path) not in response.text
 
 
 def test_dashboard_overview_endpoint_reports_missing_local_state(tmp_path: Path) -> None:

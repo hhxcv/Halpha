@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
 from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
@@ -36,7 +37,8 @@ def create_dashboard_app(
     port: int = DEFAULT_DASHBOARD_PORT,
 ) -> Any:
     try:
-        from fastapi import FastAPI
+        from fastapi import FastAPI, Response
+        from fastapi.responses import HTMLResponse
     except ModuleNotFoundError as exc:
         raise DashboardError("FastAPI is required to run the dashboard.") from exc
 
@@ -45,13 +47,13 @@ def create_dashboard_app(
     app = FastAPI(title="Halpha Dashboard", version="0.0.0")
     health = dashboard_health(config, config_path=config_path, host=host, port=port)
 
-    @app.get("/")
-    def root() -> dict[str, Any]:
-        return {
-            "service": "halpha_dashboard",
-            "status": health["status"],
-            "health": "/api/health",
-        }
+    @app.get("/", response_class=HTMLResponse)
+    def root() -> HTMLResponse:
+        return HTMLResponse(dashboard_index_html())
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> Response:
+        return Response(status_code=204)
 
     @app.get("/api/health")
     def health_endpoint() -> dict[str, Any]:
@@ -113,10 +115,11 @@ def dashboard_health(
             "ref": dashboard_config_ref(config_path),
         },
         "features": {
-            "overview_api": "not_implemented",
-            "artifact_preview_api": "not_implemented",
+            "overview_api": "available",
+            "run_history_api": "available",
+            "artifact_preview_api": "available",
             "job_runner": "not_implemented",
-            "frontend_ui": "not_implemented",
+            "frontend_ui": "available",
         },
     }
 
