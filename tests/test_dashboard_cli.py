@@ -101,6 +101,12 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Artifact inventory" in response.text
     assert "Artifact review</span>\n                <span class=\"planned-state\">available" in response.text
     assert "Report preview" in response.text
+    assert "preview-meta" in response.text
+    assert "preview-table" in response.text
+    assert "previewDisplayKind" in response.text
+    assert "previewSourceRefs" in response.text
+    assert "Some preview content was omitted" in response.text
+    assert "Preview content is not available" in response.text
     assert "Store coverage" in response.text
     assert "Store drilldown" in response.text
     assert "Strategy lab" in response.text

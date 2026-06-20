@@ -850,6 +850,23 @@ def dashboard_index_html() -> str:
       overflow-wrap: anywhere;
     }
 
+    .preview-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .preview-meta span,
+    .preview-source-actions span {
+      padding: 3px 6px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
     .preview-body {
       max-height: 520px;
       overflow: auto;
@@ -857,6 +874,61 @@ def dashboard_index_html() -> str:
       border: 1px solid var(--border);
       border-radius: 6px;
       background: #ffffff;
+    }
+
+    .preview-source-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .preview-subtitle {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .preview-table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      font-size: 12px;
+    }
+
+    .preview-table th,
+    .preview-table td {
+      max-width: 280px;
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .preview-table th {
+      background: #f6f2ea;
+      color: var(--muted);
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .preview-details {
+      margin-top: 10px;
+    }
+
+    .preview-details summary {
+      cursor: pointer;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .markdown-reader {
@@ -2765,8 +2837,12 @@ def dashboard_index_html() -> str:
         </div>`;
     }
 
-    function wireArtifactButtons() {
-      document.querySelectorAll("[data-artifact-path]").forEach((button) => {
+    function wireArtifactButtons(root = document) {
+      root.querySelectorAll("[data-artifact-path]").forEach((button) => {
+        if (button.dataset.previewWired === "true") {
+          return;
+        }
+        button.dataset.previewWired = "true";
         button.addEventListener("click", () => {
           loadArtifactPreview(button.dataset.artifactPath, button.dataset.previewTarget || "#artifact-preview");
         });
@@ -5670,32 +5746,38 @@ def dashboard_index_html() -> str:
       try {
         const url = `${endpoints.preview}?path=${encodeURIComponent(path)}`;
         const payload = await fetchJson(url);
-        renderArtifactPreview(payload, target, options);
+        renderArtifactPreview(payload, target, targetSelector, options);
       } catch (error) {
         target.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
       }
     }
 
-    function renderArtifactPreview(payload, target, options) {
+    function renderArtifactPreview(payload, target, targetSelector, options) {
       const status = payload.status || "unknown";
-      const preview = payload.preview;
+      const kind = previewDisplayKind(payload);
       if (options.report) {
         document.querySelector("#report-status").className = `badge ${normalizeStatus(status)}`;
         document.querySelector("#report-status").textContent = label(status);
       }
-      const body = payload.kind === "markdown"
-        ? `<div class="markdown-reader">${markdownToHtml(text(preview))}</div>`
-        : `<pre class="preview-pre">${escapeHtml(formatPreview(preview))}</pre>`;
+      const sourceActions = previewSourceRefActions(payload, targetSelector);
       target.innerHTML = `
         <div class="preview-heading">
           <div>
             <div class="preview-path">${escapeHtml(payload.path || "")}</div>
-            ${payload.truncated ? `<div class="message warning">Preview is truncated.</div>` : ""}
+            <div class="preview-meta">
+              <span>Kind: ${escapeHtml(kind)}</span>
+              <span>Status: ${escapeHtml(label(status))}</span>
+              <span>Truncated: ${payload.truncated ? "yes" : "no"}</span>
+              ${omittedPreviewMeta(payload.omitted)}
+            </div>
           </div>
           ${badge(status)}
         </div>
+        ${previewNotices(payload)}
         ${messages(payload)}
-        <div class="preview-body">${body}</div>`;
+        ${sourceActions}
+        <div class="preview-body">${previewBody(payload, kind)}</div>`;
+      wireArtifactButtons(target);
     }
 
     function formatPreview(value) {
@@ -5703,6 +5785,187 @@ def dashboard_index_html() -> str:
         return value;
       }
       return JSON.stringify(value, null, 2);
+    }
+
+    function previewDisplayKind(payload) {
+      const path = String(payload.path || "").toLowerCase();
+      const kind = String(payload.kind || "unknown");
+      if (path.endsWith(".csv")) {
+        return "csv";
+      }
+      if (path.endsWith(".yaml") || path.endsWith(".yml")) {
+        return "yaml";
+      }
+      if (path.endsWith(".log")) {
+        return "log";
+      }
+      return kind;
+    }
+
+    function omittedPreviewMeta(omitted) {
+      const entries = Object.entries(omitted || {}).filter(([, value]) => Number(value) > 0);
+      if (!entries.length) {
+        return `<span>Omitted: 0</span>`;
+      }
+      return entries
+        .map(([key, value]) => `<span>Omitted ${escapeHtml(key)}: ${escapeHtml(text(value))}</span>`)
+        .join("");
+    }
+
+    function previewNotices(payload) {
+      const notices = [];
+      if (payload.truncated) {
+        notices.push(`<div class="message warning">Preview is truncated at the dashboard bounded preview limit.</div>`);
+      }
+      const omitted = Object.entries(payload.omitted || {}).filter(([, value]) => Number(value) > 0);
+      if (omitted.length) {
+        notices.push(`<div class="message warning">Some preview content was omitted: ${escapeHtml(omitted.map(([key, value]) => `${key}=${value}`).join(", "))}.</div>`);
+      }
+      return notices.join("");
+    }
+
+    function previewBody(payload, kind) {
+      const preview = payload.preview;
+      if (preview === null || preview === undefined) {
+        return `<div class="message warning">Preview content is not available. Choose a supported bounded text artifact such as JSON, JSONL, Markdown, text, YAML, or CSV.</div>`;
+      }
+      if (kind === "markdown") {
+        return `<div class="markdown-reader">${markdownToHtml(text(preview))}</div>`;
+      }
+      if (kind === "json" || kind === "jsonl") {
+        const table = renderStructuredPreviewTable(preview);
+        if (table) {
+          return `${table}<details class="preview-details"><summary>Raw bounded ${escapeHtml(kind)}</summary><pre class="preview-pre">${escapeHtml(formatPreview(preview))}</pre></details>`;
+        }
+      }
+      if (kind === "csv") {
+        const table = renderCsvPreviewTable(text(preview));
+        if (table) {
+          return `${table}<details class="preview-details"><summary>Raw bounded CSV text</summary><pre class="preview-pre">${escapeHtml(text(preview))}</pre></details>`;
+        }
+      }
+      return `<pre class="preview-pre">${escapeHtml(formatPreview(preview))}</pre>`;
+    }
+
+    function renderStructuredPreviewTable(value) {
+      if (Array.isArray(value)) {
+        return renderPreviewTable(value, "Preview rows");
+      }
+      if (!value || typeof value !== "object") {
+        return "";
+      }
+      for (const [key, rows] of Object.entries(value)) {
+        if (Array.isArray(rows) && rows.length && rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) {
+          return renderPreviewTable(rows, key);
+        }
+      }
+      return "";
+    }
+
+    function renderCsvPreviewTable(value) {
+      const lines = value.split(/\\r?\\n/).filter((line) => line.trim()).slice(0, 80);
+      if (lines.length < 2) {
+        return "";
+      }
+      const delimiter = lines[0].includes("\\t") ? "\\t" : ",";
+      const rows = lines.map((line) => splitDelimitedLine(line, delimiter));
+      const headers = rows[0].map((header, index) => header || `column_${index + 1}`);
+      const body = rows.slice(1).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+      return renderPreviewTable(body, `CSV table (${body.length} preview rows)`);
+    }
+
+    function splitDelimitedLine(line, delimiter) {
+      const values = [];
+      let current = "";
+      let quoted = false;
+      const quote = String.fromCharCode(34);
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        if (char === quote) {
+          if (quoted && line[index + 1] === quote) {
+            current += quote;
+            index += 1;
+          } else {
+            quoted = !quoted;
+          }
+        } else if (char === delimiter && !quoted) {
+          values.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      values.push(current);
+      return values;
+    }
+
+    function renderPreviewTable(rows, title) {
+      const objectRows = rows.filter((row) => row && typeof row === "object" && !Array.isArray(row));
+      if (!objectRows.length) {
+        return "";
+      }
+      const columns = Array.from(new Set(objectRows.flatMap((row) => Object.keys(row)))).slice(0, 10);
+      if (!columns.length) {
+        return "";
+      }
+      return `
+        <div class="preview-subtitle">${escapeHtml(title)} - ${objectRows.length} row${objectRows.length === 1 ? "" : "s"}</div>
+        <div class="preview-table-wrap">
+          <table class="preview-table">
+            <thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${objectRows.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(previewCell(row[column]))}</td>`).join("")}</tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    function previewCell(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      if (typeof value === "object") {
+        return JSON.stringify(value);
+      }
+      return text(value);
+    }
+
+    function previewSourceRefActions(payload, targetSelector) {
+      const refs = previewSourceRefs(payload.preview);
+      if (!refs.length) {
+        return "";
+      }
+      return `
+        <div class="preview-source-actions">
+          <span>Previewable refs</span>
+          ${refs.map((ref) => `<button class="link-button" type="button" data-artifact-path="${escapeHtml(ref)}" data-preview-target="${escapeHtml(targetSelector)}">${escapeHtml(ref)}</button>`).join("")}
+        </div>`;
+    }
+
+    function previewSourceRefs(value) {
+      const refs = [];
+      const seen = new Set();
+      const visit = (item, depth) => {
+        if (depth > 4 || refs.length >= 12) {
+          return;
+        }
+        if (typeof item === "string") {
+          if (isPreviewableRef(item) && !seen.has(item)) {
+            seen.add(item);
+            refs.push(item);
+          }
+          return;
+        }
+        if (Array.isArray(item)) {
+          item.slice(0, 50).forEach((child) => visit(child, depth + 1));
+          return;
+        }
+        if (item && typeof item === "object") {
+          Object.values(item).slice(0, 80).forEach((child) => visit(child, depth + 1));
+        }
+      };
+      visit(value, 0);
+      return refs;
     }
 
     function markdownToHtml(markdown) {
