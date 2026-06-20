@@ -768,6 +768,80 @@ def test_dashboard_job_api_starts_strategy_command_intent(tmp_path: Path, monkey
     assert str(tmp_path) not in create_response.text
 
 
+def test_dashboard_job_manager_normalizes_result_refs_without_external_path_leakage(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    inside_manifest = tmp_path / "runs" / "run-api" / "run_manifest.json"
+    outside_manifest = tmp_path.parent / "outside" / "run_manifest.json"
+    stdout = "\n".join(
+        [
+            f"manifest: {inside_manifest}",
+            f"report: {outside_manifest}",
+        ]
+    )
+    monkeypatch.setattr(
+        "halpha.dashboard_jobs.subprocess.Popen",
+        lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
+    )
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "run_no_codex", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "succeeded"
+    assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
+    assert completed["result_refs"]["report"] == "<external-artifact>"
+    assert "runs/run-api/run_manifest.json" in completed["source_artifacts"]
+    assert "<external-artifact>" not in completed["source_artifacts"]
+    assert str(tmp_path) not in str(completed)
+    assert str(outside_manifest) not in str(completed)
+
+
+def test_dashboard_job_manager_marks_relative_artifacts_external_when_output_dir_is_external(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+    input_path = tmp_path / "runs" / "run-1" / "raw" / "text_events.json"
+    input_path.parent.mkdir(parents=True)
+    input_path.write_text("{}", encoding="utf-8")
+    outside_dir = tmp_path.parent / "outside-text-intel"
+    stdout = "\n".join(
+        [
+            f"output_dir: {outside_dir}",
+            "text_event_records: analysis/text_event_records.json",
+            f"manifest: {outside_dir / 'manifest.json'}",
+        ]
+    )
+    monkeypatch.setattr(
+        "halpha.dashboard_jobs.subprocess.Popen",
+        lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
+    )
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job(
+        {
+            "intent": "text_intel",
+            "params": {
+                "input_path": "runs/run-1/raw/text_events.json",
+                "output_dir": "runs/text-intel",
+            },
+        }
+    )
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "succeeded"
+    assert completed["result_refs"]["output_dir"] == "<external-artifact>"
+    assert completed["result_refs"]["text_event_records"] == "<external-artifact>"
+    assert completed["result_refs"]["manifest"] == "<external-artifact>"
+    assert "<external-artifact>" not in completed["source_artifacts"]
+    assert str(outside_dir) not in str(completed)
+
+
 def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sqlite3
 from typing import Any
 
 import pytest
@@ -61,6 +62,37 @@ def test_outcomes_inspect_reports_latest_healthy_outcome_state(tmp_path: Path, c
     assert "stable_outcome_key" not in output
     assert "raw_record" not in output
     assert str(tmp_path) not in output
+
+
+def test_outcomes_inspect_ignores_latest_run_index_outside_project_root(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path)
+    run = _write_run_with_outcomes(tmp_path, config_path, run_id="run-1", outcome_status="ok")
+    write_run_index(run, now="2026-06-05T00:10:00Z")
+    outside_dir = tmp_path.parent / "outside-outcome-inspect-run"
+    write_json(
+        outside_dir / "run_manifest.json",
+        {
+            "schema_version": 1,
+            "run_id": run.run_id,
+            "status": "succeeded",
+            "private_note": "outside outcome inspect manifest was read",
+        },
+    )
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), run.run_id))
+        connection.commit()
+
+    exit_code = main(["outcomes", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "selected_run: skipped" in output
+    assert "outcome_targets: skipped" in output
+    assert "outside outcome inspect manifest was read" not in output
+    assert str(outside_dir) not in output
 
 
 def test_outcomes_inspect_reports_specific_degraded_run_state(tmp_path: Path, capsys) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+import sqlite3
 from typing import Any
 
 from halpha.config import load_config
@@ -36,6 +37,40 @@ def test_outcome_targets_record_no_previous_run_state(tmp_path: Path) -> None:
     assert manifest["counts"]["outcome_targets"] == 0
     assert manifest["counts"]["outcome_target_skipped_records"] == 0
     assert _stage(manifest, "build_outcome_targets")["artifacts"] == ["analysis/outcome_targets.json"]
+
+
+def test_outcome_targets_reject_previous_run_outside_project_root(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    previous = _run_previous_source_pipeline(config, config_path)
+    outside_dir = tmp_path.parent / "outside-outcome-targets-run"
+    write_json(
+        outside_dir / "analysis" / "market_signals.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "market_signals",
+            "status": "ok",
+            "signals": [{"private_note": "outside outcome target artifact was read"}],
+        },
+    )
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), previous.run.run_id))
+        connection.commit()
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_outcome_targets",
+        stage_handlers=_handlers_for_until("build_outcome_targets"),
+        now=datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
+    )
+
+    artifact = _outcome_targets(result)
+    assert result.succeeded is True
+    assert artifact["status"] == "skipped"
+    assert artifact["targets"] == []
+    assert "points outside the configured project root" in artifact["warnings"][0]
+    assert "outside outcome target artifact was read" not in json.dumps(artifact)
 
 
 def test_outcome_targets_extract_supported_previous_run_artifacts(tmp_path: Path) -> None:

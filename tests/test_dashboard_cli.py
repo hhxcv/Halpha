@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
@@ -861,6 +862,60 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
         "artifacts"
     ]
     assert str(tmp_path) not in detail_response.text
+
+
+def test_dashboard_rejects_run_index_refs_outside_project_root(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    outside_dir = tmp_path.parent / "outside-dashboard-run"
+    outside_manifest = outside_dir / "run_manifest.json"
+    write_json(
+        outside_manifest,
+        {
+            "schema_version": 1,
+            "run_id": "run-1",
+            "status": "succeeded",
+            "private_note": "outside manifest was read",
+            "artifacts": {},
+        },
+    )
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        connection.execute(
+            "UPDATE runs SET run_dir = ?, manifest_path = ? WHERE run_id = ?",
+            (str(outside_dir), str(outside_manifest), "run-1"),
+        )
+        connection.commit()
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    list_response = client.get("/api/runs")
+    detail_response = client.get("/api/runs/run-1")
+    overview_response = client.get("/api/overview")
+    strategies_response = client.get("/api/strategies")
+
+    assert list_response.status_code == 200
+    listed = list_response.json()["runs"][0]
+    assert listed["run_dir"] == "<external-artifact>"
+    assert listed["manifest"] == "<external-artifact>"
+
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail["status"] == "failed"
+    assert detail["source_artifacts"] == ["data/research/index.sqlite", "<external-artifact>"]
+    assert detail["errors"] == ["external artifact reference was rejected."]
+
+    assert overview_response.status_code == 200
+    assert overview_response.json()["sections"]["latest_run"]["fields"]["manifest"] == "<external-artifact>"
+
+    assert strategies_response.status_code == 200
+    strategies = strategies_response.json()
+    assert strategies["selected_run"]["manifest"] == "<external-artifact>"
+
+    for response in (list_response, detail_response, overview_response, strategies_response):
+        assert "outside manifest was read" not in response.text
+        assert str(outside_dir) not in response.text
+        assert str(outside_manifest) not in response.text
 
 
 def test_dashboard_run_detail_reports_missing_run_id(tmp_path: Path) -> None:

@@ -94,7 +94,8 @@ def test_dashboard_job_api_redacts_private_values_from_response_and_logs(
     config_path = _write_private_config(tmp_path)
     config = load_config(config_path)
     machine_path = str(tmp_path / "private" / "job.txt")
-    stdout = "\n".join([PRIVATE_PROXY, PRIVATE_USER_STATE, machine_path, "ok"]) + "x" * (MAX_JOB_LOG_CHARS + 1)
+    stdout = "\n".join([PRIVATE_PROXY, PRIVATE_USER_STATE, machine_path, f"manifest: {PRIVATE_USER_STATE}", "ok"])
+    stdout += "x" * (MAX_JOB_LOG_CHARS + 1)
     stderr = f"{PRIVATE_PROXY}\n{PRIVATE_USER_STATE}\n{machine_path}"
 
     def fake_popen(*args, **kwargs):  # noqa: ANN002, ANN003
@@ -113,6 +114,8 @@ def test_dashboard_job_api_redacts_private_values_from_response_and_logs(
 
     assert completed["status"] == "succeeded"
     assert completed["logs"]["stdout_truncated"] is True
+    assert completed["result_refs"]["manifest"] == "<redacted-artifact>"
+    assert "<redacted-artifact>" not in completed["source_artifacts"]
     for private_value in [PRIVATE_PROXY, PRIVATE_USER_STATE, machine_path, str(config_path), str(tmp_path)]:
         assert private_value not in create_response.text
         assert private_value not in detail_response.text

@@ -24,6 +24,8 @@ DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = "Asia/Shanghai"
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
+EXTERNAL_ARTIFACT_REF = "<external-artifact>"
+REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 NO_STORE_HEADERS = {
     "Cache-Control": "no-store, max-age=0",
     "Pragma": "no-cache",
@@ -2096,10 +2098,14 @@ def _section(
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
+    if path.name == REJECTED_EXTERNAL_REF_NAME:
+        return {}, "external artifact reference was rejected."
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}, f"{path.name} was not found."
+    except OSError as exc:
+        return {}, f"{path.name} could not be read: {exc}."
     except JSONDecodeError as exc:
         return {}, f"{path.name} is not valid JSON: {exc.msg}."
     if not isinstance(loaded, dict):
@@ -2109,16 +2115,22 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
 
 def _resolve_ref(value: str, *, base: Path) -> Path:
     path = Path(value)
-    return path if path.is_absolute() else base / path
+    target = path if path.is_absolute() else base / path
+    try:
+        target.resolve().relative_to(base.resolve())
+    except (OSError, ValueError):
+        return base / REJECTED_EXTERNAL_REF_NAME
+    return target
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    if path.is_absolute():
-        try:
-            return path.resolve().relative_to(base.resolve()).as_posix()
-        except ValueError:
-            return path.name
-    return path.as_posix()
+    if path.name == REJECTED_EXTERNAL_REF_NAME:
+        return EXTERNAL_ARTIFACT_REF
+    target = path if path.is_absolute() else base / path
+    try:
+        return target.resolve().relative_to(base.resolve()).as_posix()
+    except (OSError, ValueError):
+        return EXTERNAL_ARTIFACT_REF
 
 
 def _config_base(config_path: Path) -> Path:

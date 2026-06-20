@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -87,6 +88,35 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "content_text" not in output
     assert "stable_event_key" not in output
     assert str(tmp_path) not in output
+
+
+def test_data_inspect_ignores_latest_run_index_outside_project_root(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=True)
+    run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    outside_dir = tmp_path.parent / "outside-data-inspect-run"
+    write_json(
+        outside_dir / "run_manifest.json",
+        {
+            "schema_version": 1,
+            "run_id": run.run_id,
+            "status": "succeeded",
+            "private_note": "outside data inspect manifest was read",
+        },
+    )
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), run.run_id))
+        connection.commit()
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "data_quality_summary: skipped" in output
+    assert "outside data inspect manifest was read" not in output
+    assert str(outside_dir) not in output
 
 
 def test_data_inspect_uses_specific_run_dir_and_reports_missing_quality_as_skipped(

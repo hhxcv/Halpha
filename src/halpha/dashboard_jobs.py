@@ -18,6 +18,9 @@ DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
 DASHBOARD_JOB_INDEX = "runs/dashboard/jobs/index.json"
 MAX_JOB_LOG_CHARS = 20_000
 CODEX_STAGE = "run_codex_report"
+EXTERNAL_ARTIFACT_REF = "<external-artifact>"
+REDACTED_ARTIFACT_REF = "<redacted-artifact>"
+RESULT_REF_PLACEHOLDERS = {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
 RESULT_ARTIFACT_KEYS = {
     "event_intelligence_material",
@@ -370,7 +373,12 @@ class DashboardJobManager:
         result_refs = self._job_result_refs(stdout, spec=spec)
         source_artifacts = [stdout_ref, stderr_ref]
         for key, artifact_ref in result_refs.items():
-            if key not in {"output_dir", "run_id"} and artifact_ref and artifact_ref not in source_artifacts:
+            if (
+                key not in {"output_dir", "run_id"}
+                and artifact_ref
+                and artifact_ref not in RESULT_REF_PLACEHOLDERS
+                and artifact_ref not in source_artifacts
+            ):
                 source_artifacts.append(artifact_ref)
         exit_code = int(process.returncode or 0)
         status = "cancelled" if was_cancelled else "succeeded" if exit_code == 0 else "failed"
@@ -720,15 +728,24 @@ class DashboardJobManager:
         return refs
 
     def _safe_result_artifact_ref(self, value: str, *, output_dir_ref: str | None) -> str:
-        if output_dir_ref and value.startswith(TEXT_INTELLIGENCE_RELATIVE_ARTIFACT_PREFIXES):
+        if (
+            output_dir_ref
+            and output_dir_ref != EXTERNAL_ARTIFACT_REF
+            and value.startswith(TEXT_INTELLIGENCE_RELATIVE_ARTIFACT_PREFIXES)
+        ):
             return self._safe_output_ref(f"{output_dir_ref}/{value}")
+        if output_dir_ref == EXTERNAL_ARTIFACT_REF and value.startswith(TEXT_INTELLIGENCE_RELATIVE_ARTIFACT_PREFIXES):
+            return EXTERNAL_ARTIFACT_REF
         return self._safe_output_ref(value)
 
     def _safe_output_ref(self, value: str) -> str:
-        redacted = self._redact_text(value)
-        path = Path(redacted)
+        path = Path(value.strip())
         target = path if path.is_absolute() else self.base / path
-        return _safe_ref(target, base=self.base)
+        try:
+            ref = target.resolve().relative_to(self.base.resolve()).as_posix()
+        except (OSError, ValueError):
+            return EXTERNAL_ARTIFACT_REF
+        return REDACTED_ARTIFACT_REF if self._redact_text(ref) != ref else ref
 
     def _job_path(self, job_id: str) -> Path:
         return self.jobs_root / job_id / "job.json"
@@ -768,6 +785,8 @@ def _read_json(path: Path) -> dict[str, Any]:
         loaded = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise DashboardJobError(f"{path.name} was not found.") from exc
+    except OSError as exc:
+        raise DashboardJobError(f"{path.name} could not be read: {exc}") from exc
     import json
 
     try:
@@ -825,12 +844,11 @@ def _config_ref(config_path: Path) -> str:
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    if path.is_absolute():
-        try:
-            return path.resolve().relative_to(base.resolve()).as_posix()
-        except ValueError:
-            return path.name
-    return path.as_posix()
+    target = path if path.is_absolute() else base / path
+    try:
+        return target.resolve().relative_to(base.resolve()).as_posix()
+    except (OSError, ValueError):
+        return EXTERNAL_ARTIFACT_REF
 
 
 def _utc_now() -> str:

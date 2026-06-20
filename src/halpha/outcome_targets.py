@@ -274,6 +274,14 @@ def _short_digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
 
 
+def _project_local_path(path: Path, *, base: Path) -> Path | None:
+    try:
+        path.resolve().relative_to(base.resolve())
+    except (OSError, ValueError):
+        return None
+    return path
+
+
 def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -> tuple[PreviousRun | None, str | None]:
     index_path = run_index_path(config_path)
     if not index_path.exists():
@@ -311,17 +319,24 @@ def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -
     run_dir = Path(str(row[1]))
     if not run_dir.is_absolute():
         run_dir = config_path.parent / run_dir
+    if _project_local_path(run_dir, base=config_path.parent) is None:
+        return None, "Previous successful run in run index points outside the configured project root."
     return PreviousRun(run_id=str(row[0]), run_dir=run_dir, finished_at=_optional_str(row[2]), artifacts=artifacts), None
 
 
 def _read_previous_artifact(previous: PreviousRun, artifact_path: str) -> tuple[dict[str, Any] | None, str | None]:
     path = Path(artifact_path)
-    if not path.is_absolute():
-        path = previous.run_dir / path
+    target = path if path.is_absolute() else previous.run_dir / path
     try:
-        artifact = json.loads(path.read_text(encoding="utf-8"))
+        target.resolve().relative_to(previous.run_dir.resolve())
+    except (OSError, ValueError):
+        return None, f"{artifact_path} points outside the previous run directory."
+    try:
+        artifact = json.loads(target.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return None, f"{artifact_path} was listed in run index but was not found."
+    except OSError as exc:
+        return None, f"{artifact_path} could not be read: {exc}."
     except JSONDecodeError as exc:
         return None, f"{artifact_path} is not valid JSON: {exc.msg}."
     if not isinstance(artifact, dict):
