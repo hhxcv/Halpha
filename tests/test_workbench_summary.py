@@ -44,8 +44,13 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert summary["monitor_state"]["fields"]["cycle_count"] == 2
     assert summary["outcome_state"]["fields"]["history_records"] == 7
     assert summary["strategy_state"]["fields"]["strategy_gate_effective"] == 3
+    assert summary["strategy_state"]["fields"]["strategy_lifecycle_records"] == 3
+    assert summary["strategy_state"]["fields"]["strategy_lifecycle_degraded"] == 1
+    assert summary["strategy_state"]["fields"]["strategy_lifecycle_retired"] == 1
+    assert summary["strategy_state"]["fields"]["strategy_lifecycle_state_status"] == "available"
     assert summary["data_quality_state"]["fields"]["checks"] == 10
     assert summary["source_artifacts"]["analysis"]["decision_recommendations"] == "analysis/decision_recommendations.json"
+    assert summary["source_artifacts"]["analysis"]["strategy_lifecycle_state"] == "analysis/strategy_lifecycle_state.json"
     assert summary["omitted"]["full_intermediate_json_embedded"] is False
     assert summary["codex_boundary"]["codex_input_by_default"] is False
     markdown = (tmp_path / "runs" / "workbench" / "latest" / "index.md").read_text(encoding="utf-8")
@@ -53,8 +58,10 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert "# Halpha Workbench" in markdown
     assert "../../run-1/report/report.md" in markdown
     assert "Decision and watch" in markdown
+    assert "degraded lifecycle: 1" in markdown
     assert "<table>" in html
     assert "../../run-1/report/report.md" in html
+    assert "retired lifecycle: 1" in html
 
 
 def test_workbench_summary_handles_missing_run_index(tmp_path: Path) -> None:
@@ -212,6 +219,8 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
             "strategy_evaluation_summary": "analysis/strategy_evaluation_summary.json",
             "strategy_experiment": "analysis/strategy_experiment.json",
             "strategy_effectiveness_gates": "analysis/strategy_effectiveness_gates.json",
+            "strategy_lifecycle_state": "analysis/strategy_lifecycle_state.json",
+            "strategy_lifecycle_material": "analysis/strategy_lifecycle_material.md",
             "data_quality_summary": "analysis/data_quality_summary.json",
         }
     )
@@ -238,6 +247,18 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
             "strategy_gate_watchlisted": 1,
             "strategy_gate_rejected": 0,
             "strategy_gate_insufficient_evidence": 0,
+            "strategy_lifecycle_records": 3,
+            "strategy_lifecycle_effective": 1,
+            "strategy_lifecycle_active_candidate": 0,
+            "strategy_lifecycle_watchlisted": 0,
+            "strategy_lifecycle_rejected": 0,
+            "strategy_lifecycle_degraded": 1,
+            "strategy_lifecycle_retired": 1,
+            "strategy_lifecycle_insufficient_evidence": 0,
+            "strategy_lifecycle_failed": 0,
+            "strategy_lifecycle_policy_records": 1,
+            "strategy_lifecycle_warnings": 1,
+            "strategy_lifecycle_errors": 0,
             "data_quality_checks": 10,
             "data_quality_warnings": 0,
             "data_quality_errors": 0,

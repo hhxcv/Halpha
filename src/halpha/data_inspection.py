@@ -36,6 +36,8 @@ MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
 FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
 INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
 INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.md"
+STRATEGY_LIFECYCLE_STATE_ARTIFACT = "analysis/strategy_lifecycle_state.json"
+STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT = "analysis/strategy_lifecycle_material.md"
 USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
@@ -85,6 +87,7 @@ def inspect_local_data(
         _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
         _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
         _intelligence_fusion_section(config_path, run_dir=run_dir, base=base),
+        _strategy_lifecycle_section(config_path, run_dir=run_dir, base=base),
         _personalized_risk_section(config_path, run_dir=run_dir, base=base),
         _workbench_section(config_path, base=base),
     ]
@@ -636,6 +639,121 @@ def _intelligence_fusion_section(
     )
 
 
+def _strategy_lifecycle_section(
+    config_path: Path,
+    *,
+    run_dir: Path | None,
+    base: Path,
+) -> dict[str, Any]:
+    if run_dir is not None:
+        resolved_run_dir = _resolve_run_dir(run_dir, base=base)
+    else:
+        resolved_run_dir = _latest_run_from_index(config_path)
+    if resolved_run_dir is None:
+        return _section(
+            "strategy_lifecycle",
+            "skipped",
+            reason="no latest run was found in the local run index.",
+        )
+
+    manifest_path = resolved_run_dir / "run_manifest.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    if manifest_error:
+        raise DataInspectionError(f"run_manifest.json could not be inspected: {manifest_error}")
+
+    artifacts = _dict(manifest.get("artifacts"))
+    counts = _dict(manifest.get("counts"))
+    lifecycle_summary = _dict(manifest.get("strategy_lifecycle_state"))
+    material_summary = _dict(manifest.get("strategy_lifecycle_material"))
+    has_lifecycle = _has_strategy_lifecycle_artifacts(artifacts, counts, lifecycle_summary, material_summary)
+    if not has_lifecycle:
+        return _section(
+            "strategy_lifecycle",
+            "skipped",
+            artifact=_safe_path(manifest_path, base=base),
+            fields={
+                "run_id": manifest.get("run_id"),
+                "run_status": manifest.get("status"),
+                "state_artifact_status": "missing",
+                "material_artifact_status": "missing",
+            },
+            reason="strategy lifecycle artifacts were not found in this run.",
+        )
+
+    state_ref = _artifact_ref(artifacts, "strategy_lifecycle_state", STRATEGY_LIFECYCLE_STATE_ARTIFACT)
+    material_ref = _artifact_ref(artifacts, "strategy_lifecycle_material", STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT)
+    state_artifact, state_error = _read_json(resolved_run_dir / state_ref)
+    state_artifact_status = _artifact_file_status(state_artifact, state_error)
+    material_artifact_status, material_error = _plain_artifact_status(
+        resolved_run_dir / material_ref,
+        source_status=str(material_summary.get("status") or ""),
+    )
+    lifecycle_status_counts = _compact_counts(
+        _dict(lifecycle_summary.get("lifecycle_status_counts"))
+        or _dict(_dict(state_artifact.get("counts")).get("by_lifecycle_status"))
+        or _manifest_lifecycle_status_counts(counts)
+    )
+    fields = {
+        "run_id": manifest.get("run_id"),
+        "run_status": manifest.get("status"),
+        "state_artifact": state_ref,
+        "state_artifact_status": state_artifact_status,
+        "material_artifact": material_ref,
+        "material_artifact_status": material_artifact_status,
+        "lifecycle_status": lifecycle_summary.get("status") or state_artifact_status,
+        "lifecycle_records": _int(counts.get("strategy_lifecycle_records")),
+        "lifecycle_effective": _int(counts.get("strategy_lifecycle_effective")),
+        "lifecycle_active_candidate": _int(counts.get("strategy_lifecycle_active_candidate")),
+        "lifecycle_watchlisted": _int(counts.get("strategy_lifecycle_watchlisted")),
+        "lifecycle_rejected": _int(counts.get("strategy_lifecycle_rejected")),
+        "lifecycle_degraded": _int(counts.get("strategy_lifecycle_degraded")),
+        "lifecycle_retired": _int(counts.get("strategy_lifecycle_retired")),
+        "lifecycle_insufficient_evidence": _int(counts.get("strategy_lifecycle_insufficient_evidence")),
+        "lifecycle_failed": _int(counts.get("strategy_lifecycle_failed")),
+        "lifecycle_policy_records": _int(counts.get("strategy_lifecycle_policy_records")),
+        "lifecycle_warnings": _int(counts.get("strategy_lifecycle_warnings")),
+        "lifecycle_errors": _int(counts.get("strategy_lifecycle_errors")),
+        "lifecycle_status_counts": lifecycle_status_counts,
+        "material_status": material_summary.get("status") or material_artifact_status,
+        "material_records": _int(counts.get("strategy_lifecycle_material_records")),
+        "material_omitted_records": _int(counts.get("strategy_lifecycle_material_omitted_records")),
+        "manifest": _safe_path(manifest_path, base=base),
+    }
+    budget = _codex_material_budget(manifest, STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT)
+    if budget:
+        fields.update(
+            {
+                "codex_budget_status": budget.get("status") or "unknown",
+                "codex_budget_chars": _int(budget.get("chars")),
+                "codex_budget_over_budget": bool(budget.get("over_budget")),
+                "codex_budget_warnings": len(_list(budget.get("warnings"))),
+            }
+        )
+    else:
+        fields["codex_budget_status"] = "not_available"
+
+    statuses = [
+        str(value)
+        for value in (
+            lifecycle_summary.get("status"),
+            material_summary.get("status"),
+            state_artifact_status,
+            material_artifact_status,
+        )
+        if isinstance(value, str) and value
+    ]
+    if budget and (budget.get("over_budget") or budget.get("status") not in {None, "included"}):
+        statuses.append("warning")
+    reason = "; ".join(error for error in (state_error, material_error) if error) or None
+    return _section(
+        "strategy_lifecycle",
+        _lifecycle_inspection_status(statuses),
+        artifact=_safe_path(manifest_path, base=base),
+        fields=fields,
+        reason=reason,
+    )
+
+
 def _personalized_risk_section(
     config_path: Path,
     *,
@@ -952,6 +1070,68 @@ def _codex_material_budget(manifest: dict[str, Any], artifact: str) -> dict[str,
             if record.get("artifact") == artifact:
                 return record
     return {}
+
+
+def _has_strategy_lifecycle_artifacts(
+    artifacts: dict[str, Any],
+    counts: dict[str, Any],
+    lifecycle_summary: dict[str, Any],
+    material_summary: dict[str, Any],
+) -> bool:
+    if artifacts.get("strategy_lifecycle_state") or artifacts.get("strategy_lifecycle_material"):
+        return True
+    if lifecycle_summary or material_summary:
+        return True
+    return any(str(key).startswith("strategy_lifecycle_") for key in counts)
+
+
+def _artifact_ref(artifacts: dict[str, Any], key: str, default: str) -> str:
+    value = artifacts.get(key)
+    return value if isinstance(value, str) and value else default
+
+
+def _artifact_file_status(data: dict[str, Any], error: str | None) -> str:
+    if error:
+        return "missing" if "was not found" in error else "failed"
+    status = str(data.get("status") or "").lower()
+    if status in {"failed", "degraded", "warning", "partial", "skipped", "not_generated"}:
+        return status
+    return "ok"
+
+
+def _plain_artifact_status(path: Path, *, source_status: str) -> tuple[str, str | None]:
+    if not path.is_file():
+        return "missing", f"{path.name} was not found."
+    status = source_status.lower()
+    if status in {"failed", "degraded", "warning", "partial", "skipped", "not_generated"}:
+        return status, None
+    return "ok", None
+
+
+def _manifest_lifecycle_status_counts(counts: dict[str, Any]) -> dict[str, int]:
+    return {
+        "active_candidate": _int(counts.get("strategy_lifecycle_active_candidate")),
+        "degraded": _int(counts.get("strategy_lifecycle_degraded")),
+        "effective": _int(counts.get("strategy_lifecycle_effective")),
+        "failed": _int(counts.get("strategy_lifecycle_failed")),
+        "insufficient_evidence": _int(counts.get("strategy_lifecycle_insufficient_evidence")),
+        "rejected": _int(counts.get("strategy_lifecycle_rejected")),
+        "retired": _int(counts.get("strategy_lifecycle_retired")),
+        "watchlisted": _int(counts.get("strategy_lifecycle_watchlisted")),
+    }
+
+
+def _lifecycle_inspection_status(statuses: list[str]) -> str:
+    cleaned = [status for status in statuses if status and status not in {"not_generated"}]
+    if not cleaned or set(cleaned) <= {"skipped", "missing"}:
+        return "skipped"
+    if "failed" in cleaned:
+        return "failed"
+    if "degraded" in cleaned:
+        return "degraded"
+    if any(status in cleaned for status in ("warning", "partial", "missing", "skipped")):
+        return "warning"
+    return "ok"
 
 
 def _compact_counts(counts: dict[str, Any]) -> str | None:

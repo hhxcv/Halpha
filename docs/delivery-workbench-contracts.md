@@ -73,8 +73,9 @@ Required top-level fields:
 - `monitor_state`: bounded monitor health and latest cycle refs when available.
 - `outcome_state`: bounded outcome target, evaluation, and history-state refs
   when available.
-- `strategy_state`: bounded strategy gate, strategy evaluation, and experiment
-  refs and counts when available.
+- `strategy_state`: bounded strategy gate, strategy evaluation, experiment,
+  strategy-lifecycle artifact status, lifecycle status counts, degradation
+  counts, retirement counts, warnings, and errors when available.
 - `data_quality_state`: bounded data-quality refs, quality level, warnings, and
   errors when available.
 - `index_outputs`: generated Markdown or HTML index refs when available.
@@ -107,7 +108,7 @@ They may display:
 - alert archive counts and latest alert status;
 - monitor health status;
 - outcome tracking status;
-- strategy gate or experiment status;
+- strategy gate, experiment, and bounded strategy-lifecycle status;
 - data-quality status;
 - source artifact links;
 - warnings, errors, and omitted-section counts.

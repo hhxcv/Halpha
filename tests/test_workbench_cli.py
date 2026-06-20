@@ -137,6 +137,8 @@ def test_workbench_inspect_prints_existing_summary(tmp_path: Path, capsys) -> No
     assert "latest_run_id: run-1" in output
     assert "decision_records: 2" in output
     assert "strategy_gate_effective: 3" in output
+    assert "strategy_lifecycle_state_status: missing" in output
+    assert "strategy_lifecycle_degraded: 0" in output
     assert "warning_count: 1" in output
 
 
