@@ -109,6 +109,14 @@ def test_dashboard_startup_event_selectors_exist_in_shell(tmp_path: Path) -> Non
     assert startup_selectors <= ids
 
 
+def test_dashboard_shell_does_not_emit_nul_control_characters(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    script = _script_block(html)
+
+    assert "\x00" not in html
+    assert "[\\x00-\\x20]" in script
+
+
 def test_dashboard_preview_job_and_monitor_smoke_contracts_are_present(tmp_path: Path) -> None:
     script = _script_block(_dashboard_html(tmp_path))
 

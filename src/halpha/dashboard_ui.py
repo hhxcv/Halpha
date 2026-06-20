@@ -5752,7 +5752,7 @@ def dashboard_index_html() -> str:
 
     function timezoneInputValue(selector, fieldName, renderMessage) {
       const value = optionalInputValue(selector);
-      if (value && !/[\x00-\x20]/.test(value)) {
+      if (value && !/[\\x00-\\x20]/.test(value)) {
         clearInputError(selector);
         return value;
       }
