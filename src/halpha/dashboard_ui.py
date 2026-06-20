@@ -435,7 +435,8 @@ def dashboard_index_html() -> str:
     .data-layout,
     .strategy-layout,
     .monitor-layout,
-    .command-center-layout {
+    .command-center-layout,
+    .workbench-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
@@ -893,7 +894,8 @@ def dashboard_index_html() -> str:
       .data-layout,
       .strategy-layout,
       .monitor-layout,
-      .command-center-layout {
+      .command-center-layout,
+      .workbench-layout {
         grid-template-columns: 1fr;
       }
 
@@ -945,6 +947,7 @@ def dashboard_index_html() -> str:
     id="halpha-dashboard-app"
     class="app-shell"
     data-overview-endpoint="/api/overview"
+    data-workbench-endpoint="/api/workbench"
     data-runs-endpoint="/api/runs"
     data-stores-endpoint="/api/data/stores"
     data-strategies-endpoint="/api/strategies"
@@ -981,6 +984,10 @@ def dashboard_index_html() -> str:
         </a>
         <a class="nav-item" href="#monitor" data-view-target="monitor">
           <span>Monitor</span>
+          <span class="nav-state">available</span>
+        </a>
+        <a class="nav-item" href="#workbench" data-view-target="workbench">
+          <span>Workbench</span>
           <span class="nav-state">available</span>
         </a>
         <a class="nav-item" href="#commands" data-view-target="commands">
@@ -1055,6 +1062,10 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Monitor control</span>
+                <span class="planned-state">available</span>
+              </div>
+              <div class="planned-item">
+                <span class="planned-title">Workbench</span>
                 <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
@@ -1402,6 +1413,66 @@ def dashboard_index_html() -> str:
         </section>
       </section>
 
+      <section id="workbench-view" class="view hidden" data-view="workbench">
+        <section class="topbar" aria-labelledby="workbench-title">
+          <div>
+            <p class="eyebrow">Local delivery workbench</p>
+            <h1 id="workbench-title">Workbench</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Workbench state</span>
+              <span id="workbench-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Generated</span>
+              <span id="workbench-generated" class="status-value">...</span>
+            </div>
+          </div>
+        </section>
+        <section class="workbench-layout">
+          <article class="wide-panel" aria-labelledby="workbench-summary-title">
+            <div class="panel-heading">
+              <h2 id="workbench-summary-title" class="panel-title">Workbench summary</h2>
+              <span id="workbench-summary-badge" class="badge unknown">loading</span>
+            </div>
+            <div id="workbench-summary-grid" class="run-detail-grid"></div>
+            <div class="command-grid">
+              <button class="command-button" type="button" data-command-intent="workbench_build">
+                <span class="command-title">Build workbench</span>
+                <span class="command-meta">Create a visible dashboard job; this page does not build implicitly.</span>
+              </button>
+              <button class="command-button" type="button" data-command-intent="workbench_inspect">
+                <span class="command-title">Inspect workbench</span>
+                <span class="command-meta">Create a read-only inspection job for the latest summary.</span>
+              </button>
+            </div>
+            <div id="workbench-messages"></div>
+            <section class="section-block">
+              <h3 class="subheading">
+                <span>Source refs</span>
+                <span id="workbench-source-count" class="badge unknown">loading</span>
+              </h3>
+              <div id="workbench-source-list" class="artifact-actions"></div>
+            </section>
+            <div id="workbench-preview" class="preview-panel">
+              <div class="message">Open a workbench source ref to inspect a bounded preview.</div>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="workbench-sections-title">
+            <div class="panel-heading">
+              <h2 id="workbench-sections-title" class="panel-title">State sections</h2>
+              <span id="workbench-section-count" class="badge unknown">loading</span>
+            </div>
+            <div id="workbench-section-list" class="detail-sections">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+        </section>
+      </section>
+
       <section id="commands-view" class="view hidden" data-view="commands">
         <section class="topbar" aria-labelledby="commands-title">
           <div>
@@ -1687,6 +1758,7 @@ def dashboard_index_html() -> str:
     const app = document.querySelector("#halpha-dashboard-app");
     const endpoints = {
       overview: app.dataset.overviewEndpoint,
+      workbench: app.dataset.workbenchEndpoint,
       runs: app.dataset.runsEndpoint,
       stores: app.dataset.storesEndpoint,
       strategies: app.dataset.strategiesEndpoint,
@@ -1765,6 +1837,8 @@ def dashboard_index_html() -> str:
     let monitorLoaded = false;
     let monitorPayload = null;
     let monitorJobPoll = null;
+    let workbenchLoaded = false;
+    let workbenchPayload = null;
     let commandJobsLoaded = false;
     let commandJobPoll = null;
     let dailyScheduleLoaded = false;
@@ -1888,6 +1962,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#monitor") {
         return "monitor";
       }
+      if (window.location.hash === "#workbench") {
+        return "workbench";
+      }
       if (window.location.hash === "#commands") {
         return "commands";
       }
@@ -1921,6 +1998,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "monitor" && !monitorLoaded) {
         loadMonitor();
+      }
+      if (view === "workbench" && !workbenchLoaded) {
+        loadWorkbench();
       }
       if (view === "commands" && !commandJobsLoaded) {
         loadCommandCenter();
@@ -3196,6 +3276,115 @@ def dashboard_index_html() -> str:
             <span>Source refs: ${escapeHtml(text(record.source_artifact_count))}</span>
           </div>
         </li>`).join("");
+    }
+
+    async function loadWorkbench() {
+      workbenchLoaded = true;
+      document.querySelector("#workbench-status").textContent = "Loading";
+      try {
+        workbenchPayload = await fetchJson(endpoints.workbench);
+        renderWorkbench(workbenchPayload);
+      } catch (error) {
+        renderWorkbenchFailure(error);
+      }
+    }
+
+    function renderWorkbench(payload) {
+      document.querySelector("#workbench-status").textContent = label(payload.status);
+      document.querySelector("#workbench-generated").textContent = text(payload.generated_at);
+      const badgeNode = document.querySelector("#workbench-summary-badge");
+      badgeNode.className = `badge ${normalizeStatus(payload.status)}`;
+      badgeNode.textContent = label(payload.status);
+      const selection = payload.source_selection || {};
+      const indexOutputs = payload.index_outputs || {};
+      document.querySelector("#workbench-summary-grid").innerHTML = [
+        detailTile("Summary", payload.summary_ref),
+        detailTile("Generated", payload.generated_at),
+        detailTile("Run", selection.run_id),
+        detailTile("Run dir", selection.run_dir),
+        detailTile("Selection", selection.status || selection.mode),
+        detailTile("Index markdown", indexOutputs.markdown),
+        detailTile("Index html", indexOutputs.html),
+        detailTile("Codex input", get("codex_boundary.codex_input_by_default", payload))
+      ].join("");
+      document.querySelector("#workbench-messages").innerHTML = messages(payload);
+      renderWorkbenchSections(payload.sections || {});
+      renderWorkbenchSources(payload);
+    }
+
+    function renderWorkbenchFailure(error) {
+      document.querySelector("#workbench-status").textContent = "Failed";
+      document.querySelector("#workbench-generated").textContent = "n/a";
+      document.querySelector("#workbench-summary-badge").className = "badge failed";
+      document.querySelector("#workbench-summary-badge").textContent = "failed";
+      document.querySelector("#workbench-summary-grid").innerHTML = detailTile("Error", error.message);
+      document.querySelector("#workbench-messages").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      document.querySelector("#workbench-section-count").className = "badge failed";
+      document.querySelector("#workbench-section-count").textContent = "failed";
+      document.querySelector("#workbench-section-list").innerHTML = "";
+      document.querySelector("#workbench-source-count").className = "badge failed";
+      document.querySelector("#workbench-source-count").textContent = "failed";
+      document.querySelector("#workbench-source-list").innerHTML = "";
+    }
+
+    function renderWorkbenchSections(sections) {
+      const entries = Object.entries(sections);
+      const count = document.querySelector("#workbench-section-count");
+      count.className = `badge ${entries.length ? "available" : "missing"}`;
+      count.textContent = `${entries.length} section${entries.length === 1 ? "" : "s"}`;
+      if (!entries.length) {
+        document.querySelector("#workbench-section-list").innerHTML = `<div class="message warning">No workbench state sections are available.</div>`;
+        return;
+      }
+      document.querySelector("#workbench-section-list").innerHTML = entries.map(([name, section]) => {
+        const fields = section.fields || {};
+        const sourceCount = Array.isArray(section.source_artifacts) ? section.source_artifacts.length : 0;
+        const fieldRows = Object.entries(fields).slice(0, 8).map(([key, value]) => detailTile(key, value)).join("");
+        return `
+          <section class="section-block">
+            <h3 class="subheading">
+              <span>${escapeHtml(workbenchSectionTitle(name))}</span>
+              ${badge(section.status)}
+            </h3>
+            <div class="run-detail-grid">${fieldRows || detailTile("Fields", "n/a")}</div>
+            <div class="timeline-meta">Source refs: ${escapeHtml(text(sourceCount))}</div>
+            ${messages(section)}
+          </section>`;
+      }).join("");
+    }
+
+    function renderWorkbenchSources(payload) {
+      const refs = Array.isArray(payload.source_artifacts) ? payload.source_artifacts : [];
+      const count = document.querySelector("#workbench-source-count");
+      count.className = `badge ${refs.length ? "available" : "missing"}`;
+      count.textContent = `${refs.length} ref${refs.length === 1 ? "" : "s"}`;
+      if (!refs.length) {
+        document.querySelector("#workbench-source-list").innerHTML = `<div class="message warning">No workbench source refs are available.</div>`;
+        return;
+      }
+      document.querySelector("#workbench-source-list").innerHTML = refs.slice(0, 30).map((ref) => {
+        if (isPreviewableRef(ref)) {
+          return `<button class="link-button" type="button" data-workbench-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`;
+        }
+        return `<span class="badge missing">${escapeHtml(ref)}</span>`;
+      }).join("");
+      document.querySelectorAll("[data-workbench-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.workbenchPreviewPath, "#workbench-preview"));
+      });
+    }
+
+    function workbenchSectionTitle(name) {
+      const titles = {
+        latest_run: "Latest run",
+        decision_state: "Decision and watch",
+        alert_state: "Alerts",
+        monitor_state: "Monitor",
+        outcome_state: "Outcomes",
+        strategy_state: "Strategy",
+        product_validation_state: "Product validation",
+        data_quality_state: "Data quality"
+      };
+      return titles[name] || name;
     }
 
     async function refreshMonitorJobs() {

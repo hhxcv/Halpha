@@ -47,6 +47,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["data_store_api"] == "available"
     assert payload["features"]["strategy_research_api"] == "available"
     assert payload["features"]["monitor_api"] == "available"
+    assert payload["features"]["workbench_api"] == "available"
     assert payload["features"]["schedule_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "available"
@@ -74,6 +75,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "halpha-dashboard-app" in response.text
     assert "Operational overview" in response.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
+    assert 'data-workbench-endpoint="/api/workbench"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
@@ -91,6 +93,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Strategy lab" in response.text
     assert "Historical strategy research" in response.text
     assert "Monitor control" in response.text
+    assert 'href="#workbench" data-view-target="workbench"' in response.text
+    assert "Workbench summary" in response.text
+    assert "State sections" in response.text
     assert "Dry run" in response.text
     assert "Run one cycle" in response.text
     assert "Start finite loop" in response.text
@@ -183,6 +188,81 @@ def test_dashboard_overview_endpoint_reads_artifact_backed_state(tmp_path: Path)
     workbench = sections["workbench"]
     assert workbench["status"] == "available"
     assert workbench["fields"]["generated_at"] == "2026-06-20T00:06:00Z"
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_workbench_endpoint_reports_missing_summary(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/workbench")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_workbench_summary"
+    assert payload["status"] == "missing"
+    assert payload["summary_ref"] == "runs/workbench/latest/workbench_summary.json"
+    assert payload["source_artifacts"] == ["runs/workbench/latest/workbench_summary.json"]
+    assert payload["sections"] == {}
+    assert "was not found" in payload["warnings"][0]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_workbench_endpoint_summarizes_sections_and_refs(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    write_json(
+        tmp_path / "runs" / "workbench" / "latest" / "workbench_summary.json",
+        {
+            "artifact_type": "workbench_summary",
+            "status": "warning",
+            "generated_at": "2026-06-20T00:06:00Z",
+            "source_selection": {"run_id": "run-1", "run_dir": "runs/run-1", "status": "available"},
+            "latest_run": {
+                "status": "available",
+                "fields": {"run_id": "run-1", "run_status": "succeeded"},
+                "source_artifacts": {"manifest": "runs/run-1/run_manifest.json"},
+            },
+            "decision_state": {
+                "status": "warning",
+                "fields": {"decision_records": 2, "watch_trigger_records": 1},
+                "source_artifacts": {"risk": "analysis/risk_assessment.json"},
+                "warnings": ["decision review needed"],
+            },
+            "index_outputs": {
+                "status": "available",
+                "markdown": "runs/workbench/latest/index.md",
+                "html": "runs/workbench/latest/index.html",
+            },
+            "source_artifacts": {
+                "run_manifest": "runs/run-1/run_manifest.json",
+                "report": "report/report.md",
+                "analysis": {"risk": "analysis/risk_assessment.json"},
+                "shared_data": {"outcomes": "data/research/outcomes/outcome_history.json"},
+            },
+            "omitted": {"raw_record_dumps_embedded": False},
+            "codex_boundary": {"codex_input_by_default": False},
+            "warnings": ["summary warning"],
+            "errors": [],
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/workbench")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "warning"
+    assert payload["generated_at"] == "2026-06-20T00:06:00Z"
+    assert payload["source_selection"]["run_id"] == "run-1"
+    assert payload["sections"]["decision_state"]["fields"]["decision_records"] == 2
+    assert payload["sections"]["decision_state"]["warnings"] == ["decision review needed"]
+    assert "runs/run-1/report/report.md" in payload["source_artifacts"]
+    assert "runs/run-1/analysis/risk_assessment.json" in payload["source_artifacts"]
+    assert "data/research/outcomes/outcome_history.json" in payload["source_artifacts"]
+    assert payload["omitted"]["full_workbench_summary_embedded"] is False
+    assert payload["codex_boundary"]["codex_input_by_default"] is False
     assert str(tmp_path) not in response.text
 
 
