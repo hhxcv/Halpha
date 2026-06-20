@@ -44,6 +44,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
 - Builds local workbench summary, Markdown index, and static HTML index files from existing artifacts.
+- Runs a local web dashboard service with an initial health endpoint.
 
 Halpha does not implement account access, exchange trading, order placement,
 portfolio automation, real-time alert delivery, hosted dashboards, or hosted
@@ -98,6 +99,17 @@ python -m halpha validate --config config.example.yaml
 python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
 ```
 
+Run the local web dashboard:
+
+```bash
+python -m halpha dashboard --config config.example.yaml
+python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
+```
+
+The initial dashboard command starts a local-only service and exposes
+`/api/health`. Deeper dashboard views and command controls are added through
+the M20 dashboard work.
+
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:
 
@@ -128,8 +140,9 @@ The default monitor cycle reuses the configured product pipeline through the
 configured monitor target stage and stops before Codex report generation unless
 monitor config explicitly changes that boundary. The cycle also updates the
 local alert archive and cooldown state from generated alert decisions. Monitor
-notification delivery, daemon/service behavior, and dashboard UI are not
-implemented by the current command.
+notification delivery and daemon/service behavior are not implemented by the
+current monitor command. Dashboard service behavior is provided by the separate
+`dashboard` command.
 
 Inspect local research data and data-quality state without collection or Codex:
 

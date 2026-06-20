@@ -5,6 +5,16 @@ from pathlib import Path
 from typing import Sequence
 
 from .config import ConfigError, load_config
+from .dashboard import (
+    DEFAULT_DASHBOARD_HOST,
+    DEFAULT_DASHBOARD_PORT,
+    DashboardError,
+    dashboard_config_ref,
+    run_dashboard_service,
+    sanitize_dashboard_message,
+    validate_dashboard_host,
+    validate_dashboard_port,
+)
 from .data_inspection import DataInspectionError, inspect_local_data
 from .monitoring import (
     inspect_monitor_health,
@@ -48,6 +58,24 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate", help="Inspect product contract health without running stages.")
     validate_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
     validate_parser.add_argument("--run-dir", help="Optional run directory to validate.")
+
+    dashboard_parser = subparsers.add_parser(
+        "dashboard",
+        help="Run the local web dashboard.",
+        description="Run the local web dashboard.",
+    )
+    dashboard_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    dashboard_parser.add_argument(
+        "--host",
+        default=DEFAULT_DASHBOARD_HOST,
+        help=f"Local dashboard host. Defaults to {DEFAULT_DASHBOARD_HOST}.",
+    )
+    dashboard_parser.add_argument(
+        "--port",
+        type=_positive_int_arg,
+        default=DEFAULT_DASHBOARD_PORT,
+        help=f"Local dashboard port. Defaults to {DEFAULT_DASHBOARD_PORT}.",
+    )
 
     backtest_parser = subparsers.add_parser("backtest", help="Run one standalone strategy backtest.")
     backtest_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
@@ -174,6 +202,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "validate":
         return _validate(args.config, run_dir=args.run_dir)
+
+    if args.command == "dashboard":
+        return _dashboard(args.config, host=args.host, port=args.port)
 
     if args.command == "backtest":
         return _backtest(
@@ -333,6 +364,35 @@ def _validate(config_arg: str, *, run_dir: str | None) -> int:
     for line in result.lines:
         print(line)
     return result.exit_code
+
+
+def _dashboard(config_arg: str, *, host: str, port: int) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha dashboard failed.")
+        print("stage: config")
+        print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path)}")
+        return 2
+
+    try:
+        validate_dashboard_host(host)
+        validate_dashboard_port(port)
+        print("Halpha dashboard starting.")
+        print(f"url: {_dashboard_url(host, port)}")
+        print(f"config: {dashboard_config_ref(config_path)}")
+        run_dashboard_service(config, config_path=config_path, host=host, port=port)
+    except DashboardError as exc:
+        print("Halpha dashboard failed.")
+        print("stage: dashboard")
+        print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path)}")
+        return exc.exit_code
+    except KeyboardInterrupt:
+        print("Halpha dashboard stopped.")
+        return 0
+    return 0
 
 
 def _backtest(
@@ -712,6 +772,11 @@ def _safe_local_display_path(path: Path) -> str:
     except ValueError:
         return path.name
     return display_path(path)
+
+
+def _dashboard_url(host: str, port: int) -> str:
+    display_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
+    return f"http://{display_host}:{port}"
 
 
 def _positive_int_arg(value: str) -> int:
