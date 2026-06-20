@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import hashlib
 import json
 import sqlite3
@@ -278,7 +279,7 @@ def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -
     if not index_path.exists():
         return None, "Run index was not found; no previous successful run can be selected."
     try:
-        with sqlite3.connect(index_path) as connection:
+        with closing(sqlite3.connect(index_path)) as connection:
             row = connection.execute(
                 """
                 SELECT run_id, run_dir, finished_at

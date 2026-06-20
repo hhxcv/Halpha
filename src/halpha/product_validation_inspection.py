@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import sqlite3
 from dataclasses import dataclass
@@ -109,7 +110,7 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
             reason="local run index was not found.",
         )
     try:
-        with sqlite3.connect(index_path) as connection:
+        with closing(sqlite3.connect(index_path)) as connection:
             row = _latest_run_row(connection)
     except sqlite3.Error as exc:
         return _RunSelection(
