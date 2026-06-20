@@ -77,6 +77,22 @@ def test_dashboard_responsive_css_contracts_cover_desktop_and_small_viewports(tm
     assert "overflow: auto;" in css
 
 
+def test_dashboard_data_store_layout_uses_full_width_store_grid(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    data_view = _section_block(html, '<section id="data-view"', '<section id="strategies-view"')
+
+    assert '<section class="data-layout">' in data_view
+    assert 'aria-labelledby="data-store-list-title"' in data_view
+    assert 'aria-labelledby="data-store-detail-title"' in data_view
+    assert ".data-layout {" in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
+    assert ".data-layout .store-grid" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));" in css
+    assert ".data-layout .store-title" in css
+    assert "word-break: normal;" in css
+
+
 def test_dashboard_interaction_hooks_cover_primary_workflows(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     script = _script_block(html)
@@ -163,6 +179,12 @@ def _style_block(html: str) -> str:
 def _script_block(html: str) -> str:
     start = html.index("<script>") + len("<script>")
     end = html.index("</script>", start)
+    return html[start:end]
+
+
+def _section_block(html: str, start_marker: str, end_marker: str) -> str:
+    start = html.index(start_marker)
+    end = html.index(end_marker, start)
     return html[start:end]
 
 
