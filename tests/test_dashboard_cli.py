@@ -98,6 +98,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Artifact review</span>\n                <span class=\"planned-state\">available" in response.text
     assert "Report preview" in response.text
     assert "Store coverage" in response.text
+    assert "Store drilldown" in response.text
     assert "Strategy lab" in response.text
     assert "Historical strategy research" in response.text
     assert "Monitor control" in response.text
@@ -967,29 +968,47 @@ def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path)
     run_index = stores["run_index"]
     assert run_index["status"] == "ok"
     assert run_index["fields"]["runs"] == 1
+    assert run_index["drilldown"]["category"] == "system"
+    assert run_index["drilldown"]["omitted"]["sqlite_table_contents_embedded"] is False
     assert run_index["preview_path"] is None
 
     ohlcv = stores["ohlcv_history"]
     assert ohlcv["status"] == "ok"
     assert ohlcv["fields"]["records"] == 3
+    assert ohlcv["drilldown"]["category"] == "market"
+    assert ohlcv["drilldown"]["dimensions"]["symbols"] == "BTCUSDT"
+    assert ohlcv["drilldown"]["dimensions"]["timeframes"] == "1d"
+    assert ohlcv["drilldown"]["groups"][0]["row_count"] == 3
+    assert ohlcv["drilldown"]["groups"][0]["first_open_time"] == "2026-06-18T00:00:00Z"
     assert ohlcv["preview_path"] == "data/market/metadata/ohlcv_sync_state.json"
 
     derivatives = stores["derivatives_market_history"]
     assert derivatives["status"] == "ok"
     assert derivatives["fields"]["records"] == 4
+    assert derivatives["drilldown"]["category"] == "derivatives"
+    assert derivatives["drilldown"]["groups"][0]["source"] == "binance_usdm"
 
     macro = stores["macro_calendar_history"]
     assert macro["fields"]["records"] == 5
+    assert macro["drilldown"]["category"] == "macro_calendar"
+    assert macro["drilldown"]["dimensions"]["regions"] == "US"
 
     onchain = stores["onchain_flow_history"]
     assert onchain["fields"]["records"] == 6
+    assert onchain["drilldown"]["category"] == "onchain"
+    assert onchain["drilldown"]["dimensions"]["assets"] == "BTC"
 
     text = stores["text_event_history"]
     assert text["fields"]["records"] == 2
+    assert text["drilldown"]["category"] == "text"
+    assert text["drilldown"]["dimensions"]["sources"] == "coindesk"
+    assert text["drilldown"]["warnings"] == ["text history is stale"]
 
     outcome = stores["outcome_history"]
     assert outcome["fields"]["records"] == 2
     assert outcome["fields"]["history"] == "data/research/outcomes/outcome_history.json"
+    assert outcome["drilldown"]["category"] == "outcome"
+    assert outcome["drilldown"]["dimensions"]["outcome_states"] == "confirmed"
     assert outcome["preview_path"] == "data/research/metadata/outcome_history_state.json"
     assert "data/research/outcomes/outcome_history.json" not in payload["source_artifacts"]
     assert str(tmp_path) not in response.text
@@ -1318,7 +1337,7 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
             "updated_at": "2026-06-20T00:10:00Z",
             "totals": {"records": 2},
             "sources": [{"source": "coindesk"}],
-            "warnings": [],
+            "warnings": ["text history is stale"],
             "errors": [],
         },
     )
@@ -1333,7 +1352,16 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
             "artifact_type": "ohlcv_sync_state",
             "status": "ok",
             "updated_at": "2026-06-20T00:10:00Z",
-            "items": [{"source": "binance", "symbol": "BTCUSDT", "timeframe": "1d", "row_count": 3}],
+            "items": [
+                {
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "row_count": 3,
+                    "first_open_time": "2026-06-18T00:00:00Z",
+                    "last_open_time": "2026-06-20T00:00:00Z",
+                }
+            ],
             "warnings": [],
             "errors": [],
         },
@@ -1437,6 +1465,7 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
                 "warning_count": 0,
                 "error_count": 0,
             },
+            "outcome_states": [{"value": "confirmed", "record_count": 2}],
             "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
             "warnings": [],
             "errors": [],
