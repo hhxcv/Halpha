@@ -114,6 +114,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Data inspect" in response.text
     assert "Run backtest" in response.text
     assert "Run text intelligence" in response.text
+    assert '<span class="nav-state">pending</span>' not in response.text
+    assert '<span class="planned-state">planned</span>' not in response.text
     assert str(tmp_path) not in response.text
 
 
