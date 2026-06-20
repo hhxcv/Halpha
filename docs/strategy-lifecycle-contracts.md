@@ -8,8 +8,8 @@ Implementation status:
 - The strategy lifecycle contract is defined here.
 - `analysis/strategy_lifecycle_state.json` is implemented in product runs when
   quant strategy evidence is enabled.
-- `analysis/strategy_lifecycle_material.md` is planned and not implemented
-  yet.
+- `analysis/strategy_lifecycle_material.md` is implemented in product runs when
+  lifecycle state is generated.
 - Downstream lifecycle integration is planned and not implemented yet.
 
 ## Related Docs
@@ -196,7 +196,7 @@ Rules:
 Lifecycle policy records are explicit local review inputs. They are intended
 for controlled strategy governance, not for trading execution.
 
-Planned record shape:
+Implemented record shape:
 
 ```json
 {

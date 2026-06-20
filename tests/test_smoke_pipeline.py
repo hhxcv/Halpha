@@ -187,6 +187,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_outcome_targets", "succeeded"),
         ("evaluate_outcomes", "succeeded"),
         ("build_strategy_lifecycle_state", "succeeded"),
+        ("build_strategy_lifecycle_material", "succeeded"),
         ("build_feature_snapshots", "succeeded"),
         ("build_factor_states", "succeeded"),
         ("build_multi_source_signals", "succeeded"),
@@ -361,6 +362,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/data_quality_summary.json",
         "analysis/data_quality_material.md",
         "analysis/strategy_lifecycle_state.json",
+        "analysis/strategy_lifecycle_material.md",
         "analysis/feature_snapshots.json",
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
@@ -425,6 +427,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["strategy_experiment_material_records"] == 1
     assert manifest["counts"]["strategy_lifecycle_records"] >= 1
     assert manifest["counts"]["strategy_lifecycle_policy_records"] == 0
+    assert manifest["counts"]["strategy_lifecycle_material_records"] >= 1
+    assert manifest["counts"]["strategy_lifecycle_material_omitted_records"] >= 0
     assert manifest["counts"]["text_event_records"] == 1
     assert manifest["counts"]["text_event_records_with_warnings"] == 1
     assert manifest["counts"]["text_event_record_warnings"] == 1
@@ -496,6 +500,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["strategy_effectiveness_gates"] == "analysis/strategy_effectiveness_gates.json"
     assert manifest["artifacts"]["strategy_experiment_material"] == "analysis/strategy_experiment_material.md"
     assert manifest["artifacts"]["strategy_lifecycle_state"] == "analysis/strategy_lifecycle_state.json"
+    assert manifest["artifacts"]["strategy_lifecycle_material"] == "analysis/strategy_lifecycle_material.md"
     assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["artifacts"]["market_signals"] == "analysis/market_signals.json"
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"
@@ -601,6 +606,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     strategy_experiment_material = (
         run_dir / "analysis/strategy_experiment_material.md"
     ).read_text(encoding="utf-8")
+    strategy_lifecycle_material = (
+        run_dir / "analysis/strategy_lifecycle_material.md"
+    ).read_text(encoding="utf-8")
     assert len(strategy_runs["runs"]) == 4
     assert len(strategy_evaluation["records"]) == 4
     assert strategy_experiment["coverage"]["strategy_candidates"] == 1
@@ -616,6 +624,10 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "record_type: strategy_effectiveness_gate" in strategy_experiment_material
     assert "codex_may_generate_gate_outcomes: false" in strategy_experiment_material
     assert "benchmark_coverage:" in strategy_experiment_material
+    assert "artifact_type: analysis_strategy_lifecycle_material" in strategy_lifecycle_material
+    assert "record_type: strategy_lifecycle_overview" in strategy_lifecycle_material
+    assert "codex_may_generate_lifecycle_states: false" in strategy_lifecycle_material
+    assert "codex_may_promote_or_retire_strategies: false" in strategy_lifecycle_material
     assert len(strategy_signals["signals"]) == 4
     assert len(market_signals["signals"]) == 4
     assert sorted({signal["strategy_name"] for signal in market_signals["signals"]}) == ["tsmom_vol_scaled"]
@@ -706,6 +718,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "strategy_experiment: analysis/strategy_experiment.json" in research_context
     assert "strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json" in research_context
     assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in research_context
+    assert "strategy_lifecycle_state: analysis/strategy_lifecycle_state.json" in research_context
+    assert "strategy_lifecycle_material: analysis/strategy_lifecycle_material.md" in research_context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in research_context
     assert "market_signals: analysis/market_signals.json" in research_context
     assert "decision_intelligence_material: analysis/decision_intelligence_material.md" in research_context
@@ -720,6 +734,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "artifact_type: analysis_market_signal_material" in research_context
     assert "artifact_type: analysis_strategy_evaluation_material" in research_context
     assert "artifact_type: analysis_strategy_experiment_material" in research_context
+    assert "artifact_type: analysis_strategy_lifecycle_material" in research_context
     assert "artifact_type: analysis_decision_intelligence_material" in research_context
     assert "artifact_type: analysis_factor_signal_material" in research_context
     assert "artifact_type: analysis_personalized_risk_material" in research_context
@@ -729,10 +744,12 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "artifact_type: analysis_market_signal_material" in context
     assert "artifact_type: analysis_strategy_evaluation_material" in context
     assert "artifact_type: analysis_strategy_experiment_material" in context
+    assert "artifact_type: analysis_strategy_lifecycle_material" in context
     assert "quant_strategy_runs: analysis/quant_strategy_runs.json" in context
     assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
     assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
     assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in context
+    assert "strategy_lifecycle_material: analysis/strategy_lifecycle_material.md" in context
     assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "market_signals: analysis/market_signals.json" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
@@ -760,6 +777,9 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "Strategy experiment gate material rules:" in prompt
     assert "Use Halpha-generated effectiveness gate statuses only" in prompt
     assert "Do not generate or revise strategy gate statuses" in prompt
+    assert "Strategy lifecycle material rules:" in prompt
+    assert "When strategy lifecycle material is present" in prompt
+    assert "Do not generate or revise lifecycle states" in prompt
     assert "Factor signal material rules:" in prompt
     assert "Personalized risk material rules:" in prompt
     assert "When factor/signal material is present" in prompt

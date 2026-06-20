@@ -256,6 +256,8 @@ build_decision_intelligence_material
 build_data_quality_summary
 build_outcome_targets
 evaluate_outcomes
+build_strategy_lifecycle_state
+build_strategy_lifecycle_material
 build_feature_snapshots
 build_factor_states
 build_multi_source_signals
@@ -352,6 +354,7 @@ A successful configured run can write:
 - `analysis/strategy_effectiveness_gates.json`: deterministic strategy gate output.
 - `analysis/strategy_experiment_material.md`: AI-readable strategy experiment and gate material.
 - `analysis/strategy_lifecycle_state.json`: deterministic strategy lifecycle health, degradation, version, and explicit retirement state.
+- `analysis/strategy_lifecycle_material.md`: bounded AI-readable strategy lifecycle material for Codex and report generation.
 - `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
@@ -439,6 +442,10 @@ deterministic effectiveness gates. Product runs also write bounded strategy
 experiment material into the report context so the final report can discuss
 effective, watchlisted, rejected, or insufficient-evidence candidates without
 asking Codex to generate gate outcomes.
+Strategy lifecycle material carries deterministic strategy health,
+degradation, watchlist, rejection, retirement, insufficient-evidence, and
+source-availability context into report generation without asking Codex to
+create lifecycle states or governance decisions.
 AI-readable strategy evaluation material carries those deterministic evaluation
 fields into research context and report generation without asking Codex to
 calculate new metrics.
@@ -450,7 +457,8 @@ generate action levels, strategy signals, structured decision artifacts,
 derivatives states, macro/calendar states, on-chain records, flow states,
 address labels, risk levels, user state, personalized constraints, holdings,
 allocations, position sizes, event categories, event impacts, event-market
-relationships, or price forecasts. Those are produced
+relationships, strategy lifecycle states, policy records, promotion decisions,
+retirement decisions, parameter optimization, strategy selection, or price forecasts. Those are produced
 deterministically before report generation.
 
 Codex input is governed by `docs/artifact-governance.md`: complete evidence
@@ -460,7 +468,7 @@ Derivatives, macro/calendar, on-chain flow, personalized risk, and data-quality
 evidence follow the same rule: Codex receives concise report-facing material
 files, not full local histories, raw archives, current-run views, raw
 user-state files, private notes, catalog contents, SQLite tables, Parquet data,
-or full context JSON.
+full lifecycle JSON, local lifecycle policy input, or full context JSON.
 
 The final report is generated from Codex stdout. When strategy run artifacts are
 available, Halpha inserts the complete strategy output table after Codex output
@@ -585,6 +593,9 @@ on-chain flow is enabled, data-quality review should include
 `raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`,
 `raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, and
 `analysis/onchain_flow_material.md` status checks.
+Strategy lifecycle review should include `analysis/strategy_lifecycle_state.json`
+as deterministic evidence and `analysis/strategy_lifecycle_material.md` as the
+bounded Codex-facing summary.
 
 To rerun only the report-facing alert material after inspecting or regenerating
 upstream artifacts:

@@ -55,6 +55,7 @@ STAGE_ORDER = (
     "build_outcome_targets",
     "evaluate_outcomes",
     "build_strategy_lifecycle_state",
+    "build_strategy_lifecycle_material",
     "build_feature_snapshots",
     "build_factor_states",
     "build_multi_source_signals",
@@ -390,6 +391,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_outcome_targets"] = _build_outcome_targets
     handlers["evaluate_outcomes"] = _evaluate_outcomes
     handlers["build_strategy_lifecycle_state"] = _build_strategy_lifecycle_state
+    handlers["build_strategy_lifecycle_material"] = _build_strategy_lifecycle_material
     handlers["build_feature_snapshots"] = _build_feature_snapshots
     handlers["build_factor_states"] = _build_factor_states
     handlers["build_multi_source_signals"] = _build_multi_source_signals
@@ -805,6 +807,12 @@ def _build_strategy_lifecycle_state(config: dict[str, Any], run: RunContext) -> 
     from .strategy_lifecycle import build_strategy_lifecycle_state
 
     return build_strategy_lifecycle_state(config, run)
+
+
+def _build_strategy_lifecycle_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .strategy_lifecycle_material import build_strategy_lifecycle_material
+
+    return build_strategy_lifecycle_material(config, run)
 
 
 def _build_feature_snapshots(config: dict[str, Any], run: RunContext) -> list[str] | None:

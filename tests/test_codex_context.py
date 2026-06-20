@@ -224,6 +224,8 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "strategy_experiment: analysis/strategy_experiment.json" in context
     assert "strategy_effectiveness_gates: analysis/strategy_effectiveness_gates.json" in context
     assert "strategy_experiment_material: analysis/strategy_experiment_material.md" in context
+    assert "strategy_lifecycle_state: analysis/strategy_lifecycle_state.json" in context
+    assert "strategy_lifecycle_material: analysis/strategy_lifecycle_material.md" in context
     assert "market_signal_material: analysis/market_signal_material.md" in context
     assert "data_quality_material: analysis/data_quality_material.md" in context
     assert "market_regime_assessment: analysis/market_regime_assessment.json" in context
@@ -235,6 +237,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "artifact_type: analysis_market_signal_material" in context
     assert "artifact_type: analysis_strategy_evaluation_material" in context
     assert "artifact_type: analysis_strategy_experiment_material" in context
+    assert "artifact_type: analysis_strategy_lifecycle_material" in context
     assert "artifact_type: analysis_decision_intelligence_material" in context
     assert "research_decision_support_only: true" in context
     assert "action_level:" in context
@@ -269,6 +272,10 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Use Halpha-generated effectiveness gate statuses only" in prompt
     assert "identify effective, watchlisted, rejected, and insufficient-evidence" in prompt
     assert "Do not generate or revise strategy gate statuses" in prompt
+    assert "Strategy lifecycle material rules:" in prompt
+    assert "When strategy lifecycle material is present" in prompt
+    assert "Use Halpha-generated lifecycle statuses" in prompt
+    assert "Do not generate or revise lifecycle states" in prompt
     assert "Decision intelligence material rules:" in prompt
     assert "Data quality material rules:" in prompt
     assert "data quality material as Halpha-generated reliability evidence" in prompt
@@ -300,6 +307,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert manifest["artifacts"]["data_quality_material"] == "analysis/data_quality_material.md"
     assert manifest["artifacts"]["strategy_evaluation_material"] == "analysis/strategy_evaluation_material.md"
     assert manifest["artifacts"]["strategy_experiment_material"] == "analysis/strategy_experiment_material.md"
+    assert manifest["artifacts"]["strategy_lifecycle_material"] == "analysis/strategy_lifecycle_material.md"
     assert manifest["artifacts"]["decision_intelligence_material"] == "analysis/decision_intelligence_material.md"
 
 

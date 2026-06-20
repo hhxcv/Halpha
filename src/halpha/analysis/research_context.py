@@ -22,6 +22,7 @@ MACRO_CALENDAR_MATERIAL_ARTIFACT = "analysis/macro_calendar_material.md"
 ONCHAIN_FLOW_MATERIAL_ARTIFACT = "analysis/onchain_flow_material.md"
 STRATEGY_EVALUATION_MATERIAL_ARTIFACT = "analysis/strategy_evaluation_material.md"
 STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT = "analysis/strategy_experiment_material.md"
+STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT = "analysis/strategy_lifecycle_material.md"
 FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
 INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.md"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
@@ -36,6 +37,7 @@ TOTAL_BUDGET_COMPRESSED_MATERIAL_CHARS = 9_000
 TOTAL_BUDGET_COMPRESSION_ORDER = (
     TEXT_MATERIAL_ARTIFACT,
     STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
+    STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT,
     STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
     OUTCOME_TRACKING_MATERIAL_ARTIFACT,
     MARKET_SIGNAL_MATERIAL_ARTIFACT,
@@ -111,6 +113,12 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         enabled=bool(run.manifest.get("artifacts", {}).get("strategy_experiment_material")),
         producer_stage="build_strategy_experiment_material",
     )
+    strategy_lifecycle_material = _read_material(
+        run.analysis_dir / "strategy_lifecycle_material.md",
+        STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT,
+        enabled=bool(run.manifest.get("artifacts", {}).get("strategy_lifecycle_material")),
+        producer_stage="build_strategy_lifecycle_material",
+    )
     factor_signal_material = _read_material(
         run.analysis_dir / "factor_signal_material.md",
         FACTOR_SIGNAL_MATERIAL_ARTIFACT,
@@ -155,6 +163,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         onchain_flow_material=onchain_flow_material,
         strategy_evaluation_material=strategy_evaluation_material,
         strategy_experiment_material=strategy_experiment_material,
+        strategy_lifecycle_material=strategy_lifecycle_material,
         factor_signal_material=factor_signal_material,
         intelligence_fusion_material=intelligence_fusion_material,
         personalized_risk_material=personalized_risk_material,
@@ -178,6 +187,7 @@ def build_research_context(config: dict[str, Any], run: RunContext) -> list[str]
         onchain_flow_material=material_inputs[ONCHAIN_FLOW_MATERIAL_ARTIFACT]["content"],
         strategy_evaluation_material=material_inputs[STRATEGY_EVALUATION_MATERIAL_ARTIFACT]["content"],
         strategy_experiment_material=material_inputs[STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT]["content"],
+        strategy_lifecycle_material=material_inputs[STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT]["content"],
         factor_signal_material=material_inputs[FACTOR_SIGNAL_MATERIAL_ARTIFACT]["content"],
         intelligence_fusion_material=material_inputs[INTELLIGENCE_FUSION_MATERIAL_ARTIFACT]["content"],
         personalized_risk_material=material_inputs[PERSONALIZED_RISK_MATERIAL_ARTIFACT]["content"],
@@ -217,6 +227,7 @@ def render_research_context(
     onchain_flow_material: str | None,
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
+    strategy_lifecycle_material: str | None,
     factor_signal_material: str | None,
     intelligence_fusion_material: str | None,
     personalized_risk_material: str | None,
@@ -286,6 +297,8 @@ def render_research_context(
     lines.extend(_embedded_material(STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material))
     lines.extend(["", "## strategy_experiment_material", ""])
     lines.extend(_embedded_material(STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material))
+    lines.extend(["", "## strategy_lifecycle_material", ""])
+    lines.extend(_embedded_material(STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT, strategy_lifecycle_material))
     lines.extend(["", "## factor_signal_material", ""])
     lines.extend(_embedded_material(FACTOR_SIGNAL_MATERIAL_ARTIFACT, factor_signal_material))
     lines.extend(["", "## intelligence_fusion_material", ""])
@@ -319,6 +332,8 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
         "feature_snapshots": artifacts.get("feature_snapshots"),
         "factor_states": artifacts.get("factor_states"),
         "multi_source_signals": artifacts.get("multi_source_signals"),
+        "strategy_lifecycle_state": artifacts.get("strategy_lifecycle_state"),
+        "strategy_lifecycle_material": artifacts.get("strategy_lifecycle_material"),
         "intelligence_fusion": artifacts.get("intelligence_fusion"),
         "intelligence_fusion_material": artifacts.get("intelligence_fusion_material"),
         "user_state_context": artifacts.get("user_state_context"),
@@ -350,6 +365,8 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "strategy_experiment": artifacts.get("strategy_experiment"),
                 "strategy_effectiveness_gates": artifacts.get("strategy_effectiveness_gates"),
                 "strategy_experiment_material": artifacts.get("strategy_experiment_material"),
+                "strategy_lifecycle_state": artifacts.get("strategy_lifecycle_state"),
+                "strategy_lifecycle_material": artifacts.get("strategy_lifecycle_material"),
                 "market_strategy_signals": artifacts.get("market_strategy_signals"),
                 "market_signals": artifacts.get("market_signals"),
             }
@@ -388,6 +405,13 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "factor_states": artifacts.get("factor_states"),
                 "multi_source_signals": artifacts.get("multi_source_signals"),
                 "factor_signal_material": artifacts.get("factor_signal_material"),
+            }
+        )
+    if artifacts.get("strategy_lifecycle_material"):
+        index.update(
+            {
+                "strategy_lifecycle_state": artifacts.get("strategy_lifecycle_state"),
+                "strategy_lifecycle_material": artifacts.get("strategy_lifecycle_material"),
             }
         )
     if artifacts.get("intelligence_fusion_material"):
@@ -494,6 +518,8 @@ def _source_policy() -> dict[str, Any]:
         "full_factor_states_json_embedded": False,
         "full_multi_source_signals_json_embedded": False,
         "full_intelligence_fusion_json_embedded": False,
+        "full_strategy_lifecycle_json_embedded": False,
+        "full_lifecycle_policy_input_embedded": False,
         "full_user_state_context_json_embedded": False,
         "full_personalized_risk_constraints_json_embedded": False,
         "full_user_state_file_embedded": False,
@@ -556,6 +582,23 @@ def _generation_constraints() -> dict[str, Any]:
             "include_costs_benchmark_coverage_sample_limits_and_uncertainty": True,
             "do_not_generate_gate_outcomes": True,
             "do_not_upgrade_rejected_watchlisted_or_insufficient_evidence": True,
+        },
+        "strategy_lifecycle_requirements": {
+            "include_when_strategy_lifecycle_material_exists": True,
+            "use_halpha_lifecycle_statuses_only": True,
+            "explain_health_degradation_watchlist_rejection_retirement_and_insufficient_evidence": True,
+            "explain_source_availability_and_omission_counts": True,
+            "do_not_generate_lifecycle_states": True,
+            "do_not_generate_strategy_versions": True,
+            "do_not_generate_parameter_digests": True,
+            "do_not_create_policy_records": True,
+            "do_not_promote_or_retire_strategies": True,
+            "do_not_optimize_parameters": True,
+            "do_not_select_strategies": True,
+            "do_not_generate_price_forecasts": True,
+            "do_not_create_trading_instructions": True,
+            "full_strategy_lifecycle_json_embedded": False,
+            "full_lifecycle_policy_input_embedded": False,
         },
         "factor_signal_requirements": {
             "include_when_factor_signal_material_exists": True,
@@ -757,6 +800,7 @@ def _prepare_material_inputs(
     onchain_flow_material: str | None,
     strategy_evaluation_material: str | None,
     strategy_experiment_material: str | None,
+    strategy_lifecycle_material: str | None,
     factor_signal_material: str | None,
     intelligence_fusion_material: str | None,
     personalized_risk_material: str | None,
@@ -775,6 +819,7 @@ def _prepare_material_inputs(
         (ONCHAIN_FLOW_MATERIAL_ARTIFACT, onchain_flow_material),
         (STRATEGY_EVALUATION_MATERIAL_ARTIFACT, strategy_evaluation_material),
         (STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT, strategy_experiment_material),
+        (STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT, strategy_lifecycle_material),
         (FACTOR_SIGNAL_MATERIAL_ARTIFACT, factor_signal_material),
         (INTELLIGENCE_FUSION_MATERIAL_ARTIFACT, intelligence_fusion_material),
         (PERSONALIZED_RISK_MATERIAL_ARTIFACT, personalized_risk_material),
