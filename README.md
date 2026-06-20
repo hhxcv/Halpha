@@ -446,6 +446,8 @@ Strategy lifecycle material carries deterministic strategy health,
 degradation, watchlist, rejection, retirement, insufficient-evidence, and
 source-availability context into report generation without asking Codex to
 create lifecycle states or governance decisions.
+Downstream fusion can reference lifecycle state to qualify degraded or retired
+strategies before decision material and final report context are built.
 AI-readable strategy evaluation material carries those deterministic evaluation
 fields into research context and report generation without asking Codex to
 calculate new metrics.

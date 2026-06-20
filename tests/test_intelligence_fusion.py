@@ -122,7 +122,70 @@ def test_intelligence_fusion_emits_insufficient_record_when_inputs_are_missing(t
         "region": None,
     }
     assert any(item["status"] == "missing" for item in artifact["coverage"])
+    assert any(
+        item["source_layer"] == "strategy_lifecycle"
+        and item["source_artifact"] == "analysis/strategy_lifecycle_state.json"
+        and item["status"] == "missing"
+        for item in artifact["coverage"]
+    )
     assert "No source records were available for intelligence fusion." in record["warnings"]
+
+
+def test_intelligence_fusion_uses_degraded_lifecycle_as_cautionary_context(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_market_signals(run)
+    _write_strategy_lifecycle(run, lifecycle_status="degraded", degradation_state="degraded")
+
+    build_intelligence_fusion({}, run, now="2026-06-05T00:00:00Z")
+
+    record = _record(_fusion(run), symbol="BTCUSDT", timeframe="1d")
+    assert record["state"] == "conflicting"
+    assert record["conflict"]["state"] == "material"
+    assert "analysis/strategy_lifecycle_state.json" in record["source_artifacts"]
+    assert any(
+        ref["source_layer"] == "strategy_lifecycle"
+        and ref["source_record_id"] == "strategy_lifecycle:tsmom_vol_scaled:BTCUSDT:1d"
+        for ref in record["source_record_refs"]
+    )
+    assert any("strategy_lifecycle state=degraded" in item for item in record["evidence"])
+    assert any("degradation_state=degraded" in item for item in record["evidence"])
+
+
+def test_intelligence_fusion_preserves_explicit_lifecycle_retirement_refs(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_market_signals(run)
+    _write_strategy_lifecycle(
+        run,
+        lifecycle_status="retired",
+        retirement_state="explicitly_retired",
+    )
+
+    build_intelligence_fusion({}, run, now="2026-06-05T00:00:00Z")
+
+    record = _record(_fusion(run), symbol="BTCUSDT", timeframe="1d")
+    assert record["state"] == "conflicting"
+    assert "analysis/strategy_lifecycle_state.json" in record["source_artifacts"]
+    assert any("strategy_lifecycle state=retired" in item for item in record["evidence"])
+    assert any("retirement_state=explicitly_retired" in item for item in record["evidence"])
+    assert any(
+        ref["source_layer"] == "strategy_lifecycle"
+        and ref["source_artifact"] == "analysis/strategy_lifecycle_state.json"
+        for ref in record["source_record_refs"]
+    )
+
+
+def test_intelligence_fusion_keeps_insufficient_lifecycle_visible_without_downgrade(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_market_signals(run)
+    _write_strategy_lifecycle(run, lifecycle_status="insufficient_evidence")
+
+    build_intelligence_fusion({}, run, now="2026-06-05T00:00:00Z")
+
+    record = _record(_fusion(run), symbol="BTCUSDT", timeframe="1d")
+    assert record["state"] == "supportive"
+    assert "analysis/strategy_lifecycle_state.json" in record["source_artifacts"]
+    assert any("strategy_lifecycle insufficient: insufficient_evidence" in item for item in record["uncertainty"])
+    assert any(ref["source_layer"] == "strategy_lifecycle" for ref in record["source_record_refs"])
 
 
 def test_intelligence_fusion_preserves_degraded_input_state(tmp_path: Path) -> None:
@@ -402,6 +465,58 @@ def _write_event_assessment(
                 "warnings": [],
                 "errors": [],
                 "source_artifacts": ["analysis/event_intelligence_assessment.json"],
+            }
+        ],
+    )
+
+
+def _write_strategy_lifecycle(
+    run: RunContext,
+    *,
+    lifecycle_status: str,
+    degradation_state: str = "none",
+    retirement_state: str = "not_retired",
+) -> None:
+    _write_records_artifact(
+        run,
+        "strategy_lifecycle_state.json",
+        "strategy_lifecycle_state",
+        "records",
+        [
+            {
+                "lifecycle_record_id": "strategy_lifecycle:tsmom_vol_scaled:BTCUSDT:1d",
+                "strategy_name": "tsmom_vol_scaled",
+                "scope": _scope(),
+                "strategy_contract_version": "1",
+                "parameter_version": "sha256:abc",
+                "parameter_digest": "sha256:abc",
+                "lifecycle_status": lifecycle_status,
+                "health_state": {
+                    "state": lifecycle_status,
+                    "confidence": "medium",
+                    "reasons": [f"strategy_lifecycle_status={lifecycle_status}."],
+                },
+                "degradation": {
+                    "state": degradation_state,
+                    "reasons": ["Prior outcome feedback weakened lifecycle confidence."]
+                    if degradation_state == "degraded"
+                    else [],
+                    "source_record_refs": ["outcome:strategy-gate"],
+                },
+                "regime_weakness": {"state": "unknown", "regimes": [], "reasons": []},
+                "promotion": {"state": "not_requested", "policy_refs": []},
+                "retirement": {
+                    "state": retirement_state,
+                    "policy_refs": ["lifecycle_policy:retire:abc"]
+                    if retirement_state == "explicitly_retired"
+                    else [],
+                },
+                "evidence": [f"strategy_lifecycle_status={lifecycle_status}."],
+                "uncertainty": ["Lifecycle evidence is deterministic research material."],
+                "warnings": [],
+                "errors": [],
+                "source_artifacts": ["analysis/strategy_effectiveness_gates.json"],
+                "source_record_refs": ["gate:tsmom_vol_scaled:BTCUSDT:1d"],
             }
         ],
     )

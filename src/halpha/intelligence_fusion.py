@@ -17,6 +17,7 @@ SCHEMA_VERSION = 1
 MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
 STRATEGY_EVALUATION_SUMMARY_ARTIFACT = "analysis/strategy_evaluation_summary.json"
 STRATEGY_EFFECTIVENESS_GATES_ARTIFACT = "analysis/strategy_effectiveness_gates.json"
+STRATEGY_LIFECYCLE_STATE_ARTIFACT = "analysis/strategy_lifecycle_state.json"
 MARKET_REGIME_ASSESSMENT_ARTIFACT = "analysis/market_regime_assessment.json"
 RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
@@ -105,6 +106,7 @@ class _FusionInputs:
         self._load_market_signals()
         self._load_strategy_evaluation()
         self._load_strategy_gates()
+        self._load_strategy_lifecycle()
         self._load_market_regime()
         self._load_risk_assessment()
         self._load_factor_states()
@@ -182,6 +184,43 @@ class _FusionInputs:
                 warnings=_string_list(record.get("warnings")),
                 errors=_error_list(record.get("errors")),
                 source_artifacts=[STRATEGY_EFFECTIVENESS_GATES_ARTIFACT, *_string_list(record.get("source_artifacts"))],
+            )
+
+    def _load_strategy_lifecycle(self) -> None:
+        artifact = self._read_optional(
+            "strategy_lifecycle",
+            STRATEGY_LIFECYCLE_STATE_ARTIFACT,
+            self.run.analysis_dir / "strategy_lifecycle_state.json",
+            "records",
+        )
+        if artifact is None:
+            return
+        for record in _dict_list(artifact.data.get("records")):
+            lifecycle_status = _text(record.get("lifecycle_status"))
+            health = _dict(record.get("health_state"))
+            degradation = _dict(record.get("degradation"))
+            retirement = _dict(record.get("retirement"))
+            self._add(
+                _scope_tuple(record.get("scope")),
+                "strategy_lifecycle",
+                STRATEGY_LIFECYCLE_STATE_ARTIFACT,
+                _text(record.get("lifecycle_record_id")),
+                state=lifecycle_status,
+                direction=_direction_from_lifecycle(record),
+                confidence=_text(health.get("confidence")) or "unknown",
+                evidence=_lifecycle_evidence(record),
+                uncertainty=_string_list(record.get("uncertainty")),
+                warnings=_string_list(record.get("warnings")),
+                errors=_error_list(record.get("errors")),
+                source_artifacts=[STRATEGY_LIFECYCLE_STATE_ARTIFACT, *_string_list(record.get("source_artifacts"))],
+                extra={
+                    "lifecycle_status": lifecycle_status,
+                    "health_state": _text(health.get("state")),
+                    "degradation_state": _text(degradation.get("state")),
+                    "retirement_state": _text(retirement.get("state")),
+                    "policy_refs": _string_list(retirement.get("policy_refs"))
+                    + _string_list(_dict(record.get("promotion")).get("policy_refs")),
+                },
             )
 
     def _load_market_regime(self) -> None:
@@ -408,6 +447,48 @@ class _FusionInputs:
         if error:
             self.coverage.append(
                 _coverage_record(source_layer, artifact, "missing", records=0, warnings=[error])
+            )
+            self.source_artifacts.append(artifact)
+            return None
+        records = data.get(records_key)
+        if not isinstance(records, list):
+            self.coverage.append(
+                _coverage_record(
+                    source_layer,
+                    artifact,
+                    "failed",
+                    records=0,
+                    errors=[f"{artifact} must contain a {records_key} list."],
+                )
+            )
+            self.source_artifacts.append(artifact)
+            return None
+        status = _coverage_status(_text(data.get("status")), records)
+        self.coverage.append(
+            _coverage_record(
+                source_layer,
+                artifact,
+                status,
+                records=len(records),
+                warnings=_string_list(data.get("warnings")),
+                errors=_error_list(data.get("errors")),
+            )
+        )
+        self.source_artifacts.extend([artifact, *_string_list(data.get("source_artifacts"))])
+        return _LoadedArtifact(data)
+
+    def _read_optional(self, source_layer: str, artifact: str, path: Path, records_key: str) -> "_LoadedArtifact | None":
+        data, error = _read_json(path)
+        if error:
+            status = "missing" if "was not found" in error else "failed"
+            self.coverage.append(
+                _coverage_record(
+                    source_layer,
+                    artifact,
+                    status,
+                    records=0,
+                    errors=[error] if status == "failed" else [],
+                )
             )
             self.source_artifacts.append(artifact)
             return None
@@ -787,10 +868,25 @@ def _fusion_confidence(state: str, *, supporting: list[dict[str, Any]], uncertai
 
 
 def _evidence_summary(label: str, records: list[dict[str, Any]]) -> list[str]:
-    return [
-        f"{label}: {record['source_layer']} state={record['state']} direction={record['direction']}"
-        for record in records[:6]
+    return [_source_evidence_summary(label, record) for record in records[:6]]
+
+
+def _source_evidence_summary(label: str, record: dict[str, Any]) -> str:
+    summary = f"{label}: {record['source_layer']} state={record['state']} direction={record['direction']}"
+    if record["source_layer"] != "strategy_lifecycle":
+        return summary
+    extra = _dict(record.get("extra"))
+    details = [
+        f"lifecycle_status={extra.get('lifecycle_status') or record['state']}",
+        f"health_state={extra.get('health_state') or 'unknown'}",
     ]
+    degradation_state = _text(extra.get("degradation_state"))
+    if degradation_state not in {"", "none", "unknown"}:
+        details.append(f"degradation_state={degradation_state}")
+    retirement_state = _text(extra.get("retirement_state"))
+    if retirement_state not in {"", "not_retired", "unknown"}:
+        details.append(f"retirement_state={retirement_state}")
+    return summary + " " + " ".join(details)
 
 
 def _override_reasons(label: str, override: dict[str, Any]) -> list[str]:
@@ -976,6 +1072,37 @@ def _direction_from_outcome(record: dict[str, Any]) -> str:
     if state in {"adverse", "contradicted", "misaligned"}:
         return "cautionary"
     return "unknown"
+
+
+def _direction_from_lifecycle(record: dict[str, Any]) -> str:
+    status = _text(record.get("lifecycle_status"))
+    if status == "effective":
+        return "supportive"
+    if status in {"watchlisted", "rejected", "degraded", "retired"}:
+        return "cautionary"
+    if status in {"active_candidate", "insufficient_evidence", "failed"}:
+        return "unknown"
+    return "unknown"
+
+
+def _lifecycle_evidence(record: dict[str, Any]) -> list[str]:
+    health = _dict(record.get("health_state"))
+    degradation = _dict(record.get("degradation"))
+    retirement = _dict(record.get("retirement"))
+    evidence = [
+        "strategy_lifecycle_status="
+        + (_text(record.get("lifecycle_status")) or "unknown")
+        + " health_state="
+        + (_text(health.get("state")) or "unknown")
+        + "."
+    ]
+    degradation_state = _text(degradation.get("state"))
+    if degradation_state not in {"", "none", "unknown"}:
+        evidence.append(f"strategy_lifecycle_degradation_state={degradation_state}.")
+    retirement_state = _text(retirement.get("state"))
+    if retirement_state not in {"", "not_retired", "unknown"}:
+        evidence.append(f"strategy_lifecycle_retirement_state={retirement_state}.")
+    return _unique_sorted([*evidence, *_string_list(record.get("evidence"))])
 
 
 def _reason_text(value: dict[str, Any]) -> str:

@@ -40,6 +40,7 @@ Target flow:
 
 ```text
 strategy evidence
++ strategy lifecycle state
 + feature/factor states
 + multi-source signals
 + event intelligence
@@ -63,6 +64,7 @@ Fusion may use implemented current-run artifacts when present:
 - `analysis/market_signals.json`
 - `analysis/strategy_evaluation_summary.json`
 - `analysis/strategy_effectiveness_gates.json`
+- `analysis/strategy_lifecycle_state.json`
 - `analysis/market_regime_assessment.json`
 - `analysis/risk_assessment.json`
 - `analysis/feature_snapshots.json`
@@ -198,7 +200,7 @@ Required fields:
 
 ```json
 {
-  "source_layer": "strategy|factor|event|risk|regime|alert|outcome|data_quality",
+  "source_layer": "strategy|strategy_evaluation|strategy_gate|strategy_lifecycle|factor|event|risk|regime|alert|outcome|data_quality",
   "source_artifact": "analysis/factor_states.json",
   "status": "used|skipped|missing|unavailable|degraded|failed",
   "records": 0,
@@ -241,6 +243,9 @@ Material selection rules:
 
 - Prefer conflicting, risk-blocked, event-overridden, degraded, failed, and
   high-confidence supportive records before neutral records.
+- Preserve strategy lifecycle source refs when degraded, retired, watchlisted,
+  rejected, or insufficient-evidence lifecycle states qualify strategy
+  evidence.
 - Preserve representative supportive records when they explain current
   decision or alert context.
 - Summarize omitted low-priority records with counts and reasons.
@@ -273,6 +278,9 @@ Integration rules:
 - Conservative decision downgrades are allowed only when fusion records include
   source-backed blocking risk, event override, severe conflict, degraded
   evidence, or insufficient evidence.
+- Degraded or retired strategy lifecycle evidence should qualify or downgrade
+  otherwise-supportive strategy language through fusion conflict or degraded
+  context, while preserving original gate outcomes and lifecycle source refs.
 - Conservative alert attention downgrades are allowed only for severe conflict,
   degraded evidence, or insufficient evidence. Blocking risk and event override
   require reassessment annotations instead of hidden priority upgrades.

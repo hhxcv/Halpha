@@ -10,7 +10,8 @@ Implementation status:
   quant strategy evidence is enabled.
 - `analysis/strategy_lifecycle_material.md` is implemented in product runs when
   lifecycle state is generated.
-- Downstream lifecycle integration is planned and not implemented yet.
+- Intelligence-fusion and downstream decision-material integration is
+  implemented in product runs.
 
 ## Related Docs
 
@@ -275,13 +276,16 @@ Material rules:
 
 ## Downstream Consumers
 
-Planned consumers:
+Implemented consumers:
 
-- Strategy gates or gate overlays may use lifecycle evidence to qualify
-  whether a gate-passing strategy is healthy, watchlisted, degraded, or retired.
 - Intelligence fusion may use lifecycle evidence as strategy-health context.
 - Decision material and final reports may explain lifecycle status as
   deterministic Halpha evidence.
+
+Planned consumers:
+
+- Strategy gate overlays may use lifecycle evidence to qualify whether a
+  gate-passing strategy is healthy, watchlisted, degraded, or retired.
 - Data inspection may summarize lifecycle artifact status and counts.
 - Workbench output may link and summarize lifecycle status for local review.
 
