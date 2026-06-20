@@ -236,17 +236,20 @@ execution.
 
 ## Operational Acceptance
 
-M19 validation should use the narrowest relevant check first:
+Product-stability validation should use the narrowest relevant check first:
 
 - automated tests for changed behavior;
 - focused integration tests for touched modules;
+- full automated test suite before PR merge when product contracts, pipeline
+  lifecycle, inspection, workbench, or CLI behavior changes;
 - no-Codex product acceptance when report generation is not under review;
+- read-only `validate` command for latest or selected run contract health;
+- read-only `data inspect` for local store, product-validation, and artifact
+  visibility;
+- read-only `monitor inspect` for local monitor health;
+- `workbench build` and `workbench inspect` for local delivery visibility;
 - full Codex product acceptance when Codex context or final report behavior is
-  changed;
-- read-only product validation for contract health;
-- read-only data inspection for local store and artifact visibility;
-- read-only monitor inspection for local monitor health;
-- workbench build and inspect for local delivery visibility;
+  changed.
 
 `config.example.yaml` remains public demonstration config. Real local
 acceptance should use machine-local config files and must not print or commit

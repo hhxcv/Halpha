@@ -442,27 +442,29 @@ Do not claim success without running the relevant command.
 * Prefer tests for changed behavior.
 * Use smoke checks for early scaffolding.
 * Use `python -m pytest` for automated validation.
-* Use `python -m halpha run --config config.example.yaml --no-codex` for real-source product acceptance when Codex CLI use is not needed.
-* Use `python -m halpha run --config config.example.yaml --until <stage_name>` for bounded stage-through acceptance.
-* Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
-* Use `python -m halpha validate --config config.example.yaml` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
-* Use `python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
-* Use `python -m halpha monitor run --config config.example.yaml --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
-* Use `python -m halpha monitor run --config config.example.yaml --once` to validate one bounded monitor cycle, monitor cycle manifest, alert archive, and cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
-* Use `python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.
-* Use `python -m halpha monitor inspect --config config.example.yaml` to validate read-only monitor health output without running collection, pipeline stages, Codex CLI, or raw archive export.
+* `config.example.yaml` is public demonstration config; use a gitignored machine-local config file for real local acceptance.
+* Never print or commit local config paths when they reveal machine-local details, proxy values, credentials, user-state paths, private policy files, or other local privacy values.
+* Use `python -m halpha run --config <local-config.yaml> --no-codex` for real-source product acceptance when Codex CLI use is not needed.
+* Use `python -m halpha run --config <local-config.yaml> --until <stage_name>` for bounded stage-through acceptance.
+* Use `python -m halpha stage <stage_name> --config <local-config.yaml> --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
+* Use `python -m halpha validate --config <local-config.yaml>` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
+* Use `python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
+* Use `python -m halpha monitor run --config <local-config.yaml> --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
+* Use `python -m halpha monitor run --config <local-config.yaml> --once` to validate one bounded monitor cycle, monitor cycle manifest, alert archive, and cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
+* Use `python -m halpha monitor run --config <local-config.yaml> --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.
+* Use `python -m halpha monitor inspect --config <local-config.yaml>` to validate read-only monitor health output without running collection, pipeline stages, Codex CLI, or raw archive export.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
 * Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment and gate artifacts when shared OHLCV history exists.
 * Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
 * Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
-* Use `python -m halpha data inspect --config config.example.yaml` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
-* Use `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect data-quality and strategy-lifecycle state for a specific run.
-* Use `python -m halpha outcomes inspect --config config.example.yaml` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
-* Use `python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>` to inspect outcome state for a specific run.
-* Use `python -m halpha workbench build --config config.example.yaml` to generate local delivery summary and index outputs from existing artifacts without running collection, pipeline stages, or Codex CLI.
-* Use `python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>` to generate workbench outputs from a specific run directory.
-* Use `python -m halpha workbench inspect --config config.example.yaml` to validate read-only workbench visibility without raw artifact dumps or Codex CLI.
+* Use `python -m halpha data inspect --config <local-config.yaml>` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
+* Use `python -m halpha data inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect data-quality and strategy-lifecycle state for a specific run.
+* Use `python -m halpha outcomes inspect --config <local-config.yaml>` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
+* Use `python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect outcome state for a specific run.
+* Use `python -m halpha workbench build --config <local-config.yaml>` to generate local delivery summary and index outputs from existing artifacts without running collection, pipeline stages, or Codex CLI.
+* Use `python -m halpha workbench build --config <local-config.yaml> --run-dir runs/<run_id>` to generate workbench outputs from a specific run directory.
+* Use `python -m halpha workbench inspect --config <local-config.yaml>` to validate read-only workbench visibility without raw artifact dumps or Codex CLI.
 * For event-intelligence acceptance, inspect recent text event records, entity evidence, classification evidence, topic grouping, event signals, event-market confluence, and event intelligence material.
 * For alert-decision acceptance, use `python -m halpha run --config config.example.yaml --until build_alert_decision_material` when final Codex output is not needed.
 * For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.
@@ -476,7 +478,7 @@ Do not claim success without running the relevant command.
 * Treat unsafe alert escalation, missing no-alert suppression, or Codex-boundary leakage as regression-fixture candidates.
 * For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
 * For current default strategy acceptance, expect at least three `effective` research candidates under deterministic gates.
-* Use `python -m halpha run --config config.example.yaml` for real-source product acceptance when the user permits Codex CLI use.
+* Use `python -m halpha run --config <local-config.yaml>` for real-source product acceptance when the user permits Codex CLI use and Codex context, prompt construction, report generation, report post-processing, or final report content changed.
 * State before a real Codex CLI run that generated local research context will be sent to Codex CLI.
 * Do not treat fixtures, mocked HTTP responses, or fake Codex subprocesses as product acceptance.
 * For docs-only changes, use `git diff --check` when available.
