@@ -49,6 +49,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["monitor_api"] == "available"
     assert payload["features"]["workbench_api"] == "available"
     assert payload["features"]["decision_risk_api"] == "available"
+    assert payload["features"]["event_alert_api"] == "available"
     assert payload["features"]["schedule_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "available"
@@ -78,6 +79,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-workbench-endpoint="/api/workbench"' in response.text
     assert 'data-decision-risk-endpoint="/api/decision-risk"' in response.text
+    assert 'data-event-alert-endpoint="/api/event-alert"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
@@ -101,6 +103,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'href="#decision-risk" data-view-target="decision-risk"' in response.text
     assert "Decision &amp; risk" in response.text
     assert "Decision artifacts" in response.text
+    assert 'href="#event-alert" data-view-target="event-alert"' in response.text
+    assert "Event &amp; alerts" in response.text
+    assert "Event and alert artifacts" in response.text
     assert "Dry run" in response.text
     assert "Run one cycle" in response.text
     assert "Start finite loop" in response.text
@@ -359,6 +364,100 @@ def test_dashboard_decision_risk_endpoint_summarizes_selected_run_artifacts(tmp_
     assert "runs/run-1/analysis/risk_assessment.json" in payload["source_artifacts"]
     assert "runs/run-1/analysis/market_regime_assessment.json" in payload["source_artifacts"]
     assert payload["omitted"]["full_decision_artifacts_embedded"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_event_alert_endpoint_reports_missing_run_state(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/event-alert")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_event_alert"
+    assert payload["status"] == "missing"
+    assert payload["artifacts"] == []
+    assert "local run index was not found" in payload["warnings"][0]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_event_alert_endpoint_summarizes_selected_run_artifacts(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    run.manifest["artifacts"].update(
+        {
+            "text_event_records": "analysis/text_event_records.json",
+            "text_event_signals": "analysis/text_event_signals.json",
+            "event_intelligence_assessment": "analysis/event_intelligence_assessment.json",
+            "alert_decisions": "analysis/alert_decisions.json",
+            "alert_decision_material": "analysis/alert_decision_material.md",
+        }
+    )
+    write_json(run.manifest_path, run.manifest)
+    write_json(
+        run.analysis_dir / "text_event_records.json",
+        {
+            "artifact_type": "text_event_records",
+            "status": "ok",
+            "records": [{"event_id": "event-1"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "text_event_signals.json",
+        {
+            "artifact_type": "text_event_signals",
+            "status": "ok",
+            "records": [{"event_signal_id": "signal-1"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "event_intelligence_assessment.json",
+        {
+            "artifact_type": "event_intelligence_assessment",
+            "status": "warning",
+            "records": [{"assessment_id": "assessment-1"}],
+            "source_artifacts": ["analysis/text_event_signals.json"],
+            "warnings": ["assessment needs review"],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "alert_decisions.json",
+        {
+            "artifact_type": "alert_decisions",
+            "status": "ok",
+            "records": [{"alert_decision_id": "alert-1"}],
+            "counts": {"alert_decision_records": 1},
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    (run.analysis_dir / "alert_decision_material.md").write_text("# Alert material\n", encoding="utf-8")
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/event-alert", params={"run_id": "run-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_event_alert"
+    assert payload["selected_run"]["fields"]["run_id"] == "run-1"
+    artifacts = {artifact["name"]: artifact for artifact in payload["artifacts"]}
+    assert artifacts["text_event_records"]["status"] == "available"
+    assert artifacts["event_intelligence_assessment"]["status"] == "warning"
+    assert artifacts["event_intelligence_assessment"]["warnings"] == ["assessment needs review"]
+    assert artifacts["alert_decisions"]["fields"]["record_count"] == 1
+    assert artifacts["alert_decision_material"]["fields"]["preview_path"] == "runs/run-1/analysis/alert_decision_material.md"
+    assert "runs/run-1/analysis/event_intelligence_assessment.json" in payload["source_artifacts"]
+    assert "runs/run-1/analysis/text_event_signals.json" in payload["source_artifacts"]
+    assert payload["omitted"]["full_event_alert_artifacts_embedded"] is False
     assert str(tmp_path) not in response.text
 
 

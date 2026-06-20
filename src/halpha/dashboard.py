@@ -35,6 +35,16 @@ DECISION_RISK_ARTIFACTS = (
     ("watch_triggers", "Watch triggers", "analysis/watch_triggers.json"),
     ("decision_intelligence_delta", "Decision delta", "analysis/decision_intelligence_delta.json"),
 )
+EVENT_ALERT_ARTIFACTS = (
+    ("text_event_records", "Text event records", "analysis/text_event_records.json"),
+    ("text_event_topics", "Text event topics", "analysis/text_event_topics.json"),
+    ("text_event_signals", "Text event signals", "analysis/text_event_signals.json"),
+    ("event_market_confluence", "Event market confluence", "analysis/event_market_confluence.json"),
+    ("event_intelligence_assessment", "Event intelligence assessment", "analysis/event_intelligence_assessment.json"),
+    ("alert_decisions", "Alert decisions", "analysis/alert_decisions.json"),
+    ("alert_decision_material", "Alert decision material", "analysis/alert_decision_material.md"),
+    ("event_intelligence_material", "Event intelligence material", "analysis/event_intelligence_material.md"),
+)
 DATA_STORE_SECTION_NAMES = {
     "research_data_catalog",
     "run_index",
@@ -106,6 +116,10 @@ def create_dashboard_app(
     @app.get("/api/decision-risk")
     def decision_risk_endpoint(run_id: str | None = None) -> dict[str, Any]:
         return dashboard_decision_risk(config_path=config_path, run_id=run_id)
+
+    @app.get("/api/event-alert")
+    def event_alert_endpoint(run_id: str | None = None) -> dict[str, Any]:
+        return dashboard_event_alert(config_path=config_path, run_id=run_id)
 
     @app.get("/api/runs")
     def runs_endpoint() -> dict[str, Any]:
@@ -239,6 +253,7 @@ def dashboard_health(
             "monitor_api": "available",
             "workbench_api": "available",
             "decision_risk_api": "available",
+            "event_alert_api": "available",
             "schedule_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
@@ -352,7 +367,7 @@ def dashboard_workbench(*, config_path: Path) -> dict[str, Any]:
 
 
 def dashboard_decision_risk(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
-    selected = _decision_selected_run(config_path, run_id=run_id)
+    selected = _dashboard_selected_run(config_path, run_id=run_id)
     if selected["status"] != "available":
         return {
             "schema_version": 1,
@@ -388,7 +403,7 @@ def dashboard_decision_risk(*, config_path: Path, run_id: str | None = None) -> 
         }
 
     artifacts = [
-        _decision_risk_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
+        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
         for key, title, default in DECISION_RISK_ARTIFACTS
     ]
     statuses = [artifact["status"] for artifact in artifacts]
@@ -421,6 +436,79 @@ def dashboard_decision_risk(*, config_path: Path, run_id: str | None = None) -> 
             for error in _string_list(artifact.get("errors"))
         ],
         "omitted": {"full_decision_artifacts_embedded": False},
+    }
+
+
+def dashboard_event_alert(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
+    selected = _dashboard_selected_run(config_path, run_id=run_id)
+    if selected["status"] != "available":
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_event_alert",
+            "status": selected["status"],
+            "selected_run": selected,
+            "artifacts": [],
+            "source_artifacts": selected.get("source_artifacts", []),
+            "warnings": selected.get("warnings", []),
+            "errors": selected.get("errors", []),
+            "omitted": {"full_event_alert_artifacts_embedded": False},
+        }
+    base = _config_base(config_path)
+    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
+    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
+    manifest, error = _read_json(manifest_path)
+    if error:
+        failed = {
+            **selected,
+            "status": "failed",
+            "errors": [error],
+        }
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_event_alert",
+            "status": "failed",
+            "selected_run": failed,
+            "artifacts": [],
+            "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
+            "warnings": [],
+            "errors": [error],
+            "omitted": {"full_event_alert_artifacts_embedded": False},
+        }
+
+    artifacts = [
+        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
+        for key, title, default in EVENT_ALERT_ARTIFACTS
+    ]
+    statuses = [artifact["status"] for artifact in artifacts]
+    source_artifacts = sorted(
+        {
+            RUN_INDEX_ARTIFACT,
+            _safe_ref(manifest_path, base=base),
+            *[
+                ref
+                for artifact in artifacts
+                for ref in _string_list(artifact.get("source_artifacts"))
+            ],
+        }
+    )
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_event_alert",
+        "status": _overall_status(statuses),
+        "selected_run": selected,
+        "artifacts": artifacts,
+        "source_artifacts": source_artifacts,
+        "warnings": [
+            warning
+            for artifact in artifacts
+            for warning in _string_list(artifact.get("warnings"))
+        ],
+        "errors": [
+            error
+            for artifact in artifacts
+            for error in _string_list(artifact.get("errors"))
+        ],
+        "omitted": {"full_event_alert_artifacts_embedded": False},
     }
 
 
@@ -1331,7 +1419,7 @@ def _workbench_ref_path(ref: str, *, run_dir: str) -> str:
     return ref
 
 
-def _decision_selected_run(config_path: Path, *, run_id: str | None) -> dict[str, Any]:
+def _dashboard_selected_run(config_path: Path, *, run_id: str | None) -> dict[str, Any]:
     base = _config_base(config_path)
     if run_id:
         detail = dashboard_run_detail(config_path, run_id=run_id)
@@ -1361,7 +1449,7 @@ def _decision_selected_run(config_path: Path, *, run_id: str | None) -> dict[str
     return latest
 
 
-def _decision_risk_artifact_summary(
+def _dashboard_run_artifact_summary(
     key: str,
     title: str,
     default_artifact: str,
@@ -1380,6 +1468,31 @@ def _decision_risk_artifact_summary(
         )
     path = run_dir / artifact
     preview_path = _safe_ref(path, base=base)
+    if path.suffix.lower() in {".md", ".markdown"}:
+        if not path.exists():
+            return _section(
+                key,
+                "missing",
+                fields={"title": title, "artifact": artifact, "preview_path": preview_path},
+                source_artifacts=[preview_path],
+                warnings=[f"{path.name} was not found."],
+            )
+        return _section(
+            key,
+            "available",
+            fields={
+                "title": title,
+                "artifact": artifact,
+                "preview_path": preview_path,
+                "artifact_type": "markdown",
+                "artifact_status": "available",
+                "record_count": 0,
+                "warning_count": 0,
+                "error_count": 0,
+                "counts": {},
+            },
+            source_artifacts=[preview_path],
+        )
     data, error = _read_json(path)
     if error:
         status = "missing" if "was not found" in error else "failed"
@@ -1404,7 +1517,7 @@ def _decision_risk_artifact_summary(
     }
     source_artifacts = [
         preview_path,
-        *[_decision_ref_path(ref, run_dir=run_dir, base=base) for ref in _string_list(data.get("source_artifacts"))],
+        *[_run_ref_path(ref, run_dir=run_dir, base=base) for ref in _string_list(data.get("source_artifacts"))],
     ]
     return _section(
         key,
@@ -1428,7 +1541,7 @@ def _dashboard_record_count(data: dict[str, Any]) -> int:
     return 0
 
 
-def _decision_ref_path(ref: str, *, run_dir: Path, base: Path) -> str:
+def _run_ref_path(ref: str, *, run_dir: Path, base: Path) -> str:
     if ref.startswith(("runs/", "data/")):
         return ref
     return _safe_ref(run_dir / ref, base=base)

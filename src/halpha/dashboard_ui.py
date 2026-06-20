@@ -437,7 +437,8 @@ def dashboard_index_html() -> str:
     .monitor-layout,
     .command-center-layout,
     .workbench-layout,
-    .decision-risk-layout {
+    .decision-risk-layout,
+    .event-alert-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
@@ -897,7 +898,8 @@ def dashboard_index_html() -> str:
       .monitor-layout,
       .command-center-layout,
       .workbench-layout,
-      .decision-risk-layout {
+      .decision-risk-layout,
+      .event-alert-layout {
         grid-template-columns: 1fr;
       }
 
@@ -951,6 +953,7 @@ def dashboard_index_html() -> str:
     data-overview-endpoint="/api/overview"
     data-workbench-endpoint="/api/workbench"
     data-decision-risk-endpoint="/api/decision-risk"
+    data-event-alert-endpoint="/api/event-alert"
     data-runs-endpoint="/api/runs"
     data-stores-endpoint="/api/data/stores"
     data-strategies-endpoint="/api/strategies"
@@ -995,6 +998,10 @@ def dashboard_index_html() -> str:
         </a>
         <a class="nav-item" href="#decision-risk" data-view-target="decision-risk">
           <span>Decision &amp; risk</span>
+          <span class="nav-state">available</span>
+        </a>
+        <a class="nav-item" href="#event-alert" data-view-target="event-alert">
+          <span>Event &amp; alerts</span>
           <span class="nav-state">available</span>
         </a>
         <a class="nav-item" href="#commands" data-view-target="commands">
@@ -1077,6 +1084,10 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Decision &amp; risk</span>
+                <span class="planned-state">available</span>
+              </div>
+              <div class="planned-item">
+                <span class="planned-title">Event &amp; alerts</span>
                 <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
@@ -1531,6 +1542,53 @@ def dashboard_index_html() -> str:
         </section>
       </section>
 
+      <section id="event-alert-view" class="view hidden" data-view="event-alert">
+        <section class="topbar" aria-labelledby="event-alert-title">
+          <div>
+            <p class="eyebrow">Event intelligence and alert decisions</p>
+            <h1 id="event-alert-title">Event &amp; alerts</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Event state</span>
+              <span id="event-alert-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Selected run</span>
+              <span id="event-alert-selected-run" class="status-value">none</span>
+            </div>
+          </div>
+        </section>
+        <section class="event-alert-layout">
+          <article class="wide-panel" aria-labelledby="event-run-list-title">
+            <div class="panel-heading">
+              <h2 id="event-run-list-title" class="panel-title">Runs</h2>
+              <span id="event-run-count" class="badge unknown">loading</span>
+            </div>
+            <div id="event-run-list" class="run-list">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="event-artifacts-title">
+            <div class="panel-heading">
+              <h2 id="event-artifacts-title" class="panel-title">Event and alert artifacts</h2>
+              <span id="event-artifact-count" class="badge unknown">waiting</span>
+            </div>
+            <div id="event-artifact-list" class="store-grid">
+              <div class="message">Select a run to inspect event and alert artifacts.</div>
+            </div>
+            <div id="event-artifact-detail" class="detail-sections">
+              <div class="message">Open an artifact summary to inspect status, counts, warnings, and refs.</div>
+            </div>
+            <div id="event-preview" class="preview-panel">
+              <div class="message">Open an event or alert source ref to inspect a bounded preview.</div>
+            </div>
+          </article>
+        </section>
+      </section>
+
       <section id="commands-view" class="view hidden" data-view="commands">
         <section class="topbar" aria-labelledby="commands-title">
           <div>
@@ -1818,6 +1876,7 @@ def dashboard_index_html() -> str:
       overview: app.dataset.overviewEndpoint,
       workbench: app.dataset.workbenchEndpoint,
       decisionRisk: app.dataset.decisionRiskEndpoint,
+      eventAlert: app.dataset.eventAlertEndpoint,
       runs: app.dataset.runsEndpoint,
       stores: app.dataset.storesEndpoint,
       strategies: app.dataset.strategiesEndpoint,
@@ -1903,6 +1962,11 @@ def dashboard_index_html() -> str:
     let decisionRiskPayload = null;
     let selectedDecisionRunId = null;
     let selectedDecisionArtifactKey = null;
+    let eventAlertLoaded = false;
+    let eventRunsPayload = null;
+    let eventAlertPayload = null;
+    let selectedEventRunId = null;
+    let selectedEventArtifactKey = null;
     let commandJobsLoaded = false;
     let commandJobPoll = null;
     let dailyScheduleLoaded = false;
@@ -2032,6 +2096,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#decision-risk") {
         return "decision-risk";
       }
+      if (window.location.hash === "#event-alert") {
+        return "event-alert";
+      }
       if (window.location.hash === "#commands") {
         return "commands";
       }
@@ -2071,6 +2138,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "decision-risk" && !decisionRiskLoaded) {
         loadDecisionRisk();
+      }
+      if (view === "event-alert" && !eventAlertLoaded) {
+        loadEventAlert();
       }
       if (view === "commands" && !commandJobsLoaded) {
         loadCommandCenter();
@@ -3600,6 +3670,151 @@ def dashboard_index_html() -> str:
       document.querySelector("#decision-artifact-count").textContent = "failed";
       document.querySelector("#decision-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
       document.querySelector("#decision-artifact-detail").innerHTML = "";
+    }
+
+    async function loadEventAlert() {
+      eventAlertLoaded = true;
+      document.querySelector("#event-alert-status").textContent = "Loading";
+      try {
+        eventRunsPayload = await fetchJson(endpoints.runs);
+        renderEventRunList();
+        const runs = Array.isArray(eventRunsPayload.runs) ? eventRunsPayload.runs : [];
+        if (runs.length) {
+          await selectEventRun(runs[0].run_id);
+        } else {
+          const payload = await fetchJson(endpoints.eventAlert);
+          renderEventAlert(payload);
+        }
+      } catch (error) {
+        renderEventAlertFailure(error);
+      }
+    }
+
+    function renderEventRunList() {
+      const runs = Array.isArray(eventRunsPayload && eventRunsPayload.runs) ? eventRunsPayload.runs : [];
+      const count = document.querySelector("#event-run-count");
+      count.className = `badge ${runs.length ? "available" : "missing"}`;
+      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
+      if (!runs.length) {
+        document.querySelector("#event-run-list").innerHTML = messages(eventRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        return;
+      }
+      document.querySelector("#event-run-list").innerHTML = runs.map((run) => `
+        <button class="run-row ${run.run_id === selectedEventRunId ? "selected" : ""}" type="button" data-event-run-id="${escapeHtml(run.run_id)}">
+          <span class="run-row-main">
+            <span class="run-id">${escapeHtml(run.run_id)}</span>
+            ${badge(run.status)}
+          </span>
+          <span class="run-meta">
+            <span>${escapeHtml(text(run.started_at))}</span>
+            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
+            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
+          </span>
+        </button>`).join("");
+      document.querySelectorAll("[data-event-run-id]").forEach((button) => {
+        button.addEventListener("click", () => selectEventRun(button.dataset.eventRunId));
+      });
+    }
+
+    async function selectEventRun(runId) {
+      if (!runId) {
+        return;
+      }
+      selectedEventRunId = runId;
+      selectedEventArtifactKey = null;
+      document.querySelector("#event-alert-selected-run").textContent = runId;
+      document.querySelector("#event-alert-status").textContent = "Loading";
+      renderEventRunList();
+      try {
+        eventAlertPayload = await fetchJson(`${endpoints.eventAlert}?run_id=${encodeURIComponent(runId)}`);
+        renderEventAlert(eventAlertPayload);
+      } catch (error) {
+        renderEventAlertFailure(error);
+      }
+    }
+
+    function renderEventAlert(payload) {
+      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+      const selectedRun = payload.selected_run || {};
+      const selectedFields = selectedRun.fields || {};
+      document.querySelector("#event-alert-status").textContent = label(payload.status);
+      document.querySelector("#event-alert-selected-run").textContent = text(selectedFields.run_id || selectedEventRunId);
+      const count = document.querySelector("#event-artifact-count");
+      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
+      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
+      if (!artifacts.length) {
+        document.querySelector("#event-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No event or alert artifacts are available for the selected run.</div>`;
+        document.querySelector("#event-artifact-detail").innerHTML = "";
+        return;
+      }
+      if (!selectedEventArtifactKey || !artifacts.some((artifact) => artifact.name === selectedEventArtifactKey)) {
+        selectedEventArtifactKey = artifacts[0].name;
+      }
+      document.querySelector("#event-artifact-list").innerHTML = artifacts.map((artifact) => {
+        const fields = artifact.fields || {};
+        return `
+          <button class="store-card ${artifact.name === selectedEventArtifactKey ? "selected" : ""}" type="button" data-event-artifact-key="${escapeHtml(artifact.name)}">
+            <span class="store-title-line">
+              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
+              ${badge(artifact.status)}
+            </span>
+            <span class="store-metrics">
+              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
+              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
+              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
+            </span>
+            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
+          </button>`;
+      }).join("");
+      document.querySelectorAll("[data-event-artifact-key]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedEventArtifactKey = button.dataset.eventArtifactKey;
+          renderEventAlert(payload);
+        });
+      });
+      renderEventArtifactDetail(artifacts.find((artifact) => artifact.name === selectedEventArtifactKey));
+    }
+
+    function renderEventArtifactDetail(artifact) {
+      if (!artifact) {
+        document.querySelector("#event-artifact-detail").innerHTML = `<div class="message warning">Event artifact detail is not available.</div>`;
+        return;
+      }
+      const fields = artifact.fields || {};
+      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
+      document.querySelector("#event-artifact-detail").innerHTML = `
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
+            ${badge(artifact.status)}
+          </h3>
+          <div class="run-detail-grid">
+            ${detailTile("Artifact", fields.artifact)}
+            ${detailTile("Type", fields.artifact_type)}
+            ${detailTile("Artifact status", fields.artifact_status)}
+            ${detailTile("Records", fields.record_count)}
+            ${detailTile("Warnings", fields.warning_count)}
+            ${detailTile("Errors", fields.error_count)}
+          </div>
+          ${messages(artifact)}
+          <div class="artifact-actions">
+            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-event-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
+          </div>
+        </section>`;
+      document.querySelectorAll("[data-event-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.eventPreviewPath, "#event-preview"));
+      });
+      if (isPreviewableRef(fields.preview_path)) {
+        loadArtifactPreview(fields.preview_path, "#event-preview");
+      }
+    }
+
+    function renderEventAlertFailure(error) {
+      document.querySelector("#event-alert-status").textContent = "Failed";
+      document.querySelector("#event-artifact-count").className = "badge failed";
+      document.querySelector("#event-artifact-count").textContent = "failed";
+      document.querySelector("#event-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      document.querySelector("#event-artifact-detail").innerHTML = "";
     }
 
     async function refreshMonitorJobs() {
