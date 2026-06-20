@@ -496,24 +496,32 @@ pattern with bounded deterministic evidence sections.
 
 ## Validation
 
+`config.example.yaml` is a portable public example. Real local acceptance should
+use a gitignored machine-local config file and should not print or commit local
+proxy values, credentials, machine paths, user-state files, private policy
+values, or other local privacy values.
+
 Run automated tests:
 
 ```bash
 python -m pytest
 ```
 
+For code changes, run the narrowest focused tests that cover the touched module
+before or alongside the full suite.
+
 Run real-source product acceptance without Codex CLI:
 
 ```bash
-python -m halpha run --config config.example.yaml --no-codex
+python -m halpha run --config <local-config.yaml> --no-codex
 ```
 
 Inspect product contract health without collection, pipeline execution, report
 generation, or Codex CLI:
 
 ```bash
-python -m halpha validate --config config.example.yaml
-python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha validate --config <local-config.yaml>
+python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>
 ```
 
 The validate command prints bounded status, check counts, failed check names,
@@ -524,8 +532,8 @@ as part of the pipeline.
 Inspect local data lake state without collection or Codex CLI:
 
 ```bash
-python -m halpha data inspect --config config.example.yaml
-python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha data inspect --config <local-config.yaml>
+python -m halpha data inspect --config <local-config.yaml> --run-dir runs/<run_id>
 ```
 
 Use this output to check on-chain flow history state, current-run on-chain view
@@ -538,17 +546,31 @@ values, product validation checks, or raw local user-state values.
 Inspect outcome tracking state without collection or Codex CLI:
 
 ```bash
-python -m halpha outcomes inspect --config config.example.yaml
-python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha outcomes inspect --config <local-config.yaml>
+python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>
 ```
 
 Build and inspect local workbench delivery outputs without collection, pipeline
 execution, monitor cycles, or Codex CLI:
 
 ```bash
-python -m halpha workbench build --config config.example.yaml
-python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
-python -m halpha workbench inspect --config config.example.yaml
+python -m halpha workbench build --config <local-config.yaml>
+python -m halpha workbench build --config <local-config.yaml> --run-dir runs/<run_id>
+python -m halpha workbench inspect --config <local-config.yaml>
+```
+
+Inspect local monitor health without collection, pipeline execution, or Codex
+CLI:
+
+```bash
+python -m halpha monitor inspect --config <local-config.yaml>
+```
+
+Run full Codex report acceptance only when Codex context, prompt construction,
+report generation, report post-processing, or final report content changed:
+
+```bash
+python -m halpha run --config <local-config.yaml>
 ```
 
 Run standalone strategy experiment acceptance:
