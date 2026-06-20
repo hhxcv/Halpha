@@ -430,7 +430,8 @@ def dashboard_index_html() -> str:
       white-space: nowrap;
     }
 
-    .runs-layout {
+    .runs-layout,
+    .data-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
@@ -581,6 +582,85 @@ def dashboard_index_html() -> str:
       gap: 6px;
     }
 
+    .filter-bar {
+      display: grid;
+      grid-template-columns: minmax(160px, 0.34fr) minmax(0, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .filter-control {
+      min-height: 36px;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      color: var(--text);
+      padding: 7px 9px;
+      font: inherit;
+    }
+
+    .store-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .store-card {
+      display: grid;
+      gap: 8px;
+      min-height: 122px;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .store-card:hover,
+    .store-card.selected {
+      border-color: var(--border-strong);
+      background: #f1eee7;
+    }
+
+    .store-card.selected {
+      box-shadow: inset 3px 0 0 var(--teal);
+    }
+
+    .store-title-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .store-title {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-weight: 740;
+    }
+
+    .store-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .source-ref-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
     .artifact-button,
     .link-button {
       min-height: 30px;
@@ -696,7 +776,8 @@ def dashboard_index_html() -> str:
       }
 
       .layout-row,
-      .runs-layout {
+      .runs-layout,
+      .data-layout {
         grid-template-columns: 1fr;
       }
 
@@ -728,7 +809,9 @@ def dashboard_index_html() -> str:
       }
 
       .grid,
-      .run-detail-grid {
+      .run-detail-grid,
+      .store-grid,
+      .filter-bar {
         grid-template-columns: 1fr;
       }
 
@@ -744,6 +827,7 @@ def dashboard_index_html() -> str:
     class="app-shell"
     data-overview-endpoint="/api/overview"
     data-runs-endpoint="/api/runs"
+    data-stores-endpoint="/api/data/stores"
     data-preview-endpoint="/api/artifacts/preview"
   >
     <aside class="sidebar" aria-label="Dashboard navigation">
@@ -764,10 +848,10 @@ def dashboard_index_html() -> str:
           <span>Artifacts</span>
           <span class="nav-state">pending</span>
         </span>
-        <span class="nav-item">
+        <a class="nav-item" href="#data" data-view-target="data">
           <span>Data stores</span>
-          <span class="nav-state">pending</span>
-        </span>
+          <span class="nav-state">available</span>
+        </a>
         <span class="nav-item">
           <span>Strategy lab</span>
           <span class="nav-state">pending</span>
@@ -840,7 +924,7 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Local data explorer</span>
-                <span class="planned-state">planned</span>
+                <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
                 <span class="planned-title">Strategy lab</span>
@@ -925,6 +1009,63 @@ def dashboard_index_html() -> str:
           </article>
         </section>
       </section>
+
+      <section id="data-view" class="view hidden" data-view="data">
+        <section class="topbar" aria-labelledby="data-title">
+          <div>
+            <p class="eyebrow">Local research data</p>
+            <h1 id="data-title">Data stores</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Stores</span>
+              <span id="data-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Visible</span>
+              <span id="data-visible-count" class="status-value">...</span>
+            </div>
+          </div>
+        </section>
+        <section class="data-layout">
+          <article class="wide-panel" aria-labelledby="data-store-list-title">
+            <div class="panel-heading">
+              <h2 id="data-store-list-title" class="panel-title">Store coverage</h2>
+              <span id="data-store-count" class="badge unknown">loading</span>
+            </div>
+            <div class="filter-bar">
+              <select id="data-group-filter" class="filter-control" aria-label="Store group filter">
+                <option value="all">All groups</option>
+                <option value="system">System</option>
+                <option value="market">Market</option>
+                <option value="derivatives">Derivatives</option>
+                <option value="macro">Macro/calendar</option>
+                <option value="onchain">On-chain</option>
+                <option value="text">Text</option>
+                <option value="outcome">Outcome</option>
+              </select>
+              <input id="data-search-filter" class="filter-control" type="search" placeholder="Filter by source, symbol, timeframe, data class, asset, chain, or store">
+            </div>
+            <div id="data-store-list" class="store-grid">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="data-store-detail-title">
+            <div class="panel-heading">
+              <h2 id="data-store-detail-title" class="panel-title">Store detail</h2>
+              <span id="data-store-detail-badge" class="badge unknown">waiting</span>
+            </div>
+            <div id="data-store-detail" class="detail-sections">
+              <div class="message">Select a store to inspect its metadata summary.</div>
+            </div>
+            <div id="data-preview" class="preview-panel">
+              <div class="message">Open a metadata preview to inspect bounded JSON or text output.</div>
+            </div>
+          </article>
+        </section>
+      </section>
     </main>
   </div>
   <script>
@@ -932,6 +1073,7 @@ def dashboard_index_html() -> str:
     const endpoints = {
       overview: app.dataset.overviewEndpoint,
       runs: app.dataset.runsEndpoint,
+      stores: app.dataset.storesEndpoint,
       preview: app.dataset.previewEndpoint
     };
     const statusLabels = {
@@ -978,6 +1120,9 @@ def dashboard_index_html() -> str:
     ];
     let runsLoaded = false;
     let selectedRunId = null;
+    let dataStoresLoaded = false;
+    let dataStoresPayload = null;
+    let selectedStoreName = null;
 
     function text(value) {
       if (value === null || value === undefined || value === "") {
@@ -1053,7 +1198,13 @@ def dashboard_index_html() -> str:
     }
 
     function viewFromHash() {
-      return window.location.hash === "#runs" ? "runs" : "overview";
+      if (window.location.hash === "#runs") {
+        return "runs";
+      }
+      if (window.location.hash === "#data") {
+        return "data";
+      }
+      return "overview";
     }
 
     function setView(view) {
@@ -1071,6 +1222,9 @@ def dashboard_index_html() -> str:
       });
       if (view === "runs" && !runsLoaded) {
         loadRuns();
+      }
+      if (view === "data" && !dataStoresLoaded) {
+        loadDataStores();
       }
     }
 
@@ -1355,8 +1509,167 @@ def dashboard_index_html() -> str:
 
     function wireArtifactButtons() {
       document.querySelectorAll("[data-artifact-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.artifactPath, "#artifact-preview"));
+        button.addEventListener("click", () => {
+          loadArtifactPreview(button.dataset.artifactPath, button.dataset.previewTarget || "#artifact-preview");
+        });
       });
+    }
+
+    async function loadDataStores() {
+      dataStoresLoaded = true;
+      document.querySelector("#data-status").textContent = "Loading";
+      try {
+        dataStoresPayload = await fetchJson(endpoints.stores);
+        renderDataStores();
+      } catch (error) {
+        renderDataStoresFailure(error);
+      }
+    }
+
+    function renderDataStoresFailure(error) {
+      document.querySelector("#data-status").textContent = "Failed";
+      document.querySelector("#data-store-count").className = "badge failed";
+      document.querySelector("#data-store-count").textContent = "failed";
+      document.querySelector("#data-visible-count").textContent = "0";
+      document.querySelector("#data-store-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      document.querySelector("#data-store-detail-badge").className = "badge failed";
+      document.querySelector("#data-store-detail-badge").textContent = "failed";
+      document.querySelector("#data-store-detail").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    }
+
+    function renderDataStores() {
+      const payload = dataStoresPayload || { status: "unknown", stores: [] };
+      const stores = Array.isArray(payload.stores) ? payload.stores : [];
+      const visible = stores.filter(storeMatchesFilters);
+      document.querySelector("#data-status").textContent = label(payload.status);
+      document.querySelector("#data-visible-count").textContent = `${visible.length}`;
+      const count = document.querySelector("#data-store-count");
+      count.className = `badge ${stores.length ? normalizeStatus(payload.status) : "missing"}`;
+      count.textContent = `${stores.length} store${stores.length === 1 ? "" : "s"}`;
+      if (!visible.length) {
+        document.querySelector("#data-store-list").innerHTML = `<div class="message warning">No stores match the current filter.</div>`;
+        renderDataStoreDetail(null);
+        return;
+      }
+      if (!visible.some((store) => store.name === selectedStoreName)) {
+        selectedStoreName = visible[0].name;
+      }
+      document.querySelector("#data-store-list").innerHTML = visible.map((store) => `
+        <button class="store-card ${store.name === selectedStoreName ? "selected" : ""}" type="button" data-store-name="${escapeHtml(store.name)}">
+          <span class="store-title-line">
+            <span class="store-title">${escapeHtml(store.title || store.name)}</span>
+            ${badge(store.status)}
+          </span>
+          <span class="store-metrics">
+            <span>Group: ${escapeHtml(storeGroup(store))}</span>
+            ${store.fields && store.fields.records !== undefined ? `<span>Records: ${escapeHtml(text(store.fields.records))}</span>` : ""}
+            ${store.fields && store.fields.updated_at ? `<span>Updated: ${escapeHtml(text(store.fields.updated_at))}</span>` : ""}
+            ${store.fields && store.fields.schema_version !== undefined ? `<span>Schema: ${escapeHtml(text(store.fields.schema_version))}</span>` : ""}
+          </span>
+          <span class="timeline-meta">${escapeHtml(store.artifact || "metadata not recorded")}</span>
+        </button>`).join("");
+      document.querySelectorAll("[data-store-name]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedStoreName = button.dataset.storeName;
+          renderDataStores();
+        });
+      });
+      renderDataStoreDetail(visible.find((store) => store.name === selectedStoreName) || visible[0]);
+    }
+
+    function storeMatchesFilters(store) {
+      const group = document.querySelector("#data-group-filter").value;
+      const query = document.querySelector("#data-search-filter").value.trim().toLowerCase();
+      if (group !== "all" && storeGroup(store) !== group) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return dataStoreSearchText(store).includes(query);
+    }
+
+    function dataStoreSearchText(store) {
+      return [
+        store.name,
+        store.title,
+        store.status,
+        store.artifact,
+        store.preview_path,
+        JSON.stringify(store.fields || {}),
+        JSON.stringify(store.extra || {}),
+        (store.source_artifacts || []).join(" ")
+      ].join(" ").toLowerCase();
+    }
+
+    function storeGroup(store) {
+      const name = String(store && store.name || "");
+      if (name.includes("ohlcv")) {
+        return "market";
+      }
+      if (name.includes("derivatives")) {
+        return "derivatives";
+      }
+      if (name.includes("macro")) {
+        return "macro";
+      }
+      if (name.includes("onchain")) {
+        return "onchain";
+      }
+      if (name.includes("text")) {
+        return "text";
+      }
+      if (name.includes("outcome")) {
+        return "outcome";
+      }
+      return "system";
+    }
+
+    function renderDataStoreDetail(store) {
+      if (!store) {
+        document.querySelector("#data-store-detail-badge").className = "badge missing";
+        document.querySelector("#data-store-detail-badge").textContent = "missing";
+        document.querySelector("#data-store-detail").innerHTML = `<div class="message warning">No store is selected.</div>`;
+        return;
+      }
+      document.querySelector("#data-store-detail-title").textContent = store.title || store.name;
+      document.querySelector("#data-store-detail-badge").className = `badge ${normalizeStatus(store.status)}`;
+      document.querySelector("#data-store-detail-badge").textContent = label(store.status);
+      const fields = store.fields || {};
+      const refs = Array.isArray(store.source_artifacts) ? store.source_artifacts : [];
+      document.querySelector("#data-store-detail").innerHTML = `
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Coverage summary</span>
+            <span class="badge ${normalizeStatus(store.status)}">${label(store.status)}</span>
+          </h3>
+          <div class="run-detail-grid">
+            ${Object.entries(fields).slice(0, 12).map(([key, value]) => detailTile(key, value)).join("") || detailTile("status", store.status)}
+          </div>
+          ${messages(store)}
+        </section>
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Source refs</span>
+            <span class="badge ${refs.length ? "available" : "missing"}">${refs.length} ref${refs.length === 1 ? "" : "s"}</span>
+          </h3>
+          <ul class="source-ref-list">
+            ${refs.length ? refs.slice(0, 8).map((ref) => `<li>${escapeHtml(ref)}</li>`).join("") : `<li>No source refs recorded.</li>`}
+          </ul>
+        </section>
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Metadata preview</span>
+            ${store.preview_path ? `<button class="link-button" type="button" data-artifact-path="${escapeHtml(store.preview_path)}" data-preview-target="#data-preview">Open preview</button>` : `<span class="badge missing">not available</span>`}
+          </h3>
+          <div class="message ${store.preview_path ? "" : "warning"}">${escapeHtml(store.preview_path || "This store does not expose a bounded metadata preview path.")}</div>
+        </section>`;
+      wireArtifactButtons();
+      if (store.preview_path) {
+        loadArtifactPreview(store.preview_path, "#data-preview");
+      } else {
+        document.querySelector("#data-preview").innerHTML = `<div class="message warning">No bounded metadata preview is available for this store.</div>`;
+      }
     }
 
     async function loadReportPreview(detail) {
@@ -1516,6 +1829,8 @@ def dashboard_index_html() -> str:
     document.querySelectorAll("[data-view-target]").forEach((node) => {
       node.addEventListener("click", () => setView(node.dataset.viewTarget));
     });
+    document.querySelector("#data-group-filter").addEventListener("change", renderDataStores);
+    document.querySelector("#data-search-filter").addEventListener("input", renderDataStores);
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 
     fetchJson(endpoints.overview).then(renderOverview).catch(renderOverviewFailure);
