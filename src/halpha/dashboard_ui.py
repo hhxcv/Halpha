@@ -950,6 +950,7 @@ def dashboard_index_html() -> str:
     data-strategies-endpoint="/api/strategies"
     data-monitor-endpoint="/api/monitor"
     data-jobs-endpoint="/api/jobs"
+    data-schedule-endpoint="/api/schedule/daily-report"
     data-preview-endpoint="/api/artifacts/preview"
   >
     <aside class="sidebar" aria-label="Dashboard navigation">
@@ -1427,6 +1428,57 @@ def dashboard_index_html() -> str:
             <div class="detail-sections">
               <section class="section-block">
                 <h3 class="subheading">
+                  <span>Daily report schedule</span>
+                  <span id="daily-schedule-badge" class="badge unknown">loading</span>
+                </h3>
+                <div id="daily-schedule-summary" class="run-detail-grid">
+                  <div class="skeleton"></div>
+                  <div class="skeleton"></div>
+                </div>
+                <div class="number-row">
+                  <label>
+                    <span class="status-label">Time of day</span>
+                    <input id="daily-schedule-time" class="filter-control" type="time" value="08:00">
+                  </label>
+                  <label>
+                    <span class="status-label">Timezone</span>
+                    <input id="daily-schedule-timezone" class="filter-control" type="text" value="UTC">
+                  </label>
+                </div>
+                <label>
+                  <span class="status-label">Job intent</span>
+                  <select id="daily-schedule-job-intent" class="filter-control">
+                    <option value="run_no_codex">run_no_codex</option>
+                    <option value="run">run</option>
+                  </select>
+                </label>
+                <label class="checkbox-line">
+                  <input id="daily-schedule-confirm-codex" type="checkbox">
+                  <span>I explicitly confirm this manual daily report trigger may invoke Codex.</span>
+                </label>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-schedule-action="update">
+                    <span class="command-title">Update schedule</span>
+                    <span class="command-meta">Persist time, timezone, and job intent without triggering a run.</span>
+                  </button>
+                  <button class="command-button" type="button" data-schedule-action="enable">
+                    <span class="command-title">Enable schedule</span>
+                    <span class="command-meta">Enable the local daily report schedule state.</span>
+                  </button>
+                  <button class="command-button" type="button" data-schedule-action="disable">
+                    <span class="command-title">Disable schedule</span>
+                    <span class="command-meta">Disable the local daily report schedule state.</span>
+                  </button>
+                  <button class="command-button" type="button" data-schedule-action="trigger">
+                    <span class="command-title">Trigger now</span>
+                    <span class="command-meta">Create a visible dashboard job from the selected schedule intent.</span>
+                  </button>
+                </div>
+                <div id="daily-schedule-messages"></div>
+              </section>
+
+              <section class="section-block">
+                <h3 class="subheading">
                   <span>Product runs</span>
                   <span class="badge partial">Codex confirmation required</span>
                 </h3>
@@ -1622,6 +1674,7 @@ def dashboard_index_html() -> str:
       strategies: app.dataset.strategiesEndpoint,
       monitor: app.dataset.monitorEndpoint,
       jobs: app.dataset.jobsEndpoint,
+      schedule: app.dataset.scheduleEndpoint,
       preview: app.dataset.previewEndpoint
     };
     const statusLabels = {
@@ -1696,6 +1749,7 @@ def dashboard_index_html() -> str:
     let monitorJobPoll = null;
     let commandJobsLoaded = false;
     let commandJobPoll = null;
+    let dailyScheduleLoaded = false;
     const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started", "missing"]);
 
     function text(value) {
@@ -3272,7 +3326,129 @@ def dashboard_index_html() -> str:
 
     async function loadCommandCenter() {
       commandJobsLoaded = true;
+      if (!dailyScheduleLoaded) {
+        await refreshDailySchedule();
+      }
       await refreshCommandJobs();
+    }
+
+    async function refreshDailySchedule() {
+      dailyScheduleLoaded = true;
+      document.querySelector("#daily-schedule-badge").className = "badge unknown";
+      document.querySelector("#daily-schedule-badge").textContent = "loading";
+      try {
+        const payload = await fetchJson(endpoints.schedule);
+        renderDailySchedule(payload);
+      } catch (error) {
+        renderDailyScheduleFailure(error);
+      }
+    }
+
+    function renderDailySchedule(schedule) {
+      const settings = schedule.settings || {};
+      const boundary = schedule.runtime_boundary || {};
+      const badgeNode = document.querySelector("#daily-schedule-badge");
+      badgeNode.className = `badge ${schedule.enabled === true ? "available" : normalizeStatus(schedule.status)}`;
+      badgeNode.textContent = schedule.enabled === true ? "enabled" : label(schedule.status);
+      document.querySelector("#daily-schedule-time").value = text(settings.time_of_day) === "n/a" ? "08:00" : text(settings.time_of_day);
+      document.querySelector("#daily-schedule-timezone").value = text(settings.timezone) === "n/a" ? "UTC" : text(settings.timezone);
+      document.querySelector("#daily-schedule-job-intent").value = text(settings.job_intent) === "run" ? "run" : "run_no_codex";
+      document.querySelector("#daily-schedule-summary").innerHTML = [
+        detailTile("Enabled", schedule.enabled === true ? "true" : "false"),
+        detailTile("Persisted", schedule.persisted === true ? "true" : "false"),
+        detailTile("Next run", schedule.next_run_at),
+        detailTile("Last run", schedule.last_run_at),
+        detailTile("Last job", schedule.last_job_id),
+        detailTile("Linked jobs", Array.isArray(schedule.linked_job_ids) ? schedule.linked_job_ids.length : 0),
+        detailTile("Runs while dashboard active", boundary.runs_only_while_dashboard_active),
+        detailTile("Automatic dispatch", boundary.automatic_dispatch)
+      ].join("");
+      document.querySelector("#daily-schedule-messages").innerHTML = messages(schedule);
+      document.querySelector("#command-center-status").textContent = schedule.enabled === true ? "Schedule enabled" : "Schedule idle";
+    }
+
+    function renderDailyScheduleFailure(error) {
+      document.querySelector("#daily-schedule-badge").className = "badge failed";
+      document.querySelector("#daily-schedule-badge").textContent = "failed";
+      document.querySelector("#daily-schedule-summary").innerHTML = detailTile("Error", error.message);
+      document.querySelector("#daily-schedule-messages").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    }
+
+    async function runDailyScheduleAction(action) {
+      const request = dailyScheduleRequest(action);
+      if (!request) {
+        return;
+      }
+      document.querySelector("#command-center-status").textContent = "Updating schedule";
+      try {
+        const payload = await postJson(request.url, request.body);
+        if (payload.schedule) {
+          renderDailySchedule(payload.schedule);
+          if (payload.job) {
+            document.querySelector("#command-center-status").textContent = `${jobTitle(payload.job.intent)} ${label(payload.job.status)}`;
+            renderCommandResult(payload.job);
+          } else {
+            renderScheduleActionResult(payload);
+          }
+        } else {
+          renderDailySchedule(payload);
+          renderCommandMessage(payload.status, `Daily report schedule ${action} ${label(payload.status)}.`);
+        }
+        await refreshCommandJobs();
+      } catch (error) {
+        renderCommandMessage("failed", error.message);
+      }
+    }
+
+    function dailyScheduleRequest(action) {
+      if (action === "disable") {
+        return { url: `${endpoints.schedule}/disable`, body: {} };
+      }
+      const body = {
+        time_of_day: optionalInputValue("#daily-schedule-time"),
+        timezone: optionalInputValue("#daily-schedule-timezone"),
+        job_intent: document.querySelector("#daily-schedule-job-intent").value
+      };
+      if (!body.time_of_day || !body.timezone) {
+        renderCommandMessage("blocked", "time_of_day and timezone are required for daily report schedule changes.");
+        return null;
+      }
+      if (action === "update") {
+        return { url: endpoints.schedule, body };
+      }
+      if (action === "enable") {
+        return { url: `${endpoints.schedule}/enable`, body };
+      }
+      if (action === "trigger") {
+        const triggerBody = { job_intent: body.job_intent };
+        if (body.job_intent === "run") {
+          if (document.querySelector("#daily-schedule-confirm-codex").checked !== true) {
+            renderCommandMessage("blocked", "Codex confirmation is required before triggering a Codex-capable daily report job.");
+            return null;
+          }
+          triggerBody.confirm_codex = true;
+        }
+        return { url: `${endpoints.schedule}/trigger`, body: triggerBody };
+      }
+      renderCommandMessage("unsupported", `unsupported daily report schedule action: ${action || "missing"}`);
+      return null;
+    }
+
+    function renderScheduleActionResult(payload) {
+      const schedule = payload.schedule || {};
+      document.querySelector("#command-center-status").textContent = `Schedule ${label(payload.status)}`;
+      document.querySelector("#command-result").innerHTML = `
+        <div class="preview-heading">
+          <div class="preview-path">Daily report schedule</div>
+          ${badge(payload.status)}
+        </div>
+        <div class="run-detail-grid">
+          ${detailTile("Enabled", schedule.enabled === true ? "true" : "false")}
+          ${detailTile("Next run", schedule.next_run_at)}
+          ${detailTile("Last job", schedule.last_job_id)}
+          ${detailTile("Job", payload.job ? payload.job.job_id : "n/a")}
+        </div>
+        ${messages(payload)}`;
     }
 
     async function refreshCommandJobs() {
@@ -3700,6 +3876,9 @@ def dashboard_index_html() -> str:
     });
     document.querySelectorAll("[data-command-intent]").forEach((button) => {
       button.addEventListener("click", () => startCommandJob(button.dataset.commandIntent));
+    });
+    document.querySelectorAll("[data-schedule-action]").forEach((button) => {
+      button.addEventListener("click", () => runDailyScheduleAction(button.dataset.scheduleAction));
     });
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 

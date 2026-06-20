@@ -79,6 +79,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
     assert 'data-monitor-endpoint="/api/monitor"' in response.text
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
+    assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert "Runs &amp; reports" in response.text
     assert 'href="#artifacts" data-view-target="artifacts"' in response.text
@@ -99,6 +100,11 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'href="#commands" data-view-target="commands"' in response.text
     assert "Command center" in response.text
     assert "Command groups" in response.text
+    assert "Daily report schedule" in response.text
+    assert "Update schedule" in response.text
+    assert "Enable schedule" in response.text
+    assert "Disable schedule" in response.text
+    assert "Trigger now" in response.text
     assert "Run without Codex" in response.text
     assert "Run with Codex" in response.text
     assert "Codex confirmation is required before creating this job." in response.text
