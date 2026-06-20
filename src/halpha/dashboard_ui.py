@@ -431,13 +431,15 @@ def dashboard_index_html() -> str:
     }
 
     .runs-layout,
-    .data-layout {
+    .data-layout,
+    .strategy-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
     }
 
-    .run-list {
+    .run-list,
+    .strategy-list {
       display: grid;
       gap: 8px;
       max-height: 68vh;
@@ -589,6 +591,10 @@ def dashboard_index_html() -> str:
       margin-bottom: 12px;
     }
 
+    .strategy-layout .filter-bar {
+      grid-template-columns: 1fr;
+    }
+
     .filter-control {
       min-height: 36px;
       width: 100%;
@@ -658,6 +664,29 @@ def dashboard_index_html() -> str:
       list-style: none;
       color: var(--muted);
       font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .strategy-chart {
+      display: grid;
+      gap: 8px;
+      min-height: 160px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .strategy-chart svg {
+      width: 100%;
+      height: 136px;
+      overflow: visible;
+    }
+
+    .chart-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
       overflow-wrap: anywhere;
     }
 
@@ -777,7 +806,8 @@ def dashboard_index_html() -> str:
 
       .layout-row,
       .runs-layout,
-      .data-layout {
+      .data-layout,
+      .strategy-layout {
         grid-template-columns: 1fr;
       }
 
@@ -828,6 +858,7 @@ def dashboard_index_html() -> str:
     data-overview-endpoint="/api/overview"
     data-runs-endpoint="/api/runs"
     data-stores-endpoint="/api/data/stores"
+    data-strategies-endpoint="/api/strategies"
     data-preview-endpoint="/api/artifacts/preview"
   >
     <aside class="sidebar" aria-label="Dashboard navigation">
@@ -852,10 +883,10 @@ def dashboard_index_html() -> str:
           <span>Data stores</span>
           <span class="nav-state">available</span>
         </a>
-        <span class="nav-item">
+        <a class="nav-item" href="#strategies" data-view-target="strategies">
           <span>Strategy lab</span>
-          <span class="nav-state">pending</span>
-        </span>
+          <span class="nav-state">available</span>
+        </a>
         <span class="nav-item">
           <span>Monitor</span>
           <span class="nav-state">pending</span>
@@ -928,7 +959,7 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Strategy lab</span>
-                <span class="planned-state">planned</span>
+                <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
                 <span class="planned-title">Monitor control</span>
@@ -1066,6 +1097,62 @@ def dashboard_index_html() -> str:
           </article>
         </section>
       </section>
+
+      <section id="strategies-view" class="view hidden" data-view="strategies">
+        <section class="topbar" aria-labelledby="strategies-title">
+          <div>
+            <p class="eyebrow">Historical strategy research</p>
+            <h1 id="strategies-title">Strategy lab</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Research state</span>
+              <span id="strategy-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Selected item</span>
+              <span id="selected-strategy-status" class="status-value">none</span>
+            </div>
+          </div>
+        </section>
+        <section class="strategy-layout">
+          <article class="wide-panel" aria-labelledby="strategy-list-title">
+            <div class="panel-heading">
+              <h2 id="strategy-list-title" class="panel-title">Strategy outputs</h2>
+              <span id="strategy-count" class="badge unknown">loading</span>
+            </div>
+            <div class="filter-bar">
+              <select id="strategy-scope-filter" class="filter-control" aria-label="Strategy output filter">
+                <option value="all">All outputs</option>
+                <option value="pipeline">Pipeline artifacts</option>
+                <option value="backtests">Standalone backtests</option>
+                <option value="experiments">Standalone experiments</option>
+                <option value="gates">Gates</option>
+                <option value="lifecycle">Lifecycle</option>
+                <option value="warnings">Warnings</option>
+              </select>
+              <input id="strategy-search-filter" class="filter-control" type="search" placeholder="Filter by strategy, symbol, timeframe, gate, lifecycle, or artifact">
+            </div>
+            <div id="strategy-list" class="strategy-list">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="strategy-detail-title">
+            <div class="panel-heading">
+              <h2 id="strategy-detail-title" class="panel-title">Strategy detail</h2>
+              <span id="strategy-detail-badge" class="badge unknown">waiting</span>
+            </div>
+            <div id="strategy-detail" class="detail-sections">
+              <div class="message">Select a strategy output to inspect bounded metrics, gates, lifecycle state, warnings, and source refs.</div>
+            </div>
+            <div id="strategy-preview" class="preview-panel">
+              <div class="message">Open a strategy artifact preview to inspect bounded JSON or text output.</div>
+            </div>
+          </article>
+        </section>
+      </section>
     </main>
   </div>
   <script>
@@ -1074,6 +1161,7 @@ def dashboard_index_html() -> str:
       overview: app.dataset.overviewEndpoint,
       runs: app.dataset.runsEndpoint,
       stores: app.dataset.storesEndpoint,
+      strategies: app.dataset.strategiesEndpoint,
       preview: app.dataset.previewEndpoint
     };
     const statusLabels = {
@@ -1087,6 +1175,12 @@ def dashboard_index_html() -> str:
       skipped: "Skipped",
       disabled: "Disabled",
       not_run: "Not run",
+      effective: "Effective",
+      watchlisted: "Watchlisted",
+      rejected: "Rejected",
+      insufficient_evidence: "Insufficient evidence",
+      active_candidate: "Active candidate",
+      retired: "Retired",
       degraded: "Degraded",
       failed: "Failed",
       unknown: "Unknown"
@@ -1123,6 +1217,9 @@ def dashboard_index_html() -> str:
     let dataStoresLoaded = false;
     let dataStoresPayload = null;
     let selectedStoreName = null;
+    let strategiesLoaded = false;
+    let strategiesPayload = null;
+    let selectedStrategyKey = null;
 
     function text(value) {
       if (value === null || value === undefined || value === "") {
@@ -1156,6 +1253,15 @@ def dashboard_index_html() -> str:
       const value = String(status || "unknown").toLowerCase();
       if (["ok", "success", "succeeded"].includes(value)) {
         return "available";
+      }
+      if (["effective", "active_candidate"].includes(value)) {
+        return "available";
+      }
+      if (["watchlisted", "insufficient_evidence"].includes(value)) {
+        return "partial";
+      }
+      if (["rejected", "retired"].includes(value)) {
+        return "degraded";
       }
       if (["not_run", "disabled", "skipped"].includes(value)) {
         return value;
@@ -1204,6 +1310,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#data") {
         return "data";
       }
+      if (window.location.hash === "#strategies") {
+        return "strategies";
+      }
       return "overview";
     }
 
@@ -1225,6 +1334,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "data" && !dataStoresLoaded) {
         loadDataStores();
+      }
+      if (view === "strategies" && !strategiesLoaded) {
+        loadStrategies();
       }
     }
 
@@ -1672,6 +1784,455 @@ def dashboard_index_html() -> str:
       }
     }
 
+    async function loadStrategies() {
+      strategiesLoaded = true;
+      document.querySelector("#strategy-status").textContent = "Loading";
+      try {
+        strategiesPayload = await fetchJson(endpoints.strategies);
+        renderStrategies();
+      } catch (error) {
+        renderStrategiesFailure(error);
+      }
+    }
+
+    function renderStrategiesFailure(error) {
+      document.querySelector("#strategy-status").textContent = "Failed";
+      document.querySelector("#selected-strategy-status").textContent = "none";
+      document.querySelector("#strategy-count").className = "badge failed";
+      document.querySelector("#strategy-count").textContent = "failed";
+      document.querySelector("#strategy-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      document.querySelector("#strategy-detail-badge").className = "badge failed";
+      document.querySelector("#strategy-detail-badge").textContent = "failed";
+      document.querySelector("#strategy-detail").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    }
+
+    function renderStrategies() {
+      const payload = strategiesPayload || { status: "unknown" };
+      const items = strategyItems(payload);
+      const visible = items.filter(strategyMatchesFilters);
+      document.querySelector("#strategy-status").textContent = label(payload.status);
+      const count = document.querySelector("#strategy-count");
+      count.className = `badge ${items.length ? normalizeStatus(payload.status) : "missing"}`;
+      count.textContent = `${items.length} item${items.length === 1 ? "" : "s"}`;
+      if (!visible.length) {
+        document.querySelector("#strategy-list").innerHTML = `<div class="message warning">No strategy outputs match the current filter.</div>`;
+        renderStrategyDetail(null);
+        return;
+      }
+      if (!visible.some((item) => item.key === selectedStrategyKey)) {
+        selectedStrategyKey = visible[0].key;
+      }
+      document.querySelector("#strategy-list").innerHTML = visible.map((item) => `
+        <button class="store-card ${item.key === selectedStrategyKey ? "selected" : ""}" type="button" data-strategy-key="${escapeHtml(item.key)}">
+          <span class="store-title-line">
+            <span class="store-title">${escapeHtml(item.title)}</span>
+            ${badge(item.status)}
+          </span>
+          <span class="store-metrics">
+            <span>${escapeHtml(item.scopeLabel)}</span>
+            <span>Warnings: ${escapeHtml(text(item.warnings.length))}</span>
+            <span>Errors: ${escapeHtml(text(item.errors.length))}</span>
+          </span>
+          <span class="timeline-meta">${escapeHtml(item.subtitle)}</span>
+        </button>`).join("");
+      document.querySelectorAll("[data-strategy-key]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedStrategyKey = button.dataset.strategyKey;
+          renderStrategies();
+        });
+      });
+      renderStrategyDetail(visible.find((item) => item.key === selectedStrategyKey) || visible[0]);
+    }
+
+    function strategyItems(payload) {
+      const pipeline = payload.pipeline || {};
+      const standalone = payload.standalone || {};
+      const selectedRun = payload.selected_run || {};
+      const items = [];
+      (Array.isArray(pipeline.artifacts) ? pipeline.artifacts : []).forEach((artifact) => {
+        const kind = strategyKind(artifact.name);
+        items.push({
+          key: `pipeline:${artifact.name}`,
+          group: "pipeline",
+          kind,
+          scopeLabel: "Pipeline",
+          title: strategyTitle(artifact.name),
+          subtitle: artifact.artifact || artifact.preview_path || selectedRun.run_id || "pipeline artifact",
+          status: artifact.status || "unknown",
+          fields: artifact.fields || {},
+          records: artifact.records || {},
+          sourceArtifacts: Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [],
+          previewPath: artifact.preview_path,
+          warnings: Array.isArray(artifact.warnings) ? artifact.warnings : [],
+          errors: Array.isArray(artifact.errors) ? artifact.errors : []
+        });
+      });
+      (Array.isArray(standalone.backtests) ? standalone.backtests : []).forEach((item) => {
+        items.push({
+          key: `backtest:${item.output_dir}`,
+          group: "backtests",
+          kind: "backtest",
+          scopeLabel: "Standalone backtest",
+          title: `Backtest ${standaloneStrategyName(item)}`,
+          subtitle: item.output_dir || "standalone backtest",
+          status: item.status || "unknown",
+          fields: item.fields || {},
+          records: item.records || {},
+          sourceArtifacts: Array.isArray(item.source_artifacts) ? item.source_artifacts : [],
+          previewPath: firstPreviewableRef(item.source_artifacts),
+          warnings: Array.isArray(item.warnings) ? item.warnings : [],
+          errors: Array.isArray(item.errors) ? item.errors : []
+        });
+      });
+      (Array.isArray(standalone.experiments) ? standalone.experiments : []).forEach((item) => {
+        items.push({
+          key: `experiment:${item.output_dir}`,
+          group: "experiments",
+          kind: "experiment",
+          scopeLabel: "Standalone experiment",
+          title: `Experiment ${standaloneStrategyName(item)}`,
+          subtitle: item.output_dir || "standalone experiment",
+          status: item.status || "unknown",
+          fields: item.fields || {},
+          records: item.records || {},
+          sourceArtifacts: Array.isArray(item.source_artifacts) ? item.source_artifacts : [],
+          previewPath: firstPreviewableRef(item.source_artifacts),
+          warnings: Array.isArray(item.warnings) ? item.warnings : [],
+          errors: Array.isArray(item.errors) ? item.errors : []
+        });
+      });
+      return items;
+    }
+
+    function strategyKind(name) {
+      if (name === "strategy_effectiveness_gates") {
+        return "gates";
+      }
+      if (name === "strategy_lifecycle_state") {
+        return "lifecycle";
+      }
+      if (name === "strategy_experiment") {
+        return "experiment";
+      }
+      return "pipeline";
+    }
+
+    function strategyTitle(name) {
+      const titles = {
+        strategy_benchmark_suite: "Benchmark suite",
+        quant_strategy_runs: "Quant strategy runs",
+        strategy_evaluation_summary: "Strategy evaluation",
+        strategy_experiment: "Pipeline experiment",
+        strategy_effectiveness_gates: "Effectiveness gates",
+        strategy_lifecycle_state: "Lifecycle state"
+      };
+      return titles[name] || name || "Strategy artifact";
+    }
+
+    function standaloneStrategyName(item) {
+      const inputs = item.fields && item.fields.inputs ? item.fields.inputs : {};
+      const value = inputs.strategy_name || inputs.strategy_names || item.output_dir;
+      return Array.isArray(value) ? value.join(", ") : text(value);
+    }
+
+    function strategyMatchesFilters(item) {
+      const scope = document.querySelector("#strategy-scope-filter").value;
+      const query = document.querySelector("#strategy-search-filter").value.trim().toLowerCase();
+      if (scope === "pipeline" && item.group !== "pipeline") {
+        return false;
+      }
+      if (scope === "backtests" && item.group !== "backtests") {
+        return false;
+      }
+      if (scope === "experiments" && item.group !== "experiments") {
+        return false;
+      }
+      if (scope === "gates" && item.kind !== "gates") {
+        return false;
+      }
+      if (scope === "lifecycle" && item.kind !== "lifecycle") {
+        return false;
+      }
+      if (scope === "warnings" && !item.warnings.length && !item.errors.length && !["warning", "degraded", "failed"].includes(normalizeStatus(item.status))) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return strategySearchText(item).includes(query);
+    }
+
+    function strategySearchText(item) {
+      return [
+        item.key,
+        item.group,
+        item.kind,
+        item.title,
+        item.subtitle,
+        item.status,
+        JSON.stringify(item.fields || {}),
+        JSON.stringify(item.records || {}),
+        item.sourceArtifacts.join(" ")
+      ].join(" ").toLowerCase();
+    }
+
+    function renderStrategyDetail(item) {
+      if (!item) {
+        document.querySelector("#selected-strategy-status").textContent = "none";
+        document.querySelector("#strategy-detail-title").textContent = "Strategy detail";
+        document.querySelector("#strategy-detail-badge").className = "badge missing";
+        document.querySelector("#strategy-detail-badge").textContent = "missing";
+        document.querySelector("#strategy-detail").innerHTML = `<div class="message warning">No strategy output is selected.</div>`;
+        document.querySelector("#strategy-preview").innerHTML = `<div class="message warning">No strategy artifact preview is available.</div>`;
+        return;
+      }
+      document.querySelector("#selected-strategy-status").textContent = item.title;
+      document.querySelector("#strategy-detail-title").textContent = item.title;
+      document.querySelector("#strategy-detail-badge").className = `badge ${normalizeStatus(item.status)}`;
+      document.querySelector("#strategy-detail-badge").textContent = label(item.status);
+      document.querySelector("#strategy-detail").innerHTML = `
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Summary</span>
+            <span class="badge ${normalizeStatus(item.status)}">${label(item.status)}</span>
+          </h3>
+          <div class="run-detail-grid">
+            ${strategyDetailTiles(item).join("")}
+          </div>
+          ${messages(item)}
+        </section>
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Bounded chart</span>
+            <span class="badge ${strategyChartCounts(item).length ? "available" : "missing"}">${strategyChartCounts(item).length ? "available" : "missing"}</span>
+          </h3>
+          ${renderStrategyChart(item)}
+        </section>
+        ${renderStrategyRecords(item)}
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Source refs</span>
+            <span class="badge ${item.sourceArtifacts.length ? "available" : "missing"}">${item.sourceArtifacts.length} ref${item.sourceArtifacts.length === 1 ? "" : "s"}</span>
+          </h3>
+          <ul class="source-ref-list">
+            ${strategySourceRefs(item).map((ref) => `<li>${sourceRefHtml(ref)}</li>`).join("") || `<li>No source refs recorded.</li>`}
+          </ul>
+        </section>
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Limitations</span>
+            <span class="badge partial">research only</span>
+          </h3>
+          <div class="message warning">Strategy output is historical research material, not trading advice.</div>
+        </section>`;
+      wireArtifactButtons();
+      if (item.previewPath) {
+        loadArtifactPreview(item.previewPath, "#strategy-preview");
+      } else {
+        document.querySelector("#strategy-preview").innerHTML = `<div class="message warning">No bounded strategy artifact preview path is available.</div>`;
+      }
+    }
+
+    function strategyDetailTiles(item) {
+      const fields = item.fields || {};
+      const tiles = [
+        detailTile("Scope", item.scopeLabel),
+        detailTile("Status", item.status),
+        detailTile("Artifact/output", item.previewPath || item.subtitle),
+        detailTile("Warnings", item.warnings.length),
+        detailTile("Errors", item.errors.length)
+      ];
+      if (fields.created_at) {
+        tiles.push(detailTile("Created", fields.created_at));
+      }
+      if (fields.updated_at) {
+        tiles.push(detailTile("Updated", fields.updated_at));
+      }
+      const counts = fields.counts || fields.coverage || fields.lifecycle_counts || fields.gate_coverage || fields.benchmark_coverage || {};
+      Object.entries(counts).slice(0, 7).forEach(([key, value]) => {
+        tiles.push(detailTile(key, value));
+      });
+      const metrics = fields.metrics || {};
+      Object.entries(metrics).slice(0, 2).forEach(([key, value]) => {
+        tiles.push(detailTile(key, compactObject(value)));
+      });
+      return tiles.slice(0, 12);
+    }
+
+    function renderStrategyRecords(item) {
+      const sections = Object.entries(item.records || {})
+        .filter(([, records]) => Array.isArray(records) && records.length)
+        .map(([name, records]) => `
+          <section class="section-block">
+            <h3 class="subheading">
+              <span>${escapeHtml(recordSectionTitle(name))}</span>
+              <span class="badge available">${records.length} record${records.length === 1 ? "" : "s"}</span>
+            </h3>
+            <ul class="stage-list">
+              ${records.slice(0, 8).map((record) => `
+                <li class="stage-item">
+                  <div class="stage-top">
+                    <span class="stage-name">${escapeHtml(strategyRecordTitle(record))}</span>
+                    ${badge(record.status || record.lifecycle_status || "available")}
+                  </div>
+                  <div class="run-meta">
+                    ${recordMeta(record).map((entry) => `<span>${escapeHtml(entry)}</span>`).join("")}
+                  </div>
+                </li>`).join("")}
+            </ul>
+            ${records.length > 8 ? `<div class="message warning">${records.length - 8} record(s) omitted from this UI section.</div>` : ""}
+          </section>`);
+      return sections.join("");
+    }
+
+    function recordSectionTitle(name) {
+      const titles = {
+        runs: "Quant runs",
+        records: "Evaluations",
+        candidates: "Candidates",
+        gates: "Gates",
+        lifecycle: "Lifecycle records",
+        benchmarks: "Benchmarks"
+      };
+      return titles[name] || name;
+    }
+
+    function strategyRecordTitle(record) {
+      return record.strategy_name
+        || record.gate_id
+        || record.lifecycle_record_id
+        || record.evaluation_id
+        || record.benchmark_id
+        || record.status
+        || "record";
+    }
+
+    function recordMeta(record) {
+      return Object.entries(record)
+        .filter(([, value]) => value === null || ["string", "number", "boolean"].includes(typeof value))
+        .filter(([key]) => !["gate_id", "lifecycle_record_id", "evaluation_id", "benchmark_id"].includes(key))
+        .slice(0, 8)
+        .map(([key, value]) => `${key}: ${text(value)}`);
+    }
+
+    function renderStrategyChart(item) {
+      const counts = strategyChartCounts(item);
+      if (!counts.length) {
+        return `<div class="strategy-chart"><div class="message warning">No bounded chart data is available for this output.</div></div>`;
+      }
+      const max = Math.max(...counts.map((entry) => Math.abs(entry.value)), 1);
+      const width = 520;
+      const height = 132;
+      const gap = 10;
+      const barWidth = Math.max(20, (width - gap * (counts.length + 1)) / counts.length);
+      const bars = counts.map((entry, index) => {
+        const barHeight = Math.max(4, (Math.abs(entry.value) / max) * 82);
+        const x = gap + index * (barWidth + gap);
+        const y = 92 - barHeight;
+        return `
+          <g>
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="3" fill="${chartColor(entry.label)}"></rect>
+            <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="11" fill="#202124">${escapeHtml(text(entry.value))}</text>
+            <text x="${x + barWidth / 2}" y="118" text-anchor="middle" font-size="10" fill="#68635a">${escapeHtml(shortLabel(entry.label))}</text>
+          </g>`;
+      }).join("");
+      return `
+        <div class="strategy-chart">
+          <div class="chart-label">${escapeHtml(chartTitle(item))}</div>
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(chartTitle(item))}">
+            <line x1="0" y1="92" x2="${width}" y2="92" stroke="#dedbd2"></line>
+            ${bars}
+          </svg>
+        </div>`;
+    }
+
+    function strategyChartCounts(item) {
+      if (item.records && Array.isArray(item.records.gates) && item.records.gates.length) {
+        return countBy(item.records.gates, (record) => record.status || "unknown");
+      }
+      if (item.records && Array.isArray(item.records.lifecycle) && item.records.lifecycle.length) {
+        return countBy(item.records.lifecycle, (record) => record.lifecycle_status || "unknown");
+      }
+      if (item.records && Array.isArray(item.records.candidates) && item.records.candidates.length) {
+        return countBy(item.records.candidates, (record) => record.status || "unknown");
+      }
+      const fields = item.fields || {};
+      const source = fields.gate_coverage || fields.lifecycle_counts || fields.coverage || fields.counts || fields.benchmark_coverage || {};
+      return Object.entries(source)
+        .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
+        .slice(0, 8)
+        .map(([labelText, value]) => ({ label: labelText, value }));
+    }
+
+    function countBy(records, keyFn) {
+      const counts = {};
+      records.forEach((record) => {
+        const key = keyFn(record);
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      return Object.entries(counts).map(([labelText, value]) => ({ label: labelText, value }));
+    }
+
+    function chartTitle(item) {
+      if (item.kind === "gates") {
+        return "Gate count by status";
+      }
+      if (item.kind === "lifecycle") {
+        return "Lifecycle count by status";
+      }
+      return "Bounded count summary";
+    }
+
+    function chartColor(labelText) {
+      const value = String(labelText).toLowerCase();
+      if (["available", "ok", "succeeded", "effective", "active_candidate"].some((item) => value.includes(item))) {
+        return "#0f766e";
+      }
+      if (["failed", "degraded", "rejected", "retired"].some((item) => value.includes(item))) {
+        return "#b42318";
+      }
+      return "#a16207";
+    }
+
+    function shortLabel(value) {
+      const textValue = String(value || "n/a").replaceAll("_", " ");
+      return textValue.length > 14 ? `${textValue.slice(0, 12)}..` : textValue;
+    }
+
+    function strategySourceRefs(item) {
+      const refs = [item.previewPath, ...item.sourceArtifacts].filter(Boolean);
+      return [...new Set(refs)].slice(0, 12);
+    }
+
+    function sourceRefHtml(ref) {
+      if (isPreviewableRef(ref)) {
+        return `<button class="link-button" type="button" data-artifact-path="${escapeHtml(ref)}" data-preview-target="#strategy-preview">${escapeHtml(ref)}</button>`;
+      }
+      return escapeHtml(ref);
+    }
+
+    function firstPreviewableRef(refs) {
+      return (Array.isArray(refs) ? refs : []).find(isPreviewableRef) || "";
+    }
+
+    function isPreviewableRef(ref) {
+      const value = String(ref || "");
+      return value.startsWith("runs/") || value.startsWith("data/");
+    }
+
+    function compactObject(value) {
+      if (value === null || value === undefined) {
+        return "n/a";
+      }
+      if (typeof value !== "object") {
+        return value;
+      }
+      return Object.entries(value)
+        .slice(0, 4)
+        .map(([key, item]) => `${key}: ${text(item)}`)
+        .join(", ");
+    }
+
     async function loadReportPreview(detail) {
       const path = reportPreviewPath(detail);
       if (!path) {
@@ -1831,6 +2392,8 @@ def dashboard_index_html() -> str:
     });
     document.querySelector("#data-group-filter").addEventListener("change", renderDataStores);
     document.querySelector("#data-search-filter").addEventListener("input", renderDataStores);
+    document.querySelector("#strategy-scope-filter").addEventListener("change", renderStrategies);
+    document.querySelector("#strategy-search-filter").addEventListener("input", renderStrategies);
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 
     fetchJson(endpoints.overview).then(renderOverview).catch(renderOverviewFailure);
