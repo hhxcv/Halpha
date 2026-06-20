@@ -3811,7 +3811,7 @@ def dashboard_index_html() -> str:
     function isPreviewableRef(value) {
       const ref = String(value || "");
       return (ref.startsWith("runs/") || ref.startsWith("data/"))
-        && /\.(json|jsonl|md|markdown|txt|log|csv|yaml|yml)$/i.test(ref);
+        && /\\.(json|jsonl|md|markdown|txt|log|csv|yaml|yml)$/i.test(ref);
     }
 
     function wireCommandPreviewButtons() {
