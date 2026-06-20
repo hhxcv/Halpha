@@ -25,6 +25,7 @@ WORKBENCH_HTML_FILENAME = "index.html"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
 STRATEGY_LIFECYCLE_STATE_ARTIFACT = "analysis/strategy_lifecycle_state.json"
 STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT = "analysis/strategy_lifecycle_material.md"
+PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 
 
 @dataclass(frozen=True)
@@ -81,6 +82,7 @@ def build_workbench_summary(
     monitor_state = _monitor_state(config, config_path=config_path, base=base)
     outcome_state = _outcome_state(config_path, selection, manifest, base=base)
     strategy_state = _strategy_state(selection, manifest)
+    product_validation_state = _product_validation_state(selection, manifest)
     data_quality_state = _data_quality_state(selection, manifest)
     sections = [
         latest_run,
@@ -89,6 +91,7 @@ def build_workbench_summary(
         monitor_state,
         outcome_state,
         strategy_state,
+        product_validation_state,
         data_quality_state,
     ]
 
@@ -118,6 +121,7 @@ def build_workbench_summary(
         "monitor_state": monitor_state,
         "outcome_state": outcome_state,
         "strategy_state": strategy_state,
+        "product_validation_state": product_validation_state,
         "data_quality_state": data_quality_state,
         "index_outputs": {
             "status": "available",
@@ -213,6 +217,17 @@ def render_workbench_markdown(summary: dict[str, Any]) -> str:
             },
         ),
         _markdown_state_row(
+            "Product validation",
+            summary,
+            "product_validation_state",
+            {
+                "checks": "checks",
+                "warning": "warnings",
+                "degraded": "degraded",
+                "failed": "failed checks",
+            },
+        ),
+        _markdown_state_row(
             "Data quality",
             summary,
             "data_quality_state",
@@ -294,6 +309,17 @@ def render_workbench_html(summary: dict[str, Any]) -> str:
                     "strategy_lifecycle_records": "lifecycle records",
                     "strategy_lifecycle_degraded": "degraded lifecycle",
                     "strategy_lifecycle_retired": "retired lifecycle",
+                },
+            ),
+            _html_state_row(
+                "Product validation",
+                summary,
+                "product_validation_state",
+                {
+                    "checks": "checks",
+                    "warning": "warnings",
+                    "degraded": "degraded",
+                    "failed": "failed checks",
                 },
             ),
             _html_state_row(
@@ -388,6 +414,7 @@ def inspect_workbench_summary(config: dict[str, Any], *, config_path: Path) -> W
     monitor_fields = _dict(_dict(summary.get("monitor_state")).get("fields"))
     outcome_fields = _dict(_dict(summary.get("outcome_state")).get("fields"))
     strategy_fields = _dict(_dict(summary.get("strategy_state")).get("fields"))
+    product_validation_fields = _dict(_dict(summary.get("product_validation_state")).get("fields"))
     quality_fields = _dict(_dict(summary.get("data_quality_state")).get("fields"))
     lines = [
         "Halpha workbench inspection succeeded.",
@@ -412,6 +439,11 @@ def inspect_workbench_summary(config: dict[str, Any], *, config_path: Path) -> W
         f"strategy_lifecycle_records: {_int(strategy_fields.get('strategy_lifecycle_records'))}",
         f"strategy_lifecycle_degraded: {_int(strategy_fields.get('strategy_lifecycle_degraded'))}",
         f"strategy_lifecycle_retired: {_int(strategy_fields.get('strategy_lifecycle_retired'))}",
+        f"product_validation_state: {_section_status_text(summary, 'product_validation_state')}",
+        f"product_validation_checks: {_int(product_validation_fields.get('checks'))}",
+        f"product_validation_warnings: {_int(product_validation_fields.get('warning'))}",
+        f"product_validation_degraded: {_int(product_validation_fields.get('degraded'))}",
+        f"product_validation_failed: {_int(product_validation_fields.get('failed'))}",
         f"data_quality_state: {_section_status_text(summary, 'data_quality_state')}",
         f"data_quality_warnings: {_int(quality_fields.get('warnings'))}",
         f"warning_count: {len(_list(summary.get('warnings')))}",
@@ -864,6 +896,41 @@ def _data_quality_state(selection: _RunSelection, manifest: dict[str, Any]) -> d
     )
 
 
+def _product_validation_state(selection: _RunSelection, manifest: dict[str, Any]) -> dict[str, Any]:
+    refs = _manifest_artifact_refs(
+        manifest,
+        {"product_contract_validation": PRODUCT_CONTRACT_VALIDATION_ARTIFACT},
+    )
+    if selection.run_dir is None:
+        return _section("missing", source_artifacts=refs, reason="no selected run.")
+    artifacts = _artifact_statuses(selection.run_dir, refs)
+    validation_ref = refs["product_contract_validation"]
+    validation, _ = _read_json(selection.run_dir / validation_ref)
+    counts = _dict(validation.get("counts"))
+    source_refs = _bounded_source_refs(validation.get("source_artifacts"))
+    fields = {
+        "validation_status": validation.get("status") or _artifact_source_status(artifacts),
+        "checks": _int(counts.get("checks")),
+        "ok": _int(counts.get("ok")),
+        "warning": _int(counts.get("warning")),
+        "degraded": _int(counts.get("degraded")),
+        "failed": _int(counts.get("failed")),
+        "skipped": _int(counts.get("skipped")),
+        "errors": _int(counts.get("errors")),
+        "warnings": _int(counts.get("warnings")),
+        "source_artifact_refs": source_refs["refs"],
+        "source_artifact_refs_omitted": source_refs["omitted"],
+    }
+    return _section(
+        _section_status(artifacts),
+        source_artifacts=refs,
+        fields=fields,
+        details={"artifacts": artifacts},
+        warnings=_artifact_warnings(artifacts),
+        errors=_artifact_errors(artifacts),
+    )
+
+
 def _manifest_artifact_refs(manifest: dict[str, Any], defaults: dict[str, str]) -> dict[str, str]:
     manifest_refs = _dict(manifest.get("artifacts"))
     refs: dict[str, str] = {}
@@ -892,6 +959,13 @@ def _lifecycle_artifact_status_fields(artifacts: list[dict[str, Any]]) -> dict[s
         "strategy_lifecycle_state_status": str(statuses.get("strategy_lifecycle_state") or "missing"),
         "strategy_lifecycle_material_status": str(statuses.get("strategy_lifecycle_material") or "missing"),
     }
+
+
+def _artifact_source_status(artifacts: list[dict[str, Any]]) -> str:
+    if not artifacts:
+        return "missing"
+    value = artifacts[0].get("source_status") or artifacts[0].get("status")
+    return str(value or "unknown")
 
 
 def _artifact_statuses(run_dir: Path | None, refs: dict[str, str]) -> list[dict[str, Any]]:
@@ -977,6 +1051,14 @@ def _source_artifacts(selection: _RunSelection, manifest: dict[str, Any], *, bas
             for key, value in refs.items()
             if not value.startswith(("analysis/", "raw/", "data/")) and key != "report"
         },
+    }
+
+
+def _bounded_source_refs(value: Any, *, limit: int = 12) -> dict[str, Any]:
+    refs = [str(item) for item in _list(value) if isinstance(item, str) and item]
+    return {
+        "refs": refs[:limit],
+        "omitted": max(0, len(refs) - limit),
     }
 
 

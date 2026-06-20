@@ -122,6 +122,10 @@ def test_workbench_inspect_prints_existing_summary(tmp_path: Path, capsys) -> No
             "monitor_state": {"status": "missing", "fields": {"cycle_count": 0}},
             "outcome_state": {"status": "missing", "fields": {"evaluation_records": 0}},
             "strategy_state": {"status": "available", "fields": {"strategy_gate_effective": 3}},
+            "product_validation_state": {
+                "status": "failed",
+                "fields": {"checks": 5, "warning": 1, "degraded": 0, "failed": 1},
+            },
             "data_quality_state": {"status": "available", "fields": {"warnings": 1}},
             "warnings": ["one source artifact was missing"],
             "errors": [],
@@ -139,6 +143,9 @@ def test_workbench_inspect_prints_existing_summary(tmp_path: Path, capsys) -> No
     assert "strategy_gate_effective: 3" in output
     assert "strategy_lifecycle_state_status: missing" in output
     assert "strategy_lifecycle_degraded: 0" in output
+    assert "product_validation_state: failed" in output
+    assert "product_validation_checks: 5" in output
+    assert "product_validation_failed: 1" in output
     assert "warning_count: 1" in output
 
 

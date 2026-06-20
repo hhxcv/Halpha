@@ -352,8 +352,9 @@ Workbench delivery artifacts:
 - `runs/workbench/latest/index.html`
 
 Workbench artifacts summarize and link to existing deterministic artifacts for
-local consumption. They are delivery outputs, not upstream analysis inputs,
-decision artifacts, alert-priority sources, strategy-gate inputs, or Codex
+local consumption, including bounded product-validation health when available.
+They are delivery outputs, not upstream analysis inputs, decision artifacts,
+alert-priority sources, strategy-gate inputs, validation authorities, or Codex
 context by default. Codex should continue to consume bounded report-facing
 material rather than full workbench summaries or generated indexes.
 

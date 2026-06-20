@@ -48,9 +48,19 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert summary["strategy_state"]["fields"]["strategy_lifecycle_degraded"] == 1
     assert summary["strategy_state"]["fields"]["strategy_lifecycle_retired"] == 1
     assert summary["strategy_state"]["fields"]["strategy_lifecycle_state_status"] == "available"
+    assert summary["product_validation_state"]["status"] == "available"
+    assert summary["product_validation_state"]["fields"]["checks"] == 12
+    assert summary["product_validation_state"]["fields"]["failed"] == 0
+    assert summary["product_validation_state"]["fields"]["source_artifact_refs"] == [
+        "run_manifest.json",
+        "analysis/risk_assessment.json",
+    ]
     assert summary["data_quality_state"]["fields"]["checks"] == 10
     assert summary["source_artifacts"]["analysis"]["decision_recommendations"] == "analysis/decision_recommendations.json"
     assert summary["source_artifacts"]["analysis"]["strategy_lifecycle_state"] == "analysis/strategy_lifecycle_state.json"
+    assert summary["source_artifacts"]["analysis"]["product_contract_validation"] == (
+        "analysis/product_contract_validation.json"
+    )
     assert summary["omitted"]["full_intermediate_json_embedded"] is False
     assert summary["codex_boundary"]["codex_input_by_default"] is False
     markdown = (tmp_path / "runs" / "workbench" / "latest" / "index.md").read_text(encoding="utf-8")
@@ -58,9 +68,12 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert "# Halpha Workbench" in markdown
     assert "../../run-1/report/report.md" in markdown
     assert "Decision and watch" in markdown
+    assert "Product validation" in markdown
+    assert "failed checks: 0" in markdown
     assert "degraded lifecycle: 1" in markdown
     assert "<table>" in html
     assert "../../run-1/report/report.md" in html
+    assert "Product validation" in html
     assert "retired lifecycle: 1" in html
 
 
@@ -79,6 +92,7 @@ def test_workbench_summary_handles_missing_run_index(tmp_path: Path) -> None:
     assert summary["source_selection"]["status"] == "missing"
     assert summary["source_selection"]["source_artifact"] == "data/research/index.sqlite"
     assert summary["latest_run"]["status"] == "missing"
+    assert summary["product_validation_state"]["status"] == "missing"
     assert "local run index was not found." in summary["warnings"]
     assert summary["source_artifacts"] == {}
     markdown = (tmp_path / "runs" / "workbench" / "latest" / "index.md").read_text(encoding="utf-8")
@@ -139,6 +153,7 @@ def test_workbench_html_escapes_summary_text() -> None:
             "monitor_state": {"status": "missing", "fields": {}},
             "outcome_state": {"status": "missing", "fields": {}},
             "strategy_state": {"status": "available", "fields": {"strategy_gate_effective": 3}},
+            "product_validation_state": {"status": "available", "fields": {"checks": 4, "failed": 0}},
             "data_quality_state": {"status": "available", "fields": {"warnings": 0}},
             "source_artifacts": {},
             "warnings": ["<private-note>"],
@@ -221,6 +236,7 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
             "strategy_effectiveness_gates": "analysis/strategy_effectiveness_gates.json",
             "strategy_lifecycle_state": "analysis/strategy_lifecycle_state.json",
             "strategy_lifecycle_material": "analysis/strategy_lifecycle_material.md",
+            "product_contract_validation": "analysis/product_contract_validation.json",
             "data_quality_summary": "analysis/data_quality_summary.json",
         }
     )
@@ -259,6 +275,10 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
             "strategy_lifecycle_policy_records": 1,
             "strategy_lifecycle_warnings": 1,
             "strategy_lifecycle_errors": 0,
+            "product_contract_validation_checks": 12,
+            "product_contract_validation_warning": 0,
+            "product_contract_validation_degraded": 0,
+            "product_contract_validation_failed": 0,
             "data_quality_checks": 10,
             "data_quality_warnings": 0,
             "data_quality_errors": 0,
@@ -271,6 +291,29 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
         if not ref.startswith("analysis/"):
             continue
         write_json(run.run_dir / ref, _artifact(key, counts={"records": 1}))
+    write_json(
+        run.analysis_dir / "product_contract_validation.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "product_contract_validation",
+            "run_id": run.run_id,
+            "status": "ok",
+            "counts": {
+                "checks": 12,
+                "ok": 12,
+                "warning": 0,
+                "degraded": 0,
+                "failed": 0,
+                "skipped": 0,
+                "warnings": 0,
+                "errors": 0,
+            },
+            "checks": [],
+            "source_artifacts": ["run_manifest.json", "analysis/risk_assessment.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
     write_json(
         tmp_path / "runs" / "monitor" / "alert_archive_state.json",
         {
