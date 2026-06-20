@@ -45,6 +45,11 @@ EVENT_ALERT_ARTIFACTS = (
     ("alert_decision_material", "Alert decision material", "analysis/alert_decision_material.md"),
     ("event_intelligence_material", "Event intelligence material", "analysis/event_intelligence_material.md"),
 )
+OUTCOME_TRACKING_ARTIFACTS = (
+    ("outcome_targets", "Outcome targets", "analysis/outcome_targets.json"),
+    ("outcome_evaluations", "Outcome evaluations", "analysis/outcome_evaluations.json"),
+    ("outcome_tracking_material", "Outcome tracking material", "analysis/outcome_tracking_material.md"),
+)
 DATA_STORE_SECTION_NAMES = {
     "research_data_catalog",
     "run_index",
@@ -120,6 +125,10 @@ def create_dashboard_app(
     @app.get("/api/event-alert")
     def event_alert_endpoint(run_id: str | None = None) -> dict[str, Any]:
         return dashboard_event_alert(config_path=config_path, run_id=run_id)
+
+    @app.get("/api/outcomes")
+    def outcomes_endpoint(run_id: str | None = None) -> dict[str, Any]:
+        return dashboard_outcomes(config_path=config_path, run_id=run_id)
 
     @app.get("/api/runs")
     def runs_endpoint() -> dict[str, Any]:
@@ -254,6 +263,7 @@ def dashboard_health(
             "workbench_api": "available",
             "decision_risk_api": "available",
             "event_alert_api": "available",
+            "outcome_tracking_api": "available",
             "schedule_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
@@ -509,6 +519,112 @@ def dashboard_event_alert(*, config_path: Path, run_id: str | None = None) -> di
             for error in _string_list(artifact.get("errors"))
         ],
         "omitted": {"full_event_alert_artifacts_embedded": False},
+    }
+
+
+def dashboard_outcomes(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
+    history = _outcome_history_store_section(config_path)
+    selected = _dashboard_selected_run(config_path, run_id=run_id)
+    if selected["status"] != "available":
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_outcomes",
+            "status": _overall_status([selected["status"], history["status"]]),
+            "selected_run": selected,
+            "artifacts": [],
+            "history": history,
+            "source_artifacts": sorted(
+                {
+                    *selected.get("source_artifacts", []),
+                    *history.get("source_artifacts", []),
+                }
+            ),
+            "warnings": [*selected.get("warnings", []), *history.get("warnings", [])],
+            "errors": [*selected.get("errors", []), *history.get("errors", [])],
+            "jobs": {"outcomes_inspect": "available"},
+            "omitted": {
+                "full_outcome_artifacts_embedded": False,
+                "full_outcome_history_embedded": False,
+            },
+        }
+    base = _config_base(config_path)
+    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
+    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
+    manifest, error = _read_json(manifest_path)
+    if error:
+        failed = {
+            **selected,
+            "status": "failed",
+            "errors": [error],
+        }
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_outcomes",
+            "status": _overall_status(["failed", history["status"]]),
+            "selected_run": failed,
+            "artifacts": [],
+            "history": history,
+            "source_artifacts": sorted(
+                {
+                    RUN_INDEX_ARTIFACT,
+                    _safe_ref(manifest_path, base=base),
+                    *history.get("source_artifacts", []),
+                }
+            ),
+            "warnings": history.get("warnings", []),
+            "errors": [error, *history.get("errors", [])],
+            "jobs": {"outcomes_inspect": "available"},
+            "omitted": {
+                "full_outcome_artifacts_embedded": False,
+                "full_outcome_history_embedded": False,
+            },
+        }
+
+    artifacts = [
+        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
+        for key, title, default in OUTCOME_TRACKING_ARTIFACTS
+    ]
+    source_artifacts = sorted(
+        {
+            RUN_INDEX_ARTIFACT,
+            _safe_ref(manifest_path, base=base),
+            *history.get("source_artifacts", []),
+            *[
+                ref
+                for artifact in artifacts
+                for ref in _string_list(artifact.get("source_artifacts"))
+            ],
+        }
+    )
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_outcomes",
+        "status": _overall_status([history["status"], *[artifact["status"] for artifact in artifacts]]),
+        "selected_run": selected,
+        "artifacts": artifacts,
+        "history": history,
+        "source_artifacts": source_artifacts,
+        "warnings": [
+            *history.get("warnings", []),
+            *[
+                warning
+                for artifact in artifacts
+                for warning in _string_list(artifact.get("warnings"))
+            ],
+        ],
+        "errors": [
+            *history.get("errors", []),
+            *[
+                error
+                for artifact in artifacts
+                for error in _string_list(artifact.get("errors"))
+            ],
+        ],
+        "jobs": {"outcomes_inspect": "available"},
+        "omitted": {
+            "full_outcome_artifacts_embedded": False,
+            "full_outcome_history_embedded": False,
+        },
     }
 
 
@@ -1530,7 +1646,16 @@ def _dashboard_run_artifact_summary(
 
 
 def _dashboard_record_count(data: dict[str, Any]) -> int:
-    for key in ("records", "items", "recommendations", "triggers", "changes", "risk_assessments"):
+    for key in (
+        "records",
+        "items",
+        "recommendations",
+        "triggers",
+        "changes",
+        "risk_assessments",
+        "targets",
+        "evaluations",
+    ):
         value = data.get(key)
         if isinstance(value, list):
             return len(value)
