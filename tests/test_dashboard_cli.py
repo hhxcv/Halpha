@@ -46,6 +46,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["artifact_preview_api"] == "available"
     assert payload["features"]["data_store_api"] == "available"
     assert payload["features"]["strategy_research_api"] == "available"
+    assert payload["features"]["monitor_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "available"
 
@@ -75,12 +76,21 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
+    assert 'data-monitor-endpoint="/api/monitor"' in response.text
+    assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert "Runs &amp; reports" in response.text
     assert "Report preview" in response.text
     assert "Store coverage" in response.text
     assert "Strategy lab" in response.text
     assert "Historical strategy research" in response.text
+    assert "Monitor control" in response.text
+    assert "Dry run" in response.text
+    assert "Run one cycle" in response.text
+    assert "Start finite loop" in response.text
+    assert "Cancel job" in response.text
+    assert "cancellation unsupported" in response.text
+    assert "bounded local jobs" in response.text
     assert "Command center" in response.text
     assert "pending" in response.text
     assert str(tmp_path) not in response.text

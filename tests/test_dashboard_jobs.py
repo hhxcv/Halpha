@@ -175,6 +175,70 @@ def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, 
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
+def test_dashboard_job_manager_accepts_monitor_command_intents(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    commands: list[list[str]] = []
+    outputs = [
+        "Halpha monitor dry run succeeded.\ncycle_execution: not_run",
+        "Halpha monitor cycle succeeded.\nmonitor_manifest: runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json",
+        "Halpha monitor loop succeeded.\nhealth_state: runs/monitor/monitor_health_state.json",
+    ]
+
+    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        index = len(commands)
+        commands.append(command)
+        return _FakeProcess(stdout=outputs[index], stderr="", returncode=0)
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        (
+            "monitor_dry_run",
+            {},
+            ["python", "-m", "halpha", "monitor", "run", "--config", "<external-config>", "--dry-run"],
+            {},
+        ),
+        (
+            "monitor_once",
+            {},
+            ["python", "-m", "halpha", "monitor", "run", "--config", "<external-config>", "--once"],
+            {"monitor_manifest": "runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json"},
+        ),
+        (
+            "monitor_loop",
+            {"max_cycles": 2, "interval_seconds": 1},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "monitor",
+                "run",
+                "--config",
+                "<external-config>",
+                "--max-cycles",
+                "2",
+                "--interval-seconds",
+                "1",
+            ],
+            {"health_state": "runs/monitor/monitor_health_state.json"},
+        ),
+    ]
+
+    for intent, params, preview, expected_refs in cases:
+        job = manager.create_job({"intent": intent, "params": params})
+        completed = _wait_for_terminal(manager, job["job_id"])
+        assert completed["status"] == "succeeded"
+        assert completed["intent"] == intent
+        assert completed["command"] == preview
+        for key, value in expected_refs.items():
+            assert completed["result_refs"][key] == value
+            assert value in completed["source_artifacts"]
+
+    assert len(commands) == len(cases)
+    assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
+
+
 def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -562,6 +626,33 @@ def test_dashboard_job_manager_rejects_unsafe_strategy_text_paths_before_process
         (
             {"intent": "text_intel", "params": {"input_path": "runs/missing/text_events.json"}},
             "input_path must reference an existing file",
+        ),
+    ]
+
+    for request, error in cases:
+        job = manager.create_job(request)
+        assert job["status"] == "blocked"
+        assert error in job["errors"][0]
+
+
+def test_dashboard_job_manager_rejects_invalid_monitor_loop_params_before_process(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("invalid monitor loop params must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        ({"intent": "monitor_loop", "params": {}}, "max_cycles must be a positive integer"),
+        ({"intent": "monitor_loop", "params": {"max_cycles": 0}}, "max_cycles must be a positive integer"),
+        (
+            {"intent": "monitor_loop", "params": {"max_cycles": 1, "interval_seconds": "1"}},
+            "interval_seconds must be a positive integer",
         ),
     ]
 
