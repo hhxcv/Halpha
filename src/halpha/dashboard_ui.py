@@ -362,6 +362,31 @@ def dashboard_index_html() -> str:
       color: var(--red);
     }
 
+    .empty-state {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-soft);
+    }
+
+    .empty-title {
+      font-weight: 760;
+    }
+
+    .empty-detail {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .empty-action {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     .layout-row {
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
@@ -2393,6 +2418,15 @@ def dashboard_index_html() -> str:
       return rows.length ? `<ul class="message-list">${rows.join("")}</ul>` : "";
     }
 
+    function emptyState(title, detail, action = "") {
+      return `
+        <div class="empty-state">
+          <div class="empty-title">${escapeHtml(title)}</div>
+          <div class="empty-detail">${escapeHtml(detail)}</div>
+          ${action ? `<div class="empty-action">${escapeHtml(action)}</div>` : ""}
+        </div>`;
+    }
+
     async function fetchJson(url) {
       const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) {
@@ -2669,7 +2703,11 @@ def dashboard_index_html() -> str:
       const list = document.querySelector("#run-list");
       if (!runs.length) {
         list.innerHTML = `
-          <div class="message warning">${escapeHtml((payload.warnings && payload.warnings[0]) || "No runs are recorded in the local run index.")}</div>
+          ${emptyState(
+            "No product runs yet",
+            "The local run index has no completed or attempted product runs. This is expected in a new workspace.",
+            "Create a run from Command center, or run the product pipeline from the CLI."
+          )}
           ${messages(payload)}`;
         return;
       }
@@ -2732,11 +2770,18 @@ def dashboard_index_html() -> str:
       document.querySelector("#stage-count").textContent = "0 stages";
       document.querySelector("#artifact-count").className = "badge missing";
       document.querySelector("#artifact-count").textContent = "0 refs";
-      document.querySelector("#stage-list").innerHTML = messages(payload) || `<li class="message warning">Run detail is not available.</li>`;
+      document.querySelector("#stage-list").innerHTML = messages(payload) || `<li>${emptyState(
+        "Run detail is not available",
+        "Select an existing run or create a product run before inspecting stage status."
+      )}</li>`;
       document.querySelector("#artifact-list").innerHTML = "";
       document.querySelector("#report-status").className = "badge missing";
       document.querySelector("#report-status").textContent = "missing";
-      document.querySelector("#report-preview").innerHTML = `<div class="message warning">No report preview is available.</div>`;
+      document.querySelector("#report-preview").innerHTML = emptyState(
+        "No report preview",
+        "A report preview appears after a selected run records report/report.md.",
+        "Use a product run with report generation when Codex is intentionally enabled."
+      );
     }
 
     function renderRunDetailFailure(runId, error) {
@@ -2779,7 +2824,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${stages.length ? "available" : "missing"}`;
       count.textContent = `${stages.length} stage${stages.length === 1 ? "" : "s"}`;
       if (!stages.length) {
-        document.querySelector("#stage-list").innerHTML = `<li class="message warning">No stage timeline is available for this run.</li>`;
+        document.querySelector("#stage-list").innerHTML = `<li>${emptyState(
+          "No stage timeline",
+          "This run detail does not include stage records. Re-run validation or inspect the run manifest if this was expected."
+        )}</li>`;
         return;
       }
       document.querySelector("#stage-list").innerHTML = stages.map((stage) => {
@@ -2812,7 +2860,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${artifacts.length ? "available" : "missing"}`;
       count.textContent = `${artifacts.length} ref${artifacts.length === 1 ? "" : "s"}`;
       if (!artifacts.length) {
-        document.querySelector("#artifact-list").innerHTML = `<li class="message warning">No artifact refs are recorded in this manifest.</li>`;
+        document.querySelector("#artifact-list").innerHTML = `<li>${emptyState(
+          "No artifact refs",
+          "The selected run manifest did not record previewable artifact refs. This can happen for incomplete or early failed runs."
+        )}</li>`;
         return;
       }
       document.querySelector("#artifact-list").innerHTML = artifacts.map((artifact) => `
@@ -2875,7 +2926,11 @@ def dashboard_index_html() -> str:
       count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
       const list = document.querySelector("#artifact-run-list");
       if (!runs.length) {
-        list.innerHTML = messages(payload) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        list.innerHTML = messages(payload) || emptyState(
+          "No runs with artifacts yet",
+          "Artifact review starts after a product run records a run manifest and artifact refs.",
+          "Create a run from Command center, then return to Artifact explorer."
+        );
         return;
       }
       list.innerHTML = runs.map((run) => `
@@ -2931,8 +2986,14 @@ def dashboard_index_html() -> str:
       document.querySelector("#selected-artifact-run-status").textContent = "none";
       document.querySelector("#artifact-explorer-count").className = `badge ${normalizeStatus(payload.status)}`;
       document.querySelector("#artifact-explorer-count").textContent = "0 refs";
-      document.querySelector("#artifact-explorer-list").innerHTML = messages(payload) || `<div class="message warning">No artifact refs are available.</div>`;
-      document.querySelector("#artifact-explorer-preview").innerHTML = `<div class="message">Open an artifact to inspect a bounded preview.</div>`;
+      document.querySelector("#artifact-explorer-list").innerHTML = messages(payload) || emptyState(
+        "No artifact refs available",
+        "Select a run with a manifest, or create a new product run that reaches artifact-producing stages."
+      );
+      document.querySelector("#artifact-explorer-preview").innerHTML = emptyState(
+        "No artifact selected",
+        "Open a supported JSON, JSONL, Markdown, text, YAML, or CSV artifact to inspect a bounded preview."
+      );
     }
 
     function renderArtifactExplorerFailure(runId, error) {
@@ -2953,7 +3014,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${artifacts.length ? "available" : "missing"}`;
       count.textContent = `${artifacts.length} ref${artifacts.length === 1 ? "" : "s"}`;
       if (!artifacts.length) {
-        document.querySelector("#artifact-explorer-list").innerHTML = `<div class="message warning">No artifact refs match the current filter.</div>`;
+        document.querySelector("#artifact-explorer-list").innerHTML = emptyState(
+          "No artifacts match this filter",
+          "Clear the layer or text filter to see the selected run's recorded refs."
+        );
         return;
       }
       if (!artifacts.some((artifact) => artifact.previewPath === selectedArtifactPath)) {
@@ -3129,7 +3193,13 @@ def dashboard_index_html() -> str:
       count.className = `badge ${stores.length ? normalizeStatus(payload.status) : "missing"}`;
       count.textContent = `${stores.length} store${stores.length === 1 ? "" : "s"}`;
       if (!visible.length) {
-        document.querySelector("#data-store-list").innerHTML = `<div class="message warning">No stores match the current filter.</div>`;
+        document.querySelector("#data-store-list").innerHTML = stores.length
+          ? emptyState("No stores match this filter", "Clear the group or text filter to inspect recorded local store metadata.")
+          : emptyState(
+              "No local store metadata yet",
+              "The data catalog and store state files are created by product runs and data inspection workflows.",
+              "Run data inspect or create a product run from Command center."
+            );
         renderDataStoreDetail(null);
         return;
       }
@@ -3212,7 +3282,10 @@ def dashboard_index_html() -> str:
       if (!store) {
         document.querySelector("#data-store-detail-badge").className = "badge missing";
         document.querySelector("#data-store-detail-badge").textContent = "missing";
-        document.querySelector("#data-store-detail").innerHTML = `<div class="message warning">No store is selected.</div>`;
+        document.querySelector("#data-store-detail").innerHTML = emptyState(
+          "No store selected",
+          "Select a local store after metadata is available. New workspaces may not have store metadata yet."
+        );
         return;
       }
       document.querySelector("#data-store-detail-title").textContent = store.title || store.name;
@@ -3253,7 +3326,10 @@ def dashboard_index_html() -> str:
       if (store.preview_path) {
         loadArtifactPreview(store.preview_path, "#data-preview");
       } else {
-        document.querySelector("#data-preview").innerHTML = `<div class="message warning">No bounded metadata preview is available for this store.</div>`;
+        document.querySelector("#data-preview").innerHTML = emptyState(
+          "No bounded metadata preview",
+          "This store exposes status fields but no safe preview file. Use the coverage and source refs above."
+        );
       }
     }
 
@@ -3323,7 +3399,13 @@ def dashboard_index_html() -> str:
       count.className = `badge ${items.length ? normalizeStatus(payload.status) : "missing"}`;
       count.textContent = `${items.length} item${items.length === 1 ? "" : "s"}`;
       if (!visible.length) {
-        document.querySelector("#strategy-list").innerHTML = `<div class="message warning">No strategy outputs match the current filter.</div>`;
+        document.querySelector("#strategy-list").innerHTML = items.length
+          ? emptyState("No strategy outputs match this filter", "Clear the output or text filter to inspect available strategy artifacts.")
+          : emptyState(
+              "No strategy outputs yet",
+              "Strategy artifacts appear after a product run reaches strategy stages or after standalone backtest and experiment jobs.",
+              "Use Strategy commands to run a configured backtest or experiment."
+            );
         renderStrategyDetail(null);
         return;
       }
@@ -3651,8 +3733,14 @@ def dashboard_index_html() -> str:
         document.querySelector("#strategy-detail-title").textContent = "Strategy detail";
         document.querySelector("#strategy-detail-badge").className = "badge missing";
         document.querySelector("#strategy-detail-badge").textContent = "missing";
-        document.querySelector("#strategy-detail").innerHTML = `<div class="message warning">No strategy output is selected.</div>`;
-        document.querySelector("#strategy-preview").innerHTML = `<div class="message warning">No strategy artifact preview is available.</div>`;
+        document.querySelector("#strategy-detail").innerHTML = emptyState(
+          "No strategy output selected",
+          "Select a strategy artifact after strategy evidence exists. Missing strategy evidence is expected before strategy stages or standalone jobs run."
+        );
+        document.querySelector("#strategy-preview").innerHTML = emptyState(
+          "No strategy preview",
+          "Open a previewable strategy source ref after selecting an output."
+        );
         return;
       }
       document.querySelector("#selected-strategy-status").textContent = item.title;
@@ -3978,7 +4066,11 @@ def dashboard_index_html() -> str:
       badgeNode.className = `badge ${cycles.length ? normalizeStatus(cyclesPayload.status) : "missing"}`;
       badgeNode.textContent = `${cycles.length} shown`;
       if (!cycles.length) {
-        document.querySelector("#monitor-cycle-list").innerHTML = messages(cyclesPayload) || `<li class="message warning">No monitor cycles are recorded.</li>`;
+        document.querySelector("#monitor-cycle-list").innerHTML = messages(cyclesPayload) || `<li>${emptyState(
+          "No monitor cycles yet",
+          "Monitor cycles are recorded only after an explicit monitor dry run, one-cycle run, or finite loop job starts.",
+          "Use Monitor control to start a bounded local monitor job."
+        )}</li>`;
         return;
       }
       document.querySelector("#monitor-cycle-list").innerHTML = cycles.map((cycle) => {
@@ -4012,7 +4104,10 @@ def dashboard_index_html() -> str:
       badgeNode.className = `badge ${records.length ? normalizeStatus(archive.status) : "missing"}`;
       badgeNode.textContent = `${records.length} sample${records.length === 1 ? "" : "s"}`;
       if (!records.length) {
-        document.querySelector("#monitor-alert-sample").innerHTML = messages(archive) || `<li class="message warning">No alert archive sample is available.</li>`;
+        document.querySelector("#monitor-alert-sample").innerHTML = messages(archive) || `<li>${emptyState(
+          "No alert samples yet",
+          "The alert archive remains empty until monitor cycles evaluate alert decisions. No alerts is a normal state when nothing has emitted."
+        )}</li>`;
         return;
       }
       document.querySelector("#monitor-alert-sample").innerHTML = records.slice(0, 8).map((record) => `
@@ -4087,7 +4182,11 @@ def dashboard_index_html() -> str:
       count.className = `badge ${entries.length ? "available" : "missing"}`;
       count.textContent = `${entries.length} section${entries.length === 1 ? "" : "s"}`;
       if (!entries.length) {
-        document.querySelector("#workbench-section-list").innerHTML = `<div class="message warning">No workbench state sections are available.</div>`;
+        document.querySelector("#workbench-section-list").innerHTML = emptyState(
+          "No workbench sections yet",
+          "Workbench sections are generated by the local workbench build after product artifacts exist.",
+          "Run Workbench build from Command center after a product run."
+        );
         return;
       }
       document.querySelector("#workbench-section-list").innerHTML = entries.map(([name, section]) => {
@@ -4113,7 +4212,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${refs.length ? "available" : "missing"}`;
       count.textContent = `${refs.length} ref${refs.length === 1 ? "" : "s"}`;
       if (!refs.length) {
-        document.querySelector("#workbench-source-list").innerHTML = `<div class="message warning">No workbench source refs are available.</div>`;
+        document.querySelector("#workbench-source-list").innerHTML = emptyState(
+          "No workbench source refs",
+          "The latest workbench summary did not record previewable source refs. Build the workbench after a product run to populate this list."
+        );
         return;
       }
       document.querySelector("#workbench-source-list").innerHTML = refs.slice(0, 30).map((ref) => {
@@ -4165,7 +4267,11 @@ def dashboard_index_html() -> str:
       count.className = `badge ${runs.length ? "available" : "missing"}`;
       count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
       if (!runs.length) {
-        document.querySelector("#decision-run-list").innerHTML = messages(decisionRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        document.querySelector("#decision-run-list").innerHTML = messages(decisionRunsPayload || {}) || emptyState(
+          "No runs for decision review",
+          "Decision and risk artifacts are selected from product runs. This view is empty until a run is recorded.",
+          "Create a product run from Command center."
+        );
         return;
       }
       document.querySelector("#decision-run-list").innerHTML = runs.map((run) => `
@@ -4212,7 +4318,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
       count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
       if (!artifacts.length) {
-        document.querySelector("#decision-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No decision or risk artifacts are available for the selected run.</div>`;
+        document.querySelector("#decision-artifact-list").innerHTML = messages(payload) || emptyState(
+          "No decision or risk artifacts",
+          "The selected run has not produced decision, risk, recommendation, watch, or delta artifacts."
+        );
         document.querySelector("#decision-artifact-detail").innerHTML = "";
         return;
       }
@@ -4246,7 +4355,10 @@ def dashboard_index_html() -> str:
 
     function renderDecisionArtifactDetail(artifact) {
       if (!artifact) {
-        document.querySelector("#decision-artifact-detail").innerHTML = `<div class="message warning">Decision artifact detail is not available.</div>`;
+        document.querySelector("#decision-artifact-detail").innerHTML = emptyState(
+          "No decision artifact selected",
+          "Select a decision or risk artifact to inspect status, counts, warnings, and source refs."
+        );
         return;
       }
       const fields = artifact.fields || {};
@@ -4310,7 +4422,11 @@ def dashboard_index_html() -> str:
       count.className = `badge ${runs.length ? "available" : "missing"}`;
       count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
       if (!runs.length) {
-        document.querySelector("#event-run-list").innerHTML = messages(eventRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        document.querySelector("#event-run-list").innerHTML = messages(eventRunsPayload || {}) || emptyState(
+          "No runs for event review",
+          "Event and alert artifacts are selected from product runs. This view is empty until a run is recorded.",
+          "Create a product run from Command center."
+        );
         return;
       }
       document.querySelector("#event-run-list").innerHTML = runs.map((run) => `
@@ -4357,7 +4473,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
       count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
       if (!artifacts.length) {
-        document.querySelector("#event-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No event or alert artifacts are available for the selected run.</div>`;
+        document.querySelector("#event-artifact-list").innerHTML = messages(payload) || emptyState(
+          "No event or alert artifacts",
+          "The selected run has not produced text-event, event-intelligence, alert, or confluence artifacts."
+        );
         document.querySelector("#event-artifact-detail").innerHTML = "";
         return;
       }
@@ -4391,7 +4510,10 @@ def dashboard_index_html() -> str:
 
     function renderEventArtifactDetail(artifact) {
       if (!artifact) {
-        document.querySelector("#event-artifact-detail").innerHTML = `<div class="message warning">Event artifact detail is not available.</div>`;
+        document.querySelector("#event-artifact-detail").innerHTML = emptyState(
+          "No event artifact selected",
+          "Select an event or alert artifact to inspect status, counts, warnings, and source refs."
+        );
         return;
       }
       const fields = artifact.fields || {};
@@ -4456,7 +4578,11 @@ def dashboard_index_html() -> str:
       count.className = `badge ${runs.length ? "available" : "missing"}`;
       count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
       if (!runs.length) {
-        document.querySelector("#text-run-list").innerHTML = messages(textRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        document.querySelector("#text-run-list").innerHTML = messages(textRunsPayload || {}) || emptyState(
+          "No runs for text intelligence",
+          "Text intelligence artifacts can be reviewed after a product run records text-event outputs.",
+          "Create a product run or use Text commands when configured."
+        );
         return;
       }
       document.querySelector("#text-run-list").innerHTML = runs.map((run) => `
@@ -4503,7 +4629,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
       count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
       if (!artifacts.length) {
-        document.querySelector("#text-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No text intelligence artifacts are available for the selected run.</div>`;
+        document.querySelector("#text-artifact-list").innerHTML = messages(payload) || emptyState(
+          "No text intelligence artifacts",
+          "The selected run has not produced text records, entity evidence, topics, signals, or event material."
+        );
         document.querySelector("#text-artifact-detail").innerHTML = "";
         return;
       }
@@ -4537,7 +4666,10 @@ def dashboard_index_html() -> str:
 
     function renderTextArtifactDetail(artifact) {
       if (!artifact) {
-        document.querySelector("#text-artifact-detail").innerHTML = `<div class="message warning">Text artifact detail is not available.</div>`;
+        document.querySelector("#text-artifact-detail").innerHTML = emptyState(
+          "No text artifact selected",
+          "Select a text intelligence artifact to inspect status, counts, warnings, and source refs."
+        );
         return;
       }
       const fields = artifact.fields || {};
@@ -4587,7 +4719,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${jobs.length ? "available" : "missing"}`;
       count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
       if (!jobs.length) {
-        document.querySelector("#text-job-list").innerHTML = `<div class="message">No text intelligence jobs are recorded yet.</div>`;
+        document.querySelector("#text-job-list").innerHTML = emptyState(
+          "No text jobs yet",
+          "Text jobs appear after Prepare text models or Run text intelligence is started from this page or Command center."
+        );
         return;
       }
       document.querySelector("#text-job-list").innerHTML = jobs.map((job) => `
@@ -4738,7 +4873,11 @@ def dashboard_index_html() -> str:
       count.className = `badge ${runs.length ? "available" : "missing"}`;
       count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
       if (!runs.length) {
-        document.querySelector("#outcome-run-list").innerHTML = messages(outcomeRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        document.querySelector("#outcome-run-list").innerHTML = messages(outcomeRunsPayload || {}) || emptyState(
+          "No runs for outcome tracking",
+          "Outcome tracking compares later evidence against prior run targets. It needs at least one product run.",
+          "Create a product run, then revisit outcome tracking."
+        );
         return;
       }
       document.querySelector("#outcome-run-list").innerHTML = runs.map((run) => `
@@ -4785,7 +4924,10 @@ def dashboard_index_html() -> str:
       count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
       count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
       if (!artifacts.length) {
-        document.querySelector("#outcome-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No outcome artifacts are available for the selected run.</div>`;
+        document.querySelector("#outcome-artifact-list").innerHTML = messages(payload) || emptyState(
+          "No outcome artifacts",
+          "The selected run has not produced outcome targets, evaluations, or outcome tracking material."
+        );
         document.querySelector("#outcome-artifact-detail").innerHTML = "";
         renderOutcomeHistory(payload.history || {});
         return;
@@ -4821,7 +4963,10 @@ def dashboard_index_html() -> str:
 
     function renderOutcomeArtifactDetail(artifact) {
       if (!artifact) {
-        document.querySelector("#outcome-artifact-detail").innerHTML = `<div class="message warning">Outcome artifact detail is not available.</div>`;
+        document.querySelector("#outcome-artifact-detail").innerHTML = emptyState(
+          "No outcome artifact selected",
+          "Select an outcome artifact to inspect status, counts, warnings, and source refs."
+        );
         return;
       }
       const fields = artifact.fields || {};
@@ -4955,7 +5100,11 @@ def dashboard_index_html() -> str:
       count.className = `badge ${jobs.length ? "available" : "missing"}`;
       count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
       if (!jobs.length) {
-        document.querySelector("#monitor-job-list").innerHTML = `<div class="message warning">No monitor jobs are recorded in the dashboard job history.</div>`;
+        document.querySelector("#monitor-job-list").innerHTML = emptyState(
+          "No monitor jobs yet",
+          "Monitor jobs are recorded only after an explicit dry run, one-cycle run, or finite loop is started.",
+          "Use Monitor control to start a bounded local monitor job."
+        );
         scheduleMonitorJobPolling(false);
         return;
       }
@@ -5276,9 +5425,18 @@ def dashboard_index_html() -> str:
       count.className = `badge ${allJobs.length ? "available" : "missing"}`;
       count.textContent = `${jobs.length} of ${allJobs.length} job${allJobs.length === 1 ? "" : "s"}`;
       if (!allJobs.length) {
-        document.querySelector("#command-result").innerHTML = `<div class="message">Choose an allowlisted command to create a bounded local dashboard job.</div>`;
-        document.querySelector("#command-job-preview").innerHTML = `<div class="message">Open a job result ref, stdout, or stderr to inspect a bounded preview.</div>`;
-        document.querySelector("#command-job-list").innerHTML = messages(payload) || `<div class="message warning">No dashboard jobs are recorded.</div>`;
+        document.querySelector("#command-result").innerHTML = emptyState(
+          "No dashboard jobs yet",
+          "Jobs appear here after a command, monitor action, schedule trigger, strategy run, or text run is started."
+        );
+        document.querySelector("#command-job-preview").innerHTML = emptyState(
+          "No job preview selected",
+          "Open a completed job result ref, stdout, or stderr to inspect a bounded preview."
+        );
+        document.querySelector("#command-job-list").innerHTML = messages(payload) || emptyState(
+          "No dashboard jobs recorded",
+          "Start an allowlisted command to create visible local job history."
+        );
         scheduleCommandJobPolling(false);
         return;
       }
@@ -5290,7 +5448,10 @@ def dashboard_index_html() -> str:
         renderCommandResult(selectedJob);
       }
       if (!jobs.length) {
-        document.querySelector("#command-job-list").innerHTML = `<div class="message warning">No dashboard jobs match the current filters.</div>`;
+        document.querySelector("#command-job-list").innerHTML = emptyState(
+          "No jobs match this filter",
+          "Clear the intent, status, or kind filter to inspect recorded dashboard jobs."
+        );
         scheduleCommandJobPolling(active.length > 0);
         return;
       }
