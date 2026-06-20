@@ -54,6 +54,7 @@ STAGE_ORDER = (
     "build_data_quality_summary",
     "build_outcome_targets",
     "evaluate_outcomes",
+    "build_strategy_lifecycle_state",
     "build_feature_snapshots",
     "build_factor_states",
     "build_multi_source_signals",
@@ -388,6 +389,7 @@ def _stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[st
     handlers["build_data_quality_summary"] = _build_data_quality_summary
     handlers["build_outcome_targets"] = _build_outcome_targets
     handlers["evaluate_outcomes"] = _evaluate_outcomes
+    handlers["build_strategy_lifecycle_state"] = _build_strategy_lifecycle_state
     handlers["build_feature_snapshots"] = _build_feature_snapshots
     handlers["build_factor_states"] = _build_factor_states
     handlers["build_multi_source_signals"] = _build_multi_source_signals
@@ -797,6 +799,12 @@ def _evaluate_outcomes(config: dict[str, Any], run: RunContext) -> list[str] | N
     from .outcome_evaluations import evaluate_outcomes
 
     return evaluate_outcomes(config, run)
+
+
+def _build_strategy_lifecycle_state(config: dict[str, Any], run: RunContext) -> list[str] | None:
+    from .strategy_lifecycle import build_strategy_lifecycle_state
+
+    return build_strategy_lifecycle_state(config, run)
 
 
 def _build_feature_snapshots(config: dict[str, Any], run: RunContext) -> list[str] | None:

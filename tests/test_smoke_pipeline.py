@@ -186,6 +186,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_data_quality_summary", "succeeded"),
         ("build_outcome_targets", "succeeded"),
         ("evaluate_outcomes", "succeeded"),
+        ("build_strategy_lifecycle_state", "succeeded"),
         ("build_feature_snapshots", "succeeded"),
         ("build_factor_states", "succeeded"),
         ("build_multi_source_signals", "succeeded"),
@@ -359,6 +360,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         "analysis/decision_intelligence_material.md",
         "analysis/data_quality_summary.json",
         "analysis/data_quality_material.md",
+        "analysis/strategy_lifecycle_state.json",
         "analysis/feature_snapshots.json",
         "analysis/factor_states.json",
         "analysis/multi_source_signals.json",
@@ -421,6 +423,8 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["strategy_experiment_evaluations_insufficient_data"] == 0
     assert manifest["counts"]["strategy_gate_candidates"] == 1
     assert manifest["counts"]["strategy_experiment_material_records"] == 1
+    assert manifest["counts"]["strategy_lifecycle_records"] >= 1
+    assert manifest["counts"]["strategy_lifecycle_policy_records"] == 0
     assert manifest["counts"]["text_event_records"] == 1
     assert manifest["counts"]["text_event_records_with_warnings"] == 1
     assert manifest["counts"]["text_event_record_warnings"] == 1
@@ -491,6 +495,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["artifacts"]["strategy_experiment"] == "analysis/strategy_experiment.json"
     assert manifest["artifacts"]["strategy_effectiveness_gates"] == "analysis/strategy_effectiveness_gates.json"
     assert manifest["artifacts"]["strategy_experiment_material"] == "analysis/strategy_experiment_material.md"
+    assert manifest["artifacts"]["strategy_lifecycle_state"] == "analysis/strategy_lifecycle_state.json"
     assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["artifacts"]["market_signals"] == "analysis/market_signals.json"
     assert manifest["artifacts"]["market_signal_material"] == "analysis/market_signal_material.md"

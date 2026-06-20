@@ -353,6 +353,72 @@ def test_load_config_accepts_effectiveness_gate_thresholds(tmp_path: Path) -> No
     }
 
 
+def test_load_config_accepts_lifecycle_policy_records(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            (
+                "        target_volatility: 0.2\n"
+                "  lifecycle_policy:\n"
+                "    records:\n"
+                "      - action: retire\n"
+                "        strategy_name: tsmom_vol_scaled\n"
+                "        reason: review decision\n"
+                "        created_at: 2026-06-06T00:00:00Z\n"
+                "        scope:\n"
+                "          symbol: BTCUSDT\n"
+                "          timeframe: 1d"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    record = config["quant"]["lifecycle_policy"]["records"][0]
+    assert record["action"] == "retire"
+    assert record["strategy_name"] == "tsmom_vol_scaled"
+    assert record["scope"] == {"symbol": "BTCUSDT", "timeframe": "1d"}
+
+
+@pytest.mark.parametrize(
+    ("policy_block", "expected"),
+    [
+        ("  lifecycle_policy:\n    unsupported: true", r"unsupported quant\.lifecycle_policy field"),
+        ("  lifecycle_policy:\n    records: invalid", r"quant\.lifecycle_policy\.records must be a list"),
+        (
+            "  lifecycle_policy:\n    records:\n      - action: freeze\n        strategy_name: tsmom_vol_scaled\n        reason: review",
+            r"quant\.lifecycle_policy\.records\[0\]\.action must be one of:",
+        ),
+        (
+            "  lifecycle_policy:\n    records:\n      - action: retire\n        strategy_name: unknown\n        reason: review",
+            r"quant\.lifecycle_policy\.records\[0\]\.strategy_name must be one of:",
+        ),
+        (
+            "  lifecycle_policy:\n    records:\n      - action: retire\n        strategy_name: tsmom_vol_scaled\n        reason: review\n        scope:\n          private_path: secret",
+            r"unsupported quant\.lifecycle_policy\.records\[0\]\.scope field",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_lifecycle_policy_records(
+    tmp_path: Path,
+    policy_block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            f"        target_volatility: 0.2\n{policy_block}",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
 @pytest.mark.parametrize(
     ("gate_block", "expected"),
     [

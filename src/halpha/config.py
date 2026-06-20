@@ -111,6 +111,19 @@ SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "require_parameter_stability",
     "require_walk_forward_stable",
 }
+SUPPORTED_LIFECYCLE_POLICY_FIELDS = {"records"}
+SUPPORTED_LIFECYCLE_POLICY_RECORD_FIELDS = {
+    "action",
+    "created_at",
+    "effective_at",
+    "parameter_digest",
+    "reason",
+    "scope",
+    "strategy_contract_version",
+    "strategy_name",
+}
+SUPPORTED_LIFECYCLE_POLICY_ACTIONS = {"promote", "reject", "retire", "watchlist"}
+SUPPORTED_LIFECYCLE_POLICY_SCOPE_FIELDS = {"symbol", "timeframe"}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "sma_cross_trend": {"short_window", "long_window"},
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
@@ -660,6 +673,11 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
         if not isinstance(gates, dict):
             raise ConfigError("quant.effectiveness_gates must be a mapping.")
         _validate_quant_effectiveness_gates(gates, "quant.effectiveness_gates")
+    if "lifecycle_policy" in quant:
+        policy = quant["lifecycle_policy"]
+        if not isinstance(policy, dict):
+            raise ConfigError("quant.lifecycle_policy must be a mapping.")
+        _validate_quant_lifecycle_policy(policy, "quant.lifecycle_policy")
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
@@ -915,6 +933,62 @@ def _validate_quant_effectiveness_gates(gates: dict[str, Any], path: str) -> Non
         _require_non_negative_number(gates, key, f"{path}.{key}")
     for key in sorted(bool_fields & set(gates)):
         _require_bool(gates, key, f"{path}.{key}")
+
+
+def _validate_quant_lifecycle_policy(policy: dict[str, Any], path: str) -> None:
+    _reject_unsupported_fields(
+        policy,
+        path=path,
+        supported_fields=SUPPORTED_LIFECYCLE_POLICY_FIELDS,
+    )
+    if "records" not in policy:
+        return
+    records = policy["records"]
+    if not isinstance(records, list):
+        raise ConfigError(f"{path}.records must be a list.")
+    for index, record in enumerate(records):
+        record_path = f"{path}.records[{index}]"
+        if not isinstance(record, dict):
+            raise ConfigError(f"{record_path} must be a mapping.")
+        _reject_unsupported_fields(
+            record,
+            path=record_path,
+            supported_fields=SUPPORTED_LIFECYCLE_POLICY_RECORD_FIELDS,
+        )
+        action = _require_non_empty_string(record, "action", f"{record_path}.action")
+        _require_supported_value(action, f"{record_path}.action", SUPPORTED_LIFECYCLE_POLICY_ACTIONS)
+        strategy_name = _require_non_empty_string(record, "strategy_name", f"{record_path}.strategy_name")
+        _require_supported_value(
+            strategy_name,
+            f"{record_path}.strategy_name",
+            SUPPORTED_QUANT_STRATEGIES,
+        )
+        _require_non_empty_string(record, "reason", f"{record_path}.reason")
+        if "strategy_contract_version" in record:
+            _require_non_empty_string(
+                record,
+                "strategy_contract_version",
+                f"{record_path}.strategy_contract_version",
+            )
+        if "parameter_digest" in record:
+            _require_non_empty_string(record, "parameter_digest", f"{record_path}.parameter_digest")
+        if "created_at" in record:
+            _require_iso8601_utc_value(record, "created_at", f"{record_path}.created_at")
+        if "effective_at" in record and record["effective_at"] is not None:
+            _require_iso8601_utc_value(record, "effective_at", f"{record_path}.effective_at")
+        if "scope" in record:
+            scope = record["scope"]
+            if not isinstance(scope, dict):
+                raise ConfigError(f"{record_path}.scope must be a mapping.")
+            _reject_unsupported_fields(
+                scope,
+                path=f"{record_path}.scope",
+                supported_fields=SUPPORTED_LIFECYCLE_POLICY_SCOPE_FIELDS,
+            )
+            if "symbol" in scope:
+                _require_non_empty_string(scope, "symbol", f"{record_path}.scope.symbol")
+            if "timeframe" in scope:
+                _require_non_empty_string(scope, "timeframe", f"{record_path}.scope.timeframe")
 
 
 def _validate_market_proxy_config(market: dict[str, Any]) -> None:

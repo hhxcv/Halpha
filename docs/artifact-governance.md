@@ -198,16 +198,17 @@ strategy run, benchmark, or experiment JSON.
 
 ### Strategy Lifecycle Evidence
 
-Planned strategy lifecycle artifacts:
+Strategy lifecycle artifacts:
 
 - `analysis/strategy_lifecycle_state.json`
 - `analysis/strategy_lifecycle_material.md` (planned)
 
 These contracts are defined in `docs/strategy-lifecycle-contracts.md`. The
-planned lifecycle state artifact records deterministic strategy identity,
+implemented lifecycle state artifact records deterministic strategy identity,
 contract version, parameter version, parameter digest, lifecycle status,
 degradation, insufficient-evidence, watchlist, rejection, retirement, policy,
-warnings, errors, and source refs from existing strategy and outcome evidence.
+warnings, errors, and source refs from existing strategy and outcome evidence
+when quant strategy evidence is enabled.
 The planned lifecycle material artifact is the bounded Codex-facing summary.
 Codex should consume bounded lifecycle material instead of full lifecycle JSON,
 full strategy runs, full outcome history, or local lifecycle policy input.

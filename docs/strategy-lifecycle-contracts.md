@@ -6,7 +6,8 @@ project documentation, not a milestone plan.
 Implementation status:
 
 - The strategy lifecycle contract is defined here.
-- `analysis/strategy_lifecycle_state.json` is planned and not implemented yet.
+- `analysis/strategy_lifecycle_state.json` is implemented in product runs when
+  quant strategy evidence is enabled.
 - `analysis/strategy_lifecycle_material.md` is planned and not implemented
   yet.
 - Downstream lifecycle integration is planned and not implemented yet.
