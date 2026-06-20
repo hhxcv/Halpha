@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
 from halpha.cli import main
 from halpha.ohlcv_store import OHLCVParquetStore
+from halpha.standalone_backtest import _visualization_record
 
 
 def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
@@ -62,6 +64,17 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
     assert backtest["cost_assumptions"]["fees_bps"] == 10.0
     assert backtest["cost_assumptions"]["slippage_bps"] == 5.0
     assert backtest["equity_curve"]
+    assert backtest["visualization"]["chart_type"] == "candlestick_backtest"
+    assert backtest["visualization"]["status"] == "available"
+    assert [bar["time"] for bar in backtest["visualization"]["bars"]] == [
+        "2026-06-01T00:00:00Z",
+        "2026-06-02T00:00:00Z",
+        "2026-06-03T00:00:00Z",
+        "2026-06-04T00:00:00Z",
+    ]
+    assert backtest["visualization"]["equity_curve"]
+    assert all("time" in point and "net_equity" in point for point in backtest["visualization"]["equity_curve"])
+    assert backtest["visualization"]["limits"]["max_bars"] == 120
     assert manifest["artifact_type"] == "standalone_strategy_backtest_manifest"
     assert manifest["status"] == "succeeded"
     assert manifest["evaluation_status"] == "succeeded"
@@ -123,6 +136,41 @@ def test_cli_backtest_reports_unavailable_inputs(
     assert "Halpha backtest failed." in output
     assert "stage: backtest" in output
     assert expected_reason in output
+
+
+def test_backtest_visualization_does_not_create_entry_marker_after_chart_truncation() -> None:
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    rows = [
+        _record(
+            open_time=(start + timedelta(days=index)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            close=100 + index,
+        )
+        for index in range(130)
+    ]
+    evaluation = {
+        "equity_curve": [
+            {
+                "open_time": row["open_time"],
+                "net_equity": 1 + index * 0.001,
+                "position": 1.0,
+                "turnover": 0.0,
+            }
+            for index, row in enumerate(rows)
+        ]
+    }
+
+    visualization = _visualization_record(
+        rows=rows,
+        evaluation=evaluation,
+        strategy_name="tsmom_vol_scaled",
+        source="binance",
+        symbol="BTCUSDT",
+        timeframe="1d",
+    )
+
+    assert len(visualization["bars"]) == 120
+    assert visualization["omitted"]["bars"] == 10
+    assert visualization["markers"] == []
 
 
 def _write_config(tmp_path: Path) -> Path:

@@ -15,6 +15,9 @@ EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 MAX_SUMMARY_ITEMS = 20
 MAX_STANDALONE_RUNS = 50
+MAX_BACKTEST_VISUALIZATION_BARS = 120
+MAX_BACKTEST_VISUALIZATION_MARKERS = 80
+MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS = 120
 PIPELINE_STRATEGY_ARTIFACTS = [
     ("strategy_benchmark_suite", "analysis/strategy_benchmark_suite.json"),
     ("quant_strategy_runs", "analysis/quant_strategy_runs.json"),
@@ -369,6 +372,7 @@ def _standalone_backtest_summary(path: Path, *, base: Path) -> dict[str, Any]:
             "metrics": _backtest_metrics(artifact),
             "equity_curve_points": _list_count(artifact.get("equity_curve")),
         },
+        visualization=_backtest_visualization(artifact),
         source_artifacts=source_artifacts + _source_artifacts(manifest),
         warnings=[*_messages(manifest.get("warnings")), *warnings],
         errors=[*_messages(manifest.get("errors")), *errors],
@@ -625,6 +629,77 @@ def _backtest_metrics(artifact: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
+    raw = artifact.get("visualization")
+    if not isinstance(raw, dict):
+        return {}
+    bars = [_bounded_bar(item) for item in _list(raw.get("bars"))]
+    bars = [item for item in bars if item]
+    markers = [_bounded_marker(item) for item in _list(raw.get("markers"))]
+    markers = [item for item in markers if item]
+    equity_curve = [_bounded_equity_point(item) for item in _list(raw.get("equity_curve"))]
+    equity_curve = [item for item in equity_curve if item]
+    return {
+        "schema_version": raw.get("schema_version", 1),
+        "chart_type": raw.get("chart_type", "candlestick_backtest"),
+        "status": _normalize_status(str(raw.get("status") or "partial")),
+        "strategy_name": raw.get("strategy_name"),
+        "source": raw.get("source"),
+        "symbol": raw.get("symbol"),
+        "timeframe": raw.get("timeframe"),
+        "bars": bars[-MAX_BACKTEST_VISUALIZATION_BARS:],
+        "markers": markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:],
+        "equity_curve": equity_curve[-MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS:],
+        "limits": {
+            "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
+            "max_markers": MAX_BACKTEST_VISUALIZATION_MARKERS,
+            "max_equity_points": MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS,
+        },
+        "omitted": _bounded_mapping(raw.get("omitted")),
+        "warnings": _messages(raw.get("warnings")),
+    }
+
+
+def _bounded_bar(value: Any) -> dict[str, Any]:
+    item = _dict(value)
+    if not item:
+        return {}
+    return {
+        "time": item.get("time"),
+        "open": item.get("open"),
+        "high": item.get("high"),
+        "low": item.get("low"),
+        "close": item.get("close"),
+        "volume": item.get("volume"),
+    }
+
+
+def _bounded_marker(value: Any) -> dict[str, Any]:
+    item = _dict(value)
+    if not item:
+        return {}
+    return {
+        "time": item.get("time"),
+        "kind": item.get("kind"),
+        "label": item.get("label"),
+        "position": item.get("position"),
+        "price": item.get("price"),
+    }
+
+
+def _bounded_equity_point(value: Any) -> dict[str, Any]:
+    item = _dict(value)
+    if not item:
+        return {}
+    return {
+        "time": item.get("time"),
+        "net_equity": item.get("net_equity"),
+        "gross_equity": item.get("gross_equity"),
+        "position": item.get("position"),
+        "turnover": item.get("turnover"),
+    }
+
+
 def _artifact_status(data: dict[str, Any]) -> str:
     raw_status = data.get("status")
     if isinstance(raw_status, str) and raw_status:
@@ -653,6 +728,7 @@ def _standalone_item(
     base: Path,
     fields: dict[str, Any] | None = None,
     records: dict[str, Any] | None = None,
+    visualization: dict[str, Any] | None = None,
     source_artifacts: list[str] | None = None,
     warnings: list[str] | None = None,
     errors: list[str] | None = None,
@@ -663,6 +739,7 @@ def _standalone_item(
         "output_dir": _safe_ref(path, base=base),
         "fields": fields or {},
         "records": records or {},
+        "visualization": visualization or {},
         "source_artifacts": source_artifacts or [],
         "warnings": warnings or [],
         "errors": errors or [],

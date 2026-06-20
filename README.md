@@ -213,7 +213,9 @@ python -m halpha backtest --config config.example.yaml --strategy tsmom_vol_scal
 Standalone backtests write inspectable artifacts under
 `runs/strategy_backtests/` by default. Use `--output-dir <dir>` to choose a
 different local output directory. This command does not run the report pipeline
-or Codex CLI.
+or Codex CLI. The backtest artifact includes a bounded candlestick
+visualization payload for local dashboard review; it does not copy the full
+shared OHLCV history into the artifact.
 
 Run enabled strategy candidates against the fixed benchmark suite:
 

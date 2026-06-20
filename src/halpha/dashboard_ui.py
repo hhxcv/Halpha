@@ -785,6 +785,85 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       overflow: visible;
     }
 
+    .strategy-chart.kline {
+      min-height: 0;
+    }
+
+    .strategy-chart-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .strategy-chart-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .backtest-chart-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .backtest-chart-panel {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .backtest-chart-panel.price svg {
+      height: 292px;
+    }
+
+    .backtest-chart-panel.equity svg {
+      height: 112px;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+
+    .legend-dot.up,
+    .legend-dot.entry {
+      background: #0f766e;
+    }
+
+    .legend-dot.down,
+    .legend-dot.exit {
+      background: #b42318;
+    }
+
+    .legend-dot.exposure {
+      background: #a16207;
+    }
+
+    .chart-caption {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
     .command-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3680,6 +3759,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           status: artifact.status || "unknown",
           fields: artifact.fields || {},
           records: artifact.records || {},
+          visualization: artifact.visualization || {},
           sourceArtifacts: Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [],
           previewPath: artifact.preview_path,
           warnings: Array.isArray(artifact.warnings) ? artifact.warnings : [],
@@ -3697,6 +3777,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           status: item.status || "unknown",
           fields: item.fields || {},
           records: item.records || {},
+          visualization: item.visualization || {},
           sourceArtifacts: Array.isArray(item.source_artifacts) ? item.source_artifacts : [],
           previewPath: firstPreviewableRef(item.source_artifacts),
           warnings: Array.isArray(item.warnings) ? item.warnings : [],
@@ -3714,6 +3795,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           status: item.status || "unknown",
           fields: item.fields || {},
           records: item.records || {},
+          visualization: item.visualization || {},
           sourceArtifacts: Array.isArray(item.source_artifacts) ? item.source_artifacts : [],
           previewPath: firstPreviewableRef(item.source_artifacts),
           warnings: Array.isArray(item.warnings) ? item.warnings : [],
@@ -3829,7 +3911,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         <section class="section-block">
           <h3 class="subheading">
             <span>Bounded chart</span>
-            <span class="badge ${strategyChartCounts(item).length ? "available" : "missing"}">${strategyChartCounts(item).length ? "available" : "missing"}</span>
+            <span class="badge ${strategyChartAvailable(item) ? "available" : "missing"}">${strategyChartAvailable(item) ? "available" : "missing"}</span>
           </h3>
           ${renderStrategyChart(item)}
         </section>
@@ -3881,6 +3963,12 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       Object.entries(metrics).slice(0, 2).forEach(([key, value]) => {
         tiles.push(detailTile(key, compactObject(value)));
       });
+      if (item.kind === "backtest") {
+        const vis = backtestVisualization(item);
+        tiles.push(detailTile("Chart bars", vis.bars.length));
+        tiles.push(detailTile("Markers", vis.markers.length));
+        tiles.push(detailTile("Equity points", vis.equityCurve.length));
+      }
       return tiles.slice(0, 12);
     }
 
@@ -3941,6 +4029,9 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     function renderStrategyChart(item) {
+      if (item.kind === "backtest") {
+        return renderBacktestChart(item);
+      }
       const counts = strategyChartCounts(item);
       if (!counts.length) {
         return `<div class="strategy-chart"><div class="message warning">No bounded chart data is available for this output.</div></div>`;
@@ -3969,6 +4060,282 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
             ${bars}
           </svg>
         </div>`;
+    }
+
+    function strategyChartAvailable(item) {
+      if (item && item.kind === "backtest") {
+        return backtestVisualization(item).bars.length >= 2;
+      }
+      return strategyChartCounts(item).length > 0;
+    }
+
+    function renderBacktestChart(item) {
+      const vis = backtestVisualization(item);
+      if (vis.bars.length < 2) {
+        const detail = vis.warnings.length ? vis.warnings.join(" ") : "Run a standalone backtest generated by this version to populate bounded OHLCV chart data.";
+        return `<div class="strategy-chart kline">${emptyState("No K-line data", detail)}</div>`;
+      }
+      const title = backtestChartTitle(item, vis);
+      const omitted = vis.omitted || {};
+      const omittedRows = Object.entries(omitted)
+        .filter(([, value]) => Number(value) > 0)
+        .map(([key, value]) => `${key}: ${value}`);
+      return `
+        <div class="strategy-chart kline">
+          <div class="strategy-chart-header">
+            <div>
+              <div class="chart-label">${escapeHtml(title)}</div>
+              <div class="strategy-chart-meta">
+                <span>${vis.bars.length} candles</span>
+                <span>${vis.markers.length} marker${vis.markers.length === 1 ? "" : "s"}</span>
+                <span>${vis.equityCurve.length} equity point${vis.equityCurve.length === 1 ? "" : "s"}</span>
+              </div>
+            </div>
+            <span class="badge ${normalizeStatus(vis.status)}">${label(vis.status)}</span>
+          </div>
+          ${vis.warnings.length ? `<div class="message warning">${escapeHtml(vis.warnings.join(" "))}</div>` : ""}
+          <div class="backtest-chart-grid">
+            <div class="backtest-chart-panel price">
+              ${renderCandlestickSvg(vis)}
+              <div class="chart-legend">
+                <span class="legend-item"><span class="legend-dot up"></span>Up candle</span>
+                <span class="legend-item"><span class="legend-dot down"></span>Down candle</span>
+                <span class="legend-item"><span class="legend-dot entry"></span>Long marker</span>
+                <span class="legend-item"><span class="legend-dot exit"></span>Flat marker</span>
+                <span class="legend-item"><span class="legend-dot exposure"></span>Exposure change</span>
+              </div>
+            </div>
+            <div class="backtest-chart-panel equity">
+              ${renderEquitySvg(vis)}
+            </div>
+          </div>
+          <div class="chart-caption">
+            Bounded visualization from the standalone backtest artifact. It is historical research material, not trading advice.
+            ${omittedRows.length ? ` Omitted from chart payload: ${escapeHtml(omittedRows.join(", "))}.` : ""}
+          </div>
+        </div>`;
+    }
+
+    function backtestVisualization(item) {
+      const source = item.visualization || get("fields.visualization", item) || {};
+      const bars = Array.isArray(source.bars) ? source.bars.map(normalizeBacktestBar).filter(Boolean) : [];
+      const markers = Array.isArray(source.markers) ? source.markers.map(normalizeBacktestMarker).filter(Boolean) : [];
+      const equityCurve = Array.isArray(source.equity_curve)
+        ? source.equity_curve.map(normalizeEquityPoint).filter(Boolean)
+        : [];
+      return {
+        ...source,
+        status: source.status || (bars.length >= 2 ? "available" : "missing"),
+        bars,
+        markers,
+        equityCurve,
+        omitted: source.omitted && typeof source.omitted === "object" ? source.omitted : {},
+        warnings: Array.isArray(source.warnings) ? source.warnings.map((value) => text(value)) : []
+      };
+    }
+
+    function normalizeBacktestBar(value) {
+      if (!value || typeof value !== "object" || !value.time) {
+        return null;
+      }
+      const open = finiteNumber(value.open);
+      const high = finiteNumber(value.high);
+      const low = finiteNumber(value.low);
+      const close = finiteNumber(value.close);
+      if ([open, high, low, close].some((item) => item === null)) {
+        return null;
+      }
+      return {
+        time: String(value.time),
+        open,
+        high,
+        low,
+        close,
+        volume: finiteNumber(value.volume)
+      };
+    }
+
+    function normalizeBacktestMarker(value) {
+      if (!value || typeof value !== "object" || !value.time) {
+        return null;
+      }
+      return {
+        time: String(value.time),
+        kind: String(value.kind || "exposure_change"),
+        label: String(value.label || value.kind || "marker"),
+        position: finiteNumber(value.position),
+        price: finiteNumber(value.price)
+      };
+    }
+
+    function normalizeEquityPoint(value) {
+      if (!value || typeof value !== "object" || !value.time) {
+        return null;
+      }
+      const netEquity = finiteNumber(value.net_equity || value.equity);
+      if (netEquity === null) {
+        return null;
+      }
+      return {
+        time: String(value.time),
+        netEquity,
+        grossEquity: finiteNumber(value.gross_equity),
+        position: finiteNumber(value.position),
+        turnover: finiteNumber(value.turnover)
+      };
+    }
+
+    function renderCandlestickSvg(vis) {
+      const bars = vis.bars;
+      const width = 760;
+      const height = 292;
+      const left = 48;
+      const right = 16;
+      const top = 18;
+      const bottom = 34;
+      const plotWidth = width - left - right;
+      const plotHeight = height - top - bottom;
+      const highs = bars.map((bar) => bar.high);
+      const lows = bars.map((bar) => bar.low);
+      let maxPrice = Math.max(...highs);
+      let minPrice = Math.min(...lows);
+      if (maxPrice === minPrice) {
+        maxPrice += 1;
+        minPrice -= 1;
+      }
+      const padding = (maxPrice - minPrice) * 0.08;
+      maxPrice += padding;
+      minPrice -= padding;
+      const yScale = (price) => top + ((maxPrice - price) / (maxPrice - minPrice)) * plotHeight;
+      const xScale = (index) => left + (bars.length === 1 ? plotWidth / 2 : (index / (bars.length - 1)) * plotWidth);
+      const candleWidth = Math.max(3, Math.min(12, (plotWidth / bars.length) * 0.56));
+      const grid = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+        const y = top + ratio * plotHeight;
+        const price = maxPrice - ratio * (maxPrice - minPrice);
+        return `
+          <line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="#e3dfd5"></line>
+          <text x="${left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(formatChartNumber(price))}</text>`;
+      }).join("");
+      const candles = bars.map((bar, index) => {
+        const x = xScale(index);
+        const openY = yScale(bar.open);
+        const closeY = yScale(bar.close);
+        const highY = yScale(bar.high);
+        const lowY = yScale(bar.low);
+        const bodyY = Math.min(openY, closeY);
+        const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+        const up = bar.close >= bar.open;
+        const color = up ? "#0f766e" : "#b42318";
+        return `
+          <g>
+            <line x1="${x}" y1="${highY}" x2="${x}" y2="${lowY}" stroke="${color}" stroke-width="1.4"></line>
+            <rect x="${x - candleWidth / 2}" y="${bodyY}" width="${candleWidth}" height="${bodyHeight}" rx="1.5" fill="${up ? "#d9f3ee" : "#f6d9d5"}" stroke="${color}" stroke-width="1.2"></rect>
+          </g>`;
+      }).join("");
+      const barIndexByTime = new Map(bars.map((bar, index) => [bar.time, index]));
+      const markers = vis.markers.slice(0, 32).map((marker) => {
+        const index = barIndexByTime.get(marker.time);
+        if (index === undefined) {
+          return "";
+        }
+        const bar = bars[index];
+        const x = xScale(index);
+        const anchorPrice = marker.kind === "entry" ? bar.low : marker.kind === "exit" ? bar.high : (marker.price || bar.close);
+        const y = Math.max(top + 8, Math.min(top + plotHeight - 8, yScale(anchorPrice) + (marker.kind === "entry" ? 14 : marker.kind === "exit" ? -14 : 0)));
+        const title = `${marker.label} ${marker.time} position=${marker.position === null ? "n/a" : marker.position}`;
+        if (marker.kind === "entry") {
+          return `<path d="M ${x} ${y - 8} L ${x - 7} ${y + 6} L ${x + 7} ${y + 6} Z" fill="#0f766e"><title>${escapeHtml(title)}</title></path>`;
+        }
+        if (marker.kind === "exit") {
+          return `<path d="M ${x} ${y + 8} L ${x - 7} ${y - 6} L ${x + 7} ${y - 6} Z" fill="#b42318"><title>${escapeHtml(title)}</title></path>`;
+        }
+        return `<circle cx="${x}" cy="${y}" r="5" fill="#a16207"><title>${escapeHtml(title)}</title></circle>`;
+      }).join("");
+      const firstLabel = shortChartTime(bars[0].time);
+      const lastLabel = shortChartTime(bars[bars.length - 1].time);
+      return `
+        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Backtest candlestick chart">
+          <rect x="${left}" y="${top}" width="${plotWidth}" height="${plotHeight}" fill="#fffdfa" stroke="#d8d3c8"></rect>
+          ${grid}
+          ${candles}
+          ${markers}
+          <text x="${left}" y="${height - 10}" text-anchor="start" font-size="11" fill="#68635a">${escapeHtml(firstLabel)}</text>
+          <text x="${width - right}" y="${height - 10}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(lastLabel)}</text>
+        </svg>`;
+    }
+
+    function renderEquitySvg(vis) {
+      const points = vis.equityCurve;
+      if (points.length < 2) {
+        return `<div class="message warning">No bounded equity curve is available for this backtest.</div>`;
+      }
+      const width = 760;
+      const height = 112;
+      const left = 48;
+      const right = 16;
+      const top = 14;
+      const bottom = 24;
+      const plotWidth = width - left - right;
+      const plotHeight = height - top - bottom;
+      let maxEquity = Math.max(...points.map((point) => point.netEquity));
+      let minEquity = Math.min(...points.map((point) => point.netEquity));
+      if (maxEquity === minEquity) {
+        maxEquity += 0.01;
+        minEquity -= 0.01;
+      }
+      const xScale = (index) => left + (index / (points.length - 1)) * plotWidth;
+      const yScale = (value) => top + ((maxEquity - value) / (maxEquity - minEquity)) * plotHeight;
+      const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${xScale(index)} ${yScale(point.netEquity)}`).join(" ");
+      const start = points[0].netEquity;
+      const end = points[points.length - 1].netEquity;
+      const color = end >= start ? "#0f766e" : "#b42318";
+      return `
+        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Backtest equity curve">
+          <rect x="${left}" y="${top}" width="${plotWidth}" height="${plotHeight}" fill="#fffdfa" stroke="#d8d3c8"></rect>
+          <line x1="${left}" y1="${top + plotHeight}" x2="${width - right}" y2="${top + plotHeight}" stroke="#e3dfd5"></line>
+          <path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <text x="${left - 8}" y="${top + 4}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(formatChartNumber(maxEquity))}</text>
+          <text x="${left - 8}" y="${top + plotHeight + 4}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(formatChartNumber(minEquity))}</text>
+          <text x="${left}" y="${height - 6}" text-anchor="start" font-size="11" fill="#68635a">Net equity</text>
+          <text x="${width - right}" y="${height - 6}" text-anchor="end" font-size="11" fill="${color}">${escapeHtml(formatChartNumber(end))}</text>
+        </svg>`;
+    }
+
+    function backtestChartTitle(item, vis) {
+      const fields = item.fields || {};
+      const inputs = fields.inputs || {};
+      const strategyName = vis.strategy_name || inputs.strategy_name || standaloneStrategyName(item);
+      const symbol = vis.symbol || inputs.symbol || "";
+      const timeframe = vis.timeframe || inputs.timeframe || "";
+      return [strategyName, symbol, timeframe].filter(Boolean).join(" ");
+    }
+
+    function finiteNumber(value) {
+      const numberValue = Number(value);
+      return Number.isFinite(numberValue) ? numberValue : null;
+    }
+
+    function formatChartNumber(value) {
+      const numberValue = Number(value);
+      if (!Number.isFinite(numberValue)) {
+        return "n/a";
+      }
+      const abs = Math.abs(numberValue);
+      if (abs >= 1000) {
+        return numberValue.toFixed(0);
+      }
+      if (abs >= 10) {
+        return numberValue.toFixed(2);
+      }
+      return numberValue.toFixed(4);
+    }
+
+    function shortChartTime(value) {
+      const formatted = formatTimestamp(String(value));
+      if (formatted.length <= 16) {
+        return formatted;
+      }
+      return formatted.slice(0, 16);
     }
 
     function strategyChartCounts(item) {

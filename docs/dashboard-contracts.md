@@ -81,7 +81,8 @@ Implemented dashboard views expose:
 - bounded artifact previews for supported local text-like artifacts;
 - local data store metadata and source refs;
 - strategy research outputs, standalone backtests, experiments, gates, and
-  lifecycle state;
+  lifecycle state, including bounded K-line backtest visualizations when the
+  standalone backtest artifact records visualization data;
 - monitor health, recent cycles, alert counts, cooldown state, alert samples,
   and monitor job history.
 
@@ -117,7 +118,11 @@ Dashboard pages should expose the current product shape through bounded views:
 - Local data: metadata, counts, ranges, freshness, warnings, and source refs for
   implemented reusable stores.
 - Strategy lab: pipeline strategy artifacts, standalone backtests, standalone
-  experiments, gates, lifecycle state, warnings, and limitations.
+  experiments, gates, lifecycle state, warnings, and limitations. Standalone
+  backtests may render bounded candlestick bars, deterministic exposure
+  markers, and an equity curve from the `strategy_backtest.json`
+  `visualization` block. The dashboard must not reconstruct charts by dumping
+  full reusable OHLCV history by default.
 - Decision, risk, event, and alert views: deterministic records and bounded
   source refs from existing artifacts when implemented.
 - Monitor: cycle history, linked runs, alert archive aggregates, cooldown state,
