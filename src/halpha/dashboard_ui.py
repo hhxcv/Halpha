@@ -122,6 +122,33 @@ def dashboard_index_html() -> str:
       font-weight: 650;
     }
 
+    .refresh-panel {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .refresh-panel .link-button {
+      width: 100%;
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f8f4ea;
+      text-align: center;
+    }
+
+    .refresh-panel .checkbox-line {
+      color: #d8d2c4;
+    }
+
+    .refresh-status {
+      color: #bdb5a8;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
     .sidebar-footer {
       margin-top: auto;
       padding-top: 16px;
@@ -1023,6 +1050,14 @@ def dashboard_index_html() -> str:
           <span class="nav-state">available</span>
         </a>
       </nav>
+      <div class="refresh-panel" aria-label="Dashboard refresh controls">
+        <button id="dashboard-refresh-button" class="link-button" type="button">Refresh view</button>
+        <label class="checkbox-line">
+          <input id="dashboard-auto-refresh" type="checkbox">
+          <span>Auto refresh reads only</span>
+        </label>
+        <div id="dashboard-refresh-status" class="refresh-status">Idle</div>
+      </div>
       <div class="sidebar-footer">
         Market output is research material, not financial advice.
       </div>
@@ -2142,6 +2177,9 @@ def dashboard_index_html() -> str:
       }
     ];
     let runsLoaded = false;
+    let currentView = "overview";
+    let dashboardAutoRefreshPoll = null;
+    let dashboardJobPoll = null;
     let selectedRunId = null;
     let artifactsLoaded = false;
     let artifactRunsPayload = null;
@@ -2175,6 +2213,7 @@ def dashboard_index_html() -> str:
     let selectedTextRunId = null;
     let selectedTextArtifactKey = null;
     let textJobsPayload = null;
+    let selectedTextJobId = null;
     let outcomesLoaded = false;
     let outcomeRunsPayload = null;
     let outcomesPayload = null;
@@ -2185,6 +2224,7 @@ def dashboard_index_html() -> str:
     let dailyScheduleLoaded = false;
     let commandJobsPayload = null;
     let selectedCommandJobId = null;
+    let selectedStrategyCommandJobId = null;
     const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started", "missing"]);
 
     function text(value) {
@@ -2325,6 +2365,7 @@ def dashboard_index_html() -> str:
     }
 
     function setView(view) {
+      currentView = view;
       document.querySelectorAll("[data-view]").forEach((node) => {
         node.classList.toggle("hidden", node.dataset.view !== view);
       });
@@ -2369,6 +2410,65 @@ def dashboard_index_html() -> str:
       }
       if (view === "commands" && !commandJobsLoaded) {
         loadCommandCenter();
+      }
+    }
+
+    async function refreshOverview() {
+      document.querySelector("#overall-status").textContent = "Loading";
+      try {
+        const payload = await fetchJson(endpoints.overview);
+        renderOverview(payload);
+      } catch (error) {
+        renderOverviewFailure(error);
+      }
+    }
+
+    async function refreshCurrentView() {
+      document.querySelector("#dashboard-refresh-status").textContent = "Refreshing";
+      try {
+        if (currentView === "overview") {
+          await refreshOverview();
+        } else if (currentView === "runs") {
+          await loadRuns();
+        } else if (currentView === "artifacts") {
+          await loadArtifacts();
+        } else if (currentView === "data") {
+          await loadDataStores();
+        } else if (currentView === "strategies") {
+          await loadStrategies();
+        } else if (currentView === "monitor") {
+          await loadMonitor();
+          await refreshDashboardJobs();
+        } else if (currentView === "workbench") {
+          await loadWorkbench();
+        } else if (currentView === "decision-risk") {
+          await loadDecisionRisk();
+        } else if (currentView === "event-alert") {
+          await loadEventAlert();
+        } else if (currentView === "text-intelligence") {
+          await loadTextIntelligence();
+          await refreshDashboardJobs();
+        } else if (currentView === "outcomes") {
+          await loadOutcomes();
+        } else if (currentView === "commands") {
+          await loadCommandCenter();
+        }
+        document.querySelector("#dashboard-refresh-status").textContent = "Refreshed";
+      } catch (error) {
+        document.querySelector("#dashboard-refresh-status").textContent = `Refresh failed: ${error.message}`;
+      }
+    }
+
+    function setDashboardAutoRefresh(enabled) {
+      if (enabled && !dashboardAutoRefreshPoll) {
+        document.querySelector("#dashboard-refresh-status").textContent = "Auto refresh on";
+        dashboardAutoRefreshPoll = window.setInterval(refreshCurrentView, 10000);
+        return;
+      }
+      if (!enabled && dashboardAutoRefreshPoll) {
+        window.clearInterval(dashboardAutoRefreshPoll);
+        dashboardAutoRefreshPoll = null;
+        document.querySelector("#dashboard-refresh-status").textContent = "Auto refresh off";
       }
     }
 
@@ -3198,6 +3298,7 @@ def dashboard_index_html() -> str:
         document.querySelector("#strategy-command-status").className = `badge ${normalizeStatus(job.status)}`;
         document.querySelector("#strategy-command-status").textContent = label(job.status);
         renderStrategyCommandResult(job);
+        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
         if (commandJobsLoaded) {
           await refreshCommandJobs();
         }
@@ -3278,6 +3379,7 @@ def dashboard_index_html() -> str:
     }
 
     function renderStrategyCommandResult(job) {
+      selectedStrategyCommandJobId = job.job_id || selectedStrategyCommandJobId;
       const refs = commandPreviewRefs(job);
       document.querySelector("#strategy-command-result").innerHTML = `
         <div class="preview-heading">
@@ -4398,8 +4500,9 @@ def dashboard_index_html() -> str:
       document.querySelectorAll("[data-text-job-id]").forEach((button) => {
         button.addEventListener("click", () => selectTextJob(button.dataset.textJobId));
       });
-      if (!document.querySelector("#text-job-result .preview-heading")) {
-        renderTextJobResult(jobs[0]);
+      const selected = jobs.find((job) => job.job_id === selectedTextJobId) || jobs[0];
+      if (selected) {
+        renderTextJobResult(selected);
       }
     }
 
@@ -4432,6 +4535,7 @@ def dashboard_index_html() -> str:
         document.querySelector("#text-command-status").textContent = label(job.status);
         renderTextJobResult(job);
         await refreshTextJobs();
+        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
       } catch (error) {
         renderTextCommandMessage("failed", error.message);
       }
@@ -4462,6 +4566,7 @@ def dashboard_index_html() -> str:
     }
 
     function renderTextJobResult(job) {
+      selectedTextJobId = job.job_id || selectedTextJobId;
       const refs = commandPreviewRefs(job);
       document.querySelector("#text-job-result").innerHTML = `
         <div class="preview-heading">
@@ -4683,6 +4788,50 @@ def dashboard_index_html() -> str:
       }
     }
 
+    async function refreshDashboardJobs() {
+      try {
+        const payload = await fetchJson(endpoints.jobs);
+        if (monitorLoaded) {
+          renderMonitorJobs(payload);
+        }
+        if (commandJobsLoaded) {
+          commandJobsPayload = payload;
+          renderCommandJobs(payload);
+        }
+        if (textIntelligenceLoaded) {
+          textJobsPayload = payload;
+          renderTextJobs(payload);
+        }
+        if (selectedStrategyCommandJobId) {
+          const strategyJob = (Array.isArray(payload.jobs) ? payload.jobs : [])
+            .find((job) => job.job_id === selectedStrategyCommandJobId);
+          if (strategyJob) {
+            renderStrategyCommandResult(strategyJob);
+          }
+        }
+        scheduleDashboardJobPolling(hasActiveDashboardJobs(payload));
+      } catch (error) {
+        document.querySelector("#dashboard-refresh-status").textContent = `Job refresh failed: ${error.message}`;
+        scheduleDashboardJobPolling(false);
+      }
+    }
+
+    function hasActiveDashboardJobs(payload) {
+      return (Array.isArray(payload.jobs) ? payload.jobs : [])
+        .some((job) => !terminalJobStatuses.has(String(job.status || "")));
+    }
+
+    function scheduleDashboardJobPolling(active) {
+      if (active && !dashboardJobPoll) {
+        dashboardJobPoll = window.setInterval(refreshDashboardJobs, 2000);
+        return;
+      }
+      if (!active && dashboardJobPoll) {
+        window.clearInterval(dashboardJobPoll);
+        dashboardJobPoll = null;
+      }
+    }
+
     function renderMonitorJobs(payload) {
       const allJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
       const jobs = allJobs.filter((job) => String(job.intent || "").startsWith("monitor_"));
@@ -4797,6 +4946,7 @@ def dashboard_index_html() -> str:
         const job = await postJson(endpoints.jobs, request);
         document.querySelector("#monitor-job-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
         await refreshMonitorJobs();
+        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
       } catch (error) {
         renderMonitorJobsFailure(error);
       }
@@ -4883,6 +5033,7 @@ def dashboard_index_html() -> str:
           if (payload.job) {
             document.querySelector("#command-center-status").textContent = `${jobTitle(payload.job.intent)} ${label(payload.job.status)}`;
             renderCommandResult(payload.job);
+            scheduleDashboardJobPolling(!terminalJobStatuses.has(String(payload.job.status || "")));
           } else {
             renderScheduleActionResult(payload);
           }
@@ -5097,6 +5248,7 @@ def dashboard_index_html() -> str:
         document.querySelector("#command-center-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
         renderCommandResult(job);
         await refreshCommandJobs();
+        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
       } catch (error) {
         renderCommandMessage("failed", error.message);
       }
@@ -5472,6 +5624,10 @@ def dashboard_index_html() -> str:
     document.querySelectorAll("[data-view-target]").forEach((node) => {
       node.addEventListener("click", () => setView(node.dataset.viewTarget));
     });
+    document.querySelector("#dashboard-refresh-button").addEventListener("click", refreshCurrentView);
+    document.querySelector("#dashboard-auto-refresh").addEventListener("change", (event) => {
+      setDashboardAutoRefresh(event.target.checked === true);
+    });
     document.querySelector("#artifact-layer-filter").addEventListener("change", renderArtifactExplorer);
     document.querySelector("#artifact-search-filter").addEventListener("input", renderArtifactExplorer);
     document.querySelector("#data-group-filter").addEventListener("change", renderDataStores);
@@ -5510,7 +5666,7 @@ def dashboard_index_html() -> str:
     });
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 
-    fetchJson(endpoints.overview).then(renderOverview).catch(renderOverviewFailure);
+    refreshOverview();
     setView(viewFromHash());
   </script>
 </body>
