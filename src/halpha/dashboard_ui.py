@@ -434,7 +434,8 @@ def dashboard_index_html() -> str:
     .artifacts-layout,
     .data-layout,
     .strategy-layout,
-    .monitor-layout {
+    .monitor-layout,
+    .command-center-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
@@ -693,6 +694,28 @@ def dashboard_index_html() -> str:
       gap: 8px;
     }
 
+    .command-inline {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .checkbox-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .checkbox-line input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+    }
+
     .command-button {
       display: grid;
       gap: 5px;
@@ -869,7 +892,8 @@ def dashboard_index_html() -> str:
       .artifacts-layout,
       .data-layout,
       .strategy-layout,
-      .monitor-layout {
+      .monitor-layout,
+      .command-center-layout {
         grid-template-columns: 1fr;
       }
 
@@ -905,6 +929,7 @@ def dashboard_index_html() -> str:
       .store-grid,
       .filter-bar,
       .command-grid,
+      .command-inline,
       .number-row {
         grid-template-columns: 1fr;
       }
@@ -957,10 +982,10 @@ def dashboard_index_html() -> str:
           <span>Monitor</span>
           <span class="nav-state">available</span>
         </a>
-        <span class="nav-item">
+        <a class="nav-item" href="#commands" data-view-target="commands">
           <span>Command center</span>
-          <span class="nav-state">pending</span>
-        </span>
+          <span class="nav-state">available</span>
+        </a>
       </nav>
       <div class="sidebar-footer">
         Market output is research material, not financial advice.
@@ -1033,7 +1058,7 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Command center</span>
-                <span class="planned-state">planned</span>
+                <span class="planned-state">available</span>
               </div>
             </div>
           </article>
@@ -1375,6 +1400,217 @@ def dashboard_index_html() -> str:
           </article>
         </section>
       </section>
+
+      <section id="commands-view" class="view hidden" data-view="commands">
+        <section class="topbar" aria-labelledby="commands-title">
+          <div>
+            <p class="eyebrow">Allowlisted local commands</p>
+            <h1 id="commands-title">Command center</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Command state</span>
+              <span id="command-center-status" class="status-value">Idle</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Jobs</span>
+              <span id="command-job-status" class="status-value">Loading</span>
+            </div>
+          </div>
+        </section>
+        <section class="command-center-layout">
+          <article class="wide-panel" aria-labelledby="command-groups-title">
+            <div class="panel-heading">
+              <h2 id="command-groups-title" class="panel-title">Command groups</h2>
+              <span class="badge partial">allowlisted</span>
+            </div>
+            <div class="detail-sections">
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Product runs</span>
+                  <span class="badge partial">Codex confirmation required</span>
+                </h3>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-command-intent="run_no_codex">
+                    <span class="command-title">Run without Codex</span>
+                    <span class="command-meta">Execute the product pipeline with report generation skipped.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="run">
+                    <span class="command-title">Run with Codex</span>
+                    <span class="command-meta">Requires the Codex confirmation checkbox below.</span>
+                  </button>
+                </div>
+                <label class="checkbox-line">
+                  <input id="command-run-confirm-codex" type="checkbox">
+                  <span>I explicitly confirm this dashboard job may invoke Codex.</span>
+                </label>
+                <div class="command-inline">
+                  <label>
+                    <span class="status-label">Run until stage</span>
+                    <input id="command-run-until-stage" class="filter-control" type="text" placeholder="build_research_context">
+                  </label>
+                  <button class="link-button" type="button" data-command-intent="run_until">Run until</button>
+                </div>
+              </section>
+
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Validation and inspection</span>
+                  <span class="badge available">read-only</span>
+                </h3>
+                <label>
+                  <span class="status-label">Run dir for scoped commands</span>
+                  <input id="command-run-dir" class="filter-control" type="text" placeholder="runs/&lt;run_id&gt;">
+                </label>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-command-intent="validate">
+                    <span class="command-title">Validate</span>
+                    <span class="command-meta">Run product validation for config or selected run dir.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="data_inspect">
+                    <span class="command-title">Data inspect</span>
+                    <span class="command-meta">Inspect local data stores and optional run context.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="outcomes_inspect">
+                    <span class="command-title">Outcomes inspect</span>
+                    <span class="command-meta">Inspect local outcome state and optional run context.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="monitor_inspect">
+                    <span class="command-title">Monitor inspect</span>
+                    <span class="command-meta">Inspect local monitor state without starting cycles.</span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Workbench</span>
+                  <span class="badge available">local delivery</span>
+                </h3>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-command-intent="workbench_build">
+                    <span class="command-title">Build workbench</span>
+                    <span class="command-meta">Build local workbench output, optionally scoped by run dir.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="workbench_inspect">
+                    <span class="command-title">Inspect workbench</span>
+                    <span class="command-meta">Inspect the latest local workbench summary.</span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Strategy research</span>
+                  <span class="badge partial">historical research</span>
+                </h3>
+                <div class="number-row">
+                  <label>
+                    <span class="status-label">Strategy</span>
+                    <input id="command-backtest-strategy" class="filter-control" type="text" placeholder="tsmom_vol_scaled">
+                  </label>
+                  <label>
+                    <span class="status-label">Symbol</span>
+                    <input id="command-backtest-symbol" class="filter-control" type="text" placeholder="BTCUSDT">
+                  </label>
+                </div>
+                <div class="number-row">
+                  <label>
+                    <span class="status-label">Timeframe</span>
+                    <input id="command-backtest-timeframe" class="filter-control" type="text" placeholder="1d">
+                  </label>
+                  <label>
+                    <span class="status-label">Output dir</span>
+                    <input id="command-strategy-output-dir" class="filter-control" type="text" placeholder="runs/strategy_backtests">
+                  </label>
+                </div>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-command-intent="backtest">
+                    <span class="command-title">Run backtest</span>
+                    <span class="command-meta">Start one configured standalone strategy backtest.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="experiment">
+                    <span class="command-title">Run experiment</span>
+                    <span class="command-meta">Use comma-separated strategy names from the strategy field.</span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Text intelligence</span>
+                  <span class="badge partial">bounded artifacts</span>
+                </h3>
+                <div class="number-row">
+                  <label>
+                    <span class="status-label">Input path</span>
+                    <input id="command-text-input-path" class="filter-control" type="text" placeholder="runs/&lt;run_id&gt;/raw/text_events.json">
+                  </label>
+                  <label>
+                    <span class="status-label">Output dir</span>
+                    <input id="command-text-output-dir" class="filter-control" type="text" placeholder="runs/text_intel">
+                  </label>
+                </div>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-command-intent="text_models_prepare">
+                    <span class="command-title">Prepare text models</span>
+                    <span class="command-meta">Prepare configured local text model artifacts.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="text_intel">
+                    <span class="command-title">Run text intelligence</span>
+                    <span class="command-meta">Process configured or selected text event input.</span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="section-block">
+                <h3 class="subheading">
+                  <span>Monitor commands</span>
+                  <span class="badge partial">bounded local jobs</span>
+                </h3>
+                <div class="command-grid">
+                  <button class="command-button" type="button" data-command-intent="monitor_dry_run">
+                    <span class="command-title">Monitor dry run</span>
+                    <span class="command-meta">Validate monitor configuration without executing a cycle.</span>
+                  </button>
+                  <button class="command-button" type="button" data-command-intent="monitor_once">
+                    <span class="command-title">Monitor one cycle</span>
+                    <span class="command-meta">Start one bounded monitor cycle.</span>
+                  </button>
+                </div>
+                <div class="number-row">
+                  <label>
+                    <span class="status-label">Max cycles</span>
+                    <input id="command-monitor-loop-cycles" class="filter-control" type="number" min="1" value="1">
+                  </label>
+                  <label>
+                    <span class="status-label">Interval seconds</span>
+                    <input id="command-monitor-loop-interval" class="filter-control" type="number" min="1" value="300">
+                  </label>
+                </div>
+                <button class="command-button" type="button" data-command-intent="monitor_loop">
+                  <span class="command-title">Monitor finite loop</span>
+                  <span class="command-meta">Run configured max cycles, then stop.</span>
+                </button>
+              </section>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="command-jobs-title">
+            <div class="panel-heading">
+              <h2 id="command-jobs-title" class="panel-title">Job history</h2>
+              <span id="command-job-count" class="badge unknown">loading</span>
+            </div>
+            <div id="command-result" class="preview-panel">
+              <div class="message">Choose an allowlisted command to create a bounded local dashboard job.</div>
+            </div>
+            <div id="command-job-list" class="job-list">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+        </section>
+      </section>
     </main>
   </div>
   <script>
@@ -1458,6 +1694,8 @@ def dashboard_index_html() -> str:
     let monitorLoaded = false;
     let monitorPayload = null;
     let monitorJobPoll = null;
+    let commandJobsLoaded = false;
+    let commandJobPoll = null;
     const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started", "missing"]);
 
     function text(value) {
@@ -1576,6 +1814,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#monitor") {
         return "monitor";
       }
+      if (window.location.hash === "#commands") {
+        return "commands";
+      }
       return "overview";
     }
 
@@ -1606,6 +1847,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "monitor" && !monitorLoaded) {
         loadMonitor();
+      }
+      if (view === "commands" && !commandJobsLoaded) {
+        loadCommandCenter();
       }
     }
 
@@ -2956,6 +3200,19 @@ def dashboard_index_html() -> str:
 
     function jobTitle(intent) {
       const titles = {
+        run: "Product run with Codex",
+        run_no_codex: "Product run without Codex",
+        run_until: "Product run until stage",
+        stage_rerun: "Stage rerun",
+        validate: "Product validation",
+        data_inspect: "Data inspect",
+        outcomes_inspect: "Outcomes inspect",
+        workbench_build: "Workbench build",
+        workbench_inspect: "Workbench inspect",
+        backtest: "Strategy backtest",
+        experiment: "Strategy experiment",
+        text_models_prepare: "Text models prepare",
+        text_intel: "Text intelligence",
         monitor_dry_run: "Monitor dry run",
         monitor_once: "Monitor one cycle",
         monitor_loop: "Monitor finite loop",
@@ -3010,6 +3267,268 @@ def dashboard_index_html() -> str:
         await refreshMonitorJobs();
       } catch (error) {
         renderMonitorJobsFailure(error);
+      }
+    }
+
+    async function loadCommandCenter() {
+      commandJobsLoaded = true;
+      await refreshCommandJobs();
+    }
+
+    async function refreshCommandJobs() {
+      try {
+        const payload = await fetchJson(endpoints.jobs);
+        renderCommandJobs(payload);
+      } catch (error) {
+        renderCommandJobsFailure(error);
+      }
+    }
+
+    function renderCommandJobs(payload) {
+      const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+      const active = jobs.filter((job) => !terminalJobStatuses.has(String(job.status || "")));
+      document.querySelector("#command-job-status").textContent = active.length
+        ? `${active.length} active`
+        : jobs.length
+          ? "Idle"
+          : "No jobs";
+      const count = document.querySelector("#command-job-count");
+      count.className = `badge ${jobs.length ? "available" : "missing"}`;
+      count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
+      if (!jobs.length) {
+        document.querySelector("#command-job-list").innerHTML = messages(payload) || `<div class="message warning">No dashboard jobs are recorded.</div>`;
+        scheduleCommandJobPolling(false);
+        return;
+      }
+      document.querySelector("#command-job-list").innerHTML = jobs.slice(0, 20).map((job) => {
+        const running = !terminalJobStatuses.has(String(job.status || ""));
+        const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
+        return `
+          <div class="job-row">
+            <div class="stage-top">
+              <span class="stage-name">${escapeHtml(jobTitle(job.intent))}</span>
+              ${badge(job.status)}
+            </div>
+            <div class="run-meta">
+              <span>Job: ${escapeHtml(text(job.job_id))}</span>
+              <span>Created: ${escapeHtml(text(job.created_at))}</span>
+              <span>Started: ${escapeHtml(text(job.started_at))}</span>
+              <span>Finished: ${escapeHtml(text(job.finished_at))}</span>
+              <span>Exit: ${escapeHtml(text(job.exit_code))}</span>
+            </div>
+            <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
+            ${messages(job)}
+            <div class="job-actions">
+              ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-command-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
+              ${running && job.cancellable === false ? `<span class="badge partial">cancellation unsupported</span>` : ""}
+            </div>
+          </div>`;
+      }).join("");
+      document.querySelectorAll("[data-command-cancel-job-id]").forEach((button) => {
+        button.addEventListener("click", () => cancelCommandJob(button.dataset.commandCancelJobId));
+      });
+      scheduleCommandJobPolling(active.length > 0);
+    }
+
+    function renderCommandJobsFailure(error) {
+      document.querySelector("#command-job-status").textContent = "Failed";
+      document.querySelector("#command-job-count").className = "badge failed";
+      document.querySelector("#command-job-count").textContent = "failed";
+      document.querySelector("#command-job-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      scheduleCommandJobPolling(false);
+    }
+
+    function scheduleCommandJobPolling(active) {
+      if (active && !commandJobPoll) {
+        commandJobPoll = window.setInterval(refreshCommandJobs, 2000);
+        return;
+      }
+      if (!active && commandJobPoll) {
+        window.clearInterval(commandJobPoll);
+        commandJobPoll = null;
+      }
+    }
+
+    async function startCommandJob(intent) {
+      const request = commandJobRequest(intent);
+      if (!request) {
+        return;
+      }
+      document.querySelector("#command-center-status").textContent = "Starting";
+      try {
+        const job = await postJson(endpoints.jobs, request);
+        document.querySelector("#command-center-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
+        renderCommandResult(job);
+        await refreshCommandJobs();
+      } catch (error) {
+        renderCommandMessage("failed", error.message);
+      }
+    }
+
+    function commandJobRequest(intent) {
+      const params = {};
+      if (intent === "run_no_codex") {
+        return { intent, params };
+      }
+      if (intent === "run") {
+        if (!codexConfirmed()) {
+          renderCommandMessage("blocked", "Codex confirmation is required before creating this job.");
+          return null;
+        }
+        params.confirm_codex = true;
+        return { intent, params };
+      }
+      if (intent === "run_until") {
+        const stageName = requiredInputValue("#command-run-until-stage", "stage_name is required for run_until.");
+        if (!stageName) {
+          return null;
+        }
+        if (stageReachesCodex(stageName) && !codexConfirmed()) {
+          renderCommandMessage("blocked", "Codex confirmation is required for a stage that reaches Codex report generation.");
+          return null;
+        }
+        params.stage_name = stageName;
+        if (codexConfirmed()) {
+          params.confirm_codex = true;
+        }
+        return { intent, params };
+      }
+      if (["validate", "data_inspect", "outcomes_inspect", "workbench_build"].includes(intent)) {
+        const runDir = optionalInputValue("#command-run-dir");
+        if (runDir) {
+          params.run_dir = runDir;
+        }
+        return { intent, params };
+      }
+      if (["workbench_inspect", "monitor_inspect", "monitor_dry_run", "monitor_once"].includes(intent)) {
+        return { intent, params };
+      }
+      if (intent === "monitor_loop") {
+        const maxCycles = positiveInputValue("#command-monitor-loop-cycles");
+        const intervalSeconds = positiveInputValue("#command-monitor-loop-interval");
+        if (!maxCycles || !intervalSeconds) {
+          renderCommandMessage("blocked", "max_cycles and interval_seconds must be positive integers.");
+          return null;
+        }
+        params.max_cycles = maxCycles;
+        params.interval_seconds = intervalSeconds;
+        return { intent, params };
+      }
+      if (intent === "backtest") {
+        const strategyName = requiredInputValue("#command-backtest-strategy", "strategy_name is required for backtest.");
+        const symbol = requiredInputValue("#command-backtest-symbol", "symbol is required for backtest.");
+        const timeframe = requiredInputValue("#command-backtest-timeframe", "timeframe is required for backtest.");
+        if (!strategyName || !symbol || !timeframe) {
+          return null;
+        }
+        params.strategy_name = strategyName;
+        params.symbol = symbol;
+        params.timeframe = timeframe;
+        const outputDir = optionalInputValue("#command-strategy-output-dir");
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      if (intent === "experiment") {
+        const strategyNames = commaListInputValue("#command-backtest-strategy");
+        if (!strategyNames.length) {
+          renderCommandMessage("blocked", "strategy_names must include at least one configured strategy.");
+          return null;
+        }
+        params.strategy_names = strategyNames;
+        const outputDir = optionalInputValue("#command-strategy-output-dir");
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      if (intent === "text_models_prepare") {
+        const outputDir = optionalInputValue("#command-text-output-dir");
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      if (intent === "text_intel") {
+        const inputPath = optionalInputValue("#command-text-input-path");
+        const outputDir = optionalInputValue("#command-text-output-dir");
+        if (inputPath) {
+          params.input_path = inputPath;
+        }
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      renderCommandMessage("unsupported", `unsupported dashboard job intent: ${intent || "missing"}`);
+      return null;
+    }
+
+    function codexConfirmed() {
+      return document.querySelector("#command-run-confirm-codex").checked === true;
+    }
+
+    function stageReachesCodex(stageName) {
+      const stages = "collect_market_data collect_derivatives_market_data sync_derivatives_market_history build_derivatives_market_views build_derivatives_market_context collect_macro_calendar_data sync_macro_calendar_history build_macro_calendar_views build_macro_calendar_context build_macro_calendar_material collect_onchain_flow_data sync_onchain_flow_history build_onchain_flow_views build_onchain_flow_context build_onchain_flow_material collect_text_events build_text_event_records build_text_entity_evidence build_text_event_classification_evidence build_text_event_topics build_text_event_signals sync_ohlcv build_market_data_views build_strategy_benchmark_suite evaluate_quant_strategies evaluate_strategy_evaluation build_strategy_experiment_material evaluate_market_strategy_signals build_market_signals build_market_signal_material build_market_regime_assessment build_risk_assessment build_decision_recommendations build_watch_triggers build_event_market_confluence build_event_intelligence_assessment build_alert_decisions build_alert_decision_material build_event_intelligence_material build_decision_intelligence_delta build_decision_intelligence_material build_data_quality_summary build_outcome_targets evaluate_outcomes build_strategy_lifecycle_state build_strategy_lifecycle_material build_feature_snapshots build_factor_states build_multi_source_signals build_intelligence_fusion integrate_intelligence_fusion build_user_state_context build_personalized_risk_constraints integrate_personalized_risk_constraints build_personalized_risk_material build_analysis_materials build_research_context build_codex_context run_codex_report validate_product_contracts".split(" ");
+      const stageIndex = stages.indexOf(stageName);
+      const codexIndex = stages.indexOf("run_codex_report");
+      return stageIndex >= codexIndex && codexIndex >= 0;
+    }
+
+    function optionalInputValue(selector) {
+      return document.querySelector(selector).value.trim();
+    }
+
+    function requiredInputValue(selector, message) {
+      const value = optionalInputValue(selector);
+      if (!value) {
+        renderCommandMessage("blocked", message);
+        return "";
+      }
+      return value;
+    }
+
+    function commaListInputValue(selector) {
+      return optionalInputValue(selector)
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item);
+    }
+
+    function renderCommandResult(job) {
+      const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
+      document.querySelector("#command-result").innerHTML = `
+        <div class="preview-heading">
+          <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
+          ${badge(job.status)}
+        </div>
+        <div class="run-detail-grid">
+          ${detailTile("Job", job.job_id)}
+          ${detailTile("Intent", job.intent)}
+          ${detailTile("Created", job.created_at)}
+          ${detailTile("Exit", job.exit_code)}
+        </div>
+        <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
+        ${messages(job)}`;
+    }
+
+    function renderCommandMessage(status, message) {
+      document.querySelector("#command-center-status").textContent = label(status);
+      document.querySelector("#command-result").innerHTML = `<div class="message ${normalizeStatus(status) === "failed" ? "error" : "warning"}">${escapeHtml(message)}</div>`;
+    }
+
+    async function cancelCommandJob(jobId) {
+      if (!jobId) {
+        return;
+      }
+      document.querySelector("#command-center-status").textContent = "Cancelling";
+      try {
+        const job = await postJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}/cancel`, {});
+        renderCommandResult(job);
+        await refreshCommandJobs();
+      } catch (error) {
+        renderCommandMessage("failed", error.message);
       }
     }
 
@@ -3178,6 +3697,9 @@ def dashboard_index_html() -> str:
     document.querySelector("#strategy-search-filter").addEventListener("input", renderStrategies);
     document.querySelectorAll("[data-monitor-action]").forEach((button) => {
       button.addEventListener("click", () => startMonitorJob(button.dataset.monitorAction));
+    });
+    document.querySelectorAll("[data-command-intent]").forEach((button) => {
+      button.addEventListener("click", () => startCommandJob(button.dataset.commandIntent));
     });
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 
