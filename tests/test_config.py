@@ -39,6 +39,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
     assert config["user_state"] == {"enabled": False, "path": "user_state.local.yaml"}
+    assert config["dashboard"] == {"display_timezone": "Asia/Shanghai"}
     assert config["monitor"] == {
         "enabled": False,
         "interval_seconds": 300,
@@ -219,6 +220,48 @@ def test_load_config_accepts_enabled_user_state_config(tmp_path: Path) -> None:
     config = load_config(config_path)
 
     assert config["user_state"] == {"enabled": True, "path": "user_state.local.yaml"}
+
+
+def test_load_config_accepts_dashboard_display_timezone(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "quant:\n",
+            "dashboard:\n  display_timezone: UTC\n\nquant:\n",
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["dashboard"] == {"display_timezone": "UTC"}
+
+
+@pytest.mark.parametrize(
+    ("block", "expected"),
+    [
+        ("dashboard: invalid", "dashboard must be a mapping"),
+        ("dashboard:\n  display_timezone: ''", "dashboard.display_timezone"),
+        (
+            "dashboard:\n  display_timezone: Invalid/Zone",
+            "dashboard.display_timezone is not an available IANA timezone",
+        ),
+        ("dashboard:\n  unsupported: true", "unsupported dashboard field"),
+    ],
+)
+def test_load_config_rejects_invalid_dashboard_config(
+    tmp_path: Path,
+    block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("quant:\n", f"{block}\n\nquant:\n"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
 
 
 @pytest.mark.parametrize(

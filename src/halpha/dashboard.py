@@ -6,6 +6,7 @@ from json import JSONDecodeError
 from pathlib import Path
 import sqlite3
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .data_inspection import DataInspectionError, inspect_local_store_state
 from .dashboard_jobs import DashboardJobManager
@@ -21,6 +22,7 @@ from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
+DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = "Asia/Shanghai"
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
 NO_STORE_HEADERS = {
     "Cache-Control": "no-store, max-age=0",
@@ -126,7 +128,10 @@ def create_dashboard_app(
 
     @app.get("/", response_class=HTMLResponse)
     def root() -> HTMLResponse:
-        return HTMLResponse(dashboard_index_html(), headers=NO_STORE_HEADERS)
+        return HTMLResponse(
+            dashboard_index_html(display_timezone=dashboard_display_timezone(config)),
+            headers=NO_STORE_HEADERS,
+        )
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon() -> Response:
@@ -300,6 +305,22 @@ def dashboard_health(
             "frontend_ui": "available",
         },
     }
+
+
+def dashboard_display_timezone(config: dict[str, Any]) -> str:
+    dashboard = config.get("dashboard") if isinstance(config.get("dashboard"), dict) else {}
+    run = config.get("run") if isinstance(config.get("run"), dict) else {}
+    candidates = (dashboard.get("display_timezone"), run.get("timezone"), DEFAULT_DASHBOARD_DISPLAY_TIMEZONE)
+    for candidate in candidates:
+        if not isinstance(candidate, str) or not candidate.strip():
+            continue
+        timezone_name = candidate.strip()
+        try:
+            ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError:
+            continue
+        return timezone_name
+    return DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
 
 
 def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:

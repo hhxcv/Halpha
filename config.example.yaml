@@ -2,6 +2,9 @@ run:
   output_dir: runs
   timezone: Asia/Shanghai
 
+dashboard:
+  display_timezone: Asia/Shanghai
+
 market:
   enabled: true
   source: binance

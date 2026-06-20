@@ -16,6 +16,7 @@ DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
 DAILY_REPORT_SCHEDULE_ARTIFACT = f"{DASHBOARD_SCHEDULES_DIR}/{DAILY_REPORT_SCHEDULE_FILENAME}"
 MAX_LINKED_JOB_IDS = 20
 SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run_no_codex", "run"}
+DEFAULT_DASHBOARD_TIMEZONE = "Asia/Shanghai"
 
 
 class DashboardScheduleManager:
@@ -327,7 +328,7 @@ def _utc_now_datetime() -> datetime:
 def _configured_timezone(config: dict[str, Any]) -> str:
     run = config.get("run") if isinstance(config.get("run"), dict) else {}
     value = run.get("timezone")
-    return value if isinstance(value, str) and value.strip() else "UTC"
+    return value if isinstance(value, str) and value.strip() else DEFAULT_DASHBOARD_TIMEZONE
 
 
 def _config_base(config_path: Path) -> Path:

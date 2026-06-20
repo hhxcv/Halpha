@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from halpha.cli import main
 from halpha.config import load_config
-from halpha.dashboard import create_dashboard_app, dashboard_health
+from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, dashboard_health
 from halpha.pipeline import RunContext
 from halpha.run_index import write_run_index
 from halpha.storage import write_json
@@ -98,6 +98,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
+    assert 'data-display-timezone="Asia/Shanghai"' in response.text
+    assert '<span id="display-timezone" class="status-value">Asia/Shanghai</span>' in response.text
+    assert "formatTimestamp(String(value))" in response.text
     assert "Runs &amp; reports" in response.text
     assert 'href="#artifacts" data-view-target="artifacts"' in response.text
     assert "Artifact explorer" in response.text
@@ -171,6 +174,34 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert '<span class="nav-state">pending</span>' not in response.text
     assert '<span class="planned-state">planned</span>' not in response.text
     assert str(tmp_path) not in response.text
+
+
+def test_dashboard_root_uses_configured_display_timezone(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "market:\n",
+            "dashboard:\n  display_timezone: UTC\n\nmarket:\n",
+        ),
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'data-display-timezone="UTC"' in response.text
+    assert '<span id="display-timezone" class="status-value">UTC</span>' in response.text
+
+
+def test_dashboard_display_timezone_falls_back_to_run_timezone() -> None:
+    assert dashboard_display_timezone({"run": {"timezone": "UTC"}}) == "UTC"
+
+
+def test_dashboard_display_timezone_defaults_to_east_8() -> None:
+    assert dashboard_display_timezone({"run": {}}) == "Asia/Shanghai"
+    assert dashboard_display_timezone({"dashboard": {"display_timezone": "Invalid/Zone"}, "run": {}}) == "Asia/Shanghai"
 
 
 def test_dashboard_overview_endpoint_reports_missing_local_state(tmp_path: Path) -> None:

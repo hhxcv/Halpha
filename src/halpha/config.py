@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .monitoring import SUPPORTED_MONITOR_FIELDS
 from .quant.registry import SUPPORTED_STRATEGY_NAMES
@@ -12,6 +13,7 @@ from .quant.registry import SUPPORTED_STRATEGY_NAMES
 
 CONFIG_SECTIONS = {
     "codex",
+    "dashboard",
     "macro_calendar",
     "market",
     "monitor",
@@ -94,6 +96,7 @@ SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS = {
     "max_topic_window_hours",
     "same_topic_similarity",
 }
+SUPPORTED_DASHBOARD_FIELDS = {"display_timezone"}
 SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "elevated_overfitting_blocks_effective",
     "max_abs_drawdown_pct",
@@ -198,6 +201,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
         _validate_user_state_config(config["user_state"])
     if "monitor" in config:
         _validate_monitor_config(config["monitor"])
+    if "dashboard" in config:
+        _validate_dashboard_config(config["dashboard"])
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -313,6 +318,28 @@ def _validate_monitor_config(monitor: dict[str, Any]) -> None:
         _require_non_empty_string(monitor, "target_stage", "monitor.target_stage")
     if "no_codex" in monitor:
         _require_bool(monitor, "no_codex", "monitor.no_codex")
+
+
+def _validate_dashboard_config(dashboard: Any) -> None:
+    if not isinstance(dashboard, dict):
+        raise ConfigError("dashboard must be a mapping.")
+    _reject_unsupported_fields(
+        dashboard,
+        path="dashboard",
+        supported_fields=SUPPORTED_DASHBOARD_FIELDS,
+    )
+    if "display_timezone" in dashboard:
+        timezone_name = _require_non_empty_string(
+            dashboard,
+            "display_timezone",
+            "dashboard.display_timezone",
+        )
+        try:
+            ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError as exc:
+            raise ConfigError(
+                f"dashboard.display_timezone is not an available IANA timezone: {timezone_name}."
+            ) from exc
 
 
 def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:

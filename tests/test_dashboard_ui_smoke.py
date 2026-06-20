@@ -97,6 +97,17 @@ def test_dashboard_interaction_hooks_cover_primary_workflows(tmp_path: Path) -> 
     assert "refreshCurrentView" in script
 
 
+def test_dashboard_shell_exposes_configured_display_timezone(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    script = _script_block(html)
+
+    assert 'data-display-timezone="Asia/Shanghai"' in html
+    assert 'const displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";' in script
+    assert "new Intl.DateTimeFormat" in script
+    assert "formatTimestamp(String(value))" in script
+    assert "looksLikeIsoTimestamp(value)" in script
+
+
 def test_dashboard_startup_event_selectors_exist_in_shell(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     script = _script_block(html)
