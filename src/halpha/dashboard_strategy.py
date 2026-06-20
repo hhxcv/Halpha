@@ -48,6 +48,7 @@ def dashboard_strategy_research(
         "selected_run": selected_run["fields"],
         "pipeline": pipeline,
         "standalone": standalone,
+        "commands": _strategy_command_options(config),
         "source_artifacts": source_artifacts,
         "warnings": [*pipeline["warnings"], *standalone["warnings"]],
         "errors": [*pipeline["errors"], *standalone["errors"]],
@@ -59,6 +60,41 @@ def dashboard_strategy_research(
             "trading_instructions_embedded": False,
         },
     }
+
+
+def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "backtest": "available",
+        "experiment": "available",
+        "options": {
+            "strategy_names": sorted(_configured_strategy_names(config)),
+            "symbols": sorted(_configured_symbols(config)),
+            "timeframes": sorted(_configured_timeframes(config)),
+        },
+    }
+
+
+def _configured_strategy_names(config: dict[str, Any]) -> set[str]:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    strategies = quant.get("strategies") if isinstance(quant.get("strategies"), list) else []
+    return {
+        str(strategy.get("name"))
+        for strategy in strategies
+        if isinstance(strategy, dict) and strategy.get("name") and strategy.get("enabled", True) is not False
+    }
+
+
+def _configured_symbols(config: dict[str, Any]) -> set[str]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    values = market.get("symbols") if isinstance(market.get("symbols"), list) else []
+    return {str(value) for value in values if isinstance(value, str) and value}
+
+
+def _configured_timeframes(config: dict[str, Any]) -> set[str]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+    values = ohlcv.get("timeframes") if isinstance(ohlcv.get("timeframes"), list) else []
+    return {str(value) for value in values if isinstance(value, str) and value}
 
 
 def _selected_run(config_path: Path, *, base: Path, run_id: str | None) -> dict[str, Any]:

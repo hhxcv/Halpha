@@ -101,6 +101,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Store drilldown" in response.text
     assert "Strategy lab" in response.text
     assert "Historical strategy research" in response.text
+    assert "Strategy commands" in response.text
+    assert "Run configured backtest" in response.text
+    assert "Run configured experiment" in response.text
+    assert "not configured or enabled" in response.text
     assert "Monitor control" in response.text
     assert 'href="#workbench" data-view-target="workbench"' in response.text
     assert "Workbench summary" in response.text
@@ -1054,6 +1058,11 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert payload["selected_run"]["run_id"] == "run-1"
     assert payload["pipeline"]["status"] == "warning"
     assert payload["standalone"]["status"] == "failed"
+    assert payload["commands"]["backtest"] == "available"
+    assert payload["commands"]["experiment"] == "available"
+    assert payload["commands"]["options"]["strategy_names"] == []
+    assert payload["commands"]["options"]["symbols"] == []
+    assert payload["commands"]["options"]["timeframes"] == []
     assert "runs/run-1/analysis/strategy_evaluation_summary.json" in payload["source_artifacts"]
 
     pipeline = {item["name"]: item for item in payload["pipeline"]["artifacts"]}
@@ -1080,6 +1089,27 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert experiment["fields"]["counts"]["evaluations"] == 1
     assert experiment["records"]["gates"][0]["reason_codes"] == ["benchmark_coverage_met"]
     assert str(tmp_path) not in response.text
+
+
+def test_dashboard_strategies_endpoint_reports_configured_command_options() -> None:
+    config_path = Path("config.example.yaml")
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["commands"]["backtest"] == "available"
+    assert payload["commands"]["experiment"] == "available"
+    assert payload["commands"]["options"]["strategy_names"] == [
+        "bollinger_rsi_reversion",
+        "breakout_atr_trend",
+        "sma_cross_trend",
+        "tsmom_vol_scaled",
+    ]
+    assert payload["commands"]["options"]["symbols"] == ["BTCUSDT", "ETHUSDT"]
+    assert payload["commands"]["options"]["timeframes"] == ["1d", "1h"]
 
 
 def test_dashboard_command_loads_config_and_invokes_service(

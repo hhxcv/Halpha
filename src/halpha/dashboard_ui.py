@@ -1344,6 +1344,45 @@ def dashboard_index_html() -> str:
               <div class="skeleton"></div>
               <div class="skeleton"></div>
             </div>
+            <section class="section-block">
+              <h3 class="subheading">
+                <span>Strategy commands</span>
+                <span id="strategy-command-status" class="badge partial">ready</span>
+              </h3>
+              <div class="number-row">
+                <label>
+                  <span class="status-label">Strategy</span>
+                  <input id="strategy-command-name" class="filter-control" type="text" list="strategy-command-name-options" placeholder="tsmom_vol_scaled">
+                  <datalist id="strategy-command-name-options"></datalist>
+                </label>
+                <label>
+                  <span class="status-label">Symbol</span>
+                  <input id="strategy-command-symbol" class="filter-control" type="text" list="strategy-command-symbol-options" placeholder="BTCUSDT">
+                  <datalist id="strategy-command-symbol-options"></datalist>
+                </label>
+              </div>
+              <div class="number-row">
+                <label>
+                  <span class="status-label">Timeframe</span>
+                  <input id="strategy-command-timeframe" class="filter-control" type="text" list="strategy-command-timeframe-options" placeholder="1d">
+                  <datalist id="strategy-command-timeframe-options"></datalist>
+                </label>
+                <label>
+                  <span class="status-label">Output dir</span>
+                  <input id="strategy-command-output-dir" class="filter-control" type="text" placeholder="runs/strategy_backtests">
+                </label>
+              </div>
+              <div class="command-grid">
+                <button class="command-button" type="button" data-strategy-command-intent="backtest">
+                  <span class="command-title">Run configured backtest</span>
+                  <span class="command-meta">Create a backtest job for one configured strategy, symbol, and timeframe.</span>
+                </button>
+                <button class="command-button" type="button" data-strategy-command-intent="experiment">
+                  <span class="command-title">Run configured experiment</span>
+                  <span class="command-meta">Use one strategy or comma-separated configured strategy names.</span>
+                </button>
+              </div>
+            </section>
           </article>
           <article class="wide-panel" aria-labelledby="strategy-detail-title">
             <div class="panel-heading">
@@ -1352,6 +1391,9 @@ def dashboard_index_html() -> str:
             </div>
             <div id="strategy-detail" class="detail-sections">
               <div class="message">Select a strategy output to inspect bounded metrics, gates, lifecycle state, warnings, and source refs.</div>
+            </div>
+            <div id="strategy-command-result" class="preview-panel">
+              <div class="message">Start a strategy job to inspect result refs.</div>
             </div>
             <div id="strategy-preview" class="preview-panel">
               <div class="message">Open a strategy artifact preview to inspect bounded JSON or text output.</div>
@@ -3085,6 +3127,7 @@ def dashboard_index_html() -> str:
       const payload = strategiesPayload || { status: "unknown" };
       const items = strategyItems(payload);
       const visible = items.filter(strategyMatchesFilters);
+      renderStrategyCommandOptions(payload);
       document.querySelector("#strategy-status").textContent = label(payload.status);
       const count = document.querySelector("#strategy-count");
       count.className = `badge ${items.length ? normalizeStatus(payload.status) : "missing"}`;
@@ -3117,6 +3160,151 @@ def dashboard_index_html() -> str:
         });
       });
       renderStrategyDetail(visible.find((item) => item.key === selectedStrategyKey) || visible[0]);
+    }
+
+    function renderStrategyCommandOptions(payload) {
+      const options = ((payload.commands || {}).options) || {};
+      setDatalistOptions("#strategy-command-name-options", options.strategy_names || []);
+      setDatalistOptions("#strategy-command-symbol-options", options.symbols || []);
+      setDatalistOptions("#strategy-command-timeframe-options", options.timeframes || []);
+      setDefaultInputValue("#strategy-command-name", options.strategy_names || []);
+      setDefaultInputValue("#strategy-command-symbol", options.symbols || []);
+      setDefaultInputValue("#strategy-command-timeframe", options.timeframes || []);
+    }
+
+    function setDatalistOptions(selector, values) {
+      const node = document.querySelector(selector);
+      node.innerHTML = (Array.isArray(values) ? values : [])
+        .map((value) => `<option value="${escapeHtml(value)}"></option>`)
+        .join("");
+    }
+
+    function setDefaultInputValue(selector, values) {
+      const node = document.querySelector(selector);
+      if (!node.value && Array.isArray(values) && values.length) {
+        node.value = values[0];
+      }
+    }
+
+    async function startStrategyJob(intent) {
+      const request = strategyCommandJobRequest(intent);
+      if (!request) {
+        return;
+      }
+      document.querySelector("#strategy-command-status").className = "badge partial";
+      document.querySelector("#strategy-command-status").textContent = "starting";
+      try {
+        const job = await postJson(endpoints.jobs, request);
+        document.querySelector("#strategy-command-status").className = `badge ${normalizeStatus(job.status)}`;
+        document.querySelector("#strategy-command-status").textContent = label(job.status);
+        renderStrategyCommandResult(job);
+        if (commandJobsLoaded) {
+          await refreshCommandJobs();
+        }
+      } catch (error) {
+        renderStrategyCommandMessage("failed", error.message);
+      }
+    }
+
+    function strategyCommandJobRequest(intent) {
+      const options = (((strategiesPayload || {}).commands || {}).options) || {};
+      const strategyName = strategyRequiredInputValue("#strategy-command-name", "strategy_name is required.");
+      if (!strategyName) {
+        return null;
+      }
+      if (intent === "backtest") {
+        const symbol = strategyRequiredInputValue("#strategy-command-symbol", "symbol is required.");
+        const timeframe = strategyRequiredInputValue("#strategy-command-timeframe", "timeframe is required.");
+        if (!symbol || !timeframe) {
+          return null;
+        }
+        if (!strategyConfiguredValue(strategyName, options.strategy_names, "strategy_name")) {
+          return null;
+        }
+        if (!strategyConfiguredValue(symbol, options.symbols, "symbol")) {
+          return null;
+        }
+        if (!strategyConfiguredValue(timeframe, options.timeframes, "timeframe")) {
+          return null;
+        }
+        const params = {
+          strategy_name: strategyName,
+          symbol,
+          timeframe
+        };
+        const outputDir = optionalInputValue("#strategy-command-output-dir");
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      if (intent === "experiment") {
+        const names = strategyName.split(",").map((item) => item.trim()).filter((item) => item);
+        if (!names.length) {
+          renderStrategyCommandMessage("blocked", "strategy_names must include at least one configured strategy.");
+          return null;
+        }
+        for (const name of names) {
+          if (!strategyConfiguredValue(name, options.strategy_names, "strategy_name")) {
+            return null;
+          }
+        }
+        const params = { strategy_names: names };
+        const outputDir = optionalInputValue("#strategy-command-output-dir");
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      renderStrategyCommandMessage("unsupported", `unsupported strategy job intent: ${intent || "missing"}`);
+      return null;
+    }
+
+    function strategyRequiredInputValue(selector, message) {
+      const value = optionalInputValue(selector);
+      if (!value) {
+        renderStrategyCommandMessage("blocked", message);
+        return "";
+      }
+      return value;
+    }
+
+    function strategyConfiguredValue(value, configuredValues, labelText) {
+      if (!Array.isArray(configuredValues) || !configuredValues.length || configuredValues.includes(value)) {
+        return true;
+      }
+      renderStrategyCommandMessage("blocked", `${labelText} is not configured or enabled: ${value}.`);
+      return false;
+    }
+
+    function renderStrategyCommandResult(job) {
+      const refs = commandPreviewRefs(job);
+      document.querySelector("#strategy-command-result").innerHTML = `
+        <div class="preview-heading">
+          <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
+          ${badge(job.status)}
+        </div>
+        <div class="run-detail-grid">
+          ${detailTile("Job", job.job_id)}
+          ${detailTile("Intent", job.intent)}
+          ${detailTile("Kind", job.kind)}
+          ${detailTile("Created", job.created_at)}
+          ${detailTile("Finished", job.finished_at)}
+          ${detailTile("Exit", job.exit_code)}
+        </div>
+        ${messages(job)}
+        <div class="artifact-actions">
+          ${refs.length ? refs.map((item) => `<button class="link-button" type="button" data-strategy-command-preview-path="${escapeHtml(item.path)}">${escapeHtml(item.label)}</button>`).join("") : `<span class="badge missing">no result refs</span>`}
+        </div>`;
+      document.querySelectorAll("[data-strategy-command-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.strategyCommandPreviewPath, "#strategy-command-result"));
+      });
+    }
+
+    function renderStrategyCommandMessage(status, message) {
+      document.querySelector("#strategy-command-status").className = `badge ${normalizeStatus(status)}`;
+      document.querySelector("#strategy-command-status").textContent = label(status);
+      document.querySelector("#strategy-command-result").innerHTML = `<div class="message ${normalizeStatus(status) === "failed" ? "error" : "warning"}">${escapeHtml(message)}</div>`;
     }
 
     function strategyItems(payload) {
@@ -5298,6 +5486,9 @@ def dashboard_index_html() -> str:
     });
     document.querySelectorAll("[data-text-command-intent]").forEach((button) => {
       button.addEventListener("click", () => startTextJob(button.dataset.textCommandIntent));
+    });
+    document.querySelectorAll("[data-strategy-command-intent]").forEach((button) => {
+      button.addEventListener("click", () => startStrategyJob(button.dataset.strategyCommandIntent));
     });
     document.querySelectorAll("[data-schedule-action]").forEach((button) => {
       button.addEventListener("click", () => runDailyScheduleAction(button.dataset.scheduleAction));
