@@ -431,6 +431,7 @@ def dashboard_index_html() -> str:
     }
 
     .runs-layout,
+    .artifacts-layout,
     .data-layout,
     .strategy-layout,
     .monitor-layout {
@@ -440,6 +441,7 @@ def dashboard_index_html() -> str:
     }
 
     .run-list,
+    .artifact-explorer-list,
     .strategy-list,
     .job-list {
       display: grid;
@@ -864,6 +866,7 @@ def dashboard_index_html() -> str:
 
       .layout-row,
       .runs-layout,
+      .artifacts-layout,
       .data-layout,
       .strategy-layout,
       .monitor-layout {
@@ -938,10 +941,10 @@ def dashboard_index_html() -> str:
           <span>Runs &amp; reports</span>
           <span class="nav-state">available</span>
         </a>
-        <span class="nav-item">
+        <a class="nav-item" href="#artifacts" data-view-target="artifacts">
           <span>Artifacts</span>
-          <span class="nav-state">pending</span>
-        </span>
+          <span class="nav-state">available</span>
+        </a>
         <a class="nav-item" href="#data" data-view-target="data">
           <span>Data stores</span>
           <span class="nav-state">available</span>
@@ -1014,7 +1017,7 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Artifact review</span>
-                <span class="planned-state">planned</span>
+                <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
                 <span class="planned-title">Local data explorer</span>
@@ -1099,6 +1102,65 @@ def dashboard_index_html() -> str:
                   <div class="message">Open a report, stage artifact, or run artifact to inspect a bounded preview.</div>
                 </div>
               </section>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <section id="artifacts-view" class="view hidden" data-view="artifacts">
+        <section class="topbar" aria-labelledby="artifacts-title">
+          <div>
+            <p class="eyebrow">Bounded local artifacts</p>
+            <h1 id="artifacts-title">Artifact explorer</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Run index</span>
+              <span id="artifact-runs-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Selected run</span>
+              <span id="selected-artifact-run-status" class="status-value">none</span>
+            </div>
+          </div>
+        </section>
+        <section class="artifacts-layout">
+          <article class="wide-panel" aria-labelledby="artifact-run-list-title">
+            <div class="panel-heading">
+              <h2 id="artifact-run-list-title" class="panel-title">Artifact runs</h2>
+              <span id="artifact-run-count" class="badge unknown">loading</span>
+            </div>
+            <div id="artifact-run-list" class="run-list">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="artifact-explorer-title">
+            <div class="panel-heading">
+              <h2 id="artifact-explorer-title" class="panel-title">Artifact inventory</h2>
+              <span id="artifact-explorer-count" class="badge unknown">waiting</span>
+            </div>
+            <div class="filter-bar">
+              <select id="artifact-layer-filter" class="filter-control" aria-label="Artifact layer filter">
+                <option value="all">All layers</option>
+                <option value="manifest">Manifest</option>
+                <option value="raw">Raw</option>
+                <option value="analysis">Analysis</option>
+                <option value="report">Report</option>
+                <option value="codex_context">Codex context</option>
+                <option value="data">Data</option>
+                <option value="monitor">Monitor</option>
+                <option value="dashboard">Dashboard</option>
+                <option value="other">Other</option>
+              </select>
+              <input id="artifact-search-filter" class="filter-control" type="search" placeholder="Filter by key, path, layer, stage, kind, warning, or error">
+            </div>
+            <div id="artifact-explorer-list" class="artifact-explorer-list">
+              <div class="message">Select a run to inspect recorded artifact refs.</div>
+            </div>
+            <div id="artifact-explorer-preview" class="preview-panel">
+              <div class="message">Open an artifact to inspect a bounded preview.</div>
             </div>
           </article>
         </section>
@@ -1382,6 +1444,11 @@ def dashboard_index_html() -> str:
     ];
     let runsLoaded = false;
     let selectedRunId = null;
+    let artifactsLoaded = false;
+    let artifactRunsPayload = null;
+    const artifactRunDetails = new Map();
+    let selectedArtifactRunId = null;
+    let selectedArtifactPath = null;
     let dataStoresLoaded = false;
     let dataStoresPayload = null;
     let selectedStoreName = null;
@@ -1497,6 +1564,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#runs") {
         return "runs";
       }
+      if (window.location.hash === "#artifacts") {
+        return "artifacts";
+      }
       if (window.location.hash === "#data") {
         return "data";
       }
@@ -1524,6 +1594,9 @@ def dashboard_index_html() -> str:
       });
       if (view === "runs" && !runsLoaded) {
         loadRuns();
+      }
+      if (view === "artifacts" && !artifactsLoaded) {
+        loadArtifacts();
       }
       if (view === "data" && !dataStoresLoaded) {
         loadDataStores();
@@ -1820,6 +1893,254 @@ def dashboard_index_html() -> str:
         button.addEventListener("click", () => {
           loadArtifactPreview(button.dataset.artifactPath, button.dataset.previewTarget || "#artifact-preview");
         });
+      });
+    }
+
+    async function loadArtifacts() {
+      artifactsLoaded = true;
+      document.querySelector("#artifact-runs-status").textContent = "Loading";
+      try {
+        artifactRunsPayload = await fetchJson(endpoints.runs);
+        renderArtifactRunList();
+        const runs = Array.isArray(artifactRunsPayload.runs) ? artifactRunsPayload.runs : [];
+        if (runs.length) {
+          selectArtifactRun(runs[0].run_id);
+        } else {
+          renderArtifactExplorerEmpty(artifactRunsPayload);
+        }
+      } catch (error) {
+        renderArtifactRunListFailure(error);
+      }
+    }
+
+    function renderArtifactRunList() {
+      const payload = artifactRunsPayload || { status: "unknown", runs: [] };
+      const runs = Array.isArray(payload.runs) ? payload.runs : [];
+      document.querySelector("#artifact-runs-status").textContent = label(payload.status);
+      const count = document.querySelector("#artifact-run-count");
+      count.className = `badge ${runs.length ? "available" : normalizeStatus(payload.status)}`;
+      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
+      const list = document.querySelector("#artifact-run-list");
+      if (!runs.length) {
+        list.innerHTML = messages(payload) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        return;
+      }
+      list.innerHTML = runs.map((run) => `
+        <button class="run-row ${run.run_id === selectedArtifactRunId ? "selected" : ""}" type="button" data-artifact-run-id="${escapeHtml(run.run_id)}">
+          <span class="run-row-main">
+            <span class="run-id">${escapeHtml(run.run_id)}</span>
+            ${badge(run.status)}
+          </span>
+          <span class="run-meta">
+            <span>${escapeHtml(text(run.started_at))}</span>
+            <span>Artifacts: ${escapeHtml(text(run.artifact_count))}</span>
+            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
+            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
+          </span>
+        </button>`).join("");
+      list.querySelectorAll("[data-artifact-run-id]").forEach((button) => {
+        button.addEventListener("click", () => selectArtifactRun(button.dataset.artifactRunId));
+      });
+    }
+
+    function renderArtifactRunListFailure(error) {
+      document.querySelector("#artifact-runs-status").textContent = "Failed";
+      document.querySelector("#artifact-run-count").className = "badge failed";
+      document.querySelector("#artifact-run-count").textContent = "failed";
+      document.querySelector("#artifact-run-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      renderArtifactExplorerEmpty({ status: "failed", errors: [error.message], warnings: [] });
+    }
+
+    async function selectArtifactRun(runId) {
+      if (!runId) {
+        return;
+      }
+      selectedArtifactRunId = runId;
+      selectedArtifactPath = null;
+      document.querySelector("#selected-artifact-run-status").textContent = runId;
+      document.querySelectorAll("[data-artifact-run-id]").forEach((button) => {
+        button.classList.toggle("selected", button.dataset.artifactRunId === runId);
+      });
+      document.querySelector("#artifact-explorer-count").className = "badge unknown";
+      document.querySelector("#artifact-explorer-count").textContent = "loading";
+      document.querySelector("#artifact-explorer-list").innerHTML = `<div class="message">Loading artifact refs.</div>`;
+      document.querySelector("#artifact-explorer-preview").innerHTML = `<div class="message">Open an artifact to inspect a bounded preview.</div>`;
+      try {
+        const detail = artifactRunDetails.get(runId) || await fetchJson(`${endpoints.runs}/${encodeURIComponent(runId)}`);
+        artifactRunDetails.set(runId, detail);
+        renderArtifactExplorer();
+      } catch (error) {
+        renderArtifactExplorerFailure(runId, error);
+      }
+    }
+
+    function renderArtifactExplorerEmpty(payload) {
+      document.querySelector("#selected-artifact-run-status").textContent = "none";
+      document.querySelector("#artifact-explorer-count").className = `badge ${normalizeStatus(payload.status)}`;
+      document.querySelector("#artifact-explorer-count").textContent = "0 refs";
+      document.querySelector("#artifact-explorer-list").innerHTML = messages(payload) || `<div class="message warning">No artifact refs are available.</div>`;
+      document.querySelector("#artifact-explorer-preview").innerHTML = `<div class="message">Open an artifact to inspect a bounded preview.</div>`;
+    }
+
+    function renderArtifactExplorerFailure(runId, error) {
+      document.querySelector("#selected-artifact-run-status").textContent = runId;
+      document.querySelector("#artifact-explorer-count").className = "badge failed";
+      document.querySelector("#artifact-explorer-count").textContent = "failed";
+      document.querySelector("#artifact-explorer-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    }
+
+    function renderArtifactExplorer() {
+      const detail = artifactRunDetails.get(selectedArtifactRunId);
+      if (!detail || detail.status !== "available") {
+        renderArtifactExplorerEmpty(detail || { status: "missing", warnings: ["selected run detail is not available."], errors: [] });
+        return;
+      }
+      const artifacts = filteredArtifactRefs(flattenArtifactRefs(detail));
+      const count = document.querySelector("#artifact-explorer-count");
+      count.className = `badge ${artifacts.length ? "available" : "missing"}`;
+      count.textContent = `${artifacts.length} ref${artifacts.length === 1 ? "" : "s"}`;
+      if (!artifacts.length) {
+        document.querySelector("#artifact-explorer-list").innerHTML = `<div class="message warning">No artifact refs match the current filter.</div>`;
+        return;
+      }
+      if (!artifacts.some((artifact) => artifact.previewPath === selectedArtifactPath)) {
+        selectedArtifactPath = artifacts[0].previewPath;
+      }
+      document.querySelector("#artifact-explorer-list").innerHTML = artifacts.map((artifact) => `
+        <button class="store-card ${artifact.previewPath === selectedArtifactPath ? "selected" : ""}" type="button" data-explorer-artifact-path="${escapeHtml(artifact.previewPath)}">
+          <span class="store-title-line">
+            <span class="store-title">${escapeHtml(artifact.key)}</span>
+            ${badge(artifact.status)}
+          </span>
+          <span class="store-metrics">
+            <span>Layer: ${escapeHtml(artifact.layer)}</span>
+            <span>Kind: ${escapeHtml(artifact.kind)}</span>
+            ${artifact.stage ? `<span>Stage: ${escapeHtml(artifact.stage)}</span>` : ""}
+          </span>
+          <span class="timeline-meta">${escapeHtml(artifact.previewPath)}</span>
+        </button>`).join("");
+      document.querySelectorAll("[data-explorer-artifact-path]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedArtifactPath = button.dataset.explorerArtifactPath;
+          renderArtifactExplorer();
+        });
+      });
+      if (selectedArtifactPath) {
+        loadArtifactPreview(selectedArtifactPath, "#artifact-explorer-preview");
+      }
+    }
+
+    function flattenArtifactRefs(detail) {
+      const fields = detail.fields || {};
+      const runDir = fields.run_dir || "";
+      const rows = [];
+      if (fields.manifest) {
+        rows.push(artifactExplorerRecord({
+          key: "run_manifest",
+          path: fields.manifest,
+          kind: "manifest",
+          status: fields.manifest_status || detail.status,
+          runDir
+        }));
+      }
+      if (fields.report) {
+        const reportPath = previewPath(runDir, fields.report);
+        rows.push(artifactExplorerRecord({
+          key: "report",
+          path: reportPath,
+          kind: "report",
+          status: get("report.status", fields) || detail.status,
+          runDir
+        }));
+      }
+      (Array.isArray(detail.artifacts) ? detail.artifacts : []).forEach((artifact) => {
+        rows.push(artifactExplorerRecord({ ...artifact, runDir }));
+      });
+      (Array.isArray(detail.stages) ? detail.stages : []).forEach((stage) => {
+        (Array.isArray(stage.artifacts) ? stage.artifacts : []).forEach((artifact) => {
+          rows.push(artifactExplorerRecord({
+            ...artifact,
+            key: artifact.key || stage.name || "stage_artifact",
+            status: stage.status,
+            stage: stage.name,
+            runDir
+          }));
+        });
+      });
+      const seen = new Set();
+      return rows.filter((artifact) => {
+        if (!artifact.previewPath || seen.has(artifact.previewPath)) {
+          return false;
+        }
+        seen.add(artifact.previewPath);
+        return true;
+      });
+    }
+
+    function artifactExplorerRecord(artifact) {
+      const rawPath = text(artifact.path || artifact.artifact || artifact.preview_path || "");
+      const preview = previewPath(artifact.runDir, rawPath);
+      const layer = artifactLayer(preview, artifact.kind);
+      return {
+        key: text(artifact.key || artifact.name || artifact.kind || layer || "artifact"),
+        path: rawPath,
+        previewPath: preview,
+        kind: text(artifact.kind || layer || "artifact"),
+        layer,
+        stage: String(artifact.stage || ""),
+        status: text(artifact.status || "available")
+      };
+    }
+
+    function artifactLayer(path, kind) {
+      const value = String(path || "");
+      const kindValue = String(kind || "");
+      if (kindValue === "manifest" || value.endsWith("/run_manifest.json") || value === "run_manifest.json") {
+        return "manifest";
+      }
+      if (value.includes("/raw/") || value.startsWith("raw/")) {
+        return "raw";
+      }
+      if (value.includes("/analysis/") || value.startsWith("analysis/")) {
+        return "analysis";
+      }
+      if (value.includes("/report/") || value.startsWith("report/")) {
+        return "report";
+      }
+      if (value.includes("/codex_context/") || value.startsWith("codex_context/")) {
+        return "codex_context";
+      }
+      if (value.startsWith("data/")) {
+        return "data";
+      }
+      if (value.startsWith("runs/monitor/")) {
+        return "monitor";
+      }
+      if (value.startsWith("runs/dashboard/")) {
+        return "dashboard";
+      }
+      return "other";
+    }
+
+    function filteredArtifactRefs(artifacts) {
+      const layer = document.querySelector("#artifact-layer-filter").value;
+      const query = document.querySelector("#artifact-search-filter").value.trim().toLowerCase();
+      return artifacts.filter((artifact) => {
+        if (layer !== "all" && artifact.layer !== layer) {
+          return false;
+        }
+        if (!query) {
+          return true;
+        }
+        return [
+          artifact.key,
+          artifact.kind,
+          artifact.layer,
+          artifact.stage,
+          artifact.status,
+          artifact.path,
+          artifact.previewPath
+        ].join(" ").toLowerCase().includes(query);
       });
     }
 
@@ -2849,6 +3170,8 @@ def dashboard_index_html() -> str:
     document.querySelectorAll("[data-view-target]").forEach((node) => {
       node.addEventListener("click", () => setView(node.dataset.viewTarget));
     });
+    document.querySelector("#artifact-layer-filter").addEventListener("change", renderArtifactExplorer);
+    document.querySelector("#artifact-search-filter").addEventListener("input", renderArtifactExplorer);
     document.querySelector("#data-group-filter").addEventListener("change", renderDataStores);
     document.querySelector("#data-search-filter").addEventListener("input", renderDataStores);
     document.querySelector("#strategy-scope-filter").addEventListener("change", renderStrategies);

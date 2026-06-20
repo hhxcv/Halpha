@@ -81,6 +81,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert "Runs &amp; reports" in response.text
+    assert 'href="#artifacts" data-view-target="artifacts"' in response.text
+    assert "Artifact explorer" in response.text
+    assert "Artifact inventory" in response.text
+    assert "Artifact review</span>\n                <span class=\"planned-state\">available" in response.text
     assert "Report preview" in response.text
     assert "Store coverage" in response.text
     assert "Strategy lab" in response.text
