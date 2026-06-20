@@ -92,6 +92,10 @@ def create_dashboard_app(
     def overview_endpoint() -> dict[str, Any]:
         return dashboard_overview(config, config_path=config_path)
 
+    @app.get("/api/workbench")
+    def workbench_endpoint() -> dict[str, Any]:
+        return dashboard_workbench(config_path=config_path)
+
     @app.get("/api/runs")
     def runs_endpoint() -> dict[str, Any]:
         return dashboard_runs(config_path=config_path)
@@ -222,6 +226,7 @@ def dashboard_health(
             "data_store_api": "available",
             "strategy_research_api": "available",
             "monitor_api": "available",
+            "workbench_api": "available",
             "schedule_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
@@ -267,6 +272,70 @@ def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str
             "full_codex_prompt_embedded": False,
             "raw_local_user_state_embedded": False,
         },
+    }
+
+
+def dashboard_workbench(*, config_path: Path) -> dict[str, Any]:
+    base = _config_base(config_path)
+    summary_path = base / WORKBENCH_SUMMARY_ARTIFACT
+    data, error = _read_json(summary_path)
+    if error:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_workbench_summary",
+            "status": "missing" if "was not found" in error else "failed",
+            "summary_ref": WORKBENCH_SUMMARY_ARTIFACT,
+            "generated_at": None,
+            "source_selection": {},
+            "index_outputs": {},
+            "sections": {},
+            "source_artifacts": [WORKBENCH_SUMMARY_ARTIFACT],
+            "warnings": [error] if "was not found" in error else [],
+            "errors": [] if "was not found" in error else [error],
+            "omitted": {
+                "full_workbench_summary_embedded": False,
+                "raw_record_dumps_embedded": False,
+            },
+        }
+
+    run_dir = _workbench_run_dir(data)
+    sections = {
+        name: _workbench_dashboard_section(name, data.get(name), run_dir=run_dir)
+        for name in (
+            "latest_run",
+            "decision_state",
+            "alert_state",
+            "monitor_state",
+            "outcome_state",
+            "strategy_state",
+            "product_validation_state",
+            "data_quality_state",
+        )
+    }
+    source_artifacts = sorted(
+        {
+            WORKBENCH_SUMMARY_ARTIFACT,
+            *_workbench_index_refs(data),
+            *_workbench_source_refs(data.get("source_artifacts"), run_dir=run_dir),
+        }
+    )
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_workbench_summary",
+        "status": _normalize_section_status(str(data.get("status") or "unknown")),
+        "summary_ref": WORKBENCH_SUMMARY_ARTIFACT,
+        "generated_at": data.get("generated_at"),
+        "source_selection": _bounded_mapping(data.get("source_selection")),
+        "index_outputs": _bounded_mapping(data.get("index_outputs")),
+        "sections": sections,
+        "source_artifacts": source_artifacts,
+        "warnings": _string_list(data.get("warnings")),
+        "errors": _string_list(data.get("errors")),
+        "omitted": {
+            **_bounded_mapping(data.get("omitted")),
+            "full_workbench_summary_embedded": False,
+        },
+        "codex_boundary": _bounded_mapping(data.get("codex_boundary")),
     }
 
 
@@ -1113,6 +1182,68 @@ def _workbench_section(*, base: Path) -> dict[str, Any]:
         warnings=_string_list(data.get("warnings")),
         errors=_string_list(data.get("errors")),
     )
+
+
+def _workbench_run_dir(data: dict[str, Any]) -> str:
+    selection = _dict(data.get("source_selection"))
+    run_dir = selection.get("run_dir")
+    return run_dir if isinstance(run_dir, str) else ""
+
+
+def _workbench_dashboard_section(name: str, value: Any, *, run_dir: str) -> dict[str, Any]:
+    section = _dict(value)
+    if not section:
+        return _section(name, "missing", warnings=[f"{name} was not recorded in the workbench summary."])
+    source_refs = _workbench_source_refs(section.get("source_artifacts"), run_dir=run_dir)
+    return _section(
+        name,
+        _normalize_section_status(str(section.get("status") or "unknown")),
+        fields=_bounded_mapping(section.get("fields")),
+        source_artifacts=source_refs,
+        warnings=_string_list(section.get("warnings")),
+        errors=_string_list(section.get("errors")),
+    )
+
+
+def _workbench_index_refs(data: dict[str, Any]) -> list[str]:
+    outputs = _dict(data.get("index_outputs"))
+    refs: list[str] = []
+    for key in ("markdown", "html"):
+        value = outputs.get(key)
+        if isinstance(value, str) and value:
+            refs.append(value)
+    return refs
+
+
+def _workbench_source_refs(value: Any, *, run_dir: str) -> list[str]:
+    refs: list[str] = []
+
+    def collect(item: Any) -> None:
+        if isinstance(item, str) and item:
+            refs.append(_workbench_ref_path(item, run_dir=run_dir))
+            return
+        if isinstance(item, dict):
+            for nested in item.values():
+                collect(nested)
+            return
+        if isinstance(item, list):
+            for nested in item:
+                collect(nested)
+
+    collect(value)
+    output: list[str] = []
+    for ref in refs:
+        if ref and ref not in output:
+            output.append(ref)
+    return output[:50]
+
+
+def _workbench_ref_path(ref: str, *, run_dir: str) -> str:
+    if ref.startswith(("runs/", "data/")):
+        return ref
+    if run_dir:
+        return f"{run_dir.rstrip('/')}/{ref.lstrip('/')}"
+    return ref
 
 
 def _section(
