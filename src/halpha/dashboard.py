@@ -50,6 +50,19 @@ OUTCOME_TRACKING_ARTIFACTS = (
     ("outcome_evaluations", "Outcome evaluations", "analysis/outcome_evaluations.json"),
     ("outcome_tracking_material", "Outcome tracking material", "analysis/outcome_tracking_material.md"),
 )
+TEXT_INTELLIGENCE_ARTIFACTS = (
+    ("raw_text_events", "Raw text events", "raw/text_events.json"),
+    ("text_event_records", "Text event records", "analysis/text_event_records.json"),
+    ("text_entity_evidence", "Text entity evidence", "analysis/text_entity_evidence.json"),
+    (
+        "text_event_classification_evidence",
+        "Text event classification",
+        "analysis/text_event_classification_evidence.json",
+    ),
+    ("text_event_topics", "Text event topics", "analysis/text_event_topics.json"),
+    ("text_event_signals", "Text event signals", "analysis/text_event_signals.json"),
+    ("event_intelligence_material", "Event intelligence material", "analysis/event_intelligence_material.md"),
+)
 DATA_STORE_SECTION_NAMES = {
     "research_data_catalog",
     "run_index",
@@ -129,6 +142,10 @@ def create_dashboard_app(
     @app.get("/api/outcomes")
     def outcomes_endpoint(run_id: str | None = None) -> dict[str, Any]:
         return dashboard_outcomes(config_path=config_path, run_id=run_id)
+
+    @app.get("/api/text-intelligence")
+    def text_intelligence_endpoint(run_id: str | None = None) -> dict[str, Any]:
+        return dashboard_text_intelligence(config_path=config_path, run_id=run_id)
 
     @app.get("/api/runs")
     def runs_endpoint() -> dict[str, Any]:
@@ -264,6 +281,7 @@ def dashboard_health(
             "decision_risk_api": "available",
             "event_alert_api": "available",
             "outcome_tracking_api": "available",
+            "text_intelligence_api": "available",
             "schedule_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
@@ -624,6 +642,97 @@ def dashboard_outcomes(*, config_path: Path, run_id: str | None = None) -> dict[
         "omitted": {
             "full_outcome_artifacts_embedded": False,
             "full_outcome_history_embedded": False,
+        },
+    }
+
+
+def dashboard_text_intelligence(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
+    selected = _dashboard_selected_run(config_path, run_id=run_id)
+    commands = {
+        "text_models_prepare": "available",
+        "text_intel": "available",
+    }
+    if selected["status"] != "available":
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_text_intelligence",
+            "status": selected["status"],
+            "selected_run": selected,
+            "artifacts": [],
+            "source_artifacts": selected.get("source_artifacts", []),
+            "warnings": selected.get("warnings", []),
+            "errors": selected.get("errors", []),
+            "commands": commands,
+            "omitted": {
+                "full_raw_text_events_embedded": False,
+                "full_text_intelligence_artifacts_embedded": False,
+                "llm_generated_event_states": False,
+            },
+        }
+    base = _config_base(config_path)
+    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
+    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
+    manifest, error = _read_json(manifest_path)
+    if error:
+        failed = {
+            **selected,
+            "status": "failed",
+            "errors": [error],
+        }
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_text_intelligence",
+            "status": "failed",
+            "selected_run": failed,
+            "artifacts": [],
+            "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
+            "warnings": [],
+            "errors": [error],
+            "commands": commands,
+            "omitted": {
+                "full_raw_text_events_embedded": False,
+                "full_text_intelligence_artifacts_embedded": False,
+                "llm_generated_event_states": False,
+            },
+        }
+
+    artifacts = [
+        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
+        for key, title, default in TEXT_INTELLIGENCE_ARTIFACTS
+    ]
+    source_artifacts = sorted(
+        {
+            RUN_INDEX_ARTIFACT,
+            _safe_ref(manifest_path, base=base),
+            *[
+                ref
+                for artifact in artifacts
+                for ref in _string_list(artifact.get("source_artifacts"))
+            ],
+        }
+    )
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_text_intelligence",
+        "status": _overall_status([artifact["status"] for artifact in artifacts]),
+        "selected_run": selected,
+        "artifacts": artifacts,
+        "source_artifacts": source_artifacts,
+        "warnings": [
+            warning
+            for artifact in artifacts
+            for warning in _string_list(artifact.get("warnings"))
+        ],
+        "errors": [
+            error
+            for artifact in artifacts
+            for error in _string_list(artifact.get("errors"))
+        ],
+        "commands": commands,
+        "omitted": {
+            "full_raw_text_events_embedded": False,
+            "full_text_intelligence_artifacts_embedded": False,
+            "llm_generated_event_states": False,
         },
     }
 
@@ -1625,7 +1734,7 @@ def _dashboard_run_artifact_summary(
         "artifact": artifact,
         "preview_path": preview_path,
         "artifact_type": data.get("artifact_type"),
-        "artifact_status": data.get("status"),
+        "artifact_status": data.get("status") or "available",
         "record_count": _dashboard_record_count(data),
         "warning_count": len(_list(data.get("warnings"))),
         "error_count": len(_list(data.get("errors"))),
@@ -1637,7 +1746,7 @@ def _dashboard_run_artifact_summary(
     ]
     return _section(
         key,
-        _normalize_section_status(str(data.get("status") or "unknown")),
+        _normalize_section_status(str(data.get("status") or "available")),
         fields=fields,
         source_artifacts=sorted({ref for ref in source_artifacts if ref}),
         warnings=_string_list(data.get("warnings")),
@@ -1655,6 +1764,8 @@ def _dashboard_record_count(data: dict[str, Any]) -> int:
         "risk_assessments",
         "targets",
         "evaluations",
+        "topics",
+        "signals",
     ):
         value = data.get(key)
         if isinstance(value, list):
