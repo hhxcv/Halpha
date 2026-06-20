@@ -69,8 +69,11 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert response.headers["content-type"].startswith("text/html")
     assert "halpha-dashboard-app" in response.text
     assert "Operational overview" in response.text
-    assert 'data-endpoint="/api/overview"' in response.text
+    assert 'data-overview-endpoint="/api/overview"' in response.text
+    assert 'data-runs-endpoint="/api/runs"' in response.text
+    assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert "Runs &amp; reports" in response.text
+    assert "Report preview" in response.text
     assert "Command center" in response.text
     assert "pending" in response.text
     assert str(tmp_path) not in response.text
@@ -189,6 +192,7 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     assert detail["status"] == "available"
     assert detail["run_id"] == "run-1"
     assert detail["fields"]["manifest_status"] == "succeeded"
+    assert detail["fields"]["report"] == "report/report.md"
     assert detail["fields"]["codex"]["status"] == "skipped"
     assert detail["stages"] == [
         {
@@ -197,7 +201,9 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
             "status": "succeeded",
             "started_at": "2026-06-20T00:00:00Z",
             "finished_at": "2026-06-20T00:01:00Z",
-            "artifact_count": 0,
+            "artifact_count": 1,
+            "artifacts": [{"path": "raw/market.json", "kind": "raw"}],
+            "artifact_omitted_count": 0,
             "warning_count": 0,
             "error_count": 0,
         },
@@ -208,6 +214,8 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
             "started_at": "2026-06-20T00:01:00Z",
             "finished_at": "2026-06-20T00:02:00Z",
             "artifact_count": 0,
+            "artifacts": [],
+            "artifact_omitted_count": 0,
             "warning_count": 0,
             "error_count": 0,
         },
@@ -458,7 +466,7 @@ def _write_run(tmp_path: Path, config_path: Path) -> RunContext:
                 "status": "succeeded",
                 "started_at": "2026-06-20T00:00:00Z",
                 "finished_at": "2026-06-20T00:01:00Z",
-                "artifacts": [],
+                "artifacts": ["raw/market.json"],
             },
             {
                 "name": "run_codex_report",
