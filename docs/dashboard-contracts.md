@@ -124,6 +124,26 @@ Every view must distinguish available, partial, missing, stale, degraded,
 failed, skipped, and not-applicable states where the source artifacts support
 those distinctions. Missing evidence must not be displayed as neutral evidence.
 
+## UI Smoke Validation
+
+Dashboard UI validation should cover both source-backed APIs and the HTML shell
+that users operate directly. Automated smoke coverage should check:
+
+- navigation targets match implemented view sections;
+- primary workflow controls are wired for preview, command, schedule, monitor,
+  strategy, and text interactions;
+- desktop layout contracts keep the sidebar and content panes nonblank;
+- smaller viewport layout contracts collapse major grids to a single column;
+- bounded preview panels remain scrollable instead of expanding unbounded
+  artifact content.
+
+When browser tooling can access the local dashboard process, validate at least
+one desktop viewport and one smaller viewport by navigating across core views
+and opening at least one bounded artifact preview. If the local environment
+blocks browser automation against the local-only dashboard bind, record that
+limitation in the PR and rely on TestClient shell/API coverage plus static
+responsive and interaction-contract tests.
+
 ## Artifact Preview Rules
 
 Dashboard artifact previews must be bounded by default.
