@@ -56,6 +56,49 @@ Dashboard runtime state may record UI-triggered job and schedule state. That
 state is control and delivery state only. It must not override or mutate
 product artifacts as research evidence.
 
+## Implemented Operation
+
+Start the dashboard with:
+
+```bash
+python -m halpha dashboard --config config.example.yaml
+python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
+```
+
+The dashboard service validates that the bind host is local-only. It is a local
+operator UI, not a hosted service.
+
+Implemented dashboard views expose:
+
+- overview state from latest run, product validation, data quality, monitor,
+  and workbench summaries;
+- run history, report previews, stage timelines, and artifact refs;
+- bounded artifact previews for supported local text-like artifacts;
+- local data store metadata and source refs;
+- strategy research outputs, standalone backtests, experiments, gates, and
+  lifecycle state;
+- monitor health, recent cycles, alert counts, cooldown state, alert samples,
+  and monitor job history.
+
+Implemented dashboard command controls are backed by allowlisted job intents.
+The current job runner supports:
+
+- read-only or inspection jobs: `validate`, `data_inspect`,
+  `outcomes_inspect`, `workbench_inspect`, and `monitor_inspect`;
+- product jobs: `run`, `run_no_codex`, `run_until`, and `stage_rerun`;
+- workbench build: `workbench_build`;
+- strategy and text jobs: `backtest`, `experiment`,
+  `text_models_prepare`, and `text_intel`;
+- monitor jobs: `monitor_dry_run`, `monitor_once`, and `monitor_loop`.
+
+The dashboard UI currently exposes monitor job controls directly in the Monitor
+view. Other command actions are available through the dashboard jobs API and
+remain explicit allowlisted jobs.
+
+Implemented schedule controls are API-backed local state for the daily report
+schedule. The schedule API can inspect, enable, disable, update, and manually
+trigger daily report jobs. It does not run a hidden scheduler loop.
+
 ## View Contract
 
 Dashboard pages should expose the current product shape through bounded views:
@@ -71,12 +114,11 @@ Dashboard pages should expose the current product shape through bounded views:
 - Strategy lab: pipeline strategy artifacts, standalone backtests, standalone
   experiments, gates, lifecycle state, warnings, and limitations.
 - Decision, risk, event, and alert views: deterministic records and bounded
-  source refs from existing artifacts.
+  source refs from existing artifacts when implemented.
 - Monitor: cycle history, linked runs, alert archive aggregates, cooldown state,
   warnings, and errors.
-- Command center: controlled UI triggers for implemented Halpha commands.
-- Schedule controls: explicit local daily-report schedule state when
-  implemented.
+- Command controls: controlled UI/API triggers for implemented Halpha commands.
+- Schedule controls: explicit local daily-report schedule state.
 
 Every view must distinguish available, partial, missing, stale, degraded,
 failed, skipped, and not-applicable states where the source artifacts support
@@ -152,9 +194,13 @@ Codex-capable full report jobs require explicit user confirmation before the
 dashboard invokes Codex CLI. No monitor job or read-only inspection job should
 invoke Codex unless its command contract explicitly says so.
 
+Job records are written under `runs/dashboard/jobs/`. The job index records
+bounded metadata and result refs. Full job logs are local runtime artifacts and
+must not be copied into Codex context by default.
+
 ## Schedule Contract
 
-Daily report scheduling, when implemented, must be explicit dashboard state.
+Daily report scheduling must be explicit dashboard state.
 
 Schedule state should record:
 
@@ -167,10 +213,27 @@ Schedule state should record:
 - linked report refs when available;
 - warnings and errors.
 
+Implemented daily report schedule state lives at:
+
+```text
+runs/dashboard/schedules/daily_report_schedule.json
+```
+
+The schedule API supports:
+
+- `GET /api/schedule/daily-report`;
+- `POST /api/schedule/daily-report`;
+- `POST /api/schedule/daily-report/enable`;
+- `POST /api/schedule/daily-report/disable`;
+- `POST /api/schedule/daily-report/trigger`.
+
+Manual schedule triggers create visible dashboard jobs. The default trigger is
+`run_no_codex`. Codex-capable `run` triggers require `confirm_codex: true`.
+
 The schedule must not assume a hosted scheduler, OS service, startup task,
-cron integration, workflow engine, or hidden daemon. Scheduled work should run
-only while the dashboard runtime is active unless a later explicit local service
-requirement changes that contract.
+cron integration, workflow engine, or hidden daemon. The current implementation
+does not include automatic dispatch; it records schedule state and supports
+manual trigger APIs only.
 
 ## Monitor Boundary
 
@@ -205,6 +268,12 @@ Local private values include:
 Use bounded public-facing summaries, sanitized refs, omitted-value counts, and
 explicit warnings instead of copying private source content into dashboard
 responses.
+
+Artifact previews redact private JSON keys, JSONL records, text key-value
+lines, configured private values, and local config-root paths where the
+dashboard can identify them. Preview redaction is conservative: source keys
+that look like private paths, tokens, proxy values, endpoints, users, accounts,
+or credentials may be replaced with `<redacted>`.
 
 ## Codex Boundary
 
