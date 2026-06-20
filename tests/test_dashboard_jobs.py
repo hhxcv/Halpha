@@ -265,6 +265,170 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
+def test_dashboard_job_manager_accepts_strategy_and_text_command_intents(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+    input_path = tmp_path / "runs" / "run-1" / "raw" / "text_events.json"
+    input_path.parent.mkdir(parents=True)
+    input_path.write_text("{}", encoding="utf-8")
+    commands: list[list[str]] = []
+    outputs = [
+        "\n".join(
+            [
+                "Halpha backtest succeeded.",
+                "strategy_backtest: runs/manual-backtests/run-1/strategy_backtest.json",
+                "manifest: runs/manual-backtests/run-1/manifest.json",
+            ]
+        ),
+        "\n".join(
+            [
+                "Halpha experiment succeeded.",
+                "strategy_experiment: runs/manual-experiments/run-1/strategy_experiment.json",
+                "strategy_benchmark_suite: runs/manual-experiments/run-1/strategy_benchmark_suite.json",
+                "strategy_effectiveness_gates: runs/manual-experiments/run-1/strategy_effectiveness_gates.json",
+                "manifest: runs/manual-experiments/run-1/manifest.json",
+            ]
+        ),
+        "manifest: data/models/prep/model_prepare_manifest.json",
+        "\n".join(
+            [
+                "Halpha text intelligence succeeded.",
+                "output_dir: runs/text-intel/run-1",
+                "text_event_records: analysis/text_event_records.json",
+                "text_event_classification_evidence: analysis/text_event_classification_evidence.json",
+                "text_event_topics: analysis/text_event_topics.json",
+                "text_event_signals: analysis/text_event_signals.json",
+                "event_intelligence_material: analysis/event_intelligence_material.md",
+                "manifest: runs/text-intel/run-1/manifest.json",
+            ]
+        ),
+    ]
+
+    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        index = len(commands)
+        commands.append(command)
+        return _FakeProcess(stdout=outputs[index], stderr="", returncode=0)
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        (
+            "backtest",
+            {
+                "strategy_name": "tsmom_vol_scaled",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+                "output_dir": "runs/manual-backtests",
+            },
+            [
+                "python",
+                "-m",
+                "halpha",
+                "backtest",
+                "--config",
+                "<external-config>",
+                "--strategy",
+                "tsmom_vol_scaled",
+                "--symbol",
+                "BTCUSDT",
+                "--timeframe",
+                "1d",
+                "--output-dir",
+                "runs/manual-backtests",
+            ],
+            {
+                "strategy_backtest": "runs/manual-backtests/run-1/strategy_backtest.json",
+                "manifest": "runs/manual-backtests/run-1/manifest.json",
+            },
+        ),
+        (
+            "experiment",
+            {"strategy_names": ["tsmom_vol_scaled", "sma_cross_trend"], "output_dir": "runs/manual-experiments"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "experiment",
+                "--config",
+                "<external-config>",
+                "--strategy",
+                "tsmom_vol_scaled",
+                "--strategy",
+                "sma_cross_trend",
+                "--output-dir",
+                "runs/manual-experiments",
+            ],
+            {
+                "strategy_experiment": "runs/manual-experiments/run-1/strategy_experiment.json",
+                "strategy_benchmark_suite": "runs/manual-experiments/run-1/strategy_benchmark_suite.json",
+                "strategy_effectiveness_gates": "runs/manual-experiments/run-1/strategy_effectiveness_gates.json",
+                "manifest": "runs/manual-experiments/run-1/manifest.json",
+            },
+        ),
+        (
+            "text_models_prepare",
+            {"output_dir": "data/models/prep"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "text-models",
+                "prepare",
+                "--config",
+                "<external-config>",
+                "--output-dir",
+                "data/models/prep",
+            ],
+            {"manifest": "data/models/prep/model_prepare_manifest.json"},
+        ),
+        (
+            "text_intel",
+            {"input_path": "runs/run-1/raw/text_events.json", "output_dir": "runs/text-intel"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "text-intel",
+                "--config",
+                "<external-config>",
+                "--input",
+                "runs/run-1/raw/text_events.json",
+                "--output-dir",
+                "runs/text-intel",
+            ],
+            {
+                "output_dir": "runs/text-intel/run-1",
+                "text_event_records": "runs/text-intel/run-1/analysis/text_event_records.json",
+                "text_event_classification_evidence": (
+                    "runs/text-intel/run-1/analysis/text_event_classification_evidence.json"
+                ),
+                "text_event_topics": "runs/text-intel/run-1/analysis/text_event_topics.json",
+                "text_event_signals": "runs/text-intel/run-1/analysis/text_event_signals.json",
+                "event_intelligence_material": "runs/text-intel/run-1/analysis/event_intelligence_material.md",
+                "manifest": "runs/text-intel/run-1/manifest.json",
+            },
+        ),
+    ]
+
+    for intent, params, preview, expected_refs in cases:
+        job = manager.create_job({"intent": intent, "params": params})
+        completed = _wait_for_terminal(manager, job["job_id"])
+        assert completed["status"] == "succeeded"
+        assert completed["intent"] == intent
+        assert completed["command"] == preview
+        for key, value in expected_refs.items():
+            assert completed["result_refs"][key] == value
+        for key, value in expected_refs.items():
+            if key != "output_dir":
+                assert value in completed["source_artifacts"]
+
+    assert len(commands) == len(cases)
+    assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
+
+
 def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -319,6 +483,92 @@ def test_dashboard_job_manager_rejects_invalid_stage_name_before_process(tmp_pat
 
     assert job["status"] == "blocked"
     assert "stage_name must be one of:" in job["errors"][0]
+
+
+def test_dashboard_job_manager_rejects_unconfigured_strategy_values_before_process(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("invalid configured values must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        (
+            {"intent": "backtest", "params": {"strategy_name": "missing", "symbol": "BTCUSDT", "timeframe": "1d"}},
+            "strategy_name is not configured or enabled",
+        ),
+        (
+            {"intent": "backtest", "params": {"strategy_name": "tsmom_vol_scaled", "symbol": "DOGEUSDT", "timeframe": "1d"}},
+            "symbol is not configured",
+        ),
+        (
+            {"intent": "backtest", "params": {"strategy_name": "tsmom_vol_scaled", "symbol": "BTCUSDT", "timeframe": "5m"}},
+            "timeframe is not configured",
+        ),
+        (
+            {"intent": "experiment", "params": {"strategy_names": ["breakout_atr_trend"]}},
+            "strategy_names is not configured or enabled",
+        ),
+        (
+            {"intent": "experiment", "params": {"strategy_names": "tsmom_vol_scaled"}},
+            "strategy_names must be a non-empty list",
+        ),
+    ]
+
+    for request, error in cases:
+        job = manager.create_job(request)
+        assert job["status"] == "blocked"
+        assert error in job["errors"][0]
+
+
+def test_dashboard_job_manager_rejects_unsafe_strategy_text_paths_before_process(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("unsafe paths must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        (
+            {
+                "intent": "backtest",
+                "params": {
+                    "strategy_name": "tsmom_vol_scaled",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "output_dir": "../outside",
+                },
+            },
+            "output_dir must stay within",
+        ),
+        (
+            {"intent": "text_models_prepare", "params": {"output_dir": "../outside"}},
+            "output_dir must stay within",
+        ),
+        (
+            {"intent": "text_intel", "params": {"input_path": "../outside/text_events.json"}},
+            "input_path must stay within",
+        ),
+        (
+            {"intent": "text_intel", "params": {"input_path": "runs/missing/text_events.json"}},
+            "input_path must reference an existing file",
+        ),
+    ]
+
+    for request, error in cases:
+        job = manager.create_job(request)
+        assert job["status"] == "blocked"
+        assert error in job["errors"][0]
 
 
 def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_path: Path, monkeypatch) -> None:
@@ -386,6 +636,44 @@ def test_dashboard_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
     assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
+    assert str(tmp_path) not in create_response.text
+
+
+def test_dashboard_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+    stdout = "\n".join(
+        [
+            "Halpha backtest succeeded.",
+            "strategy_backtest: runs/backtests/run-api/strategy_backtest.json",
+            "manifest: runs/backtests/run-api/manifest.json",
+        ]
+    )
+    monkeypatch.setattr(
+        "halpha.dashboard_jobs.subprocess.Popen",
+        lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    create_response = client.post(
+        "/api/jobs",
+        json={
+            "intent": "backtest",
+            "params": {
+                "strategy_name": "tsmom_vol_scaled",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+            },
+        },
+    )
+    payload = create_response.json()
+    completed = _wait_for_api_terminal(client, payload["job_id"])
+
+    assert create_response.status_code == 200
+    assert completed["status"] == "succeeded"
+    assert completed["intent"] == "backtest"
+    assert completed["result_refs"]["strategy_backtest"] == "runs/backtests/run-api/strategy_backtest.json"
+    assert completed["result_refs"]["manifest"] == "runs/backtests/run-api/manifest.json"
     assert str(tmp_path) not in create_response.text
 
 
@@ -526,6 +814,79 @@ market:
 text:
   enabled: false
   sources: []
+report:
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_strategy_text_config(tmp_path: Path) -> Path:
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        """
+run:
+  output_dir: runs
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 1h
+    lookback:
+      1d: 30
+      1h: 48
+quant:
+  enabled: true
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+    - name: sma_cross_trend
+      enabled: true
+    - name: breakout_atr_trend
+      enabled: false
+text:
+  enabled: true
+  intelligence:
+    enabled: true
+    model_cache_dir: data/models/text
+    allow_model_download: false
+    models:
+      embedding:
+        provider: sentence_transformers
+        name: sentence-transformers/all-MiniLM-L6-v2
+        revision: pinned
+      classifier:
+        provider: transformers_zero_shot
+        name: facebook/bart-large-mnli
+        revision: pinned
+      sentiment:
+        provider: transformers_text_classification
+        name: ProsusAI/finbert
+        revision: pinned
+      ner:
+        provider: gliner
+        name: urchade/gliner_medium-v2.1
+        revision: pinned
+    thresholds:
+      duplicate_similarity: 0.92
+      same_topic_similarity: 0.82
+      classifier_accept_score: 0.65
+      classifier_top_margin: 0.10
+      entity_accept_score: 0.50
+      max_topic_window_hours: 48
+  sources:
+    - name: fixture
+      type: rss
+      url: https://example.com/feed.xml
 report:
   language: zh-CN
 codex:
