@@ -10,6 +10,7 @@ from typing import Any
 from .data_inspection import DataInspectionError, inspect_local_store_state
 from .dashboard_jobs import DashboardJobManager
 from .dashboard_monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
+from .dashboard_schedule import DashboardScheduleManager
 from .dashboard_strategy import dashboard_strategy_research
 from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
@@ -73,6 +74,7 @@ def create_dashboard_app(
     app = FastAPI(title="Halpha Dashboard", version="0.0.0")
     health = dashboard_health(config, config_path=config_path, host=host, port=port)
     job_manager = DashboardJobManager(config, config_path=config_path)
+    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
 
     @app.get("/", response_class=HTMLResponse)
     def root() -> HTMLResponse:
@@ -148,6 +150,32 @@ def create_dashboard_app(
     def cancel_job_endpoint(job_id: str) -> dict[str, Any]:
         return job_manager.cancel_job(job_id)
 
+    @app.get("/api/schedule/daily-report")
+    def daily_report_schedule_endpoint() -> dict[str, Any]:
+        return schedule_manager.read_daily_report_schedule()
+
+    @app.post("/api/schedule/daily-report")
+    def update_daily_report_schedule_endpoint(
+        request: dict[str, Any] | None = Body(default=None),
+    ) -> dict[str, Any]:
+        return schedule_manager.update_daily_report_schedule(request or {})
+
+    @app.post("/api/schedule/daily-report/enable")
+    def enable_daily_report_schedule_endpoint(
+        request: dict[str, Any] | None = Body(default=None),
+    ) -> dict[str, Any]:
+        return schedule_manager.enable_daily_report_schedule(request or {})
+
+    @app.post("/api/schedule/daily-report/disable")
+    def disable_daily_report_schedule_endpoint() -> dict[str, Any]:
+        return schedule_manager.disable_daily_report_schedule()
+
+    @app.post("/api/schedule/daily-report/trigger")
+    def trigger_daily_report_schedule_endpoint(
+        request: dict[str, Any] | None = Body(default=None),
+    ) -> dict[str, Any]:
+        return schedule_manager.trigger_daily_report_schedule(request or {})
+
     return app
 
 
@@ -194,6 +222,7 @@ def dashboard_health(
             "data_store_api": "available",
             "strategy_research_api": "available",
             "monitor_api": "available",
+            "schedule_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
         },
