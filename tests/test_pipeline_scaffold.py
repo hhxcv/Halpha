@@ -323,10 +323,14 @@ def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsy
     assert manifest["codex"]["status"] == "skipped"
     assert manifest["codex"]["exit_code"] is None
     assert manifest["codex"]["skip_reason"] == "--no-codex requested"
-    assert manifest["stages"][-1]["name"] == "run_codex_report"
-    assert manifest["stages"][-1]["status"] == "skipped"
-    assert manifest["stages"][-1]["artifacts"] == []
+    codex_stage = _stage(manifest, "run_codex_report")
+    assert codex_stage["status"] == "skipped"
+    assert codex_stage["artifacts"] == []
+    assert manifest["stages"][-1]["name"] == "validate_product_contracts"
+    assert manifest["stages"][-1]["status"] == "succeeded"
+    assert manifest["stages"][-1]["artifacts"] == ["analysis/product_contract_validation.json"]
     assert (run_dir / "codex_context" / "prompt.md").is_file()
+    assert (run_dir / "analysis" / "product_contract_validation.json").is_file()
     assert not (run_dir / "report" / "report.md").exists()
     assert "report" not in manifest["artifacts"]
 

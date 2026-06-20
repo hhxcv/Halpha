@@ -271,6 +271,7 @@ build_analysis_materials
 build_research_context
 build_codex_context
 run_codex_report
+validate_product_contracts
 ```
 
 ## Configuration
@@ -390,6 +391,7 @@ A successful configured run can write:
 - `codex_context/context.md`: Codex-readable context artifact.
 - `codex_context/prompt.md`: prompt sent to Codex CLI.
 - `report/report.md`: Simplified Chinese Markdown report from Codex stdout.
+- `analysis/product_contract_validation.json`: deterministic product contract validation, manifest health, artifact contract checks, Codex/report boundary checks, and operational diagnostics.
 - `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
 - `runs/strategy_backtests/<id>/strategy_backtest.json`: standalone strategy backtest output.
 - `runs/strategy_backtests/<id>/manifest.json`: standalone backtest manifest.

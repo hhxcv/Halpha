@@ -89,6 +89,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "codex_context/context.md",
         "codex_context/prompt.md",
         "report/report.md",
+        "analysis/product_contract_validation.json",
         "run_manifest.json",
     ]
     for artifact in expected_artifacts:
@@ -121,6 +122,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
             "user_state_context": "analysis/user_state_context.json",
             "personalized_risk_constraints": "analysis/personalized_risk_constraints.json",
             "personalized_risk_material": "analysis/personalized_risk_material.md",
+            "product_contract_validation": "analysis/product_contract_validation.json",
             "factor_signal_material": "analysis/factor_signal_material.md",
             "market_material": "analysis/market_material.md",
         "raw_market": "raw/market.json",
@@ -201,8 +203,10 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         ("build_research_context", "succeeded"),
         ("build_codex_context", "succeeded"),
         ("run_codex_report", "succeeded"),
+        ("validate_product_contracts", "succeeded"),
     ]
-    assert manifest["stages"][-1]["artifacts"] == ["report/report.md"]
+    assert manifest["stages"][-1]["artifacts"] == ["analysis/product_contract_validation.json"]
+    assert manifest["artifacts"]["product_contract_validation"] == "analysis/product_contract_validation.json"
 
     market_raw = json.loads((run_dir / "raw/market.json").read_text(encoding="utf-8"))
     assert market_raw["source"]["name"] == "binance"
