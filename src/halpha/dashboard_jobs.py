@@ -19,6 +19,21 @@ DASHBOARD_JOB_INDEX = "runs/dashboard/jobs/index.json"
 MAX_JOB_LOG_CHARS = 20_000
 CODEX_STAGE = "run_codex_report"
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
+RESULT_ARTIFACT_KEYS = {
+    "event_intelligence_material",
+    "manifest",
+    "model_prepare_manifest",
+    "report",
+    "strategy_backtest",
+    "strategy_benchmark_suite",
+    "strategy_effectiveness_gates",
+    "strategy_experiment",
+    "text_event_classification_evidence",
+    "text_event_records",
+    "text_event_signals",
+    "text_event_topics",
+}
+TEXT_INTELLIGENCE_RELATIVE_ARTIFACT_PREFIXES = ("analysis/", "raw/", "codex_context/", "report/")
 PRIVATE_KEY_PARTS = (
     "account",
     "cookie",
@@ -51,6 +66,7 @@ class CommandSpec:
     extra_cli_parts: tuple[str, ...] = ()
     stage_param: str | None = None
     codex_confirmation: str | None = None
+    param_mode: str | None = None
 
 
 SUPPORTED_COMMANDS = {
@@ -124,6 +140,34 @@ SUPPORTED_COMMANDS = {
         kind="monitor_inspection",
         cancellable=True,
         cli_parts=("monitor", "inspect"),
+    ),
+    "backtest": CommandSpec(
+        intent="backtest",
+        kind="strategy_backtest",
+        cancellable=True,
+        cli_parts=("backtest",),
+        param_mode="backtest",
+    ),
+    "experiment": CommandSpec(
+        intent="experiment",
+        kind="strategy_experiment",
+        cancellable=True,
+        cli_parts=("experiment",),
+        param_mode="experiment",
+    ),
+    "text_models_prepare": CommandSpec(
+        intent="text_models_prepare",
+        kind="text_model_preparation",
+        cancellable=True,
+        cli_parts=("text-models", "prepare"),
+        param_mode="text_models_prepare",
+    ),
+    "text_intel": CommandSpec(
+        intent="text_intel",
+        kind="text_intelligence",
+        cancellable=True,
+        cli_parts=("text-intel",),
+        param_mode="text_intel",
     ),
 }
 
@@ -299,10 +343,10 @@ class DashboardJobManager:
         job = self.get_job(job_id) or job
         stdout_ref, stdout_truncated = self._write_log(job_id, "stdout.log", stdout)
         stderr_ref, stderr_truncated = self._write_log(job_id, "stderr.log", stderr)
-        result_refs = self._job_result_refs(stdout)
+        result_refs = self._job_result_refs(stdout, spec=spec)
         source_artifacts = [stdout_ref, stderr_ref]
-        for artifact_ref in (result_refs.get("run_manifest"), result_refs.get("report")):
-            if artifact_ref and artifact_ref not in source_artifacts:
+        for key, artifact_ref in result_refs.items():
+            if key not in {"output_dir", "run_id"} and artifact_ref and artifact_ref not in source_artifacts:
                 source_artifacts.append(artifact_ref)
         exit_code = int(process.returncode or 0)
         status = "cancelled" if was_cancelled else "succeeded" if exit_code == 0 else "failed"
@@ -370,6 +414,7 @@ class DashboardJobManager:
             supported_params.add("stage_name")
         if spec.codex_confirmation:
             supported_params.add("confirm_codex")
+        supported_params.update(self._param_mode_supported_params(spec.param_mode))
         extra = sorted(set(params) - supported_params)
         if extra:
             raise DashboardJobError(f"unsupported {spec.intent} job parameter(s): {', '.join(extra)}")
@@ -387,12 +432,123 @@ class DashboardJobManager:
         if spec.extra_cli_parts:
             command.extend(spec.extra_cli_parts)
             preview.extend(spec.extra_cli_parts)
+        self._extend_param_mode_args(spec.param_mode, params, command, preview)
         run_dir = params.get("run_dir")
         if run_dir is not None:
             run_dir_path = self._validated_run_dir(str(run_dir))
             command.extend(["--run-dir", str(run_dir_path)])
             preview.extend(["--run-dir", _safe_ref(run_dir_path, base=self.base)])
         return command, preview
+
+    def _param_mode_supported_params(self, param_mode: str | None) -> set[str]:
+        if param_mode == "backtest":
+            return {"strategy_name", "symbol", "timeframe", "output_dir"}
+        if param_mode == "experiment":
+            return {"strategy_names", "output_dir"}
+        if param_mode == "text_models_prepare":
+            return {"output_dir"}
+        if param_mode == "text_intel":
+            return {"input_path", "output_dir"}
+        return set()
+
+    def _extend_param_mode_args(
+        self,
+        param_mode: str | None,
+        params: dict[str, Any],
+        command: list[str],
+        preview: list[str],
+    ) -> None:
+        if param_mode == "backtest":
+            strategy_name = self._validated_strategy_name(params.get("strategy_name"), param_name="strategy_name")
+            symbol = self._validated_symbol(params.get("symbol"))
+            timeframe = self._validated_timeframe(params.get("timeframe"))
+            command.extend(["--strategy", strategy_name, "--symbol", symbol, "--timeframe", timeframe])
+            preview.extend(["--strategy", strategy_name, "--symbol", symbol, "--timeframe", timeframe])
+            self._extend_optional_output_dir(params, command, preview)
+        elif param_mode == "experiment":
+            strategy_names = self._validated_strategy_names(params.get("strategy_names"))
+            for strategy_name in strategy_names:
+                command.extend(["--strategy", strategy_name])
+                preview.extend(["--strategy", strategy_name])
+            self._extend_optional_output_dir(params, command, preview)
+        elif param_mode == "text_models_prepare":
+            self._extend_optional_output_dir(params, command, preview)
+        elif param_mode == "text_intel":
+            input_path = params.get("input_path")
+            if input_path is not None:
+                if not isinstance(input_path, str):
+                    raise DashboardJobError("input_path must be a string.")
+                path = self._validated_input_path(str(input_path))
+                command.extend(["--input", str(path)])
+                preview.extend(["--input", _safe_ref(path, base=self.base)])
+            self._extend_optional_output_dir(params, command, preview)
+
+    def _extend_optional_output_dir(
+        self,
+        params: dict[str, Any],
+        command: list[str],
+        preview: list[str],
+    ) -> None:
+        output_dir = params.get("output_dir")
+        if output_dir is None:
+            return
+        if not isinstance(output_dir, str):
+            raise DashboardJobError("output_dir must be a string.")
+        path = self._validated_local_path(str(output_dir), param_name="output_dir")
+        command.extend(["--output-dir", str(path)])
+        preview.extend(["--output-dir", _safe_ref(path, base=self.base)])
+
+    def _validated_strategy_name(self, value: Any, *, param_name: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise DashboardJobError(f"{param_name} must not be empty.")
+        strategy_name = value.strip()
+        if strategy_name not in self._configured_strategy_names():
+            raise DashboardJobError(f"{param_name} is not configured or enabled: {strategy_name}.")
+        return strategy_name
+
+    def _validated_strategy_names(self, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or not value:
+            raise DashboardJobError("strategy_names must be a non-empty list when provided.")
+        names = [self._validated_strategy_name(item, param_name="strategy_names") for item in value]
+        return names
+
+    def _validated_symbol(self, value: Any) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise DashboardJobError("symbol must not be empty.")
+        symbol = value.strip()
+        if symbol not in self._configured_symbols():
+            raise DashboardJobError(f"symbol is not configured: {symbol}.")
+        return symbol
+
+    def _validated_timeframe(self, value: Any) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise DashboardJobError("timeframe must not be empty.")
+        timeframe = value.strip()
+        if timeframe not in self._configured_timeframes():
+            raise DashboardJobError(f"timeframe is not configured: {timeframe}.")
+        return timeframe
+
+    def _configured_strategy_names(self) -> set[str]:
+        quant = self.config.get("quant") if isinstance(self.config.get("quant"), dict) else {}
+        strategies = quant.get("strategies") if isinstance(quant.get("strategies"), list) else []
+        return {
+            str(strategy.get("name"))
+            for strategy in strategies
+            if isinstance(strategy, dict) and strategy.get("name") and strategy.get("enabled", True) is not False
+        }
+
+    def _configured_symbols(self) -> set[str]:
+        market = self.config.get("market") if isinstance(self.config.get("market"), dict) else {}
+        values = market.get("symbols") if isinstance(market.get("symbols"), list) else []
+        return {str(value) for value in values}
+
+    def _configured_timeframes(self) -> set[str]:
+        market = self.config.get("market") if isinstance(self.config.get("market"), dict) else {}
+        ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+        values = ohlcv.get("timeframes") if isinstance(ohlcv.get("timeframes"), list) else []
+        return {str(value) for value in values}
 
     def _validated_stage_name(self, value: Any) -> str:
         if not isinstance(value, str) or not value.strip():
@@ -422,6 +578,23 @@ class DashboardJobManager:
             resolved.resolve().relative_to(runs_root)
         except ValueError as exc:
             raise DashboardJobError("run_dir must stay within the configured run output directory.") from exc
+        return resolved
+
+    def _validated_input_path(self, value: str) -> Path:
+        path = self._validated_local_path(value, param_name="input_path")
+        if not path.is_file():
+            raise DashboardJobError("input_path must reference an existing file.")
+        return path
+
+    def _validated_local_path(self, value: str, *, param_name: str) -> Path:
+        if not value or not value.strip():
+            raise DashboardJobError(f"{param_name} must not be empty.")
+        path = Path(value)
+        resolved = path if path.is_absolute() else self.base / path
+        try:
+            resolved.resolve().relative_to(self.base.resolve())
+        except ValueError as exc:
+            raise DashboardJobError(f"{param_name} must stay within the dashboard config directory.") from exc
         return resolved
 
     def _run_output_root(self) -> Path:
@@ -481,8 +654,9 @@ class DashboardJobManager:
         path.write_text(bounded, encoding="utf-8")
         return _safe_ref(path, base=self.base), len(safe) > MAX_JOB_LOG_CHARS
 
-    def _job_result_refs(self, stdout: str | None) -> dict[str, str]:
+    def _job_result_refs(self, stdout: str | None, *, spec: CommandSpec) -> dict[str, str]:
         refs: dict[str, str] = {}
+        output_dir_ref: str | None = None
         for line in (stdout or "").splitlines():
             key, separator, value = line.partition(":")
             if not separator:
@@ -493,11 +667,22 @@ class DashboardJobManager:
                 continue
             if key == "run_id":
                 refs["run_id"] = self._redact_text(value)
+            elif key == "output_dir":
+                output_dir_ref = self._safe_output_ref(value)
+                refs["output_dir"] = output_dir_ref
             elif key == "manifest":
-                refs["run_manifest"] = self._safe_output_ref(value)
+                result_key = "run_manifest" if spec.kind in {"product_run", "stage_rerun"} else "manifest"
+                refs[result_key] = self._safe_output_ref(value)
             elif key == "report":
                 refs["report"] = self._safe_output_ref(value)
+            elif key in RESULT_ARTIFACT_KEYS:
+                refs[key] = self._safe_result_artifact_ref(value, output_dir_ref=output_dir_ref)
         return refs
+
+    def _safe_result_artifact_ref(self, value: str, *, output_dir_ref: str | None) -> str:
+        if output_dir_ref and value.startswith(TEXT_INTELLIGENCE_RELATIVE_ARTIFACT_PREFIXES):
+            return self._safe_output_ref(f"{output_dir_ref}/{value}")
+        return self._safe_output_ref(value)
 
     def _safe_output_ref(self, value: str) -> str:
         redacted = self._redact_text(value)
