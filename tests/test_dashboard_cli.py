@@ -33,6 +33,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     response = client.get("/api/health")
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store, max-age=0"
     payload = response.json()
     assert payload["artifact_type"] == "dashboard_health"
     assert payload["service"] == "halpha_dashboard"
@@ -76,6 +77,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
+    assert response.headers["cache-control"] == "no-store, max-age=0"
+    assert response.headers["pragma"] == "no-cache"
     assert "halpha-dashboard-app" in response.text
     assert "Operational overview" in response.text
     assert "Refresh view" in response.text
