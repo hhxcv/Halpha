@@ -51,6 +51,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["decision_risk_api"] == "available"
     assert payload["features"]["event_alert_api"] == "available"
     assert payload["features"]["outcome_tracking_api"] == "available"
+    assert payload["features"]["text_intelligence_api"] == "available"
     assert payload["features"]["schedule_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "available"
@@ -82,6 +83,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-decision-risk-endpoint="/api/decision-risk"' in response.text
     assert 'data-event-alert-endpoint="/api/event-alert"' in response.text
     assert 'data-outcomes-endpoint="/api/outcomes"' in response.text
+    assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
@@ -108,6 +110,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'href="#event-alert" data-view-target="event-alert"' in response.text
     assert "Event &amp; alerts" in response.text
     assert "Event and alert artifacts" in response.text
+    assert 'href="#text-intelligence" data-view-target="text-intelligence"' in response.text
+    assert "Text intelligence" in response.text
+    assert "Text artifacts" in response.text
+    assert "Text commands" in response.text
     assert 'href="#outcomes" data-view-target="outcomes"' in response.text
     assert "Outcome tracking" in response.text
     assert "Run outcome artifacts" in response.text
@@ -464,6 +470,135 @@ def test_dashboard_event_alert_endpoint_summarizes_selected_run_artifacts(tmp_pa
     assert "runs/run-1/analysis/event_intelligence_assessment.json" in payload["source_artifacts"]
     assert "runs/run-1/analysis/text_event_signals.json" in payload["source_artifacts"]
     assert payload["omitted"]["full_event_alert_artifacts_embedded"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_text_intelligence_endpoint_reports_missing_run_state(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/text-intelligence")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_text_intelligence"
+    assert payload["status"] == "missing"
+    assert payload["artifacts"] == []
+    assert payload["commands"]["text_models_prepare"] == "available"
+    assert payload["commands"]["text_intel"] == "available"
+    assert "local run index was not found" in payload["warnings"][0]
+    assert payload["omitted"]["full_raw_text_events_embedded"] is False
+    assert payload["omitted"]["llm_generated_event_states"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_text_intelligence_endpoint_summarizes_selected_run_artifacts(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    run.manifest["artifacts"].update(
+        {
+            "raw_text_events": "raw/text_events.json",
+            "text_event_records": "analysis/text_event_records.json",
+            "text_entity_evidence": "analysis/text_entity_evidence.json",
+            "text_event_classification_evidence": "analysis/text_event_classification_evidence.json",
+            "text_event_topics": "analysis/text_event_topics.json",
+            "text_event_signals": "analysis/text_event_signals.json",
+            "event_intelligence_material": "analysis/event_intelligence_material.md",
+        }
+    )
+    write_json(run.manifest_path, run.manifest)
+    write_json(
+        run.raw_dir / "text_events.json",
+        {
+            "artifact_type": "text_events_raw",
+            "items": [{"title": "event one"}, {"title": "event two"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "text_event_records.json",
+        {
+            "artifact_type": "text_event_records",
+            "status": "ok",
+            "records": [{"event_id": "event-1"}],
+            "source_artifacts": ["raw/text_events.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "text_entity_evidence.json",
+        {
+            "artifact_type": "text_entity_evidence",
+            "status": "ok",
+            "records": [{"event_id": "event-1", "assets": ["BTC"]}],
+            "source_artifacts": ["analysis/text_event_records.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "text_event_classification_evidence.json",
+        {
+            "artifact_type": "text_event_classification_evidence",
+            "status": "warning",
+            "records": [{"event_id": "event-1", "category": "policy"}],
+            "source_artifacts": ["analysis/text_event_records.json"],
+            "warnings": ["classification threshold review needed"],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "text_event_topics.json",
+        {
+            "artifact_type": "text_event_topics",
+            "status": "ok",
+            "topics": [{"topic_id": "topic-1"}],
+            "source_artifacts": ["analysis/text_event_records.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "text_event_signals.json",
+        {
+            "artifact_type": "text_event_signals",
+            "status": "ok",
+            "signals": [{"signal_id": "signal-1"}],
+            "counts": {"signals": 1},
+            "source_artifacts": ["analysis/text_event_topics.json"],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    (run.analysis_dir / "event_intelligence_material.md").write_text("# Event material\n", encoding="utf-8")
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/text-intelligence", params={"run_id": "run-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_text_intelligence"
+    assert payload["selected_run"]["fields"]["run_id"] == "run-1"
+    artifacts = {artifact["name"]: artifact for artifact in payload["artifacts"]}
+    assert artifacts["raw_text_events"]["status"] == "available"
+    assert artifacts["raw_text_events"]["fields"]["record_count"] == 2
+    assert artifacts["text_event_classification_evidence"]["status"] == "warning"
+    assert artifacts["text_event_classification_evidence"]["warnings"] == ["classification threshold review needed"]
+    assert artifacts["text_event_topics"]["fields"]["record_count"] == 1
+    assert artifacts["text_event_signals"]["fields"]["record_count"] == 1
+    assert artifacts["event_intelligence_material"]["fields"]["preview_path"] == "runs/run-1/analysis/event_intelligence_material.md"
+    assert "runs/run-1/raw/text_events.json" in payload["source_artifacts"]
+    assert "runs/run-1/analysis/text_event_records.json" in payload["source_artifacts"]
+    assert payload["commands"]["text_models_prepare"] == "available"
+    assert payload["commands"]["text_intel"] == "available"
+    assert payload["omitted"]["full_raw_text_events_embedded"] is False
+    assert payload["omitted"]["full_text_intelligence_artifacts_embedded"] is False
+    assert payload["omitted"]["llm_generated_event_states"] is False
     assert str(tmp_path) not in response.text
 
 

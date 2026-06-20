@@ -439,7 +439,8 @@ def dashboard_index_html() -> str:
     .workbench-layout,
     .decision-risk-layout,
     .event-alert-layout,
-    .outcomes-layout {
+    .outcomes-layout,
+    .text-intelligence-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
@@ -901,7 +902,8 @@ def dashboard_index_html() -> str:
       .workbench-layout,
       .decision-risk-layout,
       .event-alert-layout,
-      .outcomes-layout {
+      .outcomes-layout,
+      .text-intelligence-layout {
         grid-template-columns: 1fr;
       }
 
@@ -957,6 +959,7 @@ def dashboard_index_html() -> str:
     data-decision-risk-endpoint="/api/decision-risk"
     data-event-alert-endpoint="/api/event-alert"
     data-outcomes-endpoint="/api/outcomes"
+    data-text-intelligence-endpoint="/api/text-intelligence"
     data-runs-endpoint="/api/runs"
     data-stores-endpoint="/api/data/stores"
     data-strategies-endpoint="/api/strategies"
@@ -1005,6 +1008,10 @@ def dashboard_index_html() -> str:
         </a>
         <a class="nav-item" href="#event-alert" data-view-target="event-alert">
           <span>Event &amp; alerts</span>
+          <span class="nav-state">available</span>
+        </a>
+        <a class="nav-item" href="#text-intelligence" data-view-target="text-intelligence">
+          <span>Text intelligence</span>
           <span class="nav-state">available</span>
         </a>
         <a class="nav-item" href="#outcomes" data-view-target="outcomes">
@@ -1095,6 +1102,10 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Event &amp; alerts</span>
+                <span class="planned-state">available</span>
+              </div>
+              <div class="planned-item">
+                <span class="planned-title">Text intelligence</span>
                 <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
@@ -1600,6 +1611,92 @@ def dashboard_index_html() -> str:
         </section>
       </section>
 
+      <section id="text-intelligence-view" class="view hidden" data-view="text-intelligence">
+        <section class="topbar" aria-labelledby="text-intelligence-title">
+          <div>
+            <p class="eyebrow">Source-aware text processing</p>
+            <h1 id="text-intelligence-title">Text intelligence</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Text state</span>
+              <span id="text-intelligence-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Selected run</span>
+              <span id="text-intelligence-selected-run" class="status-value">none</span>
+            </div>
+          </div>
+        </section>
+        <section class="text-intelligence-layout">
+          <article class="wide-panel" aria-labelledby="text-run-list-title">
+            <div class="panel-heading">
+              <h2 id="text-run-list-title" class="panel-title">Runs</h2>
+              <span id="text-run-count" class="badge unknown">loading</span>
+            </div>
+            <div id="text-run-list" class="run-list">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+            <section class="section-block">
+              <h3 class="subheading">
+                <span>Text commands</span>
+                <span id="text-command-status" class="badge partial">ready</span>
+              </h3>
+              <div class="number-row">
+                <label>
+                  <span class="status-label">Input path</span>
+                  <input id="text-input-path" class="filter-control" type="text" placeholder="runs/&lt;run_id&gt;/raw/text_events.json">
+                </label>
+                <label>
+                  <span class="status-label">Output dir</span>
+                  <input id="text-output-dir" class="filter-control" type="text" placeholder="runs/text_intelligence">
+                </label>
+              </div>
+              <div class="command-grid">
+                <button class="command-button" type="button" data-text-command-intent="text_models_prepare">
+                  <span class="command-title">Prepare text models</span>
+                  <span class="command-meta">Prepare configured local text model artifacts.</span>
+                </button>
+                <button class="command-button" type="button" data-text-command-intent="text_intel">
+                  <span class="command-title">Run text intelligence</span>
+                  <span class="command-meta">Process configured or selected text event input.</span>
+                </button>
+              </div>
+            </section>
+          </article>
+          <article class="wide-panel" aria-labelledby="text-artifacts-title">
+            <div class="panel-heading">
+              <h2 id="text-artifacts-title" class="panel-title">Text artifacts</h2>
+              <span id="text-artifact-count" class="badge unknown">waiting</span>
+            </div>
+            <div id="text-artifact-list" class="store-grid">
+              <div class="message">Select a run to inspect text intelligence artifacts.</div>
+            </div>
+            <div id="text-artifact-detail" class="detail-sections">
+              <div class="message">Open a text artifact summary to inspect status, counts, warnings, and refs.</div>
+            </div>
+            <section class="section-block">
+              <div class="panel-heading">
+                <h2 class="panel-title">Text jobs</h2>
+                <span id="text-job-count" class="badge unknown">loading</span>
+              </div>
+              <div id="text-job-result" class="preview-panel">
+                <div class="message">Start or select a text job to inspect result refs.</div>
+              </div>
+              <div id="text-job-list" class="job-list">
+                <div class="skeleton"></div>
+                <div class="skeleton"></div>
+              </div>
+            </section>
+            <div id="text-preview" class="preview-panel">
+              <div class="message">Open a text source ref or job result ref to inspect a bounded preview.</div>
+            </div>
+          </article>
+        </section>
+      </section>
+
       <section id="outcomes-view" class="view hidden" data-view="outcomes">
         <section class="topbar" aria-labelledby="outcomes-title">
           <div>
@@ -1939,6 +2036,7 @@ def dashboard_index_html() -> str:
       decisionRisk: app.dataset.decisionRiskEndpoint,
       eventAlert: app.dataset.eventAlertEndpoint,
       outcomes: app.dataset.outcomesEndpoint,
+      textIntelligence: app.dataset.textIntelligenceEndpoint,
       runs: app.dataset.runsEndpoint,
       stores: app.dataset.storesEndpoint,
       strategies: app.dataset.strategiesEndpoint,
@@ -2029,6 +2127,12 @@ def dashboard_index_html() -> str:
     let eventAlertPayload = null;
     let selectedEventRunId = null;
     let selectedEventArtifactKey = null;
+    let textIntelligenceLoaded = false;
+    let textRunsPayload = null;
+    let textIntelligencePayload = null;
+    let selectedTextRunId = null;
+    let selectedTextArtifactKey = null;
+    let textJobsPayload = null;
     let outcomesLoaded = false;
     let outcomeRunsPayload = null;
     let outcomesPayload = null;
@@ -2166,6 +2270,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#event-alert") {
         return "event-alert";
       }
+      if (window.location.hash === "#text-intelligence") {
+        return "text-intelligence";
+      }
       if (window.location.hash === "#outcomes") {
         return "outcomes";
       }
@@ -2211,6 +2318,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "event-alert" && !eventAlertLoaded) {
         loadEventAlert();
+      }
+      if (view === "text-intelligence" && !textIntelligenceLoaded) {
+        loadTextIntelligence();
       }
       if (view === "outcomes" && !outcomesLoaded) {
         loadOutcomes();
@@ -3890,6 +4000,280 @@ def dashboard_index_html() -> str:
       document.querySelector("#event-artifact-detail").innerHTML = "";
     }
 
+    async function loadTextIntelligence() {
+      textIntelligenceLoaded = true;
+      document.querySelector("#text-intelligence-status").textContent = "Loading";
+      try {
+        textRunsPayload = await fetchJson(endpoints.runs);
+        renderTextRunList();
+        const runs = Array.isArray(textRunsPayload.runs) ? textRunsPayload.runs : [];
+        if (runs.length) {
+          await selectTextRun(runs[0].run_id);
+        } else {
+          const payload = await fetchJson(endpoints.textIntelligence);
+          renderTextIntelligence(payload);
+        }
+        await refreshTextJobs();
+      } catch (error) {
+        renderTextIntelligenceFailure(error);
+      }
+    }
+
+    function renderTextRunList() {
+      const runs = Array.isArray(textRunsPayload && textRunsPayload.runs) ? textRunsPayload.runs : [];
+      const count = document.querySelector("#text-run-count");
+      count.className = `badge ${runs.length ? "available" : "missing"}`;
+      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
+      if (!runs.length) {
+        document.querySelector("#text-run-list").innerHTML = messages(textRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        return;
+      }
+      document.querySelector("#text-run-list").innerHTML = runs.map((run) => `
+        <button class="run-row ${run.run_id === selectedTextRunId ? "selected" : ""}" type="button" data-text-run-id="${escapeHtml(run.run_id)}">
+          <span class="run-row-main">
+            <span class="run-id">${escapeHtml(run.run_id)}</span>
+            ${badge(run.status)}
+          </span>
+          <span class="run-meta">
+            <span>${escapeHtml(text(run.started_at))}</span>
+            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
+            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
+          </span>
+        </button>`).join("");
+      document.querySelectorAll("[data-text-run-id]").forEach((button) => {
+        button.addEventListener("click", () => selectTextRun(button.dataset.textRunId));
+      });
+    }
+
+    async function selectTextRun(runId) {
+      if (!runId) {
+        return;
+      }
+      selectedTextRunId = runId;
+      selectedTextArtifactKey = null;
+      document.querySelector("#text-intelligence-selected-run").textContent = runId;
+      document.querySelector("#text-intelligence-status").textContent = "Loading";
+      renderTextRunList();
+      try {
+        textIntelligencePayload = await fetchJson(`${endpoints.textIntelligence}?run_id=${encodeURIComponent(runId)}`);
+        renderTextIntelligence(textIntelligencePayload);
+      } catch (error) {
+        renderTextIntelligenceFailure(error);
+      }
+    }
+
+    function renderTextIntelligence(payload) {
+      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+      const selectedRun = payload.selected_run || {};
+      const selectedFields = selectedRun.fields || {};
+      document.querySelector("#text-intelligence-status").textContent = label(payload.status);
+      document.querySelector("#text-intelligence-selected-run").textContent = text(selectedFields.run_id || selectedTextRunId);
+      const count = document.querySelector("#text-artifact-count");
+      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
+      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
+      if (!artifacts.length) {
+        document.querySelector("#text-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No text intelligence artifacts are available for the selected run.</div>`;
+        document.querySelector("#text-artifact-detail").innerHTML = "";
+        return;
+      }
+      if (!selectedTextArtifactKey || !artifacts.some((artifact) => artifact.name === selectedTextArtifactKey)) {
+        selectedTextArtifactKey = artifacts[0].name;
+      }
+      document.querySelector("#text-artifact-list").innerHTML = artifacts.map((artifact) => {
+        const fields = artifact.fields || {};
+        return `
+          <button class="store-card ${artifact.name === selectedTextArtifactKey ? "selected" : ""}" type="button" data-text-artifact-key="${escapeHtml(artifact.name)}">
+            <span class="store-title-line">
+              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
+              ${badge(artifact.status)}
+            </span>
+            <span class="store-metrics">
+              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
+              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
+              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
+            </span>
+            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
+          </button>`;
+      }).join("");
+      document.querySelectorAll("[data-text-artifact-key]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedTextArtifactKey = button.dataset.textArtifactKey;
+          renderTextIntelligence(payload);
+        });
+      });
+      renderTextArtifactDetail(artifacts.find((artifact) => artifact.name === selectedTextArtifactKey));
+    }
+
+    function renderTextArtifactDetail(artifact) {
+      if (!artifact) {
+        document.querySelector("#text-artifact-detail").innerHTML = `<div class="message warning">Text artifact detail is not available.</div>`;
+        return;
+      }
+      const fields = artifact.fields || {};
+      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
+      document.querySelector("#text-artifact-detail").innerHTML = `
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
+            ${badge(artifact.status)}
+          </h3>
+          <div class="run-detail-grid">
+            ${detailTile("Artifact", fields.artifact)}
+            ${detailTile("Type", fields.artifact_type)}
+            ${detailTile("Artifact status", fields.artifact_status)}
+            ${detailTile("Records", fields.record_count)}
+            ${detailTile("Warnings", fields.warning_count)}
+            ${detailTile("Errors", fields.error_count)}
+          </div>
+          ${messages(artifact)}
+          <div class="artifact-actions">
+            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-text-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
+          </div>
+        </section>`;
+      document.querySelectorAll("[data-text-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.textPreviewPath, "#text-preview"));
+      });
+      if (isPreviewableRef(fields.preview_path)) {
+        loadArtifactPreview(fields.preview_path, "#text-preview");
+      }
+    }
+
+    async function refreshTextJobs() {
+      try {
+        textJobsPayload = await fetchJson(endpoints.jobs);
+        renderTextJobs(textJobsPayload);
+      } catch (error) {
+        document.querySelector("#text-job-count").className = "badge failed";
+        document.querySelector("#text-job-count").textContent = "failed";
+        document.querySelector("#text-job-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function renderTextJobs(payload) {
+      const jobs = (Array.isArray(payload.jobs) ? payload.jobs : [])
+        .filter((job) => ["text_models_prepare", "text_intel"].includes(String(job.intent || "")));
+      const count = document.querySelector("#text-job-count");
+      count.className = `badge ${jobs.length ? "available" : "missing"}`;
+      count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
+      if (!jobs.length) {
+        document.querySelector("#text-job-list").innerHTML = `<div class="message">No text intelligence jobs are recorded yet.</div>`;
+        return;
+      }
+      document.querySelector("#text-job-list").innerHTML = jobs.map((job) => `
+        <button class="job-row" type="button" data-text-job-id="${escapeHtml(job.job_id)}">
+          <span class="run-row-main">
+            <span class="run-id">${escapeHtml(jobTitle(job.intent))}</span>
+            ${badge(job.status)}
+          </span>
+          <span class="run-meta">
+            <span>${escapeHtml(text(job.created_at))}</span>
+            <span>Exit: ${escapeHtml(text(job.exit_code))}</span>
+          </span>
+        </button>`).join("");
+      document.querySelectorAll("[data-text-job-id]").forEach((button) => {
+        button.addEventListener("click", () => selectTextJob(button.dataset.textJobId));
+      });
+      if (!document.querySelector("#text-job-result .preview-heading")) {
+        renderTextJobResult(jobs[0]);
+      }
+    }
+
+    async function selectTextJob(jobId) {
+      if (!jobId) {
+        return;
+      }
+      document.querySelector("#text-command-status").className = "badge partial";
+      document.querySelector("#text-command-status").textContent = "loading";
+      try {
+        const job = await fetchJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}`);
+        document.querySelector("#text-command-status").className = `badge ${normalizeStatus(job.status)}`;
+        document.querySelector("#text-command-status").textContent = label(job.status);
+        renderTextJobResult(job);
+      } catch (error) {
+        renderTextCommandMessage("failed", error.message);
+      }
+    }
+
+    async function startTextJob(intent) {
+      const request = textCommandJobRequest(intent);
+      if (!request) {
+        return;
+      }
+      document.querySelector("#text-command-status").className = "badge partial";
+      document.querySelector("#text-command-status").textContent = "starting";
+      try {
+        const job = await postJson(endpoints.jobs, request);
+        document.querySelector("#text-command-status").className = `badge ${normalizeStatus(job.status)}`;
+        document.querySelector("#text-command-status").textContent = label(job.status);
+        renderTextJobResult(job);
+        await refreshTextJobs();
+      } catch (error) {
+        renderTextCommandMessage("failed", error.message);
+      }
+    }
+
+    function textCommandJobRequest(intent) {
+      const params = {};
+      if (intent === "text_models_prepare") {
+        const outputDir = optionalInputValue("#text-output-dir");
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      if (intent === "text_intel") {
+        const inputPath = optionalInputValue("#text-input-path");
+        const outputDir = optionalInputValue("#text-output-dir");
+        if (inputPath) {
+          params.input_path = inputPath;
+        }
+        if (outputDir) {
+          params.output_dir = outputDir;
+        }
+        return { intent, params };
+      }
+      renderTextCommandMessage("unsupported", `unsupported text job intent: ${intent || "missing"}`);
+      return null;
+    }
+
+    function renderTextJobResult(job) {
+      const refs = commandPreviewRefs(job);
+      document.querySelector("#text-job-result").innerHTML = `
+        <div class="preview-heading">
+          <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
+          ${badge(job.status)}
+        </div>
+        <div class="run-detail-grid">
+          ${detailTile("Job", job.job_id)}
+          ${detailTile("Intent", job.intent)}
+          ${detailTile("Kind", job.kind)}
+          ${detailTile("Created", job.created_at)}
+          ${detailTile("Finished", job.finished_at)}
+          ${detailTile("Exit", job.exit_code)}
+        </div>
+        ${messages(job)}
+        <div class="artifact-actions">
+          ${refs.length ? refs.map((item) => `<button class="link-button" type="button" data-text-preview-path="${escapeHtml(item.path)}">${escapeHtml(item.label)}</button>`).join("") : `<span class="badge missing">no result refs</span>`}
+        </div>`;
+      document.querySelectorAll("#text-job-result [data-text-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.textPreviewPath, "#text-preview"));
+      });
+    }
+
+    function renderTextCommandMessage(status, message) {
+      document.querySelector("#text-command-status").className = `badge ${normalizeStatus(status)}`;
+      document.querySelector("#text-command-status").textContent = label(status);
+      document.querySelector("#text-job-result").innerHTML = `<div class="message ${normalizeStatus(status) === "failed" ? "error" : "warning"}">${escapeHtml(message)}</div>`;
+    }
+
+    function renderTextIntelligenceFailure(error) {
+      document.querySelector("#text-intelligence-status").textContent = "Failed";
+      document.querySelector("#text-artifact-count").className = "badge failed";
+      document.querySelector("#text-artifact-count").textContent = "failed";
+      document.querySelector("#text-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      document.querySelector("#text-artifact-detail").innerHTML = "";
+    }
+
     async function loadOutcomes() {
       outcomesLoaded = true;
       document.querySelector("#outcome-status").textContent = "Loading";
@@ -4874,6 +5258,9 @@ def dashboard_index_html() -> str:
     });
     document.querySelectorAll("[data-command-intent]").forEach((button) => {
       button.addEventListener("click", () => startCommandJob(button.dataset.commandIntent));
+    });
+    document.querySelectorAll("[data-text-command-intent]").forEach((button) => {
+      button.addEventListener("click", () => startTextJob(button.dataset.textCommandIntent));
     });
     document.querySelectorAll("[data-schedule-action]").forEach((button) => {
       button.addEventListener("click", () => runDailyScheduleAction(button.dataset.scheduleAction));
