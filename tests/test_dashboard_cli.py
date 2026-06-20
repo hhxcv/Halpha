@@ -78,6 +78,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert response.headers["content-type"].startswith("text/html")
     assert "halpha-dashboard-app" in response.text
     assert "Operational overview" in response.text
+    assert "Refresh view" in response.text
+    assert "Auto refresh reads only" in response.text
+    assert "refreshCurrentView" in response.text
+    assert "scheduleDashboardJobPolling" in response.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-workbench-endpoint="/api/workbench"' in response.text
     assert 'data-decision-risk-endpoint="/api/decision-risk"' in response.text
