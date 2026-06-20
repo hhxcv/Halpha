@@ -1652,8 +1652,26 @@ def dashboard_index_html() -> str:
               <h2 id="command-jobs-title" class="panel-title">Job history</h2>
               <span id="command-job-count" class="badge unknown">loading</span>
             </div>
+            <div class="filter-bar">
+              <input id="command-job-intent-filter" class="filter-control" type="search" placeholder="Filter intent">
+              <select id="command-job-status-filter" class="filter-control" aria-label="Job status filter">
+                <option value="all">All statuses</option>
+                <option value="active">Active</option>
+                <option value="terminal">Terminal</option>
+                <option value="queued">Queued</option>
+                <option value="running">Running</option>
+                <option value="succeeded">Succeeded</option>
+                <option value="failed">Failed</option>
+                <option value="blocked">Blocked</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <input id="command-job-kind-filter" class="filter-control" type="search" placeholder="Filter kind">
+            </div>
             <div id="command-result" class="preview-panel">
-              <div class="message">Choose an allowlisted command to create a bounded local dashboard job.</div>
+              <div class="message">Choose an allowlisted command or open a job to inspect details.</div>
+            </div>
+            <div id="command-job-preview" class="preview-panel">
+              <div class="message">Open a job result ref, stdout, or stderr to inspect a bounded preview.</div>
             </div>
             <div id="command-job-list" class="job-list">
               <div class="skeleton"></div>
@@ -1750,6 +1768,8 @@ def dashboard_index_html() -> str:
     let commandJobsLoaded = false;
     let commandJobPoll = null;
     let dailyScheduleLoaded = false;
+    let commandJobsPayload = null;
+    let selectedCommandJobId = null;
     const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started", "missing"]);
 
     function text(value) {
@@ -3454,6 +3474,7 @@ def dashboard_index_html() -> str:
     async function refreshCommandJobs() {
       try {
         const payload = await fetchJson(endpoints.jobs);
+        commandJobsPayload = payload;
         renderCommandJobs(payload);
       } catch (error) {
         renderCommandJobsFailure(error);
@@ -3461,26 +3482,41 @@ def dashboard_index_html() -> str:
     }
 
     function renderCommandJobs(payload) {
-      const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
-      const active = jobs.filter((job) => !terminalJobStatuses.has(String(job.status || "")));
+      const allJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+      const jobs = filteredCommandJobs(allJobs);
+      const active = allJobs.filter((job) => !terminalJobStatuses.has(String(job.status || "")));
       document.querySelector("#command-job-status").textContent = active.length
         ? `${active.length} active`
-        : jobs.length
+        : allJobs.length
           ? "Idle"
           : "No jobs";
       const count = document.querySelector("#command-job-count");
-      count.className = `badge ${jobs.length ? "available" : "missing"}`;
-      count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
-      if (!jobs.length) {
+      count.className = `badge ${allJobs.length ? "available" : "missing"}`;
+      count.textContent = `${jobs.length} of ${allJobs.length} job${allJobs.length === 1 ? "" : "s"}`;
+      if (!allJobs.length) {
+        document.querySelector("#command-result").innerHTML = `<div class="message">Choose an allowlisted command to create a bounded local dashboard job.</div>`;
+        document.querySelector("#command-job-preview").innerHTML = `<div class="message">Open a job result ref, stdout, or stderr to inspect a bounded preview.</div>`;
         document.querySelector("#command-job-list").innerHTML = messages(payload) || `<div class="message warning">No dashboard jobs are recorded.</div>`;
         scheduleCommandJobPolling(false);
+        return;
+      }
+      if (!selectedCommandJobId || !allJobs.some((job) => job.job_id === selectedCommandJobId)) {
+        selectedCommandJobId = allJobs[0].job_id;
+      }
+      const selectedJob = allJobs.find((job) => job.job_id === selectedCommandJobId);
+      if (selectedJob) {
+        renderCommandResult(selectedJob);
+      }
+      if (!jobs.length) {
+        document.querySelector("#command-job-list").innerHTML = `<div class="message warning">No dashboard jobs match the current filters.</div>`;
+        scheduleCommandJobPolling(active.length > 0);
         return;
       }
       document.querySelector("#command-job-list").innerHTML = jobs.slice(0, 20).map((job) => {
         const running = !terminalJobStatuses.has(String(job.status || ""));
         const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
         return `
-          <div class="job-row">
+          <div class="job-row ${job.job_id === selectedCommandJobId ? "selected" : ""}">
             <div class="stage-top">
               <span class="stage-name">${escapeHtml(jobTitle(job.intent))}</span>
               ${badge(job.status)}
@@ -3495,15 +3531,64 @@ def dashboard_index_html() -> str:
             <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
             ${messages(job)}
             <div class="job-actions">
+              <button class="link-button" type="button" data-command-job-id="${escapeHtml(job.job_id)}">Open details</button>
               ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-command-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
               ${running && job.cancellable === false ? `<span class="badge partial">cancellation unsupported</span>` : ""}
             </div>
           </div>`;
       }).join("");
+      document.querySelectorAll("[data-command-job-id]").forEach((button) => {
+        button.addEventListener("click", () => selectCommandJob(button.dataset.commandJobId));
+      });
       document.querySelectorAll("[data-command-cancel-job-id]").forEach((button) => {
         button.addEventListener("click", () => cancelCommandJob(button.dataset.commandCancelJobId));
       });
       scheduleCommandJobPolling(active.length > 0);
+    }
+
+    function filteredCommandJobs(jobs) {
+      const intentQuery = document.querySelector("#command-job-intent-filter").value.trim().toLowerCase();
+      const statusFilter = document.querySelector("#command-job-status-filter").value;
+      const kindQuery = document.querySelector("#command-job-kind-filter").value.trim().toLowerCase();
+      return jobs.filter((job) => {
+        const status = String(job.status || "");
+        if (statusFilter === "active" && terminalJobStatuses.has(status)) {
+          return false;
+        }
+        if (statusFilter === "terminal" && !terminalJobStatuses.has(status)) {
+          return false;
+        }
+        if (!["all", "active", "terminal"].includes(statusFilter) && status !== statusFilter) {
+          return false;
+        }
+        if (intentQuery && !String(job.intent || "").toLowerCase().includes(intentQuery)) {
+          return false;
+        }
+        if (kindQuery && !String(job.kind || "").toLowerCase().includes(kindQuery)) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    async function selectCommandJob(jobId) {
+      if (!jobId) {
+        return;
+      }
+      selectedCommandJobId = jobId;
+      document.querySelector("#command-center-status").textContent = "Loading job";
+      try {
+        const job = await fetchJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}`);
+        document.querySelector("#command-center-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
+        if (commandJobsPayload) {
+          commandJobsPayload.jobs = (commandJobsPayload.jobs || []).map((item) => item.job_id === job.job_id ? job : item);
+          renderCommandJobs(commandJobsPayload);
+        } else {
+          renderCommandResult(job);
+        }
+      } catch (error) {
+        renderCommandMessage("failed", error.message);
+      }
     }
 
     function renderCommandJobsFailure(error) {
@@ -3673,7 +3758,12 @@ def dashboard_index_html() -> str:
     }
 
     function renderCommandResult(job) {
-      const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
+      if (job.job_id) {
+        selectedCommandJobId = job.job_id;
+      }
+      const refs = commandPreviewRefs(job);
+      const running = !terminalJobStatuses.has(String(job.status || ""));
+      const commandPreview = (job.command || []).join(" ");
       document.querySelector("#command-result").innerHTML = `
         <div class="preview-heading">
           <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
@@ -3682,11 +3772,52 @@ def dashboard_index_html() -> str:
         <div class="run-detail-grid">
           ${detailTile("Job", job.job_id)}
           ${detailTile("Intent", job.intent)}
+          ${detailTile("Kind", job.kind)}
+          ${detailTile("Config", job.config_ref)}
           ${detailTile("Created", job.created_at)}
+          ${detailTile("Started", job.started_at)}
+          ${detailTile("Finished", job.finished_at)}
           ${detailTile("Exit", job.exit_code)}
         </div>
-        <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
-        ${messages(job)}`;
+        <div class="timeline-meta">${escapeHtml(commandPreview)}</div>
+        ${messages(job)}
+        <div class="artifact-actions">
+          ${refs.length ? refs.map((item) => `<button class="link-button" type="button" data-command-preview-path="${escapeHtml(item.path)}">${escapeHtml(item.label)}</button>`).join("") : `<span class="badge missing">no preview refs</span>`}
+          ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-command-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
+        </div>`;
+      wireCommandPreviewButtons();
+      document.querySelectorAll("#command-result [data-command-cancel-job-id]").forEach((button) => {
+        button.addEventListener("click", () => cancelCommandJob(button.dataset.commandCancelJobId));
+      });
+    }
+
+    function commandPreviewRefs(job) {
+      const refs = [];
+      Object.entries(job.result_refs || {}).forEach(([key, value]) => {
+        if (isPreviewableRef(value)) {
+          refs.push({ label: `Result: ${key}`, path: String(value) });
+        }
+      });
+      const logs = job.logs || {};
+      if (isPreviewableRef(logs.stdout_ref)) {
+        refs.push({ label: "stdout.log", path: String(logs.stdout_ref) });
+      }
+      if (isPreviewableRef(logs.stderr_ref)) {
+        refs.push({ label: "stderr.log", path: String(logs.stderr_ref) });
+      }
+      return refs;
+    }
+
+    function isPreviewableRef(value) {
+      const ref = String(value || "");
+      return (ref.startsWith("runs/") || ref.startsWith("data/"))
+        && /\.(json|jsonl|md|markdown|txt|log|csv|yaml|yml)$/i.test(ref);
+    }
+
+    function wireCommandPreviewButtons() {
+      document.querySelectorAll("[data-command-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.commandPreviewPath, "#command-job-preview"));
+      });
     }
 
     function renderCommandMessage(status, message) {
@@ -3879,6 +4010,21 @@ def dashboard_index_html() -> str:
     });
     document.querySelectorAll("[data-schedule-action]").forEach((button) => {
       button.addEventListener("click", () => runDailyScheduleAction(button.dataset.scheduleAction));
+    });
+    document.querySelector("#command-job-intent-filter").addEventListener("input", () => {
+      if (commandJobsPayload) {
+        renderCommandJobs(commandJobsPayload);
+      }
+    });
+    document.querySelector("#command-job-status-filter").addEventListener("change", () => {
+      if (commandJobsPayload) {
+        renderCommandJobs(commandJobsPayload);
+      }
+    });
+    document.querySelector("#command-job-kind-filter").addEventListener("input", () => {
+      if (commandJobsPayload) {
+        renderCommandJobs(commandJobsPayload);
+      }
     });
     window.addEventListener("hashchange", () => setView(viewFromHash()));
 

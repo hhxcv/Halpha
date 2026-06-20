@@ -105,6 +105,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Enable schedule" in response.text
     assert "Disable schedule" in response.text
     assert "Trigger now" in response.text
+    assert "Filter intent" in response.text
+    assert "Filter kind" in response.text
+    assert "Open a job result ref, stdout, or stderr" in response.text
     assert "Run without Codex" in response.text
     assert "Run with Codex" in response.text
     assert "Codex confirmation is required before creating this job." in response.text
