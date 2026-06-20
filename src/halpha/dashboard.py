@@ -59,6 +59,14 @@ def create_dashboard_app(
     def overview_endpoint() -> dict[str, Any]:
         return dashboard_overview(config, config_path=config_path)
 
+    @app.get("/api/runs")
+    def runs_endpoint() -> dict[str, Any]:
+        return dashboard_runs(config_path=config_path)
+
+    @app.get("/api/runs/{run_id}")
+    def run_detail_endpoint(run_id: str) -> dict[str, Any]:
+        return dashboard_run_detail(config_path=config_path, run_id=run_id)
+
     return app
 
 
@@ -145,6 +153,140 @@ def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str
             "full_codex_prompt_embedded": False,
             "raw_local_user_state_embedded": False,
         },
+    }
+
+
+def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
+    base = _config_base(config_path)
+    index_path = run_index_path(config_path)
+    if not index_path.exists():
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_run_list",
+            "status": "missing",
+            "source_artifacts": [RUN_INDEX_ARTIFACT],
+            "runs": [],
+            "warnings": ["local run index was not found."],
+            "errors": [],
+        }
+    try:
+        with closing(sqlite3.connect(index_path)) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                  run_id,
+                  run_dir,
+                  started_at,
+                  finished_at,
+                  status,
+                  failed_stage,
+                  codex_status,
+                  warning_count,
+                  error_count,
+                  manifest_path
+                FROM runs
+                ORDER BY COALESCE(started_at, '') DESC, run_id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            artifacts = _run_artifact_index(connection)
+    except sqlite3.Error as exc:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_run_list",
+            "status": "failed",
+            "source_artifacts": [RUN_INDEX_ARTIFACT],
+            "runs": [],
+            "warnings": [],
+            "errors": [f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"],
+        }
+    runs = [_run_list_record(row, artifacts.get(str(row[0]), {}), base=base) for row in rows]
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_run_list",
+        "status": "available",
+        "source_artifacts": [RUN_INDEX_ARTIFACT],
+        "runs": runs,
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
+    base = _config_base(config_path)
+    index_path = run_index_path(config_path)
+    if not index_path.exists():
+        return _run_detail_missing(run_id, warning="local run index was not found.")
+    try:
+        with closing(sqlite3.connect(index_path)) as connection:
+            row = connection.execute(
+                """
+                SELECT
+                  run_id,
+                  run_dir,
+                  started_at,
+                  finished_at,
+                  status,
+                  failed_stage,
+                  codex_status,
+                  warning_count,
+                  error_count,
+                  manifest_path
+                FROM runs
+                WHERE run_id = ?
+                """,
+                (run_id,),
+            ).fetchone()
+    except sqlite3.Error as exc:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_run_detail",
+            "status": "failed",
+            "run_id": run_id,
+            "source_artifacts": [RUN_INDEX_ARTIFACT],
+            "fields": {},
+            "stages": [],
+            "artifacts": [],
+            "warnings": [],
+            "errors": [f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"],
+        }
+    if row is None:
+        return _run_detail_missing(run_id, warning="run id was not found in the local run index.")
+
+    run = _run_list_record(row, {}, base=base)
+    manifest_path = _resolve_ref(str(row[9]), base=base)
+    manifest, error = _read_json(manifest_path)
+    if error:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_run_detail",
+            "status": "failed",
+            "run_id": run_id,
+            "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
+            "fields": run,
+            "stages": [],
+            "artifacts": [],
+            "warnings": [],
+            "errors": [error],
+        }
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_run_detail",
+        "status": "available",
+        "run_id": run_id,
+        "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
+        "fields": {
+            **run,
+            "manifest_status": str(manifest.get("status") or "unknown"),
+            "codex": _bounded_mapping(manifest.get("codex")),
+            "counts": _bounded_mapping(manifest.get("counts")),
+        },
+        "stages": _stage_timeline(manifest),
+        "artifacts": _manifest_artifacts(manifest),
+        "warnings": _string_list(manifest.get("warnings")),
+        "errors": _manifest_error_messages(manifest),
     }
 
 
@@ -286,6 +428,53 @@ def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | No
         if run and all(isinstance(value, str) and value for value in run):
             return run[0], run[1], run[2]
     return None
+
+
+def _run_artifact_index(connection: sqlite3.Connection) -> dict[str, dict[str, list[str]]]:
+    rows = connection.execute(
+        "SELECT run_id, artifact_key, path FROM run_artifacts ORDER BY run_id, artifact_key, path"
+    ).fetchall()
+    artifacts: dict[str, dict[str, list[str]]] = {}
+    for run_id, key, path in rows:
+        if not isinstance(run_id, str) or not isinstance(key, str) or not isinstance(path, str):
+            continue
+        artifacts.setdefault(run_id, {}).setdefault(key, []).append(path)
+    return artifacts
+
+
+def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -> dict[str, Any]:
+    run_id = str(row[0])
+    run_dir = _resolve_ref(str(row[1]), base=base)
+    manifest_path = _resolve_ref(str(row[9]), base=base)
+    report_paths = artifacts.get("report", [])
+    return {
+        "run_id": run_id,
+        "run_dir": _safe_ref(run_dir, base=base),
+        "started_at": row[2],
+        "finished_at": row[3],
+        "status": row[4],
+        "failed_stage": row[5],
+        "codex_status": row[6],
+        "warning_count": int(row[7] or 0),
+        "error_count": int(row[8] or 0),
+        "manifest": _safe_ref(manifest_path, base=base),
+        "report": report_paths[0] if report_paths else None,
+    }
+
+
+def _run_detail_missing(run_id: str, *, warning: str) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_run_detail",
+        "status": "missing",
+        "run_id": run_id,
+        "source_artifacts": [RUN_INDEX_ARTIFACT],
+        "fields": {},
+        "stages": [],
+        "artifacts": [],
+        "warnings": [warning],
+        "errors": [],
+    }
 
 
 def _run_json_artifact_section(
@@ -463,6 +652,88 @@ def _stage_counts(manifest: dict[str, Any]) -> dict[str, int]:
         status = str(stage.get("status") or "unknown")
         counts[status] = counts.get(status, 0) + 1
     return counts
+
+
+def _stage_timeline(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    timeline: list[dict[str, Any]] = []
+    for index, stage in enumerate(_list(manifest.get("stages"))):
+        if not isinstance(stage, dict):
+            continue
+        error = _dict(stage.get("error"))
+        record = {
+            "index": index,
+            "name": stage.get("name"),
+            "status": stage.get("status"),
+            "started_at": stage.get("started_at"),
+            "finished_at": stage.get("finished_at"),
+            "artifact_count": len(_list(stage.get("artifacts"))),
+            "warning_count": _warning_count(stage),
+            "error_count": 1 if error else 0,
+        }
+        reason = stage.get("reason")
+        if isinstance(reason, str) and reason:
+            record["reason"] = reason
+        if error:
+            record["error"] = _bounded_mapping(error)
+        timeline.append(record)
+    return timeline
+
+
+def _manifest_artifacts(manifest: dict[str, Any]) -> list[dict[str, str]]:
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return []
+    records: list[dict[str, str]] = []
+    for key, value in sorted(artifacts.items()):
+        for path in _artifact_paths(value):
+            records.append({"key": str(key), "path": path, "kind": _artifact_kind(path)})
+    return records
+
+
+def _artifact_paths(value: Any) -> list[str]:
+    if isinstance(value, str) and value:
+        return [value]
+    if isinstance(value, list):
+        return [str(item) for item in value if isinstance(item, str) and item]
+    if isinstance(value, dict):
+        paths: list[str] = []
+        for item in value.values():
+            paths.extend(_artifact_paths(item))
+        return sorted(set(paths))
+    return []
+
+
+def _artifact_kind(path: str) -> str:
+    if path.startswith("raw/"):
+        return "raw"
+    if path.startswith("analysis/"):
+        return "analysis"
+    if path.startswith("codex_context/"):
+        return "codex_context"
+    if path.startswith("report/"):
+        return "report"
+    if path.startswith("data/"):
+        return "data"
+    if path.startswith("runs/monitor/"):
+        return "monitor"
+    if path.startswith("runs/workbench/"):
+        return "workbench"
+    return "other"
+
+
+def _manifest_error_messages(manifest: dict[str, Any]) -> list[str]:
+    messages: list[str] = []
+    for error in _list(manifest.get("errors")):
+        if isinstance(error, dict):
+            message = error.get("message")
+            stage = error.get("stage")
+            if stage and message:
+                messages.append(f"{stage}: {message}")
+            elif message:
+                messages.append(str(message))
+        elif isinstance(error, str):
+            messages.append(error)
+    return messages
 
 
 def _check_counts(checks: list[Any]) -> dict[str, int]:
