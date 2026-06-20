@@ -22,6 +22,11 @@ from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
+NO_STORE_HEADERS = {
+    "Cache-Control": "no-store, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
 MAX_PREVIEW_CHARS = 20_000
 MAX_PREVIEW_ROWS = 100
 MAX_STAGE_ARTIFACT_REFS = 20
@@ -112,9 +117,16 @@ def create_dashboard_app(
     job_manager = DashboardJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
 
+    @app.middleware("http")
+    async def no_store_dashboard_responses(_request: Any, call_next: Any) -> Any:
+        response = await call_next(_request)
+        for key, value in NO_STORE_HEADERS.items():
+            response.headers[key] = value
+        return response
+
     @app.get("/", response_class=HTMLResponse)
     def root() -> HTMLResponse:
-        return HTMLResponse(dashboard_index_html())
+        return HTMLResponse(dashboard_index_html(), headers=NO_STORE_HEADERS)
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon() -> Response:

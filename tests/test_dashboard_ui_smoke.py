@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -94,6 +95,18 @@ def test_dashboard_interaction_hooks_cover_primary_workflows(tmp_path: Path) -> 
     assert "startMonitorJob(button.dataset.monitorAction)" in script
     assert "runDailyScheduleAction(button.dataset.scheduleAction)" in script
     assert "refreshCurrentView" in script
+
+
+def test_dashboard_startup_event_selectors_exist_in_shell(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    script = _script_block(html)
+    ids = set(re.findall(r'id="([^"]+)"', html))
+    startup_selectors = set(
+        re.findall(r'document\.querySelector\("#([A-Za-z0-9_-]+)"\)\.addEventListener', script)
+    )
+
+    assert startup_selectors
+    assert startup_selectors <= ids
 
 
 def test_dashboard_preview_job_and_monitor_smoke_contracts_are_present(tmp_path: Path) -> None:
