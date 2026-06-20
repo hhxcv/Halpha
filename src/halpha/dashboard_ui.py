@@ -491,7 +491,6 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .runs-layout,
     .artifacts-layout,
-    .data-layout,
     .strategy-layout,
     .monitor-layout,
     .command-center-layout,
@@ -502,6 +501,12 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     .text-intelligence-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .data-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 16px;
     }
 
@@ -695,6 +700,11 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       gap: 10px;
     }
 
+    .data-layout .store-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      align-items: stretch;
+    }
+
     .store-card {
       display: grid;
       gap: 8px;
@@ -729,6 +739,11 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       min-width: 0;
       overflow-wrap: anywhere;
       font-weight: 740;
+    }
+
+    .data-layout .store-title {
+      overflow-wrap: break-word;
+      word-break: normal;
     }
 
     .store-metrics {
