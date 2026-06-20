@@ -77,6 +77,32 @@ def test_dashboard_responsive_css_contracts_cover_desktop_and_small_viewports(tm
     assert "overflow: auto;" in css
 
 
+def test_dashboard_primary_layouts_use_stacked_readable_sections(tmp_path: Path) -> None:
+    css = _style_block(_dashboard_html(tmp_path))
+
+    for class_name in [
+        ".layout-row",
+        ".runs-layout",
+        ".artifacts-layout",
+        ".data-layout",
+        ".strategy-layout",
+        ".monitor-layout",
+        ".command-center-layout",
+        ".workbench-layout",
+        ".decision-risk-layout",
+        ".event-alert-layout",
+        ".outcomes-layout",
+        ".text-intelligence-layout",
+    ]:
+        assert class_name in css
+    assert "minmax(300px, 0.38fr)" not in css
+    assert "grid-template-columns: minmax(0, 1fr);" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));" in css
+    assert "overflow-wrap: break-word;" in css
+    assert "word-break: normal;" in css
+
+
 def test_dashboard_data_store_layout_uses_full_width_store_grid(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     css = _style_block(html)
