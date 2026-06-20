@@ -11,6 +11,8 @@ from .run_index import RUN_INDEX_ARTIFACT, run_index_path
 
 
 STRATEGY_RESEARCH_NOTICE = "Strategy output is historical research material, not trading advice."
+EXTERNAL_ARTIFACT_REF = "<external-artifact>"
+REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 MAX_SUMMARY_ITEMS = 20
 MAX_STANDALONE_RUNS = 50
 PIPELINE_STRATEGY_ARTIFACTS = [
@@ -731,10 +733,14 @@ def _run_output_root(config: dict[str, Any], *, config_path: Path) -> Path:
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
+    if path.name == REJECTED_EXTERNAL_REF_NAME:
+        return {}, "external artifact reference was rejected."
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}, f"{path.name} was not found."
+    except OSError as exc:
+        return {}, f"{path.name} could not be read: {exc}."
     except JSONDecodeError as exc:
         return {}, f"{path.name} is not valid JSON: {exc.msg}."
     if not isinstance(loaded, dict):
@@ -744,16 +750,22 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
 
 def _resolve_ref(value: str, *, base: Path) -> Path:
     path = Path(value)
-    return path if path.is_absolute() else base / path
+    target = path if path.is_absolute() else base / path
+    try:
+        target.resolve().relative_to(base.resolve())
+    except (OSError, ValueError):
+        return base / REJECTED_EXTERNAL_REF_NAME
+    return target
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    if path.is_absolute():
-        try:
-            return path.resolve().relative_to(base.resolve()).as_posix()
-        except ValueError:
-            return path.name
-    return path.as_posix()
+    if path.name == REJECTED_EXTERNAL_REF_NAME:
+        return EXTERNAL_ARTIFACT_REF
+    target = path if path.is_absolute() else base / path
+    try:
+        return target.resolve().relative_to(base.resolve()).as_posix()
+    except (OSError, ValueError):
+        return EXTERNAL_ARTIFACT_REF
 
 
 def _config_base(config_path: Path) -> Path:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -58,6 +59,44 @@ def test_workbench_build_writes_summary_without_running_pipeline(
     assert summary["decision_state"]["fields"]["decision_records"] == 1
     assert (tmp_path / "runs" / "workbench" / "latest" / "index.md").is_file()
     assert (tmp_path / "runs" / "workbench" / "latest" / "index.html").is_file()
+
+
+def test_workbench_build_rejects_latest_run_index_outside_project_root(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path)
+    run = _write_run(tmp_path, config_path)
+    write_json(run.manifest_path, run.manifest)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    outside_dir = tmp_path.parent / "outside-workbench-run"
+    write_json(
+        outside_dir / "run_manifest.json",
+        {
+            "schema_version": 1,
+            "run_id": run.run_id,
+            "status": "succeeded",
+            "private_note": "outside workbench manifest was read",
+        },
+    )
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), run.run_id))
+        connection.commit()
+
+    exit_code = main(["workbench", "build", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    summary = json.loads(
+        (tmp_path / "runs" / "workbench" / "latest" / "workbench_summary.json").read_text(encoding="utf-8")
+    )
+    assert exit_code == 0
+    assert summary["source_selection"]["status"] == "failed"
+    assert summary["source_selection"]["run_dir"] is None
+    assert summary["source_selection"]["reason"] == "local run index points outside the configured project root."
+    assert summary["latest_run"]["status"] == "missing"
+    assert "latest_run_id:" not in output
+    assert "outside workbench manifest was read" not in json.dumps(summary)
+    assert str(outside_dir) not in json.dumps(summary)
 
 
 def test_workbench_build_uses_explicit_run_dir(tmp_path: Path, capsys) -> None:

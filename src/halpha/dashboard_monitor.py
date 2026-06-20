@@ -17,6 +17,7 @@ from .monitoring import (
 MAX_CYCLE_SUMMARIES = 20
 MAX_ALERT_SAMPLE_RECORDS = 20
 MAX_SOURCE_ARTIFACTS = 40
+EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 ALERT_COUNT_KEYS = (
     "records",
     "emitted",
@@ -367,6 +368,8 @@ def _read_json_object(path: Path) -> tuple[dict[str, Any], str, str | None]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}, "missing", f"{path.name} was not found."
+    except OSError as exc:
+        return {}, "failed", f"{path.name} could not be read: {exc}."
     except JSONDecodeError as exc:
         return {}, "failed", f"{path.name} is not valid JSON: {exc.msg}."
     if not isinstance(data, dict):
@@ -456,12 +459,11 @@ def _safe_artifact_ref(value: Any, *, base: Path) -> str | None:
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    if path.is_absolute():
-        try:
-            return path.resolve().relative_to(base.resolve()).as_posix()
-        except ValueError:
-            return path.name
-    return path.as_posix()
+    target = path if path.is_absolute() else base / path
+    try:
+        return target.resolve().relative_to(base.resolve()).as_posix()
+    except (OSError, ValueError):
+        return EXTERNAL_ARTIFACT_REF
 
 
 def _config_base(config_path: Path) -> Path:

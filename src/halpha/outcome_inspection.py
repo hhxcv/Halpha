@@ -270,7 +270,7 @@ def _latest_run_from_index(config_path: Path) -> Path | None:
     run_dir = Path(row[0])
     if not run_dir.is_absolute():
         run_dir = config_path.parent / run_dir
-    return run_dir
+    return _project_local_path(run_dir, base=config_path.parent)
 
 
 def _latest_run_id(connection: sqlite3.Connection) -> str | None:
@@ -338,6 +338,8 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}, f"{path.name} was not found."
+    except OSError as exc:
+        return {}, f"{path.name} could not be read: {exc}."
     except JSONDecodeError as exc:
         return {}, f"{path.name} is not valid JSON: {exc.msg}."
     if not isinstance(loaded, dict):
@@ -364,6 +366,14 @@ def _safe_path(path: Path, *, base: Path) -> str:
         return path.resolve().relative_to(base.resolve()).as_posix()
     except (OSError, ValueError):
         return path.name
+
+
+def _project_local_path(path: Path, *, base: Path) -> Path | None:
+    try:
+        path.resolve().relative_to(base.resolve())
+    except (OSError, ValueError):
+        return None
+    return path
 
 
 def _dict(value: Any) -> dict[str, Any]:

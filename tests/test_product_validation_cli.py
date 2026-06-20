@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -84,6 +85,35 @@ def test_validate_missing_run_index_is_bounded_failure(tmp_path: Path, capsys) -
     assert "local run index was not found" in output
     assert "pipeline: not_run" in output
     assert str(tmp_path) not in output
+
+
+def test_validate_rejects_latest_run_index_outside_project_root(tmp_path: Path, capsys) -> None:
+    config_path = _write_config(tmp_path)
+    run = _write_run(tmp_path, config_path)
+    write_json(run.manifest_path, run.manifest)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    outside_dir = tmp_path.parent / "outside-validation-run"
+    write_json(
+        outside_dir / "run_manifest.json",
+        {
+            "schema_version": 1,
+            "run_id": run.run_id,
+            "status": "succeeded",
+            "private_note": "outside validation manifest was read",
+        },
+    )
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), run.run_id))
+        connection.commit()
+
+    exit_code = main(["validate", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 3
+    assert "selection: latest_run_index" in output
+    assert "reason: local run index points outside the configured project root." in output
+    assert "outside validation manifest was read" not in output
+    assert str(outside_dir) not in output
 
 
 def test_validate_failed_contract_outputs_bounded_diagnostics(tmp_path: Path, capsys) -> None:

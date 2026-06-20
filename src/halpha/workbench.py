@@ -27,6 +27,7 @@ WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY
 STRATEGY_LIFECYCLE_STATE_ARTIFACT = "analysis/strategy_lifecycle_state.json"
 STRATEGY_LIFECYCLE_MATERIAL_ARTIFACT = "analysis/strategy_lifecycle_material.md"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
+EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 
 
 @dataclass(frozen=True)
@@ -639,6 +640,15 @@ def _select_run(config_path: Path, *, run_dir: Path | None, base: Path) -> _RunS
     path = Path(selected_run_dir)
     if not path.is_absolute():
         path = base / path
+    if _project_local_path(path, base=base) is None:
+        return _RunSelection(
+            mode="latest_run_index",
+            status="failed",
+            run_dir=None,
+            run_id=selected_run_id,
+            source_artifact=RUN_INDEX_ARTIFACT,
+            reason="local run index points outside the configured project root.",
+        )
     return _RunSelection(
         mode="latest_run_index",
         status="available",
@@ -1151,6 +1161,8 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}, f"{path.name} was not found."
+    except OSError as exc:
+        return {}, f"{path.name} could not be read: {exc}."
     except JSONDecodeError as exc:
         return {}, f"{path.name} is not valid JSON: {exc.msg}."
     if not isinstance(loaded, dict):
@@ -1171,7 +1183,19 @@ def _resolve_path(path: Path, *, base: Path) -> Path:
 
 
 def _portable_path(path: Path, *, base: Path) -> str:
+    try:
+        path.resolve().relative_to(base.resolve())
+    except (OSError, ValueError):
+        return EXTERNAL_ARTIFACT_REF
     return display_path(path, base=base)
+
+
+def _project_local_path(path: Path, *, base: Path) -> Path | None:
+    try:
+        path.resolve().relative_to(base.resolve())
+    except (OSError, ValueError):
+        return None
+    return path
 
 
 def _config_base(config_path: Path) -> Path:
