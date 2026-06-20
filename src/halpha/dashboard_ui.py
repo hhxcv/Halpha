@@ -2948,6 +2948,7 @@ def dashboard_index_html() -> str:
         store.preview_path,
         JSON.stringify(store.fields || {}),
         JSON.stringify(store.extra || {}),
+        JSON.stringify(store.drilldown || {}),
         (store.source_artifacts || []).join(" ")
       ].join(" ").toLowerCase();
     }
@@ -2986,6 +2987,7 @@ def dashboard_index_html() -> str:
       document.querySelector("#data-store-detail-badge").className = `badge ${normalizeStatus(store.status)}`;
       document.querySelector("#data-store-detail-badge").textContent = label(store.status);
       const fields = store.fields || {};
+      const drilldown = store.drilldown || {};
       const refs = Array.isArray(store.source_artifacts) ? store.source_artifacts : [];
       document.querySelector("#data-store-detail").innerHTML = `
         <section class="section-block">
@@ -2998,6 +3000,7 @@ def dashboard_index_html() -> str:
           </div>
           ${messages(store)}
         </section>
+        ${renderDataStoreDrilldown(drilldown)}
         <section class="section-block">
           <h3 class="subheading">
             <span>Source refs</span>
@@ -3020,6 +3023,40 @@ def dashboard_index_html() -> str:
       } else {
         document.querySelector("#data-preview").innerHTML = `<div class="message warning">No bounded metadata preview is available for this store.</div>`;
       }
+    }
+
+    function renderDataStoreDrilldown(drilldown) {
+      const summary = drilldown.summary || {};
+      const dimensions = drilldown.dimensions || {};
+      const ranges = drilldown.ranges || {};
+      const groups = Array.isArray(drilldown.groups) ? drilldown.groups : [];
+      const metadataRefs = Array.isArray(drilldown.metadata_refs) ? drilldown.metadata_refs : [];
+      const warnings = Array.isArray(drilldown.warnings) ? drilldown.warnings : [];
+      const omitted = drilldown.omitted || {};
+      const tiles = [
+        ["category", drilldown.category],
+        ...Object.entries(summary),
+        ...Object.entries(dimensions),
+        ...Object.entries(ranges)
+      ].slice(0, 16);
+      return `
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>Store drilldown</span>
+            <span class="badge ${groups.length ? "available" : "partial"}">${groups.length} group${groups.length === 1 ? "" : "s"}</span>
+          </h3>
+          <div class="run-detail-grid">
+            ${tiles.map(([key, value]) => detailTile(key, value)).join("") || detailTile("category", drilldown.category)}
+          </div>
+          ${warnings.length ? `<ul class="message-list">${warnings.slice(0, 3).map((value) => `<li class="message warning">${escapeHtml(value)}</li>`).join("")}</ul>` : ""}
+          <ul class="source-ref-list">
+            ${groups.length ? groups.slice(0, 8).map((group) => `<li>${escapeHtml(formatPreview(group))}</li>`).join("") : `<li>No bounded groups recorded.</li>`}
+          </ul>
+          <div class="artifact-actions">
+            ${metadataRefs.length ? metadataRefs.map((ref) => `<span class="badge available">${escapeHtml(ref)}</span>`).join("") : `<span class="badge missing">no metadata refs</span>`}
+            ${omitted.group_records_omitted ? `<span class="badge partial">${escapeHtml(omitted.group_records_omitted)} omitted</span>` : ""}
+          </div>
+        </section>`;
     }
 
     async function loadStrategies() {
