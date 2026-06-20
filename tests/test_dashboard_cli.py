@@ -119,6 +119,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "setInputError" in response.text
     assert "stage_name must be one of the configured pipeline stages." in response.text
     assert "must be a project-relative local ref without parent traversal or URI syntax." in response.text
+    assert "empty-state" in response.text
+    assert "No product runs yet" in response.text
+    assert "No dashboard jobs yet" in response.text
+    assert "No monitor cycles yet" in response.text
     assert 'renderCommandMessage("failed", error.message)' in response.text
     assert "Monitor control" in response.text
     assert 'href="#workbench" data-view-target="workbench"' in response.text
