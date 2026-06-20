@@ -109,6 +109,11 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Run configured backtest" in response.text
     assert "Run configured experiment" in response.text
     assert "not configured or enabled" in response.text
+    assert "field-invalid" in response.text
+    assert "setInputError" in response.text
+    assert "stage_name must be one of the configured pipeline stages." in response.text
+    assert "must be a project-relative local ref without parent traversal or URI syntax." in response.text
+    assert 'renderCommandMessage("failed", error.message)' in response.text
     assert "Monitor control" in response.text
     assert 'href="#workbench" data-view-target="workbench"' in response.text
     assert "Workbench summary" in response.text

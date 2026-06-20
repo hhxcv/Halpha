@@ -643,6 +643,20 @@ def dashboard_index_html() -> str:
       font: inherit;
     }
 
+    .filter-control.field-invalid {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+    }
+
+    .field-error {
+      display: block;
+      min-height: 15px;
+      margin-top: 4px;
+      color: var(--red);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
     .store-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3319,13 +3333,13 @@ def dashboard_index_html() -> str:
         if (!symbol || !timeframe) {
           return null;
         }
-        if (!strategyConfiguredValue(strategyName, options.strategy_names, "strategy_name")) {
+        if (!strategyConfiguredValue(strategyName, options.strategy_names, "strategy_name", "#strategy-command-name")) {
           return null;
         }
-        if (!strategyConfiguredValue(symbol, options.symbols, "symbol")) {
+        if (!strategyConfiguredValue(symbol, options.symbols, "symbol", "#strategy-command-symbol")) {
           return null;
         }
-        if (!strategyConfiguredValue(timeframe, options.timeframes, "timeframe")) {
+        if (!strategyConfiguredValue(timeframe, options.timeframes, "timeframe", "#strategy-command-timeframe")) {
           return null;
         }
         const params = {
@@ -3333,7 +3347,10 @@ def dashboard_index_html() -> str:
           symbol,
           timeframe
         };
-        const outputDir = optionalInputValue("#strategy-command-output-dir");
+        const outputDir = dashboardLocalRefValue("#strategy-command-output-dir", "output_dir", renderStrategyCommandMessage);
+        if (outputDir === null) {
+          return null;
+        }
         if (outputDir) {
           params.output_dir = outputDir;
         }
@@ -3346,12 +3363,15 @@ def dashboard_index_html() -> str:
           return null;
         }
         for (const name of names) {
-          if (!strategyConfiguredValue(name, options.strategy_names, "strategy_name")) {
+          if (!strategyConfiguredValue(name, options.strategy_names, "strategy_name", "#strategy-command-name")) {
             return null;
           }
         }
         const params = { strategy_names: names };
-        const outputDir = optionalInputValue("#strategy-command-output-dir");
+        const outputDir = dashboardLocalRefValue("#strategy-command-output-dir", "output_dir", renderStrategyCommandMessage);
+        if (outputDir === null) {
+          return null;
+        }
         if (outputDir) {
           params.output_dir = outputDir;
         }
@@ -3364,15 +3384,23 @@ def dashboard_index_html() -> str:
     function strategyRequiredInputValue(selector, message) {
       const value = optionalInputValue(selector);
       if (!value) {
+        setInputError(selector, message);
         renderStrategyCommandMessage("blocked", message);
         return "";
       }
+      clearInputError(selector);
       return value;
     }
 
-    function strategyConfiguredValue(value, configuredValues, labelText) {
+    function strategyConfiguredValue(value, configuredValues, labelText, selector) {
       if (!Array.isArray(configuredValues) || !configuredValues.length || configuredValues.includes(value)) {
+        if (selector) {
+          clearInputError(selector);
+        }
         return true;
+      }
+      if (selector) {
+        setInputError(selector, `${labelText} must match a configured option.`);
       }
       renderStrategyCommandMessage("blocked", `${labelText} is not configured or enabled: ${value}.`);
       return false;
@@ -4544,15 +4572,21 @@ def dashboard_index_html() -> str:
     function textCommandJobRequest(intent) {
       const params = {};
       if (intent === "text_models_prepare") {
-        const outputDir = optionalInputValue("#text-output-dir");
+        const outputDir = dashboardLocalRefValue("#text-output-dir", "output_dir", renderTextCommandMessage);
+        if (outputDir === null) {
+          return null;
+        }
         if (outputDir) {
           params.output_dir = outputDir;
         }
         return { intent, params };
       }
       if (intent === "text_intel") {
-        const inputPath = optionalInputValue("#text-input-path");
-        const outputDir = optionalInputValue("#text-output-dir");
+        const inputPath = dashboardLocalRefValue("#text-input-path", "input_path", renderTextCommandMessage);
+        const outputDir = dashboardLocalRefValue("#text-output-dir", "output_dir", renderTextCommandMessage);
+        if (inputPath === null || outputDir === null) {
+          return null;
+        }
         if (inputPath) {
           params.input_path = inputPath;
         }
@@ -4927,8 +4961,8 @@ def dashboard_index_html() -> str:
       } else if (action === "once") {
         request = { intent: "monitor_once", params: {} };
       } else if (action === "loop") {
-        const maxCycles = positiveInputValue("#monitor-loop-cycles");
-        const intervalSeconds = positiveInputValue("#monitor-loop-interval");
+        const maxCycles = positiveInputValue("#monitor-loop-cycles", "max_cycles");
+        const intervalSeconds = positiveInputValue("#monitor-loop-interval", "interval_seconds");
         if (!maxCycles || !intervalSeconds) {
           document.querySelector("#monitor-job-status").textContent = "Invalid loop input";
           document.querySelector("#monitor-job-list").innerHTML = `<div class="message error">Max cycles and interval seconds must be positive integers.</div>`;
@@ -4952,9 +4986,52 @@ def dashboard_index_html() -> str:
       }
     }
 
-    function positiveInputValue(selector) {
-      const value = Number.parseInt(document.querySelector(selector).value, 10);
-      return Number.isInteger(value) && value > 0 ? value : null;
+    function positiveInputValue(selector, fieldName = "value") {
+      const node = document.querySelector(selector);
+      const value = Number.parseInt(node.value, 10);
+      if (Number.isInteger(value) && value > 0) {
+        clearInputError(selector);
+        return value;
+      }
+      setInputError(selector, `${fieldName} must be a positive integer.`);
+      return null;
+    }
+
+    function fieldErrorId(selector) {
+      return `${selector.replace(/^[#.]?/, "").replace(/[^A-Za-z0-9_-]/g, "-")}-field-error`;
+    }
+
+    function setInputError(selector, message) {
+      const node = document.querySelector(selector);
+      if (!node) {
+        return;
+      }
+      node.classList.add("field-invalid");
+      node.setAttribute("aria-invalid", "true");
+      const errorId = fieldErrorId(selector);
+      let error = document.querySelector(`#${errorId}`);
+      if (!error) {
+        error = document.createElement("span");
+        error.id = errorId;
+        error.className = "field-error";
+        node.insertAdjacentElement("afterend", error);
+      }
+      node.setAttribute("aria-describedby", errorId);
+      error.textContent = message;
+    }
+
+    function clearInputError(selector) {
+      const node = document.querySelector(selector);
+      if (!node) {
+        return;
+      }
+      node.classList.remove("field-invalid");
+      node.removeAttribute("aria-invalid");
+      node.removeAttribute("aria-describedby");
+      const error = document.querySelector(`#${fieldErrorId(selector)}`);
+      if (error) {
+        error.remove();
+      }
     }
 
     async function cancelMonitorJob(jobId) {
@@ -5051,15 +5128,17 @@ def dashboard_index_html() -> str:
       if (action === "disable") {
         return { url: `${endpoints.schedule}/disable`, body: {} };
       }
-      const body = {
-        time_of_day: optionalInputValue("#daily-schedule-time"),
-        timezone: optionalInputValue("#daily-schedule-timezone"),
-        job_intent: document.querySelector("#daily-schedule-job-intent").value
-      };
-      if (!body.time_of_day || !body.timezone) {
+      const timeOfDay = timeOfDayInputValue("#daily-schedule-time", "time_of_day", renderCommandMessage);
+      const timezone = timezoneInputValue("#daily-schedule-timezone", "timezone", renderCommandMessage);
+      if (!timeOfDay || !timezone) {
         renderCommandMessage("blocked", "time_of_day and timezone are required for daily report schedule changes.");
         return null;
       }
+      const body = {
+        time_of_day: timeOfDay,
+        timezone,
+        job_intent: document.querySelector("#daily-schedule-job-intent").value
+      };
       if (action === "update") {
         return { url: endpoints.schedule, body };
       }
@@ -5272,6 +5351,11 @@ def dashboard_index_html() -> str:
         if (!stageName) {
           return null;
         }
+        if (!knownStageName(stageName)) {
+          setInputError("#command-run-until-stage", "stage_name must be one of the configured pipeline stages.");
+          renderCommandMessage("blocked", "stage_name must be one of the configured pipeline stages.");
+          return null;
+        }
         if (stageReachesCodex(stageName) && !codexConfirmed()) {
           renderCommandMessage("blocked", "Codex confirmation is required for a stage that reaches Codex report generation.");
           return null;
@@ -5283,7 +5367,10 @@ def dashboard_index_html() -> str:
         return { intent, params };
       }
       if (["validate", "data_inspect", "outcomes_inspect", "workbench_build"].includes(intent)) {
-        const runDir = optionalInputValue("#command-run-dir");
+        const runDir = dashboardLocalRefValue("#command-run-dir", "run_dir", renderCommandMessage);
+        if (runDir === null) {
+          return null;
+        }
         if (runDir) {
           params.run_dir = runDir;
         }
@@ -5293,8 +5380,8 @@ def dashboard_index_html() -> str:
         return { intent, params };
       }
       if (intent === "monitor_loop") {
-        const maxCycles = positiveInputValue("#command-monitor-loop-cycles");
-        const intervalSeconds = positiveInputValue("#command-monitor-loop-interval");
+        const maxCycles = positiveInputValue("#command-monitor-loop-cycles", "max_cycles");
+        const intervalSeconds = positiveInputValue("#command-monitor-loop-interval", "interval_seconds");
         if (!maxCycles || !intervalSeconds) {
           renderCommandMessage("blocked", "max_cycles and interval_seconds must be positive integers.");
           return null;
@@ -5313,7 +5400,10 @@ def dashboard_index_html() -> str:
         params.strategy_name = strategyName;
         params.symbol = symbol;
         params.timeframe = timeframe;
-        const outputDir = optionalInputValue("#command-strategy-output-dir");
+        const outputDir = dashboardLocalRefValue("#command-strategy-output-dir", "output_dir", renderCommandMessage);
+        if (outputDir === null) {
+          return null;
+        }
         if (outputDir) {
           params.output_dir = outputDir;
         }
@@ -5326,22 +5416,31 @@ def dashboard_index_html() -> str:
           return null;
         }
         params.strategy_names = strategyNames;
-        const outputDir = optionalInputValue("#command-strategy-output-dir");
+        const outputDir = dashboardLocalRefValue("#command-strategy-output-dir", "output_dir", renderCommandMessage);
+        if (outputDir === null) {
+          return null;
+        }
         if (outputDir) {
           params.output_dir = outputDir;
         }
         return { intent, params };
       }
       if (intent === "text_models_prepare") {
-        const outputDir = optionalInputValue("#command-text-output-dir");
+        const outputDir = dashboardLocalRefValue("#command-text-output-dir", "output_dir", renderCommandMessage);
+        if (outputDir === null) {
+          return null;
+        }
         if (outputDir) {
           params.output_dir = outputDir;
         }
         return { intent, params };
       }
       if (intent === "text_intel") {
-        const inputPath = optionalInputValue("#command-text-input-path");
-        const outputDir = optionalInputValue("#command-text-output-dir");
+        const inputPath = dashboardLocalRefValue("#command-text-input-path", "input_path", renderCommandMessage);
+        const outputDir = dashboardLocalRefValue("#command-text-output-dir", "output_dir", renderCommandMessage);
+        if (inputPath === null || outputDir === null) {
+          return null;
+        }
         if (inputPath) {
           params.input_path = inputPath;
         }
@@ -5358,31 +5457,99 @@ def dashboard_index_html() -> str:
       return document.querySelector("#command-run-confirm-codex").checked === true;
     }
 
+    function pipelineStages() {
+      return "collect_market_data collect_derivatives_market_data sync_derivatives_market_history build_derivatives_market_views build_derivatives_market_context collect_macro_calendar_data sync_macro_calendar_history build_macro_calendar_views build_macro_calendar_context build_macro_calendar_material collect_onchain_flow_data sync_onchain_flow_history build_onchain_flow_views build_onchain_flow_context build_onchain_flow_material collect_text_events build_text_event_records build_text_entity_evidence build_text_event_classification_evidence build_text_event_topics build_text_event_signals sync_ohlcv build_market_data_views build_strategy_benchmark_suite evaluate_quant_strategies evaluate_strategy_evaluation build_strategy_experiment_material evaluate_market_strategy_signals build_market_signals build_market_signal_material build_market_regime_assessment build_risk_assessment build_decision_recommendations build_watch_triggers build_event_market_confluence build_event_intelligence_assessment build_alert_decisions build_alert_decision_material build_event_intelligence_material build_decision_intelligence_delta build_decision_intelligence_material build_data_quality_summary build_outcome_targets evaluate_outcomes build_strategy_lifecycle_state build_strategy_lifecycle_material build_feature_snapshots build_factor_states build_multi_source_signals build_intelligence_fusion integrate_intelligence_fusion build_user_state_context build_personalized_risk_constraints integrate_personalized_risk_constraints build_personalized_risk_material build_analysis_materials build_research_context build_codex_context run_codex_report validate_product_contracts".split(" ");
+    }
+
+    function knownStageName(stageName) {
+      return pipelineStages().includes(stageName);
+    }
+
     function stageReachesCodex(stageName) {
-      const stages = "collect_market_data collect_derivatives_market_data sync_derivatives_market_history build_derivatives_market_views build_derivatives_market_context collect_macro_calendar_data sync_macro_calendar_history build_macro_calendar_views build_macro_calendar_context build_macro_calendar_material collect_onchain_flow_data sync_onchain_flow_history build_onchain_flow_views build_onchain_flow_context build_onchain_flow_material collect_text_events build_text_event_records build_text_entity_evidence build_text_event_classification_evidence build_text_event_topics build_text_event_signals sync_ohlcv build_market_data_views build_strategy_benchmark_suite evaluate_quant_strategies evaluate_strategy_evaluation build_strategy_experiment_material evaluate_market_strategy_signals build_market_signals build_market_signal_material build_market_regime_assessment build_risk_assessment build_decision_recommendations build_watch_triggers build_event_market_confluence build_event_intelligence_assessment build_alert_decisions build_alert_decision_material build_event_intelligence_material build_decision_intelligence_delta build_decision_intelligence_material build_data_quality_summary build_outcome_targets evaluate_outcomes build_strategy_lifecycle_state build_strategy_lifecycle_material build_feature_snapshots build_factor_states build_multi_source_signals build_intelligence_fusion integrate_intelligence_fusion build_user_state_context build_personalized_risk_constraints integrate_personalized_risk_constraints build_personalized_risk_material build_analysis_materials build_research_context build_codex_context run_codex_report validate_product_contracts".split(" ");
+      const stages = pipelineStages();
       const stageIndex = stages.indexOf(stageName);
       const codexIndex = stages.indexOf("run_codex_report");
       return stageIndex >= codexIndex && codexIndex >= 0;
     }
 
     function optionalInputValue(selector) {
-      return document.querySelector(selector).value.trim();
+      const node = document.querySelector(selector);
+      return node ? node.value.trim() : "";
     }
 
     function requiredInputValue(selector, message) {
       const value = optionalInputValue(selector);
       if (!value) {
+        setInputError(selector, message);
         renderCommandMessage("blocked", message);
         return "";
       }
+      clearInputError(selector);
       return value;
     }
 
     function commaListInputValue(selector) {
-      return optionalInputValue(selector)
+      const value = optionalInputValue(selector);
+      if (!value) {
+        setInputError(selector, "strategy_names must include at least one configured strategy.");
+      } else {
+        clearInputError(selector);
+      }
+      return value
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item);
+    }
+
+    function timeOfDayInputValue(selector, fieldName, renderMessage) {
+      const value = optionalInputValue(selector);
+      if (/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+        clearInputError(selector);
+        return value;
+      }
+      const message = `${fieldName} must use HH:MM 24-hour format.`;
+      setInputError(selector, message);
+      renderMessage("blocked", message);
+      return "";
+    }
+
+    function timezoneInputValue(selector, fieldName, renderMessage) {
+      const value = optionalInputValue(selector);
+      if (value && !/[\x00-\x20]/.test(value)) {
+        clearInputError(selector);
+        return value;
+      }
+      const message = `${fieldName} is required and must not include whitespace.`;
+      setInputError(selector, message);
+      renderMessage("blocked", message);
+      return "";
+    }
+
+    function dashboardLocalRefValue(selector, fieldName, renderMessage) {
+      const value = optionalInputValue(selector);
+      if (!value) {
+        clearInputError(selector);
+        return "";
+      }
+      if (unsafeLocalRef(value)) {
+        const message = `${fieldName} must be a project-relative local ref without parent traversal or URI syntax.`;
+        setInputError(selector, message);
+        renderMessage("blocked", message);
+        return null;
+      }
+      clearInputError(selector);
+      return value;
+    }
+
+    function unsafeLocalRef(value) {
+      const trimmed = String(value || "").trim();
+      const segments = trimmed.split(/[\\\\/]+/);
+      return trimmed.startsWith("/")
+        || trimmed.startsWith("\\\\")
+        || trimmed.startsWith("~")
+        || /^[A-Za-z]:[\\\\/]/.test(trimmed)
+        || trimmed.includes("://")
+        || segments.includes("..");
     }
 
     function renderCommandResult(job) {
