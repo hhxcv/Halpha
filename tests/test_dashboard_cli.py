@@ -72,9 +72,11 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Operational overview" in response.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
+    assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert "Runs &amp; reports" in response.text
     assert "Report preview" in response.text
+    assert "Store coverage" in response.text
     assert "Command center" in response.text
     assert "pending" in response.text
     assert str(tmp_path) not in response.text
