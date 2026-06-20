@@ -44,7 +44,9 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
 - Builds local workbench summary, Markdown index, and static HTML index files from existing artifacts.
-- Runs a local web dashboard service with an initial health endpoint.
+- Runs a local web dashboard service for overview, run/report review, data
+  store inspection, strategy research, monitor control, artifact previews,
+  dashboard jobs, and daily report schedule state.
 
 Halpha does not implement account access, exchange trading, order placement,
 portfolio automation, real-time alert delivery, hosted dashboards, or hosted
@@ -106,9 +108,28 @@ python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 ```
 
-The initial dashboard command starts a local-only service and exposes
-`/api/health`. Deeper dashboard views and command controls are added through
-the M20 dashboard work.
+The dashboard is local-only by default. Open the printed local URL in a browser
+to inspect overview state, run history, report previews, local data store
+metadata, strategy outputs, monitor health, recent monitor cycles, alert
+samples, and dashboard-triggered job history.
+
+Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
+roots. Private values such as proxy URLs, credentials, tokens, private notes,
+raw user-state files, machine paths, and private endpoints are rejected or
+redacted from dashboard responses and job logs where the dashboard can identify
+them.
+
+Dashboard command execution is explicit and allowlisted. Product run, stage,
+validation, data inspection, outcome inspection, workbench, strategy, text,
+monitor, and schedule trigger actions run through dashboard jobs. Codex-capable
+report jobs require explicit confirmation before they can start. The dashboard
+does not expose arbitrary shell execution.
+
+Daily report schedule state is explicit local dashboard control state under
+`runs/dashboard/schedules/`. The implemented schedule API can inspect, enable,
+disable, update, and manually trigger daily report jobs through dashboard jobs.
+It does not install an OS scheduler, hosted scheduler, startup task, cron job,
+workflow engine, or hidden daemon.
 
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:

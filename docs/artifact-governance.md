@@ -364,11 +364,19 @@ material rather than full workbench summaries or generated indexes.
 ### Local Dashboard Control State
 
 Dashboard contracts are defined in `docs/dashboard-contracts.md`. Dashboard
-state, when implemented, records local web UI control metadata such as
-dashboard-triggered jobs, bounded logs, schedule state, and linked source refs.
+state records local web UI control metadata such as dashboard-triggered jobs,
+bounded logs, schedule state, and linked source refs.
 It is control and delivery state, not upstream research evidence, validation
 authority, decision input, alert-priority source, strategy-gate input, or Codex
 context by default.
+
+Implemented dashboard control artifacts include:
+
+- `runs/dashboard/jobs/index.json`
+- `runs/dashboard/jobs/<job_id>/job.json`
+- `runs/dashboard/jobs/<job_id>/stdout.log`
+- `runs/dashboard/jobs/<job_id>/stderr.log`
+- `runs/dashboard/schedules/daily_report_schedule.json`
 
 ### Report-Facing Material
 
