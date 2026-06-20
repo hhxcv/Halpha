@@ -48,6 +48,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["strategy_research_api"] == "available"
     assert payload["features"]["monitor_api"] == "available"
     assert payload["features"]["workbench_api"] == "available"
+    assert payload["features"]["decision_risk_api"] == "available"
     assert payload["features"]["schedule_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "available"
@@ -76,6 +77,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Operational overview" in response.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-workbench-endpoint="/api/workbench"' in response.text
+    assert 'data-decision-risk-endpoint="/api/decision-risk"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
@@ -96,6 +98,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'href="#workbench" data-view-target="workbench"' in response.text
     assert "Workbench summary" in response.text
     assert "State sections" in response.text
+    assert 'href="#decision-risk" data-view-target="decision-risk"' in response.text
+    assert "Decision &amp; risk" in response.text
+    assert "Decision artifacts" in response.text
     assert "Dry run" in response.text
     assert "Run one cycle" in response.text
     assert "Start finite loop" in response.text
@@ -263,6 +268,97 @@ def test_dashboard_workbench_endpoint_summarizes_sections_and_refs(tmp_path: Pat
     assert "data/research/outcomes/outcome_history.json" in payload["source_artifacts"]
     assert payload["omitted"]["full_workbench_summary_embedded"] is False
     assert payload["codex_boundary"]["codex_input_by_default"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_decision_risk_endpoint_reports_missing_run_state(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/decision-risk")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_decision_risk"
+    assert payload["status"] == "missing"
+    assert payload["artifacts"] == []
+    assert "local run index was not found" in payload["warnings"][0]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_decision_risk_endpoint_summarizes_selected_run_artifacts(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    run.manifest["artifacts"].update(
+        {
+            "risk_assessment": "analysis/risk_assessment.json",
+            "decision_recommendations": "analysis/decision_recommendations.json",
+            "watch_triggers": "analysis/watch_triggers.json",
+            "decision_intelligence_delta": "analysis/decision_intelligence_delta.json",
+        }
+    )
+    write_json(run.manifest_path, run.manifest)
+    write_json(
+        run.analysis_dir / "risk_assessment.json",
+        {
+            "artifact_type": "risk_assessment",
+            "status": "warning",
+            "records": [{"risk_level": "high"}],
+            "source_artifacts": ["analysis/market_regime_assessment.json"],
+            "warnings": ["risk elevated"],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "decision_recommendations.json",
+        {
+            "artifact_type": "decision_recommendations",
+            "status": "ok",
+            "records": [{"decision_bias": "wait_for_confirmation"}],
+            "counts": {"decision_recommendation_records": 1},
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "watch_triggers.json",
+        {
+            "artifact_type": "watch_triggers",
+            "status": "ok",
+            "triggers": [{"trigger_type": "risk_escalation"}],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        run.analysis_dir / "decision_intelligence_delta.json",
+        {
+            "artifact_type": "decision_intelligence_delta",
+            "status": "missing",
+            "warnings": ["No previous successful decision-intelligence run found."],
+            "errors": [],
+        },
+    )
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/decision-risk", params={"run_id": "run-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_decision_risk"
+    assert payload["selected_run"]["fields"]["run_id"] == "run-1"
+    artifacts = {artifact["name"]: artifact for artifact in payload["artifacts"]}
+    assert artifacts["risk_assessment"]["status"] == "warning"
+    assert artifacts["risk_assessment"]["fields"]["record_count"] == 1
+    assert artifacts["decision_recommendations"]["status"] == "available"
+    assert artifacts["watch_triggers"]["fields"]["record_count"] == 1
+    assert artifacts["decision_intelligence_delta"]["status"] == "missing"
+    assert "runs/run-1/analysis/risk_assessment.json" in payload["source_artifacts"]
+    assert "runs/run-1/analysis/market_regime_assessment.json" in payload["source_artifacts"]
+    assert payload["omitted"]["full_decision_artifacts_embedded"] is False
     assert str(tmp_path) not in response.text
 
 
