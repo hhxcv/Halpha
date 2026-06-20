@@ -8,6 +8,7 @@ import sqlite3
 from typing import Any
 
 from .data_inspection import DataInspectionError, inspect_local_store_state
+from .dashboard_jobs import DashboardJobManager
 from .dashboard_strategy import dashboard_strategy_research
 from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
@@ -61,7 +62,7 @@ def create_dashboard_app(
     port: int = DEFAULT_DASHBOARD_PORT,
 ) -> Any:
     try:
-        from fastapi import FastAPI, Response
+        from fastapi import Body, FastAPI, Response
         from fastapi.responses import HTMLResponse
     except ModuleNotFoundError as exc:
         raise DashboardError("FastAPI is required to run the dashboard.") from exc
@@ -70,6 +71,7 @@ def create_dashboard_app(
     validate_dashboard_port(port)
     app = FastAPI(title="Halpha Dashboard", version="0.0.0")
     health = dashboard_health(config, config_path=config_path, host=host, port=port)
+    job_manager = DashboardJobManager(config, config_path=config_path)
 
     @app.get("/", response_class=HTMLResponse)
     def root() -> HTMLResponse:
@@ -106,6 +108,32 @@ def create_dashboard_app(
     @app.get("/api/strategies")
     def strategies_endpoint(run_id: str | None = None) -> dict[str, Any]:
         return dashboard_strategy_research(config, config_path=config_path, run_id=run_id)
+
+    @app.get("/api/jobs")
+    def jobs_endpoint() -> dict[str, Any]:
+        return job_manager.list_jobs()
+
+    @app.post("/api/jobs")
+    def create_job_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        return job_manager.create_job(request)
+
+    @app.get("/api/jobs/{job_id}")
+    def job_detail_endpoint(job_id: str) -> dict[str, Any]:
+        job = job_manager.get_job(job_id)
+        if job is None:
+            return {
+                "schema_version": 1,
+                "artifact_type": "dashboard_job",
+                "job_id": job_id,
+                "status": "missing",
+                "warnings": ["dashboard job was not found."],
+                "errors": [],
+            }
+        return job
+
+    @app.post("/api/jobs/{job_id}/cancel")
+    def cancel_job_endpoint(job_id: str) -> dict[str, Any]:
+        return job_manager.cancel_job(job_id)
 
     return app
 
@@ -152,7 +180,7 @@ def dashboard_health(
             "artifact_preview_api": "available",
             "data_store_api": "available",
             "strategy_research_api": "available",
-            "job_runner": "not_implemented",
+            "job_runner": "available",
             "frontend_ui": "available",
         },
     }

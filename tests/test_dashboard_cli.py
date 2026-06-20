@@ -47,7 +47,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["data_store_api"] == "available"
     assert payload["features"]["strategy_research_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
-    assert payload["features"]["job_runner"] == "not_implemented"
+    assert payload["features"]["job_runner"] == "available"
 
 
 def test_dashboard_health_omits_external_absolute_config_path(tmp_path: Path) -> None:
