@@ -28,6 +28,13 @@ MAX_STAGE_ARTIFACT_REFS = 20
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
+DECISION_RISK_ARTIFACTS = (
+    ("market_regime_assessment", "Market regime", "analysis/market_regime_assessment.json"),
+    ("risk_assessment", "Risk assessment", "analysis/risk_assessment.json"),
+    ("decision_recommendations", "Decision recommendations", "analysis/decision_recommendations.json"),
+    ("watch_triggers", "Watch triggers", "analysis/watch_triggers.json"),
+    ("decision_intelligence_delta", "Decision delta", "analysis/decision_intelligence_delta.json"),
+)
 DATA_STORE_SECTION_NAMES = {
     "research_data_catalog",
     "run_index",
@@ -95,6 +102,10 @@ def create_dashboard_app(
     @app.get("/api/workbench")
     def workbench_endpoint() -> dict[str, Any]:
         return dashboard_workbench(config_path=config_path)
+
+    @app.get("/api/decision-risk")
+    def decision_risk_endpoint(run_id: str | None = None) -> dict[str, Any]:
+        return dashboard_decision_risk(config_path=config_path, run_id=run_id)
 
     @app.get("/api/runs")
     def runs_endpoint() -> dict[str, Any]:
@@ -227,6 +238,7 @@ def dashboard_health(
             "strategy_research_api": "available",
             "monitor_api": "available",
             "workbench_api": "available",
+            "decision_risk_api": "available",
             "schedule_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
@@ -336,6 +348,79 @@ def dashboard_workbench(*, config_path: Path) -> dict[str, Any]:
             "full_workbench_summary_embedded": False,
         },
         "codex_boundary": _bounded_mapping(data.get("codex_boundary")),
+    }
+
+
+def dashboard_decision_risk(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
+    selected = _decision_selected_run(config_path, run_id=run_id)
+    if selected["status"] != "available":
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_decision_risk",
+            "status": selected["status"],
+            "selected_run": selected,
+            "artifacts": [],
+            "source_artifacts": selected.get("source_artifacts", []),
+            "warnings": selected.get("warnings", []),
+            "errors": selected.get("errors", []),
+            "omitted": {"full_decision_artifacts_embedded": False},
+        }
+    base = _config_base(config_path)
+    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
+    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
+    manifest, error = _read_json(manifest_path)
+    if error:
+        failed = {
+            **selected,
+            "status": "failed",
+            "errors": [error],
+        }
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_decision_risk",
+            "status": "failed",
+            "selected_run": failed,
+            "artifacts": [],
+            "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
+            "warnings": [],
+            "errors": [error],
+            "omitted": {"full_decision_artifacts_embedded": False},
+        }
+
+    artifacts = [
+        _decision_risk_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
+        for key, title, default in DECISION_RISK_ARTIFACTS
+    ]
+    statuses = [artifact["status"] for artifact in artifacts]
+    source_artifacts = sorted(
+        {
+            RUN_INDEX_ARTIFACT,
+            _safe_ref(manifest_path, base=base),
+            *[
+                ref
+                for artifact in artifacts
+                for ref in _string_list(artifact.get("source_artifacts"))
+            ],
+        }
+    )
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_decision_risk",
+        "status": _overall_status(statuses),
+        "selected_run": selected,
+        "artifacts": artifacts,
+        "source_artifacts": source_artifacts,
+        "warnings": [
+            warning
+            for artifact in artifacts
+            for warning in _string_list(artifact.get("warnings"))
+        ],
+        "errors": [
+            error
+            for artifact in artifacts
+            for error in _string_list(artifact.get("errors"))
+        ],
+        "omitted": {"full_decision_artifacts_embedded": False},
     }
 
 
@@ -1244,6 +1329,109 @@ def _workbench_ref_path(ref: str, *, run_dir: str) -> str:
     if run_dir:
         return f"{run_dir.rstrip('/')}/{ref.lstrip('/')}"
     return ref
+
+
+def _decision_selected_run(config_path: Path, *, run_id: str | None) -> dict[str, Any]:
+    base = _config_base(config_path)
+    if run_id:
+        detail = dashboard_run_detail(config_path, run_id=run_id)
+        if detail["status"] != "available":
+            return {
+                "status": detail["status"],
+                "fields": detail.get("fields", {}),
+                "source_artifacts": detail.get("source_artifacts", []),
+                "warnings": detail.get("warnings", []),
+                "errors": detail.get("errors", []),
+            }
+        fields = detail["fields"]
+        return _section(
+            "selected_run",
+            "available",
+            fields={
+                "run_id": detail["run_id"],
+                "run_dir": fields.get("run_dir"),
+                "manifest": fields.get("manifest"),
+                "run_status": fields.get("run_status"),
+                "started_at": fields.get("started_at"),
+                "finished_at": fields.get("finished_at"),
+            },
+            source_artifacts=detail.get("source_artifacts", []),
+        )
+    latest, _, _ = _latest_run_section(config_path, base=base)
+    return latest
+
+
+def _decision_risk_artifact_summary(
+    key: str,
+    title: str,
+    default_artifact: str,
+    *,
+    run_dir: Path,
+    manifest: dict[str, Any],
+    base: Path,
+) -> dict[str, Any]:
+    artifact = _artifact_ref(manifest, key, default_artifact)
+    if artifact is None:
+        return _section(
+            key,
+            "missing",
+            fields={"title": title, "artifact": default_artifact},
+            warnings=[f"{title} artifact is not recorded."],
+        )
+    path = run_dir / artifact
+    preview_path = _safe_ref(path, base=base)
+    data, error = _read_json(path)
+    if error:
+        status = "missing" if "was not found" in error else "failed"
+        return _section(
+            key,
+            status,
+            fields={"title": title, "artifact": artifact, "preview_path": preview_path},
+            source_artifacts=[preview_path],
+            warnings=[error] if status == "missing" else [],
+            errors=[error] if status == "failed" else [],
+        )
+    fields = {
+        "title": title,
+        "artifact": artifact,
+        "preview_path": preview_path,
+        "artifact_type": data.get("artifact_type"),
+        "artifact_status": data.get("status"),
+        "record_count": _dashboard_record_count(data),
+        "warning_count": len(_list(data.get("warnings"))),
+        "error_count": len(_list(data.get("errors"))),
+        "counts": _bounded_mapping(data.get("counts")),
+    }
+    source_artifacts = [
+        preview_path,
+        *[_decision_ref_path(ref, run_dir=run_dir, base=base) for ref in _string_list(data.get("source_artifacts"))],
+    ]
+    return _section(
+        key,
+        _normalize_section_status(str(data.get("status") or "unknown")),
+        fields=fields,
+        source_artifacts=sorted({ref for ref in source_artifacts if ref}),
+        warnings=_string_list(data.get("warnings")),
+        errors=_string_list(data.get("errors")),
+    )
+
+
+def _dashboard_record_count(data: dict[str, Any]) -> int:
+    for key in ("records", "items", "recommendations", "triggers", "changes", "risk_assessments"):
+        value = data.get(key)
+        if isinstance(value, list):
+            return len(value)
+    counts = _dict(data.get("counts"))
+    for value in counts.values():
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    return 0
+
+
+def _decision_ref_path(ref: str, *, run_dir: Path, base: Path) -> str:
+    if ref.startswith(("runs/", "data/")):
+        return ref
+    return _safe_ref(run_dir / ref, base=base)
 
 
 def _section(

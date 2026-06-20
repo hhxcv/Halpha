@@ -436,7 +436,8 @@ def dashboard_index_html() -> str:
     .strategy-layout,
     .monitor-layout,
     .command-center-layout,
-    .workbench-layout {
+    .workbench-layout,
+    .decision-risk-layout {
       display: grid;
       grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
       gap: 16px;
@@ -895,7 +896,8 @@ def dashboard_index_html() -> str:
       .strategy-layout,
       .monitor-layout,
       .command-center-layout,
-      .workbench-layout {
+      .workbench-layout,
+      .decision-risk-layout {
         grid-template-columns: 1fr;
       }
 
@@ -948,6 +950,7 @@ def dashboard_index_html() -> str:
     class="app-shell"
     data-overview-endpoint="/api/overview"
     data-workbench-endpoint="/api/workbench"
+    data-decision-risk-endpoint="/api/decision-risk"
     data-runs-endpoint="/api/runs"
     data-stores-endpoint="/api/data/stores"
     data-strategies-endpoint="/api/strategies"
@@ -988,6 +991,10 @@ def dashboard_index_html() -> str:
         </a>
         <a class="nav-item" href="#workbench" data-view-target="workbench">
           <span>Workbench</span>
+          <span class="nav-state">available</span>
+        </a>
+        <a class="nav-item" href="#decision-risk" data-view-target="decision-risk">
+          <span>Decision &amp; risk</span>
           <span class="nav-state">available</span>
         </a>
         <a class="nav-item" href="#commands" data-view-target="commands">
@@ -1066,6 +1073,10 @@ def dashboard_index_html() -> str:
               </div>
               <div class="planned-item">
                 <span class="planned-title">Workbench</span>
+                <span class="planned-state">available</span>
+              </div>
+              <div class="planned-item">
+                <span class="planned-title">Decision &amp; risk</span>
                 <span class="planned-state">available</span>
               </div>
               <div class="planned-item">
@@ -1473,6 +1484,53 @@ def dashboard_index_html() -> str:
         </section>
       </section>
 
+      <section id="decision-risk-view" class="view hidden" data-view="decision-risk">
+        <section class="topbar" aria-labelledby="decision-risk-title">
+          <div>
+            <p class="eyebrow">Deterministic decision support</p>
+            <h1 id="decision-risk-title">Decision &amp; risk</h1>
+          </div>
+          <div class="status-panel" aria-live="polite">
+            <div class="status-line">
+              <span class="status-label">Decision state</span>
+              <span id="decision-risk-status" class="status-value">Loading</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Selected run</span>
+              <span id="decision-risk-selected-run" class="status-value">none</span>
+            </div>
+          </div>
+        </section>
+        <section class="decision-risk-layout">
+          <article class="wide-panel" aria-labelledby="decision-run-list-title">
+            <div class="panel-heading">
+              <h2 id="decision-run-list-title" class="panel-title">Runs</h2>
+              <span id="decision-run-count" class="badge unknown">loading</span>
+            </div>
+            <div id="decision-run-list" class="run-list">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </article>
+          <article class="wide-panel" aria-labelledby="decision-artifacts-title">
+            <div class="panel-heading">
+              <h2 id="decision-artifacts-title" class="panel-title">Decision artifacts</h2>
+              <span id="decision-artifact-count" class="badge unknown">waiting</span>
+            </div>
+            <div id="decision-artifact-list" class="store-grid">
+              <div class="message">Select a run to inspect decision and risk artifacts.</div>
+            </div>
+            <div id="decision-artifact-detail" class="detail-sections">
+              <div class="message">Open an artifact summary to inspect counts, status, warnings, and refs.</div>
+            </div>
+            <div id="decision-preview" class="preview-panel">
+              <div class="message">Open a decision or risk source ref to inspect a bounded preview.</div>
+            </div>
+          </article>
+        </section>
+      </section>
+
       <section id="commands-view" class="view hidden" data-view="commands">
         <section class="topbar" aria-labelledby="commands-title">
           <div>
@@ -1759,6 +1817,7 @@ def dashboard_index_html() -> str:
     const endpoints = {
       overview: app.dataset.overviewEndpoint,
       workbench: app.dataset.workbenchEndpoint,
+      decisionRisk: app.dataset.decisionRiskEndpoint,
       runs: app.dataset.runsEndpoint,
       stores: app.dataset.storesEndpoint,
       strategies: app.dataset.strategiesEndpoint,
@@ -1839,6 +1898,11 @@ def dashboard_index_html() -> str:
     let monitorJobPoll = null;
     let workbenchLoaded = false;
     let workbenchPayload = null;
+    let decisionRiskLoaded = false;
+    let decisionRunsPayload = null;
+    let decisionRiskPayload = null;
+    let selectedDecisionRunId = null;
+    let selectedDecisionArtifactKey = null;
     let commandJobsLoaded = false;
     let commandJobPoll = null;
     let dailyScheduleLoaded = false;
@@ -1965,6 +2029,9 @@ def dashboard_index_html() -> str:
       if (window.location.hash === "#workbench") {
         return "workbench";
       }
+      if (window.location.hash === "#decision-risk") {
+        return "decision-risk";
+      }
       if (window.location.hash === "#commands") {
         return "commands";
       }
@@ -2001,6 +2068,9 @@ def dashboard_index_html() -> str:
       }
       if (view === "workbench" && !workbenchLoaded) {
         loadWorkbench();
+      }
+      if (view === "decision-risk" && !decisionRiskLoaded) {
+        loadDecisionRisk();
       }
       if (view === "commands" && !commandJobsLoaded) {
         loadCommandCenter();
@@ -3385,6 +3455,151 @@ def dashboard_index_html() -> str:
         data_quality_state: "Data quality"
       };
       return titles[name] || name;
+    }
+
+    async function loadDecisionRisk() {
+      decisionRiskLoaded = true;
+      document.querySelector("#decision-risk-status").textContent = "Loading";
+      try {
+        decisionRunsPayload = await fetchJson(endpoints.runs);
+        renderDecisionRunList();
+        const runs = Array.isArray(decisionRunsPayload.runs) ? decisionRunsPayload.runs : [];
+        if (runs.length) {
+          await selectDecisionRun(runs[0].run_id);
+        } else {
+          const payload = await fetchJson(endpoints.decisionRisk);
+          renderDecisionRisk(payload);
+        }
+      } catch (error) {
+        renderDecisionRiskFailure(error);
+      }
+    }
+
+    function renderDecisionRunList() {
+      const runs = Array.isArray(decisionRunsPayload && decisionRunsPayload.runs) ? decisionRunsPayload.runs : [];
+      const count = document.querySelector("#decision-run-count");
+      count.className = `badge ${runs.length ? "available" : "missing"}`;
+      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
+      if (!runs.length) {
+        document.querySelector("#decision-run-list").innerHTML = messages(decisionRunsPayload || {}) || `<div class="message warning">No runs are recorded in the local run index.</div>`;
+        return;
+      }
+      document.querySelector("#decision-run-list").innerHTML = runs.map((run) => `
+        <button class="run-row ${run.run_id === selectedDecisionRunId ? "selected" : ""}" type="button" data-decision-run-id="${escapeHtml(run.run_id)}">
+          <span class="run-row-main">
+            <span class="run-id">${escapeHtml(run.run_id)}</span>
+            ${badge(run.status)}
+          </span>
+          <span class="run-meta">
+            <span>${escapeHtml(text(run.started_at))}</span>
+            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
+            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
+          </span>
+        </button>`).join("");
+      document.querySelectorAll("[data-decision-run-id]").forEach((button) => {
+        button.addEventListener("click", () => selectDecisionRun(button.dataset.decisionRunId));
+      });
+    }
+
+    async function selectDecisionRun(runId) {
+      if (!runId) {
+        return;
+      }
+      selectedDecisionRunId = runId;
+      selectedDecisionArtifactKey = null;
+      document.querySelector("#decision-risk-selected-run").textContent = runId;
+      document.querySelector("#decision-risk-status").textContent = "Loading";
+      renderDecisionRunList();
+      try {
+        decisionRiskPayload = await fetchJson(`${endpoints.decisionRisk}?run_id=${encodeURIComponent(runId)}`);
+        renderDecisionRisk(decisionRiskPayload);
+      } catch (error) {
+        renderDecisionRiskFailure(error);
+      }
+    }
+
+    function renderDecisionRisk(payload) {
+      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+      const selectedRun = payload.selected_run || {};
+      const selectedFields = selectedRun.fields || {};
+      document.querySelector("#decision-risk-status").textContent = label(payload.status);
+      document.querySelector("#decision-risk-selected-run").textContent = text(selectedFields.run_id || selectedDecisionRunId);
+      const count = document.querySelector("#decision-artifact-count");
+      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
+      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
+      if (!artifacts.length) {
+        document.querySelector("#decision-artifact-list").innerHTML = messages(payload) || `<div class="message warning">No decision or risk artifacts are available for the selected run.</div>`;
+        document.querySelector("#decision-artifact-detail").innerHTML = "";
+        return;
+      }
+      if (!selectedDecisionArtifactKey || !artifacts.some((artifact) => artifact.name === selectedDecisionArtifactKey)) {
+        selectedDecisionArtifactKey = artifacts[0].name;
+      }
+      document.querySelector("#decision-artifact-list").innerHTML = artifacts.map((artifact) => {
+        const fields = artifact.fields || {};
+        return `
+          <button class="store-card ${artifact.name === selectedDecisionArtifactKey ? "selected" : ""}" type="button" data-decision-artifact-key="${escapeHtml(artifact.name)}">
+            <span class="store-title-line">
+              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
+              ${badge(artifact.status)}
+            </span>
+            <span class="store-metrics">
+              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
+              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
+              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
+            </span>
+            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
+          </button>`;
+      }).join("");
+      document.querySelectorAll("[data-decision-artifact-key]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedDecisionArtifactKey = button.dataset.decisionArtifactKey;
+          renderDecisionRisk(payload);
+        });
+      });
+      renderDecisionArtifactDetail(artifacts.find((artifact) => artifact.name === selectedDecisionArtifactKey));
+    }
+
+    function renderDecisionArtifactDetail(artifact) {
+      if (!artifact) {
+        document.querySelector("#decision-artifact-detail").innerHTML = `<div class="message warning">Decision artifact detail is not available.</div>`;
+        return;
+      }
+      const fields = artifact.fields || {};
+      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
+      document.querySelector("#decision-artifact-detail").innerHTML = `
+        <section class="section-block">
+          <h3 class="subheading">
+            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
+            ${badge(artifact.status)}
+          </h3>
+          <div class="run-detail-grid">
+            ${detailTile("Artifact", fields.artifact)}
+            ${detailTile("Type", fields.artifact_type)}
+            ${detailTile("Artifact status", fields.artifact_status)}
+            ${detailTile("Records", fields.record_count)}
+            ${detailTile("Warnings", fields.warning_count)}
+            ${detailTile("Errors", fields.error_count)}
+          </div>
+          ${messages(artifact)}
+          <div class="artifact-actions">
+            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-decision-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
+          </div>
+        </section>`;
+      document.querySelectorAll("[data-decision-preview-path]").forEach((button) => {
+        button.addEventListener("click", () => loadArtifactPreview(button.dataset.decisionPreviewPath, "#decision-preview"));
+      });
+      if (isPreviewableRef(fields.preview_path)) {
+        loadArtifactPreview(fields.preview_path, "#decision-preview");
+      }
+    }
+
+    function renderDecisionRiskFailure(error) {
+      document.querySelector("#decision-risk-status").textContent = "Failed";
+      document.querySelector("#decision-artifact-count").className = "badge failed";
+      document.querySelector("#decision-artifact-count").textContent = "failed";
+      document.querySelector("#decision-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      document.querySelector("#decision-artifact-detail").innerHTML = "";
     }
 
     async function refreshMonitorJobs() {
