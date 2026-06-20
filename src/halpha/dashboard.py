@@ -102,7 +102,7 @@ def create_dashboard_app(
 
     @app.get("/api/artifacts/preview")
     def artifact_preview_endpoint(path: str) -> dict[str, Any]:
-        return dashboard_artifact_preview(config_path=config_path, artifact_path=path)
+        return dashboard_artifact_preview(config, config_path=config_path, artifact_path=path)
 
     @app.get("/api/data/stores")
     def data_stores_endpoint() -> dict[str, Any]:
@@ -405,13 +405,14 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
     }
 
 
-def dashboard_artifact_preview(config_path: Path, *, artifact_path: str) -> dict[str, Any]:
+def dashboard_artifact_preview(config: dict[str, Any], *, config_path: Path, artifact_path: str) -> dict[str, Any]:
     base = _config_base(config_path)
     resolved = _resolve_preview_path(artifact_path, base=base)
     if isinstance(resolved, dict):
         return resolved
 
     path, safe_path = resolved
+    redactor = _DashboardPreviewRedactor(config, config_path=config_path)
     if not path.exists():
         return _artifact_preview_error(safe_path, "missing", f"{safe_path} was not found.")
     if not path.is_file():
@@ -424,13 +425,13 @@ def dashboard_artifact_preview(config_path: Path, *, artifact_path: str) -> dict
             f"{suffix} previews are not expanded by the dashboard artifact preview API.",
         )
     if suffix == ".json":
-        return _json_preview(path, safe_path)
+        return _json_preview(path, safe_path, redactor=redactor)
     if suffix == ".jsonl":
-        return _jsonl_preview(path, safe_path)
+        return _jsonl_preview(path, safe_path, redactor=redactor)
     if suffix in {".md", ".markdown"}:
-        return _text_preview(path, safe_path, preview_kind="markdown")
+        return _text_preview(path, safe_path, preview_kind="markdown", redactor=redactor)
     if suffix in {".txt", ".log", ".csv", ".yaml", ".yml"}:
-        return _text_preview(path, safe_path, preview_kind="text")
+        return _text_preview(path, safe_path, preview_kind="text", redactor=redactor)
     return _artifact_preview_error(
         safe_path,
         "unsupported",
@@ -650,7 +651,94 @@ def _resolve_preview_path(artifact_path: str, *, base: Path) -> tuple[Path, str]
     return resolved, path.as_posix()
 
 
-def _json_preview(path: Path, safe_path: str) -> dict[str, Any]:
+class _DashboardPreviewRedactor:
+    _private_key_parts = {
+        "account",
+        "cookie",
+        "credential",
+        "endpoint",
+        "host",
+        "password",
+        "path",
+        "port",
+        "private",
+        "proxy",
+        "secret",
+        "token",
+        "url",
+        "user",
+    }
+
+    def __init__(self, config: dict[str, Any], *, config_path: Path) -> None:
+        self.private_values = _dashboard_private_values(config, config_path=config_path)
+
+    def redact_value(self, value: Any, *, key: str | None = None) -> Any:
+        if key and self._is_private_key(key):
+            return "<redacted>"
+        if isinstance(value, dict):
+            return {str(item_key): self.redact_value(item, key=str(item_key)) for item_key, item in value.items()}
+        if isinstance(value, list):
+            return [self.redact_value(item) for item in value]
+        if isinstance(value, str):
+            return self.redact_text(value)
+        return value
+
+    def redact_text(self, text: str) -> str:
+        redacted = text
+        for value in self.private_values:
+            redacted = redacted.replace(value, "<redacted>")
+        return "\n".join(self._redact_private_line(line) for line in redacted.split("\n"))
+
+    def _redact_private_line(self, line: str) -> str:
+        stripped = line.lstrip()
+        key, separator, value = stripped.partition(":")
+        if not separator or not value:
+            return line
+        clean_key = key.strip().strip("'\"")
+        if not clean_key or not self._is_private_key(clean_key):
+            return line
+        indent = line[: len(line) - len(stripped)]
+        return f"{indent}{key}: <redacted>"
+
+    @staticmethod
+    def _is_private_key(key: str) -> bool:
+        lowered = key.lower()
+        if lowered == "report":
+            return False
+        return any(part in lowered for part in _DashboardPreviewRedactor._private_key_parts)
+
+
+def _dashboard_private_values(config: dict[str, Any], *, config_path: Path) -> list[str]:
+    values = set()
+    base = _config_base(config_path)
+    if base.is_absolute():
+        values.update({str(base), base.as_posix()})
+    if config_path.is_absolute():
+        values.update({str(config_path), config_path.as_posix()})
+    try:
+        values.update({str(config_path.resolve()), config_path.resolve().as_posix()})
+    except OSError:
+        pass
+
+    def visit(value: Any, key_path: tuple[str, ...]) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                visit(item, (*key_path, str(key)))
+            return
+        if isinstance(value, list):
+            for item in value:
+                visit(item, key_path)
+            return
+        if not isinstance(value, str) or not value:
+            return
+        if any(_DashboardPreviewRedactor._is_private_key(key) for key in key_path):
+            values.add(value)
+
+    visit(config, ())
+    return sorted(values, key=len, reverse=True)
+
+
+def _json_preview(path: Path, safe_path: str, *, redactor: _DashboardPreviewRedactor) -> dict[str, Any]:
     text, truncated, error = _read_bounded_text(path)
     if error:
         return _artifact_preview_error(safe_path, "failed", error)
@@ -658,7 +746,7 @@ def _json_preview(path: Path, safe_path: str) -> dict[str, Any]:
         return _artifact_preview_payload(
             safe_path,
             "json",
-            text,
+            redactor.redact_text(text),
             truncated=True,
             warnings=["JSON file was truncated before parsing."],
         )
@@ -666,7 +754,7 @@ def _json_preview(path: Path, safe_path: str) -> dict[str, Any]:
         loaded = json.loads(text)
     except JSONDecodeError as exc:
         return _artifact_preview_error(safe_path, "failed", f"{safe_path} is not valid JSON: {exc.msg}.")
-    preview, omitted = _bounded_json(loaded)
+    preview, omitted = _bounded_json(redactor.redact_value(loaded))
     return _artifact_preview_payload(
         safe_path,
         "json",
@@ -676,7 +764,7 @@ def _json_preview(path: Path, safe_path: str) -> dict[str, Any]:
     )
 
 
-def _jsonl_preview(path: Path, safe_path: str) -> dict[str, Any]:
+def _jsonl_preview(path: Path, safe_path: str, *, redactor: _DashboardPreviewRedactor) -> dict[str, Any]:
     text, truncated, error = _read_bounded_text(path)
     if error:
         return _artifact_preview_error(safe_path, "failed", error)
@@ -687,10 +775,10 @@ def _jsonl_preview(path: Path, safe_path: str) -> dict[str, Any]:
         if not line.strip():
             continue
         try:
-            records.append(json.loads(line))
+            records.append(redactor.redact_value(json.loads(line)))
         except JSONDecodeError as exc:
             parse_errors.append(f"line {index + 1}: {exc.msg}")
-            records.append(line)
+            records.append(redactor.redact_text(line))
     omitted_rows = max(0, len(lines) - MAX_PREVIEW_ROWS)
     warnings = []
     if truncated:
@@ -707,11 +795,17 @@ def _jsonl_preview(path: Path, safe_path: str) -> dict[str, Any]:
     )
 
 
-def _text_preview(path: Path, safe_path: str, *, preview_kind: str) -> dict[str, Any]:
+def _text_preview(
+    path: Path,
+    safe_path: str,
+    *,
+    preview_kind: str,
+    redactor: _DashboardPreviewRedactor,
+) -> dict[str, Any]:
     text, truncated, error = _read_bounded_text(path)
     if error:
         return _artifact_preview_error(safe_path, "failed", error)
-    return _artifact_preview_payload(safe_path, preview_kind, text, truncated=truncated)
+    return _artifact_preview_payload(safe_path, preview_kind, redactor.redact_text(text), truncated=truncated)
 
 
 def _read_bounded_text(path: Path) -> tuple[str, bool, str | None]:

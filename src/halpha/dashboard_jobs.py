@@ -43,6 +43,7 @@ PRIVATE_KEY_PARTS = (
     "endpoint",
     "host",
     "password",
+    "path",
     "port",
     "proxy",
     "secret",
@@ -753,6 +754,8 @@ class DashboardJobManager:
 
     def _private_values(self) -> list[str]:
         values = set()
+        if self.base.is_absolute():
+            values.update({str(self.base), self.base.as_posix()})
         if self.config_path.is_absolute():
             values.update({str(self.config_path), self.config_path.as_posix()})
         values.update({str(self.config_path.resolve()), self.config_path.resolve().as_posix()})
