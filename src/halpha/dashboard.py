@@ -18,6 +18,7 @@ DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
 MAX_PREVIEW_CHARS = 20_000
 MAX_PREVIEW_ROWS = 100
+MAX_STAGE_ARTIFACT_REFS = 20
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
@@ -288,6 +289,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
         "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
         "fields": {
             **run,
+            "report": _recorded_artifact_ref(manifest, "report"),
             "manifest_status": str(manifest.get("status") or "unknown"),
             "codex": _bounded_mapping(manifest.get("codex")),
             "counts": _bounded_mapping(manifest.get("counts")),
@@ -835,6 +837,14 @@ def _artifact_ref(manifest: dict[str, Any], key: str, default: str) -> str | Non
     return default if manifest else None
 
 
+def _recorded_artifact_ref(manifest: dict[str, Any], key: str) -> str | None:
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return None
+    value = artifacts.get(key)
+    return value if isinstance(value, str) and value else None
+
+
 def _report_state(run_dir: Path, manifest: dict[str, Any]) -> dict[str, Any]:
     report = _artifact_ref(manifest, "report", "report/report.md")
     codex_status = _dict(manifest.get("codex")).get("status")
@@ -861,13 +871,16 @@ def _stage_timeline(manifest: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(stage, dict):
             continue
         error = _dict(stage.get("error"))
+        artifact_paths = _artifact_paths(stage.get("artifacts"))
         record = {
             "index": index,
             "name": stage.get("name"),
             "status": stage.get("status"),
             "started_at": stage.get("started_at"),
             "finished_at": stage.get("finished_at"),
-            "artifact_count": len(_list(stage.get("artifacts"))),
+            "artifact_count": len(artifact_paths),
+            "artifacts": _stage_artifact_records(artifact_paths),
+            "artifact_omitted_count": max(0, len(artifact_paths) - MAX_STAGE_ARTIFACT_REFS),
             "warning_count": _warning_count(stage),
             "error_count": 1 if error else 0,
         }
@@ -878,6 +891,13 @@ def _stage_timeline(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             record["error"] = _bounded_mapping(error)
         timeline.append(record)
     return timeline
+
+
+def _stage_artifact_records(paths: list[str]) -> list[dict[str, str]]:
+    return [
+        {"path": path, "kind": _artifact_kind(path)}
+        for path in paths[:MAX_STAGE_ARTIFACT_REFS]
+    ]
 
 
 def _manifest_artifacts(manifest: dict[str, Any]) -> list[dict[str, str]]:
