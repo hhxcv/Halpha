@@ -44,10 +44,51 @@ class CommandSpec:
     intent: str
     kind: str
     cancellable: bool
+    cli_parts: tuple[str, ...]
+    allow_run_dir: bool = False
 
 
 SUPPORTED_COMMANDS = {
-    "validate": CommandSpec(intent="validate", kind="product_validation", cancellable=True),
+    "validate": CommandSpec(
+        intent="validate",
+        kind="product_validation",
+        cancellable=True,
+        cli_parts=("validate",),
+        allow_run_dir=True,
+    ),
+    "data_inspect": CommandSpec(
+        intent="data_inspect",
+        kind="data_inspection",
+        cancellable=True,
+        cli_parts=("data", "inspect"),
+        allow_run_dir=True,
+    ),
+    "outcomes_inspect": CommandSpec(
+        intent="outcomes_inspect",
+        kind="outcome_inspection",
+        cancellable=True,
+        cli_parts=("outcomes", "inspect"),
+        allow_run_dir=True,
+    ),
+    "workbench_build": CommandSpec(
+        intent="workbench_build",
+        kind="workbench_build",
+        cancellable=True,
+        cli_parts=("workbench", "build"),
+        allow_run_dir=True,
+    ),
+    "workbench_inspect": CommandSpec(
+        intent="workbench_inspect",
+        kind="workbench_inspection",
+        cancellable=True,
+        cli_parts=("workbench", "inspect"),
+    ),
+    "monitor_inspect": CommandSpec(
+        intent="monitor_inspect",
+        kind="monitor_inspection",
+        cancellable=True,
+        cli_parts=("monitor", "inspect"),
+    ),
 }
 
 
@@ -281,17 +322,12 @@ class DashboardJobManager:
         }
 
     def _command_for_intent(self, spec: CommandSpec, params: dict[str, Any]) -> tuple[list[str], list[str]]:
-        if spec.intent == "validate":
-            return self._validate_command(params)
-        raise DashboardJobError(f"unsupported dashboard job intent: {spec.intent}", status="unsupported")
-
-    def _validate_command(self, params: dict[str, Any]) -> tuple[list[str], list[str]]:
-        supported_params = {"run_dir"}
+        supported_params = {"run_dir"} if spec.allow_run_dir else set()
         extra = sorted(set(params) - supported_params)
         if extra:
-            raise DashboardJobError(f"unsupported validate job parameter(s): {', '.join(extra)}")
-        command = [sys.executable, "-m", "halpha", "validate", "--config", str(self.config_path)]
-        preview = ["python", "-m", "halpha", "validate", "--config", _config_ref(self.config_path)]
+            raise DashboardJobError(f"unsupported {spec.intent} job parameter(s): {', '.join(extra)}")
+        command = [sys.executable, "-m", "halpha", *spec.cli_parts, "--config", str(self.config_path)]
+        preview = ["python", "-m", "halpha", *spec.cli_parts, "--config", _config_ref(self.config_path)]
         run_dir = params.get("run_dir")
         if run_dir is not None:
             run_dir_path = self._validated_run_dir(str(run_dir))
@@ -390,12 +426,10 @@ class DashboardJobManager:
         return redacted
 
     def _private_values(self) -> list[str]:
-        values = {
-            str(self.config_path),
-            self.config_path.as_posix(),
-            str(self.config_path.resolve()),
-            self.config_path.resolve().as_posix(),
-        }
+        values = set()
+        if self.config_path.is_absolute():
+            values.update({str(self.config_path), self.config_path.as_posix()})
+        values.update({str(self.config_path.resolve()), self.config_path.resolve().as_posix()})
         values.update(_config_private_values(self.config))
         return sorted(values, key=len, reverse=True)
 
