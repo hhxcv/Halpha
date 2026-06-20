@@ -10,12 +10,14 @@ import threading
 from typing import Any
 from uuid import uuid4
 
+from .pipeline import STAGE_ORDER
 from .storage import write_json
 
 
 DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
 DASHBOARD_JOB_INDEX = "runs/dashboard/jobs/index.json"
 MAX_JOB_LOG_CHARS = 20_000
+CODEX_STAGE = "run_codex_report"
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
 PRIVATE_KEY_PARTS = (
     "account",
@@ -46,9 +48,43 @@ class CommandSpec:
     cancellable: bool
     cli_parts: tuple[str, ...]
     allow_run_dir: bool = False
+    extra_cli_parts: tuple[str, ...] = ()
+    stage_param: str | None = None
+    codex_confirmation: str | None = None
 
 
 SUPPORTED_COMMANDS = {
+    "run": CommandSpec(
+        intent="run",
+        kind="product_run",
+        cancellable=True,
+        cli_parts=("run",),
+        codex_confirmation="always",
+    ),
+    "run_no_codex": CommandSpec(
+        intent="run_no_codex",
+        kind="product_run",
+        cancellable=True,
+        cli_parts=("run",),
+        extra_cli_parts=("--no-codex",),
+    ),
+    "run_until": CommandSpec(
+        intent="run_until",
+        kind="product_run",
+        cancellable=True,
+        cli_parts=("run",),
+        stage_param="until",
+        codex_confirmation="stage_reaches_codex",
+    ),
+    "stage_rerun": CommandSpec(
+        intent="stage_rerun",
+        kind="stage_rerun",
+        cancellable=True,
+        cli_parts=("stage",),
+        allow_run_dir=True,
+        stage_param="positional",
+        codex_confirmation="stage_is_codex",
+    ),
     "validate": CommandSpec(
         intent="validate",
         kind="product_validation",
@@ -263,6 +299,11 @@ class DashboardJobManager:
         job = self.get_job(job_id) or job
         stdout_ref, stdout_truncated = self._write_log(job_id, "stdout.log", stdout)
         stderr_ref, stderr_truncated = self._write_log(job_id, "stderr.log", stderr)
+        result_refs = self._job_result_refs(stdout)
+        source_artifacts = [stdout_ref, stderr_ref]
+        for artifact_ref in (result_refs.get("run_manifest"), result_refs.get("report")):
+            if artifact_ref and artifact_ref not in source_artifacts:
+                source_artifacts.append(artifact_ref)
         exit_code = int(process.returncode or 0)
         status = "cancelled" if was_cancelled else "succeeded" if exit_code == 0 else "failed"
         job.update(
@@ -278,7 +319,8 @@ class DashboardJobManager:
                     "stderr_truncated": stderr_truncated,
                     "max_chars": MAX_JOB_LOG_CHARS,
                 },
-                "source_artifacts": [stdout_ref, stderr_ref],
+                "result_refs": result_refs,
+                "source_artifacts": source_artifacts,
             }
         )
         if status == "cancelled":
@@ -316,6 +358,7 @@ class DashboardJobManager:
                 "stderr_truncated": False,
                 "max_chars": MAX_JOB_LOG_CHARS,
             },
+            "result_refs": {},
             "source_artifacts": [],
             "warnings": [],
             "errors": [],
@@ -323,17 +366,51 @@ class DashboardJobManager:
 
     def _command_for_intent(self, spec: CommandSpec, params: dict[str, Any]) -> tuple[list[str], list[str]]:
         supported_params = {"run_dir"} if spec.allow_run_dir else set()
+        if spec.stage_param:
+            supported_params.add("stage_name")
+        if spec.codex_confirmation:
+            supported_params.add("confirm_codex")
         extra = sorted(set(params) - supported_params)
         if extra:
             raise DashboardJobError(f"unsupported {spec.intent} job parameter(s): {', '.join(extra)}")
-        command = [sys.executable, "-m", "halpha", *spec.cli_parts, "--config", str(self.config_path)]
-        preview = ["python", "-m", "halpha", *spec.cli_parts, "--config", _config_ref(self.config_path)]
+        stage_name = self._validated_stage_name(params.get("stage_name")) if spec.stage_param else None
+        if self._requires_codex_confirmation(spec, stage_name) and params.get("confirm_codex") is not True:
+            raise DashboardJobError("confirm_codex must be true for dashboard jobs that may invoke Codex.")
+        cli_parts = list(spec.cli_parts)
+        if spec.stage_param == "positional" and stage_name:
+            cli_parts.append(stage_name)
+        command = [sys.executable, "-m", "halpha", *cli_parts, "--config", str(self.config_path)]
+        preview = ["python", "-m", "halpha", *cli_parts, "--config", _config_ref(self.config_path)]
+        if spec.stage_param == "until" and stage_name:
+            command.extend(["--until", stage_name])
+            preview.extend(["--until", stage_name])
+        if spec.extra_cli_parts:
+            command.extend(spec.extra_cli_parts)
+            preview.extend(spec.extra_cli_parts)
         run_dir = params.get("run_dir")
         if run_dir is not None:
             run_dir_path = self._validated_run_dir(str(run_dir))
             command.extend(["--run-dir", str(run_dir_path)])
             preview.extend(["--run-dir", _safe_ref(run_dir_path, base=self.base)])
         return command, preview
+
+    def _validated_stage_name(self, value: Any) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise DashboardJobError("stage_name must not be empty.")
+        stage_name = value.strip()
+        if stage_name not in STAGE_ORDER:
+            supported = ", ".join(STAGE_ORDER)
+            raise DashboardJobError(f"stage_name must be one of: {supported}.")
+        return stage_name
+
+    def _requires_codex_confirmation(self, spec: CommandSpec, stage_name: str | None) -> bool:
+        if spec.codex_confirmation == "always":
+            return True
+        if spec.codex_confirmation == "stage_is_codex":
+            return stage_name == CODEX_STAGE
+        if spec.codex_confirmation == "stage_reaches_codex" and stage_name:
+            return STAGE_ORDER.index(stage_name) >= STAGE_ORDER.index(CODEX_STAGE)
+        return False
 
     def _validated_run_dir(self, value: str) -> Path:
         if not value or not value.strip():
@@ -377,6 +454,7 @@ class DashboardJobManager:
                         "status": job.get("status"),
                         "created_at": job.get("created_at"),
                         "updated_at": job.get("updated_at"),
+                        "result_refs": job.get("result_refs") or {},
                         "job_ref": _safe_ref(self._job_path(str(job.get("job_id"))), base=self.base),
                     }
                     for job in jobs[:100]
@@ -402,6 +480,30 @@ class DashboardJobManager:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(bounded, encoding="utf-8")
         return _safe_ref(path, base=self.base), len(safe) > MAX_JOB_LOG_CHARS
+
+    def _job_result_refs(self, stdout: str | None) -> dict[str, str]:
+        refs: dict[str, str] = {}
+        for line in (stdout or "").splitlines():
+            key, separator, value = line.partition(":")
+            if not separator:
+                continue
+            key = key.strip()
+            value = value.strip()
+            if not value:
+                continue
+            if key == "run_id":
+                refs["run_id"] = self._redact_text(value)
+            elif key == "manifest":
+                refs["run_manifest"] = self._safe_output_ref(value)
+            elif key == "report":
+                refs["report"] = self._safe_output_ref(value)
+        return refs
+
+    def _safe_output_ref(self, value: str) -> str:
+        redacted = self._redact_text(value)
+        path = Path(redacted)
+        target = path if path.is_absolute() else self.base / path
+        return _safe_ref(target, base=self.base)
 
     def _job_path(self, job_id: str) -> Path:
         return self.jobs_root / job_id / "job.json"
@@ -473,6 +575,8 @@ def _config_private_values(config: dict[str, Any]) -> set[str]:
 
 def _is_private_key(key: str) -> bool:
     lowered = key.lower()
+    if lowered == "report":
+        return False
     return any(part in lowered for part in PRIVATE_KEY_PARTS)
 
 

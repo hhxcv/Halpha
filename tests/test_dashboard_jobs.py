@@ -175,6 +175,96 @@ def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, 
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
+def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    (tmp_path / "runs" / "run-1").mkdir(parents=True)
+    commands: list[list[str]] = []
+    stdout = "\n".join(
+        [
+            "Halpha run succeeded.",
+            "run_id: run-1",
+            "report: runs/run-1/report/report.md",
+            "manifest: runs/run-1/run_manifest.json",
+        ]
+    )
+
+    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        commands.append(command)
+        return _FakeProcess(stdout=stdout, stderr="", returncode=0)
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        ("run", {"confirm_codex": True}, ["python", "-m", "halpha", "run", "--config", "<external-config>"]),
+        (
+            "run_no_codex",
+            {},
+            ["python", "-m", "halpha", "run", "--config", "<external-config>", "--no-codex"],
+        ),
+        (
+            "run_until",
+            {"stage_name": "build_research_context"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "run",
+                "--config",
+                "<external-config>",
+                "--until",
+                "build_research_context",
+            ],
+        ),
+        (
+            "run_until",
+            {"stage_name": "run_codex_report", "confirm_codex": True},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "run",
+                "--config",
+                "<external-config>",
+                "--until",
+                "run_codex_report",
+            ],
+        ),
+        (
+            "stage_rerun",
+            {"stage_name": "build_market_data_views", "run_dir": "runs/run-1"},
+            [
+                "python",
+                "-m",
+                "halpha",
+                "stage",
+                "build_market_data_views",
+                "--config",
+                "<external-config>",
+                "--run-dir",
+                "runs/run-1",
+            ],
+        ),
+    ]
+
+    for intent, params, preview in cases:
+        job = manager.create_job({"intent": intent, "params": params})
+        completed = _wait_for_terminal(manager, job["job_id"])
+        assert completed["status"] == "succeeded"
+        assert completed["intent"] == intent
+        assert completed["command"] == preview
+        assert completed["result_refs"] == {
+            "run_id": "run-1",
+            "report": "runs/run-1/report/report.md",
+            "run_manifest": "runs/run-1/run_manifest.json",
+        }
+        assert "runs/run-1/run_manifest.json" in completed["source_artifacts"]
+        assert "runs/run-1/report/report.md" in completed["source_artifacts"]
+
+    assert len(commands) == len(cases)
+    assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
+
+
 def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -189,6 +279,68 @@ def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: P
 
     assert job["status"] == "blocked"
     assert "run_dir must stay within" in job["errors"][0]
+
+
+def test_dashboard_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("unsafe run_dir must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job(
+        {
+            "intent": "stage_rerun",
+            "params": {"stage_name": "build_market_data_views", "run_dir": "../outside"},
+        }
+    )
+
+    assert job["status"] == "blocked"
+    assert "run_dir must stay within" in job["errors"][0]
+
+
+def test_dashboard_job_manager_rejects_invalid_stage_name_before_process(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("invalid stage_name must not start a process")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "run_until", "params": {"stage_name": "not_a_stage"}})
+
+    assert job["status"] == "blocked"
+    assert "stage_name must be one of:" in job["errors"][0]
+
+
+def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    (tmp_path / "runs" / "run-1").mkdir(parents=True)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("Codex-capable jobs must not start without confirmation")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+    cases = [
+        {"intent": "run", "params": {}},
+        {"intent": "run_until", "params": {"stage_name": "run_codex_report"}},
+        {"intent": "stage_rerun", "params": {"stage_name": "run_codex_report", "run_dir": "runs/run-1"}},
+    ]
+
+    for request in cases:
+        job = manager.create_job(request)
+        assert job["status"] == "blocked"
+        assert "confirm_codex must be true" in job["errors"][0]
 
 
 def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
@@ -208,6 +360,33 @@ def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
 
     assert job["status"] == "blocked"
     assert "unsupported monitor_inspect job parameter(s): run_dir" in job["errors"][0]
+
+
+def test_dashboard_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    stdout = "\n".join(
+        [
+            "Halpha run succeeded.",
+            "run_id: run-api",
+            "manifest: runs/run-api/run_manifest.json",
+        ]
+    )
+    monkeypatch.setattr(
+        "halpha.dashboard_jobs.subprocess.Popen",
+        lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    create_response = client.post("/api/jobs", json={"intent": "run_no_codex", "params": {}})
+    payload = create_response.json()
+    completed = _wait_for_api_terminal(client, payload["job_id"])
+
+    assert create_response.status_code == 200
+    assert completed["status"] == "succeeded"
+    assert completed["intent"] == "run_no_codex"
+    assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
+    assert str(tmp_path) not in create_response.text
 
 
 def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) -> None:
