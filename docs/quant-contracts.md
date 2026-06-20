@@ -1114,6 +1114,23 @@ Reusable core output contract:
   },
   "equity_curve": [],
   "drawdown_curve": [],
+  "visualization": {
+    "schema_version": 1,
+    "chart_type": "candlestick_backtest",
+    "status": "available",
+    "bars": [],
+    "markers": [],
+    "equity_curve": [],
+    "limits": {
+      "max_bars": 120,
+      "max_markers": 80
+    },
+    "omitted": {
+      "bars": 0,
+      "markers": 0
+    },
+    "warnings": []
+  },
   "warnings": [
     {
       "severity": "warning",
@@ -1327,6 +1344,7 @@ Standalone output rules:
 - Standalone evaluation must not execute Codex.
 - Standalone evaluation must not mutate shared OHLCV history unless the implemented command explicitly performs a sync step.
 - Standalone output must preserve cost assumptions, execution model, sample window, warnings, and errors.
+- Standalone backtest output may include a bounded `visualization` block for dashboard review. It contains the backtest input-window candlestick bars, deterministic exposure-change markers, and a bounded equity curve. It must not embed full reusable OHLCV history or vectorbt objects.
 - Implemented standalone command:
   `python -m halpha backtest --config <config> --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>`.
 - The optional `--output-dir <dir>` argument overrides the default `runs/strategy_backtests/` output directory.

@@ -14,6 +14,8 @@ from .storage import display_path, ensure_directory, write_json
 
 STRATEGY_BACKTEST_ARTIFACT = "strategy_backtest.json"
 STANDALONE_MANIFEST_ARTIFACT = "manifest.json"
+MAX_BACKTEST_VISUALIZATION_BARS = 120
+MAX_BACKTEST_VISUALIZATION_MARKERS = 80
 
 
 class StandaloneBacktestError(Exception):
@@ -95,6 +97,17 @@ def run_standalone_strategy_backtest(
     except Exception as exc:
         raise StandaloneBacktestError(f"strategy backtest failed: {exc}", exit_code=3) from exc
 
+    evaluation = {
+        **evaluation,
+        "visualization": _visualization_record(
+            rows=window,
+            evaluation=evaluation,
+            strategy_name=strategy_name,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+        ),
+    }
     target_dir = _unique_output_dir(
         _base_output_dir(config, config_path=config_path, output_dir=output_dir),
         _backtest_id(clock_value, strategy_name, source, symbol, timeframe),
@@ -241,6 +254,157 @@ def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
         "fees_bps": backtest.get("fees_bps", 0.0),
         "slippage_bps": backtest.get("slippage_bps", 0.0),
     }
+
+
+def _visualization_record(
+    *,
+    rows: list[dict[str, Any]],
+    evaluation: dict[str, Any],
+    strategy_name: str,
+    source: str,
+    symbol: str,
+    timeframe: str,
+) -> dict[str, Any]:
+    bars = [_visualization_bar(row) for row in rows]
+    bars = [bar for bar in bars if bar is not None]
+    visible_bars = bars[-MAX_BACKTEST_VISUALIZATION_BARS:]
+    visible_times = {str(bar["time"]) for bar in visible_bars}
+    full_equity_curve = _visualization_equity_curve(evaluation)
+    equity_curve = [point for point in full_equity_curve if str(point["time"]) in visible_times]
+    markers = [
+        marker
+        for marker in _visualization_markers(full_equity_curve, bars)
+        if str(marker["time"]) in visible_times
+    ]
+    warnings = []
+    if len(bars) < 2:
+        warnings.append("Backtest visualization requires at least two OHLCV bars.")
+    if not equity_curve:
+        warnings.append("Backtest visualization has no equity curve points.")
+    return {
+        "schema_version": 1,
+        "chart_type": "candlestick_backtest",
+        "status": "available" if len(visible_bars) >= 2 and equity_curve else "partial",
+        "strategy_name": strategy_name,
+        "source": source,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "bars": visible_bars,
+        "markers": markers[:MAX_BACKTEST_VISUALIZATION_MARKERS],
+        "equity_curve": equity_curve,
+        "limits": {
+            "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
+            "max_markers": MAX_BACKTEST_VISUALIZATION_MARKERS,
+        },
+        "omitted": {
+            "bars": max(0, len(bars) - len(visible_bars)),
+            "markers": max(0, len(markers) - MAX_BACKTEST_VISUALIZATION_MARKERS),
+        },
+        "warnings": warnings,
+    }
+
+
+def _visualization_bar(row: dict[str, Any]) -> dict[str, Any] | None:
+    time_value = row.get("open_time")
+    if time_value is None or str(time_value) == "":
+        return None
+    try:
+        return {
+            "time": str(time_value),
+            "open": _round_float(row.get("open")),
+            "high": _round_float(row.get("high")),
+            "low": _round_float(row.get("low")),
+            "close": _round_float(row.get("close")),
+            "volume": _optional_round_float(row.get("volume")),
+        }
+    except (TypeError, ValueError):
+        return None
+
+
+def _visualization_equity_curve(evaluation: dict[str, Any]) -> list[dict[str, Any]]:
+    curve = evaluation.get("equity_curve")
+    if not isinstance(curve, list):
+        return []
+    visible = []
+    for point in curve:
+        if not isinstance(point, dict):
+            continue
+        time_value = point.get("open_time") or point.get("timestamp")
+        if time_value is None or str(time_value) == "":
+            continue
+        net_equity = point.get("net_equity", point.get("equity"))
+        try:
+            visible.append(
+                {
+                    "time": str(time_value),
+                    "net_equity": _round_float(net_equity),
+                    "gross_equity": _optional_round_float(point.get("gross_equity")),
+                    "position": _optional_round_float(point.get("position")),
+                    "turnover": _optional_round_float(point.get("turnover")),
+                }
+            )
+        except (TypeError, ValueError):
+            continue
+    return visible
+
+
+def _visualization_markers(
+    equity_curve: list[dict[str, Any]],
+    bars: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    bars_by_time = {str(bar["time"]): bar for bar in bars}
+    markers = []
+    previous_position = 0.0
+    for point in equity_curve:
+        position = point.get("position")
+        if position is None:
+            continue
+        position_value = float(position)
+        time_value = str(point["time"])
+        bar = bars_by_time.get(time_value)
+        price = bar.get("close") if bar else None
+        if position_value > 0 and previous_position <= 0:
+            markers.append(
+                {
+                    "time": time_value,
+                    "kind": "entry",
+                    "label": "Long",
+                    "position": _round_float(position_value),
+                    "price": price,
+                }
+            )
+        elif position_value <= 0 and previous_position > 0:
+            markers.append(
+                {
+                    "time": time_value,
+                    "kind": "exit",
+                    "label": "Flat",
+                    "position": _round_float(position_value),
+                    "price": price,
+                }
+            )
+        elif position_value > 0 and previous_position > 0 and abs(position_value - previous_position) > 1e-9:
+            markers.append(
+                {
+                    "time": time_value,
+                    "kind": "exposure_change",
+                    "label": "Exposure",
+                    "position": _round_float(position_value),
+                    "price": price,
+                }
+            )
+        previous_position = position_value
+    return markers
+
+
+def _round_float(value: Any) -> float:
+    return round(float(value), 8)
+
+
+def _optional_round_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return _round_float(value)
 
 
 def _manifest(

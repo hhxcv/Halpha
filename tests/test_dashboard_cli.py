@@ -1191,6 +1191,13 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert backtest["fields"]["evaluation_status"] == "failed"
     assert backtest["fields"]["equity_curve_points"] == 2
     assert "equity_curve" not in str(backtest["fields"]["metrics"])
+    assert backtest["visualization"]["chart_type"] == "candlestick_backtest"
+    assert backtest["visualization"]["status"] == "available"
+    assert len(backtest["visualization"]["bars"]) == 2
+    assert backtest["visualization"]["bars"][0]["open"] == 99
+    assert backtest["visualization"]["markers"][0]["kind"] == "entry"
+    assert len(backtest["visualization"]["equity_curve"]) == 2
+    assert backtest["visualization"]["limits"]["max_bars"] == 120
 
     experiment = payload["standalone"]["experiments"][0]
     assert experiment["status"] == "available"
@@ -1824,6 +1831,49 @@ def _write_standalone_strategy_outputs(tmp_path: Path) -> None:
                 {"timestamp": "2026-06-01T00:00:00Z", "equity": 10000},
                 {"timestamp": "2026-06-02T00:00:00Z", "equity": 9900},
             ],
+            "visualization": {
+                "schema_version": 1,
+                "chart_type": "candlestick_backtest",
+                "status": "available",
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+                "bars": [
+                    {
+                        "time": "2026-06-01T00:00:00Z",
+                        "open": 99,
+                        "high": 102,
+                        "low": 98,
+                        "close": 100,
+                        "volume": 10,
+                    },
+                    {
+                        "time": "2026-06-02T00:00:00Z",
+                        "open": 100,
+                        "high": 104,
+                        "low": 99,
+                        "close": 103,
+                        "volume": 12,
+                    },
+                ],
+                "markers": [
+                    {
+                        "time": "2026-06-02T00:00:00Z",
+                        "kind": "entry",
+                        "label": "Long",
+                        "position": 1,
+                        "price": 103,
+                    }
+                ],
+                "equity_curve": [
+                    {"time": "2026-06-01T00:00:00Z", "net_equity": 1, "position": 0, "turnover": 0},
+                    {"time": "2026-06-02T00:00:00Z", "net_equity": 0.99, "position": 1, "turnover": 1},
+                ],
+                "limits": {"max_bars": 120, "max_markers": 80},
+                "omitted": {"bars": 0, "markers": 0},
+                "warnings": [],
+            },
             "warnings": [],
             "errors": [{"message": "strategy evaluation status is failed"}],
         },

@@ -185,6 +185,23 @@ def test_dashboard_preview_job_and_monitor_smoke_contracts_are_present(tmp_path:
     assert "renderMonitor(payload)" in script
     assert "renderMonitorAlertCounts" in script
     assert "refreshMonitorJobs" in script
+    assert "renderBacktestChart(item)" in script
+    assert "renderCandlestickSvg(vis)" in script
+    assert "Backtest candlestick chart" in script
+
+
+def test_dashboard_strategy_backtest_chart_shell_contracts_are_present(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert ".strategy-chart.kline" in css
+    assert ".backtest-chart-panel.price svg" in css
+    assert ".backtest-chart-panel.equity svg" in css
+    assert "height: 292px;" in css
+    assert "height: 112px;" in css
+    assert "backtestVisualization(item)" in script
+    assert "Bounded visualization from the standalone backtest artifact" in script
 
 
 def _dashboard_html(tmp_path: Path) -> str:
