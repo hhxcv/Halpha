@@ -96,8 +96,15 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Cancel job" in response.text
     assert "cancellation unsupported" in response.text
     assert "bounded local jobs" in response.text
+    assert 'href="#commands" data-view-target="commands"' in response.text
     assert "Command center" in response.text
-    assert "pending" in response.text
+    assert "Command groups" in response.text
+    assert "Run without Codex" in response.text
+    assert "Run with Codex" in response.text
+    assert "Codex confirmation is required before creating this job." in response.text
+    assert "Data inspect" in response.text
+    assert "Run backtest" in response.text
+    assert "Run text intelligence" in response.text
     assert str(tmp_path) not in response.text
 
 
