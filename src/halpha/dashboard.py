@@ -15,6 +15,8 @@ from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
+MAX_PREVIEW_CHARS = 20_000
+MAX_PREVIEW_ROWS = 100
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
@@ -66,6 +68,10 @@ def create_dashboard_app(
     @app.get("/api/runs/{run_id}")
     def run_detail_endpoint(run_id: str) -> dict[str, Any]:
         return dashboard_run_detail(config_path=config_path, run_id=run_id)
+
+    @app.get("/api/artifacts/preview")
+    def artifact_preview_endpoint(path: str) -> dict[str, Any]:
+        return dashboard_artifact_preview(config_path=config_path, artifact_path=path)
 
     return app
 
@@ -290,6 +296,39 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
     }
 
 
+def dashboard_artifact_preview(config_path: Path, *, artifact_path: str) -> dict[str, Any]:
+    base = _config_base(config_path)
+    resolved = _resolve_preview_path(artifact_path, base=base)
+    if isinstance(resolved, dict):
+        return resolved
+
+    path, safe_path = resolved
+    if not path.exists():
+        return _artifact_preview_error(safe_path, "missing", f"{safe_path} was not found.")
+    if not path.is_file():
+        return _artifact_preview_error(safe_path, "unsupported", f"{safe_path} is not a file.")
+    suffix = path.suffix.lower()
+    if suffix in {".sqlite", ".db", ".parquet", ".arrow", ".feather"}:
+        return _artifact_preview_error(
+            safe_path,
+            "unsupported",
+            f"{suffix} previews are not expanded by the dashboard artifact preview API.",
+        )
+    if suffix == ".json":
+        return _json_preview(path, safe_path)
+    if suffix == ".jsonl":
+        return _jsonl_preview(path, safe_path)
+    if suffix in {".md", ".markdown"}:
+        return _text_preview(path, safe_path, preview_kind="markdown")
+    if suffix in {".txt", ".log", ".csv", ".yaml", ".yml"}:
+        return _text_preview(path, safe_path, preview_kind="text")
+    return _artifact_preview_error(
+        safe_path,
+        "unsupported",
+        f"{suffix or 'unknown'} files are not supported by the dashboard artifact preview API.",
+    )
+
+
 def validate_dashboard_host(host: str) -> None:
     if host not in LOCAL_DASHBOARD_HOSTS:
         supported = ", ".join(sorted(LOCAL_DASHBOARD_HOSTS))
@@ -440,6 +479,165 @@ def _run_artifact_index(connection: sqlite3.Connection) -> dict[str, dict[str, l
             continue
         artifacts.setdefault(run_id, {}).setdefault(key, []).append(path)
     return artifacts
+
+
+def _resolve_preview_path(artifact_path: str, *, base: Path) -> tuple[Path, str] | dict[str, Any]:
+    if not artifact_path or not artifact_path.strip():
+        return _artifact_preview_error("", "rejected", "artifact path is required.")
+    raw_path = artifact_path.replace("\\", "/").strip()
+    path = Path(raw_path)
+    if path.is_absolute():
+        return _artifact_preview_error(raw_path, "rejected", "artifact path must be repo-relative.")
+    parts = path.parts
+    if any(part in {"", ".", ".."} for part in parts):
+        return _artifact_preview_error(raw_path, "rejected", "artifact path must not contain traversal segments.")
+    if not parts or parts[0] not in {"runs", "data"}:
+        return _artifact_preview_error(raw_path, "rejected", "artifact path must start with runs/ or data/.")
+    resolved = (base / path).resolve()
+    try:
+        resolved.relative_to(base.resolve())
+    except ValueError:
+        return _artifact_preview_error(raw_path, "rejected", "artifact path must stay under the configured project root.")
+    return resolved, path.as_posix()
+
+
+def _json_preview(path: Path, safe_path: str) -> dict[str, Any]:
+    text, truncated, error = _read_bounded_text(path)
+    if error:
+        return _artifact_preview_error(safe_path, "failed", error)
+    if truncated:
+        return _artifact_preview_payload(
+            safe_path,
+            "json",
+            text,
+            truncated=True,
+            warnings=["JSON file was truncated before parsing."],
+        )
+    try:
+        loaded = json.loads(text)
+    except JSONDecodeError as exc:
+        return _artifact_preview_error(safe_path, "failed", f"{safe_path} is not valid JSON: {exc.msg}.")
+    preview, omitted = _bounded_json(loaded)
+    return _artifact_preview_payload(
+        safe_path,
+        "json",
+        preview,
+        truncated=False,
+        omitted=omitted,
+    )
+
+
+def _jsonl_preview(path: Path, safe_path: str) -> dict[str, Any]:
+    text, truncated, error = _read_bounded_text(path)
+    if error:
+        return _artifact_preview_error(safe_path, "failed", error)
+    records: list[Any] = []
+    parse_errors: list[str] = []
+    lines = text.splitlines()
+    for index, line in enumerate(lines[:MAX_PREVIEW_ROWS]):
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except JSONDecodeError as exc:
+            parse_errors.append(f"line {index + 1}: {exc.msg}")
+            records.append(line)
+    omitted_rows = max(0, len(lines) - MAX_PREVIEW_ROWS)
+    warnings = []
+    if truncated:
+        warnings.append("JSONL file was truncated.")
+    if parse_errors:
+        warnings.append(f"{len(parse_errors)} JSONL line(s) could not be parsed.")
+    return _artifact_preview_payload(
+        safe_path,
+        "jsonl",
+        records,
+        truncated=truncated or omitted_rows > 0,
+        omitted={"rows": omitted_rows, "parse_errors": len(parse_errors)},
+        warnings=warnings,
+    )
+
+
+def _text_preview(path: Path, safe_path: str, *, preview_kind: str) -> dict[str, Any]:
+    text, truncated, error = _read_bounded_text(path)
+    if error:
+        return _artifact_preview_error(safe_path, "failed", error)
+    return _artifact_preview_payload(safe_path, preview_kind, text, truncated=truncated)
+
+
+def _read_bounded_text(path: Path) -> tuple[str, bool, str | None]:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            text = handle.read(MAX_PREVIEW_CHARS + 1)
+    except UnicodeDecodeError:
+        return "", False, f"{path.name} is not valid UTF-8 text."
+    except OSError as exc:
+        return "", False, f"{path.name} could not be read: {exc}"
+    truncated = len(text) > MAX_PREVIEW_CHARS
+    return text[:MAX_PREVIEW_CHARS], truncated, None
+
+
+def _bounded_json(value: Any) -> tuple[Any, dict[str, int]]:
+    omitted: dict[str, int] = {}
+    if isinstance(value, list):
+        omitted_count = max(0, len(value) - MAX_PREVIEW_ROWS)
+        if omitted_count:
+            omitted["items"] = omitted_count
+        return value[:MAX_PREVIEW_ROWS], omitted
+    if isinstance(value, dict):
+        preview: dict[str, Any] = {}
+        for key, item in sorted(value.items()):
+            if isinstance(item, list):
+                preview[str(key)] = item[:MAX_PREVIEW_ROWS]
+                omitted_count = max(0, len(item) - MAX_PREVIEW_ROWS)
+                if omitted_count:
+                    omitted[f"{key}.items"] = omitted_count
+            elif isinstance(item, dict):
+                preview[str(key)] = _bounded_mapping(item)
+            elif isinstance(item, (str, int, float, bool)) or item is None:
+                preview[str(key)] = item
+            else:
+                preview[str(key)] = str(item)
+        return preview, omitted
+    return value, omitted
+
+
+def _artifact_preview_payload(
+    path: str,
+    preview_kind: str,
+    preview: Any,
+    *,
+    truncated: bool,
+    omitted: dict[str, int] | None = None,
+    warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_artifact_preview",
+        "status": "available",
+        "path": path,
+        "kind": preview_kind,
+        "truncated": truncated,
+        "omitted": omitted or {},
+        "preview": preview,
+        "warnings": warnings or [],
+        "errors": [],
+    }
+
+
+def _artifact_preview_error(path: str, status: str, message: str) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_artifact_preview",
+        "status": status,
+        "path": path,
+        "kind": "unknown",
+        "truncated": False,
+        "omitted": {},
+        "preview": None,
+        "warnings": [message] if status in {"missing", "rejected", "unsupported"} else [],
+        "errors": [message] if status == "failed" else [],
+    }
 
 
 def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -> dict[str, Any]:

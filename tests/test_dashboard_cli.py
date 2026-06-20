@@ -216,6 +216,103 @@ def test_dashboard_run_detail_reports_missing_run_id(tmp_path: Path) -> None:
     assert payload["warnings"] == ["run id was not found in the local run index."]
 
 
+def test_dashboard_artifact_preview_returns_bounded_json(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    artifact_path = tmp_path / "runs" / "run-1" / "analysis" / "sample.json"
+    write_json(
+        artifact_path,
+        {
+            "artifact_type": "sample",
+            "status": "ok",
+            "records": [{"index": index} for index in range(105)],
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/artifacts/preview", params={"path": "runs/run-1/analysis/sample.json"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_artifact_preview"
+    assert payload["status"] == "available"
+    assert payload["kind"] == "json"
+    assert payload["path"] == "runs/run-1/analysis/sample.json"
+    assert len(payload["preview"]["records"]) == 100
+    assert payload["omitted"] == {"records.items": 5}
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_artifact_preview_returns_bounded_jsonl(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    artifact_path = tmp_path / "runs" / "monitor" / "alert_archive.jsonl"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        "\n".join(f'{{"index": {index}}}' for index in range(105)) + "\n",
+        encoding="utf-8",
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/artifacts/preview", params={"path": "runs/monitor/alert_archive.jsonl"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "available"
+    assert payload["kind"] == "jsonl"
+    assert len(payload["preview"]) == 100
+    assert payload["omitted"]["rows"] == 5
+
+
+def test_dashboard_artifact_preview_truncates_markdown(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    artifact_path = tmp_path / "runs" / "run-1" / "report" / "report.md"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("# Report\n" + ("a" * 21_000), encoding="utf-8")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/artifacts/preview", params={"path": "runs/run-1/report/report.md"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "available"
+    assert payload["kind"] == "markdown"
+    assert payload["truncated"] is True
+    assert len(payload["preview"]) == 20_000
+
+
+def test_dashboard_artifact_preview_rejects_unsafe_paths(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/artifacts/preview", params={"path": "../config.yaml"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "rejected"
+    assert "traversal" in payload["warnings"][0]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_artifact_preview_rejects_unsupported_store_files(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    artifact_path = tmp_path / "data" / "research" / "index.sqlite"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("not a real sqlite file", encoding="utf-8")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/artifacts/preview", params={"path": "data/research/index.sqlite"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "unsupported"
+    assert payload["preview"] is None
+    assert "not expanded" in payload["warnings"][0]
+
+
 def test_dashboard_command_loads_config_and_invokes_service(
     tmp_path: Path,
     capsys,
