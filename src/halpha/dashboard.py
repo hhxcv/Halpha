@@ -9,6 +9,7 @@ from typing import Any
 
 from .data_inspection import DataInspectionError, inspect_local_store_state
 from .dashboard_jobs import DashboardJobManager
+from .dashboard_monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from .dashboard_strategy import dashboard_strategy_research
 from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
@@ -109,6 +110,18 @@ def create_dashboard_app(
     def strategies_endpoint(run_id: str | None = None) -> dict[str, Any]:
         return dashboard_strategy_research(config, config_path=config_path, run_id=run_id)
 
+    @app.get("/api/monitor")
+    def monitor_endpoint() -> dict[str, Any]:
+        return dashboard_monitor_summary(config, config_path=config_path)
+
+    @app.get("/api/monitor/cycles")
+    def monitor_cycles_endpoint() -> dict[str, Any]:
+        return dashboard_monitor_cycles(config, config_path=config_path)
+
+    @app.get("/api/monitor/alerts")
+    def monitor_alerts_endpoint() -> dict[str, Any]:
+        return dashboard_monitor_alerts(config, config_path=config_path)
+
     @app.get("/api/jobs")
     def jobs_endpoint() -> dict[str, Any]:
         return job_manager.list_jobs()
@@ -180,6 +193,7 @@ def dashboard_health(
             "artifact_preview_api": "available",
             "data_store_api": "available",
             "strategy_research_api": "available",
+            "monitor_api": "available",
             "job_runner": "available",
             "frontend_ui": "available",
         },
