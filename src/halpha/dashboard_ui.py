@@ -396,7 +396,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .layout-row {
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 16px;
     }
 
@@ -460,7 +460,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       color: var(--muted);
       font-size: 12px;
       line-height: 1.4;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
     }
 
     .planned-grid {
@@ -500,7 +501,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     .outcomes-layout,
     .text-intelligence-layout {
       display: grid;
-      grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 16px;
     }
 
@@ -576,7 +577,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .run-detail-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
       gap: 10px;
       margin-bottom: 14px;
     }
@@ -596,7 +597,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .detail-value {
       margin-top: 5px;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
       font-weight: 710;
     }
 
@@ -696,7 +698,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .store-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 10px;
     }
 
@@ -737,7 +739,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .store-title {
       min-width: 0;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
       font-weight: 740;
     }
 
@@ -762,7 +765,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       list-style: none;
       color: var(--muted);
       font-size: 12px;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
     }
 
     .strategy-chart {
