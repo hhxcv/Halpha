@@ -30,6 +30,17 @@ def test_dashboard_daily_report_schedule_reports_missing_state(tmp_path: Path) -
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_daily_report_schedule_defaults_to_east_8_without_run_timezone(tmp_path: Path) -> None:
+    config_path = _write_config_without_run_timezone(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/schedule/daily-report")
+
+    assert response.status_code == 200
+    assert response.json()["settings"]["timezone"] == "Asia/Shanghai"
+
+
 def test_dashboard_daily_report_schedule_enable_disable_and_persistence(
     tmp_path: Path,
     monkeypatch,
@@ -196,6 +207,27 @@ def _write_config(tmp_path: Path) -> Path:
 run:
   output_dir: runs
   timezone: UTC
+market:
+  enabled: false
+text:
+  enabled: false
+  sources: []
+report:
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_config_without_run_timezone(tmp_path: Path) -> Path:
+    path = tmp_path / "config.yaml"
+    path.write_text(
+        """
+run:
+  output_dir: runs
 market:
   enabled: false
 text:

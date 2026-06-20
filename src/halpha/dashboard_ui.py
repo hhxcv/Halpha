@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 
-def dashboard_index_html() -> str:
+from html import escape
+
+
+DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = "Asia/Shanghai"
+
+
+def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TIMEZONE) -> str:
+    display_timezone_attr = escape(display_timezone or DEFAULT_DASHBOARD_DISPLAY_TIMEZONE, quote=True)
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1105,6 +1112,7 @@ def dashboard_index_html() -> str:
     data-jobs-endpoint="/api/jobs"
     data-schedule-endpoint="/api/schedule/daily-report"
     data-preview-endpoint="/api/artifacts/preview"
+    data-display-timezone="__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__"
   >
     <aside class="sidebar" aria-label="Dashboard navigation">
       <div class="brand">
@@ -1188,6 +1196,10 @@ def dashboard_index_html() -> str:
             <div class="status-line">
               <span class="status-label">Config</span>
               <span id="config-ref" class="status-value">...</span>
+            </div>
+            <div class="status-line">
+              <span class="status-label">Time zone</span>
+              <span id="display-timezone" class="status-value">__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__</span>
             </div>
           </div>
         </section>
@@ -1975,7 +1987,7 @@ def dashboard_index_html() -> str:
                   </label>
                   <label>
                     <span class="status-label">Timezone</span>
-                    <input id="daily-schedule-timezone" class="filter-control" type="text" value="UTC">
+                    <input id="daily-schedule-timezone" class="filter-control" type="text" value="Asia/Shanghai">
                   </label>
                 </div>
                 <label>
@@ -2233,6 +2245,23 @@ def dashboard_index_html() -> str:
       schedule: app.dataset.scheduleEndpoint,
       preview: app.dataset.previewEndpoint
     };
+    const displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";
+    let displayTimeFormatter = null;
+    try {
+      displayTimeFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: displayTimezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+        timeZoneName: "shortOffset"
+      });
+    } catch (error) {
+      displayTimeFormatter = null;
+    }
     const statusLabels = {
       available: "Available",
       succeeded: "Succeeded",
@@ -2345,7 +2374,26 @@ def dashboard_index_html() -> str:
       if (typeof value === "object") {
         return JSON.stringify(value);
       }
-      return String(value);
+      return formatTimestamp(String(value));
+    }
+
+    function formatTimestamp(value) {
+      if (!displayTimeFormatter || !looksLikeIsoTimestamp(value)) {
+        return value;
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      const parts = Object.fromEntries(
+        displayTimeFormatter.formatToParts(date).map((part) => [part.type, part.value])
+      );
+      const zone = parts.timeZoneName ? ` ${parts.timeZoneName}` : "";
+      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}${zone}`;
+    }
+
+    function looksLikeIsoTimestamp(value) {
+      return /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})$/.test(value);
     }
 
     function get(path, source) {
@@ -2648,6 +2696,7 @@ def dashboard_index_html() -> str:
       const overall = payload.status || "unknown";
       document.querySelector("#overall-status").textContent = label(overall);
       document.querySelector("#config-ref").textContent = text(payload.config && payload.config.ref);
+      document.querySelector("#display-timezone").textContent = displayTimezone;
       renderOverviewCards(sections);
       renderAttention(sections);
     }
@@ -5299,7 +5348,7 @@ def dashboard_index_html() -> str:
       badgeNode.className = `badge ${schedule.enabled === true ? "available" : normalizeStatus(schedule.status)}`;
       badgeNode.textContent = schedule.enabled === true ? "enabled" : label(schedule.status);
       document.querySelector("#daily-schedule-time").value = text(settings.time_of_day) === "n/a" ? "08:00" : text(settings.time_of_day);
-      document.querySelector("#daily-schedule-timezone").value = text(settings.timezone) === "n/a" ? "UTC" : text(settings.timezone);
+      document.querySelector("#daily-schedule-timezone").value = text(settings.timezone) === "n/a" ? displayTimezone : text(settings.timezone);
       document.querySelector("#daily-schedule-job-intent").value = text(settings.job_intent) === "run" ? "run" : "run_no_codex";
       document.querySelector("#daily-schedule-summary").innerHTML = [
         detailTile("Enabled", schedule.enabled === true ? "true" : "false"),
@@ -5740,7 +5789,7 @@ def dashboard_index_html() -> str:
 
     function timeOfDayInputValue(selector, fieldName, renderMessage) {
       const value = optionalInputValue(selector);
-      if (/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+      if (/^([01]\\d|2[0-3]):[0-5]\\d$/.test(value)) {
         clearInputError(selector);
         return value;
       }
@@ -6262,4 +6311,4 @@ def dashboard_index_html() -> str:
   </script>
 </body>
 </html>
-"""
+""".replace("__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__", display_timezone_attr)

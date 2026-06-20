@@ -68,6 +68,11 @@ python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 
 The dashboard service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
+Dashboard timestamp display uses `dashboard.display_timezone` when configured,
+falls back to `run.timezone`, and defaults to `Asia/Shanghai`. This display
+setting changes the local UI rendering of ISO timestamps; it must not rewrite
+source artifacts or stored UTC timestamps.
+
 Implemented dashboard views expose:
 
 - overview state from latest run, product validation, data quality, monitor,
@@ -136,6 +141,8 @@ that users operate directly. Automated smoke coverage should check:
 - smaller viewport layout contracts collapse major grids to a single column;
 - bounded preview panels remain scrollable instead of expanding unbounded
   artifact content.
+- configured timestamp display converts ISO timestamps without mutating raw
+  artifact values.
 
 When browser tooling can access the local dashboard process, validate at least
 one desktop viewport and one smaller viewport by navigating across core views
