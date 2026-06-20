@@ -347,6 +347,8 @@ python -m halpha run --config config.example.yaml
 python -m halpha run --config config.example.yaml --no-codex
 python -m halpha run --config config.example.yaml --until <stage_name>
 python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha validate --config config.example.yaml
+python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha monitor --help
 python -m halpha monitor run --config config.example.yaml --dry-run
 python -m halpha monitor run --config config.example.yaml --once
@@ -377,6 +379,10 @@ They must not fabricate skipped artifacts.
 `--until` runs through the named stage and records later stages as not run.
 
 `stage` runs one named stage against an existing run directory.
+
+`validate` is read-only. It selects the latest indexed run or an explicit run directory, evaluates product contract health, prints bounded status, check counts, failed check names, source refs, and recovery hints, and does not write validation artifacts by default.
+
+`validate` does not collect network data, run processors, run pipeline stages, run Codex CLI, generate reports, repair stores, mutate decision artifacts, or print raw artifact contents or local private values.
 
 `monitor --help` exposes the local monitor command family.
 
@@ -439,6 +445,8 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha run --config config.example.yaml --no-codex` for real-source product acceptance when Codex CLI use is not needed.
 * Use `python -m halpha run --config config.example.yaml --until <stage_name>` for bounded stage-through acceptance.
 * Use `python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
+* Use `python -m halpha validate --config config.example.yaml` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
+* Use `python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
 * Use `python -m halpha monitor run --config config.example.yaml --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
 * Use `python -m halpha monitor run --config config.example.yaml --once` to validate one bounded monitor cycle, monitor cycle manifest, alert archive, and cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
 * Use `python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.

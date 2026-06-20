@@ -39,6 +39,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Runs Codex CLI to generate a Simplified Chinese report.
 - Inserts deterministic strategy output and strategy effectiveness tables into the final report.
 - Records lifecycle status, artifacts, counts, warnings, errors, and Codex status in `run_manifest.json`.
+- Validates product contract health through a deterministic artifact and read-only CLI inspection.
 - Validates local monitor configuration without starting hidden background execution.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
@@ -87,6 +88,14 @@ Run one stage against an existing run directory:
 
 ```bash
 python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
+```
+
+Inspect product contract health for the latest indexed run or one selected run
+without collection, pipeline stages, report generation, or Codex:
+
+```bash
+python -m halpha validate --config config.example.yaml
+python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
 ```
 
 Inspect the monitor command surface and validate local monitor configuration
@@ -497,6 +506,19 @@ Run real-source product acceptance without Codex CLI:
 ```bash
 python -m halpha run --config config.example.yaml --no-codex
 ```
+
+Inspect product contract health without collection, pipeline execution, report
+generation, or Codex CLI:
+
+```bash
+python -m halpha validate --config config.example.yaml
+python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
+```
+
+The validate command prints bounded status, check counts, failed check names,
+source refs, and recovery hints. It does not write
+`analysis/product_contract_validation.json`; product runs write that artifact
+as part of the pipeline.
 
 Inspect local data lake state without collection or Codex CLI:
 

@@ -8,12 +8,13 @@ inspection, and operational acceptance. It is not a milestone plan.
 
 - Product-stability contracts are defined here.
 - `analysis/product_contract_validation.json` is implemented in product runs.
-- A read-only `validate` command is planned for M19 and is not implemented yet.
+- A read-only `validate` command is implemented for local inspection of existing
+  runs.
 - Data inspection and workbench surfacing for product validation are planned
   for M19 and are not implemented yet.
 - Existing validation paths remain `python -m pytest`, `python -m halpha run`,
-  `python -m halpha data inspect`, `python -m halpha monitor inspect`, and
-  `python -m halpha workbench inspect`.
+  `python -m halpha validate`, `python -m halpha data inspect`,
+  `python -m halpha monitor inspect`, and `python -m halpha workbench inspect`.
 
 ## Related Docs
 
@@ -177,23 +178,25 @@ Privacy checks:
   account identifiers, exact balances, exact holdings, allocations, or position
   sizes.
 
-## Planned Read-Only Validate Command
+## Read-Only Validate Command
 
-Planned command:
+Implemented command:
 
 ```bash
 python -m halpha validate --config config.example.yaml
 python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
 ```
 
-Planned behavior:
+Implemented behavior:
 
 - select the latest indexed run or the explicit run directory;
 - evaluate product contract validation in read-only mode;
 - print bounded status, counts, failed check names, source refs, and recovery
   hints;
-- exit nonzero only when validation itself fails or the inspected run has
-  failed contract checks that should block acceptance.
+- exit with `3` when latest-run selection, manifest loading, or failed product
+  contract checks should block acceptance;
+- leave `analysis/product_contract_validation.json` untouched. Product runs
+  write that artifact; the read-only command only prints inspection output.
 
 The command must not:
 
@@ -240,10 +243,10 @@ M19 validation should use the narrowest relevant check first:
 - no-Codex product acceptance when report generation is not under review;
 - full Codex product acceptance when Codex context or final report behavior is
   changed;
+- read-only product validation for contract health;
 - read-only data inspection for local store and artifact visibility;
 - read-only monitor inspection for local monitor health;
 - workbench build and inspect for local delivery visibility;
-- planned read-only product validation for contract health.
 
 `config.example.yaml` remains public demonstration config. Real local
 acceptance should use machine-local config files and must not print or commit

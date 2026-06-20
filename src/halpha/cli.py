@@ -15,6 +15,7 @@ from .monitoring import (
 )
 from .outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
 from .pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipeline_stage
+from .product_validation_inspection import inspect_product_validation
 from .standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
 from .standalone_text_intelligence import run_standalone_text_intelligence
 from .storage import display_path
@@ -43,6 +44,10 @@ def build_parser() -> argparse.ArgumentParser:
     stage_parser.add_argument("stage_name", help="Pipeline stage name to run.")
     stage_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
     stage_parser.add_argument("--run-dir", required=True, help="Existing Halpha run directory.")
+
+    validate_parser = subparsers.add_parser("validate", help="Inspect product contract health without running stages.")
+    validate_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    validate_parser.add_argument("--run-dir", help="Optional run directory to validate.")
 
     backtest_parser = subparsers.add_parser("backtest", help="Run one standalone strategy backtest.")
     backtest_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
@@ -166,6 +171,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "stage":
         return _stage(args.stage_name, args.config, args.run_dir)
+
+    if args.command == "validate":
+        return _validate(args.config, run_dir=args.run_dir)
 
     if args.command == "backtest":
         return _backtest(
@@ -303,6 +311,27 @@ def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
     print(f"stage: {result.failed_stage}")
     print(f"reason: {result.reason}")
     print(f"manifest: {manifest}")
+    return result.exit_code
+
+
+def _validate(config_arg: str, *, run_dir: str | None) -> int:
+    config_path = Path(config_arg)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        print("Halpha product validation failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    result = inspect_product_validation(
+        config,
+        config_path=config_path,
+        run_dir=Path(run_dir) if run_dir else None,
+    )
+    for line in result.lines:
+        print(line)
     return result.exit_code
 
 
