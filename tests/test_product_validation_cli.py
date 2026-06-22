@@ -36,6 +36,8 @@ def test_validate_uses_latest_run_without_running_pipeline(
     assert "Halpha product validation succeeded." in output
     assert "status: ok" in output
     assert "selection: latest_run_index" in output
+    assert "selection_source: latest_successful_run" in output
+    assert "selection_label: latest successful run" in output
     assert "run_id: run-1" in output
     assert "run_dir: runs/run-1" in output
     assert "checks: total=" in output

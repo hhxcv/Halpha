@@ -189,12 +189,17 @@ def _run_index_section(config_path: Path, *, base: Path) -> dict[str, Any]:
                 "run_artifacts": _table_count(connection, "run_artifacts"),
                 "run_latest": _table_count(connection, "run_latest"),
             }
-            latest = _latest_run_id(connection)
+            latest_refs = _latest_run_refs(connection)
+            selected_source, selected_run_id = _latest_run_selection(latest_refs)
     except sqlite3.Error as exc:
         raise DataInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
     fields: dict[str, Any] = dict(counts)
-    if latest:
-        fields["latest_successful_run_id"] = latest
+    for key, value in latest_refs.items():
+        if value:
+            fields[key] = value
+    if selected_run_id:
+        fields["selected_run_id"] = selected_run_id
+        fields["selected_run_source"] = selected_source
     return _section("run_index", "ok", artifact=RUN_INDEX_ARTIFACT, fields=fields)
 
 
@@ -1123,11 +1128,33 @@ def _table_count(connection: sqlite3.Connection, table: str) -> int:
 
 
 def _latest_run_id(connection: sqlite3.Connection) -> str | None:
-    for key in ("latest_successful_run", "latest_run"):
-        row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
-        if row and isinstance(row[0], str) and row[0]:
-            return row[0]
-    return None
+    return _latest_run_selection(_latest_run_refs(connection))[1]
+
+
+def _latest_run_refs(connection: sqlite3.Connection) -> dict[str, str | None]:
+    refs: dict[str, str | None] = {"latest_run_id": None, "latest_successful_run_id": None}
+    rows = connection.execute(
+        "SELECT key, run_id FROM run_latest WHERE key IN (?, ?)",
+        ("latest_run", "latest_successful_run"),
+    ).fetchall()
+    for key, run_id in rows:
+        if not isinstance(run_id, str) or not run_id:
+            continue
+        if key == "latest_run":
+            refs["latest_run_id"] = run_id
+        elif key == "latest_successful_run":
+            refs["latest_successful_run_id"] = run_id
+    return refs
+
+
+def _latest_run_selection(refs: dict[str, str | None]) -> tuple[str | None, str | None]:
+    latest_success = refs.get("latest_successful_run_id")
+    if latest_success:
+        return "latest_successful_run", latest_success
+    latest = refs.get("latest_run_id")
+    if latest:
+        return "latest_run", latest
+    return None, None
 
 
 def _store_statuses(catalog: dict[str, Any]) -> str | None:

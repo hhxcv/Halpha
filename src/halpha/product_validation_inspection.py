@@ -36,6 +36,8 @@ class _RunSelection:
     run_id: str | None
     source_artifact: str | None
     reason: str | None
+    selection_key: str | None = None
+    selection_label: str | None = None
 
 
 def inspect_product_validation(
@@ -130,7 +132,7 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
             source_artifact=RUN_INDEX_ARTIFACT,
             reason="local run index does not contain a latest run.",
         )
-    selected_run_id, selected_run_dir = row
+    selection_key, selected_run_id, selected_run_dir = row
     path = Path(selected_run_dir)
     if not path.is_absolute():
         path = base / path
@@ -142,6 +144,8 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
             run_id=selected_run_id,
             source_artifact=RUN_INDEX_ARTIFACT,
             reason="local run index points outside the configured project root.",
+            selection_key=selection_key,
+            selection_label=_latest_selection_label(selection_key),
         )
     return _RunSelection(
         mode="latest_run_index",
@@ -150,18 +154,28 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
         run_id=selected_run_id,
         source_artifact=RUN_INDEX_ARTIFACT,
         reason=None,
+        selection_key=selection_key,
+        selection_label=_latest_selection_label(selection_key),
     )
 
 
-def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str] | None:
+def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | None:
     for key in ("latest_successful_run", "latest_run"):
         row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
         if not row or not isinstance(row[0], str) or not row[0]:
             continue
         run = connection.execute("SELECT run_id, run_dir FROM runs WHERE run_id = ?", (row[0],)).fetchone()
         if run and isinstance(run[0], str) and isinstance(run[1], str):
-            return run[0], run[1]
+            return key, run[0], run[1]
     return None
+
+
+def _latest_selection_label(selection_key: str) -> str:
+    if selection_key == "latest_successful_run":
+        return "latest successful run"
+    if selection_key == "latest_run":
+        return "latest indexed run"
+    return selection_key
 
 
 def _read_manifest(path: Path) -> tuple[dict[str, Any], str | None]:
@@ -210,6 +224,7 @@ def _validation_lines(
         f"selection: {selection.mode}",
         f"run_id: {validation.get('run_id') or selection.run_id or 'unknown'}",
     ]
+    lines.extend(_selection_source_lines(selection))
     if selection.run_dir is not None:
         lines.append(f"run_dir: {_safe_display_path(selection.run_dir, base=base)}")
     lines.append(
@@ -239,6 +254,7 @@ def _missing_result(selection: _RunSelection) -> ProductValidationInspectionResu
         f"status: {selection.status}",
         f"selection: {selection.mode}",
     ]
+    lines.extend(_selection_source_lines(selection))
     if selection.source_artifact:
         lines.append(f"source_artifact: {selection.source_artifact}")
     if selection.reason:
@@ -263,6 +279,7 @@ def _manifest_error_result(
         "status: failed",
         f"selection: {selection.mode}",
     ]
+    lines.extend(_selection_source_lines(selection))
     if selection.run_id:
         lines.append(f"run_id: {selection.run_id}")
     if selection.run_dir is not None:
@@ -282,6 +299,15 @@ def _manifest_error_result(
         lines=lines,
         validation={},
     )
+
+
+def _selection_source_lines(selection: _RunSelection) -> list[str]:
+    if not selection.selection_key:
+        return []
+    lines = [f"selection_source: {selection.selection_key}"]
+    if selection.selection_label:
+        lines.append(f"selection_label: {selection.selection_label}")
+    return lines
 
 
 def _source_artifact_lines(validation: dict[str, Any]) -> list[str]:

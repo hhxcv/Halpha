@@ -745,6 +745,8 @@ def _workbench_build(config_arg: str, *, run_dir: str | None) -> int:
         fields = latest_run.get("fields")
         if isinstance(fields, dict) and fields.get("run_id"):
             print(f"latest_run_id: {fields['run_id']}")
+        if isinstance(fields, dict) and fields.get("selection_key"):
+            print(f"latest_run_source: {fields['selection_key']}")
     print("codex: not_run")
     return 0
 

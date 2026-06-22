@@ -2352,6 +2352,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function renderRuntime(sections) {
       const latest = sections.latest_run?.fields || {};
+      const selection = latest.selection || {};
       const now = Date.now();
       const started = latest.started_at || latest.finished_at;
       const startedTime = started ? new Date(started).getTime() : NaN;
@@ -2359,6 +2360,10 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const storeRecords = state.stores.reduce((sum, store) => sum + numericRecordCount(store), 0);
       const dataSizeLabel = storeRecords ? `${formatNumber(storeRecords)} records` : "n/a";
       document.querySelector("#overview-runtime").innerHTML = [
+        detailRow("Overview run source", label(selection.label || "n/a")),
+        detailRow("Overview run", latest.run_id || "n/a"),
+        detailRow("Latest run", selection.latest_run_id || "n/a"),
+        detailRow("Latest successful run", selection.latest_successful_run_id || "n/a"),
         detailRow("Service start time", formatTimestamp(started)),
         detailRow("Historical runtime", state.runs.length ? `${state.runs.length} runs recorded` : "No run history"),
         detailRow("Current uptime", uptime),
@@ -2551,6 +2556,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       document.querySelector("#report-details").innerHTML = [
         detailRow("Type", run.type),
         detailRow("Run", run.run_id),
+        detailRow("Run role", runRole(run)),
         detailRow("Status", run.status),
         detailRow("Duration", durationBetween(run.started_at, run.finished_at)),
         detailRow("Generated", formatTimestamp(run.finished_at || run.started_at)),
@@ -2559,6 +2565,14 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       document.querySelector("#report-sources").innerHTML = refs.length
         ? refs.slice(0, 12).map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("")
         : `<li class="message">No source refs recorded for this report.</li>`;
+    }
+
+    function runRole(run) {
+      const latest = run?.latest_state || {};
+      if (latest.is_latest_run && latest.is_latest_successful_run) return "Latest run and latest successful run";
+      if (latest.is_latest_run) return "Latest run";
+      if (latest.is_latest_successful_run) return "Latest successful run";
+      return "Historical run";
     }
 
     function reportSourceRefs(run, detail) {

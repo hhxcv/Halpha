@@ -51,6 +51,8 @@ class _RunSelection:
     run_id: str | None
     source_artifact: str | None
     reason: str | None
+    selection_key: str | None = None
+    selection_label: str | None = None
 
 
 def build_workbench_summary(
@@ -116,6 +118,8 @@ def build_workbench_summary(
             "run_dir": _portable_path(selection.run_dir, base=base) if selection.run_dir else None,
             "source_artifact": selection.source_artifact,
             "reason": selection.reason,
+            "selection_key": selection.selection_key,
+            "selection_label": selection.selection_label,
         },
         "latest_run": latest_run,
         "decision_state": decision_state,
@@ -424,6 +428,7 @@ def inspect_workbench_summary(config: dict[str, Any], *, config_path: Path) -> W
         f"summary: {summary_ref}",
         f"latest_run_id: {latest_fields.get('run_id') or 'none'}",
         f"latest_run_status: {latest_fields.get('run_status') or 'unknown'}",
+        f"latest_run_source: {latest_fields.get('selection_key') or 'none'}",
         f"report: {latest_report.get('artifact') or 'none'}",
         f"report_status: {latest_report.get('status') or 'unknown'}",
         f"decision_state: {_section_status_text(summary, 'decision_state')}",
@@ -636,7 +641,7 @@ def _select_run(config_path: Path, *, run_dir: Path | None, base: Path) -> _RunS
             source_artifact=RUN_INDEX_ARTIFACT,
             reason="local run index does not contain a latest run.",
         )
-    selected_run_id, selected_run_dir = row
+    selection_key, selected_run_id, selected_run_dir = row
     path = Path(selected_run_dir)
     if not path.is_absolute():
         path = base / path
@@ -648,6 +653,8 @@ def _select_run(config_path: Path, *, run_dir: Path | None, base: Path) -> _RunS
             run_id=selected_run_id,
             source_artifact=RUN_INDEX_ARTIFACT,
             reason="local run index points outside the configured project root.",
+            selection_key=selection_key,
+            selection_label=_latest_selection_label(selection_key),
         )
     return _RunSelection(
         mode="latest_run_index",
@@ -656,18 +663,28 @@ def _select_run(config_path: Path, *, run_dir: Path | None, base: Path) -> _RunS
         run_id=selected_run_id,
         source_artifact=RUN_INDEX_ARTIFACT,
         reason=None,
+        selection_key=selection_key,
+        selection_label=_latest_selection_label(selection_key),
     )
 
 
-def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str] | None:
+def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | None:
     for key in ("latest_successful_run", "latest_run"):
         row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
         if not row or not isinstance(row[0], str) or not row[0]:
             continue
         run = connection.execute("SELECT run_id, run_dir FROM runs WHERE run_id = ?", (row[0],)).fetchone()
         if run and isinstance(run[0], str) and isinstance(run[1], str):
-            return run[0], run[1]
+            return key, run[0], run[1]
     return None
+
+
+def _latest_selection_label(selection_key: str) -> str:
+    if selection_key == "latest_successful_run":
+        return "latest successful run"
+    if selection_key == "latest_run":
+        return "latest indexed run"
+    return selection_key
 
 
 def _latest_run_state(
@@ -694,6 +711,8 @@ def _latest_run_state(
             "finished_at": manifest.get("finished_at"),
             "codex_status": _dict(manifest.get("codex")).get("status"),
             "report": report_status,
+            "selection_key": selection.selection_key,
+            "selection_label": selection.selection_label,
         },
     )
 

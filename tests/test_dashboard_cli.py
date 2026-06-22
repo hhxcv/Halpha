@@ -546,6 +546,7 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     run_list = list_response.json()
     assert run_list["artifact_type"] == "dashboard_run_list"
     assert run_list["status"] == "available"
+    assert run_list["latest"] == {"latest_run_id": "run-1", "latest_successful_run_id": "run-1"}
     assert len(run_list["runs"]) == 1
     listed = run_list["runs"][0]
     assert listed["run_id"] == "run-1"
@@ -559,6 +560,7 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
         "manifest": "runs/run-1/run_manifest.json",
         "missing": [],
     }
+    assert listed["latest_state"] == {"is_latest_run": True, "is_latest_successful_run": True}
     assert listed["report"] == "report/report.md"
     assert listed["report_state"] == {"status": "available", "artifact": "report/report.md"}
 
@@ -602,6 +604,51 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
         "artifacts"
     ]
     assert str(tmp_path) not in detail_response.text
+
+
+def test_dashboard_latest_state_distinguishes_latest_failed_from_successful(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    successful = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-1",
+        started_at="2026-06-20T00:00:00Z",
+        finished_at="2026-06-20T00:05:00Z",
+    )
+    _write_dashboard_source_artifacts(tmp_path, successful)
+    failed = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-2",
+        started_at="2026-06-20T01:00:00Z",
+        finished_at="2026-06-20T01:05:00Z",
+    )
+    failed.manifest["status"] = "failed"
+    failed.manifest["errors"] = [{"stage": "collect_market_data", "message": "source unavailable"}]
+    failed.manifest["stages"][0]["status"] = "failed"
+    write_json(failed.manifest_path, failed.manifest)
+    write_run_index(successful, now="2026-06-20T00:05:00Z")
+    write_run_index(failed, now="2026-06-20T01:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    overview = client.get("/api/overview").json()
+    runs = client.get("/api/runs").json()
+
+    latest_fields = overview["sections"]["latest_run"]["fields"]
+    assert latest_fields["run_id"] == "run-1"
+    assert latest_fields["selection"] == {
+        "key": "latest_successful_run",
+        "label": "latest successful run",
+        "latest_run_id": "run-2",
+        "latest_successful_run_id": "run-1",
+    }
+    assert runs["latest"] == {"latest_run_id": "run-2", "latest_successful_run_id": "run-1"}
+    assert [run["run_id"] for run in runs["runs"]] == ["run-2", "run-1"]
+    assert runs["runs"][0]["latest_state"] == {"is_latest_run": True, "is_latest_successful_run": False}
+    assert runs["runs"][1]["latest_state"] == {"is_latest_run": False, "is_latest_successful_run": True}
+    assert str(tmp_path) not in str(overview)
+    assert str(tmp_path) not in str(runs)
 
 
 def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> None:
