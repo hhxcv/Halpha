@@ -65,7 +65,10 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "stores=3" in output
     assert "store_statuses: ohlcv_history=ok, run_index=ok, text_event_history=ok" in output
     assert "run_index: ok" in output
+    assert "latest_run_id=run-1" in output
     assert "latest_successful_run_id=run-1" in output
+    assert "selected_run_id=run-1" in output
+    assert "selected_run_source=latest_successful_run" in output
     assert "text_event_history: ok" in output
     assert "records=2" in output
     assert "ohlcv_history: ok" in output

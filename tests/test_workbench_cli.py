@@ -53,8 +53,11 @@ def test_workbench_build_writes_summary_without_running_pipeline(
     assert "index_markdown: runs/workbench/latest/index.md" in output
     assert "index_html: runs/workbench/latest/index.html" in output
     assert "latest_run_id: run-1" in output
+    assert "latest_run_source: latest_successful_run" in output
     assert "codex: not_run" in output
     assert summary["source_selection"]["mode"] == "latest_run_index"
+    assert summary["source_selection"]["selection_key"] == "latest_successful_run"
+    assert summary["source_selection"]["selection_label"] == "latest successful run"
     assert summary["source_selection"]["run_id"] == "run-1"
     assert summary["decision_state"]["fields"]["decision_records"] == 1
     assert (tmp_path / "runs" / "workbench" / "latest" / "index.md").is_file()

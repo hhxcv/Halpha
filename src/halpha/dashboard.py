@@ -836,12 +836,14 @@ def dashboard_text_intelligence(*, config_path: Path, run_id: str | None = None)
 def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
     base = _config_base(config_path)
     index_path = run_index_path(config_path)
+    empty_latest = {"latest_run_id": None, "latest_successful_run_id": None}
     if not index_path.exists():
         return {
             "schema_version": 1,
             "artifact_type": "dashboard_run_list",
             "status": "missing",
             "source_artifacts": [RUN_INDEX_ARTIFACT],
+            "latest": empty_latest,
             "runs": [],
             "warnings": ["local run index was not found."],
             "errors": [],
@@ -868,17 +870,19 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
                 (limit,),
             ).fetchall()
             artifacts = _run_artifact_index(connection)
+            latest = _run_latest_refs(connection)
     except sqlite3.Error as exc:
         return {
             "schema_version": 1,
             "artifact_type": "dashboard_run_list",
             "status": "failed",
             "source_artifacts": [RUN_INDEX_ARTIFACT],
+            "latest": empty_latest,
             "runs": [],
             "warnings": [],
             "errors": [f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"],
         }
-    runs = [_run_list_record(row, artifacts.get(str(row[0]), {}), base=base) for row in rows]
+    runs = [_run_list_record(row, artifacts.get(str(row[0]), {}), base=base, latest=latest) for row in rows]
     missing_report_diagnostics = [
         {
             "run_id": run["run_id"],
@@ -914,6 +918,7 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
         "artifact_type": "dashboard_run_list",
         "status": "partial" if missing_index_diagnostics else "available",
         "source_artifacts": [RUN_INDEX_ARTIFACT],
+        "latest": latest,
         "runs": runs,
         "index_diagnostics": index_diagnostics,
         "report_diagnostics": report_diagnostics,
@@ -947,6 +952,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
                 """,
                 (run_id,),
             ).fetchone()
+            latest = _run_latest_refs(connection)
     except sqlite3.Error as exc:
         return {
             "schema_version": 1,
@@ -963,7 +969,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
     if row is None:
         return _run_detail_missing(run_id, warning="run id was not found in the local run index.")
 
-    run = _run_list_record(row, {}, base=base)
+    run = _run_list_record(row, {}, base=base, latest=latest)
     run_dir = _resolve_ref(str(row[1]), base=base)
     manifest_path = _resolve_ref(str(row[9]), base=base)
     manifest, error = _read_json(manifest_path)
@@ -1341,6 +1347,7 @@ def _latest_run_section(
         )
     try:
         with closing(sqlite3.connect(index_path)) as connection:
+            latest = _run_latest_refs(connection)
             row = _latest_run_row(connection)
     except sqlite3.Error as exc:
         return (
@@ -1365,7 +1372,7 @@ def _latest_run_section(
             {},
         )
 
-    run_id, run_dir_ref, manifest_ref = row
+    selection_key, run_id, run_dir_ref, manifest_ref = row
     run_dir = _resolve_ref(run_dir_ref, base=base)
     manifest_path = _resolve_ref(manifest_ref, base=base)
     manifest, error = _read_json(manifest_path)
@@ -1398,6 +1405,12 @@ def _latest_run_section(
         "warning_count": _warning_count(manifest),
         "error_count": _error_count(manifest),
         "report": _report_state(run_dir, manifest),
+        "selection": {
+            "key": selection_key,
+            "label": _latest_selection_label(selection_key),
+            "latest_run_id": latest.get("latest_run_id"),
+            "latest_successful_run_id": latest.get("latest_successful_run_id"),
+        },
     }
     return (
         _section(
@@ -1411,7 +1424,7 @@ def _latest_run_section(
     )
 
 
-def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | None:
+def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str, str] | None:
     for key in ("latest_successful_run", "latest_run"):
         row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
         if not row or not isinstance(row[0], str) or not row[0]:
@@ -1421,11 +1434,40 @@ def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | No
             (row[0],),
         ).fetchone()
         if run and all(isinstance(value, str) and value for value in run):
-            return run[0], run[1], run[2]
-    return _fallback_latest_run(connection, succeeded_only=True) or _fallback_latest_run(
-        connection,
-        succeeded_only=False,
-    )
+            return key, run[0], run[1], run[2]
+    fallback = _fallback_latest_run(connection, succeeded_only=True)
+    if fallback:
+        return ("fallback_latest_successful_run", *fallback)
+    fallback = _fallback_latest_run(connection, succeeded_only=False)
+    if fallback:
+        return ("fallback_latest_run", *fallback)
+    return None
+
+
+def _run_latest_refs(connection: sqlite3.Connection) -> dict[str, str | None]:
+    refs: dict[str, str | None] = {"latest_run_id": None, "latest_successful_run_id": None}
+    rows = connection.execute(
+        "SELECT key, run_id FROM run_latest WHERE key IN (?, ?)",
+        ("latest_run", "latest_successful_run"),
+    ).fetchall()
+    for key, run_id in rows:
+        if not isinstance(run_id, str) or not run_id:
+            continue
+        if key == "latest_run":
+            refs["latest_run_id"] = run_id
+        elif key == "latest_successful_run":
+            refs["latest_successful_run_id"] = run_id
+    return refs
+
+
+def _latest_selection_label(selection_key: str) -> str:
+    labels = {
+        "latest_successful_run": "latest successful run",
+        "latest_run": "latest indexed run",
+        "fallback_latest_successful_run": "fallback latest successful run",
+        "fallback_latest_run": "fallback latest indexed run",
+    }
+    return labels.get(selection_key, selection_key)
 
 
 def _run_artifact_index(connection: sqlite3.Connection) -> dict[str, dict[str, list[str]]]:
@@ -2645,7 +2687,13 @@ def _unique_refs(values: Any) -> list[str]:
     return unique
 
 
-def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -> dict[str, Any]:
+def _run_list_record(
+    row: Any,
+    artifacts: dict[str, list[str]],
+    *,
+    base: Path,
+    latest: dict[str, str | None],
+) -> dict[str, Any]:
     run_id = str(row[0])
     run_dir = _resolve_ref(str(row[1]), base=base)
     manifest_path = _resolve_ref(str(row[9]), base=base)
@@ -2671,6 +2719,10 @@ def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -
         "integrity_state": integrity_state,
         "report": report_state.get("artifact") if report_state.get("status") == "available" else None,
         "report_state": report_state,
+        "latest_state": {
+            "is_latest_run": run_id == latest.get("latest_run_id"),
+            "is_latest_successful_run": run_id == latest.get("latest_successful_run_id"),
+        },
     }
 
 
