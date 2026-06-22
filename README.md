@@ -44,9 +44,9 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
 - Builds local workbench summary, Markdown index, and static HTML index files from existing artifacts.
-- Runs a local web dashboard service for overview, run/report review, data
-  store inspection, strategy research, monitor control, artifact previews,
-  dashboard jobs, and daily report schedule state.
+- Runs a local web dashboard service for overview, report review, strategy
+  research, monitor control, intelligence review, settings, bounded artifact
+  previews, dashboard jobs, storage cleanup, and daily report schedule state.
 
 Halpha does not implement account access, exchange trading, order placement,
 portfolio automation, real-time alert delivery, hosted dashboards, or hosted

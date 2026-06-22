@@ -94,17 +94,21 @@ def test_dashboard_uses_dropdowns_tabs_and_detail_rails_for_primary_flows(tmp_pa
         "strategy-timeframe",
         "strategy-name",
         "intel-asset",
+        "intel-range",
         "intel-severity",
         "intel-source",
-        "config-profile",
+        "intel-sort",
     ]:
         assert f'id="{selector_id}"' in html
+    assert 'id="config-profile" class="readonly-value"' in html
     assert 'data-strategy-tab="trades"' in html
     assert 'data-intel-tab="text"' in html
     assert "detail-rail" in html
     assert "fillSelect" in script
     assert "renderOutline" in script
     assert "filteredIntelligenceItems" in script
+    assert "withinIntelRange" in script
+    assert "severityRank" in script
     assert "resetIntelFilters" in script
 
 
@@ -173,7 +177,7 @@ def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path)
     script = _script_block(_dashboard_html(tmp_path))
 
     assert "renderReportPreview(preview, run)" in script
-    assert "markdownToHtml(markdown)" in script
+    assert "markdownToHtml(markdown, state.reportSearchTerm)" in script
     assert "postJob(intent, params = {})" in script
     assert "renderValidationJob(job)" in script
     assert "startMonitorJob(intent)" in script
@@ -194,8 +198,34 @@ def test_dashboard_strategy_backtest_chart_shell_contracts_are_present(tmp_path:
     assert "backtestVisualization(item)" in script
     assert "renderCandlestickSvg(vis)" in script
     assert "renderTradeMarker" in script
-    assert "sampleVisualization" in script
+    assert "downloadSelectedOhlcv" in script
+    assert "sampleVisualization" not in script
+    assert "sampleIntelItems" not in script
+    assert 'id="strategy-range"' in html
+    assert "chart-tools" in html
+    assert "tool-dot" in html
+    assert "data-strategy-window" in html
+    assert "applyStrategyWindow" in script
+    assert "setStrategyWindow" in script
+    assert ">USDT</span>" not in html
+    assert "Latest available window" not in html
     assert "Backtest candlestick chart" in html
+
+
+def test_dashboard_shell_has_no_unwired_dashboard_controls_or_fabricated_sources(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    script = _script_block(html)
+
+    assert 'id="report-reader-search"' in html
+    assert "state.reportSearchTerm" in script
+    assert "renderInline" in script
+    assert "Report content is not available yet" not in script
+    assert '"Run manifest"' not in script
+    assert '"Report artifact"' not in script
+    assert '["BTC", "ETH", "USDT", "SOL", "XRP", "ADA"]' not in script
+    assert "{max_cycles: 72, interval_seconds: 360}" not in script
+    assert "state.monitor?.settings" in script
+    assert '"#intel-asset", "#intel-range", "#intel-severity", "#intel-source", "#intel-sort"' in script
 
 
 def _dashboard_html(tmp_path: Path) -> str:

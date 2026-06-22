@@ -30,6 +30,7 @@ ALERT_COUNT_KEYS = (
 
 def dashboard_monitor_summary(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
     base = _config_base(config_path)
+    settings = load_monitor_config(config)
     output_dir = _monitor_output_dir(config, base=base)
     health = _health_summary(output_dir, base=base)
     cycles = _cycle_list(output_dir, base=base, limit=MAX_CYCLE_SUMMARIES)
@@ -41,6 +42,14 @@ def dashboard_monitor_summary(config: dict[str, Any], *, config_path: Path) -> d
         "artifact_type": "dashboard_monitor",
         "status": _overall_status([str(component.get("status") or "unknown") for component in components]),
         "monitor_output_dir": _safe_ref(output_dir, base=base),
+        "settings": {
+            "interval_seconds": settings.interval_seconds,
+            "max_cycles": settings.max_cycles,
+            "cooldown_seconds": settings.cooldown_seconds,
+            "output_dir": _safe_ref(output_dir, base=base),
+            "target_stage": settings.target_stage,
+            "no_codex": settings.no_codex,
+        },
         "health": health,
         "latest_cycle": cycles["cycles"][0] if cycles["cycles"] else None,
         "cycles": cycles,

@@ -51,10 +51,6 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["config_profile_api"] == "available"
     assert payload["features"]["strategy_research_api"] == "available"
     assert payload["features"]["monitor_api"] == "available"
-    assert payload["features"]["workbench_api"] == "available"
-    assert payload["features"]["decision_risk_api"] == "available"
-    assert payload["features"]["event_alert_api"] == "available"
-    assert payload["features"]["outcome_tracking_api"] == "available"
     assert payload["features"]["text_intelligence_api"] == "available"
     assert payload["features"]["schedule_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
@@ -172,7 +168,8 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
     assert payload["artifact_type"] == "dashboard_config_profile"
     assert payload["status"] == "available"
     assert payload["config"]["ref"] == "<external-config>"
-    assert payload["config"]["confirmation_text"] == "SAVE CONFIG"
+    assert payload["config"]["requires_confirmation"] is True
+    assert "confirmation_text" not in payload["config"]
     assert payload["sections"] == [
         "General",
         "Market data",
@@ -188,6 +185,7 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
     assert fields["market.enabled"]["control"] == "toggle"
     assert fields["market.symbols"]["control"] == "tags"
     assert fields["market.ohlcv.timeframes"]["options"] == ["1d", "1h"]
+    assert "monitor.enabled" not in fields
     assert payload["omitted"]["raw_config_text_embedded"] is False
     assert str(tmp_path) not in response.text
 
@@ -216,7 +214,7 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
     response = client.post(
         "/api/config/profile",
         json={
-            "confirm": "SAVE CONFIG",
+            "confirm": True,
             "changes": {
                 "dashboard.display_timezone": "UTC",
                 "monitor.interval_seconds": 600,
@@ -249,11 +247,11 @@ def test_dashboard_config_save_rejects_unknown_path_and_wrong_confirmation(tmp_p
 
     blocked = client.post(
         "/api/config/profile",
-        json={"confirm": "SAVE", "changes": {"dashboard.display_timezone": "UTC"}},
+        json={"confirm": False, "changes": {"dashboard.display_timezone": "UTC"}},
     ).json()
     failed = client.post(
         "/api/config/profile",
-        json={"confirm": "SAVE CONFIG", "changes": {"local.secret": "value"}},
+        json={"confirm": True, "changes": {"local.secret": "value"}},
     ).json()
 
     assert blocked["status"] == "blocked"
@@ -331,264 +329,15 @@ def test_dashboard_overview_endpoint_reads_artifact_backed_state(tmp_path: Path)
     assert str(tmp_path) not in response.text
 
 
-def test_dashboard_workbench_endpoint_reports_missing_summary(tmp_path: Path) -> None:
+def test_dashboard_removed_legacy_endpoints_return_not_found(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
-    response = client.get("/api/workbench")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_workbench_summary"
-    assert payload["status"] == "missing"
-    assert payload["summary_ref"] == "runs/workbench/latest/workbench_summary.json"
-    assert payload["source_artifacts"] == ["runs/workbench/latest/workbench_summary.json"]
-    assert payload["sections"] == {}
-    assert "was not found" in payload["warnings"][0]
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_workbench_endpoint_summarizes_sections_and_refs(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    write_json(
-        tmp_path / "runs" / "workbench" / "latest" / "workbench_summary.json",
-        {
-            "artifact_type": "workbench_summary",
-            "status": "warning",
-            "generated_at": "2026-06-20T00:06:00Z",
-            "source_selection": {"run_id": "run-1", "run_dir": "runs/run-1", "status": "available"},
-            "latest_run": {
-                "status": "available",
-                "fields": {"run_id": "run-1", "run_status": "succeeded"},
-                "source_artifacts": {"manifest": "runs/run-1/run_manifest.json"},
-            },
-            "decision_state": {
-                "status": "warning",
-                "fields": {"decision_records": 2, "watch_trigger_records": 1},
-                "source_artifacts": {"risk": "analysis/risk_assessment.json"},
-                "warnings": ["decision review needed"],
-            },
-            "index_outputs": {
-                "status": "available",
-                "markdown": "runs/workbench/latest/index.md",
-                "html": "runs/workbench/latest/index.html",
-            },
-            "source_artifacts": {
-                "run_manifest": "runs/run-1/run_manifest.json",
-                "report": "report/report.md",
-                "analysis": {"risk": "analysis/risk_assessment.json"},
-                "shared_data": {"outcomes": "data/research/outcomes/outcome_history.json"},
-            },
-            "omitted": {"raw_record_dumps_embedded": False},
-            "codex_boundary": {"codex_input_by_default": False},
-            "warnings": ["summary warning"],
-            "errors": [],
-        },
-    )
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/workbench")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["status"] == "warning"
-    assert payload["generated_at"] == "2026-06-20T00:06:00Z"
-    assert payload["source_selection"]["run_id"] == "run-1"
-    assert payload["sections"]["decision_state"]["fields"]["decision_records"] == 2
-    assert payload["sections"]["decision_state"]["warnings"] == ["decision review needed"]
-    assert "runs/run-1/report/report.md" in payload["source_artifacts"]
-    assert "runs/run-1/analysis/risk_assessment.json" in payload["source_artifacts"]
-    assert "data/research/outcomes/outcome_history.json" in payload["source_artifacts"]
-    assert payload["omitted"]["full_workbench_summary_embedded"] is False
-    assert payload["codex_boundary"]["codex_input_by_default"] is False
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_decision_risk_endpoint_reports_missing_run_state(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/decision-risk")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_decision_risk"
-    assert payload["status"] == "missing"
-    assert payload["artifacts"] == []
-    assert "local run index was not found" in payload["warnings"][0]
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_decision_risk_endpoint_summarizes_selected_run_artifacts(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    run = _write_run(tmp_path, config_path)
-    run.manifest["artifacts"].update(
-        {
-            "risk_assessment": "analysis/risk_assessment.json",
-            "decision_recommendations": "analysis/decision_recommendations.json",
-            "watch_triggers": "analysis/watch_triggers.json",
-            "decision_intelligence_delta": "analysis/decision_intelligence_delta.json",
-        }
-    )
-    write_json(run.manifest_path, run.manifest)
-    write_json(
-        run.analysis_dir / "risk_assessment.json",
-        {
-            "artifact_type": "risk_assessment",
-            "status": "warning",
-            "records": [{"risk_level": "high"}],
-            "source_artifacts": ["analysis/market_regime_assessment.json"],
-            "warnings": ["risk elevated"],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "decision_recommendations.json",
-        {
-            "artifact_type": "decision_recommendations",
-            "status": "ok",
-            "records": [{"decision_bias": "wait_for_confirmation"}],
-            "counts": {"decision_recommendation_records": 1},
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "watch_triggers.json",
-        {
-            "artifact_type": "watch_triggers",
-            "status": "ok",
-            "triggers": [{"trigger_type": "risk_escalation"}],
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "decision_intelligence_delta.json",
-        {
-            "artifact_type": "decision_intelligence_delta",
-            "status": "missing",
-            "warnings": ["No previous successful decision-intelligence run found."],
-            "errors": [],
-        },
-    )
-    write_run_index(run, now="2026-06-20T00:05:00Z")
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/decision-risk", params={"run_id": "run-1"})
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_decision_risk"
-    assert payload["selected_run"]["fields"]["run_id"] == "run-1"
-    artifacts = {artifact["name"]: artifact for artifact in payload["artifacts"]}
-    assert artifacts["risk_assessment"]["status"] == "warning"
-    assert artifacts["risk_assessment"]["fields"]["record_count"] == 1
-    assert artifacts["decision_recommendations"]["status"] == "available"
-    assert artifacts["watch_triggers"]["fields"]["record_count"] == 1
-    assert artifacts["decision_intelligence_delta"]["status"] == "missing"
-    assert "runs/run-1/analysis/risk_assessment.json" in payload["source_artifacts"]
-    assert "runs/run-1/analysis/market_regime_assessment.json" in payload["source_artifacts"]
-    assert payload["omitted"]["full_decision_artifacts_embedded"] is False
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_event_alert_endpoint_reports_missing_run_state(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/event-alert")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_event_alert"
-    assert payload["status"] == "missing"
-    assert payload["artifacts"] == []
-    assert "local run index was not found" in payload["warnings"][0]
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_event_alert_endpoint_summarizes_selected_run_artifacts(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    run = _write_run(tmp_path, config_path)
-    run.manifest["artifacts"].update(
-        {
-            "text_event_records": "analysis/text_event_records.json",
-            "text_event_signals": "analysis/text_event_signals.json",
-            "event_intelligence_assessment": "analysis/event_intelligence_assessment.json",
-            "alert_decisions": "analysis/alert_decisions.json",
-            "alert_decision_material": "analysis/alert_decision_material.md",
-        }
-    )
-    write_json(run.manifest_path, run.manifest)
-    write_json(
-        run.analysis_dir / "text_event_records.json",
-        {
-            "artifact_type": "text_event_records",
-            "status": "ok",
-            "records": [{"event_id": "event-1"}],
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "text_event_signals.json",
-        {
-            "artifact_type": "text_event_signals",
-            "status": "ok",
-            "records": [{"event_signal_id": "signal-1"}],
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "event_intelligence_assessment.json",
-        {
-            "artifact_type": "event_intelligence_assessment",
-            "status": "warning",
-            "records": [{"assessment_id": "assessment-1"}],
-            "source_artifacts": ["analysis/text_event_signals.json"],
-            "warnings": ["assessment needs review"],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "alert_decisions.json",
-        {
-            "artifact_type": "alert_decisions",
-            "status": "ok",
-            "records": [{"alert_decision_id": "alert-1"}],
-            "counts": {"alert_decision_records": 1},
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    (run.analysis_dir / "alert_decision_material.md").write_text("# Alert material\n", encoding="utf-8")
-    write_run_index(run, now="2026-06-20T00:05:00Z")
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/event-alert", params={"run_id": "run-1"})
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_event_alert"
-    assert payload["selected_run"]["fields"]["run_id"] == "run-1"
-    artifacts = {artifact["name"]: artifact for artifact in payload["artifacts"]}
-    assert artifacts["text_event_records"]["status"] == "available"
-    assert artifacts["event_intelligence_assessment"]["status"] == "warning"
-    assert artifacts["event_intelligence_assessment"]["warnings"] == ["assessment needs review"]
-    assert artifacts["alert_decisions"]["fields"]["record_count"] == 1
-    assert artifacts["alert_decision_material"]["fields"]["preview_path"] == "runs/run-1/analysis/alert_decision_material.md"
-    assert "runs/run-1/analysis/event_intelligence_assessment.json" in payload["source_artifacts"]
-    assert "runs/run-1/analysis/text_event_signals.json" in payload["source_artifacts"]
-    assert payload["omitted"]["full_event_alert_artifacts_embedded"] is False
-    assert str(tmp_path) not in response.text
+    for path in ("/api/workbench", "/api/decision-risk", "/api/event-alert", "/api/outcomes"):
+        response = client.get(path)
+        assert response.status_code == 404
+        assert str(tmp_path) not in response.text
 
 
 def test_dashboard_text_intelligence_endpoint_reports_missing_run_state(tmp_path: Path) -> None:
@@ -717,128 +466,6 @@ def test_dashboard_text_intelligence_endpoint_summarizes_selected_run_artifacts(
     assert payload["omitted"]["full_raw_text_events_embedded"] is False
     assert payload["omitted"]["full_text_intelligence_artifacts_embedded"] is False
     assert payload["omitted"]["llm_generated_event_states"] is False
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_outcomes_endpoint_reports_missing_run_with_history_state(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    write_json(
-        tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "outcome_history_state",
-            "status": "ok",
-            "updated_at": "2026-06-20T00:10:00Z",
-            "history_path": "data/research/outcomes/outcome_history.json",
-            "storage_path": "data/research/outcomes",
-            "totals": {"records": 2, "warning_count": 0, "error_count": 0},
-            "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/outcomes")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_outcomes"
-    assert payload["status"] == "partial"
-    assert payload["artifacts"] == []
-    assert payload["history"]["status"] == "ok"
-    assert payload["history"]["fields"]["records"] == 2
-    assert payload["history"]["preview_path"] == "data/research/metadata/outcome_history_state.json"
-    assert payload["jobs"]["outcomes_inspect"] == "available"
-    assert "local run index was not found" in payload["warnings"][0]
-    assert payload["omitted"]["full_outcome_history_embedded"] is False
-    assert str(tmp_path) not in response.text
-
-
-def test_dashboard_outcomes_endpoint_summarizes_selected_run_artifacts_and_history(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    run = _write_run(tmp_path, config_path)
-    run.manifest["artifacts"].update(
-        {
-            "outcome_targets": "analysis/outcome_targets.json",
-            "outcome_evaluations": "analysis/outcome_evaluations.json",
-            "outcome_tracking_material": "analysis/outcome_tracking_material.md",
-        }
-    )
-    write_json(run.manifest_path, run.manifest)
-    write_json(
-        run.analysis_dir / "outcome_targets.json",
-        {
-            "artifact_type": "outcome_targets",
-            "status": "ok",
-            "targets": [{"target_id": "target-1"}, {"target_id": "target-2"}],
-            "skipped_records": [{"reason": "missing_observation_window"}],
-            "counts": {"targets": 2, "skipped_records": 1, "duplicate_records": 0},
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    write_json(
-        run.analysis_dir / "outcome_evaluations.json",
-        {
-            "artifact_type": "outcome_evaluations",
-            "status": "warning",
-            "evaluations": [{"outcome_id": "outcome-1"}],
-            "counts": {"evaluations": 1, "evaluated": 1, "pending": 0, "insufficient_data": 0},
-            "source_artifacts": ["analysis/outcome_targets.json"],
-            "warnings": ["Recorded 1 contradicted outcome target."],
-            "errors": [],
-        },
-    )
-    (run.analysis_dir / "outcome_tracking_material.md").write_text("# Outcome material\n", encoding="utf-8")
-    write_json(
-        tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "outcome_history_state",
-            "status": "ok",
-            "updated_at": "2026-06-20T00:10:00Z",
-            "history_path": "data/research/outcomes/outcome_history.json",
-            "storage_path": "data/research/outcomes",
-            "totals": {
-                "records": 3,
-                "incoming_records": 1,
-                "duplicate_records": 0,
-                "conflicting_duplicates": 0,
-                "warning_count": 0,
-                "error_count": 0,
-            },
-            "outcome_states": [{"value": "confirmed", "record_count": 2}],
-            "source_artifacts": ["runs/run-1/analysis/outcome_evaluations.json"],
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    write_run_index(run, now="2026-06-20T00:05:00Z")
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    response = client.get("/api/outcomes", params={"run_id": "run-1"})
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["artifact_type"] == "dashboard_outcomes"
-    assert payload["selected_run"]["fields"]["run_id"] == "run-1"
-    artifacts = {artifact["name"]: artifact for artifact in payload["artifacts"]}
-    assert artifacts["outcome_targets"]["status"] == "available"
-    assert artifacts["outcome_targets"]["fields"]["record_count"] == 2
-    assert artifacts["outcome_evaluations"]["status"] == "warning"
-    assert artifacts["outcome_evaluations"]["fields"]["counts"]["pending"] == 0
-    assert artifacts["outcome_tracking_material"]["fields"]["preview_path"] == "runs/run-1/analysis/outcome_tracking_material.md"
-    assert payload["history"]["fields"]["records"] == 3
-    assert payload["history"]["fields"]["history"] == "data/research/outcomes/outcome_history.json"
-    assert "data/research/metadata/outcome_history_state.json" in payload["source_artifacts"]
-    assert "data/research/outcomes/outcome_history.json" not in payload["source_artifacts"]
-    assert "runs/run-1/analysis/outcome_evaluations.json" in payload["source_artifacts"]
-    assert payload["jobs"]["outcomes_inspect"] == "available"
-    assert payload["omitted"]["full_outcome_artifacts_embedded"] is False
-    assert payload["omitted"]["full_outcome_history_embedded"] is False
     assert str(tmp_path) not in response.text
 
 

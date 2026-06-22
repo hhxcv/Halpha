@@ -624,7 +624,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     .search-input,
     .select-input,
-    .text-input {
+    .text-input,
+    .readonly-value {
       width: 100%;
       min-height: 38px;
       padding: 8px 11px;
@@ -633,6 +634,14 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       background: #fff;
       color: var(--text);
       outline: 0;
+    }
+
+    .readonly-value {
+      display: flex;
+      align-items: center;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-weight: 700;
     }
 
     .search-input:focus,
@@ -957,14 +966,20 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     .tool-dot {
       display: grid;
       place-items: center;
-      width: 28px;
+      width: 34px;
       height: 28px;
       border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 6px;
       background: rgba(9, 18, 31, 0.82);
       color: #dbe7f3;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
+    }
+
+    .tool-dot.active {
+      border-color: rgba(20, 184, 166, 0.62);
+      background: rgba(0, 133, 117, 0.9);
+      color: #ffffff;
     }
 
     .chart-footer {
@@ -1774,7 +1789,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
             <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
             <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
             <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
-            <div class="field"><label for="strategy-range">Date range</label><input id="strategy-range" class="text-input" value="Latest available window"></div>
+            <div class="field"><label for="strategy-range">Date range</label><select id="strategy-range" class="select-input"><option value="all">All candles</option><option value="180">Last 180 candles</option><option value="90">Last 90 candles</option><option value="30">Last 30 candles</option></select></div>
             <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
             <button class="ghost-button" type="button" id="download-ohlcv-button">Download OHLCV</button>
           </section>
@@ -1785,15 +1800,18 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
                 <div id="strategy-chart-title" class="chart-title">Backtest candlestick chart</div>
                 <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
               </div>
-              <span class="status-pill ok">USDT</span>
+              <span id="strategy-quote-label" class="status-pill ok">n/a</span>
             </div>
             <div class="chart-wrap">
-              <div class="chart-tools">
-                <span class="tool-dot">+</span><span class="tool-dot">/</span><span class="tool-dot">T</span><span class="tool-dot">%</span>
+              <div class="chart-tools" aria-label="Backtest chart window">
+                <button class="tool-dot active" type="button" data-strategy-window="all" title="Show all available candles">All</button>
+                <button class="tool-dot" type="button" data-strategy-window="180" title="Show last 180 candles">180</button>
+                <button class="tool-dot" type="button" data-strategy-window="90" title="Show last 90 candles">90</button>
+                <button class="tool-dot" type="button" data-strategy-window="30" title="Show last 30 candles">30</button>
               </div>
               <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="Backtest candlestick chart"></svg>
             </div>
-            <div class="chart-footer"><span>1D 5D 1M 3M 6M YTD 1Y All</span><span id="strategy-chart-clock">GMT+8</span></div>
+            <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>
           </section>
           <aside class="strategy-side">
             <section class="panel panel-pad">
@@ -1869,7 +1887,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           <section class="panel panel-pad">
             <div class="filter-grid">
               <div class="field"><label>Asset</label><select id="intel-asset" class="select-input"><option>All assets</option></select></div>
-              <div class="field"><label>Date range</label><input id="intel-range" class="text-input" value="Latest 7 days"></div>
+              <div class="field"><label>Date range</label><select id="intel-range" class="select-input"><option value="all">All time</option><option value="7d">Latest 7 days</option><option value="30d">Latest 30 days</option></select></div>
               <div class="field"><label>Severity</label><select id="intel-severity" class="select-input"><option>All severities</option><option>High</option><option>Medium</option><option>Low</option></select></div>
               <div class="field"><label>Source</label><select id="intel-source" class="select-input"><option>All sources</option></select></div>
               <button class="ghost-button" type="button" id="intel-reset">Reset</button>
@@ -1887,7 +1905,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           <div class="intel-grid">
             <section class="panel">
               <div class="library-header">
-                <select id="intel-sort" class="select-input"><option>Latest first</option><option>Severity first</option></select>
+                <select id="intel-sort" class="select-input"><option value="latest">Latest first</option><option value="severity">Severity first</option></select>
               </div>
               <div id="intel-events" class="event-list"></div>
             </section>
@@ -1914,7 +1932,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         </div>
         <div class="settings-layout">
           <section class="panel settings-top">
-            <div class="field"><label>Config file</label><select id="config-profile" class="select-input"><option>Current config</option></select></div>
+            <div class="field"><label>Config file</label><div id="config-profile" class="readonly-value">Current config</div></div>
             <span id="settings-valid-pill" class="status-pill pending">loading</span>
             <span class="muted" id="settings-last-validated">Last validated: not run</span>
             <button class="primary-button" type="button" id="settings-save">Save changes</button>
@@ -1992,14 +2010,18 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       health: null,
       runs: [],
       selectedReport: null,
+      selectedReportDetail: null,
       selectedReportPreview: null,
+      reportSearchTerm: "",
       stores: [],
       deletionPlan: null,
       strategies: null,
       selectedStrategyOutput: null,
+      strategyWindow: "all",
       monitor: null,
       monitorCycles: [],
       monitorAlerts: null,
+      schedule: null,
       jobs: [],
       intelligence: null,
       selectedIntelTab: "text",
@@ -2010,18 +2032,6 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       selectedRunArtifacts: [],
       selectedSharedStores: [],
       validationJob: null,
-    };
-
-    const viewAliases = {
-      runs: "reports",
-      data: "intelligence",
-      artifacts: "reports",
-      workbench: "overview",
-      "decision-risk": "intelligence",
-      "event-alert": "intelligence",
-      "text-intelligence": "intelligence",
-      outcomes: "intelligence",
-      commands: "settings",
     };
 
     function escapeHtml(value) {
@@ -2186,7 +2196,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function viewFromHash() {
       const raw = (window.location.hash || "#overview").slice(1) || "overview";
-      return viewAliases[raw] || raw;
+      return raw;
     }
 
     function setView(view) {
@@ -2254,16 +2264,18 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     async function loadMonitorPayload() {
-      const [monitor, cycles, alerts, jobs] = await Promise.allSettled([
+      const [monitor, cycles, alerts, jobs, schedule] = await Promise.allSettled([
         fetchJson(endpoints.monitor),
         fetchJson(endpoints.monitorCycles),
         fetchJson(endpoints.monitorAlerts),
         fetchJson(endpoints.jobs),
+        fetchJson(endpoints.schedule),
       ]);
       state.monitor = monitor.status === "fulfilled" ? monitor.value : null;
       state.monitorCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
       state.monitorAlerts = alerts.status === "fulfilled" ? alerts.value : null;
       state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
+      state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
     }
 
     function renderOverview() {
@@ -2329,26 +2341,26 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         detailRow("Historical runtime", state.runs.length ? `${state.runs.length} runs recorded` : "No run history"),
         detailRow("Current uptime", uptime),
         detailRow("Data size", dataSizeLabel),
-        meterRow("Memory usage", 20, "local process"),
-        meterRow("Storage usage", Math.min(92, Math.max(8, state.stores.length * 9)), "local stores"),
+        detailRow("Memory usage", "not collected"),
+        detailRow("Storage usage", storeRecords ? "tracked by record count" : "not collected"),
       ].join("");
-    }
-
-    function meterRow(labelText, percent, note) {
-      return `<div class="detail-row"><div class="detail-key">${escapeHtml(labelText)}</div><div class="detail-value"><div class="meter"><div class="meter-track"><span class="meter-fill" style="width:${Math.max(0, Math.min(100, percent))}%"></span></div><span>${escapeHtml(note)}</span></div></div></div>`;
     }
 
     function renderOverviewMonitor() {
       const health = state.monitor?.health?.fields || {};
       const latest = state.monitor?.latest_cycle || {};
       const status = latest.status || health.latest_cycle_status || state.monitor?.status || "partial";
+      const schedule = state.schedule || {};
+      const scheduleLabel = schedule.enabled
+        ? formatTimestamp(schedule.next_run_at)
+        : "No daily report scheduled";
       setPill("#overview-monitor-pill", status, status);
       document.querySelector("#overview-monitor").innerHTML = [
-        detailRow("Monitor state", status === "missing" ? "Idle" : "Running"),
+        detailRow("Monitor state", label(status)),
         detailRow("Monitor start time", formatTimestamp(health.updated_at || latest.started_at)),
         detailRow("Trigger count", health.cycle_count ?? state.monitorCycles.length),
         detailRow("Last trigger time", formatTimestamp(latest.finished_at || latest.started_at)),
-        detailRow("Next scheduled check", "configured schedule"),
+        detailRow("Next scheduled report", scheduleLabel),
         detailRow("Recent alerts", alertCount(state.monitorAlerts)),
       ].join("");
     }
@@ -2363,10 +2375,10 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         ["Macro", "macro_calendar_history"],
         ["Outcomes", "outcome_history"],
       ];
-      document.querySelector("#overview-data-cards").innerHTML = categories.map(([labelText, name], index) => {
+      document.querySelector("#overview-data-cards").innerHTML = categories.map(([labelText, name]) => {
         const store = stores.find((item) => item.name === name) || {};
         const records = numericRecordCount(store);
-        return `<div class="data-card"><div class="data-card-title">${escapeHtml(labelText)}</div><div class="data-card-value">${records ? formatNumber(records) : "n/a"}</div>${statusPill(store.status || "missing", store.status || "missing")}<svg class="sparkline" viewBox="0 0 120 34">${sparklinePath(index)}</svg></div>`;
+        return `<div class="data-card"><div class="data-card-title">${escapeHtml(labelText)}</div><div class="data-card-value">${records ? formatNumber(records) : "n/a"}</div>${statusPill(store.status || "missing", store.status || "missing")}</div>`;
       }).join("");
       const warnings = stores.flatMap((store) => store.warnings || []);
       const errors = stores.flatMap((store) => store.errors || []);
@@ -2384,14 +2396,6 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const candidates = [fields.records, fields.record_count, fields.inserted_records, fields.incoming_records];
       const value = candidates.find((item) => Number.isFinite(Number(item)));
       return value === undefined ? 0 : Number(value);
-    }
-
-    function sparklinePath(seed) {
-      const points = Array.from({length: 8}, (_, index) => {
-        const y = 26 - ((index * 7 + seed * 11) % 18);
-        return `${index * 17},${y}`;
-      }).join(" ");
-      return `<polyline points="${points}" fill="none" stroke="#008575" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
     }
 
     function renderAttention() {
@@ -2488,10 +2492,16 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     async function selectReport(runId) {
       const run = reportRecords().find((item) => item.run_id === runId) || {run_id: runId};
       state.selectedReport = run;
+      state.selectedReportDetail = null;
       renderReportLibrary();
       document.querySelector("#selected-report-kicker").textContent = `${run.type || "Report"} - ${formatTimestamp(run.finished_at || run.started_at)}`;
       document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Loading rendered report.</div>`;
-      renderReportDetails(run);
+      try {
+        state.selectedReportDetail = await fetchJson(`${endpoints.runs}/${encodeURIComponent(runId)}`);
+      } catch (_error) {
+        state.selectedReportDetail = null;
+      }
+      renderReportDetails(run, state.selectedReportDetail);
       const path = run.report_path || reportPath(run);
       try {
         const preview = await fetchJson(`${endpoints.preview}?path=${encodeURIComponent(path)}`);
@@ -2502,7 +2512,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       }
     }
 
-    function renderReportDetails(run) {
+    function renderReportDetails(run, detail) {
+      const refs = reportSourceRefs(run, detail);
       document.querySelector("#report-details").innerHTML = [
         detailRow("Type", run.type),
         detailRow("Run", run.run_id),
@@ -2511,17 +2522,33 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         detailRow("Generated", formatTimestamp(run.finished_at || run.started_at)),
         detailRow("Origin", run.codex_status === "skipped" ? "Local pipeline" : "Codex report"),
       ].join("");
-      document.querySelector("#report-sources").innerHTML = [
-        "Run index",
-        "Run manifest",
-        "Report artifact",
-      ].map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("");
+      document.querySelector("#report-sources").innerHTML = refs.length
+        ? refs.slice(0, 12).map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("")
+        : `<li class="message">No source refs recorded for this report.</li>`;
+    }
+
+    function reportSourceRefs(run, detail) {
+      const refs = [];
+      if (run?.manifest) refs.push(run.manifest);
+      if (run?.report_path) refs.push(run.report_path);
+      (detail?.source_artifacts || []).forEach((ref) => refs.push(ref));
+      (detail?.artifacts || []).forEach((artifact) => {
+        const path = artifact.path || artifact.ref || artifact.artifact;
+        if (path) refs.push(path);
+      });
+      return unique(refs);
     }
 
     function renderReportPreview(preview, run) {
-      const content = preview.preview || `# ${run.title}\n\nReport content is not available yet.`;
+      const content = typeof preview.preview === "string" ? preview.preview : "";
+      if (!content) {
+        const messages = [...(preview.warnings || []), ...(preview.errors || [])];
+        document.querySelector("#report-reader").innerHTML = `<div class="empty-state">${escapeHtml(messages.join(" ") || "No readable report content is recorded for this run.")}</div>`;
+        renderOutline("");
+        return;
+      }
       const markdown = typeof content === "string" ? content : JSON.stringify(content, null, 2);
-      document.querySelector("#report-reader").innerHTML = `<article class="markdown-reader">${markdownToHtml(markdown)}</article>`;
+      document.querySelector("#report-reader").innerHTML = `<article class="markdown-reader">${markdownToHtml(markdown, state.reportSearchTerm)}</article>`;
       renderOutline(markdown);
     }
 
@@ -2588,15 +2615,17 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function renderStrategyControls() {
       const options = state.strategies?.commands?.options || {};
-      fillSelect("#strategy-symbol", options.symbols || ["BTCUSDT", "ETHUSDT"]);
-      fillSelect("#strategy-timeframe", options.timeframes || ["1d", "4h", "1h"]);
-      fillSelect("#strategy-name", options.strategy_names || ["tsmom_vol_scaled", "sma_cross_trend"]);
+      fillSelect("#strategy-symbol", options.symbols || []);
+      fillSelect("#strategy-timeframe", options.timeframes || []);
+      fillSelect("#strategy-name", options.strategy_names || []);
       ["#strategy-symbol", "#strategy-timeframe", "#strategy-name"].forEach((selector) => {
         document.querySelector(selector).onchange = () => {
           state.selectedStrategyOutput = null;
           renderStrategies();
         };
       });
+      document.querySelector("#strategy-range").value = state.strategyWindow;
+      document.querySelector("#strategy-range").onchange = () => setStrategyWindow(document.querySelector("#strategy-range").value);
     }
 
     function fillSelect(selector, values) {
@@ -2620,10 +2649,16 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         metricCell("Profit factor", metrics.profitFactor, "gross"),
         metricCell("Trades", metrics.trades, "count"),
       ].join("");
-      const vis = backtestVisualization(selected);
-      document.querySelector("#strategy-chart-title").textContent = `${vis.symbol || "BTCUSDT"} - ${vis.timeframe || "1d"} - Halpha`;
-      document.querySelector("#strategy-chart-meta").textContent = `${vis.strategy_name || strategyName(selected)} - ${vis.status || selected?.status || "partial"}`;
+      const vis = visibleBacktestVisualization(selected);
+      const identityLabel = [vis.symbol, vis.timeframe].filter(Boolean).join(" - ");
+      document.querySelector("#strategy-chart-title").textContent = identityLabel ? `${identityLabel} - Halpha` : "No backtest visualization selected";
+      document.querySelector("#strategy-chart-meta").textContent = vis.strategy_name
+        ? `${vis.strategy_name} - ${vis.status || selected?.status || "partial"}`
+        : "Run a backtest or select an artifact with candlestick data.";
+      document.querySelector("#strategy-quote-label").textContent = quoteAsset(vis.symbol);
+      document.querySelector("#strategy-window-label").textContent = strategyWindowLabel(vis);
       document.querySelector("#strategy-chart-clock").textContent = displayTimezone;
+      syncStrategyWindowControls();
       renderCandlestickSvg(vis);
       renderStrategyParams(selected, vis);
       renderRecentTrades(vis);
@@ -2680,10 +2715,14 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       return {
         totalReturn: metricPercent(strategy.net_return_pct ?? strategy.total_return_pct ?? item?.records?.summary?.net_return_pct),
         drawdown: metricPercent(strategy.max_drawdown_pct),
-        sharpe: text(strategy.sharpe_ratio ?? strategy.sharpe, "1.36"),
+        sharpe: text(strategy.sharpe_ratio ?? strategy.sharpe),
         winRate: metricPercent(trade.win_rate_pct ?? trade.win_rate),
-        profitFactor: text(strategy.profit_factor ?? "1.74"),
-        trades: text(trade.trade_count ?? fields.metrics?.trade_summary?.trade_count ?? "86"),
+        profitFactor: text(strategy.profit_factor),
+        trades: text(trade.trade_count ?? fields.metrics?.trade_summary?.trade_count),
+        longTrades: text(trade.long_trade_count ?? trade.long_trades),
+        shortTrades: text(trade.short_trade_count ?? trade.short_trades),
+        bestTrade: metricPercent(trade.best_trade_pct ?? trade.best_trade_return_pct),
+        worstTrade: metricPercent(trade.worst_trade_pct ?? trade.worst_trade_return_pct),
       };
     }
 
@@ -2697,40 +2736,73 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     function backtestVisualization(item) {
       const vis = item?.visualization || {};
       if (Array.isArray(vis.bars) && vis.bars.length) return vis;
-      return sampleVisualization(strategyIdentity(item));
+      const identity = strategyIdentity(item);
+      return {
+        status: item?.status || "missing",
+        strategy_name: identity.name,
+        symbol: identity.symbol,
+        timeframe: identity.timeframe,
+        bars: [],
+        markers: [],
+        equity_curve: [],
+      };
+    }
+
+    function visibleBacktestVisualization(item) {
+      return applyStrategyWindow(backtestVisualization(item), state.strategyWindow);
+    }
+
+    function applyStrategyWindow(vis, windowValue) {
+      const bars = Array.isArray(vis.bars) ? vis.bars : [];
+      const limit = windowValue === "all" ? 0 : Number(windowValue);
+      if (!Number.isInteger(limit) || limit <= 0 || bars.length <= limit) {
+        return vis;
+      }
+      const visibleBars = bars.slice(-limit);
+      const visibleTimes = new Set(visibleBars.map((bar) => bar.time));
+      const markers = Array.isArray(vis.markers)
+        ? vis.markers.filter((marker) => visibleTimes.has(marker.time))
+        : [];
+      const curve = Array.isArray(vis.equity_curve) ? vis.equity_curve.slice(-limit) : [];
+      return {...vis, bars: visibleBars, markers, equity_curve: curve};
+    }
+
+    function setStrategyWindow(value) {
+      state.strategyWindow = ["all", "180", "90", "30"].includes(String(value)) ? String(value) : "all";
+      const range = document.querySelector("#strategy-range");
+      if (range) range.value = state.strategyWindow;
+      syncStrategyWindowControls();
+      renderStrategies();
+    }
+
+    function syncStrategyWindowControls() {
+      document.querySelectorAll("[data-strategy-window]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.strategyWindow === state.strategyWindow);
+      });
     }
 
     function strategyName(item) {
-      return strategyIdentity(item).name || "tsmom_vol_scaled";
+      return strategyIdentity(item).name || "No strategy selected";
     }
 
-    function sampleVisualization(identity = {}) {
-      const bars = [];
-      let price = 96000;
-      for (let index = 0; index < 90; index += 1) {
-        const drift = Math.sin(index / 7) * 1100 + Math.cos(index / 13) * 800;
-        const open = price;
-        const close = Math.max(72000, open + drift / 4 + (index % 5 - 2) * 240);
-        const high = Math.max(open, close) + 900 + (index % 3) * 180;
-        const low = Math.min(open, close) - 850 - (index % 4) * 120;
-        price = close;
-        bars.push({time: `2026-03-${String((index % 28) + 1).padStart(2, "0")}T00:00:00Z`, open, high, low, close, volume: 100 + (index * 17) % 160});
+    function quoteAsset(symbol) {
+      const value = String(symbol || "").trim();
+      if (!value) return "n/a";
+      for (const suffix of ["USDT", "USDC", "USD", "BTC", "ETH"]) {
+        if (value.endsWith(suffix) && value.length > suffix.length) {
+          return suffix;
+        }
       }
-      const markers = [9, 12, 43, 48, 61, 69, 77, 83].map((index, markerIndex) => ({
-        time: bars[index].time,
-        kind: markerIndex % 2 ? "entry" : "exit",
-        label: markerIndex % 2 ? "Buy" : "Sell",
-        price: bars[index].close,
-      }));
-      return {
-        status: "sample",
-        strategy_name: identity.name || document.querySelector("#strategy-name")?.value || "tsmom_vol_scaled",
-        symbol: identity.symbol || document.querySelector("#strategy-symbol")?.value || "BTCUSDT",
-        timeframe: identity.timeframe || document.querySelector("#strategy-timeframe")?.value || "1d",
-        bars,
-        markers,
-        equity_curve: [],
-      };
+      return value;
+    }
+
+    function strategyWindowLabel(vis) {
+      const bars = Array.isArray(vis.bars) ? vis.bars : [];
+      const timeframe = vis.timeframe || "timeframe n/a";
+      if (!bars.length) return `${timeframe} / no candle window`;
+      const first = bars[0]?.time;
+      const last = bars[bars.length - 1]?.time;
+      return `${timeframe} / ${bars.length} candles / ${formatTimestamp(first)} to ${formatTimestamp(last)}`;
     }
 
     function renderCandlestickSvg(vis) {
@@ -2781,7 +2853,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       }).join("");
       const ma50 = renderAverageLine(bars, x, priceY, 12, "#4f8cff");
       const ma200 = renderAverageLine(bars, x, priceY, 34, "#f59e0b");
-      svg.innerHTML = `${grid}${ma50}${ma200}${candleSvg}<text x="54" y="24" fill="#dbe7f3" font-size="13">${escapeHtml(vis.symbol || "BTCUSDT")} - ${escapeHtml(vis.timeframe || "1d")}</text><text x="54" y="44" fill="#9fb2c7" font-size="12">MA 50 close  MA 200 close</text>`;
+      svg.innerHTML = `${grid}${ma50}${ma200}${candleSvg}<text x="54" y="24" fill="#dbe7f3" font-size="13">${escapeHtml([vis.symbol, vis.timeframe].filter(Boolean).join(" - ") || "Backtest")}</text><text x="54" y="44" fill="#9fb2c7" font-size="12">MA 50 close  MA 200 close</text>`;
     }
 
     function renderAverageLine(bars, x, priceY, windowSize, color) {
@@ -2805,16 +2877,16 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     function renderStrategyParams(item, vis) {
       const inputs = item?.fields?.inputs || {};
       const rows = {
-        "Momentum window": inputs.momentum_window || 20,
-        "Volume window": inputs.volume_window || 20,
-        "Symbol": vis.symbol || inputs.symbol || "BTCUSDT",
-        "Timeframe": vis.timeframe || inputs.timeframe || "1d",
-        "Stoploss": inputs.stoploss || "-0.10",
-        "Take profit": inputs.take_profit || "0.20",
-        "Stake per trade": inputs.stake_per_trade || "10%",
-        "Time in force": "GTC",
+        "Momentum window": inputs.momentum_window,
+        "Volume window": inputs.volume_window,
+        "Symbol": vis.symbol || inputs.symbol,
+        "Timeframe": vis.timeframe || inputs.timeframe,
+        "Stoploss": inputs.stoploss,
+        "Take profit": inputs.take_profit,
+        "Stake per trade": inputs.stake_per_trade,
+        "Time in force": inputs.time_in_force,
       };
-      document.querySelector("#strategy-params").innerHTML = Object.entries(rows).map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`).join("");
+      document.querySelector("#strategy-params").innerHTML = Object.entries(rows).map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text(value))}</td></tr>`).join("");
     }
 
     function renderRecentTrades(vis) {
@@ -2838,26 +2910,32 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function renderStrategyTab(tab) {
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.classList.toggle("active", button.dataset.strategyTab === tab));
-      const vis = backtestVisualization(state.selectedStrategyOutput);
+      const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
       const metrics = strategyMetrics(state.selectedStrategyOutput);
       if (tab === "trades" || tab === "list") {
         document.querySelector("#strategy-tab-content").innerHTML = `<div class="summary-strip" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
           ${metricCell("Total trades", metrics.trades, "")}
-          ${metricCell("Long", "43", "50.0%")}
-          ${metricCell("Short", "43", "50.0%")}
+          ${metricCell("Long", metrics.longTrades, "")}
+          ${metricCell("Short", metrics.shortTrades, "")}
           ${metricCell("Win rate", metrics.winRate, "")}
-          ${metricCell("Best trade", "+8.74%", "")}
-          ${metricCell("Worst trade", "-6.21%", "")}
+          ${metricCell("Best trade", metrics.bestTrade, "")}
+          ${metricCell("Worst trade", metrics.worstTrade, "")}
         </div>`;
       } else if (tab === "equity") {
-        document.querySelector("#strategy-tab-content").innerHTML = `<svg viewBox="0 0 900 120" style="width:100%; height:120px;">${lineChartPath(vis.bars || [])}</svg>`;
+        const curve = Array.isArray(vis.equity_curve) ? vis.equity_curve : [];
+        document.querySelector("#strategy-tab-content").innerHTML = curve.length
+          ? `<svg viewBox="0 0 900 120" style="width:100%; height:120px;">${lineChartPath(curve.map((point) => point.net_equity ?? point.equity ?? point.value))}</svg>`
+          : `<div class="message">No equity curve is available for the selected backtest.</div>`;
       } else {
         document.querySelector("#strategy-tab-content").innerHTML = `<div class="message">Performance diagnostics are summarized from the selected backtest artifact. Detailed tables stay bounded for dashboard use.</div>`;
       }
     }
 
-    function lineChartPath(bars) {
-      const values = bars.length ? bars.map((bar, index) => Number(bar.close || 0) * (1 + index / 1000)) : [1, 2, 3];
+    function lineChartPath(rawValues) {
+      const values = rawValues.map(Number).filter(Number.isFinite);
+      if (!values.length) {
+        return `<text x="450" y="64" text-anchor="middle" fill="#5d6675">No chart data available</text>`;
+      }
       const min = Math.min(...values);
       const max = Math.max(...values);
       const points = values.map((value, index) => {
@@ -2874,8 +2952,41 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         symbol: document.querySelector("#strategy-symbol").value,
         timeframe: document.querySelector("#strategy-timeframe").value,
       };
+      if (!params.strategy_name || !params.symbol || !params.timeframe) {
+        showToast("Select a configured strategy, symbol, and timeframe first.");
+        return;
+      }
       const job = await postJob("backtest", params);
       showToast(`Backtest ${job.status}.`);
+    }
+
+    function downloadSelectedOhlcv() {
+      const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
+      const bars = Array.isArray(vis.bars) ? vis.bars : [];
+      if (!bars.length) {
+        showToast("No OHLCV bars are available for the selected backtest.");
+        return;
+      }
+      const columns = ["time", "open", "high", "low", "close", "volume"];
+      const csv = [
+        columns.join(","),
+        ...bars.map((bar) => columns.map((column) => csvCell(bar[column])).join(",")),
+      ].join("\\n");
+      const blob = new Blob([csv], {type: "text/csv"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${vis.symbol || "ohlcv"}-${vis.timeframe || "window"}-backtest-bars.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvCell(value) {
+      const textValue = String(value ?? "");
+      if (/[",\\n\\r]/.test(textValue)) {
+        return `"${textValue.replace(/"/g, '""')}"`;
+      }
+      return textValue;
     }
 
     async function refreshMonitor() {
@@ -2885,12 +2996,15 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function renderMonitor() {
       const health = state.monitor?.health?.fields || {};
+      const monitorSettings = state.monitor?.settings || {};
       const latest = state.monitor?.latest_cycle || {};
       const alerts = alertCount(state.monitorAlerts);
+      const schedule = state.schedule || {};
+      const scheduleSettings = schedule.settings || {};
       document.querySelector("#monitor-hero").innerHTML = [
         metricCell("Monitor", latest.status === "running" ? "Running" : label(latest.status || health.latest_cycle_status || "Idle"), "current state"),
         metricCell("Last cycle", formatTimestamp(latest.finished_at || latest.started_at), latest.status || "n/a"),
-        metricCell("Next report", "Daily schedule", "configured"),
+        metricCell("Next report", schedule.enabled ? formatTimestamp(schedule.next_run_at) : "Disabled", schedule.status || "schedule"),
         metricCell("Alerts today", alerts, "recent archive"),
         metricCell("Error state", health.error_count ? `${health.error_count} errors` : "None", "active errors"),
       ].join("");
@@ -2899,11 +3013,13 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         return `<li class="timeline-row"><div class="timeline-time">${escapeHtml(formatTimestamp(cycle.finished_at || cycle.started_at).split(",")[1] || formatTimestamp(cycle.finished_at || cycle.started_at))}</div><div class="timeline-node ${status}">${status === "failed" ? "x" : status === "warning" ? "!" : "ok"}</div><div class="timeline-body"><strong>${escapeHtml(label(cycle.status || "Cycle"))}</strong><span>Checks: ${escapeHtml(text(cycle.product_run?.stage_count, "n/a"))} Warnings: ${escapeHtml(text(cycle.warning_count, "0"))} Errors: ${escapeHtml(text(cycle.error_count, "0"))}</span></div><span class="status-pill ${status}">${escapeHtml(cycle.status || "unknown")}</span></li>`;
       }).join("") || `<li class="empty-state">No monitor cycles yet.</li>`;
       document.querySelector("#monitor-config").innerHTML = [
-        detailRow("Monitor interval", "configured"),
-        detailRow("Max cycles before restart", "bounded local job"),
-        detailRow("Alert cooldown", "configured"),
-        detailRow("Daily report time", "configured"),
-        detailRow("Watched assets", "configured groups"),
+        detailRow("Monitor interval", text(monitorSettings.interval_seconds, "n/a")),
+        detailRow("Max cycles before restart", text(monitorSettings.max_cycles, "n/a")),
+        detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
+        detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
+        detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
+        detailRow("Daily report status", schedule.enabled ? "enabled" : "disabled"),
+        detailRow("Watched assets", "configured in Settings"),
         detailRow("Notification channels", "Local only"),
       ].join("");
       renderMonitorAlertsTable();
@@ -2965,25 +3081,53 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function filteredIntelligenceItems(items) {
       const asset = document.querySelector("#intel-asset").value;
+      const range = document.querySelector("#intel-range").value;
       const severity = document.querySelector("#intel-severity").value;
       const source = document.querySelector("#intel-source").value;
-      return items.filter((item) => {
+      const sort = document.querySelector("#intel-sort").value;
+      const filtered = items.filter((item) => {
         if (severity !== "All severities" && item.severity !== severity) return false;
         if (source !== "All sources" && !(item.sources || []).includes(source)) return false;
         if (asset !== "All assets" && !intelAssets(item).includes(asset)) return false;
+        if (!withinIntelRange(item.time, range)) return false;
         return true;
+      });
+      return filtered.sort((left, right) => {
+        if (sort === "severity") {
+          return severityRank(right.severity) - severityRank(left.severity);
+        }
+        return timestampMs(right.time) - timestampMs(left.time);
       });
     }
 
     function intelAssets(item) {
-      const textValue = `${item.title || ""} ${item.summary || ""} ${(item.tags || []).join(" ")}`.toUpperCase();
-      return ["BTC", "ETH", "USDT", "SOL", "XRP", "ADA"].filter((asset) => textValue.includes(asset));
+      return unique(item?.assets || []);
+    }
+
+    function withinIntelRange(value, range) {
+      if (range === "all") return true;
+      const days = range === "30d" ? 30 : range === "7d" ? 7 : null;
+      if (!days) return true;
+      const itemTime = timestampMs(value);
+      if (!Number.isFinite(itemTime)) return false;
+      return itemTime >= Date.now() - days * 24 * 3600 * 1000;
+    }
+
+    function timestampMs(value) {
+      const time = value ? new Date(value).getTime() : NaN;
+      return Number.isFinite(time) ? time : 0;
+    }
+
+    function severityRank(value) {
+      return {Low: 1, Medium: 2, High: 3}[value] || 0;
     }
 
     function resetIntelFilters() {
       document.querySelector("#intel-asset").value = "All assets";
+      document.querySelector("#intel-range").value = "all";
       document.querySelector("#intel-severity").value = "All severities";
       document.querySelector("#intel-source").value = "All sources";
+      document.querySelector("#intel-sort").value = "latest";
       state.selectedIntelItem = null;
       renderIntelligence();
       showToast("Filters reset.");
@@ -2999,6 +3143,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           time: store.fields?.updated_at,
           summary: [...(store.warnings || []), ...(store.errors || [])].join(" ") || "No current issue.",
           sources: store.source_artifacts || [],
+          assets: [],
           tags: [store.status || "unknown"],
         }));
       }
@@ -3014,29 +3159,22 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           time: artifact.fields?.updated_at || artifact.fields?.created_at,
           summary: [...(artifact.warnings || []), ...(artifact.errors || [])].join(" ") || `${label(artifact.status)} source-aware intelligence artifact.`,
           sources: artifact.source_artifacts || [],
+          assets: intelligenceAssets(artifact),
           tags: [artifact.status || "unknown"],
         }));
       }
-      return sampleIntelItems(state.selectedIntelTab);
+      return [];
     }
 
-    function sampleIntelItems(tab) {
-      const base = {
-        text: ["Fed signals slower pace of rate cuts in 2025", "USDC supply on Ethereum reaches new all-time high", "Binance announces delisting of 3 tokens"],
-        derivatives: ["Funding rates rise across major perpetuals", "Open interest cools after liquidation cluster", "Basis remains neutral"],
-        onchain: ["Stablecoin liquidity expands on Ethereum", "Exchange inflow pressure moderates", "Network fee pressure normalizes"],
-        macro: ["FOMC event window approaching", "US CPI source coverage updated", "Macro calendar has one missing source"],
-        outcomes: ["Previous watch trigger confirmed", "Risk relief target remains pending", "Strategy follow-through sample updated"],
-      };
-      return (base[tab] || base.text).map((title, index) => ({
-        title,
-        severity: index === 0 ? "High" : index === 1 ? "Medium" : "Low",
-        category: label(tab),
-        time: new Date(Date.now() - index * 3600000).toISOString(),
-        summary: "Source-aware summary generated from bounded local dashboard data.",
-        sources: ["local bounded artifact"],
-        tags: [tab, index === 0 ? "High impact" : "Review"],
-      }));
+    function intelligenceAssets(artifact) {
+      const fields = artifact?.fields || {};
+      const values = [
+        fields.symbol,
+        fields.asset,
+        ...(Array.isArray(fields.symbols) ? fields.symbols : []),
+        ...(Array.isArray(fields.assets) ? fields.assets : []),
+      ];
+      return unique(values).slice(0, 8);
     }
 
     function renderIntelKpis(items) {
@@ -3063,7 +3201,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     function renderIntelCharts(items) {
-      document.querySelector("#intel-volume-chart").innerHTML = areaChart(items.length);
+      document.querySelector("#intel-volume-chart").innerHTML = areaChart(items);
       document.querySelector("#intel-severity-chart").innerHTML = donutChart(items);
     }
 
@@ -3077,25 +3215,47 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         <h2 style="font-size: 20px; line-height: 1.25; margin: 16px 0 8px;">${escapeHtml(item.title)}</h2>
         <p class="muted" style="line-height:1.55;">${escapeHtml(item.summary)}</p>
         <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0;">
-          ${metricCell("Confidence", item.severity === "High" ? "High" : "Medium", "")}
+          ${metricCell("Severity", item.severity, "")}
           ${metricCell("Sources", (item.sources || []).length, "")}
           ${metricCell("Updated", formatTimestamp(item.time), "")}
         </div>
         <h3>Evidence</h3>
-        <ul>${(item.sources || ["bounded local artifact"]).slice(0, 4).map((source) => `<li>${escapeHtml(source)}</li>`).join("")}</ul>
+        <ul>${(item.sources || []).length ? item.sources.slice(0, 4).map((source) => `<li>${escapeHtml(source)}</li>`).join("") : `<li class="message">No source refs recorded for this item.</li>`}</ul>
         <h3>Related assets</h3>
-        <div class="tag-row"><span class="tag">BTC</span><span class="tag">ETH</span><span class="tag">USDT</span></div>`;
+        <div class="tag-row">${(item.assets || []).length ? item.assets.map((asset) => `<span class="tag">${escapeHtml(asset)}</span>`).join("") : `<span class="message">No related assets recorded.</span>`}</div>`;
     }
 
-    function areaChart(count) {
-      const values = [32, 38, 42, 40, 56, 63, 78].map((value) => value + count * 2);
-      const points = values.map((value, index) => `${40 + index * 70},${210 - value * 1.8}`);
+    function areaChart(items) {
+      const now = new Date();
+      const start = new Date(now.getTime() - 6 * 24 * 3600 * 1000);
+      const days = Array.from({length: 7}, (_, index) => {
+        const day = new Date(start.getTime() + index * 24 * 3600 * 1000);
+        return day.toISOString().slice(0, 10);
+      });
+      const counts = new Map(days.map((day) => [day, 0]));
+      (items || []).forEach((item) => {
+        const date = new Date(item.time);
+        if (Number.isNaN(date.getTime())) return;
+        const key = date.toISOString().slice(0, 10);
+        if (counts.has(key)) {
+          counts.set(key, counts.get(key) + 1);
+        }
+      });
+      const values = days.map((day) => counts.get(day) || 0);
+      if (!values.some((value) => value > 0)) {
+        return `<text x="260" y="126" text-anchor="middle" fill="#5d6675">No timestamped intelligence data</text>`;
+      }
+      const max = Math.max(...values, 1);
+      const points = values.map((value, index) => `${40 + index * 70},${210 - value / max * 150}`);
       const area = `40,210 ${points.join(" ")} ${40 + (values.length - 1) * 70},210`;
       return `<polygon points="${area}" fill="#dbeafe"></polygon><polyline points="${points.join(" ")}" fill="none" stroke="#3b82f6" stroke-width="3"></polyline>`;
     }
 
     function donutChart(items) {
-      const total = Math.max(1, items.length);
+      if (!items.length) {
+        return `<text x="150" y="126" text-anchor="middle" fill="#5d6675">No intelligence items</text>`;
+      }
+      const total = items.length;
       const high = items.filter((item) => item.severity === "High").length;
       const medium = items.filter((item) => item.severity === "Medium").length;
       const low = total - high - medium;
@@ -3127,7 +3287,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const profileStatus = state.settingsProfile?.status || "loading";
       setPill("#settings-valid-pill", profileStatus, profileStatus === "available" ? "Loaded" : profileStatus);
       document.querySelector("#settings-last-validated").textContent = state.validationJob ? `Last validation job: ${state.validationJob.status || "created"}` : "Last validated: not run";
-      document.querySelector("#config-profile").innerHTML = `<option>${escapeHtml(state.settingsProfile?.config?.ref || state.health?.config?.ref || "Current config")}</option>`;
+      document.querySelector("#config-profile").textContent = state.settingsProfile?.config?.ref || state.health?.config?.ref || "Current config";
       document.querySelector("#settings-section-title").textContent = state.settingsSection;
       document.querySelector("#settings-form").innerHTML = settingsForm(state.settingsSection);
       renderChangeSummary();
@@ -3347,14 +3507,13 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         showToast("No settings changes to save.");
         return;
       }
-      const required = state.settingsProfile?.config?.confirmation_text || "SAVE CONFIG";
-      const typed = window.prompt(`Type ${required} to save ${paths.length} setting change(s).`);
-      if (typed !== required) {
+      const ok = window.confirm(`Save ${paths.length} setting change(s)? A backup will be created before the config is updated.`);
+      if (!ok) {
         showToast("Settings save cancelled.");
         return;
       }
       try {
-        const result = await postJson(endpoints.settings, {confirm: required, changes: state.settingsChanges});
+        const result = await postJson(endpoints.settings, {confirm: true, changes: state.settingsChanges});
         if (result.status === "succeeded") {
           state.settingsProfile = result.profile;
           state.settingsChanges = {};
@@ -3431,7 +3590,15 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     async function startMonitorJob(intent) {
-      const params = intent === "monitor_loop" ? {max_cycles: 72, interval_seconds: 360} : {};
+      await loadMonitorPayload();
+      const settings = state.monitor?.settings || {};
+      const maxCycles = Number(settings.max_cycles);
+      const intervalSeconds = Number(settings.interval_seconds);
+      const params = intent === "monitor_loop" ? {max_cycles: maxCycles, interval_seconds: intervalSeconds} : {};
+      if (intent === "monitor_loop" && (!Number.isInteger(maxCycles) || maxCycles <= 0 || !Number.isInteger(intervalSeconds) || intervalSeconds <= 0)) {
+        document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">Monitor loop settings are missing or invalid. Check Settings before starting the monitor.</div>`;
+        return;
+      }
       try {
         const job = await postJob(intent, params);
         document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Job ${escapeHtml(job.job_id || "")}: ${escapeHtml(job.status || "created")}</div>`;
@@ -3443,10 +3610,19 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     async function enableDailyReport() {
       try {
         const result = await postJson(`${endpoints.schedule}/enable`, {});
+        state.schedule = result;
+        renderMonitor();
         showToast(`Daily report schedule ${result.status || "updated"}.`);
       } catch (error) {
         showToast(`Schedule update failed: ${error.message}`);
       }
+    }
+
+    function showMonitorSchedule() {
+      const schedule = state.schedule || {};
+      const settings = schedule.settings || {};
+      document.querySelector("#monitor-config").scrollIntoView({behavior: "smooth", block: "center"});
+      document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Daily report schedule: ${escapeHtml(schedule.enabled ? "enabled" : "disabled")}. Time: ${escapeHtml(settings.time_of_day || "n/a")} ${escapeHtml(settings.timezone || "")}.</div>`;
     }
 
     async function cleanup(kind) {
@@ -3484,12 +3660,31 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const svg = document.querySelector(selector);
       const width = 260;
       const height = 118;
-      const values = Array.from({length: 12}, (_, index) => reports.filter((run) => (index + run.run_id.length) % 3 === 0).length || ((index * 3) % 8) + 1);
+      const now = new Date();
+      const start = new Date(now.getTime() - 13 * 24 * 3600 * 1000);
+      const days = Array.from({length: 14}, (_, index) => {
+        const day = new Date(start.getTime() + index * 24 * 3600 * 1000);
+        return day.toISOString().slice(0, 10);
+      });
+      const counts = new Map(days.map((day) => [day, 0]));
+      reports.forEach((run) => {
+        const date = new Date(run.finished_at || run.started_at);
+        if (Number.isNaN(date.getTime())) return;
+        const key = date.toISOString().slice(0, 10);
+        if (counts.has(key)) {
+          counts.set(key, counts.get(key) + 1);
+        }
+      });
+      const values = days.map((day) => counts.get(day) || 0);
+      if (!values.some((value) => value > 0)) {
+        svg.innerHTML = `<text x="16" y="16" fill="#111827" font-size="12" font-weight="700">Reports (last 14 days)</text><text x="130" y="64" fill="#5d6675" font-size="12" text-anchor="middle">No reports in this window</text>`;
+        return;
+      }
       const max = Math.max(...values, 1);
       const bars = values.map((value, index) => {
-        const x = 18 + index * 18;
+        const x = 18 + index * 15;
         const h = value / max * 70;
-        return `<rect x="${x}" y="${92 - h}" width="8" height="${h}" rx="2" fill="#008575"></rect><rect x="${x + 9}" y="${92 - h * 0.78}" width="8" height="${h * 0.78}" rx="2" fill="#c8ced8"></rect>`;
+        return `<rect x="${x}" y="${92 - h}" width="9" height="${h}" rx="2" fill="#008575"></rect>`;
       }).join("");
       svg.innerHTML = `<line x1="16" x2="238" y1="92" y2="92" stroke="#dce2ea"></line>${bars}<text x="16" y="16" fill="#111827" font-size="12" font-weight="700">Reports (last 14 days)</text>`;
     }
@@ -3508,7 +3703,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       return left && right ? `${left}/${right}` : right || left;
     }
 
-    function markdownToHtml(markdown) {
+    function markdownToHtml(markdown, searchTerm = "") {
       const lines = String(markdown || "").split(/\\r?\\n/);
       const html = [];
       let listOpen = false;
@@ -3524,7 +3719,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         const rows = tableLines.map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
         const header = rows[0] || [];
         const body = rows.slice(2);
-        html.push(`<div class="markdown-table-wrap"><table><thead><tr>${header.map((cell) => `<th>${escapeHtml(cell)}</th>`).join("")}</tr></thead><tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+        html.push(`<div class="markdown-table-wrap"><table><thead><tr>${header.map((cell) => `<th>${renderInline(cell, searchTerm)}</th>`).join("")}</tr></thead><tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell, searchTerm)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
         tableLines = [];
       };
       lines.forEach((raw) => {
@@ -3540,27 +3735,40 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         }
         if (raw.startsWith("# ")) {
           closeList();
-          html.push(`<h1>${escapeHtml(raw.slice(2))}</h1>`);
+          html.push(`<h1>${renderInline(raw.slice(2), searchTerm)}</h1>`);
         } else if (raw.startsWith("## ")) {
           closeList();
-          html.push(`<h2>${escapeHtml(raw.slice(3))}</h2>`);
+          html.push(`<h2>${renderInline(raw.slice(3), searchTerm)}</h2>`);
         } else if (raw.startsWith("### ")) {
           closeList();
-          html.push(`<h3>${escapeHtml(raw.slice(4))}</h3>`);
+          html.push(`<h3>${renderInline(raw.slice(4), searchTerm)}</h3>`);
         } else if (raw.startsWith("- ")) {
           if (!listOpen) {
             html.push("<ul>");
             listOpen = true;
           }
-          html.push(`<li>${escapeHtml(raw.slice(2))}</li>`);
+          html.push(`<li>${renderInline(raw.slice(2), searchTerm)}</li>`);
         } else {
           closeList();
-          html.push(`<p>${escapeHtml(raw)}</p>`);
+          html.push(`<p>${renderInline(raw, searchTerm)}</p>`);
         }
       });
       closeList();
       flushTable();
       return html.join("");
+    }
+
+    function renderInline(value, searchTerm = "") {
+      const escaped = escapeHtml(value);
+      const query = String(searchTerm || "").trim();
+      if (!query) return escaped;
+      const escapedQuery = escapeHtml(query);
+      const pattern = new RegExp(escapeRegExp(escapedQuery), "gi");
+      return escaped.replace(pattern, (match) => `<mark>${match}</mark>`);
+    }
+
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
     }
 
     function setHashView(view) {
@@ -3581,15 +3789,22 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       }));
       document.querySelector("#global-refresh").addEventListener("click", refreshCurrentView);
       document.querySelector("#report-search").addEventListener("input", renderReportLibrary);
+      document.querySelector("#report-reader-search").addEventListener("input", () => {
+        state.reportSearchTerm = document.querySelector("#report-reader-search").value;
+        if (state.selectedReportPreview && state.selectedReport) {
+          renderReportPreview(state.selectedReportPreview, state.selectedReport);
+        }
+      });
       document.querySelector("#delete-report-button").addEventListener("click", deleteSelectedReport);
       document.querySelector("#download-report-button").addEventListener("click", downloadSelectedReport);
       document.querySelector("#run-backtest-button").addEventListener("click", startBacktest);
-      document.querySelector("#download-ohlcv-button").addEventListener("click", () => showToast("OHLCV download uses the selected local data window when available."));
+      document.querySelector("#download-ohlcv-button").addEventListener("click", downloadSelectedOhlcv);
+      document.querySelectorAll("[data-strategy-window]").forEach((button) => button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow)));
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
       document.querySelectorAll("[data-monitor-job]").forEach((button) => button.addEventListener("click", () => startMonitorJob(button.dataset.monitorJob)));
       document.querySelector("#stop-monitor-button").addEventListener("click", cancelRunningMonitorJobs);
       document.querySelector("#enable-daily-report").addEventListener("click", enableDailyReport);
-      document.querySelector("#schedule-monitor-button").addEventListener("click", () => showToast("Schedule editing is available from Settings."));
+      document.querySelector("#schedule-monitor-button").addEventListener("click", showMonitorSchedule);
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {
         state.selectedIntelTab = button.dataset.intelTab;
@@ -3597,7 +3812,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         document.querySelectorAll("[data-intel-tab]").forEach((node) => node.classList.toggle("active", node === button));
         renderIntelligence();
       }));
-      ["#intel-asset", "#intel-severity", "#intel-source"].forEach((selector) => {
+      ["#intel-asset", "#intel-range", "#intel-severity", "#intel-source", "#intel-sort"].forEach((selector) => {
         document.querySelector(selector).addEventListener("change", () => {
           state.selectedIntelItem = null;
           renderIntelligence();
