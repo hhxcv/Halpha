@@ -7,19 +7,19 @@ from halpha.stage_handlers._lazy import lazy_stage_handler
 def stage_handlers() -> dict[str, StageHandler]:
     return {
         "build_market_regime_assessment": lazy_stage_handler(
-            "halpha.decision.decision_intelligence",
+            "halpha.decision.market_regime_assessment",
             "build_market_regime_assessment",
         ),
         "build_risk_assessment": lazy_stage_handler(
-            "halpha.decision.decision_intelligence",
+            "halpha.decision.risk_assessment",
             "build_risk_assessment",
         ),
         "build_decision_recommendations": lazy_stage_handler(
-            "halpha.decision.decision_intelligence",
+            "halpha.decision.decision_recommendations",
             "build_decision_recommendations",
         ),
         "build_watch_triggers": lazy_stage_handler(
-            "halpha.decision.decision_intelligence",
+            "halpha.decision.watch_triggers",
             "build_watch_triggers",
         ),
         "build_event_market_confluence": lazy_stage_handler(
@@ -40,11 +40,11 @@ def stage_handlers() -> dict[str, StageHandler]:
             "build_event_intelligence_material",
         ),
         "build_decision_intelligence_delta": lazy_stage_handler(
-            "halpha.decision.decision_intelligence",
+            "halpha.decision.decision_intelligence_delta_stage",
             "build_decision_intelligence_delta",
         ),
         "build_decision_intelligence_material": lazy_stage_handler(
-            "halpha.decision.decision_intelligence",
+            "halpha.decision.decision_intelligence_material_stage",
             "build_decision_intelligence_material",
         ),
         "build_feature_snapshots": lazy_stage_handler("halpha.decision.feature_snapshots", "build_feature_snapshots"),

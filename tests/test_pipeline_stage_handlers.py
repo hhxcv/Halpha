@@ -32,3 +32,22 @@ def test_default_stage_handlers_apply_overrides_after_domain_groups() -> None:
     handlers = default_stage_handlers({"collect_market_data": replacement})
 
     assert handlers["collect_market_data"] is replacement
+
+
+def test_decision_stage_handlers_use_artifact_modules() -> None:
+    handlers = default_stage_handlers()
+
+    assert getattr(handlers["build_market_regime_assessment"], "stage_module") == (
+        "halpha.decision.market_regime_assessment"
+    )
+    assert getattr(handlers["build_risk_assessment"], "stage_module") == "halpha.decision.risk_assessment"
+    assert getattr(handlers["build_decision_recommendations"], "stage_module") == (
+        "halpha.decision.decision_recommendations"
+    )
+    assert getattr(handlers["build_watch_triggers"], "stage_module") == "halpha.decision.watch_triggers"
+    assert getattr(handlers["build_decision_intelligence_delta"], "stage_module") == (
+        "halpha.decision.decision_intelligence_delta_stage"
+    )
+    assert getattr(handlers["build_decision_intelligence_material"], "stage_module") == (
+        "halpha.decision.decision_intelligence_material_stage"
+    )
