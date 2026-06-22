@@ -70,6 +70,7 @@ operator UI, not a hosted service.
 
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
+`/assets/dashboard_dialogs.js`, `/assets/dashboard_reports.js`,
 `/assets/dashboard_strategy_chart.js`, and `/assets/dashboard.js`.
 
 Dashboard timestamp display uses `dashboard.display_timezone` when configured,
@@ -199,6 +200,8 @@ Static dashboard JavaScript must also pass syntax checks before merge:
 
 ```bash
 node --check src/halpha/dashboard/static/dashboard_shared.js
+node --check src/halpha/dashboard/static/dashboard_dialogs.js
+node --check src/halpha/dashboard/static/dashboard_reports.js
 node --check src/halpha/dashboard/static/dashboard_strategy_chart.js
 node --check src/halpha/dashboard/static/dashboard.js
 ```

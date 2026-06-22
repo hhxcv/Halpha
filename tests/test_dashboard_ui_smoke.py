@@ -10,6 +10,8 @@ from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from dashboard_asset_helpers import (
     dashboard_css,
+    dashboard_dialogs_script,
+    dashboard_reports_script,
     dashboard_script,
     dashboard_shell_html,
     dashboard_strategy_chart_script,
@@ -38,6 +40,8 @@ def test_dashboard_ui_source_sections_are_static_assets() -> None:
     assert "__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__" in shell
     assert '<link rel="stylesheet" href="/assets/dashboard.css">' in shell
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in shell
+    assert '<script src="/assets/dashboard_dialogs.js" defer></script>' in shell
+    assert '<script src="/assets/dashboard_reports.js" defer></script>' in shell
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in shell
     assert '<script src="/assets/dashboard.js" defer></script>' in shell
     assert "<style>" not in shell
@@ -50,6 +54,8 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     html = client.get("/")
     css = client.get("/assets/dashboard.css")
     shared_script = client.get("/assets/dashboard_shared.js")
+    dialogs_script = client.get("/assets/dashboard_dialogs.js")
+    reports_script = client.get("/assets/dashboard_reports.js")
     strategy_chart_script = client.get("/assets/dashboard_strategy_chart.js")
     script = client.get("/assets/dashboard.js")
     missing = client.get("/assets/missing.js")
@@ -57,9 +63,13 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     assert html.status_code == 200
     assert '<link rel="stylesheet" href="/assets/dashboard.css">' in html.text
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in html.text
+    assert '<script src="/assets/dashboard_dialogs.js" defer></script>' in html.text
+    assert '<script src="/assets/dashboard_reports.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard.js" defer></script>' in html.text
-    assert html.text.index("/assets/dashboard_shared.js") < html.text.index("/assets/dashboard_strategy_chart.js")
+    assert html.text.index("/assets/dashboard_shared.js") < html.text.index("/assets/dashboard_dialogs.js")
+    assert html.text.index("/assets/dashboard_dialogs.js") < html.text.index("/assets/dashboard_reports.js")
+    assert html.text.index("/assets/dashboard_reports.js") < html.text.index("/assets/dashboard_strategy_chart.js")
     assert html.text.index("/assets/dashboard_strategy_chart.js") < html.text.index("/assets/dashboard.js")
     assert css.status_code == 200
     assert css.headers["content-type"].startswith("text/css")
@@ -67,6 +77,12 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     assert shared_script.status_code == 200
     assert shared_script.headers["content-type"].startswith("application/javascript")
     assert "window.HalphaDashboardShared" in shared_script.text
+    assert dialogs_script.status_code == 200
+    assert dialogs_script.headers["content-type"].startswith("application/javascript")
+    assert "window.HalphaDashboardDialogs" in dialogs_script.text
+    assert reports_script.status_code == 200
+    assert reports_script.headers["content-type"].startswith("application/javascript")
+    assert "window.HalphaDashboardReports" in reports_script.text
     assert strategy_chart_script.status_code == 200
     assert strategy_chart_script.headers["content-type"].startswith("application/javascript")
     assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
@@ -218,11 +234,14 @@ def test_dashboard_uses_in_app_confirmation_dialogs(tmp_path: Path) -> None:
     assert 'id="dashboard-dialog-input"' in html
     assert ".dialog-backdrop" in css
     assert ".dialog-actions" in css
-    assert "openDashboardDialog" in script
-    assert "confirmDashboardAction" in script
-    assert "typedDashboardConfirmation" in script
-    assert "closeDashboardDialog(false)" in script
-    assert "updateDialogConfirmState" in script
+    assert "window.HalphaDashboardDialogs" in dashboard_dialogs_script()
+    assert "confirmAction" in dashboard_dialogs_script()
+    assert "typedConfirmation" in dashboard_dialogs_script()
+    assert "wire" in dashboard_dialogs_script()
+    assert "const dialogs = window.HalphaDashboardDialogs;" in script
+    assert "dialogs.wire();" in script
+    assert "dialogs.confirmAction" in script
+    assert "dialogs.typedConfirmation" in script
     assert "window.confirm" not in script
     assert "window.prompt" not in script
     assert "window.alert" not in script
@@ -267,7 +286,11 @@ def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path)
     assert "markdownToHtml(markdown, state.reportSearchTerm)" in script
     assert "store.source_label" in script
     assert "store.state_scope" in script
-    assert "isAvailableReport(run)" in script
+    assert "window.HalphaDashboardReports" in dashboard_reports_script()
+    assert "createReportHelpers" in dashboard_reports_script()
+    assert "const reportsWorkflow = window.HalphaDashboardReports;" in script
+    assert "reportHelpers.reportRecords(state.runs)" in script
+    assert "isAvailableReport(run)" in dashboard_reports_script()
     assert 'reportState.status === "available"' in script
     assert "run.report_state?.artifact" in script
     assert 'data-report-job="generate"' in html

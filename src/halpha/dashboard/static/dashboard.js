@@ -24,6 +24,14 @@
     if (!strategyChart) {
       throw new Error("Halpha dashboard strategy chart helpers did not load.");
     }
+    const dialogs = window.HalphaDashboardDialogs;
+    if (!dialogs) {
+      throw new Error("Halpha dashboard dialog helpers did not load.");
+    }
+    const reportsWorkflow = window.HalphaDashboardReports;
+    if (!reportsWorkflow) {
+      throw new Error("Halpha dashboard report helpers did not load.");
+    }
     const {
       escapeHtml,
       text,
@@ -32,6 +40,8 @@
       joinPath,
       markdownToHtml,
     } = shared;
+    const reportHelpers = reportsWorkflow.createReportHelpers({joinPath, unique});
+    const {isAvailableReport, reportPath, reportSourceRefs} = reportHelpers;
 
     const state = {
       view: "overview",
@@ -64,7 +74,6 @@
       selectedSharedStores: [],
       validationJob: null,
     };
-    let activeDialog = null;
 
     function label(value) {
       return text(value, "unknown").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -168,82 +177,6 @@
       toast.textContent = message;
       toast.classList.add("visible");
       window.setTimeout(() => toast.classList.remove("visible"), 3600);
-    }
-
-    function dialogElements() {
-      return {
-        backdrop: document.querySelector("#dashboard-dialog-backdrop"),
-        title: document.querySelector("#dashboard-dialog-title"),
-        message: document.querySelector("#dashboard-dialog-message"),
-        label: document.querySelector("#dashboard-dialog-input-label"),
-        input: document.querySelector("#dashboard-dialog-input"),
-        hint: document.querySelector("#dashboard-dialog-hint"),
-        cancel: document.querySelector("#dashboard-dialog-cancel"),
-        confirm: document.querySelector("#dashboard-dialog-confirm"),
-      };
-    }
-
-    function openDashboardDialog(options) {
-      const nodes = dialogElements();
-      if (activeDialog) {
-        closeDashboardDialog(false);
-      }
-      return new Promise((resolve) => {
-        const requiredText = options.requiredText || "";
-        activeDialog = {
-          resolve,
-          requiredText,
-          previousFocus: document.activeElement,
-        };
-        nodes.title.textContent = options.title || "Confirm action";
-        nodes.message.textContent = options.message || "";
-        nodes.hint.textContent = requiredText ? `Type ${requiredText} to enable this action.` : (options.hint || "");
-        nodes.input.value = "";
-        nodes.input.placeholder = requiredText;
-        nodes.input.classList.toggle("hidden", !requiredText);
-        nodes.label.classList.toggle("hidden", !requiredText);
-        nodes.confirm.textContent = options.confirmLabel || "Confirm";
-        nodes.cancel.textContent = options.cancelLabel || "Cancel";
-        nodes.confirm.className = options.danger ? "danger-button" : "primary-button";
-        nodes.backdrop.classList.remove("hidden");
-        nodes.backdrop.setAttribute("aria-hidden", "false");
-        updateDialogConfirmState();
-        window.setTimeout(() => (requiredText ? nodes.input : nodes.cancel).focus(), 0);
-      });
-    }
-
-    function updateDialogConfirmState() {
-      const nodes = dialogElements();
-      if (!activeDialog) return;
-      const requiredText = activeDialog.requiredText || "";
-      nodes.confirm.disabled = Boolean(requiredText && nodes.input.value !== requiredText);
-    }
-
-    function closeDashboardDialog(confirmed) {
-      if (!activeDialog) return;
-      const nodes = dialogElements();
-      const dialog = activeDialog;
-      const value = nodes.input.value;
-      activeDialog = null;
-      nodes.backdrop.classList.add("hidden");
-      nodes.backdrop.setAttribute("aria-hidden", "true");
-      nodes.input.value = "";
-      nodes.hint.textContent = "";
-      nodes.confirm.disabled = false;
-      if (dialog.previousFocus && typeof dialog.previousFocus.focus === "function") {
-        dialog.previousFocus.focus();
-      }
-      dialog.resolve({confirmed: Boolean(confirmed), value});
-    }
-
-    async function confirmDashboardAction(options) {
-      const result = await openDashboardDialog(options);
-      return result.confirmed;
-    }
-
-    async function typedDashboardConfirmation(options) {
-      const result = await openDashboardDialog(options);
-      return result.confirmed && result.value === options.requiredText;
     }
 
     function viewFromHash() {
@@ -509,45 +442,7 @@
     }
 
     function reportRecords() {
-      return state.runs.filter((run) => isAvailableReport(run)).map((run) => {
-        const type = reportType(run);
-        return {
-          ...run,
-          type,
-          title: reportTitle(run, type),
-          report_path: reportPath(run),
-        };
-      });
-    }
-
-    function isAvailableReport(run) {
-      const reportState = run?.report_state || {};
-      return reportState.status === "available" && Boolean(run?.report || reportState.artifact);
-    }
-
-    function reportType(run) {
-      const source = `${run.run_dir || ""} ${run.run_id || ""}`.toLowerCase();
-      if (source.includes("monitor") || source.includes("cycle")) {
-        return "Monitor-triggered";
-      }
-      if (String(run.codex_status || "").toLowerCase() === "skipped") {
-        return "Manual";
-      }
-      return "Daily";
-    }
-
-    function reportTitle(run, type) {
-      if (type === "Monitor-triggered") return `Monitor Report ${run.run_id}`;
-      if (type === "Manual") return `Manual Research Report ${run.run_id}`;
-      return `Daily Market Brief ${run.run_id}`;
-    }
-
-    function reportPath(run) {
-      if (!run) return "";
-      const report = String(run.report || run.report_state?.artifact || "");
-      if (report.startsWith("runs/") || report.startsWith("data/")) return report;
-      if (report) return joinPath(run.run_dir, report);
-      return joinPath(run.run_dir, "report/report.md");
+      return reportHelpers.reportRecords(state.runs);
     }
 
     function renderReportLibrary() {
@@ -615,18 +510,6 @@
       return "Historical run";
     }
 
-    function reportSourceRefs(run, detail) {
-      const refs = [];
-      if (run?.manifest) refs.push(run.manifest);
-      if (run?.report_path) refs.push(run.report_path);
-      (detail?.source_artifacts || []).forEach((ref) => refs.push(ref));
-      (detail?.artifacts || []).forEach((artifact) => {
-        const path = artifact.path || artifact.ref || artifact.artifact;
-        if (path) refs.push(path);
-      });
-      return unique(refs);
-    }
-
     function renderReportPreview(preview, run) {
       const content = typeof preview.preview === "string" ? preview.preview : "";
       if (!content) {
@@ -653,7 +536,7 @@
         showToast("Select a report first.");
         return;
       }
-      const ok = await confirmDashboardAction({
+      const ok = await dialogs.confirmAction({
         title: "Delete report artifacts",
         message: "Delete this report's single-run artifacts? Shared data is not deleted.",
         confirmLabel: "Delete report",
@@ -1534,7 +1417,7 @@
         showToast("No settings changes to save.");
         return;
       }
-      const ok = await confirmDashboardAction({
+      const ok = await dialogs.confirmAction({
         title: "Save settings",
         message: `Save ${paths.length} setting change(s)? A backup will be created before the config is updated.`,
         confirmLabel: "Save settings",
@@ -1647,7 +1530,7 @@
     }
 
     async function startReportJob() {
-      const ok = await confirmDashboardAction({
+      const ok = await dialogs.confirmAction({
         title: "Generate report",
         message: "Generate a full Codex report now? This can take a while and will create a new run.",
         confirmLabel: "Generate report",
@@ -1818,7 +1701,7 @@
         const selected = state.selectedRunArtifacts.slice();
         if (!selected.length) return showToast("Select at least one run artifact first.");
         const required = state.deletionPlan?.confirmations?.run_artifacts || "DELETE RUN DATA";
-        const confirmed = await typedDashboardConfirmation({
+        const confirmed = await dialogs.typedConfirmation({
           title: "Delete single-run artifacts",
           message: `Delete ${selected.length} run artifact set(s). Shared stores are not deleted.`,
           requiredText: required,
@@ -1838,7 +1721,7 @@
         const selected = state.selectedSharedStores.slice();
         if (!selected.length) return showToast("Select at least one shared data store first.");
         const required = state.deletionPlan?.confirmations?.shared_data || "DELETE SHARED DATA";
-        const confirmed = await typedDashboardConfirmation({
+        const confirmed = await dialogs.typedConfirmation({
           title: "Delete shared data stores",
           message: `Delete ${selected.length} shared store(s). These stores may be reused by reports and future runs.`,
           requiredText: required,
@@ -1910,20 +1793,7 @@
     }
 
     function wireGlobalEvents() {
-      const dialogNodes = dialogElements();
-      dialogNodes.cancel.addEventListener("click", () => closeDashboardDialog(false));
-      dialogNodes.confirm.addEventListener("click", () => closeDashboardDialog(true));
-      dialogNodes.input.addEventListener("input", updateDialogConfirmState);
-      dialogNodes.backdrop.addEventListener("click", (event) => {
-        if (event.target === dialogNodes.backdrop) {
-          closeDashboardDialog(false);
-        }
-      });
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && activeDialog) {
-          closeDashboardDialog(false);
-        }
-      });
+      dialogs.wire();
       document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
         event.preventDefault();
         setHashView(node.dataset.viewTarget);
