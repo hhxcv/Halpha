@@ -248,7 +248,7 @@ def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(
 ) -> None:
     config_path = _write_config(tmp_path, ohlcv_enabled=False)
     run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
-    _write_m13_inspection_artifacts(run)
+    _write_feature_factor_inspection_artifacts(run)
 
     exit_code = main(
         [
@@ -270,8 +270,8 @@ def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(
     assert "signal_conflicting=1" in output
     assert "material_records=5" in output
     assert "material_omitted_records=3" in output
-    assert "m13_quality_ok=3" in output
-    assert "m13_quality_warning=1" in output
+    assert "feature_factor_quality_ok=3" in output
+    assert "feature_factor_quality_warning=1" in output
     assert "codex_budget_status=included" in output
     assert "codex_budget_chars=2048" in output
     assert "codex_budget_over_budget=False" in output
@@ -364,7 +364,7 @@ def test_data_inspect_reports_personalized_risk_artifacts_and_codex_budget(
 ) -> None:
     config_path = _write_config(tmp_path, ohlcv_enabled=False)
     run = _write_run_with_quality(tmp_path, config_path, quality_status="ok")
-    _write_m15_inspection_artifacts(run)
+    _write_personalized_risk_inspection_artifacts(run)
 
     exit_code = main(
         [
@@ -395,8 +395,8 @@ def test_data_inspect_reports_personalized_risk_artifacts_and_codex_budget(
     assert "alert_adjusted_records=1" in output
     assert "material_records=3" in output
     assert "material_omitted_records=1" in output
-    assert "m15_quality_ok=2" in output
-    assert "m15_quality_warning=1" in output
+    assert "personalized_risk_quality_ok=2" in output
+    assert "personalized_risk_quality_warning=1" in output
     assert "codex_budget_status=included" in output
     assert "codex_budget_chars=1536" in output
     assert "configured_user_state" not in output
@@ -749,7 +749,7 @@ def _write_product_validation_artifact(run: RunContext, *, status: str) -> None:
     )
 
 
-def _write_m13_inspection_artifacts(run: RunContext) -> None:
+def _write_feature_factor_inspection_artifacts(run: RunContext) -> None:
     run.manifest["artifacts"].update(
         {
             "feature_snapshots": "analysis/feature_snapshots.json",
@@ -1004,7 +1004,7 @@ def _write_lifecycle_inspection_artifacts(run: RunContext) -> None:
     write_json(run.manifest_path, run.manifest)
 
 
-def _write_m15_inspection_artifacts(run: RunContext) -> None:
+def _write_personalized_risk_inspection_artifacts(run: RunContext) -> None:
     run.manifest["artifacts"].update(
         {
             "user_state_context": "analysis/user_state_context.json",
@@ -1432,3 +1432,4 @@ def _write_store_metadata(tmp_path: Path, run: RunContext) -> None:
             "errors": [],
         },
     )
+

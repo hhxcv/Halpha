@@ -17,22 +17,22 @@ INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.m
 USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
-M13_CHECK_NAMES = {
+FEATURE_FACTOR_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
     "multi_source_signals",
     "factor_signal_material",
 }
-M15_CHECK_NAMES = {
+PERSONALIZED_RISK_CHECK_NAMES = {
     "user_state_context",
     "personalized_risk_constraints",
     "personalized_risk_material",
 }
 POST_DATA_QUALITY_CHECK_NAMES = {
-    *M13_CHECK_NAMES,
+    *FEATURE_FACTOR_CHECK_NAMES,
     "intelligence_fusion",
     "intelligence_fusion_material",
-    *M15_CHECK_NAMES,
+    *PERSONALIZED_RISK_CHECK_NAMES,
 }
 
 
@@ -791,3 +791,4 @@ def _int(value: Any) -> int:
 
 def _unique_sorted(values: list[str]) -> list[str]:
     return sorted({value for value in values if value})
+

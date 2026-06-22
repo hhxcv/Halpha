@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.data.data_quality import build_data_quality_summary, refresh_m13_data_quality_checks
+from halpha.data.data_quality import build_data_quality_summary, refresh_post_data_quality_checks
 from halpha.data.data_quality_post_artifacts import (
     POST_DATA_QUALITY_CHECK_NAMES,
     post_data_quality_artifact_checks,
@@ -67,9 +67,9 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
         "personalized_risk_constraints",
         "personalized_risk_material",
     ):
-        m13_check = _check(summary, name)
-        assert m13_check["status"] == "skipped"
-        assert m13_check["details"]["stage_time_skip_is_expected"] is True
+        post_artifact_check = _check(summary, name)
+        assert post_artifact_check["status"] == "skipped"
+        assert post_artifact_check["details"]["stage_time_skip_is_expected"] is True
     assert _check(summary, "text_event_history")["status"] == "ok"
     run_index = _check(summary, "run_index")
     assert run_index["status"] == "skipped"
@@ -168,15 +168,15 @@ def test_data_quality_summary_records_partial_collection_and_optional_skips(tmp_
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
-def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -> None:
+def test_data_quality_summary_refreshes_post_artifact_checks_ok(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
-    _write_m13_artifacts(run)
+    _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run)
-    _write_m15_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "ok"
@@ -212,15 +212,15 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_ok(tmp_path: Path) -
     assert run.manifest["counts"]["data_quality_checks"] == 9
 
 
-def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Path) -> None:
+def test_data_quality_summary_refreshes_post_artifact_checks_warning(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
-    _write_m13_artifacts(run, feature_status="warning", feature_warnings=["one source was partial."])
+    _write_feature_factor_artifacts(run, feature_status="warning", feature_warnings=["one source was partial."])
     _write_fusion_artifacts(run)
-    _write_m15_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "warning"
@@ -229,15 +229,15 @@ def test_data_quality_summary_refreshes_m13_artifact_checks_warning(tmp_path: Pa
     assert feature["warning_count"] == 1
 
 
-def test_data_quality_summary_refreshes_m13_artifact_checks_degraded(tmp_path: Path) -> None:
+def test_data_quality_summary_refreshes_post_artifact_checks_degraded(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
-    _write_m13_artifacts(run, factor_status="degraded")
+    _write_feature_factor_artifacts(run, factor_status="degraded")
     _write_fusion_artifacts(run)
-    _write_m15_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "degraded"
@@ -248,11 +248,11 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
-    _write_m13_artifacts(run)
+    _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run, status="warning", state="conflicting", conflict_state="severe")
-    _write_m15_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     fusion = _check(summary, "intelligence_fusion")
@@ -263,11 +263,11 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
 
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
-    _write_m13_artifacts(run)
+    _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run, status="warning", state="degraded")
-    _write_m15_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     fusion = _check(summary, "intelligence_fusion")
@@ -277,11 +277,11 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
 
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
-    _write_m13_artifacts(run)
+    _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run, status="failed", state="failed", errors=["fusion failed"])
-    _write_m15_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     fusion = _check(summary, "intelligence_fusion")
@@ -291,12 +291,12 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
     assert fusion["details"]["failed_records"] == 2
 
 
-def test_data_quality_summary_refreshes_m13_artifact_checks_missing_as_failed(tmp_path: Path) -> None:
+def test_data_quality_summary_refreshes_post_artifact_checks_missing_as_failed(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
 
-    refresh_m13_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "failed"
@@ -637,7 +637,7 @@ def _write_initial_quality_summary(run: RunContext) -> None:
     )
 
 
-def _write_m13_artifacts(
+def _write_feature_factor_artifacts(
     run: RunContext,
     *,
     feature_status: str = "ok",
@@ -889,7 +889,7 @@ def _write_fusion_artifacts(
     run.manifest["counts"]["intelligence_fusion_material_omitted_records"] = 0
 
 
-def _write_m15_artifacts(run: RunContext) -> None:
+def _write_personalized_risk_artifacts(run: RunContext) -> None:
     write_json(
         run.analysis_dir / "user_state_context.json",
         {
@@ -1879,3 +1879,4 @@ def _manifest(path: Path) -> dict[str, Any]:
 
 def _check(summary: dict[str, Any], name: str) -> dict[str, Any]:
     return next(check for check in summary["checks"] if check["name"] == name)
+
