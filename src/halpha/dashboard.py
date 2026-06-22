@@ -1076,6 +1076,7 @@ def dashboard_data_deletion_plan(config: dict[str, Any], *, config_path: Path) -
     base = _config_base(config_path)
     run_section = _run_artifact_deletion_section(config, config_path=config_path, base=base)
     shared_section = _shared_data_deletion_section(config, config_path=config_path, base=base)
+    cleanup_candidates = _cleanup_candidate_section(_list(run_section.get("cleanup_candidates")))
     statuses = [run_section["status"], shared_section["status"]]
     return {
         "schema_version": 1,
@@ -1087,6 +1088,7 @@ def dashboard_data_deletion_plan(config: dict[str, Any], *, config_path: Path) -
         },
         "run_artifacts": run_section,
         "shared_data": shared_section,
+        "cleanup_candidates": cleanup_candidates,
         "warnings": [
             *run_section.get("warnings", []),
             *shared_section.get("warnings", []),
@@ -2054,6 +2056,7 @@ def _run_artifact_deletion_section(
     root_blocked = _deletion_root_block_reason(run_root, base=base)
     runs_payload = dashboard_runs(config_path=config_path, limit=MAX_DELETION_RUN_ITEMS)
     runs = _list(runs_payload.get("runs"))
+    cleanup_candidates = _cleanup_candidates_from_runs_payload(runs_payload)
     items = [
         _run_artifact_delete_item(run, run_root=run_root, root_blocked=root_blocked, base=base)
         for run in runs
@@ -2072,10 +2075,56 @@ def _run_artifact_deletion_section(
             "runs": len(items),
             "deletable": sum(1 for item in items if item["deletable"]),
             "blocked": blocked_count,
+            "cleanup_candidates": len(cleanup_candidates),
         },
+        "cleanup_candidates": cleanup_candidates,
         "warnings": warnings,
         "errors": _string_list(runs_payload.get("errors")),
     }
+
+
+def _cleanup_candidate_section(items: list[Any]) -> dict[str, Any]:
+    candidates = [item for item in items if isinstance(item, dict)]
+    return {
+        "status": "available" if candidates else "empty",
+        "items": candidates[:20],
+        "counts": {
+            "items": len(candidates),
+            "run_index_refs": sum(1 for item in candidates if item.get("kind") == "run_index_ref"),
+            "missing_report_refs": sum(1 for item in candidates if item.get("kind") == "missing_report_ref"),
+        },
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _cleanup_candidates_from_runs_payload(runs_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for item in _list(runs_payload.get("index_diagnostics")):
+        if not isinstance(item, dict):
+            continue
+        candidates.append(
+            {
+                "kind": "run_index_ref",
+                "run_id": item.get("run_id"),
+                "reason": "run index row references missing run artifacts.",
+                "missing": _string_list(item.get("missing")),
+                "refs": _unique_refs([item.get("run_dir"), item.get("manifest")]),
+            }
+        )
+    for item in _list(runs_payload.get("report_diagnostics")):
+        if not isinstance(item, dict):
+            continue
+        candidates.append(
+            {
+                "kind": "missing_report_ref",
+                "run_id": item.get("run_id"),
+                "reason": "recorded report artifact is missing and omitted from report lists.",
+                "missing": ["report"],
+                "refs": _unique_refs([item.get("artifact")]),
+            }
+        )
+    return candidates[:40]
 
 
 def _shared_data_deletion_section(
