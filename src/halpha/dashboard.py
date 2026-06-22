@@ -45,7 +45,6 @@ PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.jso
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
 RUN_ARTIFACT_DELETE_CONFIRMATION = "DELETE RUN DATA"
 SHARED_DATA_DELETE_CONFIRMATION = "DELETE SHARED DATA"
-CONFIG_SAVE_CONFIRMATION = "SAVE CONFIG"
 CONFIG_BACKUP_DIR = "runs/dashboard/config_backups"
 SHARED_DATA_ALLOWED_ROOTS = {"data"}
 SHARED_DATA_STORE_DELETE_REFS = {
@@ -81,28 +80,6 @@ SHARED_DATA_STORE_DELETE_REFS = {
         "data/research/outcomes",
     ),
 }
-DECISION_RISK_ARTIFACTS = (
-    ("market_regime_assessment", "Market regime", "analysis/market_regime_assessment.json"),
-    ("risk_assessment", "Risk assessment", "analysis/risk_assessment.json"),
-    ("decision_recommendations", "Decision recommendations", "analysis/decision_recommendations.json"),
-    ("watch_triggers", "Watch triggers", "analysis/watch_triggers.json"),
-    ("decision_intelligence_delta", "Decision delta", "analysis/decision_intelligence_delta.json"),
-)
-EVENT_ALERT_ARTIFACTS = (
-    ("text_event_records", "Text event records", "analysis/text_event_records.json"),
-    ("text_event_topics", "Text event topics", "analysis/text_event_topics.json"),
-    ("text_event_signals", "Text event signals", "analysis/text_event_signals.json"),
-    ("event_market_confluence", "Event market confluence", "analysis/event_market_confluence.json"),
-    ("event_intelligence_assessment", "Event intelligence assessment", "analysis/event_intelligence_assessment.json"),
-    ("alert_decisions", "Alert decisions", "analysis/alert_decisions.json"),
-    ("alert_decision_material", "Alert decision material", "analysis/alert_decision_material.md"),
-    ("event_intelligence_material", "Event intelligence material", "analysis/event_intelligence_material.md"),
-)
-OUTCOME_TRACKING_ARTIFACTS = (
-    ("outcome_targets", "Outcome targets", "analysis/outcome_targets.json"),
-    ("outcome_evaluations", "Outcome evaluations", "analysis/outcome_evaluations.json"),
-    ("outcome_tracking_material", "Outcome tracking material", "analysis/outcome_tracking_material.md"),
-)
 TEXT_INTELLIGENCE_ARTIFACTS = (
     ("raw_text_events", "Raw text events", "raw/text_events.json"),
     ("text_event_records", "Text event records", "analysis/text_event_records.json"),
@@ -266,14 +243,6 @@ CONFIG_PROFILE_FIELDS = (
     },
     {
         "section": "Monitor",
-        "label": "Enable monitor",
-        "path": "monitor.enabled",
-        "control": "toggle",
-        "value_type": "bool",
-        "description": "Enable local monitor configuration.",
-    },
-    {
-        "section": "Monitor",
         "label": "Interval seconds",
         "path": "monitor.interval_seconds",
         "control": "number",
@@ -419,22 +388,6 @@ def create_dashboard_app(
     def overview_endpoint() -> dict[str, Any]:
         return dashboard_overview(config, config_path=config_path)
 
-    @app.get("/api/workbench")
-    def workbench_endpoint() -> dict[str, Any]:
-        return dashboard_workbench(config_path=config_path)
-
-    @app.get("/api/decision-risk")
-    def decision_risk_endpoint(run_id: str | None = None) -> dict[str, Any]:
-        return dashboard_decision_risk(config_path=config_path, run_id=run_id)
-
-    @app.get("/api/event-alert")
-    def event_alert_endpoint(run_id: str | None = None) -> dict[str, Any]:
-        return dashboard_event_alert(config_path=config_path, run_id=run_id)
-
-    @app.get("/api/outcomes")
-    def outcomes_endpoint(run_id: str | None = None) -> dict[str, Any]:
-        return dashboard_outcomes(config_path=config_path, run_id=run_id)
-
     @app.get("/api/text-intelligence")
     def text_intelligence_endpoint(run_id: str | None = None) -> dict[str, Any]:
         return dashboard_text_intelligence(config_path=config_path, run_id=run_id)
@@ -579,10 +532,6 @@ def dashboard_health(
             "config_profile_api": "available",
             "strategy_research_api": "available",
             "monitor_api": "available",
-            "workbench_api": "available",
-            "decision_risk_api": "available",
-            "event_alert_api": "available",
-            "outcome_tracking_api": "available",
             "text_intelligence_api": "available",
             "schedule_api": "available",
             "job_runner": "available",
@@ -616,7 +565,7 @@ def dashboard_config_profile(config: dict[str, Any], *, config_path: Path) -> di
         "config": {
             "ref": dashboard_config_ref(config_path),
             "editable": True,
-            "confirmation_text": CONFIG_SAVE_CONFIRMATION,
+            "requires_confirmation": True,
         },
         "sections": list(CONFIG_PROFILE_SECTIONS),
         "fields": fields,
@@ -663,12 +612,12 @@ def dashboard_save_config_profile(
     config_path: Path,
     request: dict[str, Any],
 ) -> dict[str, Any]:
-    if request.get("confirm") != CONFIG_SAVE_CONFIRMATION:
+    if request.get("confirm") is not True:
         return _config_save_result(
             config,
             config_path=config_path,
             status="blocked",
-            errors=["confirmation text does not match config save requirement."],
+            errors=["confirm must be true to save dashboard settings."],
         )
 
     changes = request.get("changes")
@@ -784,322 +733,6 @@ def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str
             "full_reusable_histories_embedded": False,
             "full_codex_prompt_embedded": False,
             "raw_local_user_state_embedded": False,
-        },
-    }
-
-
-def dashboard_workbench(*, config_path: Path) -> dict[str, Any]:
-    base = _config_base(config_path)
-    summary_path = base / WORKBENCH_SUMMARY_ARTIFACT
-    data, error = _read_json(summary_path)
-    if error:
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_workbench_summary",
-            "status": "missing" if "was not found" in error else "failed",
-            "summary_ref": WORKBENCH_SUMMARY_ARTIFACT,
-            "generated_at": None,
-            "source_selection": {},
-            "index_outputs": {},
-            "sections": {},
-            "source_artifacts": [WORKBENCH_SUMMARY_ARTIFACT],
-            "warnings": [error] if "was not found" in error else [],
-            "errors": [] if "was not found" in error else [error],
-            "omitted": {
-                "full_workbench_summary_embedded": False,
-                "raw_record_dumps_embedded": False,
-            },
-        }
-
-    run_dir = _workbench_run_dir(data)
-    sections = {
-        name: _workbench_dashboard_section(name, data.get(name), run_dir=run_dir)
-        for name in (
-            "latest_run",
-            "decision_state",
-            "alert_state",
-            "monitor_state",
-            "outcome_state",
-            "strategy_state",
-            "product_validation_state",
-            "data_quality_state",
-        )
-    }
-    source_artifacts = sorted(
-        {
-            WORKBENCH_SUMMARY_ARTIFACT,
-            *_workbench_index_refs(data),
-            *_workbench_source_refs(data.get("source_artifacts"), run_dir=run_dir),
-        }
-    )
-    return {
-        "schema_version": 1,
-        "artifact_type": "dashboard_workbench_summary",
-        "status": _normalize_section_status(str(data.get("status") or "unknown")),
-        "summary_ref": WORKBENCH_SUMMARY_ARTIFACT,
-        "generated_at": data.get("generated_at"),
-        "source_selection": _bounded_mapping(data.get("source_selection")),
-        "index_outputs": _bounded_mapping(data.get("index_outputs")),
-        "sections": sections,
-        "source_artifacts": source_artifacts,
-        "warnings": _string_list(data.get("warnings")),
-        "errors": _string_list(data.get("errors")),
-        "omitted": {
-            **_bounded_mapping(data.get("omitted")),
-            "full_workbench_summary_embedded": False,
-        },
-        "codex_boundary": _bounded_mapping(data.get("codex_boundary")),
-    }
-
-
-def dashboard_decision_risk(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
-    selected = _dashboard_selected_run(config_path, run_id=run_id)
-    if selected["status"] != "available":
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_decision_risk",
-            "status": selected["status"],
-            "selected_run": selected,
-            "artifacts": [],
-            "source_artifacts": selected.get("source_artifacts", []),
-            "warnings": selected.get("warnings", []),
-            "errors": selected.get("errors", []),
-            "omitted": {"full_decision_artifacts_embedded": False},
-        }
-    base = _config_base(config_path)
-    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
-    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
-    manifest, error = _read_json(manifest_path)
-    if error:
-        failed = {
-            **selected,
-            "status": "failed",
-            "errors": [error],
-        }
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_decision_risk",
-            "status": "failed",
-            "selected_run": failed,
-            "artifacts": [],
-            "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
-            "warnings": [],
-            "errors": [error],
-            "omitted": {"full_decision_artifacts_embedded": False},
-        }
-
-    artifacts = [
-        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
-        for key, title, default in DECISION_RISK_ARTIFACTS
-    ]
-    statuses = [artifact["status"] for artifact in artifacts]
-    source_artifacts = sorted(
-        {
-            RUN_INDEX_ARTIFACT,
-            _safe_ref(manifest_path, base=base),
-            *[
-                ref
-                for artifact in artifacts
-                for ref in _string_list(artifact.get("source_artifacts"))
-            ],
-        }
-    )
-    return {
-        "schema_version": 1,
-        "artifact_type": "dashboard_decision_risk",
-        "status": _overall_status(statuses),
-        "selected_run": selected,
-        "artifacts": artifacts,
-        "source_artifacts": source_artifacts,
-        "warnings": [
-            warning
-            for artifact in artifacts
-            for warning in _string_list(artifact.get("warnings"))
-        ],
-        "errors": [
-            error
-            for artifact in artifacts
-            for error in _string_list(artifact.get("errors"))
-        ],
-        "omitted": {"full_decision_artifacts_embedded": False},
-    }
-
-
-def dashboard_event_alert(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
-    selected = _dashboard_selected_run(config_path, run_id=run_id)
-    if selected["status"] != "available":
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_event_alert",
-            "status": selected["status"],
-            "selected_run": selected,
-            "artifacts": [],
-            "source_artifacts": selected.get("source_artifacts", []),
-            "warnings": selected.get("warnings", []),
-            "errors": selected.get("errors", []),
-            "omitted": {"full_event_alert_artifacts_embedded": False},
-        }
-    base = _config_base(config_path)
-    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
-    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
-    manifest, error = _read_json(manifest_path)
-    if error:
-        failed = {
-            **selected,
-            "status": "failed",
-            "errors": [error],
-        }
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_event_alert",
-            "status": "failed",
-            "selected_run": failed,
-            "artifacts": [],
-            "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
-            "warnings": [],
-            "errors": [error],
-            "omitted": {"full_event_alert_artifacts_embedded": False},
-        }
-
-    artifacts = [
-        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
-        for key, title, default in EVENT_ALERT_ARTIFACTS
-    ]
-    statuses = [artifact["status"] for artifact in artifacts]
-    source_artifacts = sorted(
-        {
-            RUN_INDEX_ARTIFACT,
-            _safe_ref(manifest_path, base=base),
-            *[
-                ref
-                for artifact in artifacts
-                for ref in _string_list(artifact.get("source_artifacts"))
-            ],
-        }
-    )
-    return {
-        "schema_version": 1,
-        "artifact_type": "dashboard_event_alert",
-        "status": _overall_status(statuses),
-        "selected_run": selected,
-        "artifacts": artifacts,
-        "source_artifacts": source_artifacts,
-        "warnings": [
-            warning
-            for artifact in artifacts
-            for warning in _string_list(artifact.get("warnings"))
-        ],
-        "errors": [
-            error
-            for artifact in artifacts
-            for error in _string_list(artifact.get("errors"))
-        ],
-        "omitted": {"full_event_alert_artifacts_embedded": False},
-    }
-
-
-def dashboard_outcomes(*, config_path: Path, run_id: str | None = None) -> dict[str, Any]:
-    history = _outcome_history_store_section(config_path)
-    selected = _dashboard_selected_run(config_path, run_id=run_id)
-    if selected["status"] != "available":
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_outcomes",
-            "status": _overall_status([selected["status"], history["status"]]),
-            "selected_run": selected,
-            "artifacts": [],
-            "history": history,
-            "source_artifacts": sorted(
-                {
-                    *selected.get("source_artifacts", []),
-                    *history.get("source_artifacts", []),
-                }
-            ),
-            "warnings": [*selected.get("warnings", []), *history.get("warnings", [])],
-            "errors": [*selected.get("errors", []), *history.get("errors", [])],
-            "jobs": {"outcomes_inspect": "available"},
-            "omitted": {
-                "full_outcome_artifacts_embedded": False,
-                "full_outcome_history_embedded": False,
-            },
-        }
-    base = _config_base(config_path)
-    run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
-    manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
-    manifest, error = _read_json(manifest_path)
-    if error:
-        failed = {
-            **selected,
-            "status": "failed",
-            "errors": [error],
-        }
-        return {
-            "schema_version": 1,
-            "artifact_type": "dashboard_outcomes",
-            "status": _overall_status(["failed", history["status"]]),
-            "selected_run": failed,
-            "artifacts": [],
-            "history": history,
-            "source_artifacts": sorted(
-                {
-                    RUN_INDEX_ARTIFACT,
-                    _safe_ref(manifest_path, base=base),
-                    *history.get("source_artifacts", []),
-                }
-            ),
-            "warnings": history.get("warnings", []),
-            "errors": [error, *history.get("errors", [])],
-            "jobs": {"outcomes_inspect": "available"},
-            "omitted": {
-                "full_outcome_artifacts_embedded": False,
-                "full_outcome_history_embedded": False,
-            },
-        }
-
-    artifacts = [
-        _dashboard_run_artifact_summary(key, title, default, run_dir=run_dir, manifest=manifest, base=base)
-        for key, title, default in OUTCOME_TRACKING_ARTIFACTS
-    ]
-    source_artifacts = sorted(
-        {
-            RUN_INDEX_ARTIFACT,
-            _safe_ref(manifest_path, base=base),
-            *history.get("source_artifacts", []),
-            *[
-                ref
-                for artifact in artifacts
-                for ref in _string_list(artifact.get("source_artifacts"))
-            ],
-        }
-    )
-    return {
-        "schema_version": 1,
-        "artifact_type": "dashboard_outcomes",
-        "status": _overall_status([history["status"], *[artifact["status"] for artifact in artifacts]]),
-        "selected_run": selected,
-        "artifacts": artifacts,
-        "history": history,
-        "source_artifacts": source_artifacts,
-        "warnings": [
-            *history.get("warnings", []),
-            *[
-                warning
-                for artifact in artifacts
-                for warning in _string_list(artifact.get("warnings"))
-            ],
-        ],
-        "errors": [
-            *history.get("errors", []),
-            *[
-                error
-                for artifact in artifacts
-                for error in _string_list(artifact.get("errors"))
-            ],
-        ],
-        "jobs": {"outcomes_inspect": "available"},
-        "omitted": {
-            "full_outcome_artifacts_embedded": False,
-            "full_outcome_history_embedded": False,
         },
     }
 
@@ -3005,68 +2638,6 @@ def _workbench_section(*, base: Path) -> dict[str, Any]:
         warnings=_string_list(data.get("warnings")),
         errors=_string_list(data.get("errors")),
     )
-
-
-def _workbench_run_dir(data: dict[str, Any]) -> str:
-    selection = _dict(data.get("source_selection"))
-    run_dir = selection.get("run_dir")
-    return run_dir if isinstance(run_dir, str) else ""
-
-
-def _workbench_dashboard_section(name: str, value: Any, *, run_dir: str) -> dict[str, Any]:
-    section = _dict(value)
-    if not section:
-        return _section(name, "missing", warnings=[f"{name} was not recorded in the workbench summary."])
-    source_refs = _workbench_source_refs(section.get("source_artifacts"), run_dir=run_dir)
-    return _section(
-        name,
-        _normalize_section_status(str(section.get("status") or "unknown")),
-        fields=_bounded_mapping(section.get("fields")),
-        source_artifacts=source_refs,
-        warnings=_string_list(section.get("warnings")),
-        errors=_string_list(section.get("errors")),
-    )
-
-
-def _workbench_index_refs(data: dict[str, Any]) -> list[str]:
-    outputs = _dict(data.get("index_outputs"))
-    refs: list[str] = []
-    for key in ("markdown", "html"):
-        value = outputs.get(key)
-        if isinstance(value, str) and value:
-            refs.append(value)
-    return refs
-
-
-def _workbench_source_refs(value: Any, *, run_dir: str) -> list[str]:
-    refs: list[str] = []
-
-    def collect(item: Any) -> None:
-        if isinstance(item, str) and item:
-            refs.append(_workbench_ref_path(item, run_dir=run_dir))
-            return
-        if isinstance(item, dict):
-            for nested in item.values():
-                collect(nested)
-            return
-        if isinstance(item, list):
-            for nested in item:
-                collect(nested)
-
-    collect(value)
-    output: list[str] = []
-    for ref in refs:
-        if ref and ref not in output:
-            output.append(ref)
-    return output[:50]
-
-
-def _workbench_ref_path(ref: str, *, run_dir: str) -> str:
-    if ref.startswith(("runs/", "data/")):
-        return ref
-    if run_dir:
-        return f"{run_dir.rstrip('/')}/{ref.lstrip('/')}"
-    return ref
 
 
 def _dashboard_selected_run(config_path: Path, *, run_id: str | None) -> dict[str, Any]:

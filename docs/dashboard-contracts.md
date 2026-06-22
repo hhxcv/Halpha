@@ -109,26 +109,30 @@ trigger daily report jobs. It does not run a hidden scheduler loop.
 
 Dashboard pages should expose the current product shape through bounded views:
 
-- Overview: latest run, latest report, product validation, data quality, monitor
-  health, warning and error counts, and recent job state.
-- Runs and reports: run history, stage timeline, artifact refs, Codex status,
-  warnings, errors, and report previews.
-- Artifact explorer: bounded previews for allowed JSON, JSONL, Markdown, text,
-  and table-like artifacts.
-- Local data: metadata, counts, ranges, freshness, warnings, and source refs for
-  implemented reusable stores.
+- Overview: latest report state, system runtime, monitor status, data health,
+  warning and error counts, and recent attention items.
+- Reports: all generated reports, report metadata, real source refs, rendered
+  Markdown previews, report generation, report download, and single-run report
+  deletion.
 - Strategy lab: pipeline strategy artifacts, standalone backtests, standalone
   experiments, gates, lifecycle state, warnings, and limitations. Standalone
   backtests may render bounded candlestick bars, deterministic exposure
   markers, and an equity curve from the `strategy_backtest.json`
   `visualization` block. The dashboard must not reconstruct charts by dumping
   full reusable OHLCV history by default.
-- Decision, risk, event, and alert views: deterministic records and bounded
-  source refs from existing artifacts when implemented.
-- Monitor: cycle history, linked runs, alert archive aggregates, cooldown state,
-  warnings, and errors.
-- Command controls: controlled UI/API triggers for implemented Halpha commands.
-- Schedule controls: explicit local daily-report schedule state.
+- Monitor: monitor control, configured loop parameters, cycle history, linked
+  runs, alert archive aggregates, cooldown state, warnings, errors, and
+  explicit daily-report schedule state.
+- Intelligence: source-aware non-OHLCV intelligence summaries, including text,
+  derivatives, on-chain, macro, outcomes, and data-quality tabs where the
+  corresponding artifacts exist.
+- Settings: current config controls, validation, backup, and storage
+  maintenance for single-run artifacts and shared stores.
+
+Artifact preview remains an internal bounded API capability used by these
+views. It must not reintroduce a top-level Artifacts page. Command controls
+must be page-local actions backed by allowlisted dashboard jobs, not a top-level
+Command center.
 
 Every view must distinguish available, partial, missing, stale, degraded,
 failed, skipped, and not-applicable states where the source artifacts support

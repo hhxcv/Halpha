@@ -24,6 +24,10 @@ def test_dashboard_monitor_api_summarizes_complete_state_without_dumping_alerts(
     summary = summary_response.json()
     assert summary["artifact_type"] == "dashboard_monitor"
     assert summary["status"] == "available"
+    assert summary["settings"]["interval_seconds"] == 300
+    assert summary["settings"]["max_cycles"] == 1
+    assert summary["settings"]["cooldown_seconds"] == 1800
+    assert summary["settings"]["output_dir"] == "runs/monitor"
     assert summary["health"]["fields"]["cycle_count"] == 1
     assert summary["latest_cycle"]["cycle_id"] == "cycle-1"
     assert summary["alert_archive"]["fields"]["counts"]["records"] == 25
