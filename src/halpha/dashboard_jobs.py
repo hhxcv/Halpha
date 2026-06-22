@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import logging
 import os
 from pathlib import Path
 import subprocess
@@ -12,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 from .dashboard_time import parse_utc_timestamp, utc_now_timestamp
+from .logging_utils import configure_local_logging
 from .pipeline import STAGE_ORDER
 from .storage import config_base as _config_base, read_json_object, safe_local_ref, write_json
 
@@ -209,6 +211,9 @@ class DashboardJobManager:
         self.config_path = Path(config_path)
         self.base = _config_base(self.config_path)
         self.jobs_root = self.base / DASHBOARD_JOBS_DIR
+        with suppress(OSError):
+            configure_local_logging(config_path=self.config_path, config=config)
+        self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
         self._processes: dict[str, subprocess.Popen[str]] = {}
         self._cancel_requested: set[str] = set()
@@ -230,6 +235,16 @@ class DashboardJobManager:
             )
             self._write_job(job)
             self._write_index()
+            self._logger.warning(
+                "Dashboard job was rejected.",
+                extra={
+                    "event": "dashboard.job.rejected",
+                    "job_id": job["job_id"],
+                    "intent": intent,
+                    "status": job["status"],
+                    "reason": job["errors"][0],
+                },
+            )
             return job
 
         try:
@@ -245,6 +260,16 @@ class DashboardJobManager:
             )
             self._write_job(job)
             self._write_index()
+            self._logger.warning(
+                "Dashboard job was blocked.",
+                extra={
+                    "event": "dashboard.job.blocked",
+                    "job_id": job["job_id"],
+                    "intent": intent,
+                    "status": job["status"],
+                    "reason": str(exc),
+                },
+            )
             return job
 
         job["kind"] = spec.kind
@@ -252,6 +277,16 @@ class DashboardJobManager:
         job["cancellable"] = spec.cancellable
         self._write_job(job)
         self._write_index()
+        self._logger.info(
+            "Dashboard job queued.",
+            extra={
+                "event": "dashboard.job.queued",
+                "job_id": job["job_id"],
+                "intent": intent,
+                "kind": spec.kind,
+                "command_preview": command_preview,
+            },
+        )
         thread = threading.Thread(
             target=self._run_job,
             args=(job["job_id"], command, spec),
@@ -328,6 +363,16 @@ class DashboardJobManager:
         if job is None:
             return
         started_at = _utc_now()
+        self._logger.info(
+            "Dashboard job starting.",
+            extra={
+                "event": "dashboard.job.start",
+                "job_id": job_id,
+                "intent": job.get("intent"),
+                "kind": spec.kind,
+                "command_preview": job.get("command"),
+            },
+        )
         try:
             process = subprocess.Popen(
                 command,
@@ -349,6 +394,16 @@ class DashboardJobManager:
             )
             self._write_job(job)
             self._write_index()
+            self._logger.error(
+                "Dashboard job process could not start.",
+                extra={
+                    "event": "dashboard.job.start_failed",
+                    "job_id": job_id,
+                    "intent": job.get("intent"),
+                    "kind": spec.kind,
+                    "reason": str(exc),
+                },
+            )
             return
 
         with self._lock:
@@ -409,6 +464,18 @@ class DashboardJobManager:
             job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
         self._write_job(job)
         self._write_index()
+        self._logger.log(
+            logging.INFO if status == "succeeded" else logging.WARNING,
+            "Dashboard job finished.",
+            extra={
+                "event": "dashboard.job.finished",
+                "job_id": job_id,
+                "intent": job.get("intent"),
+                "kind": spec.kind,
+                "status": status,
+                "exit_code": exit_code,
+            },
+        )
 
     def _new_job(self, *, intent: str, params: dict[str, Any], now: str) -> dict[str, Any]:
         job_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid4().hex[:8]}"

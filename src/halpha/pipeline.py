@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 from .storage import ensure_directory, write_json
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 STAGE_ORDER = (
@@ -145,6 +149,15 @@ def run_pipeline(
     run = _create_run_context(config, config_path=config_path, now=clock())
     _record_validation_mode(run, until_stage=until_stage, skip_codex=skip_codex)
     _write_manifest(run)
+    LOGGER.info(
+        "Pipeline run started.",
+        extra={
+            "event": "pipeline.run.start",
+            "run_id": run.run_id,
+            "until_stage": until_stage,
+            "skip_codex": skip_codex,
+        },
+    )
 
     handlers = _stage_handlers(stage_handlers)
 
@@ -193,6 +206,10 @@ def run_pipeline(
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
     _record_terminal_local_data_state(config, run, clock=clock)
+    LOGGER.info(
+        "Pipeline run succeeded.",
+        extra={"event": "pipeline.run.succeeded", "run_id": run.run_id},
+    )
     return RunResult(True, run, 0, None, None)
 
 
@@ -435,6 +452,16 @@ def _run_stage_handler(
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
         _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
+        LOGGER.error(
+            "Pipeline stage failed.",
+            extra={
+                "event": "pipeline.stage.failed",
+                "run_id": run.run_id,
+                "stage": failed_stage,
+                "exit_code": exc.exit_code,
+                "reason": reason,
+            },
+        )
         return RunResult(False, run, exc.exit_code, failed_stage, reason)
     except Exception as exc:
         finished_at = _utc_timestamp(clock())
@@ -446,6 +473,16 @@ def _run_stage_handler(
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
         _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
+        LOGGER.error(
+            "Pipeline stage failed.",
+            extra={
+                "event": "pipeline.stage.failed",
+                "run_id": run.run_id,
+                "stage": stage,
+                "exit_code": 1,
+                "reason": reason,
+            },
+        )
         return RunResult(False, run, 1, stage, reason)
 
     finished_at = _utc_timestamp(clock())

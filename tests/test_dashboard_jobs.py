@@ -72,6 +72,27 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     assert str(config_path) not in job_json
 
 
+def test_dashboard_job_logging_includes_context_without_private_values(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_private_config(tmp_path)
+    config = load_config(config_path)
+    secret = "http://private-proxy.example:7890"
+    fake_process = _FakeProcess(stdout=f"stdout {secret}", stderr="", returncode=0)
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    log_text = (tmp_path / "logs" / "halpha.log").read_text(encoding="utf-8")
+    events = [json.loads(line) for line in log_text.splitlines() if line.strip()]
+    assert completed["job_id"] in log_text
+    assert "dashboard.job.start" in {event.get("event") for event in events}
+    assert "dashboard.job.finished" in {event.get("event") for event in events}
+    assert secret not in log_text
+    assert str(config_path) not in log_text
+    assert str(tmp_path) not in log_text
+
+
 def test_dashboard_job_manager_preserves_relative_config_ref(
     tmp_path: Path,
     monkeypatch,
