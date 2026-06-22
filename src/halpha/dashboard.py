@@ -704,6 +704,7 @@ def dashboard_save_config_profile(
 def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
     base = _config_base(config_path)
     latest_run, run_dir, manifest = _latest_run_section(config_path, base=base)
+    monitor = _monitor_section(config, config_path=config_path, base=base)
     sections = {
         "latest_run": latest_run,
         "product_validation": _run_json_artifact_section(
@@ -720,8 +721,8 @@ def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str
             artifact_key="data_quality_summary",
             default_artifact=DATA_QUALITY_SUMMARY_ARTIFACT,
         ),
-        "monitor": _monitor_section(config, config_path=config_path, base=base),
-        "workbench": _workbench_section(base=base),
+        "monitor": monitor,
+        "workbench": _workbench_section(base=base, latest_run=latest_run, monitor=monitor),
     }
     return {
         "schema_version": 1,
@@ -2912,7 +2913,12 @@ def _monitor_section(config: dict[str, Any], *, config_path: Path, base: Path) -
     return _section("monitor", "available", fields=fields, source_artifacts=[artifact])
 
 
-def _workbench_section(*, base: Path) -> dict[str, Any]:
+def _workbench_section(
+    *,
+    base: Path,
+    latest_run: dict[str, Any],
+    monitor: dict[str, Any],
+) -> dict[str, Any]:
     path = base / WORKBENCH_SUMMARY_ARTIFACT
     data, error = _read_json(path)
     if error:
@@ -2923,23 +2929,67 @@ def _workbench_section(*, base: Path) -> dict[str, Any]:
             errors=[error],
         )
     summary_status = str(data.get("status") or "unknown")
+    stale_warnings, stale_sources = _workbench_stale_diagnostics(data, latest_run=latest_run, monitor=monitor)
     fields = {
         "artifact": WORKBENCH_SUMMARY_ARTIFACT,
         "artifact_type": data.get("artifact_type"),
         "artifact_status": summary_status,
         "generated_at": data.get("generated_at"),
         "latest_run": _bounded_mapping(_dict(data.get("latest_run")).get("fields")),
+        "stale": bool(stale_warnings),
+        "stale_warning_count": len(stale_warnings),
         "warnings": len(_list(data.get("warnings"))),
         "errors": len(_list(data.get("errors"))),
     }
+    status = _normalize_section_status(summary_status)
+    if stale_warnings and status not in {"failed", "degraded"}:
+        status = "partial"
     return _section(
         "workbench",
-        _normalize_section_status(summary_status),
+        status,
         fields=fields,
-        source_artifacts=[WORKBENCH_SUMMARY_ARTIFACT],
-        warnings=_string_list(data.get("warnings")),
+        source_artifacts=[WORKBENCH_SUMMARY_ARTIFACT, *stale_sources],
+        warnings=[*_string_list(data.get("warnings")), *stale_warnings],
         errors=_string_list(data.get("errors")),
     )
+
+
+def _workbench_stale_diagnostics(
+    data: dict[str, Any],
+    *,
+    latest_run: dict[str, Any],
+    monitor: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    warnings: list[str] = []
+    sources: list[str] = []
+    workbench_latest = _dict(_dict(data.get("latest_run")).get("fields"))
+    workbench_run_id = _clean_text(workbench_latest.get("run_id"))
+    latest_fields = _dict(latest_run.get("fields"))
+    latest_selection = _dict(latest_fields.get("selection"))
+    current_run_id = _clean_text(latest_selection.get("latest_run_id")) or _clean_text(latest_fields.get("run_id"))
+    if workbench_run_id and current_run_id and workbench_run_id != current_run_id:
+        warnings.append(
+            f"workbench summary references run {workbench_run_id}, but latest run is {current_run_id}. "
+            f"Source: {RUN_INDEX_ARTIFACT}."
+        )
+        sources.append(RUN_INDEX_ARTIFACT)
+
+    workbench_monitor = _dict(_dict(data.get("monitor_state")).get("fields"))
+    workbench_cycle_id = _clean_text(workbench_monitor.get("latest_cycle_id"))
+    monitor_fields = _dict(monitor.get("fields"))
+    current_cycle_id = _clean_text(monitor_fields.get("latest_cycle_id"))
+    if current_cycle_id == "none":
+        current_cycle_id = None
+    if workbench_cycle_id == "none":
+        workbench_cycle_id = None
+    if workbench_cycle_id and current_cycle_id and workbench_cycle_id != current_cycle_id:
+        monitor_artifact = _clean_text(monitor_fields.get("artifact")) or f"runs/monitor/{MONITOR_HEALTH_STATE_FILENAME}"
+        warnings.append(
+            f"workbench summary references monitor cycle {workbench_cycle_id}, "
+            f"but latest monitor cycle is {current_cycle_id}. Source: {monitor_artifact}."
+        )
+        sources.append(monitor_artifact)
+    return warnings, sorted({source for source in sources if source})
 
 
 def _dashboard_selected_run(config_path: Path, *, run_id: str | None) -> dict[str, Any]:
@@ -3329,6 +3379,13 @@ def _bounded_mapping(value: Any) -> dict[str, Any]:
 
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _clean_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    clean = value.strip()
+    return clean or None
 
 
 def _list(value: Any) -> list[Any]:

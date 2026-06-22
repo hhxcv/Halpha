@@ -329,6 +329,76 @@ def test_dashboard_overview_endpoint_reads_artifact_backed_state(tmp_path: Path)
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_overview_marks_stale_workbench_summary(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    old_run = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-1",
+        started_at="2026-06-20T00:00:00Z",
+        finished_at="2026-06-20T00:05:00Z",
+    )
+    _write_dashboard_source_artifacts(tmp_path, old_run)
+    new_run = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-2",
+        started_at="2026-06-20T01:00:00Z",
+        finished_at="2026-06-20T01:05:00Z",
+    )
+    write_run_index(old_run, now="2026-06-20T00:05:00Z")
+    write_run_index(new_run, now="2026-06-20T01:05:00Z")
+    write_json(
+        tmp_path / "runs" / "workbench" / "latest" / "workbench_summary.json",
+        {
+            "artifact_type": "workbench_summary",
+            "status": "available",
+            "generated_at": "2026-06-20T00:06:00Z",
+            "latest_run": {"fields": {"run_id": "run-1", "run_status": "succeeded"}},
+            "monitor_state": {"fields": {"latest_cycle_id": "cycle-1"}},
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "runs" / "monitor" / "monitor_health_state.json",
+        {
+            "artifact_type": "monitor_health_state",
+            "cycle_count": 3,
+            "failed_cycle_count": 0,
+            "latest_cycle_id": "cycle-2",
+            "latest_cycle_status": "succeeded",
+            "latest_run_id": "run-2",
+            "alert_archive_status": "ok",
+            "alert_counts": {"records": 1, "emitted": 1},
+            "cooldown_records": 0,
+            "warning_count": 0,
+            "error_count": 0,
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/overview")
+
+    assert response.status_code == 200
+    workbench = response.json()["sections"]["workbench"]
+    assert workbench["status"] == "partial"
+    assert workbench["fields"]["stale"] is True
+    assert workbench["fields"]["stale_warning_count"] == 2
+    assert workbench["source_artifacts"] == [
+        "runs/workbench/latest/workbench_summary.json",
+        "data/research/index.sqlite",
+        "runs/monitor/monitor_health_state.json",
+    ]
+    assert workbench["warnings"] == [
+        "workbench summary references run run-1, but latest run is run-2. Source: data/research/index.sqlite.",
+        "workbench summary references monitor cycle cycle-1, but latest monitor cycle is cycle-2. "
+        "Source: runs/monitor/monitor_health_state.json.",
+    ]
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_overview_endpoint_explains_product_validation_not_run(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
