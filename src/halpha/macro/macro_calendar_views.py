@@ -10,7 +10,7 @@ from halpha.macro.macro_calendar_history import (
     macro_calendar_group_path,
     read_macro_calendar_history_records,
 )
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, write_json
 
 

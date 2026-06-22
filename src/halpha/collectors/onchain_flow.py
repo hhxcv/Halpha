@@ -7,7 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.data.raw_artifacts import RawArtifactError, validate_onchain_flow_raw_artifact
 from halpha.storage import write_json
 

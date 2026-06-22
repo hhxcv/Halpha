@@ -4,7 +4,7 @@ import json
 from json import JSONDecodeError
 from typing import Any
 
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 
 

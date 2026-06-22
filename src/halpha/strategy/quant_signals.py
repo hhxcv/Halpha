@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from halpha.market.market_data_views import MARKET_DATA_VIEWS_ARTIFACT
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import write_json
 
 

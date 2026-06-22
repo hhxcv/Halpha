@@ -9,7 +9,7 @@ from halpha.codex.input_budget import (
     text_budget_record,
     update_codex_input_manifest,
 )
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 
 
 STAGE_NAME = "build_codex_context"

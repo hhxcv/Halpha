@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from halpha.pipeline import PipelineError
+from halpha.runtime.pipeline_contracts import PipelineError
 
 
 BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE = "build_decision_intelligence_material"

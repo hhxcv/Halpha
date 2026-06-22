@@ -9,7 +9,9 @@ from pathlib import Path
 import time
 from typing import Any, Callable
 
-from halpha.pipeline import RunResult, StageSelectionError, run_pipeline
+from halpha.runtime.pipeline_contracts import RunResult
+from halpha.pipeline_stages import StageSelectionError
+from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
 
 

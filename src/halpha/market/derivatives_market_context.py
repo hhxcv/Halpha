@@ -6,7 +6,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from halpha.market.derivatives_market_views import load_derivatives_market_view_records
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
 

@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, TIMEFRAME_DURATIONS
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.research_data_catalog import write_research_data_catalog
 from halpha.storage import display_path
 

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from json import JSONDecodeError
 from typing import Any
 
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import write_json
 
 

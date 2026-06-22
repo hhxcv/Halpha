@@ -11,7 +11,7 @@ from halpha.decision.decision_material import (
     validate_decision_material_inputs,
 )
 from halpha.decision.decision_delta import build_decision_intelligence_delta_artifact
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import write_json
 
 

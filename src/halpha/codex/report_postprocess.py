@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 
 
 STAGE_NAME = "run_codex_report"

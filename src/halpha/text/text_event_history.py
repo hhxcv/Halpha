@@ -8,7 +8,7 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import display_path, write_json
 
 

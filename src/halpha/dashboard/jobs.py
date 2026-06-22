@@ -15,7 +15,7 @@ from uuid import uuid4
 from halpha.dashboard.time import parse_utc_timestamp, utc_now_timestamp
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
-from halpha.pipeline import STAGE_ORDER
+from halpha.pipeline_stages import STAGE_ORDER
 from halpha.storage import config_base as _config_base, read_json_object, safe_local_ref, write_json
 
 

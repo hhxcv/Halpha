@@ -10,7 +10,7 @@ from halpha.onchain.onchain_flow_history import (
     onchain_flow_group_path,
     read_onchain_flow_history_records,
 )
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, write_json
 
 

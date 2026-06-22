@@ -8,7 +8,7 @@ from halpha.market.derivatives_source import (
     DerivativesSourceError,
     PublicDerivativesSource,
 )
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.data.raw_artifacts import RawArtifactError, validate_derivatives_market_raw_artifact
 from halpha.storage import write_json
 

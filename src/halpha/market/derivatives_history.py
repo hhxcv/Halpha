@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.collectors.derivatives_market import DERIVATIVES_MARKET_ARTIFACT
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, write_json
 
 

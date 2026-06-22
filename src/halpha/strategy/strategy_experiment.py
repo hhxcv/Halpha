@@ -8,7 +8,7 @@ from statistics import mean
 from typing import Any
 
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest, evaluate_walk_forward_backtest
 from halpha.strategy.strategy_effectiveness_gates import (

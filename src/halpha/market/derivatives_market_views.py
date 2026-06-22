@@ -8,7 +8,7 @@ from halpha.market.derivatives_history import (
     derivatives_market_group_path,
     read_derivatives_history_records,
 )
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, write_json
 
 
