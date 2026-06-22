@@ -8,6 +8,12 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from halpha.data.data_quality_groups import (
+    FEATURE_FACTOR_CHECK_NAMES,
+    FUSION_CHECK_NAMES,
+    PERSONALIZED_RISK_CHECK_NAMES,
+    named_quality_check_counts,
+)
 from halpha.data.research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
 from halpha.utils.value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
@@ -44,23 +50,6 @@ USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
-FEATURE_FACTOR_CHECK_NAMES = {
-    "feature_snapshots",
-    "factor_states",
-    "multi_source_signals",
-    "factor_signal_material",
-}
-FUSION_CHECK_NAMES = {
-    "intelligence_fusion",
-    "intelligence_fusion_material",
-}
-PERSONALIZED_RISK_CHECK_NAMES = {
-    "user_state_context",
-    "personalized_risk_constraints",
-    "personalized_risk_material",
-}
-
-
 class DataInspectionError(Exception):
     def __init__(self, message: str, *, exit_code: int = 3) -> None:
         super().__init__(message)
@@ -1172,26 +1161,15 @@ def _store_statuses(catalog: dict[str, Any]) -> str | None:
 
 
 def _feature_factor_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
-    return _named_quality_check_counts(quality, FEATURE_FACTOR_CHECK_NAMES)
+    return named_quality_check_counts(quality, FEATURE_FACTOR_CHECK_NAMES)
 
 
 def _fusion_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
-    return _named_quality_check_counts(quality, FUSION_CHECK_NAMES)
+    return named_quality_check_counts(quality, FUSION_CHECK_NAMES)
 
 
 def _personalized_risk_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
-    return _named_quality_check_counts(quality, PERSONALIZED_RISK_CHECK_NAMES)
-
-
-def _named_quality_check_counts(quality: dict[str, Any], names: set[str]) -> dict[str, int]:
-    counts = {"ok": 0, "warning": 0, "degraded": 0, "skipped": 0, "failed": 0}
-    for check in _list(quality.get("checks")):
-        if not isinstance(check, dict) or check.get("name") not in names:
-            continue
-        status = str(check.get("status") or "unknown")
-        if status in counts:
-            counts[status] += 1
-    return counts
+    return named_quality_check_counts(quality, PERSONALIZED_RISK_CHECK_NAMES)
 
 
 def _codex_material_budget(manifest: dict[str, Any], artifact: str) -> dict[str, Any]:
