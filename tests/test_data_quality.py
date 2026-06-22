@@ -6,6 +6,10 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.data_quality import build_data_quality_summary, refresh_m13_data_quality_checks
+from halpha.data_quality_post_artifacts import (
+    POST_DATA_QUALITY_CHECK_NAMES,
+    post_data_quality_artifact_checks,
+)
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 
@@ -72,6 +76,23 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert "terminal artifact written after the data-quality stage" in run_index["summary"]
     assert run_index["details"]["stage_time_skip_is_expected"] is True
     assert run_index["details"]["report_as_final_missing"] is False
+
+
+def test_post_data_quality_artifact_checks_report_stage_time_skips(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, include_ohlcv=False)
+    run = _run_context(tmp_path, config_path)
+
+    checks = post_data_quality_artifact_checks(run, expected=False)
+
+    assert {check["name"] for check in checks} == POST_DATA_QUALITY_CHECK_NAMES
+    assert len(checks) == 9
+    for check in checks:
+        assert check["status"] == "skipped"
+        assert check["scope"] == "analysis"
+        assert check["source_artifacts"]
+        assert check["details"]["stage_time_skip_is_expected"] is True
+        assert check["details"]["report_as_final_missing"] is False
+        assert "produced by" in check["summary"]
 
 
 def test_data_quality_summary_flags_schema_drift_future_timestamp_and_duplicates(tmp_path: Path) -> None:
