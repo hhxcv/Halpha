@@ -16,7 +16,7 @@ import uvicorn
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.dashboard.ui_script import dashboard_script
+from dashboard_asset_helpers import dashboard_script
 
 
 BROWSER_SMOKE_ENABLED = os.environ.get("HALPHA_BROWSER_SMOKE") == "1"
