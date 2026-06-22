@@ -7,8 +7,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
-from halpha.runtime.pipeline_contracts import RunContext
+from halpha.data.public_capabilities import (
+    ONCHAIN_FLOW_EXCHANGE_FLOW_UNAVAILABLE_REASON,
+    onchain_flow_data_class_capability,
+    unsupported_onchain_flow_raw_collection_reason,
+)
 from halpha.data.raw_artifacts import RawArtifactError, validate_onchain_flow_raw_artifact
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
 
@@ -22,10 +27,6 @@ BLOCKCHAIN_CHARTS_BASE_URL = "https://api.blockchain.info/charts"
 CHAIN_ACTIVITY_CHART = "n-transactions"
 NETWORK_CONGESTION_CHART = "mempool-size"
 REQUEST_TIMEOUT_SECONDS = 20
-EXCHANGE_FLOW_UNAVAILABLE_REASON = (
-    "reliable periodic unauthenticated exchange inflow, outflow, or netflow data is not configured; "
-    "missing exchange-flow evidence must not be treated as neutral risk context."
-)
 
 
 class OnchainFlowCollectionError(Exception):
@@ -81,7 +82,7 @@ def collect_onchain_flow_raw(
                     source=source,
                     data_class=data_class,
                     status="unavailable",
-                    reason=f"{source} on-chain flow collection is not implemented.",
+                    reason=unsupported_onchain_flow_raw_collection_reason(data_class, source),
                 )
             )
         validate_onchain_flow_raw_artifact(raw, ONCHAIN_FLOW_ARTIFACT)
@@ -433,23 +434,18 @@ def _availability_record(
 
 
 def _exchange_flow_availability_record() -> dict[str, Any]:
+    capability = onchain_flow_data_class_capability("exchange_flow_availability")
     record = _availability_record(
         source=PUBLIC_AGGREGATE_SOURCE,
         data_class="exchange_flow_availability",
         status="unavailable",
         endpoint="exchange_flow_periodic_public_source",
-        reason=EXCHANGE_FLOW_UNAVAILABLE_REASON,
+        reason=capability.unavailable_reason if capability else ONCHAIN_FLOW_EXCHANGE_FLOW_UNAVAILABLE_REASON,
     )
     record.update(
         {
-            "limitations": [
-                "reliable exchange netflow is commonly provided by paid or proprietary analytics vendors",
-                "public exchange account, deposit, or withdrawal APIs are outside Halpha's product boundary",
-                "Halpha does not infer exchange netflow from text or unrelated market metrics",
-            ],
-            "downstream_implication": (
-                "exchange-flow evidence is unavailable and must not be treated as neutral risk context"
-            ),
+            "limitations": list(capability.limitations) if capability else [],
+            "downstream_implication": capability.downstream_implication if capability else None,
         }
     )
     return record

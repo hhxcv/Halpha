@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from json import JSONDecodeError
 from typing import Any
 
+from halpha.data.public_capabilities import ONCHAIN_FLOW_CONTEXT_DATA_CLASSES
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
@@ -15,12 +16,7 @@ ONCHAIN_FLOW_VIEWS_ARTIFACT = "raw/onchain_flow_views.json"
 RAW_ONCHAIN_FLOW_ARTIFACT = "raw/onchain_flow.json"
 CONTEXT_SCHEMA_VERSION = 1
 STALE_MAX_AGE_HOURS = 72
-SUPPORTED_DATA_CLASSES = {
-    "chain_activity",
-    "exchange_flow_availability",
-    "network_congestion",
-    "stablecoin_supply",
-}
+SUPPORTED_DATA_CLASSES = ONCHAIN_FLOW_CONTEXT_DATA_CLASSES
 
 STABLECOIN_THRESHOLDS = {
     "supply_expansion_change_pct": 0.02,

@@ -5,6 +5,10 @@ from datetime import datetime, timedelta, timezone
 from json import JSONDecodeError
 from typing import Any
 
+from halpha.data.public_capabilities import (
+    MACRO_CALENDAR_VIEW_DATA_CLASSES,
+    unsupported_macro_calendar_view_reason,
+)
 from halpha.macro.macro_calendar_history import (
     MACRO_CALENDAR_HISTORY_STATE_ARTIFACT,
     macro_calendar_group_path,
@@ -28,7 +32,7 @@ VIEW_INCLUDED_COLUMNS = (
     "warnings",
     "errors",
 )
-SUPPORTED_VIEW_DATA_CLASSES = {"central_bank_event"}
+SUPPORTED_VIEW_DATA_CLASSES = MACRO_CALENDAR_VIEW_DATA_CLASSES
 
 
 def build_macro_calendar_views(
@@ -61,7 +65,7 @@ def build_macro_calendar_views(
                         source=source,
                         data_class=data_class,
                         region=region,
-                        reason=f"{data_class} macro calendar views are not implemented.",
+                        reason=unsupported_macro_calendar_view_reason(data_class),
                     )
                 )
             continue

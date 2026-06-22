@@ -98,16 +98,80 @@ DERIVATIVES_VIEW_DATA_CLASSES: Final[set[str]] = {
 DERIVATIVES_CONTEXT_DATA_CLASSES: Final[set[str]] = set(DERIVATIVES_VIEW_DATA_CLASSES)
 
 SUPPORTED_MACRO_CALENDAR_SOURCES: Final[set[str]] = {"federal_reserve_fomc"}
-SUPPORTED_MACRO_CALENDAR_DATA_CLASSES: Final[set[str]] = {"central_bank_event"}
 SUPPORTED_MACRO_CALENDAR_REGIONS: Final[set[str]] = {"US"}
+MACRO_CALENDAR_DATA_CLASS_CAPABILITIES: Final[dict[str, PublicDataClassCapability]] = {
+    "central_bank_event": PublicDataClassCapability(
+        data_class="central_bank_event",
+        collection_status="implemented",
+        view_status="implemented",
+        request_classes=("fomc_calendars",),
+    ),
+}
+SUPPORTED_MACRO_CALENDAR_DATA_CLASSES: Final[set[str]] = set(MACRO_CALENDAR_DATA_CLASS_CAPABILITIES)
+MACRO_CALENDAR_RAW_DATA_CLASSES: Final[set[str]] = {
+    data_class
+    for data_class, capability in MACRO_CALENDAR_DATA_CLASS_CAPABILITIES.items()
+    if capability.collection_status in {"implemented", "unavailable"}
+}
+MACRO_CALENDAR_VIEW_DATA_CLASSES: Final[set[str]] = {
+    data_class
+    for data_class, capability in MACRO_CALENDAR_DATA_CLASS_CAPABILITIES.items()
+    if capability.view_status == "implemented"
+}
+MACRO_CALENDAR_CONTEXT_DATA_CLASSES: Final[set[str]] = set(MACRO_CALENDAR_VIEW_DATA_CLASSES)
 
 SUPPORTED_ONCHAIN_FLOW_SOURCES: Final[set[str]] = {"public_aggregate"}
-SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES: Final[set[str]] = {
-    "chain_activity",
-    "exchange_flow_availability",
-    "network_congestion",
-    "stablecoin_supply",
+ONCHAIN_FLOW_EXCHANGE_FLOW_UNAVAILABLE_REASON: Final[str] = (
+    "reliable periodic unauthenticated exchange inflow, outflow, or netflow data is not configured; "
+    "missing exchange-flow evidence must not be treated as neutral risk context."
+)
+ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES: Final[dict[str, PublicDataClassCapability]] = {
+    "chain_activity": PublicDataClassCapability(
+        data_class="chain_activity",
+        collection_status="implemented",
+        view_status="implemented",
+        request_classes=("blockchain_chart_n_transactions",),
+    ),
+    "exchange_flow_availability": PublicDataClassCapability(
+        data_class="exchange_flow_availability",
+        collection_status="unavailable",
+        view_status="implemented",
+        availability_period="source_availability",
+        unavailable_reason=ONCHAIN_FLOW_EXCHANGE_FLOW_UNAVAILABLE_REASON,
+        limitations=(
+            "reliable exchange netflow is commonly provided by paid or proprietary analytics vendors",
+            "public exchange account, deposit, or withdrawal APIs are outside Halpha's product boundary",
+            "Halpha does not infer exchange netflow from text or unrelated market metrics",
+        ),
+        downstream_implication=(
+            "exchange-flow evidence is unavailable and must not be treated as neutral risk context"
+        ),
+    ),
+    "network_congestion": PublicDataClassCapability(
+        data_class="network_congestion",
+        collection_status="implemented",
+        view_status="implemented",
+        request_classes=("blockchain_chart_mempool_size",),
+    ),
+    "stablecoin_supply": PublicDataClassCapability(
+        data_class="stablecoin_supply",
+        collection_status="implemented",
+        view_status="implemented",
+        request_classes=("stablecoincharts_all",),
+    ),
 }
+SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES: Final[set[str]] = set(ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES)
+ONCHAIN_FLOW_RAW_DATA_CLASSES: Final[set[str]] = {
+    data_class
+    for data_class, capability in ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES.items()
+    if capability.collection_status in {"implemented", "unavailable"}
+}
+ONCHAIN_FLOW_VIEW_DATA_CLASSES: Final[set[str]] = {
+    data_class
+    for data_class, capability in ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES.items()
+    if capability.view_status == "implemented"
+}
+ONCHAIN_FLOW_CONTEXT_DATA_CLASSES: Final[set[str]] = set(ONCHAIN_FLOW_VIEW_DATA_CLASSES)
 SUPPORTED_ONCHAIN_FLOW_ASSETS: Final[set[str]] = {"ALL_STABLECOINS", "BTC"}
 SUPPORTED_ONCHAIN_FLOW_CHAINS: Final[set[str]] = {"all", "bitcoin"}
 
@@ -122,3 +186,29 @@ def unsupported_derivatives_raw_collection_reason(data_class: str, source: str) 
 
 def unsupported_derivatives_view_reason(data_class: str) -> str:
     return f"{data_class} derivatives views are not implemented."
+
+
+def macro_calendar_data_class_capability(data_class: str) -> PublicDataClassCapability | None:
+    return MACRO_CALENDAR_DATA_CLASS_CAPABILITIES.get(data_class)
+
+
+def unsupported_macro_calendar_raw_collection_reason(data_class: str, source: str) -> str:
+    _ = data_class
+    return f"{source} macro/calendar collection is not implemented."
+
+
+def unsupported_macro_calendar_view_reason(data_class: str) -> str:
+    return f"{data_class} macro calendar views are not implemented."
+
+
+def onchain_flow_data_class_capability(data_class: str) -> PublicDataClassCapability | None:
+    return ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES.get(data_class)
+
+
+def unsupported_onchain_flow_raw_collection_reason(data_class: str, source: str) -> str:
+    _ = data_class
+    return f"{source} on-chain flow collection is not implemented."
+
+
+def unsupported_onchain_flow_view_reason(data_class: str) -> str:
+    return f"{data_class} on-chain flow views are not implemented."
