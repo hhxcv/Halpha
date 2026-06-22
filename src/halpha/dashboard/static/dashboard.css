@@ -1494,6 +1494,74 @@
       display: block;
     }
 
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.42);
+    }
+
+    .dialog-backdrop.hidden {
+      display: none;
+    }
+
+    .dialog {
+      width: min(520px, 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+      overflow: hidden;
+    }
+
+    .dialog-body {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .dialog h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.25;
+      font-weight: 800;
+    }
+
+    .dialog p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .dialog-input-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .dialog-hint {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--panel-soft);
+    }
+
+    .dialog .hidden {
+      display: none;
+    }
+
     .positive {
       color: var(--teal);
     }

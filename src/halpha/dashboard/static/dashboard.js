@@ -64,6 +64,7 @@
       selectedSharedStores: [],
       validationJob: null,
     };
+    let activeDialog = null;
 
     function label(value) {
       return text(value, "unknown").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -167,6 +168,82 @@
       toast.textContent = message;
       toast.classList.add("visible");
       window.setTimeout(() => toast.classList.remove("visible"), 3600);
+    }
+
+    function dialogElements() {
+      return {
+        backdrop: document.querySelector("#dashboard-dialog-backdrop"),
+        title: document.querySelector("#dashboard-dialog-title"),
+        message: document.querySelector("#dashboard-dialog-message"),
+        label: document.querySelector("#dashboard-dialog-input-label"),
+        input: document.querySelector("#dashboard-dialog-input"),
+        hint: document.querySelector("#dashboard-dialog-hint"),
+        cancel: document.querySelector("#dashboard-dialog-cancel"),
+        confirm: document.querySelector("#dashboard-dialog-confirm"),
+      };
+    }
+
+    function openDashboardDialog(options) {
+      const nodes = dialogElements();
+      if (activeDialog) {
+        closeDashboardDialog(false);
+      }
+      return new Promise((resolve) => {
+        const requiredText = options.requiredText || "";
+        activeDialog = {
+          resolve,
+          requiredText,
+          previousFocus: document.activeElement,
+        };
+        nodes.title.textContent = options.title || "Confirm action";
+        nodes.message.textContent = options.message || "";
+        nodes.hint.textContent = requiredText ? `Type ${requiredText} to enable this action.` : (options.hint || "");
+        nodes.input.value = "";
+        nodes.input.placeholder = requiredText;
+        nodes.input.classList.toggle("hidden", !requiredText);
+        nodes.label.classList.toggle("hidden", !requiredText);
+        nodes.confirm.textContent = options.confirmLabel || "Confirm";
+        nodes.cancel.textContent = options.cancelLabel || "Cancel";
+        nodes.confirm.className = options.danger ? "danger-button" : "primary-button";
+        nodes.backdrop.classList.remove("hidden");
+        nodes.backdrop.setAttribute("aria-hidden", "false");
+        updateDialogConfirmState();
+        window.setTimeout(() => (requiredText ? nodes.input : nodes.cancel).focus(), 0);
+      });
+    }
+
+    function updateDialogConfirmState() {
+      const nodes = dialogElements();
+      if (!activeDialog) return;
+      const requiredText = activeDialog.requiredText || "";
+      nodes.confirm.disabled = Boolean(requiredText && nodes.input.value !== requiredText);
+    }
+
+    function closeDashboardDialog(confirmed) {
+      if (!activeDialog) return;
+      const nodes = dialogElements();
+      const dialog = activeDialog;
+      const value = nodes.input.value;
+      activeDialog = null;
+      nodes.backdrop.classList.add("hidden");
+      nodes.backdrop.setAttribute("aria-hidden", "true");
+      nodes.input.value = "";
+      nodes.hint.textContent = "";
+      nodes.confirm.disabled = false;
+      if (dialog.previousFocus && typeof dialog.previousFocus.focus === "function") {
+        dialog.previousFocus.focus();
+      }
+      dialog.resolve({confirmed: Boolean(confirmed), value});
+    }
+
+    async function confirmDashboardAction(options) {
+      const result = await openDashboardDialog(options);
+      return result.confirmed;
+    }
+
+    async function typedDashboardConfirmation(options) {
+      const result = await openDashboardDialog(options);
+      return result.confirmed && result.value === options.requiredText;
     }
 
     function viewFromHash() {
@@ -576,7 +653,12 @@
         showToast("Select a report first.");
         return;
       }
-      const ok = window.confirm("Delete this report's single-run artifacts? Shared data is not deleted.");
+      const ok = await confirmDashboardAction({
+        title: "Delete report artifacts",
+        message: "Delete this report's single-run artifacts? Shared data is not deleted.",
+        confirmLabel: "Delete report",
+        danger: true,
+      });
       if (!ok) return;
       try {
         const result = await postJson(endpoints.deletion, {
@@ -1452,7 +1534,11 @@
         showToast("No settings changes to save.");
         return;
       }
-      const ok = window.confirm(`Save ${paths.length} setting change(s)? A backup will be created before the config is updated.`);
+      const ok = await confirmDashboardAction({
+        title: "Save settings",
+        message: `Save ${paths.length} setting change(s)? A backup will be created before the config is updated.`,
+        confirmLabel: "Save settings",
+      });
       if (!ok) {
         showToast("Settings save cancelled.");
         return;
@@ -1561,7 +1647,11 @@
     }
 
     async function startReportJob() {
-      const ok = window.confirm("Generate a full Codex report now? This can take a while and will create a new run.");
+      const ok = await confirmDashboardAction({
+        title: "Generate report",
+        message: "Generate a full Codex report now? This can take a while and will create a new run.",
+        confirmLabel: "Generate report",
+      });
       if (!ok) {
         showToast("Report generation cancelled.");
         return;
@@ -1728,7 +1818,14 @@
         const selected = state.selectedRunArtifacts.slice();
         if (!selected.length) return showToast("Select at least one run artifact first.");
         const required = state.deletionPlan?.confirmations?.run_artifacts || "DELETE RUN DATA";
-        if (window.prompt(`Type ${required} to delete ${selected.length} run artifact set(s).`) !== required) {
+        const confirmed = await typedDashboardConfirmation({
+          title: "Delete single-run artifacts",
+          message: `Delete ${selected.length} run artifact set(s). Shared stores are not deleted.`,
+          requiredText: required,
+          confirmLabel: "Delete selected",
+          danger: true,
+        });
+        if (!confirmed) {
           showToast("Run artifact cleanup cancelled.");
           return;
         }
@@ -1741,7 +1838,14 @@
         const selected = state.selectedSharedStores.slice();
         if (!selected.length) return showToast("Select at least one shared data store first.");
         const required = state.deletionPlan?.confirmations?.shared_data || "DELETE SHARED DATA";
-        if (window.prompt(`Type ${required} to delete ${selected.length} shared store(s).`) !== required) {
+        const confirmed = await typedDashboardConfirmation({
+          title: "Delete shared data stores",
+          message: `Delete ${selected.length} shared store(s). These stores may be reused by reports and future runs.`,
+          requiredText: required,
+          confirmLabel: "Delete shared data",
+          danger: true,
+        });
+        if (!confirmed) {
           showToast("Shared data cleanup cancelled.");
           return;
         }
@@ -1806,6 +1910,20 @@
     }
 
     function wireGlobalEvents() {
+      const dialogNodes = dialogElements();
+      dialogNodes.cancel.addEventListener("click", () => closeDashboardDialog(false));
+      dialogNodes.confirm.addEventListener("click", () => closeDashboardDialog(true));
+      dialogNodes.input.addEventListener("input", updateDialogConfirmState);
+      dialogNodes.backdrop.addEventListener("click", (event) => {
+        if (event.target === dialogNodes.backdrop) {
+          closeDashboardDialog(false);
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && activeDialog) {
+          closeDashboardDialog(false);
+        }
+      });
       document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
         event.preventDefault();
         setHashView(node.dataset.viewTarget);

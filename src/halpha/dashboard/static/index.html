@@ -381,6 +381,30 @@
         </div>
       </section>
     </main>
+    <div id="dashboard-dialog-backdrop" class="dialog-backdrop hidden" aria-hidden="true">
+      <section
+        id="dashboard-dialog"
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dashboard-dialog-title"
+        aria-describedby="dashboard-dialog-message"
+      >
+        <div class="dialog-body">
+          <h2 id="dashboard-dialog-title">Confirm action</h2>
+          <p id="dashboard-dialog-message"></p>
+          <label id="dashboard-dialog-input-label" class="dialog-input-label hidden" for="dashboard-dialog-input">
+            Confirmation text
+          </label>
+          <input id="dashboard-dialog-input" class="text-input hidden" type="text" autocomplete="off">
+          <div id="dashboard-dialog-hint" class="dialog-hint"></div>
+        </div>
+        <div class="dialog-actions">
+          <button class="ghost-button" type="button" id="dashboard-dialog-cancel">Cancel</button>
+          <button class="primary-button" type="button" id="dashboard-dialog-confirm">Confirm</button>
+        </div>
+      </section>
+    </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
 
