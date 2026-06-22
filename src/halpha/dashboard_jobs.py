@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from .dashboard_time import parse_utc_timestamp, utc_now_timestamp
 from .pipeline import STAGE_ORDER
-from .storage import write_json
+from .storage import config_base as _config_base, read_json_object, safe_local_ref, write_json
 
 
 DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
@@ -825,20 +825,9 @@ class DashboardJobManager:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    try:
-        loaded = path.read_text(encoding="utf-8")
-    except FileNotFoundError as exc:
-        raise DashboardJobError(f"{path.name} was not found.") from exc
-    except OSError as exc:
-        raise DashboardJobError(f"{path.name} could not be read: {exc}") from exc
-    import json
-
-    try:
-        data = json.loads(loaded)
-    except json.JSONDecodeError as exc:
-        raise DashboardJobError(f"{path.name} is not valid JSON: {exc.msg}.") from exc
-    if not isinstance(data, dict):
-        raise DashboardJobError(f"{path.name} must be a JSON object.")
+    data, error = read_json_object(path)
+    if error:
+        raise DashboardJobError(error)
     return data
 
 
@@ -890,13 +879,6 @@ def _is_private_key(key: str) -> bool:
     return any(part in lowered for part in PRIVATE_KEY_PARTS)
 
 
-def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
-
-
 def _config_ref(config_path: Path) -> str:
     path = Path(config_path)
     if not path.is_absolute():
@@ -908,11 +890,7 @@ def _config_ref(config_path: Path) -> str:
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    target = path if path.is_absolute() else base / path
-    try:
-        return target.resolve().relative_to(base.resolve()).as_posix()
-    except (OSError, ValueError):
-        return EXTERNAL_ARTIFACT_REF
+    return safe_local_ref(path, base=base, external_ref=EXTERNAL_ARTIFACT_REF)
 
 
 def _utc_now() -> str:
