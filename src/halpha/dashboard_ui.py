@@ -2975,8 +2975,26 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           ? `<svg viewBox="0 0 900 120" style="width:100%; height:120px;">${lineChartPath(curve.map((point) => point.net_equity ?? point.equity ?? point.value))}</svg>`
           : `<div class="message">No equity curve is available for the selected backtest.</div>`;
       } else {
-        document.querySelector("#strategy-tab-content").innerHTML = `<div class="message">Performance diagnostics are summarized from the selected backtest artifact. Detailed tables stay bounded for dashboard use.</div>`;
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyDiagnostics();
       }
+    }
+
+    function renderStrategyDiagnostics() {
+      const groups = strategyWarningGroups();
+      if (!groups.length) {
+        return `<div class="message">No grouped strategy warnings are recorded for the selected data.</div>`;
+      }
+      return `<table class="kv-table"><tbody>${groups.map((group) => `
+        <tr>
+          <td>${escapeHtml(group.message || "warning")}</td>
+          <td>${escapeHtml(formatNumber(group.count || 0))} occurrence${Number(group.count) === 1 ? "" : "s"}</td>
+          <td>${escapeHtml((group.sources || []).slice(0, 2).join("; ") || "source n/a")}</td>
+        </tr>`).join("")}</tbody></table>`;
+    }
+
+    function strategyWarningGroups() {
+      const groups = Array.isArray(state.strategies?.warning_groups) ? state.strategies.warning_groups : [];
+      return groups.slice(0, 12);
     }
 
     function lineChartPath(rawValues) {

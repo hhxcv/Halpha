@@ -18,6 +18,8 @@ MAX_STANDALONE_RUNS = 50
 MAX_BACKTEST_VISUALIZATION_BARS = 120
 MAX_BACKTEST_VISUALIZATION_MARKERS = 80
 MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS = 120
+MAX_WARNING_GROUPS = 12
+MAX_WARNING_GROUP_SOURCES = 5
 PIPELINE_STRATEGY_ARTIFACTS = [
     ("strategy_benchmark_suite", "analysis/strategy_benchmark_suite.json"),
     ("quant_strategy_runs", "analysis/quant_strategy_runs.json"),
@@ -45,6 +47,8 @@ def dashboard_strategy_research(
             for artifact in _string_list(section.get("source_artifacts"))
         }
     )
+    warnings = [*pipeline["warnings"], *standalone["warnings"]]
+    errors = [*pipeline["errors"], *standalone["errors"]]
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_strategy_research",
@@ -55,8 +59,9 @@ def dashboard_strategy_research(
         "standalone": standalone,
         "commands": _strategy_command_options(config),
         "source_artifacts": source_artifacts,
-        "warnings": [*pipeline["warnings"], *standalone["warnings"]],
-        "errors": [*pipeline["errors"], *standalone["errors"]],
+        "warnings": warnings,
+        "warning_groups": _warning_groups(warnings, source_artifacts),
+        "errors": errors,
         "omitted": {
             "full_equity_curves_embedded": False,
             "full_strategy_records_embedded": False,
@@ -733,6 +738,8 @@ def _standalone_item(
     warnings: list[str] | None = None,
     errors: list[str] | None = None,
 ) -> dict[str, Any]:
+    source_artifacts = source_artifacts or []
+    warnings = warnings or []
     return {
         "type": item_type,
         "status": status,
@@ -740,8 +747,9 @@ def _standalone_item(
         "fields": fields or {},
         "records": records or {},
         "visualization": visualization or {},
-        "source_artifacts": source_artifacts or [],
-        "warnings": warnings or [],
+        "source_artifacts": source_artifacts,
+        "warnings": warnings,
+        "warning_groups": _warning_groups(warnings, source_artifacts),
         "errors": errors or [],
     }
 
@@ -758,6 +766,8 @@ def _artifact_section(
     warnings: list[str] | None = None,
     errors: list[str] | None = None,
 ) -> dict[str, Any]:
+    source_artifacts = source_artifacts or []
+    warnings = warnings or []
     return {
         "name": name,
         "status": status,
@@ -765,8 +775,9 @@ def _artifact_section(
         "preview_path": preview_path,
         "fields": fields or {},
         "records": records or {},
-        "source_artifacts": source_artifacts or [],
-        "warnings": warnings or [],
+        "source_artifacts": source_artifacts,
+        "warnings": warnings,
+        "warning_groups": _warning_groups(warnings, source_artifacts),
         "errors": errors or [],
     }
 
@@ -781,12 +792,15 @@ def _section(
     errors: list[str] | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    source_artifacts = source_artifacts or []
+    warnings = warnings or []
     section = {
         "name": name,
         "status": status,
         "fields": fields or {},
-        "source_artifacts": source_artifacts or [],
-        "warnings": warnings or [],
+        "source_artifacts": source_artifacts,
+        "warnings": warnings,
+        "warning_groups": _warning_groups(warnings, source_artifacts),
         "errors": errors or [],
     }
     if extra:
@@ -866,6 +880,28 @@ def _messages(value: Any) -> list[str]:
             if message:
                 messages.append(str(message))
     return messages
+
+
+def _warning_groups(warnings: list[str], source_artifacts: list[str] | None = None) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    sources = sorted({source for source in (source_artifacts or []) if isinstance(source, str) and source})
+    for warning in warnings:
+        if not isinstance(warning, str):
+            continue
+        message = warning.strip()
+        if not message:
+            continue
+        key = " ".join(message.lower().split())
+        group = grouped.setdefault(
+            key,
+            {
+                "message": message,
+                "count": 0,
+                "sources": sources[:MAX_WARNING_GROUP_SOURCES],
+            },
+        )
+        group["count"] += 1
+    return sorted(grouped.values(), key=lambda item: (-int(item["count"]), str(item["message"])))[:MAX_WARNING_GROUPS]
 
 
 def _overall_status(statuses: list[str]) -> str:
