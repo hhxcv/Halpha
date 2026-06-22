@@ -6,7 +6,17 @@ import sqlite3
 from typing import Any
 
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
-from .storage import config_base as _config_base, read_json_object, resolve_local_ref, safe_local_ref
+from .storage import (
+    config_base as _config_base,
+    read_json_object,
+    resolve_local_ref,
+    safe_local_ref,
+)
+from .value_helpers import (
+    as_dict as _dict,
+    as_list as _list,
+    stringified_list as _string_list,
+)
 
 
 STRATEGY_RESEARCH_NOTICE = "Strategy output is historical research material, not trading advice."
@@ -927,18 +937,6 @@ def _bounded_mapping(value: Any) -> dict[str, Any]:
 
 def _dict_items(value: Any) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
-
-
-def _dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
-
-
-def _string_list(value: Any) -> list[str]:
-    return [str(item) for item in _list(value)]
 
 
 def _list_count(value: Any) -> int:

@@ -27,6 +27,12 @@ from .storage import (
     resolve_local_ref,
     safe_local_ref,
 )
+from .value_helpers import (
+    as_dict as _dict,
+    as_list as _list,
+    strict_int as _int,
+    stringified_list as _string_list,
+)
 from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
 
 
@@ -3369,29 +3375,11 @@ def _bounded_mapping(value: Any) -> dict[str, Any]:
     return bounded
 
 
-def _dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
 def _clean_text(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     clean = value.strip()
     return clean or None
-
-
-def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
-
-
-def _string_list(value: Any) -> list[str]:
-    return [str(item) for item in _list(value)]
-
-
-def _int(value: Any) -> int:
-    if isinstance(value, bool):
-        return 0
-    return value if isinstance(value, int) else 0
 
 
 def _warning_count(value: dict[str, Any]) -> int:
