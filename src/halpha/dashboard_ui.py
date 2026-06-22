@@ -2464,7 +2464,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     function reportRecords() {
-      return state.runs.filter((run) => run.report).map((run) => {
+      return state.runs.filter((run) => isAvailableReport(run)).map((run) => {
         const type = reportType(run);
         return {
           ...run,
@@ -2473,6 +2473,11 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           report_path: reportPath(run),
         };
       });
+    }
+
+    function isAvailableReport(run) {
+      const reportState = run?.report_state || {};
+      return reportState.status === "available" && Boolean(run?.report || reportState.artifact);
     }
 
     function reportType(run) {
@@ -2494,7 +2499,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
 
     function reportPath(run) {
       if (!run) return "";
-      const report = String(run.report || "");
+      const report = String(run.report || run.report_state?.artifact || "");
       if (report.startsWith("runs/") || report.startsWith("data/")) return report;
       if (report) return joinPath(run.run_dir, report);
       return joinPath(run.run_dir, "report/report.md");

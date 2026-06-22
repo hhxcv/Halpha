@@ -874,13 +874,29 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
             "errors": [f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"],
         }
     runs = [_run_list_record(row, artifacts.get(str(row[0]), {}), base=base) for row in rows]
+    missing_report_diagnostics = [
+        {
+            "run_id": run["run_id"],
+            "status": run["report_state"]["status"],
+            "artifact": run["report_state"].get("artifact"),
+        }
+        for run in runs
+        if _dict(run.get("report_state")).get("status") == "missing"
+        and _dict(run.get("report_state")).get("artifact")
+    ]
+    report_diagnostics = missing_report_diagnostics[:20]
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_run_list",
         "status": "available",
         "source_artifacts": [RUN_INDEX_ARTIFACT],
         "runs": runs,
-        "warnings": [],
+        "report_diagnostics": report_diagnostics,
+        "warnings": [
+            f"{len(missing_report_diagnostics)} recorded report artifact(s) were missing and omitted from report lists."
+        ]
+        if missing_report_diagnostics
+        else [],
         "errors": [],
     }
 
@@ -2514,6 +2530,12 @@ def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -
     run_dir = _resolve_ref(str(row[1]), base=base)
     manifest_path = _resolve_ref(str(row[9]), base=base)
     report_paths = artifacts.get("report", [])
+    report_state = _run_report_state(
+        run_dir,
+        report_paths[0] if report_paths else None,
+        codex_status=row[6],
+        base=base,
+    )
     return {
         "run_id": run_id,
         "run_dir": _safe_ref(run_dir, base=base),
@@ -2525,8 +2547,43 @@ def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -
         "warning_count": int(row[7] or 0),
         "error_count": int(row[8] or 0),
         "manifest": _safe_ref(manifest_path, base=base),
-        "report": report_paths[0] if report_paths else None,
+        "report": report_state.get("artifact") if report_state.get("status") == "available" else None,
+        "report_state": report_state,
     }
+
+
+def _run_report_state(run_dir: Path, report_ref: str | None, *, codex_status: Any, base: Path) -> dict[str, Any]:
+    if report_ref:
+        path = _report_artifact_path(run_dir, report_ref, base=base)
+        artifact = _display_report_ref(report_ref, path, base=base)
+        if path.exists() and path.is_file():
+            return {"status": "available", "artifact": artifact}
+        return {
+            "status": "missing",
+            "artifact": artifact,
+            "warning": "recorded report artifact was not found.",
+        }
+    status = str(codex_status or "").lower()
+    if status in {"skipped", "disabled", "not_run"}:
+        return {"status": status, "artifact": None}
+    return {"status": "missing", "artifact": None}
+
+
+def _report_artifact_path(run_dir: Path, report_ref: str, *, base: Path) -> Path:
+    path = Path(report_ref)
+    if path.is_absolute():
+        return path
+    if report_ref.startswith(("runs/", "data/")):
+        return base / path
+    return run_dir / path
+
+
+def _display_report_ref(report_ref: str, path: Path, *, base: Path) -> str:
+    if Path(report_ref).is_absolute() or report_ref.startswith(("runs/", "data/")):
+        return _safe_ref(path, base=base)
+    if ".." in Path(report_ref).parts:
+        return _safe_ref(path, base=base)
+    return report_ref
 
 
 def _run_detail_missing(run_id: str, *, warning: str) -> dict[str, Any]:

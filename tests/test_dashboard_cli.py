@@ -508,6 +508,7 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     assert listed["codex_status"] == "skipped"
     assert listed["manifest"] == "runs/run-1/run_manifest.json"
     assert listed["report"] == "report/report.md"
+    assert listed["report_state"] == {"status": "available", "artifact": "report/report.md"}
 
     assert detail_response.status_code == 200
     detail = detail_response.json()
@@ -548,6 +549,32 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
         "artifacts"
     ]
     assert str(tmp_path) not in detail_response.text
+
+
+def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/runs")
+
+    assert response.status_code == 200
+    payload = response.json()
+    listed = payload["runs"][0]
+    assert listed["run_id"] == "run-1"
+    assert listed["report"] is None
+    assert listed["report_state"] == {
+        "status": "missing",
+        "artifact": "report/report.md",
+        "warning": "recorded report artifact was not found.",
+    }
+    assert payload["report_diagnostics"] == [
+        {"run_id": "run-1", "status": "missing", "artifact": "report/report.md"}
+    ]
+    assert payload["warnings"] == ["1 recorded report artifact(s) were missing and omitted from report lists."]
+    assert str(tmp_path) not in response.text
 
 
 def test_dashboard_rejects_run_index_refs_outside_project_root(tmp_path: Path) -> None:

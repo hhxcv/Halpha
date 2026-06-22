@@ -179,6 +179,9 @@ def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path)
 
     assert "renderReportPreview(preview, run)" in script
     assert "markdownToHtml(markdown, state.reportSearchTerm)" in script
+    assert "isAvailableReport(run)" in script
+    assert 'reportState.status === "available"' in script
+    assert "run.report_state?.artifact" in script
     assert 'data-report-job="generate"' in html
     assert 'data-job-intent="run_no_codex"' not in html
     assert 'id="overview-report-job-status"' in html
