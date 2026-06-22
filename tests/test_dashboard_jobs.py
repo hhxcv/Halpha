@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import threading
 import time
@@ -859,6 +860,44 @@ def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) 
     assert completed["status"] == "cancelled"
     assert completed["exit_code"] == -15
     assert "cancelled" in completed["warnings"][0]
+
+
+def test_dashboard_job_manager_marks_stale_running_job_blocked(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    job_dir = tmp_path / "runs" / "dashboard" / "jobs" / "stale-job"
+    job_dir.mkdir(parents=True)
+    (job_dir / "job.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_type": "dashboard_job",
+                "job_id": "stale-job",
+                "intent": "monitor_loop",
+                "kind": "monitor_loop",
+                "status": "running",
+                "pid": 99999999,
+                "created_at": "2026-06-22T00:00:00Z",
+                "updated_at": "2026-06-22T00:00:00Z",
+                "warnings": [],
+                "errors": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    detail = manager.get_job("stale-job")
+    listed = manager.list_jobs()["jobs"][0]
+    index = json.loads((tmp_path / "runs" / "dashboard" / "jobs" / "index.json").read_text(encoding="utf-8"))
+
+    assert detail is not None
+    assert detail["status"] == "blocked"
+    assert detail["runtime_attached"] is False
+    assert detail["process_alive"] is False
+    assert "recorded process is not running" in detail["errors"][0]
+    assert listed["status"] == "blocked"
+    assert index["jobs"][0]["status"] == "blocked"
 
 
 def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> None:
