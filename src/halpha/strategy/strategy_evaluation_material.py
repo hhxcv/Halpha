@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from halpha.pipeline import PipelineError
+from halpha.runtime.pipeline_contracts import PipelineError
 
 
 STRATEGY_EVALUATION_SUMMARY_ARTIFACT = "analysis/strategy_evaluation_summary.json"

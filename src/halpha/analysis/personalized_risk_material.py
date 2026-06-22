@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from halpha.codex.input_budget import DEFAULT_MATERIAL_MAX_CHARS, text_budget_record
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 
 
 STAGE_NAME = "build_personalized_risk_material"

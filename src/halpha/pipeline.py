@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import redact_private_text
+from halpha.runtime.pipeline_contracts import (
+    PipelineError,
+    RunContext,
+    RunResult,
+    StageHandler,
+    StageNotImplementedError,
+)
 from halpha.pipeline_stages import (
     DECISION_INTELLIGENCE_STAGES,
     STAGE_ORDER,
@@ -21,51 +27,6 @@ from halpha.storage import ensure_directory, write_json
 
 
 LOGGER = logging.getLogger(__name__)
-
-StageHandler = Callable[[dict[str, Any], "RunContext"], list[str] | None]
-
-
-class PipelineError(Exception):
-    def __init__(
-        self,
-        message: str,
-        *,
-        stage: str | None = None,
-        exit_code: int = 1,
-        artifacts: list[str] | None = None,
-        error_details: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.stage = stage
-        self.exit_code = exit_code
-        self.artifacts = artifacts or []
-        self.error_details = error_details or {}
-
-
-class StageNotImplementedError(PipelineError):
-    def __init__(self, stage: str) -> None:
-        super().__init__(f"stage {stage} is not implemented", stage=stage, exit_code=3)
-
-@dataclass(frozen=True)
-class RunContext:
-    run_id: str
-    run_dir: Path
-    raw_dir: Path
-    analysis_dir: Path
-    codex_context_dir: Path
-    report_dir: Path
-    manifest_path: Path
-    config_path: Path
-    manifest: dict[str, Any]
-
-
-@dataclass(frozen=True)
-class RunResult:
-    succeeded: bool
-    run: RunContext
-    exit_code: int
-    failed_stage: str | None
-    reason: str | None
 
 
 def run_pipeline(

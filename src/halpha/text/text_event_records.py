@@ -10,7 +10,7 @@ from json import JSONDecodeError
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from halpha.data.research_data_catalog import write_research_data_catalog
 from halpha.storage import write_json

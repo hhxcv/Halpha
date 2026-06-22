@@ -8,7 +8,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.product.product_validation import validate_product_contracts
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
 from halpha.storage import display_path

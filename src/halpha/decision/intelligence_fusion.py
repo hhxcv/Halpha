@@ -6,7 +6,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
 

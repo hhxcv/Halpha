@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, write_json
 
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from halpha.collectors.onchain_flow import ONCHAIN_FLOW_ARTIFACT
 from halpha.data.history_merge import merge_history_records
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, write_json
 
 

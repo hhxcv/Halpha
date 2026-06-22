@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.market.market_data_views import MARKET_DATA_VIEWS_ARTIFACT, load_market_data_view_records
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import (
     HIGH_COST_DRAG_PCT_THRESHOLD,

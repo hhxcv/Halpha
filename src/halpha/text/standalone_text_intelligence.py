@@ -9,7 +9,7 @@ from typing import Any
 
 from halpha.collectors.text import TEXT_ARTIFACT, collect_text_events_raw
 from halpha.analysis.event_intelligence_material import build_event_intelligence_material
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from halpha.storage import display_path, ensure_directory, write_json
 from halpha.text.text_entity_evidence import build_text_entity_evidence

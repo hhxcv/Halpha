@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
-from halpha.pipeline import RunContext
+from halpha.runtime.pipeline_contracts import RunContext
 
 
 FEATURE_SNAPSHOTS_ARTIFACT = "analysis/feature_snapshots.json"

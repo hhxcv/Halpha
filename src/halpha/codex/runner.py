@@ -12,7 +12,7 @@ from halpha.codex.report_postprocess import (
     inject_quant_strategy_table,
     inject_strategy_effectiveness_table,
 )
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 
 
 STAGE_NAME = "run_codex_report"

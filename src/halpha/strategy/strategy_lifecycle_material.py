@@ -4,7 +4,7 @@ import json
 from json import JSONDecodeError
 from typing import Any
 
-from halpha.pipeline import PipelineError, RunContext
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 
 
 STAGE_NAME = "build_strategy_lifecycle_material"

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from halpha.storage import display_path
 
 if TYPE_CHECKING:
-    from halpha.pipeline import RunContext
+    from halpha.runtime.pipeline_contracts import RunContext
 
 
 RUN_INDEX_SCHEMA_VERSION = 1
