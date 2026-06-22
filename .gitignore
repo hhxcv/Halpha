@@ -15,7 +15,7 @@ config.*.local.yaml
 config.*.local.yml
 data/
 !src/halpha/data/
-!src/halpha/data/*.py
+!src/halpha/data/**
 logs/
 runs/*
 !runs/README.md
