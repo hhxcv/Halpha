@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .collectors.macro_calendar import MACRO_CALENDAR_ARTIFACT
+from .history_merge import merge_history_records
 from .pipeline import PipelineError, RunContext
 from .storage import display_path, write_json
 
@@ -195,53 +196,12 @@ def _merge_history(
     existing_records: list[dict[str, Any]],
     incoming_records: list[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    by_key = {record["history_key"]: record for record in existing_records}
-    inserted = 0
-    updated = 0
-    duplicate = 0
-    conflicts = 0
-    warnings = []
-
-    for incoming in incoming_records:
-        existing = by_key.get(incoming["history_key"])
-        if existing is None:
-            by_key[incoming["history_key"]] = incoming
-            inserted += 1
-            continue
-
-        duplicate += 1
-        updated += 1
-        if existing.get("payload_signature") != incoming.get("payload_signature"):
-            conflicts += 1
-            warning = f"conflicting duplicate macro calendar record: {incoming['history_key']}"
-            warnings.append(warning)
-            existing["warnings"] = _unique_sorted([*existing.get("warnings", []), warning])
-            existing["status"] = "warning"
-        existing["affected_assets"] = _unique_sorted(
-            [*existing.get("affected_assets", []), *incoming.get("affected_assets", [])]
-        )
-        existing["origin_run_ids"] = _unique_sorted(
-            [*existing.get("origin_run_ids", []), *incoming.get("origin_run_ids", [])]
-        )
-        existing["last_seen_run_id"] = incoming["last_seen_run_id"]
-        existing["last_seen_at"] = _latest_timestamp(existing.get("last_seen_at"), incoming.get("last_seen_at"))
-        existing["source_artifacts"] = _unique_sorted(
-            [*existing.get("source_artifacts", []), *incoming.get("source_artifacts", [])]
-        )
-        existing["warnings"] = _unique_sorted([*existing.get("warnings", []), *incoming.get("warnings", [])])
-        existing["errors"] = _error_list([*existing.get("errors", []), *incoming.get("errors", [])])
-        if (existing["warnings"] or existing["errors"]) and existing.get("status") == "active":
-            existing["status"] = "warning"
-
-    return (
-        sorted(by_key.values(), key=lambda record: _record_sort_key(record)),
-        {
-            "inserted_records": inserted,
-            "updated_records": updated,
-            "duplicate_records": duplicate,
-            "conflicting_duplicates": conflicts,
-            "warnings": _unique_sorted(warnings),
-        },
+    return merge_history_records(
+        existing_records,
+        incoming_records,
+        conflict_label="macro calendar",
+        sort_key=_record_sort_key,
+        extra_string_list_fields=("affected_assets",),
     )
 
 
@@ -592,12 +552,6 @@ def _error_list(value: Any) -> list[dict[str, Any]]:
 
 def _unique_sorted(values: list[str]) -> list[str]:
     return sorted(set(values))
-
-
-def _latest_timestamp(left: Any, right: Any) -> str:
-    left_text = str(left or "")
-    right_text = str(right or "")
-    return max(left_text, right_text)
 
 
 def _partition_value(value: str) -> str:
