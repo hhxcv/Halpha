@@ -1,0 +1,396 @@
+from __future__ import annotations
+
+
+def dashboard_shell_html(*, css: str, script: str) -> str:
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Halpha Dashboard</title>
+  <style>
+__HALPHA_DASHBOARD_CSS__  </style>
+</head>
+<body>
+  <div
+    id="halpha-dashboard-app"
+    class="app-shell"
+    data-overview-endpoint="/api/overview"
+    data-health-endpoint="/api/health"
+    data-runs-endpoint="/api/runs"
+    data-preview-endpoint="/api/artifacts/preview"
+    data-stores-endpoint="/api/data/stores"
+    data-delete-endpoint="/api/data/deletion"
+    data-strategies-endpoint="/api/strategies"
+    data-monitor-endpoint="/api/monitor"
+    data-monitor-cycles-endpoint="/api/monitor/cycles"
+    data-monitor-alerts-endpoint="/api/monitor/alerts"
+    data-jobs-endpoint="/api/jobs"
+    data-schedule-endpoint="/api/schedule/daily-report"
+    data-settings-endpoint="/api/config/profile"
+    data-text-intelligence-endpoint="/api/text-intelligence"
+    data-display-timezone="__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__"
+  >
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-mark">H</div>
+        <div class="brand-copy">
+          <div class="brand-name">Halpha</div>
+          <div class="brand-subtitle">Local Research</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="nav-item active" href="#overview" data-view-target="overview" aria-current="page">
+          <span class="nav-icon">OV</span><span class="nav-label">Overview</span>
+        </a>
+        <a class="nav-item" href="#reports" data-view-target="reports">
+          <span class="nav-icon">RP</span><span class="nav-label">Reports</span>
+        </a>
+        <a class="nav-item" href="#strategies" data-view-target="strategies">
+          <span class="nav-icon">ST</span><span class="nav-label">Strategy Lab</span>
+        </a>
+        <a class="nav-item" href="#monitor" data-view-target="monitor">
+          <span class="nav-icon">MO</span><span class="nav-label">Monitor</span>
+        </a>
+        <a class="nav-item" href="#intelligence" data-view-target="intelligence">
+          <span class="nav-icon">IN</span><span class="nav-label">Intelligence</span>
+        </a>
+        <a class="nav-item" href="#settings" data-view-target="settings">
+          <span class="nav-icon">SE</span><span class="nav-label">Settings</span>
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-card">
+          <div class="sidebar-card-title"><span class="health-dot"></span>System healthy</div>
+          <div class="sidebar-card-detail" id="sidebar-health-text">Loading local status.</div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Local mode</div>
+          <div class="sidebar-card-detail">No data leaves this device through the dashboard UI.</div>
+        </div>
+        <div class="sidebar-disclaimer">Market output is research material, not financial advice.</div>
+      </div>
+    </aside>
+
+    <main class="main-shell">
+      <header class="global-topbar" aria-label="Global dashboard status">
+        <span class="top-status-item"><span class="health-dot"></span>Local mode</span>
+        <span class="top-status-item">Timezone: <strong id="display-timezone">__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__</strong></span>
+        <span class="top-status-item">Config: <strong id="config-ref">Loading</strong></span>
+        <button class="icon-button" type="button" id="global-refresh" title="Refresh current page">R</button>
+      </header>
+
+      <section id="overview-view" class="view" data-view="overview">
+        <div class="page-title-row">
+          <div class="page-title">
+            <h1>Overview</h1>
+            <p>System status, reports, monitor, and data health</p>
+          </div>
+        </div>
+        <div class="overview-layout">
+          <div class="overview-main">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Report operations <span id="overview-report-status" class="status-pill pending">loading</span></h2>
+              <div class="report-ops-grid">
+                <div>
+                  <div id="overview-report-metrics" class="report-metrics"></div>
+                  <div id="overview-latest-report"></div>
+                </div>
+                <div>
+                  <svg id="overview-report-chart" class="chart-mini" viewBox="0 0 260 118" role="img" aria-label="Reports in the last 14 days"></svg>
+                  <div class="toolbar-actions" style="margin-top: 14px;">
+                    <button class="primary-button" type="button" data-report-job="generate">Generate report</button>
+                    <button class="ghost-button" type="button" id="open-latest-report">Open latest</button>
+                  </div>
+                  <div id="overview-report-job-status" class="message job-status hidden"></div>
+                </div>
+              </div>
+            </section>
+
+            <div class="overview-grid-2">
+              <section class="panel panel-pad">
+                <h2 class="panel-title">System runtime <span class="status-pill ok">operational</span></h2>
+                <div id="overview-runtime"></div>
+              </section>
+              <section class="panel panel-pad">
+                <h2 class="panel-title">Monitor status <span id="overview-monitor-pill" class="status-pill pending">loading</span></h2>
+                <div id="overview-monitor"></div>
+              </section>
+            </div>
+
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Data health <span id="overview-data-pill" class="status-pill pending">loading</span></h2>
+              <div id="overview-data-cards" class="data-cards"></div>
+              <div id="overview-quality" style="margin-top: 14px;"></div>
+            </section>
+          </div>
+
+          <aside class="detail-rail">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Needs attention <span id="attention-count" class="status-pill warning">0</span></h2>
+              <ul id="attention-list" class="attention-list"></ul>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Quick actions</h2>
+              <div class="action-list">
+                <button class="ghost-button" type="button" data-report-job="generate">Generate report</button>
+                <button class="ghost-button" type="button" data-view-shortcut="strategies">Run strategy backtest</button>
+                <button class="ghost-button" type="button" data-view-shortcut="intelligence">Review intelligence</button>
+                <button class="ghost-button" type="button" data-view-shortcut="monitor">Monitor control</button>
+                <button class="ghost-button" type="button" data-view-shortcut="settings">System settings</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="reports-view" class="view hidden" data-view="reports">
+        <div class="reports-layout">
+          <aside class="panel report-library">
+            <div class="library-header">
+              <h2 class="panel-title">All reports</h2>
+              <input id="report-search" class="search-input" type="search" placeholder="Search reports...">
+            </div>
+            <div id="report-library-groups" class="library-groups"></div>
+          </aside>
+          <section class="panel report-workspace">
+            <div class="report-toolbar">
+              <div id="selected-report-kicker" class="muted">Select a report</div>
+              <div class="toolbar-actions">
+                <button class="primary-button" type="button" data-report-job="generate">Generate report</button>
+                <button class="danger-button" type="button" id="delete-report-button">Delete report</button>
+                <button class="ghost-button" type="button" id="download-report-button">Download</button>
+                <input id="report-reader-search" class="search-input" type="search" placeholder="Search in report..." style="width: 210px;">
+              </div>
+            </div>
+            <div id="reports-report-job-status" class="message job-status hidden"></div>
+            <div id="report-reader" class="report-reader">
+              <div class="empty-state">Loading report library.</div>
+            </div>
+          </section>
+          <aside class="detail-rail">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Report outline</h2>
+              <ul id="report-outline" class="outline-list"></ul>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Report details</h2>
+              <div id="report-details"></div>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Sources</h2>
+              <ul id="report-sources" class="compact-list"></ul>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="strategies-view" class="view hidden" data-view="strategies">
+        <div class="page-title-row">
+          <div class="page-title"><h1>Strategy Lab</h1></div>
+        </div>
+        <div class="strategy-layout">
+          <section class="panel strategy-controls">
+            <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
+            <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
+            <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
+            <div class="field"><label for="strategy-range">Date range</label><select id="strategy-range" class="select-input"><option value="all">All candles</option><option value="180">Last 180 candles</option><option value="90">Last 90 candles</option><option value="30">Last 30 candles</option></select></div>
+            <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
+            <button class="ghost-button" type="button" id="download-ohlcv-button">Download OHLCV</button>
+          </section>
+          <section class="panel metric-strip" id="strategy-metrics"></section>
+          <section class="panel kline-panel">
+            <div class="chart-header">
+              <div>
+                <div id="strategy-chart-title" class="chart-title">Backtest candlestick chart</div>
+                <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
+              </div>
+              <span id="strategy-quote-label" class="status-pill ok">n/a</span>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-tools" aria-label="Backtest chart window">
+                <button class="tool-dot active" type="button" data-strategy-window="all" title="Show all available candles">All</button>
+                <button class="tool-dot" type="button" data-strategy-window="180" title="Show last 180 candles">180</button>
+                <button class="tool-dot" type="button" data-strategy-window="90" title="Show last 90 candles">90</button>
+                <button class="tool-dot" type="button" data-strategy-window="30" title="Show last 30 candles">30</button>
+              </div>
+              <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="Backtest candlestick chart"></svg>
+            </div>
+            <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>
+          </section>
+          <aside class="strategy-side">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Strategy parameters</h2>
+              <table id="strategy-params" class="kv-table"></table>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Recent trades</h2>
+              <div id="recent-trades"></div>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Backtest runs</h2>
+              <div id="backtest-runs"></div>
+            </section>
+          </aside>
+          <section class="panel strategy-tabs">
+            <div class="tabs" id="strategy-tabs">
+              <button class="tab-button active" type="button" data-strategy-tab="trades">Trades</button>
+              <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
+              <button class="tab-button" type="button" data-strategy-tab="drawdown">Drawdown</button>
+              <button class="tab-button" type="button" data-strategy-tab="summary">Performance summary</button>
+              <button class="tab-button" type="button" data-strategy-tab="list">List of trades</button>
+            </div>
+            <div id="strategy-tab-content" style="padding-top: 14px;"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="monitor-view" class="view hidden" data-view="monitor">
+        <div class="page-title-row">
+          <div class="page-title"><h1>Monitor</h1></div>
+        </div>
+        <div class="monitor-layout">
+          <section class="panel monitor-hero" id="monitor-hero"></section>
+          <section class="panel panel-pad">
+            <h2 class="panel-title">Monitor timeline</h2>
+            <ul id="monitor-timeline" class="monitor-timeline"></ul>
+          </section>
+          <aside class="detail-rail">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Controls</h2>
+              <div class="control-grid">
+                <button class="primary-button" type="button" data-monitor-job="monitor_loop">Start monitor</button>
+                <button class="danger-button" type="button" id="stop-monitor-button">Stop monitor</button>
+                <button class="ghost-button" type="button" data-monitor-job="monitor_once">Run one cycle</button>
+                <button class="ghost-button" type="button" data-monitor-job="monitor_dry_run">Dry run</button>
+                <button class="ghost-button" type="button" id="enable-daily-report">Enable daily report</button>
+                <button class="ghost-button" type="button" id="schedule-monitor-button">Schedule</button>
+              </div>
+              <div id="monitor-control-result" style="margin-top: 12px;"></div>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Configuration</h2>
+              <div id="monitor-config"></div>
+            </section>
+          </aside>
+          <section class="panel panel-pad">
+            <h2 class="panel-title">Recent alerts</h2>
+            <div id="monitor-alert-table"></div>
+          </section>
+          <section class="panel panel-pad">
+            <h2 class="panel-title">Recent jobs</h2>
+            <div id="monitor-job-table"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="intelligence-view" class="view hidden" data-view="intelligence">
+        <div class="page-title-row">
+          <div class="page-title"><h1>Intelligence</h1></div>
+        </div>
+        <div class="intelligence-layout">
+          <section class="panel panel-pad">
+            <div class="filter-grid">
+              <div class="field"><label>Asset</label><select id="intel-asset" class="select-input"><option>All assets</option></select></div>
+              <div class="field"><label>Date range</label><select id="intel-range" class="select-input"><option value="all">All time</option><option value="7d">Latest 7 days</option><option value="30d">Latest 30 days</option></select></div>
+              <div class="field"><label>Severity</label><select id="intel-severity" class="select-input"><option>All severities</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+              <div class="field"><label>Source</label><select id="intel-source" class="select-input"><option>All sources</option></select></div>
+              <button class="ghost-button" type="button" id="intel-reset">Reset</button>
+            </div>
+            <div class="tabs" id="intel-tabs" style="margin-top: 14px;">
+              <button class="tab-button active" type="button" data-intel-tab="text">Text</button>
+              <button class="tab-button" type="button" data-intel-tab="derivatives">Derivatives</button>
+              <button class="tab-button" type="button" data-intel-tab="onchain">On-chain</button>
+              <button class="tab-button" type="button" data-intel-tab="macro">Macro</button>
+              <button class="tab-button" type="button" data-intel-tab="outcomes">Outcomes</button>
+              <button class="tab-button" type="button" data-intel-tab="quality">Data quality</button>
+            </div>
+          </section>
+          <section class="summary-strip" id="intel-kpis"></section>
+          <div class="intel-grid">
+            <section class="panel">
+              <div class="library-header">
+                <select id="intel-sort" class="select-input"><option value="latest">Latest first</option><option value="severity">Severity first</option></select>
+              </div>
+              <div id="intel-events" class="event-list"></div>
+            </section>
+            <section class="intel-charts">
+              <section class="panel panel-pad chart-card">
+                <h2 class="panel-title">Topic volume over time</h2>
+                <svg id="intel-volume-chart" viewBox="0 0 520 240"></svg>
+              </section>
+              <section class="panel panel-pad chart-card">
+                <h2 class="panel-title">Severity mix</h2>
+                <svg id="intel-severity-chart" viewBox="0 0 520 240"></svg>
+              </section>
+            </section>
+            <aside class="panel panel-pad">
+              <div id="intel-detail"></div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="settings-view" class="view hidden" data-view="settings">
+        <div class="page-title-row">
+          <div class="page-title"><h1>Settings</h1></div>
+        </div>
+        <div class="settings-layout">
+          <section class="panel settings-top">
+            <div class="field"><label>Config file</label><div id="config-profile" class="readonly-value">Current config</div></div>
+            <span id="settings-valid-pill" class="status-pill pending">loading</span>
+            <span class="muted" id="settings-last-validated">Last validated: not run</span>
+            <button class="primary-button" type="button" id="settings-save">Save changes</button>
+            <button class="ghost-button" type="button" data-job-intent="validate">Validate</button>
+            <button class="ghost-button" type="button" id="settings-backup">Create backup</button>
+          </section>
+          <div class="settings-main">
+            <aside class="panel settings-nav" id="settings-nav"></aside>
+            <section class="panel panel-pad">
+              <h2 class="panel-title" id="settings-section-title">Market data</h2>
+              <div id="settings-form" class="form-grid"></div>
+            </section>
+            <aside class="detail-rail">
+              <section class="panel panel-pad">
+                <h2 class="panel-title">Change summary <span id="change-count" class="status-pill warning">0 changes</span></h2>
+                <ul id="change-summary" class="compact-list"></ul>
+              </section>
+              <section class="panel panel-pad">
+                <h2 class="panel-title">Validation results</h2>
+                <div id="validation-results"></div>
+              </section>
+            </aside>
+          </div>
+          <section class="panel storage-maintenance">
+            <div class="storage-maintenance-header">
+              <h2 class="panel-title" style="margin-bottom: 4px;">Storage maintenance</h2>
+              <div class="muted">Run artifacts affect one run. Shared stores may be reused by reports and future runs.</div>
+            </div>
+            <div class="cleanup-grid">
+              <section class="cleanup-panel">
+                <div class="cleanup-panel-head">
+                  <strong>Single-run artifacts</strong>
+                  <button class="danger-button" type="button" id="cleanup-run-artifacts">Delete selected</button>
+                </div>
+                <div id="run-cleanup-list" class="cleanup-list"></div>
+              </section>
+              <section class="cleanup-panel">
+                <div class="cleanup-panel-head">
+                  <strong>Shared data stores</strong>
+                  <button class="danger-button" type="button" id="cleanup-shared-data">Delete selected</button>
+                </div>
+                <div id="shared-cleanup-list" class="cleanup-list"></div>
+              </section>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+__HALPHA_DASHBOARD_SCRIPT__  </script>
+</body>
+</html>
+""".replace("__HALPHA_DASHBOARD_CSS__", css).replace("__HALPHA_DASHBOARD_SCRIPT__", script)
