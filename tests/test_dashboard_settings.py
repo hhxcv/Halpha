@@ -1,14 +1,65 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from halpha.config import ConfigError, load_config
 from halpha.dashboard.settings import (
+    CONFIG_PROFILE_FIELDS,
+    CONFIG_PROFILE_SECTIONS,
     _dashboard_config_temp_path,
     dashboard_config_profile,
     dashboard_save_config_profile,
+)
+
+
+EXPECTED_EDITABLE_CONFIG_PATHS = {
+    "codex.enabled",
+    "dashboard.display_timezone",
+    "macro_calendar.enabled",
+    "market.derivatives.enabled",
+    "market.enabled",
+    "market.ohlcv.lookback.1d",
+    "market.ohlcv.lookback.1h",
+    "market.ohlcv.timeframes",
+    "market.proxy.enabled",
+    "market.source",
+    "market.symbols",
+    "monitor.cooldown_seconds",
+    "monitor.interval_seconds",
+    "monitor.max_cycles",
+    "monitor.no_codex",
+    "onchain_flow.enabled",
+    "quant.enabled",
+    "report.language",
+    "report.title",
+    "run.timezone",
+    "text.enabled",
+    "text.intelligence.allow_model_download",
+    "text.intelligence.enabled",
+    "text.max_items",
+}
+NON_EDITABLE_CONFIG_PATTERNS = (
+    "codex.args",
+    "codex.command",
+    "codex.timeout_seconds",
+    "market.ohlcv.storage_dir",
+    "monitor.enabled",
+    "monitor.output_dir",
+    "monitor.target_stage",
+    "quant.effectiveness_gates.**",
+    "quant.engine",
+    "quant.parameter_diagnostics.**",
+    "quant.strategies[].**",
+    "run.output_dir",
+    "text.intelligence.model_cache_dir",
+    "text.intelligence.models.**",
+    "text.intelligence.thresholds.**",
+    "text.sources[].**",
+    "user_state.**",
 )
 
 
@@ -26,6 +77,51 @@ def test_dashboard_settings_profile_excludes_monitor_enable_control(tmp_path: Pa
     assert "monitor.enabled" not in fields
     assert fields["monitor.interval_seconds"]["value"] == 300
     assert str(tmp_path) not in str(profile)
+
+
+def test_dashboard_settings_field_contract_is_explicit() -> None:
+    paths = [str(field["path"]) for field in CONFIG_PROFILE_FIELDS]
+
+    assert set(paths) == EXPECTED_EDITABLE_CONFIG_PATHS
+    assert len(paths) == len(set(paths))
+    for field in CONFIG_PROFILE_FIELDS:
+        assert field["section"] in CONFIG_PROFILE_SECTIONS
+        assert field["control"] in {"multi_select", "number", "select", "tags", "text", "toggle"}
+        assert field["value_type"] in {"bool", "positive_int", "string", "string_list"}
+        if field["control"] in {"multi_select", "select"}:
+            assert field.get("options")
+        assert str(field["description"]).strip()
+
+
+def test_dashboard_settings_config_example_paths_are_classified() -> None:
+    config = load_config(Path("config.example.yaml"))
+    leaf_paths = set(_config_leaf_paths(config))
+    classified_paths = {path for path in leaf_paths if path in EXPECTED_EDITABLE_CONFIG_PATHS or _is_non_editable_path(path)}
+
+    assert EXPECTED_EDITABLE_CONFIG_PATHS <= leaf_paths
+    assert classified_paths == leaf_paths
+
+
+def test_dashboard_settings_profile_does_not_expose_local_private_config_values() -> None:
+    config = load_config(Path("config.example.yaml"))
+    profile = dashboard_config_profile(config, config_path=Path("config.example.yaml"))
+    fields = {field["path"]: field for field in profile["fields"]}
+
+    for forbidden in [
+        "codex.args",
+        "codex.command",
+        "codex.timeout_seconds",
+        "market.proxy.url",
+        "monitor.enabled",
+        "text.intelligence.model_cache_dir",
+        "text.sources[].url",
+        "user_state.path",
+    ]:
+        assert forbidden not in fields
+    profile_text = str(profile)
+    assert "https://cointelegraph.com/rss" not in profile_text
+    assert "https://www.coindesk.com/arc/outboundfeeds/rss/" not in profile_text
+    assert "user_state.local.yaml" not in profile_text
 
 
 def test_dashboard_settings_save_requires_confirmation(tmp_path: Path) -> None:
@@ -121,3 +217,32 @@ dashboard:
         encoding="utf-8",
     )
     return path
+
+
+def _config_leaf_paths(value: Any, prefix: str = "") -> list[str]:
+    if isinstance(value, dict):
+        paths: list[str] = []
+        for key, child in value.items():
+            child_prefix = f"{prefix}.{key}" if prefix else str(key)
+            paths.extend(_config_leaf_paths(child, child_prefix))
+        return paths
+    if isinstance(value, list):
+        if not value:
+            return [prefix]
+        if all(not isinstance(item, (dict, list)) for item in value):
+            return [prefix]
+        paths = []
+        for item in value:
+            paths.extend(_config_leaf_paths(item, f"{prefix}[]"))
+        return sorted(set(paths))
+    return [prefix]
+
+
+def _is_non_editable_path(path: str) -> bool:
+    return any(_matches_pattern(path, pattern) for pattern in NON_EDITABLE_CONFIG_PATTERNS)
+
+
+def _matches_pattern(path: str, pattern: str) -> bool:
+    escaped = re.escape(pattern)
+    regex = escaped.replace(r"\*\*", r".*").replace(r"\*", r"[^.]+")
+    return re.fullmatch(regex, path) is not None
