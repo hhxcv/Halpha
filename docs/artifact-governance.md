@@ -31,6 +31,8 @@ milestone plan.
 - `docs/product-stability-contracts.md`: product validation, run health,
   backup boundary, operational acceptance, privacy, and Codex-boundary
   contracts.
+- `docs/logging-standards.md`: local JSON logging levels, event shape,
+  privacy boundaries, context fields, and anti-noise rules.
 - `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule,
   artifact preview, privacy, and Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, run index,
