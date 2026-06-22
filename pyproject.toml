@@ -22,6 +22,7 @@ dependencies = [
 dev = [
   "httpx2>=2,<3",
   "pytest>=8,<9",
+  "ruff>=0.8,<1",
 ]
 nlp = [
   "gliner>=0.2,<1",
@@ -43,3 +44,10 @@ testpaths = ["tests"]
 markers = [
   "browser_smoke: opt-in local browser smoke checks that launch Playwright through npx",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]
