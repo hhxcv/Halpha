@@ -507,6 +507,12 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     assert listed["status"] == "succeeded"
     assert listed["codex_status"] == "skipped"
     assert listed["manifest"] == "runs/run-1/run_manifest.json"
+    assert listed["integrity_state"] == {
+        "status": "available",
+        "run_dir": "runs/run-1",
+        "manifest": "runs/run-1/run_manifest.json",
+        "missing": [],
+    }
     assert listed["report"] == "report/report.md"
     assert listed["report_state"] == {"status": "available", "artifact": "report/report.md"}
 
@@ -575,6 +581,40 @@ def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> No
         {"run_id": "run-1", "status": "missing", "artifact": "report/report.md"}
     ]
     assert payload["warnings"] == ["1 recorded report artifact(s) were missing and omitted from report lists."]
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_runs_endpoint_reports_dangling_index_manifest(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_source_artifacts(tmp_path, run)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    run.manifest_path.unlink()
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/runs")
+
+    assert response.status_code == 200
+    payload = response.json()
+    listed = payload["runs"][0]
+    assert payload["status"] == "partial"
+    assert listed["integrity_state"] == {
+        "status": "missing",
+        "run_dir": "runs/run-1",
+        "manifest": "runs/run-1/run_manifest.json",
+        "missing": ["manifest"],
+    }
+    assert payload["index_diagnostics"] == [
+        {
+            "run_id": "run-1",
+            "status": "missing",
+            "missing": ["manifest"],
+            "run_dir": "runs/run-1",
+            "manifest": "runs/run-1/run_manifest.json",
+        }
+    ]
+    assert payload["warnings"] == ["1 run index row(s) reference missing run artifacts."]
     assert str(tmp_path) not in response.text
 
 
