@@ -42,6 +42,11 @@ MAX_STORE_DRILLDOWN_ITEMS = 12
 MAX_DELETION_RUN_ITEMS = 500
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
+ARTIFACT_PRODUCER_STAGES = {
+    "data_quality_summary": "build_data_quality_summary",
+    "product_contract_validation": "validate_product_contracts",
+}
+NON_PRODUCED_STAGE_STATUSES = {"disabled", "not_run", "skipped"}
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
 RUN_ARTIFACT_DELETE_CONFIRMATION = "DELETE RUN DATA"
 SHARED_DATA_DELETE_CONFIRMATION = "DELETE SHARED DATA"
@@ -2743,11 +2748,21 @@ def _run_json_artifact_section(
     if run_dir is None:
         return _section(name, "skipped", warnings=["latest run is not available."])
     artifact = _artifact_ref(manifest, artifact_key, default_artifact)
+    boundary = _artifact_stage_boundary(manifest, artifact_key)
     if artifact is None:
+        if boundary:
+            return _stage_boundary_section(
+                name,
+                artifact_key=artifact_key,
+                artifact=default_artifact,
+                boundary=boundary,
+            )
         return _section(name, "missing", warnings=[f"{artifact_key} artifact is not recorded."])
     path = run_dir / artifact
     data, error = _read_json(path)
     if error:
+        if boundary and "was not found" in error:
+            return _stage_boundary_section(name, artifact_key=artifact_key, artifact=artifact, boundary=boundary)
         return _section(name, "missing" if "was not found" in error else "failed", source_artifacts=[artifact], errors=[error])
     artifact_status = str(data.get("status") or "unknown")
     fields = {
@@ -2768,6 +2783,53 @@ def _run_json_artifact_section(
         source_artifacts=[artifact],
         warnings=_string_list(data.get("warnings")),
         errors=_string_list(data.get("errors")),
+    )
+
+
+def _artifact_stage_boundary(manifest: dict[str, Any], artifact_key: str) -> dict[str, str] | None:
+    stage_name = ARTIFACT_PRODUCER_STAGES.get(artifact_key)
+    if not stage_name:
+        return None
+    for stage in _list(manifest.get("stages")):
+        if not isinstance(stage, dict) or stage.get("name") != stage_name:
+            continue
+        status = str(stage.get("status") or "unknown")
+        if status not in NON_PRODUCED_STAGE_STATUSES:
+            return None
+        boundary = {"stage": stage_name, "stage_status": status}
+        reason = stage.get("reason")
+        if isinstance(reason, str) and reason:
+            boundary["stage_reason"] = reason
+        return boundary
+    return None
+
+
+def _stage_boundary_section(
+    name: str,
+    *,
+    artifact_key: str,
+    artifact: str,
+    boundary: dict[str, str],
+) -> dict[str, Any]:
+    stage = boundary["stage"]
+    stage_status = boundary["stage_status"]
+    message = f"{artifact_key} artifact was not produced because {stage} stage is {stage_status}."
+    reason = boundary.get("stage_reason")
+    warnings = [message]
+    if reason:
+        warnings.append(f"Stage reason: {reason}")
+    return _section(
+        name,
+        stage_status,
+        fields={
+            "artifact": artifact,
+            "artifact_key": artifact_key,
+            "stage": stage,
+            "stage_status": stage_status,
+            **({"stage_reason": reason} if reason else {}),
+        },
+        source_artifacts=["run_manifest.json"],
+        warnings=warnings,
     )
 
 
@@ -3175,7 +3237,10 @@ def _overall_status(statuses: list[str]) -> str:
         return "failed"
     if any(status == "degraded" for status in statuses):
         return "degraded"
-    if any(status in {"missing", "partial", "skipped", "unknown"} for status in statuses):
+    if any(
+        status in {"disabled", "missing", "not_run", "partial", "skipped", "unknown"}
+        for status in statuses
+    ):
         return "partial"
     if any(status == "warning" for status in statuses):
         return "warning"
@@ -3186,7 +3251,16 @@ def _normalize_section_status(status: str) -> str:
     normalized = status.lower()
     if normalized in {"ok", "available", "succeeded", "success"}:
         return "available"
-    if normalized in {"warning", "degraded", "failed", "partial", "missing", "skipped"}:
+    if normalized in {
+        "warning",
+        "degraded",
+        "disabled",
+        "failed",
+        "partial",
+        "missing",
+        "not_run",
+        "skipped",
+    }:
         return normalized
     return "unknown"
 

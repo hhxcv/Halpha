@@ -329,6 +329,52 @@ def test_dashboard_overview_endpoint_reads_artifact_backed_state(tmp_path: Path)
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_overview_endpoint_explains_product_validation_not_run(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    reason = "Stopped after run_codex_report by --until."
+    run.manifest["stage_order"].append("validate_product_contracts")
+    run.manifest["stages"].append(
+        {
+            "name": "validate_product_contracts",
+            "status": "not_run",
+            "started_at": None,
+            "finished_at": None,
+            "artifacts": [],
+            "reason": reason,
+        }
+    )
+    run.manifest["artifacts"].pop("product_contract_validation")
+    write_json(run.manifest_path, run.manifest)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/overview")
+
+    assert response.status_code == 200
+    product = response.json()["sections"]["product_validation"]
+    assert product["status"] == "not_run"
+    assert product["fields"] == {
+        "artifact": "analysis/product_contract_validation.json",
+        "artifact_key": "product_contract_validation",
+        "stage": "validate_product_contracts",
+        "stage_status": "not_run",
+        "stage_reason": reason,
+    }
+    assert product["source_artifacts"] == ["run_manifest.json"]
+    expected_warning = (
+        "product_contract_validation artifact was not produced because "
+        "validate_product_contracts stage is not_run."
+    )
+    assert product["warnings"] == [
+        expected_warning,
+        f"Stage reason: {reason}",
+    ]
+    assert product["errors"] == []
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_removed_legacy_endpoints_return_not_found(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
