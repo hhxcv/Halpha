@@ -23,7 +23,7 @@ from halpha.pipeline_stages import (
     validate_optional_stage as _validate_optional_stage,
     validate_stage as _validate_stage,
 )
-from halpha.storage import ensure_directory, write_json
+from halpha.storage import config_base, display_path, ensure_directory, write_json
 
 
 LOGGER = logging.getLogger(__name__)
@@ -634,5 +634,5 @@ def _codex_summary(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _path_for_manifest(path: Path) -> str:
-    return path.as_posix()
+    return display_path(path, base=config_base(path))
 

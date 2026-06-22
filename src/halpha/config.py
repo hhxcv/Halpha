@@ -7,6 +7,18 @@ from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from halpha.data.public_capabilities import (
+    SUPPORTED_DERIVATIVES_DATA_CLASSES,
+    SUPPORTED_DERIVATIVES_MARKET_SOURCES,
+    SUPPORTED_DERIVATIVES_PERIODS,
+    SUPPORTED_MACRO_CALENDAR_DATA_CLASSES,
+    SUPPORTED_MACRO_CALENDAR_REGIONS,
+    SUPPORTED_MACRO_CALENDAR_SOURCES,
+    SUPPORTED_ONCHAIN_FLOW_ASSETS,
+    SUPPORTED_ONCHAIN_FLOW_CHAINS,
+    SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
+    SUPPORTED_ONCHAIN_FLOW_SOURCES,
+)
 from halpha.monitor.monitoring import SUPPORTED_MONITOR_FIELDS
 from halpha.quant.registry import SUPPORTED_STRATEGY_NAMES
 
@@ -27,20 +39,7 @@ CONFIG_SECTIONS = {
 SUPPORTED_USER_STATE_FIELDS = {"enabled", "path"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
-SUPPORTED_DERIVATIVES_MARKET_SOURCES = {"binance_usdm"}
-SUPPORTED_DERIVATIVES_DATA_CLASSES = {
-    "basis",
-    "funding_rate",
-    "liquidation_summary",
-    "open_interest",
-    "premium_index",
-    "spread_depth",
-}
-SUPPORTED_DERIVATIVES_PERIODS = {"5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"}
 SUPPORTED_DERIVATIVES_FIELDS = {"data_classes", "enabled", "lookback", "periods", "source", "symbols"}
-SUPPORTED_MACRO_CALENDAR_SOURCES = {"federal_reserve_fomc"}
-SUPPORTED_MACRO_CALENDAR_DATA_CLASSES = {"central_bank_event"}
-SUPPORTED_MACRO_CALENDAR_REGIONS = {"US"}
 SUPPORTED_MACRO_CALENDAR_FIELDS = {
     "data_classes",
     "enabled",
@@ -50,15 +49,6 @@ SUPPORTED_MACRO_CALENDAR_FIELDS = {
     "source",
     "source_url",
 }
-SUPPORTED_ONCHAIN_FLOW_SOURCES = {"public_aggregate"}
-SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES = {
-    "chain_activity",
-    "exchange_flow_availability",
-    "network_congestion",
-    "stablecoin_supply",
-}
-SUPPORTED_ONCHAIN_FLOW_ASSETS = {"ALL_STABLECOINS", "BTC"}
-SUPPORTED_ONCHAIN_FLOW_CHAINS = {"all", "bitcoin"}
 SUPPORTED_ONCHAIN_FLOW_FIELDS = {
     "assets",
     "chain_activity_source_url",

@@ -6,8 +6,10 @@ from io import BytesIO
 from pathlib import Path
 from urllib.error import HTTPError
 
+from halpha.collectors.derivatives_market import collect_derivatives_market_data
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
+from halpha.runtime.pipeline_contracts import RunContext
 
 
 def test_pipeline_collects_derivatives_market_raw_artifact(tmp_path: Path, monkeypatch) -> None:
@@ -183,6 +185,53 @@ def test_derivatives_collector_passes_configured_market_proxy(tmp_path: Path, mo
     assert captured_proxy_urls == ["http://proxy.example:8080"]
 
 
+def test_derivatives_collector_records_unsupported_data_class_as_unavailable(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = {
+        "market": {
+            "derivatives": {
+                "enabled": True,
+                "source": "binance_usdm",
+                "symbols": ["BTCUSDT"],
+                "data_classes": ["not_yet_supported"],
+                "periods": ["1h"],
+                "lookback": {"1h": 2},
+            }
+        }
+    }
+    run = _run_context(tmp_path)
+
+    class FakeDerivativesSource:
+        def __init__(self, source: str, *, proxy_url: str | None = None) -> None:
+            self.source = source
+
+        def fetch_records(self, request_class, *, symbol, period=None, limit=None):
+            raise AssertionError("unsupported data classes should not call fetch_records")
+
+    monkeypatch.setattr(
+        "halpha.collectors.derivatives_market.PublicDerivativesSource",
+        FakeDerivativesSource,
+    )
+
+    artifacts = collect_derivatives_market_data(config, run)
+
+    raw = json.loads((run.raw_dir / "derivatives_market.json").read_text(encoding="utf-8"))
+    assert artifacts == ["raw/derivatives_market.json"]
+    assert raw["items"] == []
+    assert raw["availability"] == [
+        {
+            "data_class": "not_yet_supported",
+            "status": "unavailable",
+            "record_count": 0,
+            "error_count": 0,
+            "reason": "not_yet_supported raw collection is not implemented for binance_usdm.",
+        }
+    ]
+    assert run.manifest["counts"]["derivatives_market_unavailable"] == 1
+
+
 def _write_config(
     tmp_path: Path,
     *,
@@ -244,6 +293,27 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _run_context(tmp_path: Path) -> RunContext:
+    run_dir = tmp_path / "runs" / "test-run"
+    raw_dir = run_dir / "raw"
+    analysis_dir = run_dir / "analysis"
+    codex_context_dir = run_dir / "codex_context"
+    report_dir = run_dir / "report"
+    for path in (raw_dir, analysis_dir, codex_context_dir, report_dir):
+        path.mkdir(parents=True, exist_ok=True)
+    return RunContext(
+        run_id="test-run",
+        run_dir=run_dir,
+        raw_dir=raw_dir,
+        analysis_dir=analysis_dir,
+        codex_context_dir=codex_context_dir,
+        report_dir=report_dir,
+        manifest_path=run_dir / "run_manifest.json",
+        config_path=tmp_path / "config.yaml",
+        manifest={"artifacts": {}, "counts": {}, "stages": []},
+    )
 
 
 def _successful_payloads() -> dict[str, object]:

@@ -10,8 +10,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
+from halpha.data.public_capabilities import SUPPORTED_DERIVATIVES_MARKET_SOURCES
 
-SUPPORTED_DERIVATIVES_SOURCES = {"binance_usdm"}
 BINANCE_USDM_BASE_URL = "https://fapi.binance.com"
 MARKET_TYPE = "usd_m_futures"
 REQUEST_TIMEOUT_SECONDS = 20
@@ -486,8 +486,8 @@ def _request_url(spec: _RequestSpec, *, symbol: str, period: str, limit: int | N
 
 def _require_supported_source(source: str) -> str:
     _require_non_empty_text(source, "source")
-    if source not in SUPPORTED_DERIVATIVES_SOURCES:
-        supported = ", ".join(sorted(SUPPORTED_DERIVATIVES_SOURCES))
+    if source not in SUPPORTED_DERIVATIVES_MARKET_SOURCES:
+        supported = ", ".join(sorted(SUPPORTED_DERIVATIVES_MARKET_SOURCES))
         raise DerivativesSourceError(f"unsupported derivatives source: {source}. Supported sources: {supported}.")
     return source
 

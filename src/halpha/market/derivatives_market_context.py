@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from json import JSONDecodeError
 from typing import Any
 
+from halpha.data.public_capabilities import DERIVATIVES_CONTEXT_DATA_CLASSES
 from halpha.market.derivatives_market_views import load_derivatives_market_view_records
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
@@ -16,14 +17,7 @@ DERIVATIVES_MARKET_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 RAW_DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
 CONTEXT_SCHEMA_VERSION = 1
 STALE_MAX_AGE_HOURS = 48
-SUPPORTED_DATA_CLASSES = {
-    "basis",
-    "funding_rate",
-    "liquidation_summary",
-    "open_interest",
-    "premium_index",
-    "spread_depth",
-}
+SUPPORTED_DATA_CLASSES = DERIVATIVES_CONTEXT_DATA_CLASSES
 
 FUNDING_THRESHOLDS = {
     "elevated_positive_funding_rate": 0.0002,
