@@ -36,7 +36,10 @@ def test_dashboard_browser_smoke_static_navigation_contract(tmp_path: Path) -> N
         assert f'id="{view}-view"' in html
         assert f'"{view}"' in _PLAYWRIGHT_SMOKE_SPEC
     assert "await page.waitForSelector(`#${view}-view:not(.hidden)`" in _PLAYWRIGHT_SMOKE_SPEC
+    assert '<script src="/assets/dashboard_shared.js" defer></script>' in html
     assert '<script src="/assets/dashboard.js" defer></script>' in html
+    assert html.index("/assets/dashboard_shared.js") < html.index("/assets/dashboard.js")
+    assert "window.HalphaDashboardShared" in script
     assert 'document.querySelectorAll("[data-view-target]")' in script
     assert "setHashView(node.dataset.viewTarget)" in script
     assert "view is stuck loading" in _PLAYWRIGHT_SMOKE_SPEC
