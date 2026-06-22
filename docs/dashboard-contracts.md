@@ -160,6 +160,25 @@ blocks browser automation against the local-only dashboard bind, record that
 limitation in the PR and rely on TestClient shell/API coverage plus static
 responsive and interaction-contract tests.
 
+The opt-in browser smoke check is:
+
+```bash
+HALPHA_BROWSER_SMOKE=1 python -m pytest tests/test_dashboard_browser_smoke.py -q
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:HALPHA_BROWSER_SMOKE = "1"
+python -m pytest tests\test_dashboard_browser_smoke.py -q
+```
+
+Without `HALPHA_BROWSER_SMOKE=1`, the browser smoke test is skipped so default
+unit runs do not download or launch browser tooling. When enabled, the test
+starts the local dashboard server, drives the primary views with Playwright
+Chromium through `npx`, fails on stuck loading or broken navigation, and fails
+on browser console or page errors.
+
 ## Artifact Preview Rules
 
 Dashboard artifact previews must be bounded by default.
