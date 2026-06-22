@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -18,10 +19,12 @@ DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
 DASHBOARD_JOB_INDEX = "runs/dashboard/jobs/index.json"
 MAX_JOB_LOG_CHARS = 20_000
 CODEX_STAGE = "run_codex_report"
+STALE_RUNNING_JOB_GRACE_SECONDS = 30
 EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REDACTED_ARTIFACT_REF = "<redacted-artifact>"
 RESULT_REF_PLACEHOLDERS = {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
+JOB_PROCESS_STATUSES = {"running"}
 RESULT_ARTIFACT_KEYS = {
     "event_intelligence_material",
     "manifest",
@@ -259,7 +262,7 @@ class DashboardJobManager:
 
     def list_jobs(self, *, limit: int = 100) -> dict[str, Any]:
         jobs = sorted(
-            (job for job in self._read_jobs() if job),
+            (self._normalize_runtime_job_state(job) for job in self._read_jobs() if job),
             key=lambda item: str(item.get("created_at") or ""),
             reverse=True,
         )[:limit]
@@ -281,7 +284,7 @@ class DashboardJobManager:
             data = _read_json(path)
         except DashboardJobError:
             return None
-        return data
+        return self._normalize_runtime_job_state(data)
 
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         with self._lock:
@@ -750,6 +753,46 @@ class DashboardJobManager:
     def _job_path(self, job_id: str) -> Path:
         return self.jobs_root / job_id / "job.json"
 
+    def _normalize_runtime_job_state(self, job: dict[str, Any]) -> dict[str, Any]:
+        status = str(job.get("status") or "").lower()
+        if status not in JOB_PROCESS_STATUSES:
+            return job
+        job_id = str(job.get("job_id") or "")
+        if job_id in self._processes:
+            job["runtime_attached"] = True
+            job["process_alive"] = True
+            return job
+
+        alive = _process_is_alive(job.get("pid"))
+        job["runtime_attached"] = False
+        job["process_alive"] = alive
+        if alive:
+            job["cancellable"] = False
+            warning = (
+                "job process is running outside this dashboard runtime; "
+                "cancellation is unsupported from the current dashboard process."
+            )
+            warnings = job.setdefault("warnings", [])
+            if isinstance(warnings, list) and warning not in warnings:
+                warnings.append(warning)
+            return job
+        if _job_recently_updated(job, grace_seconds=STALE_RUNNING_JOB_GRACE_SECONDS):
+            return job
+
+        job["status"] = "blocked"
+        job["updated_at"] = _utc_now()
+        job["finished_at"] = job["updated_at"]
+        error = (
+            "job was marked running, but its recorded process is not running "
+            "and is not attached to this dashboard runtime."
+        )
+        errors = job.setdefault("errors", [])
+        if isinstance(errors, list) and error not in errors:
+            errors.append(error)
+        self._write_job(job)
+        self._write_index()
+        return job
+
     def _redact_value(self, value: Any) -> Any:
         if isinstance(value, dict):
             return {
@@ -796,6 +839,38 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise DashboardJobError(f"{path.name} must be a JSON object.")
     return data
+
+
+def _process_is_alive(pid: Any) -> bool:
+    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except (OSError, OverflowError, ValueError):
+        return False
+    return True
+
+
+def _job_recently_updated(job: dict[str, Any], *, grace_seconds: int) -> bool:
+    for key in ("updated_at", "started_at", "created_at"):
+        timestamp = _parse_utc(job.get(key))
+        if timestamp is None:
+            continue
+        age = datetime.now(timezone.utc) - timestamp
+        return age.total_seconds() < grace_seconds
+    return False
+
+
+def _parse_utc(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
 
 
 def _config_private_values(config: dict[str, Any]) -> set[str]:
