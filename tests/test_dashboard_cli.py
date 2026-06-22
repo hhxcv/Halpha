@@ -566,6 +566,7 @@ def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> No
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.get("/api/runs")
+    detail_response = client.get("/api/runs/run-1")
 
     assert response.status_code == 200
     payload = response.json()
@@ -581,7 +582,15 @@ def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> No
         {"run_id": "run-1", "status": "missing", "artifact": "report/report.md"}
     ]
     assert payload["warnings"] == ["1 recorded report artifact(s) were missing and omitted from report lists."]
+    detail = detail_response.json()
+    assert detail["fields"]["report"] is None
+    assert detail["fields"]["report_state"] == {
+        "status": "missing",
+        "artifact": "report/report.md",
+        "warning": "recorded report artifact was not found.",
+    }
     assert str(tmp_path) not in response.text
+    assert str(tmp_path) not in detail_response.text
 
 
 def test_dashboard_runs_endpoint_reports_dangling_index_manifest(tmp_path: Path) -> None:
