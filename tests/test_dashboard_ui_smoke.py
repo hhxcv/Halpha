@@ -8,6 +8,9 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
+from halpha.dashboard_ui_script import dashboard_script
+from halpha.dashboard_ui_shell import dashboard_shell_html
+from halpha.dashboard_ui_style import dashboard_css
 
 
 EXPECTED_DASHBOARD_VIEWS = {
@@ -18,6 +21,20 @@ EXPECTED_DASHBOARD_VIEWS = {
     "intelligence",
     "settings",
 }
+
+
+def test_dashboard_ui_source_sections_are_split() -> None:
+    css = dashboard_css()
+    script = dashboard_script()
+    shell = dashboard_shell_html(css="", script="")
+
+    assert ".reports-layout" in css
+    assert ".strategy-layout" in css
+    assert "function renderReportLibrary" in script
+    assert "function renderSettings" in script
+    assert "__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__" in shell
+    assert "__HALPHA_DASHBOARD_CSS__" not in shell
+    assert "__HALPHA_DASHBOARD_SCRIPT__" not in shell
 
 
 class DashboardShellParser(HTMLParser):
