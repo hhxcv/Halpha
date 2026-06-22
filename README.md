@@ -543,6 +543,12 @@ Run automated tests:
 python -m pytest
 ```
 
+Run the local lint gate used by CI:
+
+```bash
+python -m ruff check .
+```
+
 For code changes, run the narrowest focused tests that cover the touched module
 before or alongside the full suite.
 
