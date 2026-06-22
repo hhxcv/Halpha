@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from copy import deepcopy
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import shutil
 from typing import Any
+from uuid import uuid4
 
 from halpha.config import ConfigError, load_config
 from halpha.storage import config_base, safe_local_ref
@@ -319,10 +322,10 @@ def dashboard_save_config_profile(
     if error:
         return _config_save_result(config, config_path=config_path, status="failed", errors=[error])
 
-    temp_path = config_path.with_name(f".{config_path.name}.dashboard-save.tmp")
+    temp_path = _dashboard_config_temp_path(config_path)
     backup_path: Path | None = None
     try:
-        temp_path.write_text(serialized, encoding="utf-8")
+        _write_text_for_validation(temp_path, serialized)
         try:
             validated = load_config(temp_path)
         except ConfigError as exc:
@@ -335,7 +338,7 @@ def dashboard_save_config_profile(
         backup_path, backup_error = _backup_dashboard_config(config_path)
         if backup_error:
             return _config_save_result(config, config_path=config_path, status="failed", errors=[backup_error])
-        temp_path.replace(config_path)
+        os.replace(temp_path, config_path)
     except OSError as exc:
         return _config_save_result(
             config,
@@ -344,11 +347,9 @@ def dashboard_save_config_profile(
             errors=[sanitize_dashboard_message(f"config file could not be saved: {exc}", config_path=config_path)],
         )
     finally:
-        try:
+        with suppress(OSError):
             if temp_path.exists():
                 temp_path.unlink()
-        except OSError:
-            pass
 
     config.clear()
     config.update(validated)
@@ -370,6 +371,18 @@ def dashboard_config_ref(config_path: Path) -> str:
         return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
     except ValueError:
         return "<external-config>"
+
+
+def _dashboard_config_temp_path(config_path: Path) -> Path:
+    return config_path.with_name(f".{config_path.name}.{uuid4().hex}.dashboard-save.tmp")
+
+
+def _write_text_for_validation(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def sanitize_dashboard_message(message: str, *, config_path: Path) -> str:
