@@ -5,6 +5,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
 from halpha.pipeline import RunContext
 
 
@@ -17,25 +18,6 @@ INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.m
 USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
-FEATURE_FACTOR_CHECK_NAMES = {
-    "feature_snapshots",
-    "factor_states",
-    "multi_source_signals",
-    "factor_signal_material",
-}
-PERSONALIZED_RISK_CHECK_NAMES = {
-    "user_state_context",
-    "personalized_risk_constraints",
-    "personalized_risk_material",
-}
-POST_DATA_QUALITY_CHECK_NAMES = {
-    *FEATURE_FACTOR_CHECK_NAMES,
-    "intelligence_fusion",
-    "intelligence_fusion_material",
-    *PERSONALIZED_RISK_CHECK_NAMES,
-}
-
-
 def post_data_quality_artifact_checks(run: RunContext, *, expected: bool) -> list[dict[str, Any]]:
     return [
         _feature_snapshots_check(run, expected=expected),

@@ -6,10 +6,8 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.data.data_quality_post_artifacts import (
-    POST_DATA_QUALITY_CHECK_NAMES,
-    post_data_quality_artifact_checks,
-)
+from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
+from halpha.data.data_quality_post_artifacts import post_data_quality_artifact_checks
 from halpha.pipeline import RunContext
 from halpha.data.raw_artifacts import (
     RawArtifactError,
