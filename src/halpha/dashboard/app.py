@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -96,10 +97,19 @@ def create_dashboard_app(
 
     validate_dashboard_host(host)
     validate_dashboard_port(port)
-    app = FastAPI(title="Halpha Dashboard", version="0.0.0")
     health = dashboard_health(config, config_path=config_path, host=host, port=port)
     job_manager = DashboardJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
+
+    @asynccontextmanager
+    async def dashboard_lifespan(_app: Any) -> Any:
+        schedule_manager.start_daily_report_dispatcher()
+        try:
+            yield
+        finally:
+            schedule_manager.stop_daily_report_dispatcher()
+
+    app = FastAPI(title="Halpha Dashboard", version="0.0.0", lifespan=dashboard_lifespan)
 
     @app.middleware("http")
     async def no_store_dashboard_responses(_request: Any, call_next: Any) -> Any:
