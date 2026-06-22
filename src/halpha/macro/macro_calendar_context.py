@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from json import JSONDecodeError
 from typing import Any
 
+from halpha.data.public_capabilities import MACRO_CALENDAR_CONTEXT_DATA_CLASSES
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
@@ -14,7 +15,7 @@ MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 MACRO_CALENDAR_VIEWS_ARTIFACT = "raw/macro_calendar_views.json"
 RAW_MACRO_CALENDAR_ARTIFACT = "raw/macro_calendar.json"
 CONTEXT_SCHEMA_VERSION = 1
-SUPPORTED_DATA_CLASSES = {"central_bank_event"}
+SUPPORTED_DATA_CLASSES = MACRO_CALENDAR_CONTEXT_DATA_CLASSES
 
 
 def build_macro_calendar_context(

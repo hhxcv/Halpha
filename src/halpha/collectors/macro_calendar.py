@@ -9,8 +9,9 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
-from halpha.runtime.pipeline_contracts import RunContext
+from halpha.data.public_capabilities import unsupported_macro_calendar_raw_collection_reason
 from halpha.data.raw_artifacts import RawArtifactError, validate_macro_calendar_raw_artifact
+from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
 
@@ -111,7 +112,7 @@ def collect_macro_calendar_raw(
                 source=source,
                 data_class="central_bank_event",
                 status="unavailable",
-                reason=f"{source} macro/calendar collection is not implemented.",
+                reason=unsupported_macro_calendar_raw_collection_reason("central_bank_event", source),
             )
         )
         validate_macro_calendar_raw_artifact(raw, MACRO_CALENDAR_ARTIFACT)

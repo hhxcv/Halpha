@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from json import JSONDecodeError
 from typing import Any
 
+from halpha.data.public_capabilities import ONCHAIN_FLOW_VIEW_DATA_CLASSES, unsupported_onchain_flow_view_reason
 from halpha.onchain.onchain_flow_history import (
     ONCHAIN_FLOW_HISTORY_STATE_ARTIFACT,
     onchain_flow_group_path,
@@ -19,12 +20,7 @@ ONCHAIN_FLOW_VIEWS_ARTIFACT = "raw/onchain_flow_views.json"
 VIEW_SCHEMA_VERSION = 1
 MAX_VIEW_RECORDS = 50
 VIEW_INCLUDED_COLUMNS = ("as_of", "endpoint", "metrics", "units", "warnings", "errors")
-SUPPORTED_VIEW_DATA_CLASSES = {
-    "chain_activity",
-    "exchange_flow_availability",
-    "network_congestion",
-    "stablecoin_supply",
-}
+SUPPORTED_VIEW_DATA_CLASSES = ONCHAIN_FLOW_VIEW_DATA_CLASSES
 
 
 def build_onchain_flow_views(
@@ -48,7 +44,7 @@ def build_onchain_flow_views(
     for scope in _requested_scopes(onchain_flow):
         data_class = scope["data_class"]
         if data_class not in SUPPORTED_VIEW_DATA_CLASSES:
-            views.append(_skipped_view(scope=scope, reason=f"{data_class} on-chain flow views are not implemented."))
+            views.append(_skipped_view(scope=scope, reason=unsupported_onchain_flow_view_reason(data_class)))
             continue
         if data_class == "exchange_flow_availability":
             views.append(
