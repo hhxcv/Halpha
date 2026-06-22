@@ -313,6 +313,11 @@ def test_codex_runner_records_failure_exit_code_and_stderr_summary(
         "message": "Codex command failed with exit code 17.",
         "exit_code": 17,
         "stderr_summary": "fatal Codex error\ntoken=[REDACTED]",
+        "diagnostic": {
+            "exception_type": "PipelineError",
+            "traceback_embedded": False,
+            "context": {"pipeline_exit_code": 17},
+        },
     }
     assert manifest["errors"] == [failed_stage["error"]]
 
@@ -347,6 +352,11 @@ def test_codex_runner_rejects_report_without_risk_section(tmp_path: Path, monkey
         "stage": "run_codex_report",
         "message": "Codex stdout did not include a risk section; report/report.md was not written.",
         "exit_code": 0,
+        "diagnostic": {
+            "exception_type": "PipelineError",
+            "traceback_embedded": False,
+            "context": {"pipeline_exit_code": 1},
+        },
     }
 
 
@@ -376,6 +386,11 @@ def test_codex_runner_records_timeout_without_cli_exit_code(tmp_path: Path, monk
         "stage": "run_codex_report",
         "message": "Codex command timed out after 9 seconds.",
         "stderr_summary": "sk-[REDACTED]",
+        "diagnostic": {
+            "exception_type": "PipelineError",
+            "traceback_embedded": False,
+            "context": {"pipeline_exit_code": 124},
+        },
     }
     assert "exit_code" not in failed_stage["error"]
 

@@ -13,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 from .dashboard_time import parse_utc_timestamp, utc_now_timestamp
+from .exception_diagnostics import bounded_exception_diagnostic
 from .logging_utils import configure_local_logging
 from .pipeline import STAGE_ORDER
 from .storage import config_base as _config_base, read_json_object, safe_local_ref, write_json
@@ -383,13 +384,15 @@ class DashboardJobManager:
                 shell=False,
             )
         except OSError as exc:
+            reason = self._redact_text(f"job process could not start: {exc}")
             job.update(
                 {
                     "status": "failed",
                     "updated_at": _utc_now(),
                     "started_at": started_at,
                     "finished_at": _utc_now(),
-                    "errors": [f"job process could not start: {exc}"],
+                    "errors": [reason],
+                    "diagnostic": bounded_exception_diagnostic(exc, context={"phase": "process_start"}),
                 }
             )
             self._write_job(job)
@@ -401,7 +404,8 @@ class DashboardJobManager:
                     "job_id": job_id,
                     "intent": job.get("intent"),
                     "kind": spec.kind,
-                    "reason": str(exc),
+                    "reason": reason,
+                    "exception_type": type(exc).__name__,
                 },
             )
             return
@@ -903,7 +907,7 @@ def _process_is_alive(pid: Any) -> bool:
         return False
     try:
         os.kill(pid, 0)
-    except (OSError, OverflowError, ValueError):
+    except (OSError, OverflowError, SystemError, ValueError):
         return False
     return True
 

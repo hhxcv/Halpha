@@ -63,6 +63,14 @@ def configure_local_logging(
     return log_path
 
 
+def redact_private_text(text: str, *, config_path: Path, config: dict[str, Any] | None = None) -> str:
+    output = text
+    for private in sorted(_private_values(config_path=config_path, config=config), key=len, reverse=True):
+        if private:
+            output = output.replace(private, "<redacted>")
+    return output
+
+
 class _JsonLogFormatter(logging.Formatter):
     def __init__(self, private_values: set[str]) -> None:
         super().__init__()
@@ -100,10 +108,7 @@ class _JsonLogFormatter(logging.Formatter):
         return self._sanitize_text(str(value))
 
     def _sanitize_text(self, text: str) -> str:
-        output = text
-        for private in self.private_values:
-            output = output.replace(private, "<redacted>")
-        return output
+        return _redact_values(text, self.private_values)
 
 
 def _private_values(*, config_path: Path, config: dict[str, Any] | None) -> set[str]:
@@ -145,3 +150,10 @@ def _is_private_key(key: str) -> bool:
     if lowered == "report":
         return False
     return any(part in lowered for part in PRIVATE_KEY_PARTS)
+
+
+def _redact_values(text: str, private_values: list[str]) -> str:
+    output = text
+    for private in private_values:
+        output = output.replace(private, "<redacted>")
+    return output

@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from .exception_diagnostics import bounded_exception_diagnostic
+from .logging_utils import redact_private_text
 from .storage import ensure_directory, write_json
 
 
@@ -443,8 +445,17 @@ def _run_stage_handler(
     except PipelineError as exc:
         finished_at = _utc_timestamp(clock())
         failed_stage = exc.stage or stage
-        reason = str(exc)
-        error = _error_summary(failed_stage, reason, details=exc.error_details)
+        reason = redact_private_text(str(exc), config_path=run.config_path, config=config)
+        error = _error_summary(
+        failed_stage,
+        reason,
+        details=exc.error_details,
+        diagnostic=(
+            bounded_exception_diagnostic(exc, context={"pipeline_exit_code": exc.exit_code})
+            if exc.error_details
+            else None
+        ),
+    )
         stage_record["status"] = "failed"
         stage_record["finished_at"] = finished_at
         stage_record["artifacts"] = exc.artifacts
@@ -465,8 +476,9 @@ def _run_stage_handler(
         return RunResult(False, run, exc.exit_code, failed_stage, reason)
     except Exception as exc:
         finished_at = _utc_timestamp(clock())
-        reason = f"stage {stage} failed: {exc}"
-        error = _error_summary(stage, reason)
+        exception_message = redact_private_text(str(exc), config_path=run.config_path, config=config)
+        reason = f"stage {stage} failed: {exception_message}"
+        error = _error_summary(stage, reason, diagnostic=bounded_exception_diagnostic(exc))
         stage_record["status"] = "failed"
         stage_record["finished_at"] = finished_at
         stage_record["error"] = error
@@ -1042,10 +1054,18 @@ def _record_research_data_catalog(
         }
 
 
-def _error_summary(stage: str, reason: str, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
+def _error_summary(
+    stage: str,
+    reason: str,
+    *,
+    details: dict[str, Any] | None = None,
+    diagnostic: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     error: dict[str, Any] = {"stage": stage, "message": reason}
     if details:
         error.update(details)
+    if diagnostic:
+        error["diagnostic"] = diagnostic
     return error
 
 

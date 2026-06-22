@@ -45,16 +45,12 @@ def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) ->
     assert manifest["stages"][0]["started_at"].endswith("Z")
     assert manifest["stages"][0]["finished_at"].endswith("Z")
     assert manifest["stages"][0]["artifacts"] == []
-    assert manifest["stages"][0]["error"] == {
+    expected_error = {
         "stage": "collect_market_data",
         "message": "stage collect_market_data is not implemented",
     }
-    assert manifest["errors"] == [
-        {
-            "stage": "collect_market_data",
-            "message": "stage collect_market_data is not implemented",
-        }
-    ]
+    assert manifest["stages"][0]["error"] == expected_error
+    assert manifest["errors"] == [expected_error]
     _assert_manifest_timeline(manifest)
 
 
@@ -195,6 +191,32 @@ def test_pipeline_records_finished_at_after_stage_handler_failure(tmp_path: Path
     assert manifest["stages"][0]["finished_at"] == "2026-06-05T00:03:00Z"
     assert manifest["finished_at"] == "2026-06-05T00:03:00Z"
     _assert_manifest_timeline(manifest)
+
+
+def test_pipeline_unexpected_exception_diagnostic_redacts_private_values(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    secret = "http://private-proxy.example:7890"
+    config.setdefault("market", {})["proxy"] = {"url": secret}
+
+    def collect_market_data(config, run) -> None:
+        raise RuntimeError(f"{secret} failed in {config_path}")
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_market_data": collect_market_data},
+    )
+
+    assert result.succeeded is False
+    manifest_text = result.run.manifest_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_text)
+    error = manifest["stages"][0]["error"]
+    assert error["diagnostic"] == {"exception_type": "RuntimeError", "traceback_embedded": False}
+    assert "<redacted>" in error["message"]
+    assert secret not in manifest_text
+    assert str(config_path) not in manifest_text
+    assert str(tmp_path) not in manifest_text
 
 
 def test_single_stage_records_finished_at_after_handler_returns(tmp_path: Path, monkeypatch) -> None:
