@@ -517,6 +517,7 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     assert detail["run_id"] == "run-1"
     assert detail["fields"]["manifest_status"] == "succeeded"
     assert detail["fields"]["report"] == "report/report.md"
+    assert detail["fields"]["report_state"] == {"status": "available", "artifact": "report/report.md"}
     assert detail["fields"]["codex"]["status"] == "skipped"
     assert detail["stages"] == [
         {
@@ -575,6 +576,29 @@ def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> No
     ]
     assert payload["warnings"] == ["1 recorded report artifact(s) were missing and omitted from report lists."]
     assert str(tmp_path) not in response.text
+
+
+def test_dashboard_run_detail_reports_empty_report_dir_as_not_generated(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    run.manifest["artifacts"].pop("report")
+    write_json(run.manifest_path, run.manifest)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    list_response = client.get("/api/runs")
+    detail_response = client.get("/api/runs/run-1")
+
+    assert (run.report_dir).is_dir()
+    assert not (run.report_dir / "report.md").exists()
+    listed = list_response.json()["runs"][0]
+    assert listed["report"] is None
+    assert listed["report_state"] == {"status": "skipped", "artifact": None}
+    detail = detail_response.json()
+    assert detail["fields"]["report"] is None
+    assert detail["fields"]["report_state"] == {"status": "skipped", "artifact": None}
+    assert str(tmp_path) not in detail_response.text
 
 
 def test_dashboard_rejects_run_index_refs_outside_project_root(tmp_path: Path) -> None:

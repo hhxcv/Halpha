@@ -943,6 +943,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
         return _run_detail_missing(run_id, warning="run id was not found in the local run index.")
 
     run = _run_list_record(row, {}, base=base)
+    run_dir = _resolve_ref(str(row[1]), base=base)
     manifest_path = _resolve_ref(str(row[9]), base=base)
     manifest, error = _read_json(manifest_path)
     if error:
@@ -959,6 +960,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
             "errors": [error],
         }
 
+    report_state = _report_state(run_dir, manifest)
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_run_detail",
@@ -967,7 +969,8 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
         "source_artifacts": [RUN_INDEX_ARTIFACT, _safe_ref(manifest_path, base=base)],
         "fields": {
             **run,
-            "report": _recorded_artifact_ref(manifest, "report"),
+            "report": report_state.get("artifact") if report_state.get("status") == "available" else None,
+            "report_state": report_state,
             "manifest_status": str(manifest.get("status") or "unknown"),
             "codex": _bounded_mapping(manifest.get("codex")),
             "counts": _bounded_mapping(manifest.get("counts")),
@@ -2916,13 +2919,15 @@ def _recorded_artifact_ref(manifest: dict[str, Any], key: str) -> str | None:
 
 
 def _report_state(run_dir: Path, manifest: dict[str, Any]) -> dict[str, Any]:
-    report = _artifact_ref(manifest, "report", "report/report.md")
+    recorded = _recorded_artifact_ref(manifest, "report")
     codex_status = _dict(manifest.get("codex")).get("status")
-    if report and (run_dir / report).exists():
-        return {"status": "available", "artifact": report}
+    if recorded:
+        if (run_dir / recorded).is_file():
+            return {"status": "available", "artifact": recorded}
+        return {"status": "missing", "artifact": recorded, "warning": "recorded report artifact was not found."}
     if codex_status in {"skipped", "disabled", "not_run"}:
-        return {"status": str(codex_status), "artifact": report}
-    return {"status": "missing", "artifact": report}
+        return {"status": str(codex_status), "artifact": None}
+    return {"status": "missing", "artifact": None}
 
 
 def _stage_counts(manifest: dict[str, Any]) -> dict[str, int]:
