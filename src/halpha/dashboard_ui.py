@@ -3035,6 +3035,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const alerts = alertCount(state.monitorAlerts);
       const schedule = state.schedule || {};
       const scheduleSettings = schedule.settings || {};
+      const reportGeneration = schedule.report_generation || {};
       document.querySelector("#monitor-hero").innerHTML = [
         metricCell("Monitor", latest.status === "running" ? "Running" : label(latest.status || health.latest_cycle_status || "Idle"), "current state"),
         metricCell("Last cycle", formatTimestamp(latest.finished_at || latest.started_at), latest.status || "n/a"),
@@ -3052,6 +3053,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
         detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
         detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
+        detailRow("Daily report mode", reportGeneration.generates_report ? "Codex report" : "No-Codex run"),
         detailRow("Daily report status", schedule.enabled ? "enabled" : "disabled"),
         detailRow("Watched assets", "configured in Settings"),
         detailRow("Notification channels", "Local only"),
@@ -3806,8 +3808,9 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     function showMonitorSchedule() {
       const schedule = state.schedule || {};
       const settings = schedule.settings || {};
+      const reportGeneration = schedule.report_generation || {};
       document.querySelector("#monitor-config").scrollIntoView({behavior: "smooth", block: "center"});
-      document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Daily report schedule: ${escapeHtml(schedule.enabled ? "enabled" : "disabled")}. Time: ${escapeHtml(settings.time_of_day || "n/a")} ${escapeHtml(settings.timezone || "")}.</div>`;
+      document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Daily report schedule: ${escapeHtml(schedule.enabled ? "enabled" : "disabled")}. Mode: ${escapeHtml(reportGeneration.generates_report ? "Codex report" : "No-Codex run")}. Time: ${escapeHtml(settings.time_of_day || "n/a")} ${escapeHtml(settings.timezone || "")}.</div>`;
     }
 
     async function cleanup(kind) {
