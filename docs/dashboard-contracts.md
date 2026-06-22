@@ -69,7 +69,8 @@ The dashboard service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
 The dashboard root serves the application shell and loads packaged static
-frontend assets from `/assets/dashboard.css` and `/assets/dashboard.js`.
+frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
+`/assets/dashboard_strategy_chart.js`, and `/assets/dashboard.js`.
 
 Dashboard timestamp display uses `dashboard.display_timezone` when configured,
 falls back to `run.timezone`, and defaults to `Asia/Shanghai`. This display
@@ -193,6 +194,14 @@ test starts the local dashboard server, drives the primary views with
 Playwright Chromium through `npx`, fails on stuck loading or broken navigation,
 and fails on browser console or page errors. Tests that require Playwright are
 marked `browser_smoke`.
+
+Static dashboard JavaScript must also pass syntax checks before merge:
+
+```bash
+node --check src/halpha/dashboard/static/dashboard_shared.js
+node --check src/halpha/dashboard/static/dashboard_strategy_chart.js
+node --check src/halpha/dashboard/static/dashboard.js
+```
 
 ## Artifact Preview Rules
 
