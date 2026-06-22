@@ -11,12 +11,28 @@ def dashboard_shared_script() -> str:
     return dashboard_asset_text("dashboard_shared.js")
 
 
+def dashboard_dialogs_script() -> str:
+    return dashboard_asset_text("dashboard_dialogs.js")
+
+
+def dashboard_reports_script() -> str:
+    return dashboard_asset_text("dashboard_reports.js")
+
+
 def dashboard_strategy_chart_script() -> str:
     return dashboard_asset_text("dashboard_strategy_chart.js")
 
 
 def dashboard_script() -> str:
-    return f"{dashboard_shared_script()}\n{dashboard_strategy_chart_script()}\n{dashboard_asset_text('dashboard.js')}"
+    return "\n".join(
+        [
+            dashboard_shared_script(),
+            dashboard_dialogs_script(),
+            dashboard_reports_script(),
+            dashboard_strategy_chart_script(),
+            dashboard_asset_text("dashboard.js"),
+        ]
+    )
 
 
 def dashboard_shell_html(*, css: str, script: str) -> str:
@@ -29,6 +45,8 @@ def dashboard_shell_html(*, css: str, script: str) -> str:
     if script:
         script_tags = (
             '  <script src="/assets/dashboard_shared.js" defer></script>\n'
+            '  <script src="/assets/dashboard_dialogs.js" defer></script>\n'
+            '  <script src="/assets/dashboard_reports.js" defer></script>\n'
             '  <script src="/assets/dashboard_strategy_chart.js" defer></script>\n'
             '  <script src="/assets/dashboard.js" defer></script>'
         )

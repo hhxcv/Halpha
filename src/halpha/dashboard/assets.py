@@ -8,6 +8,8 @@ DASHBOARD_ASSET_MEDIA_TYPES = {
     "index.html": "text/html; charset=utf-8",
     "dashboard.css": "text/css; charset=utf-8",
     "dashboard_shared.js": "application/javascript; charset=utf-8",
+    "dashboard_dialogs.js": "application/javascript; charset=utf-8",
+    "dashboard_reports.js": "application/javascript; charset=utf-8",
     "dashboard_strategy_chart.js": "application/javascript; charset=utf-8",
     "dashboard.js": "application/javascript; charset=utf-8",
 }

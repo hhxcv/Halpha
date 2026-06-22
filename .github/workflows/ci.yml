@@ -32,6 +32,8 @@ jobs:
       - name: Check dashboard JavaScript
         run: |
           node --check src/halpha/dashboard/static/dashboard_shared.js
+          node --check src/halpha/dashboard/static/dashboard_dialogs.js
+          node --check src/halpha/dashboard/static/dashboard_reports.js
           node --check src/halpha/dashboard/static/dashboard_strategy_chart.js
           node --check src/halpha/dashboard/static/dashboard.js
 
