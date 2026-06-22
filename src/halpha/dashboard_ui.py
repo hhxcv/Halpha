@@ -3177,10 +3177,10 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           severity: store.errors?.length ? "High" : store.warnings?.length ? "Medium" : "Low",
           category: "Data quality",
           time: store.fields?.updated_at,
-          summary: [...(store.warnings || []), ...(store.errors || [])].join(" ") || "No current issue.",
+          summary: [...(store.warnings || []), ...(store.errors || [])].join(" ") || `${store.source_label || "Data store"} status.`,
           sources: store.source_artifacts || [],
           assets: [],
-          tags: [store.status || "unknown"],
+          tags: [store.status || "unknown", store.source_label || store.state_scope || "store"],
         }));
       }
       const filtered = artifacts.filter((artifact) => {
