@@ -6,7 +6,7 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
-from halpha.quant_signals import evaluate_market_strategy_signals
+from halpha.strategy.quant_signals import evaluate_market_strategy_signals
 from halpha.storage import write_json
 
 

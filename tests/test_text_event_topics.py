@@ -10,8 +10,8 @@ from halpha.storage import write_json
 
 
 def test_text_event_topics_groups_exact_duplicate_url_and_title(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _skipped_embedding_model)
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _skipped_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"])
     config = load_config(config_path)
 
@@ -57,8 +57,8 @@ def test_text_event_topics_records_embedding_same_topic_without_erasing_traceabi
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _available_embedding_model)
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _available_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT", "ETHUSDT"])
     config = load_config(config_path)
 
@@ -98,8 +98,8 @@ def test_text_event_topics_does_not_merge_on_embedding_similarity_alone(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _high_similarity_embedding_model)
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _high_similarity_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"])
     config = load_config(config_path)
 

@@ -12,9 +12,9 @@ def test_text_event_classification_accepts_high_confidence_category_and_tone(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _available_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _available_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _available_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _available_sentiment_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"])
     config = load_config(config_path)
 
@@ -73,9 +73,9 @@ def test_text_event_classification_downgrades_weak_model_evidence(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _weak_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _weak_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _weak_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _weak_sentiment_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"])
     config = load_config(config_path)
 
@@ -112,9 +112,9 @@ def test_text_event_classification_marks_missing_models_unknown(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _unavailable_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _unavailable_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _unavailable_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _unavailable_sentiment_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"])
     config = load_config(config_path)
 

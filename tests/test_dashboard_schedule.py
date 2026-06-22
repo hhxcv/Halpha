@@ -49,7 +49,7 @@ def test_dashboard_daily_report_schedule_enable_disable_and_persistence(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "halpha.dashboard_schedule._utc_now_datetime",
+        "halpha.dashboard.schedule._utc_now_datetime",
         lambda: datetime(2026, 6, 20, 1, 0, tzinfo=timezone.utc),
     )
     config_path = _write_config(tmp_path)
@@ -111,7 +111,7 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "halpha.dashboard_schedule._utc_now_datetime",
+        "halpha.dashboard.schedule._utc_now_datetime",
         lambda: datetime(2026, 6, 20, 1, 0, tzinfo=timezone.utc),
     )
     config_path = _write_config(tmp_path)
@@ -133,7 +133,7 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
             returncode=0,
         )
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     client.post(
@@ -172,7 +172,7 @@ def test_dashboard_daily_report_schedule_codex_trigger_requires_confirmation(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("Codex-capable scheduled trigger must require confirmation before process start")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.post("/api/schedule/daily-report/trigger", json={})
@@ -207,7 +207,7 @@ def test_dashboard_daily_report_schedule_confirmed_default_trigger_creates_repor
             returncode=0,
         )
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     client.post("/api/schedule/daily-report/enable", json={"time_of_day": "08:30", "timezone": "UTC"})

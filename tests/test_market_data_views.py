@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.market_data_views import build_market_data_views, load_market_data_view_records
-from halpha.ohlcv_store import OHLCVParquetStore
+from halpha.market.market_data_views import build_market_data_views, load_market_data_view_records
+from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
 
 

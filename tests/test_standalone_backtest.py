@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from halpha.cli import main
-from halpha.ohlcv_store import OHLCVParquetStore
-from halpha.standalone_backtest import _visualization_record
+from halpha.market.ohlcv_store import OHLCVParquetStore
+from halpha.strategy.standalone_backtest import _visualization_record
 
 
 def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(

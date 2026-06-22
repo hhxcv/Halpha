@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from halpha import text_models
+from halpha.text import text_models
 from halpha.cli import main
 
 

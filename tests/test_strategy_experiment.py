@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from halpha.cli import main
-from halpha.ohlcv_store import OHLCVParquetStore
+from halpha.market.ohlcv_store import OHLCVParquetStore
 
 
 def test_cli_experiment_runs_candidates_against_benchmark_suite(

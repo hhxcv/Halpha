@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from halpha.strategy_effectiveness_gates import build_strategy_effectiveness_gates
+from halpha.strategy.strategy_effectiveness_gates import build_strategy_effectiveness_gates
 
 
 def test_strategy_effectiveness_gate_marks_effective_only_with_broad_evidence() -> None:

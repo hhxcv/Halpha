@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from halpha.dashboard_run_aggregation import manifest_report_state, run_list_record, run_report_state
+from halpha.dashboard.run_aggregation import manifest_report_state, run_list_record, run_report_state
 
 
 def test_run_report_state_keeps_missing_report_as_diagnostic(tmp_path: Path) -> None:

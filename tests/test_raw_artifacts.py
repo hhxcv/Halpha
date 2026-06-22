@@ -7,7 +7,7 @@ import pytest
 
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
-from halpha.raw_artifacts import (
+from halpha.data.raw_artifacts import (
     RawArtifactError,
     validate_market_raw_artifact,
     validate_text_events_raw_artifact,

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from halpha.fusion_integration import integrate_intelligence_fusion
+from halpha.decision.fusion_integration import integrate_intelligence_fusion
 from halpha.pipeline import RunContext
 from halpha.storage import write_json
 

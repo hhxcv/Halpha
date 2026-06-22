@@ -11,8 +11,8 @@ from urllib.request import ProxyHandler, Request, build_opener, urlopen
 from xml.etree import ElementTree
 
 from halpha.pipeline import PipelineError, RunContext
-from halpha.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
-from halpha.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
+from halpha.runtime.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
+from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from halpha.storage import write_json
 
 

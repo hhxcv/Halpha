@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from halpha import macro_calendar_views, ohlcv_source, onchain_flow_views
+from halpha.macro import macro_calendar_views
+from halpha.market import ohlcv_source
+from halpha.onchain import onchain_flow_views
 
 
 def test_audited_test_helpers_are_private() -> None:

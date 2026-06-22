@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from halpha.dashboard_data_cleanup import dashboard_data_deletion_plan, dashboard_delete_data
+from halpha.dashboard.data_cleanup import dashboard_data_deletion_plan, dashboard_delete_data
 
 
 def test_dashboard_data_cleanup_requires_run_artifact_confirmation(tmp_path: Path) -> None:

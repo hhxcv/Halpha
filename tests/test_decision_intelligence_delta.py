@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from halpha.config import load_config
-from halpha.decision_delta import build_decision_intelligence_delta_artifact
+from halpha.decision.decision_delta import build_decision_intelligence_delta_artifact
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
 

@@ -7,7 +7,7 @@ import pytest
 
 from halpha.cli import main
 from halpha.pipeline import RunContext
-from halpha.run_index import write_run_index
+from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
 
 

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from halpha.pipeline import RunContext
-from halpha.product_validation import build_product_contract_validation
+from halpha.product.product_validation import build_product_contract_validation
 from halpha.storage import write_json
 
 

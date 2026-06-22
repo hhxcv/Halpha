@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from halpha.ohlcv_store import OHLCVParquetStore
+from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import RunContext
-from halpha.research_data_catalog import build_research_data_catalog, write_research_data_catalog
+from halpha.data.research_data_catalog import build_research_data_catalog, write_research_data_catalog
 
 
 def test_research_data_catalog_registers_shared_ohlcv_store(tmp_path: Path) -> None:

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.decision_material import (
+from halpha.decision.decision_material import (
     decision_material_record_count,
     render_decision_intelligence_material,
     validate_decision_material_inputs,

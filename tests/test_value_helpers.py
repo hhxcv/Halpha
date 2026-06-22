@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from halpha.dashboard_time import utc_timestamp
-from halpha.value_helpers import as_dict, as_list, strict_int, stringified_list
+from halpha.dashboard.time import utc_timestamp
+from halpha.utils.value_helpers import as_dict, as_list, strict_int, stringified_list
 
 
 def test_value_helpers_coerce_common_artifact_values() -> None:

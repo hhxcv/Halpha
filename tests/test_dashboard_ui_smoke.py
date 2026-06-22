@@ -8,9 +8,9 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.dashboard_ui_script import dashboard_script
-from halpha.dashboard_ui_shell import dashboard_shell_html
-from halpha.dashboard_ui_style import dashboard_css
+from halpha.dashboard.ui_script import dashboard_script
+from halpha.dashboard.ui_shell import dashboard_shell_html
+from halpha.dashboard.ui_style import dashboard_css
 
 
 EXPECTED_DASHBOARD_VIEWS = {

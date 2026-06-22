@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.macro_calendar_context import build_macro_calendar_context
-from halpha.macro_calendar_history import sync_macro_calendar_history
-from halpha.macro_calendar_views import build_macro_calendar_views
+from halpha.macro.macro_calendar_context import build_macro_calendar_context
+from halpha.macro.macro_calendar_history import sync_macro_calendar_history
+from halpha.macro.macro_calendar_views import build_macro_calendar_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 

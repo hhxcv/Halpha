@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.multi_source_signals import build_multi_source_signals
+from halpha.decision.multi_source_signals import build_multi_source_signals
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 

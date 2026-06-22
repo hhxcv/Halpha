@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from halpha.pipeline import PipelineError, RunContext
-from halpha.raw_artifacts import RawArtifactError, validate_market_raw_artifact
+from halpha.data.raw_artifacts import RawArtifactError, validate_market_raw_artifact
 
 
 STAGE_NAME = "build_analysis_materials"

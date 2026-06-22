@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from halpha.ohlcv_store import OHLCVParquetStore, OHLCV_REQUIRED_FIELDS, OHLCVStoreError
+from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCV_REQUIRED_FIELDS, OHLCVStoreError
 
 
 def test_ohlcv_store_writes_reads_deduplicates_and_orders_records(tmp_path: Path) -> None:

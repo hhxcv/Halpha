@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.factor_states import build_factor_states
+from halpha.decision.factor_states import build_factor_states
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 

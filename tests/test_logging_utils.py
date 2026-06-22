@@ -7,7 +7,7 @@ from pathlib import Path
 
 from halpha.cli import main
 from halpha.config import load_config
-from halpha.logging_utils import configure_local_logging
+from halpha.runtime.logging_utils import configure_local_logging
 from halpha.pipeline import run_pipeline
 
 

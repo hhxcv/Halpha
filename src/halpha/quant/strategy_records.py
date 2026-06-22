@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from ..market_data_views import MARKET_DATA_VIEWS_ARTIFACT
+from halpha.market.market_data_views import MARKET_DATA_VIEWS_ARTIFACT
 
 
 STRATEGY_VERSION = 1

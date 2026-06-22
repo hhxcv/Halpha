@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from halpha.personalized_risk import build_personalized_risk_constraints
+from halpha.decision.personalized_risk import build_personalized_risk_constraints
 from halpha.pipeline import RunContext
 
 

@@ -35,7 +35,7 @@ nlp = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-"halpha.dashboard_static" = ["*.html", "*.css", "*.js"]
+"halpha.dashboard.static" = ["*.html", "*.css", "*.js"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

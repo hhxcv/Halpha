@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from halpha.pipeline import RunContext
-from halpha.run_index import write_run_index
+from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
-from halpha.workbench import build_workbench_summary, render_workbench_html
-from halpha.workbench_rendering import render_workbench_markdown
+from halpha.workbench.workbench import build_workbench_summary, render_workbench_html
+from halpha.workbench.workbench_rendering import render_workbench_markdown
 
 
 def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:

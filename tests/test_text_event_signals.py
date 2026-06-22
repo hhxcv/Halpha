@@ -9,10 +9,10 @@ from halpha.storage import write_json
 
 
 def test_text_event_signals_accepts_source_backed_category_signal(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _accepted_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _accepted_sentiment_model)
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _skipped_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _accepted_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _accepted_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _skipped_embedding_model)
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
@@ -68,10 +68,10 @@ def test_text_event_signals_preserves_low_confidence_events_without_accepting_th
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _weak_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _weak_sentiment_model)
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _skipped_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _weak_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _weak_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _skipped_embedding_model)
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 

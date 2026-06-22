@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 
 import pytest
 
-from halpha.derivatives_source import DerivativesSourceError, PublicDerivativesSource
+from halpha.market.derivatives_source import DerivativesSourceError, PublicDerivativesSource
 
 
 def test_binance_usdm_derivatives_source_parses_supported_payloads() -> None:
@@ -205,8 +205,8 @@ def test_derivatives_source_uses_configured_proxy(monkeypatch) -> None:
         assert handler == {"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}
         return FakeOpener()
 
-    monkeypatch.setattr("halpha.derivatives_source.ProxyHandler", fake_proxy_handler)
-    monkeypatch.setattr("halpha.derivatives_source.build_opener", fake_build_opener)
+    monkeypatch.setattr("halpha.market.derivatives_source.ProxyHandler", fake_proxy_handler)
+    monkeypatch.setattr("halpha.market.derivatives_source.build_opener", fake_build_opener)
 
     source = PublicDerivativesSource("binance_usdm", proxy_url="http://proxy.example:8080")
     result = source.fetch_records("funding_rate_history", symbol="BTCUSDT")

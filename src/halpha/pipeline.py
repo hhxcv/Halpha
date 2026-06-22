@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .exception_diagnostics import bounded_exception_diagnostic
-from .logging_utils import redact_private_text
-from .pipeline_stages import (
+from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
+from halpha.runtime.logging_utils import redact_private_text
+from halpha.pipeline_stages import (
     DECISION_INTELLIGENCE_STAGES,
     STAGE_ORDER,
     StageSelectionError,
@@ -17,7 +17,7 @@ from .pipeline_stages import (
     validate_optional_stage as _validate_optional_stage,
     validate_stage as _validate_stage,
 )
-from .storage import ensure_directory, write_json
+from halpha.storage import ensure_directory, write_json
 
 
 LOGGER = logging.getLogger(__name__)
@@ -489,7 +489,7 @@ def _record_stage_failure_context(
     failed_stage = str(error.get("stage") or stage)
     if stage not in DECISION_INTELLIGENCE_STAGES and failed_stage not in DECISION_INTELLIGENCE_STAGES:
         return
-    from .decision_intelligence import record_decision_intelligence_failure
+    from halpha.decision.decision_intelligence import record_decision_intelligence_failure
 
     message = str(error.get("message") or f"stage {failed_stage} failed")
     record_decision_intelligence_failure(config, run, stage=failed_stage, message=message)
@@ -543,344 +543,344 @@ def _unimplemented_handler(stage: str) -> StageHandler:
 
 
 def _collect_market_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .collectors.market import collect_market_data
+    from halpha.collectors.market import collect_market_data
 
     return collect_market_data(config, run)
 
 
 def _collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .collectors.derivatives_market import collect_derivatives_market_data
+    from halpha.collectors.derivatives_market import collect_derivatives_market_data
 
     return collect_derivatives_market_data(config, run)
 
 
 def _sync_derivatives_market_history(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .derivatives_history import sync_derivatives_market_history
+    from halpha.market.derivatives_history import sync_derivatives_market_history
 
     return sync_derivatives_market_history(config, run)
 
 
 def _build_derivatives_market_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .derivatives_market_views import build_derivatives_market_views
+    from halpha.market.derivatives_market_views import build_derivatives_market_views
 
     return build_derivatives_market_views(config, run)
 
 
 def _build_derivatives_market_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .derivatives_market_context import build_derivatives_market_context
+    from halpha.market.derivatives_market_context import build_derivatives_market_context
 
     return build_derivatives_market_context(config, run)
 
 
 def _collect_macro_calendar_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .collectors.macro_calendar import collect_macro_calendar_data
+    from halpha.collectors.macro_calendar import collect_macro_calendar_data
 
     return collect_macro_calendar_data(config, run)
 
 
 def _sync_macro_calendar_history(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .macro_calendar_history import sync_macro_calendar_history
+    from halpha.macro.macro_calendar_history import sync_macro_calendar_history
 
     return sync_macro_calendar_history(config, run)
 
 
 def _build_macro_calendar_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .macro_calendar_views import build_macro_calendar_views
+    from halpha.macro.macro_calendar_views import build_macro_calendar_views
 
     return build_macro_calendar_views(config, run)
 
 
 def _build_macro_calendar_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .macro_calendar_context import build_macro_calendar_context
+    from halpha.macro.macro_calendar_context import build_macro_calendar_context
 
     return build_macro_calendar_context(config, run)
 
 
 def _build_macro_calendar_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.macro_calendar_material import build_macro_calendar_material
+    from halpha.analysis.macro_calendar_material import build_macro_calendar_material
 
     return build_macro_calendar_material(config, run)
 
 
 def _collect_onchain_flow_data(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .collectors.onchain_flow import collect_onchain_flow_data
+    from halpha.collectors.onchain_flow import collect_onchain_flow_data
 
     return collect_onchain_flow_data(config, run)
 
 
 def _sync_onchain_flow_history(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .onchain_flow_history import sync_onchain_flow_history
+    from halpha.onchain.onchain_flow_history import sync_onchain_flow_history
 
     return sync_onchain_flow_history(config, run)
 
 
 def _build_onchain_flow_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .onchain_flow_views import build_onchain_flow_views
+    from halpha.onchain.onchain_flow_views import build_onchain_flow_views
 
     return build_onchain_flow_views(config, run)
 
 
 def _build_onchain_flow_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .onchain_flow_context import build_onchain_flow_context
+    from halpha.onchain.onchain_flow_context import build_onchain_flow_context
 
     return build_onchain_flow_context(config, run)
 
 
 def _build_onchain_flow_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.onchain_flow_material import build_onchain_flow_material
+    from halpha.analysis.onchain_flow_material import build_onchain_flow_material
 
     return build_onchain_flow_material(config, run)
 
 
 def _collect_text_events(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .collectors.text import collect_text_events
+    from halpha.collectors.text import collect_text_events
 
     return collect_text_events(config, run)
 
 
 def _build_text_event_records(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .text_event_records import build_text_event_records
+    from halpha.text.text_event_records import build_text_event_records
 
     return build_text_event_records(config, run)
 
 
 def _build_text_entity_evidence(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .text_entity_evidence import build_text_entity_evidence
+    from halpha.text.text_entity_evidence import build_text_entity_evidence
 
     return build_text_entity_evidence(config, run)
 
 
 def _build_text_event_classification_evidence(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .text_event_classification import build_text_event_classification_evidence
+    from halpha.text.text_event_classification import build_text_event_classification_evidence
 
     return build_text_event_classification_evidence(config, run)
 
 
 def _build_text_event_topics(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .text_event_topics import build_text_event_topics
+    from halpha.text.text_event_topics import build_text_event_topics
 
     return build_text_event_topics(config, run)
 
 
 def _build_text_event_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .text_event_signals import build_text_event_signals
+    from halpha.text.text_event_signals import build_text_event_signals
 
     return build_text_event_signals(config, run)
 
 
 def _sync_ohlcv(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .ohlcv_sync import sync_ohlcv_history
+    from halpha.market.ohlcv_sync import sync_ohlcv_history
 
     return sync_ohlcv_history(config, run)
 
 
 def _build_market_data_views(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .market_data_views import build_market_data_views
+    from halpha.market.market_data_views import build_market_data_views
 
     return build_market_data_views(config, run)
 
 
 def _build_strategy_benchmark_suite(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .strategy_benchmark_suite import build_strategy_benchmark_suite
+    from halpha.strategy.strategy_benchmark_suite import build_strategy_benchmark_suite
 
     return build_strategy_benchmark_suite(config, run)
 
 
 def _evaluate_quant_strategies(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .quant_strategies import evaluate_quant_strategies
+    from halpha.strategy.quant_strategies import evaluate_quant_strategies
 
     return evaluate_quant_strategies(config, run)
 
 
 def _evaluate_strategy_evaluation(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .strategy_evaluation_summary import build_strategy_evaluation_summary
+    from halpha.strategy.strategy_evaluation_summary import build_strategy_evaluation_summary
 
     return build_strategy_evaluation_summary(config, run)
 
 
 def _build_strategy_experiment_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .strategy_experiment import build_strategy_experiment_material
+    from halpha.strategy.strategy_experiment import build_strategy_experiment_material
 
     return build_strategy_experiment_material(config, run)
 
 
 def _evaluate_market_strategy_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .quant_signals import evaluate_market_strategy_signals
+    from halpha.strategy.quant_signals import evaluate_market_strategy_signals
 
     return evaluate_market_strategy_signals(config, run)
 
 
 def _build_market_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .market_signals import build_market_signals
+    from halpha.market.market_signals import build_market_signals
 
     return build_market_signals(config, run)
 
 
 def _build_market_signal_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .market_signals import build_market_signal_material
+    from halpha.market.market_signals import build_market_signal_material
 
     return build_market_signal_material(config, run)
 
 
 def _build_market_regime_assessment(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .decision_intelligence import build_market_regime_assessment
+    from halpha.decision.decision_intelligence import build_market_regime_assessment
 
     return build_market_regime_assessment(config, run)
 
 
 def _build_risk_assessment(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .decision_intelligence import build_risk_assessment
+    from halpha.decision.decision_intelligence import build_risk_assessment
 
     return build_risk_assessment(config, run)
 
 
 def _build_decision_recommendations(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .decision_intelligence import build_decision_recommendations
+    from halpha.decision.decision_intelligence import build_decision_recommendations
 
     return build_decision_recommendations(config, run)
 
 
 def _build_watch_triggers(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .decision_intelligence import build_watch_triggers
+    from halpha.decision.decision_intelligence import build_watch_triggers
 
     return build_watch_triggers(config, run)
 
 
 def _build_event_market_confluence(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .event_market_confluence import build_event_market_confluence
+    from halpha.decision.event_market_confluence import build_event_market_confluence
 
     return build_event_market_confluence(config, run)
 
 
 def _build_event_intelligence_assessment(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .event_intelligence_assessment import build_event_intelligence_assessment
+    from halpha.decision.event_intelligence_assessment import build_event_intelligence_assessment
 
     return build_event_intelligence_assessment(config, run)
 
 
 def _build_alert_decisions(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .alert_decisions import build_alert_decisions
+    from halpha.decision.alert_decisions import build_alert_decisions
 
     return build_alert_decisions(config, run)
 
 
 def _build_alert_decision_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.alert_decision_material import build_alert_decision_material
+    from halpha.analysis.alert_decision_material import build_alert_decision_material
 
     return build_alert_decision_material(config, run)
 
 
 def _build_event_intelligence_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.event_intelligence_material import build_event_intelligence_material
+    from halpha.analysis.event_intelligence_material import build_event_intelligence_material
 
     return build_event_intelligence_material(config, run)
 
 
 def _build_decision_intelligence_delta(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .decision_intelligence import build_decision_intelligence_delta
+    from halpha.decision.decision_intelligence import build_decision_intelligence_delta
 
     return build_decision_intelligence_delta(config, run)
 
 
 def _build_decision_intelligence_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .decision_intelligence import build_decision_intelligence_material
+    from halpha.decision.decision_intelligence import build_decision_intelligence_material
 
     return build_decision_intelligence_material(config, run)
 
 
 def _build_data_quality_summary(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .data_quality import build_data_quality_summary
+    from halpha.data.data_quality import build_data_quality_summary
 
     return build_data_quality_summary(config, run)
 
 
 def _build_outcome_targets(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .outcome_targets import build_outcome_targets
+    from halpha.outcome.outcome_targets import build_outcome_targets
 
     return build_outcome_targets(config, run)
 
 
 def _evaluate_outcomes(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .outcome_evaluations import evaluate_outcomes
+    from halpha.outcome.outcome_evaluations import evaluate_outcomes
 
     return evaluate_outcomes(config, run)
 
 
 def _build_strategy_lifecycle_state(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .strategy_lifecycle import build_strategy_lifecycle_state
+    from halpha.strategy.strategy_lifecycle import build_strategy_lifecycle_state
 
     return build_strategy_lifecycle_state(config, run)
 
 
 def _build_strategy_lifecycle_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .strategy_lifecycle_material import build_strategy_lifecycle_material
+    from halpha.strategy.strategy_lifecycle_material import build_strategy_lifecycle_material
 
     return build_strategy_lifecycle_material(config, run)
 
 
 def _build_feature_snapshots(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .feature_snapshots import build_feature_snapshots
+    from halpha.decision.feature_snapshots import build_feature_snapshots
 
     return build_feature_snapshots(config, run)
 
 
 def _build_factor_states(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .factor_states import build_factor_states
+    from halpha.decision.factor_states import build_factor_states
 
     return build_factor_states(config, run)
 
 
 def _build_multi_source_signals(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .multi_source_signals import build_multi_source_signals
+    from halpha.decision.multi_source_signals import build_multi_source_signals
 
     return build_multi_source_signals(config, run)
 
 
 def _build_intelligence_fusion(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .intelligence_fusion import build_intelligence_fusion
+    from halpha.decision.intelligence_fusion import build_intelligence_fusion
 
     return build_intelligence_fusion(config, run)
 
 
 def _integrate_intelligence_fusion(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .fusion_integration import integrate_intelligence_fusion
+    from halpha.decision.fusion_integration import integrate_intelligence_fusion
 
     return integrate_intelligence_fusion(config, run)
 
 
 def _build_user_state_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .user_state import build_user_state_context
+    from halpha.decision.user_state import build_user_state_context
 
     return build_user_state_context(config, run)
 
 
 def _build_personalized_risk_constraints(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .personalized_risk import build_personalized_risk_constraints
+    from halpha.decision.personalized_risk import build_personalized_risk_constraints
 
     return build_personalized_risk_constraints(config, run)
 
 
 def _integrate_personalized_risk_constraints(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .personalized_integration import integrate_personalized_risk_constraints
+    from halpha.decision.personalized_integration import integrate_personalized_risk_constraints
 
     return integrate_personalized_risk_constraints(config, run)
 
 
 def _build_personalized_risk_material(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.personalized_risk_material import build_personalized_risk_material
+    from halpha.analysis.personalized_risk_material import build_personalized_risk_material
 
     return build_personalized_risk_material(config, run)
 
 
 def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.data_quality_material import build_data_quality_material
-    from .analysis.derivatives_market_material import build_derivatives_market_material
-    from .analysis.factor_signal_material import build_factor_signal_material
-    from .analysis.intelligence_fusion_material import build_intelligence_fusion_material
-    from .analysis.market_material import build_market_material
-    from .analysis.outcome_tracking_material import build_outcome_tracking_material
-    from .analysis.text_material import build_text_material
-    from .data_quality import refresh_m13_data_quality_checks
+    from halpha.analysis.data_quality_material import build_data_quality_material
+    from halpha.analysis.derivatives_market_material import build_derivatives_market_material
+    from halpha.analysis.factor_signal_material import build_factor_signal_material
+    from halpha.analysis.intelligence_fusion_material import build_intelligence_fusion_material
+    from halpha.analysis.market_material import build_market_material
+    from halpha.analysis.outcome_tracking_material import build_outcome_tracking_material
+    from halpha.analysis.text_material import build_text_material
+    from halpha.data.data_quality import refresh_m13_data_quality_checks
 
     artifacts = []
     try:
@@ -900,25 +900,25 @@ def _build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[s
 
 
 def _build_research_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .analysis.research_context import build_research_context
+    from halpha.analysis.research_context import build_research_context
 
     return build_research_context(config, run)
 
 
 def _build_codex_context(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .codex.context_builder import build_codex_context
+    from halpha.codex.context_builder import build_codex_context
 
     return build_codex_context(config, run)
 
 
 def _run_codex_report(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .codex.runner import run_codex_report
+    from halpha.codex.runner import run_codex_report
 
     return run_codex_report(config, run)
 
 
 def _validate_product_contracts(config: dict[str, Any], run: RunContext) -> list[str] | None:
-    from .product_validation import build_product_contract_validation
+    from halpha.product.product_validation import build_product_contract_validation
 
     return build_product_contract_validation(config, run)
 
@@ -953,7 +953,7 @@ def _record_terminal_local_data_state(
 
 
 def _record_run_index(run: RunContext, *, clock: Callable[[], datetime]) -> None:
-    from .run_index import RUN_INDEX_ARTIFACT, write_run_index
+    from halpha.data.run_index import RUN_INDEX_ARTIFACT, write_run_index
 
     run.manifest.setdefault("artifacts", {})["run_index"] = RUN_INDEX_ARTIFACT
     try:
@@ -975,7 +975,7 @@ def _record_outcome_history(
     *,
     clock: Callable[[], datetime],
 ) -> None:
-    from .outcome_history import OUTCOME_HISTORY_STATE_ARTIFACT, write_outcome_history
+    from halpha.outcome.outcome_history import OUTCOME_HISTORY_STATE_ARTIFACT, write_outcome_history
 
     try:
         write_outcome_history(config, run, now=clock())
@@ -994,7 +994,7 @@ def _record_research_data_catalog(
     *,
     clock: Callable[[], datetime],
 ) -> None:
-    from .research_data_catalog import write_research_data_catalog
+    from halpha.data.research_data_catalog import write_research_data_catalog
 
     try:
         write_research_data_catalog(config, run, now=clock())
