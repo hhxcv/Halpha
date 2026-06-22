@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import logging
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import threading
@@ -29,6 +30,7 @@ REDACTED_ARTIFACT_REF = "<redacted-artifact>"
 RESULT_REF_PLACEHOLDERS = {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
 JOB_PROCESS_STATUSES = {"running"}
+DASHBOARD_JOB_ID_RE = re.compile(r"^\d{8}T\d{6}Z_[0-9a-f]{8}$")
 RESULT_ARTIFACT_KEYS = {
     "event_intelligence_material",
     "manifest",
@@ -314,6 +316,8 @@ class DashboardJobManager:
         }
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
+        if not _is_dashboard_job_id(job_id):
+            return None
         path = self._job_path(job_id)
         if not path.exists():
             return None
@@ -962,6 +966,10 @@ def _config_ref(config_path: Path) -> str:
 
 def _safe_ref(path: Path, *, base: Path) -> str:
     return safe_local_ref(path, base=base, external_ref=EXTERNAL_ARTIFACT_REF)
+
+
+def _is_dashboard_job_id(value: str) -> bool:
+    return DASHBOARD_JOB_ID_RE.fullmatch(str(value or "")) is not None
 
 
 def _utc_now() -> str:
