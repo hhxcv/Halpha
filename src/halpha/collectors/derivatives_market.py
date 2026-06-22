@@ -9,26 +9,19 @@ from halpha.market.derivatives_source import (
     PublicDerivativesSource,
 )
 from halpha.runtime.pipeline_contracts import RunContext
+from halpha.data.public_capabilities import (
+    DERIVATIVES_LIQUIDATION_SUMMARY_PERIOD,
+    DERIVATIVES_RAW_DATA_CLASSES,
+    derivatives_data_class_capability,
+    unsupported_derivatives_raw_collection_reason,
+)
 from halpha.data.raw_artifacts import RawArtifactError, validate_derivatives_market_raw_artifact
 from halpha.storage import write_json
 
 
 STAGE_NAME = "collect_derivatives_market_data"
 DERIVATIVES_MARKET_ARTIFACT = "raw/derivatives_market.json"
-SUPPORTED_RAW_DATA_CLASSES = {
-    "basis",
-    "funding_rate",
-    "liquidation_summary",
-    "open_interest",
-    "premium_index",
-    "spread_depth",
-}
 SPREAD_DEPTH_LIMIT = 20
-LIQUIDATION_SUMMARY_PERIOD = "source_availability"
-LIQUIDATION_UNAVAILABLE_REASON = (
-    "binance_usdm public liquidation data is available as real-time WebSocket force-order streams; "
-    "periodic unauthenticated REST liquidation summaries are not available for the current product path."
-)
 
 
 def collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -53,12 +46,12 @@ def collect_derivatives_market_data(config: dict[str, Any], run: RunContext) -> 
         raw["errors"].append(_collector_error(derivatives, str(exc)))
     else:
         for data_class in data_classes:
-            if data_class not in SUPPORTED_RAW_DATA_CLASSES:
+            if data_class not in DERIVATIVES_RAW_DATA_CLASSES:
                 raw["availability"].append(
                     _availability_record(
                         data_class=data_class,
                         status="unavailable",
-                        reason=f"{data_class} raw collection is not implemented for {source.source}.",
+                        reason=unsupported_derivatives_raw_collection_reason(data_class, source.source),
                     )
                 )
                 continue
@@ -231,13 +224,14 @@ def _availability_record(
 
 
 def _liquidation_availability_record(*, symbol: str) -> dict[str, Any]:
+    capability = derivatives_data_class_capability("liquidation_summary")
     record = _availability_record(
         data_class="liquidation_summary",
         status="unavailable",
         endpoint="liquidation_order_streams",
         symbol=symbol,
-        period=LIQUIDATION_SUMMARY_PERIOD,
-        reason=LIQUIDATION_UNAVAILABLE_REASON,
+        period=capability.availability_period if capability else DERIVATIVES_LIQUIDATION_SUMMARY_PERIOD,
+        reason=capability.unavailable_reason if capability else None,
     )
     record.update(
         {
@@ -246,14 +240,8 @@ def _liquidation_availability_record(*, symbol: str) -> dict[str, Any]:
             "stream_path": "/market",
             "signed_rest_endpoint": "/fapi/v1/forceOrders",
             "signed_rest_access": "USER_DATA",
-            "limitations": [
-                "public liquidation stream is real-time and requires a streaming runtime",
-                "stream snapshots include only the largest liquidation order within each 1000ms interval",
-                "signed REST force-order query is user data and is outside public market-data scope",
-            ],
-            "downstream_implication": (
-                "liquidation evidence is unavailable and must not be treated as neutral risk context"
-            ),
+            "limitations": list(capability.limitations) if capability else [],
+            "downstream_implication": capability.downstream_implication if capability else None,
         }
     )
     return record

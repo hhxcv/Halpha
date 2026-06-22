@@ -3,6 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from halpha.data.public_capabilities import (
+    DERIVATIVES_LIQUIDATION_SUMMARY_PERIOD,
+    DERIVATIVES_VIEW_DATA_CLASSES,
+    unsupported_derivatives_view_reason,
+)
 from halpha.market.derivatives_history import (
     DERIVATIVES_HISTORY_STATE_ARTIFACT,
     derivatives_market_group_path,
@@ -16,14 +21,7 @@ STAGE_NAME = "build_derivatives_market_views"
 DERIVATIVES_MARKET_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
 VIEW_SCHEMA_VERSION = 1
 VIEW_INCLUDED_COLUMNS = ("as_of", "endpoint", "metrics", "units", "warnings", "errors")
-SUPPORTED_VIEW_DATA_CLASSES = {
-    "basis",
-    "funding_rate",
-    "liquidation_summary",
-    "open_interest",
-    "premium_index",
-    "spread_depth",
-}
+SUPPORTED_VIEW_DATA_CLASSES = DERIVATIVES_VIEW_DATA_CLASSES
 
 
 def build_derivatives_market_views(
@@ -50,7 +48,7 @@ def build_derivatives_market_views(
                 _skipped_view(
                     source=source,
                     data_class=data_class,
-                    reason=f"{data_class} derivatives views are not implemented.",
+                    reason=unsupported_derivatives_view_reason(data_class),
                 )
             )
             continue
@@ -196,7 +194,7 @@ def _view_periods(data_class: str, periods: list[str]) -> list[str]:
     if data_class == "spread_depth":
         return ["snapshot"]
     if data_class == "liquidation_summary":
-        return ["source_availability"]
+        return [DERIVATIVES_LIQUIDATION_SUMMARY_PERIOD]
     return periods
 
 

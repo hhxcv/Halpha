@@ -230,6 +230,7 @@ def test_pipeline_unexpected_exception_diagnostic_redacts_private_values(tmp_pat
     manifest = json.loads(manifest_text)
     error = manifest["stages"][0]["error"]
     assert error["diagnostic"] == {"exception_type": "RuntimeError", "traceback_embedded": False}
+    assert manifest["config_path"] == "config.yaml"
     assert "<redacted>" in error["message"]
     assert secret not in manifest_text
     assert str(config_path) not in manifest_text
