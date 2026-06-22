@@ -6,10 +6,10 @@ from typing import Any
 import ccxt
 import pytest
 
-from halpha.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, fetch_configured_ohlcv
+from halpha.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, _fetch_configured_ohlcv
 
 
-def test_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
+def test_internal_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
     exchange = _FakeExchange(
         {
             ("BTCUSDT", "1d"): [
@@ -29,7 +29,7 @@ def test_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
         captured_options.update(options)
         return exchange
 
-    records = fetch_configured_ohlcv(
+    records = _fetch_configured_ohlcv(
         {
             "source": "binance",
             "symbols": ["BTCUSDT"],
@@ -92,14 +92,14 @@ def test_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
     ]
 
 
-def test_fetch_configured_ohlcv_uses_configured_proxy_without_credentials() -> None:
+def test_internal_fetch_configured_ohlcv_uses_configured_proxy_without_credentials() -> None:
     captured_options: dict[str, Any] = {}
 
     def factory(options: dict[str, Any]) -> _FakeExchange:
         captured_options.update(options)
         return _FakeExchange({("BTCUSDT", "1d"): [_row("2026-06-01T00:00:00Z", 100)]})
 
-    fetch_configured_ohlcv(
+    _fetch_configured_ohlcv(
         {
             "source": "binance",
             "symbols": ["BTCUSDT"],

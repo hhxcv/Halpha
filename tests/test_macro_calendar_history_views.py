@@ -6,7 +6,7 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.macro_calendar_history import sync_macro_calendar_history
-from halpha.macro_calendar_views import build_macro_calendar_views, load_macro_calendar_view_records
+from halpha.macro_calendar_views import _load_macro_calendar_view_records, build_macro_calendar_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 
@@ -48,7 +48,7 @@ def test_macro_calendar_history_and_views_use_bounded_current_windows(tmp_path: 
     stored_records = _stored_records(tmp_path)
     views = _views(result)
     view = views["views"][0]
-    loaded_window = load_macro_calendar_view_records(view, config_path=config_path)
+    loaded_window = _load_macro_calendar_view_records(view, config_path=config_path)
     manifest = _manifest(result)
     catalog = _catalog(tmp_path)
     catalog_store = next(store for store in catalog["stores"] if store["name"] == "macro_calendar_history")

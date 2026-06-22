@@ -98,7 +98,7 @@ def build_macro_calendar_views(
     return [MACRO_CALENDAR_VIEWS_ARTIFACT]
 
 
-def load_macro_calendar_view_records(
+def _load_macro_calendar_view_records(
     view: dict[str, Any],
     *,
     config_path: Any,

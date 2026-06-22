@@ -89,7 +89,7 @@ def build_onchain_flow_views(
     return [ONCHAIN_FLOW_VIEWS_ARTIFACT]
 
 
-def load_onchain_flow_view_records(
+def _load_onchain_flow_view_records(
     view: dict[str, Any],
     *,
     config_path: Any,
