@@ -957,6 +957,7 @@ def test_dashboard_data_deletion_plan_surfaces_cleanup_candidates(tmp_path: Path
         "items": 1,
         "run_index_refs": 0,
         "missing_report_refs": 1,
+        "nested_run_roots": 0,
     }
     assert payload["cleanup_candidates"]["items"] == [
         {
@@ -968,6 +969,49 @@ def test_dashboard_data_deletion_plan_surfaces_cleanup_candidates(tmp_path: Path
         }
     ]
     assert payload["run_artifacts"]["counts"]["cleanup_candidates"] == 1
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_data_deletion_plan_surfaces_nested_run_root_candidates(tmp_path: Path) -> None:
+    config_path = _write_data_store_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_source_artifacts(tmp_path, run)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    nested_run_dir = tmp_path / "runs" / "runs" / "nested-run"
+    write_json(
+        nested_run_dir / "run_manifest.json",
+        {
+            "schema_version": 1,
+            "run_id": "nested-run",
+            "status": "succeeded",
+            "artifacts": {},
+        },
+    )
+    _write_dashboard_data_store_metadata(tmp_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/data/deletion")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["cleanup_candidates"]["counts"] == {
+        "items": 1,
+        "run_index_refs": 0,
+        "missing_report_refs": 0,
+        "nested_run_roots": 1,
+    }
+    assert payload["cleanup_candidates"]["items"] == [
+        {
+            "kind": "nested_run_root",
+            "run_id": None,
+            "reason": "nested run root is outside indexed run history and requires explicit review before cleanup.",
+            "missing": [],
+            "refs": ["runs/runs", "runs/runs/nested-run/run_manifest.json"],
+            "counts": {"run_manifests": 1, "sample_refs": 1},
+            "indexed": False,
+        }
+    ]
     assert str(tmp_path) not in response.text
 
 

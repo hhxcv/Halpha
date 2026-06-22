@@ -2056,7 +2056,10 @@ def _run_artifact_deletion_section(
     root_blocked = _deletion_root_block_reason(run_root, base=base)
     runs_payload = dashboard_runs(config_path=config_path, limit=MAX_DELETION_RUN_ITEMS)
     runs = _list(runs_payload.get("runs"))
-    cleanup_candidates = _cleanup_candidates_from_runs_payload(runs_payload)
+    cleanup_candidates = [
+        *_cleanup_candidates_from_runs_payload(runs_payload),
+        *_nested_run_root_cleanup_candidates(run_root, base=base),
+    ][:40]
     items = [
         _run_artifact_delete_item(run, run_root=run_root, root_blocked=root_blocked, base=base)
         for run in runs
@@ -2092,6 +2095,7 @@ def _cleanup_candidate_section(items: list[Any]) -> dict[str, Any]:
             "items": len(candidates),
             "run_index_refs": sum(1 for item in candidates if item.get("kind") == "run_index_ref"),
             "missing_report_refs": sum(1 for item in candidates if item.get("kind") == "missing_report_ref"),
+            "nested_run_roots": sum(1 for item in candidates if item.get("kind") == "nested_run_root"),
         },
         "warnings": [],
         "errors": [],
@@ -2125,6 +2129,29 @@ def _cleanup_candidates_from_runs_payload(runs_payload: dict[str, Any]) -> list[
             }
         )
     return candidates[:40]
+
+
+def _nested_run_root_cleanup_candidates(run_root: Path, *, base: Path) -> list[dict[str, Any]]:
+    nested_root = run_root / run_root.name
+    if not nested_root.is_dir():
+        return []
+    manifests = sorted(nested_root.glob("*/run_manifest.json"))
+    if not manifests:
+        return []
+    return [
+        {
+            "kind": "nested_run_root",
+            "run_id": None,
+            "reason": "nested run root is outside indexed run history and requires explicit review before cleanup.",
+            "missing": [],
+            "refs": [_safe_ref(nested_root, base=base), *[_safe_ref(path, base=base) for path in manifests[:5]]],
+            "counts": {
+                "run_manifests": len(manifests),
+                "sample_refs": min(len(manifests), 5),
+            },
+            "indexed": False,
+        }
+    ]
 
 
 def _shared_data_deletion_section(
