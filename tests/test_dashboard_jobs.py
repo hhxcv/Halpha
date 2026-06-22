@@ -144,6 +144,38 @@ def test_dashboard_job_manager_preserves_relative_config_ref(
     assert "config.yaml" in stdout_log
 
 
+def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    config_path = Path("configs/local.yaml")
+    _write_config(config_dir, name="local.yaml")
+    config = load_config(config_path)
+    commands: list[list[str]] = []
+    cwd_values: list[Path] = []
+
+    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        commands.append(command)
+        cwd_values.append(Path(kwargs["cwd"]))
+        return _FakeProcess(stdout=str((tmp_path / config_path).resolve()), stderr="", returncode=0)
+
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "configs/local.yaml"]
+    assert cwd_values == [config_dir.resolve()]
+    assert Path(commands[0][-1]).is_file()
+    assert Path(commands[0][-1]).resolve() == (tmp_path / config_path).resolve()
+    stdout_log = (config_dir / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
+    assert str((tmp_path / config_path).resolve()) not in stdout_log
+
+
 def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -1056,8 +1088,8 @@ def _wait_for_api_terminal(client: TestClient, job_id: str) -> dict:
     raise AssertionError(f"job did not finish: {job_id}")
 
 
-def _write_config(tmp_path: Path) -> Path:
-    path = tmp_path / "config.yaml"
+def _write_config(tmp_path: Path, *, name: str = "config.yaml") -> Path:
+    path = tmp_path / name
     path.write_text(
         """
 run:

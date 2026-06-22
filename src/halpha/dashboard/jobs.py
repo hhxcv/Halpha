@@ -211,7 +211,7 @@ SUPPORTED_COMMANDS = {
 class DashboardJobManager:
     def __init__(self, config: dict[str, Any], *, config_path: Path) -> None:
         self.config = config
-        self.config_path = Path(config_path)
+        self.config_path = Path(config_path).resolve()
         self.base = _config_base(self.config_path)
         self.jobs_root = self.base / DASHBOARD_JOBS_DIR
         with suppress(OSError):
