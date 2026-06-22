@@ -74,6 +74,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
 
     response = client.get("/")
     shared_script = client.get("/assets/dashboard_shared.js")
+    strategy_chart_script = client.get("/assets/dashboard_strategy_chart.js")
     script = client.get("/assets/dashboard.js")
 
     assert response.status_code == 200
@@ -82,14 +83,19 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert response.headers["pragma"] == "no-cache"
     assert shared_script.status_code == 200
     assert shared_script.headers["cache-control"] == "no-store, max-age=0"
+    assert strategy_chart_script.status_code == 200
+    assert strategy_chart_script.headers["cache-control"] == "no-store, max-age=0"
     assert script.status_code == 200
     assert script.headers["cache-control"] == "no-store, max-age=0"
     assert "halpha-dashboard-app" in response.text
     assert "System status, reports, monitor, and data health" in response.text
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in response.text
+    assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in response.text
     assert '<script src="/assets/dashboard.js" defer></script>' in response.text
-    assert response.text.index("/assets/dashboard_shared.js") < response.text.index("/assets/dashboard.js")
+    assert response.text.index("/assets/dashboard_shared.js") < response.text.index("/assets/dashboard_strategy_chart.js")
+    assert response.text.index("/assets/dashboard_strategy_chart.js") < response.text.index("/assets/dashboard.js")
     assert "window.HalphaDashboardShared" in shared_script.text
+    assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
     assert "refreshCurrentView" in script.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
