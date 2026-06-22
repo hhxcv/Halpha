@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from halpha.decision.decision_intelligence import _build_watch_triggers_artifact
+from halpha.decision.decision_artifact_builders import build_watch_triggers_artifact
 from halpha.runtime.pipeline_contracts import RunContext
 
 
@@ -13,4 +13,4 @@ def build_watch_triggers(
     *,
     now: datetime | str | None = None,
 ) -> list[str]:
-    return _build_watch_triggers_artifact(config, run, now=now)
+    return build_watch_triggers_artifact(config, run, now=now)

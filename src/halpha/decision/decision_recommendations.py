@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from halpha.decision.decision_intelligence import _build_decision_recommendations_artifact
+from halpha.decision.decision_artifact_builders import build_decision_recommendations_artifact
 from halpha.runtime.pipeline_contracts import RunContext
 
 
@@ -13,4 +13,4 @@ def build_decision_recommendations(
     *,
     now: datetime | str | None = None,
 ) -> list[str]:
-    return _build_decision_recommendations_artifact(config, run, now=now)
+    return build_decision_recommendations_artifact(config, run, now=now)
