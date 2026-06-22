@@ -32,6 +32,7 @@ def test_dashboard_ui_source_sections_are_static_assets() -> None:
     assert "function renderSettings" in script
     assert "__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__" in shell
     assert '<link rel="stylesheet" href="/assets/dashboard.css">' in shell
+    assert '<script src="/assets/dashboard_shared.js" defer></script>' in shell
     assert '<script src="/assets/dashboard.js" defer></script>' in shell
     assert "<style>" not in shell
     assert "\n  <script>\n" not in shell
@@ -42,15 +43,21 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
 
     html = client.get("/")
     css = client.get("/assets/dashboard.css")
+    shared_script = client.get("/assets/dashboard_shared.js")
     script = client.get("/assets/dashboard.js")
     missing = client.get("/assets/missing.js")
 
     assert html.status_code == 200
     assert '<link rel="stylesheet" href="/assets/dashboard.css">' in html.text
+    assert '<script src="/assets/dashboard_shared.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard.js" defer></script>' in html.text
+    assert html.text.index("/assets/dashboard_shared.js") < html.text.index("/assets/dashboard.js")
     assert css.status_code == 200
     assert css.headers["content-type"].startswith("text/css")
     assert ".reports-layout" in css.text
+    assert shared_script.status_code == 200
+    assert shared_script.headers["content-type"].startswith("application/javascript")
+    assert "window.HalphaDashboardShared" in shared_script.text
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
     assert "function renderReportLibrary" in script.text

@@ -73,17 +73,23 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.get("/")
+    shared_script = client.get("/assets/dashboard_shared.js")
     script = client.get("/assets/dashboard.js")
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert response.headers["cache-control"] == "no-store, max-age=0"
     assert response.headers["pragma"] == "no-cache"
+    assert shared_script.status_code == 200
+    assert shared_script.headers["cache-control"] == "no-store, max-age=0"
     assert script.status_code == 200
     assert script.headers["cache-control"] == "no-store, max-age=0"
     assert "halpha-dashboard-app" in response.text
     assert "System status, reports, monitor, and data health" in response.text
+    assert '<script src="/assets/dashboard_shared.js" defer></script>' in response.text
     assert '<script src="/assets/dashboard.js" defer></script>' in response.text
+    assert response.text.index("/assets/dashboard_shared.js") < response.text.index("/assets/dashboard.js")
+    assert "window.HalphaDashboardShared" in shared_script.text
     assert "refreshCurrentView" in script.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
