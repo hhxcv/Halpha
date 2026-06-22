@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from halpha.data.data_inspection import DataInspectionError, inspect_local_store_state
 from halpha.dashboard.artifact_preview import dashboard_artifact_preview
 from halpha.dashboard.assets import dashboard_asset_media_type, dashboard_asset_text
+from halpha.dashboard.constants import DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
 from halpha.dashboard.data_cleanup import (
     MAX_DELETION_RUN_ITEMS,
     dashboard_data_deletion_plan as build_dashboard_data_deletion_plan,
@@ -48,7 +49,6 @@ from halpha.workbench.workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_S
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
-DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = "Asia/Shanghai"
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
 EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
