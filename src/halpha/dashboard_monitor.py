@@ -444,8 +444,10 @@ def _overall_status(statuses: list[str]) -> str:
 
 def _normalize_status(status: str) -> str:
     lowered = status.lower()
-    if lowered in {"ok", "succeeded", "success"}:
+    if lowered in {"ok", "available", "succeeded", "success", "completed"}:
         return "available"
+    if lowered in {"disabled", "insufficient_data", "not_generated", "not_run", "pending", "skipped"}:
+        return "partial"
     return lowered
 
 
