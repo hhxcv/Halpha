@@ -7,11 +7,11 @@ from html import unescape
 from html.parser import HTMLParser
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 from xml.etree import ElementTree
 
 from halpha.pipeline import PipelineError, RunContext
+from halpha.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
 from halpha.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from halpha.storage import write_json
 
@@ -131,38 +131,17 @@ def _request_feed(source: dict[str, Any], *, urlopen_func) -> str:
 
 
 def _proxy_url_from_config(config: dict[str, Any]) -> str | None:
-    market = config.get("market")
-    if not isinstance(market, dict):
-        return None
-    proxy = market.get("proxy")
-    if not isinstance(proxy, dict) or proxy.get("enabled") is not True:
-        return None
-    url = proxy.get("url")
-    if isinstance(url, str) and url.strip():
-        return url.strip()
-    return None
+    return market_proxy_url_from_config(config, error_factory=TextCollectionError)
 
 
 def _urlopen_from_proxy(proxy_url: str | None):
-    proxy_url = _normalize_proxy_url(proxy_url)
-    if proxy_url is None:
-        return urlopen
-    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
-    return opener.open
-
-
-def _normalize_proxy_url(value: str | None) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value.strip():
-        raise TextCollectionError("market.proxy.url must be a non-empty string.")
-    proxy_url = value.strip()
-    parsed = urlparse(proxy_url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise TextCollectionError("market.proxy.url must be an http or https URL.")
-    if parsed.username or parsed.password:
-        raise TextCollectionError("market.proxy.url must not include credentials.")
-    return proxy_url
+    return urlopen_from_public_proxy(
+        proxy_url,
+        error_factory=TextCollectionError,
+        default_urlopen=urlopen,
+        proxy_handler_factory=ProxyHandler,
+        opener_factory=build_opener,
+    )
 
 
 def _rss_items(root: ElementTree.Element) -> list[ElementTree.Element]:

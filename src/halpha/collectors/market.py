@@ -4,10 +4,11 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from halpha.pipeline import PipelineError, RunContext
+from halpha.public_http import market_proxy_url_from_market, urlopen_from_public_proxy
 from halpha.raw_artifacts import RawArtifactError, validate_market_raw_artifact
 from halpha.storage import write_json
 
@@ -135,27 +136,27 @@ def _ticker_url(symbol: str) -> str:
 
 
 def _urlopen_from_market_config(market: dict[str, Any]):
-    proxy_url = _proxy_url_from_market_config(market)
-    if proxy_url is None:
-        return urlopen
-    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
-    return opener.open
+    return urlopen_from_public_proxy(
+        _proxy_url_from_market_config(market),
+        error_factory=MarketCollectionError,
+        default_urlopen=urlopen,
+        proxy_handler_factory=ProxyHandler,
+        opener_factory=build_opener,
+        missing_url_message="market.proxy.url must be a non-empty string when market.proxy.enabled is true",
+        invalid_url_message="market.proxy.url must be an http or https URL",
+        credentials_message="market.proxy.url must not include credentials",
+    )
 
 
 def _proxy_url_from_market_config(market: dict[str, Any]) -> str | None:
-    proxy = market.get("proxy")
-    if not isinstance(proxy, dict) or proxy.get("enabled") is not True:
-        return None
-    url = proxy.get("url")
-    if not isinstance(url, str) or not url.strip():
-        raise MarketCollectionError("market.proxy.url must be a non-empty string when market.proxy.enabled is true")
-    proxy_url = url.strip()
-    parsed = urlparse(proxy_url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise MarketCollectionError("market.proxy.url must be an http or https URL")
-    if parsed.username or parsed.password:
-        raise MarketCollectionError("market.proxy.url must not include credentials")
-    return proxy_url
+    return market_proxy_url_from_market(
+        market,
+        error_factory=MarketCollectionError,
+        require_url_when_enabled=True,
+        missing_url_message="market.proxy.url must be a non-empty string when market.proxy.enabled is true",
+        invalid_url_message="market.proxy.url must be an http or https URL",
+        credentials_message="market.proxy.url must not include credentials",
+    )
 
 
 def _market_item(ticker: dict[str, Any], collected_at: str) -> dict[str, Any]:
