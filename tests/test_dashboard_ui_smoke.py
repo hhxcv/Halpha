@@ -8,7 +8,12 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from dashboard_asset_helpers import dashboard_css, dashboard_script, dashboard_shell_html
+from dashboard_asset_helpers import (
+    dashboard_css,
+    dashboard_script,
+    dashboard_shell_html,
+    dashboard_strategy_chart_script,
+)
 
 
 EXPECTED_DASHBOARD_VIEWS = {
@@ -33,6 +38,7 @@ def test_dashboard_ui_source_sections_are_static_assets() -> None:
     assert "__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__" in shell
     assert '<link rel="stylesheet" href="/assets/dashboard.css">' in shell
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in shell
+    assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in shell
     assert '<script src="/assets/dashboard.js" defer></script>' in shell
     assert "<style>" not in shell
     assert "\n  <script>\n" not in shell
@@ -44,20 +50,26 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     html = client.get("/")
     css = client.get("/assets/dashboard.css")
     shared_script = client.get("/assets/dashboard_shared.js")
+    strategy_chart_script = client.get("/assets/dashboard_strategy_chart.js")
     script = client.get("/assets/dashboard.js")
     missing = client.get("/assets/missing.js")
 
     assert html.status_code == 200
     assert '<link rel="stylesheet" href="/assets/dashboard.css">' in html.text
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in html.text
+    assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard.js" defer></script>' in html.text
-    assert html.text.index("/assets/dashboard_shared.js") < html.text.index("/assets/dashboard.js")
+    assert html.text.index("/assets/dashboard_shared.js") < html.text.index("/assets/dashboard_strategy_chart.js")
+    assert html.text.index("/assets/dashboard_strategy_chart.js") < html.text.index("/assets/dashboard.js")
     assert css.status_code == 200
     assert css.headers["content-type"].startswith("text/css")
     assert ".reports-layout" in css.text
     assert shared_script.status_code == 200
     assert shared_script.headers["content-type"].startswith("application/javascript")
     assert "window.HalphaDashboardShared" in shared_script.text
+    assert strategy_chart_script.status_code == 200
+    assert strategy_chart_script.headers["content-type"].startswith("application/javascript")
+    assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
     assert "function renderReportLibrary" in script.text
@@ -263,8 +275,8 @@ def test_dashboard_strategy_backtest_chart_shell_contracts_are_present(tmp_path:
     assert ".chart-wrap" in css
     assert "height: 52vh;" in css
     assert "backtestVisualization(item)" in script
-    assert "renderCandlestickSvg(vis)" in script
-    assert "renderTradeMarker" in script
+    assert 'strategyChart.renderCandlestickSvg("#backtest-chart", vis)' in script
+    assert "renderTradeMarker" in dashboard_strategy_chart_script()
     assert "downloadSelectedOhlcv" in script
     assert "sampleVisualization" not in script
     assert "sampleIntelItems" not in script
