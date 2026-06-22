@@ -9,6 +9,7 @@ from halpha.pipeline import RunContext
 from halpha.run_index import write_run_index
 from halpha.storage import write_json
 from halpha.workbench import build_workbench_summary, render_workbench_html
+from halpha.workbench_rendering import render_workbench_markdown
 
 
 def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
@@ -165,6 +166,43 @@ def test_workbench_html_escapes_summary_text() -> None:
     assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
     assert "&lt;private-note&gt;" in html
     assert "<script>" not in html
+
+
+def test_workbench_markdown_renderer_links_relative_artifacts() -> None:
+    markdown = render_workbench_markdown(
+        {
+            "status": "available",
+            "generated_at": "2026-06-20T00:00:00Z",
+            "source_selection": {"run_dir": "runs/run-1"},
+            "latest_run": {
+                "fields": {
+                    "run_id": "run-1",
+                    "run_status": "succeeded",
+                    "report": {"status": "available", "artifact": "report/report.md"},
+                }
+            },
+            "decision_state": {"status": "available", "fields": {"decision_records": 2}},
+            "alert_state": {"status": "missing", "fields": {}},
+            "monitor_state": {"status": "missing", "fields": {}},
+            "outcome_state": {"status": "missing", "fields": {}},
+            "strategy_state": {"status": "available", "fields": {"strategy_gate_effective": 3}},
+            "product_validation_state": {"status": "available", "fields": {"checks": 4, "failed": 0}},
+            "data_quality_state": {"status": "available", "fields": {"warnings": 0}},
+            "source_artifacts": {
+                "run_manifest": "runs/run-1/run_manifest.json",
+                "report": "report/report.md",
+                "analysis": {"risk_assessment": "analysis/risk_assessment.json"},
+            },
+            "warnings": ["review warning"],
+            "errors": ["review error"],
+        }
+    )
+
+    assert "[`report/report.md`](../../run-1/report/report.md)" in markdown
+    assert "- run_manifest: [`runs/run-1/run_manifest.json`](../../run-1/run_manifest.json)" in markdown
+    assert "- analysis.risk_assessment: [`analysis/risk_assessment.json`](../../run-1/analysis/risk_assessment.json)" in markdown
+    assert "- review warning" in markdown
+    assert "- review error" in markdown
 
 
 def _write_config(tmp_path: Path) -> Path:
