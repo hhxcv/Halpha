@@ -26,6 +26,7 @@ ALERT_COUNT_KEYS = (
     "suppressed_no_alert",
     "skipped",
 )
+FAILED_MONITOR_STATUSES = {"failed", "error"}
 
 
 def dashboard_monitor_summary(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
@@ -132,7 +133,15 @@ def _health_summary(output_dir: Path, *, base: Path) -> dict[str, Any]:
         "error_count": _int(data.get("error_count")),
         "latest_loop": _bounded_mapping(data.get("latest_loop")),
     }
-    return _component("monitor_health", "available", fields=fields, source_artifacts=[artifact])
+    status, warnings, errors = _monitor_health_status(fields)
+    return _component(
+        "monitor_health",
+        status,
+        fields=fields,
+        source_artifacts=[artifact],
+        warnings=warnings,
+        errors=errors,
+    )
 
 
 def _cycle_list(output_dir: Path, *, base: Path, limit: int) -> dict[str, Any]:
@@ -351,6 +360,32 @@ def _cooldown_summary(output_dir: Path, *, base: Path) -> dict[str, Any]:
         "state_path": data.get("state_path"),
     }
     return _component("cooldown", "available", fields=fields, source_artifacts=[artifact])
+
+
+def _monitor_health_status(fields: dict[str, Any]) -> tuple[str, list[str], list[str]]:
+    latest_cycle_status = str(fields.get("latest_cycle_status") or "").lower()
+    latest_loop = _dict(fields.get("latest_loop"))
+    latest_loop_status = str(latest_loop.get("status") or "").lower()
+    warning_count = _int(fields.get("warning_count"))
+    error_count = _int(fields.get("error_count"))
+    failed_cycle_count = _int(fields.get("failed_cycle_count"))
+    warnings: list[str] = []
+    errors: list[str] = []
+    if latest_cycle_status in FAILED_MONITOR_STATUSES:
+        errors.append(f"latest monitor cycle status is {latest_cycle_status}.")
+    if latest_loop_status in FAILED_MONITOR_STATUSES:
+        errors.append(f"latest monitor loop status is {latest_loop_status}.")
+    if error_count:
+        errors.append(f"monitor health records {error_count} error(s).")
+    if errors:
+        return "failed", warnings, errors
+    if warning_count:
+        warnings.append(f"monitor health records {warning_count} warning(s).")
+    if failed_cycle_count:
+        warnings.append(f"monitor health records {failed_cycle_count} failed cycle(s).")
+    if warnings:
+        return "partial", warnings, errors
+    return "available", warnings, errors
 
 
 def _component(

@@ -103,6 +103,45 @@ def test_dashboard_monitor_api_reports_partial_state(tmp_path: Path) -> None:
     assert payload["cooldown"]["status"] == "missing"
 
 
+def test_dashboard_monitor_api_promotes_failed_health_state(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    monitor_dir = tmp_path / "runs" / "monitor"
+    write_json(
+        monitor_dir / "monitor_health_state.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "monitor_health_state",
+            "cycle_count": 6,
+            "failed_cycle_count": 1,
+            "latest_cycle_id": "cycle-failed",
+            "latest_cycle_status": "failed",
+            "latest_run_id": "run-failed",
+            "latest_run_manifest": "runs/run-failed/run_manifest.json",
+            "latest_cycle_manifest": "runs/monitor/cycles/cycle-failed/monitor_cycle_manifest.json",
+            "alert_archive_status": "skipped",
+            "alert_counts": {},
+            "cooldown_records": 0,
+            "warning_count": 2,
+            "error_count": 1,
+            "latest_loop": {"status": "failed", "stop_reason": "cycle_failed"},
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/monitor")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["health"]["status"] == "failed"
+    assert payload["health"]["fields"]["latest_cycle_status"] == "failed"
+    assert payload["health"]["fields"]["warning_count"] == 2
+    assert payload["health"]["fields"]["error_count"] == 1
+    assert "latest monitor cycle status is failed." in payload["errors"]
+    assert "latest monitor loop status is failed." in payload["errors"]
+
+
 def test_dashboard_monitor_api_reports_malformed_artifacts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -181,7 +220,7 @@ def _write_complete_monitor_state(tmp_path: Path) -> None:
                 "skipped": 1,
             },
             "cooldown_records": 2,
-            "warning_count": 1,
+            "warning_count": 0,
             "error_count": 0,
             "latest_loop": {"completed_cycles": 1, "stop_reason": "max_cycles_reached"},
         },
