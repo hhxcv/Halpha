@@ -112,6 +112,15 @@ def test_dashboard_uses_dropdowns_tabs_and_detail_rails_for_primary_flows(tmp_pa
     assert "resetIntelFilters" in script
 
 
+def test_dashboard_status_class_covers_nonterminal_states(tmp_path: Path) -> None:
+    script = _script_block(_dashboard_html(tmp_path))
+
+    assert '"disabled", "not_generated", "not_run"' in script
+    assert 'return "skipped";' in script
+    assert '"insufficient_data", "unavailable"' in script
+    assert 'return "partial";' in script
+
+
 def test_dashboard_interaction_hooks_cover_redesigned_workflows(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     script = _script_block(html)

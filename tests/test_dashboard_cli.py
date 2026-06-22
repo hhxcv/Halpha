@@ -1440,6 +1440,34 @@ def test_dashboard_strategies_endpoint_groups_repeated_warnings(tmp_path: Path) 
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_strategies_endpoint_normalizes_not_run_status(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_strategy_artifacts(run)
+    write_json(
+        run.analysis_dir / "strategy_benchmark_suite.json",
+        {
+            "artifact_type": "strategy_benchmark_suite",
+            "status": "not_run",
+            "coverage": {"benchmark_records": 0},
+            "benchmarks": [],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    payload = response.json()
+    pipeline = {item["name"]: item for item in payload["pipeline"]["artifacts"]}
+    assert pipeline["strategy_benchmark_suite"]["status"] == "partial"
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_strategies_endpoint_reports_configured_command_options() -> None:
     config_path = Path("config.example.yaml")
     config = load_config(config_path)

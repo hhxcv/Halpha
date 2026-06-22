@@ -929,7 +929,7 @@ def _normalize_status(status: str) -> str:
         return "available"
     if normalized in {"warning", "degraded", "failed", "partial", "missing", "skipped"}:
         return normalized
-    if normalized in {"insufficient_data", "disabled", "not_generated"}:
+    if normalized in {"insufficient_data", "disabled", "not_generated", "not_run"}:
         return "partial"
     return "unknown"
 

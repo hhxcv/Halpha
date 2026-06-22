@@ -3340,7 +3340,17 @@ def _overall_status(statuses: list[str]) -> str:
     if any(status == "degraded" for status in statuses):
         return "degraded"
     if any(
-        status in {"disabled", "missing", "not_run", "partial", "skipped", "unknown"}
+        status
+        in {
+            "disabled",
+            "insufficient_data",
+            "missing",
+            "not_generated",
+            "not_run",
+            "partial",
+            "skipped",
+            "unknown",
+        }
         for status in statuses
     ):
         return "partial"
@@ -3360,6 +3370,8 @@ def _normalize_section_status(status: str) -> str:
         "failed",
         "partial",
         "missing",
+        "insufficient_data",
+        "not_generated",
         "not_run",
         "skipped",
     }:

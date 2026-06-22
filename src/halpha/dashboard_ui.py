@@ -2070,6 +2070,12 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       if (["failed", "error", "degraded", "blocked"].includes(normalized)) {
         return normalized;
       }
+      if (["disabled", "not_generated", "not_run"].includes(normalized)) {
+        return "skipped";
+      }
+      if (["insufficient_data", "unavailable"].includes(normalized)) {
+        return "partial";
+      }
       if (["warning", "partial", "missing", "skipped", "pending"].includes(normalized)) {
         return normalized;
       }
