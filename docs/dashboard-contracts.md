@@ -68,6 +68,9 @@ python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 
 The dashboard service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
+The dashboard root serves the application shell and loads packaged static
+frontend assets from `/assets/dashboard.css` and `/assets/dashboard.js`.
+
 Dashboard timestamp display uses `dashboard.display_timezone` when configured,
 falls back to `run.timezone`, and defaults to `Asia/Shanghai`. This display
 setting changes the local UI rendering of ISO timestamps; it must not rewrite

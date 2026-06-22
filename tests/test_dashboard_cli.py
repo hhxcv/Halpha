@@ -73,14 +73,18 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.get("/")
+    script = client.get("/assets/dashboard.js")
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert response.headers["cache-control"] == "no-store, max-age=0"
     assert response.headers["pragma"] == "no-cache"
+    assert script.status_code == 200
+    assert script.headers["cache-control"] == "no-store, max-age=0"
     assert "halpha-dashboard-app" in response.text
     assert "System status, reports, monitor, and data health" in response.text
-    assert "refreshCurrentView" in response.text
+    assert '<script src="/assets/dashboard.js" defer></script>' in response.text
+    assert "refreshCurrentView" in script.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
@@ -94,7 +98,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert 'data-display-timezone="Asia/Shanghai"' in response.text
     assert '<strong id="display-timezone">Asia/Shanghai</strong>' in response.text
-    assert "formatTimestamp(value)" in response.text
+    assert "formatTimestamp(value)" in script.text
     assert 'href="#overview" data-view-target="overview"' in response.text
     assert 'href="#reports" data-view-target="reports"' in response.text
     assert 'href="#strategies" data-view-target="strategies"' in response.text
@@ -116,16 +120,18 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Settings" in response.text
     assert "Config file" in response.text
     assert "Storage maintenance" in response.text
-    assert "DELETE RUN DATA" in response.text
+    assert "DELETE RUN DATA" in script.text
     assert "empty-state" in response.text
-    assert "No monitor cycles yet" in response.text
+    assert "No monitor cycles yet" in script.text
     assert "Dry run" in response.text
     assert "Run one cycle" in response.text
     assert "Run backtest" in response.text
     assert "Generate report" in response.text
     assert "Save changes" in response.text
     assert "Config save is staged" not in response.text
+    assert "Config save is staged" not in script.text
     assert str(tmp_path) not in response.text
+    assert str(tmp_path) not in script.text
 
 
 def test_dashboard_root_uses_configured_display_timezone(tmp_path: Path) -> None:

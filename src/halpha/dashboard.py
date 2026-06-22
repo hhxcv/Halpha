@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .data_inspection import DataInspectionError, inspect_local_store_state
 from .dashboard_artifact_preview import dashboard_artifact_preview
+from .dashboard_assets import dashboard_asset_media_type, dashboard_asset_text
 from .dashboard_data_cleanup import (
     MAX_DELETION_RUN_ITEMS,
     dashboard_data_deletion_plan as build_dashboard_data_deletion_plan,
@@ -144,6 +145,13 @@ def create_dashboard_app(
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon() -> Response:
         return Response(status_code=204)
+
+    @app.get("/assets/{asset_name}", include_in_schema=False)
+    def dashboard_asset(asset_name: str) -> Response:
+        media_type = dashboard_asset_media_type(asset_name)
+        if media_type is None:
+            return Response(status_code=404)
+        return Response(dashboard_asset_text(asset_name), media_type=media_type, headers=NO_STORE_HEADERS)
 
     @app.get("/api/health")
     def health_endpoint() -> dict[str, Any]:
