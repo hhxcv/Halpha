@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -19,18 +20,51 @@ BINANCE_SOURCE_NAME = "binance"
 BINANCE_BASE_URL = "https://data-api.binance.vision"
 BINANCE_TICKER_PATH = "/api/v3/ticker/24hr"
 REQUEST_TIMEOUT_SECONDS = 20
+LOGGER = logging.getLogger(__name__)
 
 
 def collect_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
     market = config.get("market", {})
     if not market.get("enabled"):
         run.manifest["counts"]["market_items"] = 0
+        LOGGER.info(
+            "Market collection skipped.",
+            extra={
+                "event": "collector.market.skipped",
+                "stage": STAGE_NAME,
+                "status": "skipped",
+                "reason": "market.enabled is false",
+            },
+        )
         return []
 
+    source_name = str(market.get("source") or "unknown")
+    symbol_count = len(market.get("symbols")) if isinstance(market.get("symbols"), list) else 0
+    LOGGER.info(
+        "Market collection started.",
+        extra={
+            "event": "collector.market.start",
+            "stage": STAGE_NAME,
+            "source": source_name,
+            "symbol_count": symbol_count,
+        },
+    )
     raw = _collect_raw_market(market)
     try:
         validate_market_raw_artifact(raw, MARKET_ARTIFACT)
     except RawArtifactError as exc:
+        LOGGER.error(
+            "Market collection produced an invalid raw artifact.",
+            extra={
+                "event": "collector.market.failed",
+                "stage": STAGE_NAME,
+                "source": source_name,
+                "status": "failed",
+                "item_count": len(raw.get("items", [])),
+                "error_count": len(raw.get("errors", [])),
+                "artifact": MARKET_ARTIFACT,
+            },
+        )
         raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=3) from exc
 
     artifact_path = run.raw_dir / "market.json"
@@ -39,6 +73,18 @@ def collect_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
     run.manifest["counts"]["market_items"] = len(raw["items"])
 
     if raw["errors"]:
+        LOGGER.warning(
+            "Market collection finished with errors.",
+            extra={
+                "event": "collector.market.finished",
+                "stage": STAGE_NAME,
+                "source": source_name,
+                "status": "failed",
+                "item_count": len(raw["items"]),
+                "error_count": len(raw["errors"]),
+                "artifact": MARKET_ARTIFACT,
+            },
+        )
         raise PipelineError(
             _collector_failure_message(raw["errors"]),
             stage=STAGE_NAME,
@@ -46,6 +92,18 @@ def collect_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
             artifacts=[MARKET_ARTIFACT],
         )
 
+    LOGGER.info(
+        "Market collection finished.",
+        extra={
+            "event": "collector.market.finished",
+            "stage": STAGE_NAME,
+            "source": source_name,
+            "status": "succeeded",
+            "item_count": len(raw["items"]),
+            "error_count": 0,
+            "artifact": MARKET_ARTIFACT,
+        },
+    )
     return [MARKET_ARTIFACT]
 
 

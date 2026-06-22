@@ -102,6 +102,10 @@ Common event names:
 - `pipeline.stage.skipped`;
 - `pipeline.stage.failed`;
 - `pipeline.stages.not_run`;
+- `collector.<name>.start`;
+- `collector.<name>.finished`;
+- `collector.<name>.skipped`;
+- `collector.<name>.failed`;
 - `dashboard.job.queued`;
 - `dashboard.job.start`;
 - `dashboard.job.finished`;
@@ -115,6 +119,8 @@ Common context fields:
 - CLI: `command`, `stage`, `status`, `exit_code`, `reason`;
 - pipeline: `run_id`, `stage`, `artifact_count`, `skip_codex`,
   `until_stage`;
+- collectors: `stage`, `source`, `status`, `symbol_count`, `item_count`,
+  `error_count`, `artifact`;
 - dashboard jobs: `job_id`, `intent`, `kind`, `status`, `exit_code`;
 - monitor: `cycle_id`, `loop_id`, `run_id`, `target_stage`, `no_codex`,
   `completed_cycles`, `stop_reason`;
