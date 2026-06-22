@@ -20,5 +20,12 @@ def format_utc_timestamp(value: datetime) -> str:
     return value.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def utc_timestamp(value: datetime | None = None) -> str:
+    timestamp = value or datetime.now(timezone.utc)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return format_utc_timestamp(timestamp)
+
+
 def utc_now_timestamp() -> str:
-    return format_utc_timestamp(datetime.now(timezone.utc))
+    return utc_timestamp()

@@ -10,6 +10,7 @@ from typing import Any
 
 from .research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
+from .value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 from .workbench import (
     DEFAULT_WORKBENCH_OUTPUT_DIR,
     WORKBENCH_HTML_FILENAME,
@@ -1316,20 +1317,6 @@ def _project_local_path(path: Path, *, base: Path) -> Path | None:
     except (OSError, ValueError):
         return None
     return path
-
-
-def _dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
-
-
-def _int(value: Any) -> int:
-    if isinstance(value, bool):
-        return 0
-    return value if isinstance(value, int) else 0
 
 
 def _status_count(records: list[Any], status: str) -> int:

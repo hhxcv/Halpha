@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from html import escape
 import json
 from json import JSONDecodeError
@@ -10,6 +10,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from .dashboard_time import utc_timestamp as _utc_timestamp
 from .monitoring import (
     ALERT_ARCHIVE_STATE_FILENAME,
     MONITOR_HEALTH_STATE_FILENAME,
@@ -17,6 +18,7 @@ from .monitoring import (
 )
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
 from .storage import display_path, ensure_directory, write_json
+from .value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 
 
 DEFAULT_WORKBENCH_OUTPUT_DIR = "runs/workbench/latest"
@@ -1222,27 +1224,6 @@ def _config_base(config_path: Path) -> Path:
     if str(parent) in {"", "."}:
         return Path.cwd()
     return parent
-
-
-def _utc_timestamp(value: datetime | None = None) -> str:
-    timestamp = value or datetime.now(timezone.utc)
-    if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
-    return timestamp.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
-
-
-def _int(value: Any) -> int:
-    if isinstance(value, bool):
-        return 0
-    return value if isinstance(value, int) else 0
 
 
 def _dedupe(values: list[str]) -> list[str]:
