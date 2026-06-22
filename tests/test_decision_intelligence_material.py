@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
+from halpha.decision_material import (
+    decision_material_record_count,
+    render_decision_intelligence_material,
+    validate_decision_material_inputs,
+)
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
 
@@ -39,7 +44,12 @@ def test_decision_intelligence_material_summarizes_m3_artifacts(tmp_path: Path) 
 
     assert result.succeeded is True
     material = (result.run.analysis_dir / "decision_intelligence_material.md").read_text(encoding="utf-8")
+    artifacts = _decision_material_inputs(result)
     manifest = _manifest(result)
+
+    validate_decision_material_inputs(artifacts)
+    assert decision_material_record_count(artifacts) == 1
+    assert render_decision_intelligence_material(artifacts, run_id=result.run.run_id) == material
 
     assert "artifact_type: analysis_decision_intelligence_material" in material
     assert "schema_version: 1" in material
@@ -391,6 +401,26 @@ def _manifest(result) -> dict[str, Any]:
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
     return next(stage for stage in manifest["stages"] if stage["name"] == name)
+
+
+def _decision_material_inputs(result) -> dict[str, dict[str, Any]]:
+    return {
+        "market_regime_assessment": json.loads(
+            (result.run.analysis_dir / "market_regime_assessment.json").read_text(encoding="utf-8")
+        ),
+        "risk_assessment": json.loads(
+            (result.run.analysis_dir / "risk_assessment.json").read_text(encoding="utf-8")
+        ),
+        "decision_recommendations": json.loads(
+            (result.run.analysis_dir / "decision_recommendations.json").read_text(encoding="utf-8")
+        ),
+        "watch_triggers": json.loads(
+            (result.run.analysis_dir / "watch_triggers.json").read_text(encoding="utf-8")
+        ),
+        "decision_intelligence_delta": json.loads(
+            (result.run.analysis_dir / "decision_intelligence_delta.json").read_text(encoding="utf-8")
+        ),
+    }
 
 
 def _noop_stage(config, run) -> list[str]:
