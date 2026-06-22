@@ -267,13 +267,14 @@ def _visualization_record(
 ) -> dict[str, Any]:
     bars = [_visualization_bar(row) for row in rows]
     bars = [bar for bar in bars if bar is not None]
-    visible_bars = bars[-MAX_BACKTEST_VISUALIZATION_BARS:]
-    visible_times = {str(bar["time"]) for bar in visible_bars}
     full_equity_curve = _visualization_equity_curve(evaluation)
+    full_markers = _visualization_markers(full_equity_curve, bars)
+    visible_bars = _visualization_bars_window(bars, full_markers)
+    visible_times = {str(bar["time"]) for bar in visible_bars}
     equity_curve = [point for point in full_equity_curve if str(point["time"]) in visible_times]
     markers = [
         marker
-        for marker in _visualization_markers(full_equity_curve, bars)
+        for marker in full_markers
         if str(marker["time"]) in visible_times
     ]
     warnings = []
@@ -302,6 +303,39 @@ def _visualization_record(
         },
         "warnings": warnings,
     }
+
+
+def _visualization_bars_window(
+    bars: list[dict[str, Any]],
+    markers: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if len(bars) <= MAX_BACKTEST_VISUALIZATION_BARS:
+        return bars
+    marker_indices = _completed_trade_marker_indices(bars, markers)
+    if not marker_indices:
+        return bars[-MAX_BACKTEST_VISUALIZATION_BARS:]
+    first = min(marker_indices)
+    last = max(marker_indices)
+    span = last - first + 1
+    if span >= MAX_BACKTEST_VISUALIZATION_BARS:
+        start = max(0, min(last - MAX_BACKTEST_VISUALIZATION_BARS + 1, len(bars) - MAX_BACKTEST_VISUALIZATION_BARS))
+    else:
+        context = (MAX_BACKTEST_VISUALIZATION_BARS - span) // 2
+        start = max(0, min(first - context, len(bars) - MAX_BACKTEST_VISUALIZATION_BARS))
+    end = start + MAX_BACKTEST_VISUALIZATION_BARS
+    return bars[start:end]
+
+
+def _completed_trade_marker_indices(
+    bars: list[dict[str, Any]],
+    markers: list[dict[str, Any]],
+) -> list[int]:
+    if len(markers) < 2:
+        return []
+    if not any(str(marker.get("kind") or "") == "exit" for marker in markers):
+        return []
+    index_by_time = {str(bar["time"]): index for index, bar in enumerate(bars)}
+    return [index_by_time[str(marker["time"])] for marker in markers if str(marker.get("time")) in index_by_time]
 
 
 def _visualization_bar(row: dict[str, Any]) -> dict[str, Any] | None:
@@ -378,7 +412,7 @@ def _visualization_markers(
                 {
                     "time": time_value,
                     "kind": "exit",
-                    "label": "Flat",
+                    "label": "Sell",
                     "position": _round_float(position_value),
                     "price": price,
                 }

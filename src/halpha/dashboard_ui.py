@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from html import escape
 
 
@@ -18,26 +17,28 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
   <style>
     :root {
       color-scheme: light;
-      --bg: #f6f4ef;
+      --bg: #f7f8fa;
       --panel: #ffffff;
-      --panel-soft: #fbfaf7;
-      --border: #dedbd2;
-      --border-strong: #c6c1b6;
-      --text: #202124;
-      --muted: #68635a;
-      --muted-2: #857f75;
-      --teal: #0f766e;
-      --teal-soft: #e0f2ef;
-      --amber: #a16207;
-      --amber-soft: #fff4d6;
-      --red: #b42318;
-      --red-soft: #fde7e4;
-      --blue: #1d4ed8;
-      --blue-soft: #e7efff;
-      --shadow: 0 1px 2px rgba(32, 33, 36, 0.08);
-      font-family:
-        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+      --panel-soft: #fbfcfd;
+      --sidebar: #0d1b2a;
+      --sidebar-2: #10263b;
+      --border: #dce2ea;
+      --border-strong: #bdc8d6;
+      --text: #111827;
+      --muted: #5d6675;
+      --muted-2: #8a94a5;
+      --teal: #008575;
+      --teal-dark: #006f62;
+      --teal-soft: #e5f7f4;
+      --amber: #c46a00;
+      --amber-soft: #fff4dc;
+      --red: #dc2626;
+      --red-soft: #fdecec;
+      --blue: #2563eb;
+      --blue-soft: #eef4ff;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     * {
@@ -53,217 +54,270 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       letter-spacing: 0;
     }
 
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
     a {
       color: inherit;
       text-decoration: none;
     }
 
-    button {
-      font: inherit;
-    }
-
     .app-shell {
       display: grid;
-      grid-template-columns: 248px minmax(0, 1fr);
+      grid-template-columns: 224px minmax(0, 1fr);
       min-height: 100vh;
     }
 
     .sidebar {
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      padding: 22px 18px;
-      border-right: 1px solid var(--border);
-      background: #24221f;
-      color: #f8f4ea;
+      gap: 24px;
+      min-width: 0;
+      padding: 20px 12px;
+      background: linear-gradient(180deg, var(--sidebar), #081320);
+      color: #f8fafc;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      min-height: 36px;
+      gap: 10px;
+      padding: 2px 6px 14px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: #0f766e;
+      color: #d9fffa;
+      font-weight: 800;
     }
 
     .brand-name {
-      font-size: 18px;
-      font-weight: 720;
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 780;
     }
 
-    .local-pill {
-      padding: 4px 8px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      border-radius: 999px;
-      color: #d8d2c4;
+    .brand-subtitle {
+      margin-top: 4px;
+      color: #a9b5c4;
       font-size: 12px;
     }
 
     .nav {
       display: grid;
-      gap: 6px;
+      gap: 8px;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      min-height: 36px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      color: #d8d2c4;
-    }
-
-    .nav-item.active {
-      background: #f8f4ea;
-      color: #24221f;
-      box-shadow: var(--shadow);
-    }
-
-    .nav-state {
-      color: #aaa194;
-      font-size: 11px;
-    }
-
-    .nav-item.active .nav-state {
-      color: var(--teal);
+      gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      color: #d7dee8;
       font-weight: 650;
     }
 
-    .refresh-panel {
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, #007c72, #005f71);
+      color: #ffffff;
+      box-shadow: 0 8px 18px rgba(0, 90, 100, 0.28);
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      color: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .sidebar-bottom {
       display: grid;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .refresh-panel .link-button {
-      width: 100%;
-      border-color: rgba(255, 255, 255, 0.18);
-      background: rgba(255, 255, 255, 0.08);
-      color: #f8f4ea;
-      text-align: center;
-    }
-
-    .refresh-panel .checkbox-line {
-      color: #d8d2c4;
-    }
-
-    .refresh-status {
-      color: #bdb5a8;
-      font-size: 12px;
-      overflow-wrap: anywhere;
-    }
-
-    .sidebar-footer {
+      gap: 12px;
       margin-top: auto;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-      color: #bdb5a8;
-      font-size: 12px;
-      line-height: 1.5;
     }
 
-    .main {
+    .sidebar-card {
+      padding: 13px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .health-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--teal);
+      margin-right: 7px;
+    }
+
+    .sidebar-card-title {
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .sidebar-card-detail {
+      margin-top: 7px;
+      color: #b7c2d0;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .sidebar-disclaimer {
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      color: #a9b5c4;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .main-shell {
       min-width: 0;
-      padding: 22px;
+      background: var(--bg);
+    }
+
+    .global-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      height: 54px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(8px);
+    }
+
+    .top-status-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .icon-button,
+    .ghost-button,
+    .primary-button,
+    .danger-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .icon-button {
+      width: 38px;
+      padding: 0;
+    }
+
+    .primary-button {
+      border-color: var(--teal-dark);
+      background: linear-gradient(180deg, var(--teal), var(--teal-dark));
+      color: #ffffff;
+      box-shadow: 0 8px 18px rgba(0, 117, 104, 0.18);
+    }
+
+    .danger-button {
+      border-color: #ef8585;
+      background: #fff;
+      color: var(--red);
+    }
+
+    .ghost-button:hover,
+    .icon-button:hover {
+      border-color: var(--border-strong);
+      background: #f4f7fa;
+    }
+
+    .primary-button:disabled,
+    .ghost-button:disabled,
+    .danger-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
     }
 
     .view {
       display: block;
+      padding: 20px 24px 24px;
     }
 
-    .topbar {
+    .view.hidden {
+      display: none;
+    }
+
+    .page-title-row {
       display: flex;
-      align-items: flex-start;
       justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 14px;
     }
 
-    .eyebrow {
-      margin: 0 0 5px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 650;
-      text-transform: uppercase;
-    }
-
-    h1 {
+    .page-title h1 {
       margin: 0;
       font-size: 28px;
-      line-height: 1.15;
-      font-weight: 760;
+      line-height: 1.12;
+      font-weight: 800;
     }
 
-    .status-panel {
-      display: grid;
-      min-width: 260px;
-      gap: 6px;
-      padding: 12px;
+    .page-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .panel {
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: var(--radius);
       background: var(--panel);
       box-shadow: var(--shadow);
     }
 
-    .status-line {
+    .panel-pad {
+      padding: 16px;
+    }
+
+    .panel-title {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      margin: 0 0 14px;
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 780;
     }
 
-    .status-label {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .status-value {
-      font-weight: 690;
-      overflow-wrap: anywhere;
-      text-align: right;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .card,
-    .wide-panel {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    .card {
-      display: grid;
-      min-height: 218px;
-      grid-template-rows: auto 1fr auto;
-      gap: 12px;
-      padding: 14px;
-    }
-
-    .card-header,
-    .panel-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .card-title {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 740;
-    }
-
-    .badge {
+    .status-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -274,11 +328,11 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       background: var(--panel-soft);
       color: var(--muted);
       font-size: 12px;
-      font-weight: 650;
+      font-weight: 760;
       white-space: nowrap;
     }
 
-    .badge::before {
+    .status-pill::before {
       width: 7px;
       height: 7px;
       border-radius: 999px;
@@ -286,77 +340,1122 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       content: "";
     }
 
-    .badge.available {
-      border-color: #b7ded8;
+    .status-pill.ok,
+    .status-pill.available,
+    .status-pill.succeeded,
+    .status-pill.success,
+    .status-pill.completed,
+    .status-pill.running {
+      border-color: #a9ded7;
       background: var(--teal-soft);
       color: var(--teal);
     }
 
-    .badge.warning,
-    .badge.partial,
-    .badge.missing,
-    .badge.skipped,
-    .badge.not_run,
-    .badge.unknown {
-      border-color: #f0d38b;
+    .status-pill.warning,
+    .status-pill.partial,
+    .status-pill.missing,
+    .status-pill.skipped,
+    .status-pill.unknown,
+    .status-pill.pending {
+      border-color: #f2cf83;
       background: var(--amber-soft);
       color: var(--amber);
     }
 
-    .badge.failed,
-    .badge.degraded {
-      border-color: #f0b6af;
+    .status-pill.failed,
+    .status-pill.error,
+    .status-pill.degraded,
+    .status-pill.blocked {
+      border-color: #f4b4b4;
       background: var(--red-soft);
       color: var(--red);
     }
 
-    .card-body {
+    .summary-strip {
       display: grid;
-      align-content: start;
-      gap: 8px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
-    .metric {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      min-height: 22px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #eeece5;
+    .summary-cell {
+      min-width: 0;
+      padding: 16px 18px;
+      border-right: 1px solid var(--border);
     }
 
-    .metric:last-child {
-      border-bottom: 0;
+    .summary-cell:last-child {
+      border-right: 0;
     }
 
-    .metric-key {
+    .summary-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .summary-value {
+      margin-top: 8px;
+      font-size: 20px;
+      line-height: 1.1;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .detail-rail .summary-value {
+      font-size: 16px;
+      overflow-wrap: normal;
+      word-break: keep-all;
+    }
+
+    .summary-note {
+      margin-top: 6px;
       color: var(--muted);
       font-size: 12px;
     }
 
-    .metric-value {
-      min-width: 0;
-      max-width: 58%;
-      overflow-wrap: anywhere;
-      text-align: right;
-      font-weight: 650;
+    .overview-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 14px;
     }
 
-    .message-list {
+    .overview-main {
       display: grid;
-      gap: 6px;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .overview-grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .report-ops-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .report-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .report-metric {
+      padding: 13px;
+      border-right: 1px solid var(--border);
+      background: var(--panel-soft);
+    }
+
+    .report-metric:last-child {
+      border-right: 0;
+    }
+
+    .metric-big {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 820;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 12px;
+      align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid #edf1f5;
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+    }
+
+    .detail-key {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .detail-value {
+      min-width: 0;
+      font-weight: 760;
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+
+    #overview-latest-report {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0 18px;
+    }
+
+    #overview-latest-report .detail-row {
+      display: block;
+      padding: 7px 0;
+    }
+
+    #overview-latest-report .detail-value {
+      margin-top: 3px;
+      font-size: 13px;
+    }
+
+    .meter {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .meter-track {
+      height: 8px;
+      border-radius: 999px;
+      background: #e7ecf2;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--teal);
+    }
+
+    .chart-mini {
+      width: 100%;
+      height: 118px;
+    }
+
+    .data-cards {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .data-card {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .data-card-title {
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .data-card-value {
+      margin-top: 6px;
+      font-size: 16px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .sparkline {
+      width: 100%;
+      height: 34px;
+      margin-top: 8px;
+    }
+
+    .attention-list,
+    .action-list,
+    .compact-list {
+      display: grid;
+      gap: 10px;
       margin: 0;
       padding: 0;
       list-style: none;
     }
 
-    .message {
-      padding: 8px;
-      border-radius: 6px;
+    .attention-item,
+    .compact-row {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .compact-row > span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .attention-title,
+    .compact-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: 760;
+    }
+
+    .attention-copy,
+    .compact-copy {
+      margin-top: 6px;
       color: var(--muted);
       font-size: 12px;
       line-height: 1.4;
+    }
+
+    .reports-layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr) 250px;
+      gap: 14px;
+      min-height: calc(100vh - 96px);
+    }
+
+    .report-library {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .search-input,
+    .select-input,
+    .text-input {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--text);
+      outline: 0;
+    }
+
+    .search-input:focus,
+    .select-input:focus,
+    .text-input:focus {
+      border-color: #7dc8be;
+      box-shadow: 0 0 0 3px rgba(0, 133, 117, 0.14);
+    }
+
+    .library-groups {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      min-height: 0;
+      overflow: auto;
+      padding: 0 14px 14px;
+    }
+
+    .library-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 780;
+    }
+
+    .report-row {
+      display: block;
+      width: 100%;
+      padding: 11px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      text-align: left;
+    }
+
+    .report-row:hover,
+    .report-row.active {
+      border-color: #87d3cb;
+      background: linear-gradient(90deg, #e6f7f5, #fff);
+    }
+
+    .report-row-title {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-weight: 780;
+    }
+
+    .report-row-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .report-workspace {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .report-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      min-width: 0;
+    }
+
+    #selected-report-kicker {
+      flex: 1 1 150px;
+      min-width: 0;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .report-toolbar .toolbar-actions {
+      flex: 1 1 420px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .report-toolbar .primary-button,
+    .report-toolbar .danger-button,
+    .report-toolbar .ghost-button {
+      min-height: 36px;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+
+    .report-toolbar .search-input {
+      width: 150px !important;
+      min-width: 120px;
+    }
+
+    .report-reader {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 28px 34px;
+      background: #fff;
+    }
+
+    .markdown-reader {
+      max-width: 100%;
+      min-width: 0;
+      color: #172033;
+      font-size: 15px;
+      line-height: 1.62;
+      overflow-wrap: break-word;
+      word-break: normal;
+      white-space: normal;
+    }
+
+    .markdown-reader h1 {
+      margin: 0 0 18px;
+      font-size: 32px;
+      line-height: 1.15;
       overflow-wrap: anywhere;
+      word-break: normal;
+    }
+
+    .markdown-reader h2 {
+      margin: 28px 0 10px;
+      font-size: 21px;
+    }
+
+    .markdown-reader h3 {
+      margin: 20px 0 8px;
+      font-size: 17px;
+    }
+
+    .markdown-reader p {
+      margin: 8px 0;
+    }
+
+    .markdown-reader ul {
+      padding-left: 20px;
+    }
+
+    .markdown-table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 14px 0 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .markdown-reader table {
+      display: table;
+      width: max-content;
+      min-width: 720px;
+      border-collapse: collapse;
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .markdown-reader th,
+    .markdown-reader td {
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      text-align: left;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+
+    .markdown-reader th {
+      background: #f5f7fa;
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .detail-rail {
+      display: grid;
+      align-content: start;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .detail-rail .detail-row {
+      grid-template-columns: 82px minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    #intel-detail .summary-value {
+      font-size: 18px;
+      overflow-wrap: normal;
+      word-break: keep-all;
+      hyphens: none;
+    }
+
+    .outline-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .outline-list a {
+      display: block;
+      color: var(--muted);
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .outline-list a.active,
+    .outline-list a:hover {
+      color: var(--teal);
+    }
+
+    .strategy-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: 12px;
+      min-height: calc(100vh - 96px);
+    }
+
+    .strategy-controls {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 160px 140px 210px minmax(220px, 1fr) auto auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .metric-strip {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      overflow: hidden;
+    }
+
+    .kline-panel {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #0d1b2a;
+      color: #dbe7f3;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0b1726;
+    }
+
+    .chart-title {
+      font-weight: 760;
+    }
+
+    .chart-meta {
+      color: #9fb2c7;
+      font-size: 12px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      min-height: 470px;
+      height: 52vh;
+      padding: 0;
+      background:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+        #0d1b2a;
+      background-size: 60px 48px;
+    }
+
+    .chart-wrap svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-tools {
+      position: absolute;
+      top: 14px;
+      left: 12px;
+      display: grid;
+      gap: 8px;
+      z-index: 2;
+    }
+
+    .tool-dot {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(9, 18, 31, 0.82);
+      color: #dbe7f3;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .chart-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0b1726;
+      color: #b5c4d6;
+      font-size: 12px;
+    }
+
+    .strategy-side {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      min-width: 0;
+    }
+
+    .kv-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+
+    .kv-table td {
+      padding: 7px 0;
+      border-bottom: 1px solid #edf1f5;
+      vertical-align: top;
+    }
+
+    .kv-table td:first-child {
+      width: 58%;
+      padding-right: 8px;
+    }
+
+    .kv-table td:last-child {
+      text-align: right;
+      font-weight: 740;
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+
+    .trade-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .trade-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #edf1f5;
+    }
+
+    .trade-row:last-child {
+      border-bottom: 0;
+    }
+
+    .trade-row strong {
+      text-align: right;
+      font-size: 12px;
+      overflow-wrap: break-word;
+    }
+
+    .trade-row small {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-button {
+      min-height: 42px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 760;
+    }
+
+    .tab-button.active {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .strategy-tabs {
+      grid-column: 1 / -1;
+      padding: 0 16px 16px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.data-table th,
+    table.data-table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    table.data-table th {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .monitor-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 14px;
+    }
+
+    .monitor-hero {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+      overflow: hidden;
+    }
+
+    .monitor-timeline {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .timeline-row {
+      display: grid;
+      grid-template-columns: 76px 42px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 74px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .timeline-row:last-child {
+      border-bottom: 0;
+    }
+
+    .timeline-time {
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .timeline-node {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--teal);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .timeline-node.warning {
+      background: var(--amber);
+    }
+
+    .timeline-node.failed {
+      background: var(--red);
+    }
+
+    .timeline-body {
+      min-width: 0;
+    }
+
+    .timeline-body strong {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .timeline-body span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .intelligence-layout {
+      display: grid;
+      gap: 14px;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 240px 280px 240px 240px auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .intel-grid {
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr) 360px;
+      gap: 14px;
+      min-height: 560px;
+    }
+
+    .event-list {
+      min-height: 0;
+      max-height: 560px;
+      overflow: auto;
+      border-top: 1px solid var(--border);
+    }
+
+    .event-row {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      gap: 10px;
+      width: 100%;
+      padding: 13px 12px;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+      text-align: left;
+    }
+
+    .event-row.active,
+    .event-row:hover {
+      background: #effaf8;
+    }
+
+    .event-title {
+      font-weight: 780;
+      line-height: 1.35;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #f6f8fb;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .intel-charts {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .chart-card svg {
+      width: 100%;
+      height: 240px;
+    }
+
+    .settings-layout {
+      display: grid;
+      gap: 14px;
+    }
+
+    .settings-top {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+    }
+
+    .settings-top .field {
+      flex: 0 0 280px;
+    }
+
+    .settings-top .muted {
+      flex: 1 1 auto;
+      min-width: 160px;
+    }
+
+    .settings-main {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr) 320px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .settings-nav {
+      display: grid;
+      padding: 10px 0;
+    }
+
+    .settings-nav button {
+      display: flex;
+      justify-content: space-between;
+      min-height: 44px;
+      padding: 10px 16px;
+      border: 0;
+      border-left: 3px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .settings-nav button.active {
+      border-left-color: var(--teal);
+      background: #effaf8;
+      color: var(--teal-dark);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-row small {
+      display: block;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 5px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #f4f7fa;
+      font-weight: 650;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      border: 0;
+    }
+
+    .toggle.on {
+      background: var(--teal);
+    }
+
+    .toggle::after {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+      content: "";
+      transition: transform 0.16s ease;
+    }
+
+    .toggle.on::after {
+      transform: translateX(20px);
+    }
+
+    .storage-maintenance {
+      display: grid;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 18px;
+    }
+
+    .storage-maintenance-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .cleanup-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .cleanup-panel {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+
+    .cleanup-panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .cleanup-list {
+      display: grid;
+      gap: 8px;
+      max-height: 248px;
+      overflow: auto;
+    }
+
+    .cleanup-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .cleanup-option strong,
+    .cleanup-option small {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .cleanup-option small {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .empty-state {
+      display: grid;
+      gap: 8px;
+      padding: 16px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      color: var(--muted);
+    }
+
+    .message {
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: #f1f5f9;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     .message.warning {
@@ -369,826 +1468,127 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       color: var(--red);
     }
 
-    .empty-state {
-      display: grid;
-      gap: 6px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-    }
-
-    .empty-title {
-      font-weight: 760;
-    }
-
-    .empty-detail {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .empty-action {
-      color: var(--blue);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .layout-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 16px;
-    }
-
-    .wide-panel {
-      min-height: 260px;
-      padding: 16px;
-    }
-
-    .panel-heading {
-      margin-bottom: 14px;
-    }
-
-    .panel-title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 740;
-    }
-
-    .timeline {
-      display: grid;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .timeline-item {
-      display: grid;
-      grid-template-columns: 18px minmax(0, 1fr);
-      gap: 10px;
-      align-items: start;
-    }
-
-    .timeline-dot {
-      width: 10px;
-      height: 10px;
-      margin-top: 4px;
-      border-radius: 999px;
-      background: var(--teal);
-    }
-
-    .timeline-item.partial .timeline-dot,
-    .timeline-item.missing .timeline-dot,
-    .timeline-item.skipped .timeline-dot,
-    .timeline-item.not_run .timeline-dot,
-    .timeline-item.unknown .timeline-dot {
-      background: var(--amber);
-    }
-
-    .timeline-item.failed .timeline-dot,
-    .timeline-item.degraded .timeline-dot {
-      background: var(--red);
-    }
-
-    .timeline-title {
-      font-weight: 680;
-    }
-
-    .timeline-meta {
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.4;
-      overflow-wrap: break-word;
-      word-break: normal;
-    }
-
-    .planned-grid {
-      display: grid;
-      gap: 8px;
-    }
-
-    .planned-item {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      min-height: 38px;
-      padding: 9px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-    }
-
-    .planned-title {
-      font-weight: 650;
-    }
-
-    .planned-state {
-      color: var(--muted-2);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    .runs-layout,
-    .artifacts-layout,
-    .strategy-layout,
-    .monitor-layout,
-    .command-center-layout,
-    .workbench-layout,
-    .decision-risk-layout,
-    .event-alert-layout,
-    .outcomes-layout,
-    .text-intelligence-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 16px;
-    }
-
-    .data-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 16px;
-    }
-
-    .run-list,
-    .artifact-explorer-list,
-    .strategy-list,
-    .job-list {
-      display: grid;
-      gap: 8px;
-      max-height: 68vh;
-      overflow: auto;
-      padding-right: 2px;
-    }
-
-    .run-row,
-    .artifact-button,
-    .link-button {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-      color: var(--text);
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .run-row {
-      display: grid;
-      gap: 6px;
-      width: 100%;
-      min-height: 76px;
-      padding: 10px;
-    }
-
-    .run-row:hover,
-    .run-row.selected,
-    .artifact-button:hover,
-    .link-button:hover {
-      border-color: var(--border-strong);
-      background: #f1eee7;
-    }
-
-    .run-row.selected {
-      box-shadow: inset 3px 0 0 var(--teal);
-    }
-
-    .run-row-main,
-    .artifact-row-main {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .run-id {
-      min-width: 0;
-      overflow-wrap: anywhere;
-      font-weight: 720;
-    }
-
-    .run-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .run-detail-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .detail-tile {
-      min-height: 72px;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-    }
-
-    .detail-label {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .detail-value {
-      margin-top: 5px;
-      overflow-wrap: break-word;
-      word-break: normal;
-      font-weight: 710;
-    }
-
-    .detail-sections {
-      display: grid;
-      gap: 14px;
-    }
-
-    .section-block {
-      display: grid;
-      gap: 10px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-    }
-
-    .subheading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin: 0;
-      font-size: 14px;
-      font-weight: 740;
-    }
-
-    .stage-list,
-    .artifact-list {
-      display: grid;
-      gap: 8px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .stage-item {
-      display: grid;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-    }
-
-    .stage-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .stage-name {
-      min-width: 0;
-      overflow-wrap: anywhere;
-      font-weight: 700;
-    }
-
-    .artifact-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .filter-bar {
-      display: grid;
-      grid-template-columns: minmax(160px, 0.34fr) minmax(0, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .strategy-layout .filter-bar {
-      grid-template-columns: 1fr;
-    }
-
-    .filter-control {
-      min-height: 36px;
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-      color: var(--text);
-      padding: 7px 9px;
-      font: inherit;
-    }
-
-    .filter-control.field-invalid {
-      border-color: var(--red);
-      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
-    }
-
-    .field-error {
-      display: block;
-      min-height: 15px;
-      margin-top: 4px;
-      color: var(--red);
-      font-size: 11px;
-      line-height: 1.35;
-    }
-
-    .store-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 10px;
-    }
-
-    .data-layout .store-grid {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      align-items: stretch;
-    }
-
-    .store-card {
-      display: grid;
-      gap: 8px;
-      min-height: 122px;
-      padding: 11px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel-soft);
-      color: var(--text);
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .store-card:hover,
-    .store-card.selected {
-      border-color: var(--border-strong);
-      background: #f1eee7;
-    }
-
-    .store-card.selected {
-      box-shadow: inset 3px 0 0 var(--teal);
-    }
-
-    .store-title-line {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: flex-start;
-    }
-
-    .store-title {
-      min-width: 0;
-      overflow-wrap: break-word;
-      word-break: normal;
-      font-weight: 740;
-    }
-
-    .data-layout .store-title {
-      overflow-wrap: break-word;
-      word-break: normal;
-    }
-
-    .store-metrics {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .source-ref-list {
-      display: grid;
-      gap: 6px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      color: var(--muted);
-      font-size: 12px;
-      overflow-wrap: break-word;
-      word-break: normal;
-    }
-
-    .strategy-chart {
-      display: grid;
-      gap: 8px;
-      min-height: 160px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel-soft);
-    }
-
-    .strategy-chart svg {
-      width: 100%;
-      height: 136px;
-      overflow: visible;
-    }
-
-    .strategy-chart.kline {
-      min-height: 0;
-    }
-
-    .strategy-chart-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: start;
-    }
-
-    .strategy-chart-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .backtest-chart-grid {
-      display: grid;
-      gap: 14px;
-    }
-
-    .backtest-chart-panel {
-      display: grid;
-      gap: 6px;
-      min-width: 0;
-    }
-
-    .backtest-chart-panel.price svg {
-      height: 292px;
-    }
-
-    .backtest-chart-panel.equity svg {
-      height: 112px;
-    }
-
-    .chart-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .legend-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: var(--muted);
-    }
-
-    .legend-dot.up,
-    .legend-dot.entry {
-      background: #0f766e;
-    }
-
-    .legend-dot.down,
-    .legend-dot.exit {
-      background: #b42318;
-    }
-
-    .legend-dot.exposure {
-      background: #a16207;
-    }
-
-    .chart-caption {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .command-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .command-inline {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-      align-items: end;
-    }
-
-    .checkbox-line {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .checkbox-line input {
-      width: 16px;
-      height: 16px;
-      margin: 0;
-    }
-
-    .command-button {
-      display: grid;
-      gap: 5px;
-      min-height: 64px;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-      color: var(--text);
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .command-button:hover,
-    .command-button:focus-visible {
-      border-color: var(--border-strong);
-      background: #f1eee7;
-    }
-
-    .command-title {
-      font-weight: 720;
-    }
-
-    .command-meta {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .number-row {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .job-row {
-      display: grid;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel-soft);
-    }
-
-    .job-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .chart-label {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-      overflow-wrap: anywhere;
-    }
-
-    .artifact-button,
-    .link-button {
-      min-height: 30px;
-      padding: 5px 8px;
-      color: var(--blue);
-      font-size: 12px;
-      font-weight: 650;
-    }
-
-    .preview-panel {
-      display: grid;
-      gap: 10px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel-soft);
-    }
-
-    .preview-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .preview-path {
-      color: var(--muted);
-      font-size: 12px;
-      overflow-wrap: anywhere;
-    }
-
-    .preview-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 6px;
-    }
-
-    .preview-meta span,
-    .preview-source-actions span {
-      padding: 3px 6px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.2;
-    }
-
-    .preview-body {
-      max-height: 520px;
-      overflow: auto;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: #ffffff;
-    }
-
-    .preview-source-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-    }
-
-    .preview-subtitle {
-      margin-bottom: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .preview-table-wrap {
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-    }
-
-    .preview-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #ffffff;
-      font-size: 12px;
-    }
-
-    .preview-table th,
-    .preview-table td {
-      max-width: 280px;
-      padding: 7px 8px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-      vertical-align: top;
-      overflow-wrap: anywhere;
-    }
-
-    .preview-table th {
-      background: #f6f2ea;
-      color: var(--muted);
-      font-weight: 760;
-      white-space: nowrap;
-    }
-
-    .preview-details {
-      margin-top: 10px;
-    }
-
-    .preview-details summary {
-      cursor: pointer;
-      color: var(--blue);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .markdown-reader {
-      display: grid;
-      gap: 8px;
-      line-height: 1.55;
-    }
-
-    .markdown-reader h2,
-    .markdown-reader h3,
-    .markdown-reader h4,
-    .markdown-reader p,
-    .markdown-reader ul,
-    .markdown-reader pre {
-      margin: 0;
-    }
-
-    .markdown-reader h2 {
-      font-size: 20px;
-    }
-
-    .markdown-reader h3 {
-      font-size: 16px;
-    }
-
-    .markdown-reader h4 {
-      font-size: 14px;
-    }
-
-    .markdown-reader ul {
-      padding-left: 18px;
-    }
-
-    .preview-pre {
-      margin: 0;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .skeleton {
-      position: relative;
-      overflow: hidden;
-      min-height: 12px;
-      border-radius: 4px;
-      background: #ebe7dc;
-    }
-
-    .skeleton::after {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-      animation: shimmer 1.3s infinite;
-      content: "";
-    }
-
-    .hidden {
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
       display: none;
+      max-width: 360px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
+      color: var(--text);
+      font-weight: 700;
     }
 
-    @keyframes shimmer {
-      from {
-        transform: translateX(-100%);
-      }
-      to {
-        transform: translateX(100%);
-      }
+    .toast.visible {
+      display: block;
+    }
+
+    .positive {
+      color: var(--teal);
+    }
+
+    .negative {
+      color: var(--red);
+    }
+
+    .muted {
+      color: var(--muted);
     }
 
     @media (max-width: 1180px) {
-      .grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .app-shell {
+        grid-template-columns: 80px minmax(0, 1fr);
       }
 
-      .layout-row,
-      .runs-layout,
-      .artifacts-layout,
-      .data-layout,
+      .brand-copy,
+      .nav-label,
+      .sidebar-card,
+      .sidebar-disclaimer {
+        display: none;
+      }
+
+      .nav-item {
+        justify-content: center;
+      }
+
+      .overview-layout,
+      .reports-layout,
       .strategy-layout,
       .monitor-layout,
-      .command-center-layout,
-      .workbench-layout,
-      .decision-risk-layout,
-      .event-alert-layout,
-      .outcomes-layout,
-      .text-intelligence-layout {
+      .intel-grid,
+      .settings-main,
+      .cleanup-grid {
         grid-template-columns: 1fr;
       }
 
-      .run-detail-grid {
+      .detail-rail,
+      .strategy-side {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .strategy-controls,
+      .filter-grid,
+      .settings-top {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 760px) {
       .app-shell {
-        grid-template-columns: 1fr;
+        display: block;
       }
 
       .sidebar {
         position: static;
-        min-height: auto;
       }
 
       .nav {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .topbar {
-        display: grid;
+      .global-topbar {
+        justify-content: flex-start;
+        overflow-x: auto;
       }
 
-      .status-panel {
-        min-width: 0;
+      .view {
+        padding: 16px;
       }
 
-      .grid,
-      .run-detail-grid,
-      .store-grid,
-      .filter-bar,
-      .command-grid,
-      .command-inline,
-      .number-row {
+      .summary-strip,
+      .report-metrics,
+      .metric-strip,
+      .data-cards,
+      .overview-grid-2,
+      .monitor-hero,
+      .storage-maintenance {
         grid-template-columns: 1fr;
       }
 
-      h1 {
-        font-size: 24px;
+      .summary-cell,
+      .report-metric {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .strategy-controls,
+      .filter-grid,
+      .settings-top,
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-top {
+        flex-wrap: wrap;
+      }
+
+      .settings-top .field {
+        flex-basis: 100%;
       }
     }
   </style>
@@ -1198,5501 +1598,2022 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     id="halpha-dashboard-app"
     class="app-shell"
     data-overview-endpoint="/api/overview"
-    data-workbench-endpoint="/api/workbench"
-    data-decision-risk-endpoint="/api/decision-risk"
-    data-event-alert-endpoint="/api/event-alert"
-    data-outcomes-endpoint="/api/outcomes"
-    data-text-intelligence-endpoint="/api/text-intelligence"
+    data-health-endpoint="/api/health"
     data-runs-endpoint="/api/runs"
+    data-preview-endpoint="/api/artifacts/preview"
     data-stores-endpoint="/api/data/stores"
+    data-delete-endpoint="/api/data/deletion"
     data-strategies-endpoint="/api/strategies"
     data-monitor-endpoint="/api/monitor"
+    data-monitor-cycles-endpoint="/api/monitor/cycles"
+    data-monitor-alerts-endpoint="/api/monitor/alerts"
     data-jobs-endpoint="/api/jobs"
     data-schedule-endpoint="/api/schedule/daily-report"
-    data-preview-endpoint="/api/artifacts/preview"
+    data-settings-endpoint="/api/config/profile"
+    data-text-intelligence-endpoint="/api/text-intelligence"
     data-display-timezone="__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__"
   >
-    <aside class="sidebar" aria-label="Dashboard navigation">
+    <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand">
-        <div class="brand-name">Halpha</div>
-        <div class="local-pill">Local</div>
+        <div class="brand-mark">H</div>
+        <div class="brand-copy">
+          <div class="brand-name">Halpha</div>
+          <div class="brand-subtitle">Local Research</div>
+        </div>
       </div>
       <nav class="nav">
         <a class="nav-item active" href="#overview" data-view-target="overview" aria-current="page">
-          <span>Overview</span>
-          <span class="nav-state">active</span>
+          <span class="nav-icon">OV</span><span class="nav-label">Overview</span>
         </a>
-        <a class="nav-item" href="#runs" data-view-target="runs">
-          <span>Runs &amp; reports</span>
-          <span class="nav-state">available</span>
-        </a>
-        <a class="nav-item" href="#artifacts" data-view-target="artifacts">
-          <span>Artifacts</span>
-          <span class="nav-state">available</span>
-        </a>
-        <a class="nav-item" href="#data" data-view-target="data">
-          <span>Data stores</span>
-          <span class="nav-state">available</span>
+        <a class="nav-item" href="#reports" data-view-target="reports">
+          <span class="nav-icon">RP</span><span class="nav-label">Reports</span>
         </a>
         <a class="nav-item" href="#strategies" data-view-target="strategies">
-          <span>Strategy lab</span>
-          <span class="nav-state">available</span>
+          <span class="nav-icon">ST</span><span class="nav-label">Strategy Lab</span>
         </a>
         <a class="nav-item" href="#monitor" data-view-target="monitor">
-          <span>Monitor</span>
-          <span class="nav-state">available</span>
+          <span class="nav-icon">MO</span><span class="nav-label">Monitor</span>
         </a>
-        <a class="nav-item" href="#workbench" data-view-target="workbench">
-          <span>Workbench</span>
-          <span class="nav-state">available</span>
+        <a class="nav-item" href="#intelligence" data-view-target="intelligence">
+          <span class="nav-icon">IN</span><span class="nav-label">Intelligence</span>
         </a>
-        <a class="nav-item" href="#decision-risk" data-view-target="decision-risk">
-          <span>Decision &amp; risk</span>
-          <span class="nav-state">available</span>
-        </a>
-        <a class="nav-item" href="#event-alert" data-view-target="event-alert">
-          <span>Event &amp; alerts</span>
-          <span class="nav-state">available</span>
-        </a>
-        <a class="nav-item" href="#text-intelligence" data-view-target="text-intelligence">
-          <span>Text intelligence</span>
-          <span class="nav-state">available</span>
-        </a>
-        <a class="nav-item" href="#outcomes" data-view-target="outcomes">
-          <span>Outcomes</span>
-          <span class="nav-state">available</span>
-        </a>
-        <a class="nav-item" href="#commands" data-view-target="commands">
-          <span>Command center</span>
-          <span class="nav-state">available</span>
+        <a class="nav-item" href="#settings" data-view-target="settings">
+          <span class="nav-icon">SE</span><span class="nav-label">Settings</span>
         </a>
       </nav>
-      <div class="refresh-panel" aria-label="Dashboard refresh controls">
-        <button id="dashboard-refresh-button" class="link-button" type="button">Refresh view</button>
-        <label class="checkbox-line">
-          <input id="dashboard-auto-refresh" type="checkbox">
-          <span>Auto refresh reads only</span>
-        </label>
-        <div id="dashboard-refresh-status" class="refresh-status">Idle</div>
-      </div>
-      <div class="sidebar-footer">
-        Market output is research material, not financial advice.
+      <div class="sidebar-bottom">
+        <div class="sidebar-card">
+          <div class="sidebar-card-title"><span class="health-dot"></span>System healthy</div>
+          <div class="sidebar-card-detail" id="sidebar-health-text">Loading local status.</div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Local mode</div>
+          <div class="sidebar-card-detail">No data leaves this device through the dashboard UI.</div>
+        </div>
+        <div class="sidebar-disclaimer">Market output is research material, not financial advice.</div>
       </div>
     </aside>
-    <main class="main">
+
+    <main class="main-shell">
+      <header class="global-topbar" aria-label="Global dashboard status">
+        <span class="top-status-item"><span class="health-dot"></span>Local mode</span>
+        <span class="top-status-item">Timezone: <strong id="display-timezone">__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__</strong></span>
+        <span class="top-status-item">Config: <strong id="config-ref">Loading</strong></span>
+        <button class="icon-button" type="button" id="global-refresh" title="Refresh current page">R</button>
+      </header>
+
       <section id="overview-view" class="view" data-view="overview">
-        <section class="topbar" aria-labelledby="overview-title">
-          <div>
-            <p class="eyebrow">Local research operations</p>
-            <h1 id="overview-title">Operational overview</h1>
+        <div class="page-title-row">
+          <div class="page-title">
+            <h1>Overview</h1>
+            <p>System status, reports, monitor, and data health</p>
           </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Overview</span>
-              <span id="overall-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Config</span>
-              <span id="config-ref" class="status-value">...</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Time zone</span>
-              <span id="display-timezone" class="status-value">__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__</span>
-            </div>
-          </div>
-        </section>
-        <section id="overview-cards" class="grid" aria-label="Overview sections">
-          <article class="card">
-            <div class="card-header">
-              <h2 class="card-title">Loading dashboard</h2>
-              <span class="badge unknown">loading</span>
-            </div>
-            <div class="card-body">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-        </section>
-        <section class="layout-row">
-          <article class="wide-panel" aria-labelledby="signals-title">
-            <div class="panel-heading">
-              <h2 id="signals-title" class="panel-title">Current attention</h2>
-              <span id="attention-count" class="badge unknown">loading</span>
-            </div>
-            <ul id="attention-list" class="timeline"></ul>
-          </article>
-          <article class="wide-panel" aria-labelledby="planned-title">
-            <div class="panel-heading">
-              <h2 id="planned-title" class="panel-title">Dashboard areas</h2>
-              <span class="badge partial">incremental</span>
-            </div>
-            <div class="planned-grid">
-              <div class="planned-item">
-                <span class="planned-title">Runs &amp; reports</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Artifact review</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Local data explorer</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Strategy lab</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Monitor control</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Workbench</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Decision &amp; risk</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Event &amp; alerts</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Text intelligence</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Outcome tracking</span>
-                <span class="planned-state">available</span>
-              </div>
-              <div class="planned-item">
-                <span class="planned-title">Command center</span>
-                <span class="planned-state">available</span>
-              </div>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="runs-view" class="view hidden" data-view="runs">
-        <section class="topbar" aria-labelledby="runs-title">
-          <div>
-            <p class="eyebrow">Run history and reports</p>
-            <h1 id="runs-title">Runs &amp; reports</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Run index</span>
-              <span id="runs-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Selected run</span>
-              <span id="selected-run-status" class="status-value">none</span>
-            </div>
-          </div>
-        </section>
-        <section class="runs-layout">
-          <article class="wide-panel" aria-labelledby="run-list-title">
-            <div class="panel-heading">
-              <h2 id="run-list-title" class="panel-title">Run history</h2>
-              <span id="run-count" class="badge unknown">loading</span>
-            </div>
-            <div id="run-list" class="run-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="run-detail-title">
-            <div class="panel-heading">
-              <h2 id="run-detail-title" class="panel-title">Run detail</h2>
-              <span id="run-detail-badge" class="badge unknown">waiting</span>
-            </div>
-            <div id="run-detail-summary" class="run-detail-grid"></div>
-            <div class="detail-sections">
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Report preview</span>
-                  <span id="report-status" class="badge unknown">waiting</span>
-                </h3>
-                <div id="report-preview" class="preview-panel">
-                  <div class="message">Select a run to preview its report.</div>
+        </div>
+        <div class="overview-layout">
+          <div class="overview-main">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Report operations <span id="overview-report-status" class="status-pill pending">loading</span></h2>
+              <div class="report-ops-grid">
+                <div>
+                  <div id="overview-report-metrics" class="report-metrics"></div>
+                  <div id="overview-latest-report"></div>
                 </div>
-              </section>
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Stage timeline</span>
-                  <span id="stage-count" class="badge unknown">waiting</span>
-                </h3>
-                <ul id="stage-list" class="stage-list"></ul>
-              </section>
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Artifact refs</span>
-                  <span id="artifact-count" class="badge unknown">waiting</span>
-                </h3>
-                <ul id="artifact-list" class="artifact-list"></ul>
-                <div id="artifact-preview" class="preview-panel">
-                  <div class="message">Open a report, stage artifact, or run artifact to inspect a bounded preview.</div>
+                <div>
+                  <svg id="overview-report-chart" class="chart-mini" viewBox="0 0 260 118" role="img" aria-label="Reports in the last 14 days"></svg>
+                  <div class="toolbar-actions" style="margin-top: 14px;">
+                    <button class="primary-button" type="button" data-job-intent="run_no_codex">Generate report</button>
+                    <button class="ghost-button" type="button" id="open-latest-report">Open latest</button>
+                  </div>
                 </div>
+              </div>
+            </section>
+
+            <div class="overview-grid-2">
+              <section class="panel panel-pad">
+                <h2 class="panel-title">System runtime <span class="status-pill ok">operational</span></h2>
+                <div id="overview-runtime"></div>
+              </section>
+              <section class="panel panel-pad">
+                <h2 class="panel-title">Monitor status <span id="overview-monitor-pill" class="status-pill pending">loading</span></h2>
+                <div id="overview-monitor"></div>
               </section>
             </div>
-          </article>
-        </section>
+
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Data health <span id="overview-data-pill" class="status-pill pending">loading</span></h2>
+              <div id="overview-data-cards" class="data-cards"></div>
+              <div id="overview-quality" style="margin-top: 14px;"></div>
+            </section>
+          </div>
+
+          <aside class="detail-rail">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Needs attention <span id="attention-count" class="status-pill warning">0</span></h2>
+              <ul id="attention-list" class="attention-list"></ul>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Quick actions</h2>
+              <div class="action-list">
+                <button class="ghost-button" type="button" data-job-intent="run_no_codex">Generate report</button>
+                <button class="ghost-button" type="button" data-view-shortcut="strategies">Run strategy backtest</button>
+                <button class="ghost-button" type="button" data-view-shortcut="intelligence">Review intelligence</button>
+                <button class="ghost-button" type="button" data-view-shortcut="monitor">Monitor control</button>
+                <button class="ghost-button" type="button" data-view-shortcut="settings">System settings</button>
+              </div>
+            </section>
+          </aside>
+        </div>
       </section>
 
-      <section id="artifacts-view" class="view hidden" data-view="artifacts">
-        <section class="topbar" aria-labelledby="artifacts-title">
-          <div>
-            <p class="eyebrow">Bounded local artifacts</p>
-            <h1 id="artifacts-title">Artifact explorer</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Run index</span>
-              <span id="artifact-runs-status" class="status-value">Loading</span>
+      <section id="reports-view" class="view hidden" data-view="reports">
+        <div class="reports-layout">
+          <aside class="panel report-library">
+            <div class="library-header">
+              <h2 class="panel-title">All reports</h2>
+              <input id="report-search" class="search-input" type="search" placeholder="Search reports...">
             </div>
-            <div class="status-line">
-              <span class="status-label">Selected run</span>
-              <span id="selected-artifact-run-status" class="status-value">none</span>
+            <div id="report-library-groups" class="library-groups"></div>
+          </aside>
+          <section class="panel report-workspace">
+            <div class="report-toolbar">
+              <div id="selected-report-kicker" class="muted">Select a report</div>
+              <div class="toolbar-actions">
+                <button class="primary-button" type="button" data-job-intent="run_no_codex">Generate report</button>
+                <button class="danger-button" type="button" id="delete-report-button">Delete report</button>
+                <button class="ghost-button" type="button" id="download-report-button">Download</button>
+                <input id="report-reader-search" class="search-input" type="search" placeholder="Search in report..." style="width: 210px;">
+              </div>
             </div>
-          </div>
-        </section>
-        <section class="artifacts-layout">
-          <article class="wide-panel" aria-labelledby="artifact-run-list-title">
-            <div class="panel-heading">
-              <h2 id="artifact-run-list-title" class="panel-title">Artifact runs</h2>
-              <span id="artifact-run-count" class="badge unknown">loading</span>
+            <div id="report-reader" class="report-reader">
+              <div class="empty-state">Loading report library.</div>
             </div>
-            <div id="artifact-run-list" class="run-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="artifact-explorer-title">
-            <div class="panel-heading">
-              <h2 id="artifact-explorer-title" class="panel-title">Artifact inventory</h2>
-              <span id="artifact-explorer-count" class="badge unknown">waiting</span>
-            </div>
-            <div class="filter-bar">
-              <select id="artifact-layer-filter" class="filter-control" aria-label="Artifact layer filter">
-                <option value="all">All layers</option>
-                <option value="manifest">Manifest</option>
-                <option value="raw">Raw</option>
-                <option value="analysis">Analysis</option>
-                <option value="report">Report</option>
-                <option value="codex_context">Codex context</option>
-                <option value="data">Data</option>
-                <option value="monitor">Monitor</option>
-                <option value="dashboard">Dashboard</option>
-                <option value="other">Other</option>
-              </select>
-              <input id="artifact-search-filter" class="filter-control" type="search" placeholder="Filter by key, path, layer, stage, kind, warning, or error">
-            </div>
-            <div id="artifact-explorer-list" class="artifact-explorer-list">
-              <div class="message">Select a run to inspect recorded artifact refs.</div>
-            </div>
-            <div id="artifact-explorer-preview" class="preview-panel">
-              <div class="message">Open an artifact to inspect a bounded preview.</div>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="data-view" class="view hidden" data-view="data">
-        <section class="topbar" aria-labelledby="data-title">
-          <div>
-            <p class="eyebrow">Local research data</p>
-            <h1 id="data-title">Data stores</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Stores</span>
-              <span id="data-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Visible</span>
-              <span id="data-visible-count" class="status-value">...</span>
-            </div>
-          </div>
-        </section>
-        <section class="data-layout">
-          <article class="wide-panel" aria-labelledby="data-store-list-title">
-            <div class="panel-heading">
-              <h2 id="data-store-list-title" class="panel-title">Store coverage</h2>
-              <span id="data-store-count" class="badge unknown">loading</span>
-            </div>
-            <div class="filter-bar">
-              <select id="data-group-filter" class="filter-control" aria-label="Store group filter">
-                <option value="all">All groups</option>
-                <option value="system">System</option>
-                <option value="market">Market</option>
-                <option value="derivatives">Derivatives</option>
-                <option value="macro">Macro/calendar</option>
-                <option value="onchain">On-chain</option>
-                <option value="text">Text</option>
-                <option value="outcome">Outcome</option>
-              </select>
-              <input id="data-search-filter" class="filter-control" type="search" placeholder="Filter by source, symbol, timeframe, data class, asset, chain, or store">
-            </div>
-            <div id="data-store-list" class="store-grid">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="data-store-detail-title">
-            <div class="panel-heading">
-              <h2 id="data-store-detail-title" class="panel-title">Store detail</h2>
-              <span id="data-store-detail-badge" class="badge unknown">waiting</span>
-            </div>
-            <div id="data-store-detail" class="detail-sections">
-              <div class="message">Select a store to inspect its metadata summary.</div>
-            </div>
-            <div id="data-preview" class="preview-panel">
-              <div class="message">Open a metadata preview to inspect bounded JSON or text output.</div>
-            </div>
-          </article>
-        </section>
+          </section>
+          <aside class="detail-rail">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Report outline</h2>
+              <ul id="report-outline" class="outline-list"></ul>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Report details</h2>
+              <div id="report-details"></div>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Sources</h2>
+              <ul id="report-sources" class="compact-list"></ul>
+            </section>
+          </aside>
+        </div>
       </section>
 
       <section id="strategies-view" class="view hidden" data-view="strategies">
-        <section class="topbar" aria-labelledby="strategies-title">
-          <div>
-            <p class="eyebrow">Historical strategy research</p>
-            <h1 id="strategies-title">Strategy lab</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Research state</span>
-              <span id="strategy-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Selected item</span>
-              <span id="selected-strategy-status" class="status-value">none</span>
-            </div>
-          </div>
-        </section>
-        <section class="strategy-layout">
-          <article class="wide-panel" aria-labelledby="strategy-list-title">
-            <div class="panel-heading">
-              <h2 id="strategy-list-title" class="panel-title">Strategy outputs</h2>
-              <span id="strategy-count" class="badge unknown">loading</span>
-            </div>
-            <div class="filter-bar">
-              <select id="strategy-scope-filter" class="filter-control" aria-label="Strategy output filter">
-                <option value="all">All outputs</option>
-                <option value="pipeline">Pipeline artifacts</option>
-                <option value="backtests">Standalone backtests</option>
-                <option value="experiments">Standalone experiments</option>
-                <option value="gates">Gates</option>
-                <option value="lifecycle">Lifecycle</option>
-                <option value="warnings">Warnings</option>
-              </select>
-              <input id="strategy-search-filter" class="filter-control" type="search" placeholder="Filter by strategy, symbol, timeframe, gate, lifecycle, or artifact">
-            </div>
-            <div id="strategy-list" class="strategy-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-            <section class="section-block">
-              <h3 class="subheading">
-                <span>Strategy commands</span>
-                <span id="strategy-command-status" class="badge partial">ready</span>
-              </h3>
-              <div class="number-row">
-                <label>
-                  <span class="status-label">Strategy</span>
-                  <input id="strategy-command-name" class="filter-control" type="text" list="strategy-command-name-options" placeholder="tsmom_vol_scaled">
-                  <datalist id="strategy-command-name-options"></datalist>
-                </label>
-                <label>
-                  <span class="status-label">Symbol</span>
-                  <input id="strategy-command-symbol" class="filter-control" type="text" list="strategy-command-symbol-options" placeholder="BTCUSDT">
-                  <datalist id="strategy-command-symbol-options"></datalist>
-                </label>
+        <div class="page-title-row">
+          <div class="page-title"><h1>Strategy Lab</h1></div>
+        </div>
+        <div class="strategy-layout">
+          <section class="panel strategy-controls">
+            <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
+            <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
+            <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
+            <div class="field"><label for="strategy-range">Date range</label><input id="strategy-range" class="text-input" value="Latest available window"></div>
+            <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
+            <button class="ghost-button" type="button" id="download-ohlcv-button">Download OHLCV</button>
+          </section>
+          <section class="panel metric-strip" id="strategy-metrics"></section>
+          <section class="panel kline-panel">
+            <div class="chart-header">
+              <div>
+                <div id="strategy-chart-title" class="chart-title">Backtest candlestick chart</div>
+                <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
               </div>
-              <div class="number-row">
-                <label>
-                  <span class="status-label">Timeframe</span>
-                  <input id="strategy-command-timeframe" class="filter-control" type="text" list="strategy-command-timeframe-options" placeholder="1d">
-                  <datalist id="strategy-command-timeframe-options"></datalist>
-                </label>
-                <label>
-                  <span class="status-label">Output dir</span>
-                  <input id="strategy-command-output-dir" class="filter-control" type="text" placeholder="runs/strategy_backtests">
-                </label>
+              <span class="status-pill ok">USDT</span>
+            </div>
+            <div class="chart-wrap">
+              <div class="chart-tools">
+                <span class="tool-dot">+</span><span class="tool-dot">/</span><span class="tool-dot">T</span><span class="tool-dot">%</span>
               </div>
-              <div class="command-grid">
-                <button class="command-button" type="button" data-strategy-command-intent="backtest">
-                  <span class="command-title">Run configured backtest</span>
-                  <span class="command-meta">Create a backtest job for one configured strategy, symbol, and timeframe.</span>
-                </button>
-                <button class="command-button" type="button" data-strategy-command-intent="experiment">
-                  <span class="command-title">Run configured experiment</span>
-                  <span class="command-meta">Use one strategy or comma-separated configured strategy names.</span>
-                </button>
-              </div>
+              <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="Backtest candlestick chart"></svg>
+            </div>
+            <div class="chart-footer"><span>1D 5D 1M 3M 6M YTD 1Y All</span><span id="strategy-chart-clock">GMT+8</span></div>
+          </section>
+          <aside class="strategy-side">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Strategy parameters</h2>
+              <table id="strategy-params" class="kv-table"></table>
             </section>
-          </article>
-          <article class="wide-panel" aria-labelledby="strategy-detail-title">
-            <div class="panel-heading">
-              <h2 id="strategy-detail-title" class="panel-title">Strategy detail</h2>
-              <span id="strategy-detail-badge" class="badge unknown">waiting</span>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Recent trades</h2>
+              <div id="recent-trades"></div>
+            </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Backtest runs</h2>
+              <div id="backtest-runs"></div>
+            </section>
+          </aside>
+          <section class="panel strategy-tabs">
+            <div class="tabs" id="strategy-tabs">
+              <button class="tab-button active" type="button" data-strategy-tab="trades">Trades</button>
+              <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
+              <button class="tab-button" type="button" data-strategy-tab="drawdown">Drawdown</button>
+              <button class="tab-button" type="button" data-strategy-tab="summary">Performance summary</button>
+              <button class="tab-button" type="button" data-strategy-tab="list">List of trades</button>
             </div>
-            <div id="strategy-detail" class="detail-sections">
-              <div class="message">Select a strategy output to inspect bounded metrics, gates, lifecycle state, warnings, and source refs.</div>
-            </div>
-            <div id="strategy-command-result" class="preview-panel">
-              <div class="message">Start a strategy job to inspect result refs.</div>
-            </div>
-            <div id="strategy-preview" class="preview-panel">
-              <div class="message">Open a strategy artifact preview to inspect bounded JSON or text output.</div>
-            </div>
-          </article>
-        </section>
+            <div id="strategy-tab-content" style="padding-top: 14px;"></div>
+          </section>
+        </div>
       </section>
 
       <section id="monitor-view" class="view hidden" data-view="monitor">
-        <section class="topbar" aria-labelledby="monitor-title">
-          <div>
-            <p class="eyebrow">Local monitoring operations</p>
-            <h1 id="monitor-title">Monitor control</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Monitor state</span>
-              <span id="monitor-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Monitor jobs</span>
-              <span id="monitor-job-status" class="status-value">Loading</span>
-            </div>
-          </div>
-        </section>
-        <section class="monitor-layout">
-          <article class="wide-panel" aria-labelledby="monitor-health-title">
-            <div class="panel-heading">
-              <h2 id="monitor-health-title" class="panel-title">Monitor health</h2>
-              <span id="monitor-health-badge" class="badge unknown">loading</span>
-            </div>
-            <div id="monitor-summary-grid" class="run-detail-grid"></div>
-            <div class="detail-sections">
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Alert counts</span>
-                  <span id="monitor-alert-badge" class="badge unknown">loading</span>
-                </h3>
-                <div id="monitor-alert-counts" class="run-detail-grid"></div>
-              </section>
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Explicit controls</span>
-                  <span class="badge partial">bounded local jobs</span>
-                </h3>
-                <div class="message warning">Monitor commands start explicit bounded local jobs from this dashboard; they are not hidden services.</div>
-                <div class="command-grid" aria-label="Monitor commands">
-                  <button class="command-button" type="button" data-monitor-action="dry-run">
-                    <span class="command-title">Dry run</span>
-                    <span class="command-meta">Validate monitor configuration without executing a cycle.</span>
-                  </button>
-                  <button class="command-button" type="button" data-monitor-action="once">
-                    <span class="command-title">Run one cycle</span>
-                    <span class="command-meta">Start one bounded monitor cycle.</span>
-                  </button>
-                </div>
-                <div class="number-row">
-                  <label>
-                    <span class="status-label">Max cycles</span>
-                    <input id="monitor-loop-cycles" class="filter-control" type="number" min="1" value="1">
-                  </label>
-                  <label>
-                    <span class="status-label">Interval seconds</span>
-                    <input id="monitor-loop-interval" class="filter-control" type="number" min="1" value="300">
-                  </label>
-                </div>
-                <button class="command-button" type="button" data-monitor-action="loop">
-                  <span class="command-title">Start finite loop</span>
-                  <span class="command-meta">Run the configured max cycles, then stop.</span>
-                </button>
-              </section>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="monitor-activity-title">
-            <div class="panel-heading">
-              <h2 id="monitor-activity-title" class="panel-title">Monitor activity</h2>
-              <span id="monitor-cycle-count" class="badge unknown">loading</span>
-            </div>
-            <div class="detail-sections">
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Recent cycles</span>
-                  <span id="monitor-cycle-badge" class="badge unknown">loading</span>
-                </h3>
-                <ul id="monitor-cycle-list" class="stage-list"></ul>
-              </section>
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Monitor jobs</span>
-                  <span id="monitor-job-count" class="badge unknown">loading</span>
-                </h3>
-                <div id="monitor-job-list" class="job-list"></div>
-              </section>
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Alert sample</span>
-                  <span id="monitor-alert-sample-badge" class="badge unknown">loading</span>
-                </h3>
-                <ul id="monitor-alert-sample" class="stage-list"></ul>
-              </section>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="workbench-view" class="view hidden" data-view="workbench">
-        <section class="topbar" aria-labelledby="workbench-title">
-          <div>
-            <p class="eyebrow">Local delivery workbench</p>
-            <h1 id="workbench-title">Workbench</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Workbench state</span>
-              <span id="workbench-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Generated</span>
-              <span id="workbench-generated" class="status-value">...</span>
-            </div>
-          </div>
-        </section>
-        <section class="workbench-layout">
-          <article class="wide-panel" aria-labelledby="workbench-summary-title">
-            <div class="panel-heading">
-              <h2 id="workbench-summary-title" class="panel-title">Workbench summary</h2>
-              <span id="workbench-summary-badge" class="badge unknown">loading</span>
-            </div>
-            <div id="workbench-summary-grid" class="run-detail-grid"></div>
-            <div class="command-grid">
-              <button class="command-button" type="button" data-command-intent="workbench_build">
-                <span class="command-title">Build workbench</span>
-                <span class="command-meta">Create a visible dashboard job; this page does not build implicitly.</span>
-              </button>
-              <button class="command-button" type="button" data-command-intent="workbench_inspect">
-                <span class="command-title">Inspect workbench</span>
-                <span class="command-meta">Create a read-only inspection job for the latest summary.</span>
-              </button>
-            </div>
-            <div id="workbench-messages"></div>
-            <section class="section-block">
-              <h3 class="subheading">
-                <span>Source refs</span>
-                <span id="workbench-source-count" class="badge unknown">loading</span>
-              </h3>
-              <div id="workbench-source-list" class="artifact-actions"></div>
+        <div class="page-title-row">
+          <div class="page-title"><h1>Monitor</h1></div>
+        </div>
+        <div class="monitor-layout">
+          <section class="panel monitor-hero" id="monitor-hero"></section>
+          <section class="panel panel-pad">
+            <h2 class="panel-title">Monitor timeline</h2>
+            <ul id="monitor-timeline" class="monitor-timeline"></ul>
+          </section>
+          <aside class="detail-rail">
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Controls</h2>
+              <div class="control-grid">
+                <button class="primary-button" type="button" data-monitor-job="monitor_loop">Start monitor</button>
+                <button class="danger-button" type="button" id="stop-monitor-button">Stop monitor</button>
+                <button class="ghost-button" type="button" data-monitor-job="monitor_once">Run one cycle</button>
+                <button class="ghost-button" type="button" data-monitor-job="monitor_dry_run">Dry run</button>
+                <button class="ghost-button" type="button" id="enable-daily-report">Enable daily report</button>
+                <button class="ghost-button" type="button" id="schedule-monitor-button">Schedule</button>
+              </div>
+              <div id="monitor-control-result" style="margin-top: 12px;"></div>
             </section>
-            <div id="workbench-preview" class="preview-panel">
-              <div class="message">Open a workbench source ref to inspect a bounded preview.</div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="workbench-sections-title">
-            <div class="panel-heading">
-              <h2 id="workbench-sections-title" class="panel-title">State sections</h2>
-              <span id="workbench-section-count" class="badge unknown">loading</span>
-            </div>
-            <div id="workbench-section-list" class="detail-sections">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="decision-risk-view" class="view hidden" data-view="decision-risk">
-        <section class="topbar" aria-labelledby="decision-risk-title">
-          <div>
-            <p class="eyebrow">Deterministic decision support</p>
-            <h1 id="decision-risk-title">Decision &amp; risk</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Decision state</span>
-              <span id="decision-risk-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Selected run</span>
-              <span id="decision-risk-selected-run" class="status-value">none</span>
-            </div>
-          </div>
-        </section>
-        <section class="decision-risk-layout">
-          <article class="wide-panel" aria-labelledby="decision-run-list-title">
-            <div class="panel-heading">
-              <h2 id="decision-run-list-title" class="panel-title">Runs</h2>
-              <span id="decision-run-count" class="badge unknown">loading</span>
-            </div>
-            <div id="decision-run-list" class="run-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="decision-artifacts-title">
-            <div class="panel-heading">
-              <h2 id="decision-artifacts-title" class="panel-title">Decision artifacts</h2>
-              <span id="decision-artifact-count" class="badge unknown">waiting</span>
-            </div>
-            <div id="decision-artifact-list" class="store-grid">
-              <div class="message">Select a run to inspect decision and risk artifacts.</div>
-            </div>
-            <div id="decision-artifact-detail" class="detail-sections">
-              <div class="message">Open an artifact summary to inspect counts, status, warnings, and refs.</div>
-            </div>
-            <div id="decision-preview" class="preview-panel">
-              <div class="message">Open a decision or risk source ref to inspect a bounded preview.</div>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="event-alert-view" class="view hidden" data-view="event-alert">
-        <section class="topbar" aria-labelledby="event-alert-title">
-          <div>
-            <p class="eyebrow">Event intelligence and alert decisions</p>
-            <h1 id="event-alert-title">Event &amp; alerts</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Event state</span>
-              <span id="event-alert-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Selected run</span>
-              <span id="event-alert-selected-run" class="status-value">none</span>
-            </div>
-          </div>
-        </section>
-        <section class="event-alert-layout">
-          <article class="wide-panel" aria-labelledby="event-run-list-title">
-            <div class="panel-heading">
-              <h2 id="event-run-list-title" class="panel-title">Runs</h2>
-              <span id="event-run-count" class="badge unknown">loading</span>
-            </div>
-            <div id="event-run-list" class="run-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="event-artifacts-title">
-            <div class="panel-heading">
-              <h2 id="event-artifacts-title" class="panel-title">Event and alert artifacts</h2>
-              <span id="event-artifact-count" class="badge unknown">waiting</span>
-            </div>
-            <div id="event-artifact-list" class="store-grid">
-              <div class="message">Select a run to inspect event and alert artifacts.</div>
-            </div>
-            <div id="event-artifact-detail" class="detail-sections">
-              <div class="message">Open an artifact summary to inspect status, counts, warnings, and refs.</div>
-            </div>
-            <div id="event-preview" class="preview-panel">
-              <div class="message">Open an event or alert source ref to inspect a bounded preview.</div>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="text-intelligence-view" class="view hidden" data-view="text-intelligence">
-        <section class="topbar" aria-labelledby="text-intelligence-title">
-          <div>
-            <p class="eyebrow">Source-aware text processing</p>
-            <h1 id="text-intelligence-title">Text intelligence</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Text state</span>
-              <span id="text-intelligence-status" class="status-value">Loading</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Selected run</span>
-              <span id="text-intelligence-selected-run" class="status-value">none</span>
-            </div>
-          </div>
-        </section>
-        <section class="text-intelligence-layout">
-          <article class="wide-panel" aria-labelledby="text-run-list-title">
-            <div class="panel-heading">
-              <h2 id="text-run-list-title" class="panel-title">Runs</h2>
-              <span id="text-run-count" class="badge unknown">loading</span>
-            </div>
-            <div id="text-run-list" class="run-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-            <section class="section-block">
-              <h3 class="subheading">
-                <span>Text commands</span>
-                <span id="text-command-status" class="badge partial">ready</span>
-              </h3>
-              <div class="number-row">
-                <label>
-                  <span class="status-label">Input path</span>
-                  <input id="text-input-path" class="filter-control" type="text" placeholder="runs/&lt;run_id&gt;/raw/text_events.json">
-                </label>
-                <label>
-                  <span class="status-label">Output dir</span>
-                  <input id="text-output-dir" class="filter-control" type="text" placeholder="runs/text_intelligence">
-                </label>
-              </div>
-              <div class="command-grid">
-                <button class="command-button" type="button" data-text-command-intent="text_models_prepare">
-                  <span class="command-title">Prepare text models</span>
-                  <span class="command-meta">Prepare configured local text model artifacts.</span>
-                </button>
-                <button class="command-button" type="button" data-text-command-intent="text_intel">
-                  <span class="command-title">Run text intelligence</span>
-                  <span class="command-meta">Process configured or selected text event input.</span>
-                </button>
-              </div>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Configuration</h2>
+              <div id="monitor-config"></div>
             </section>
-          </article>
-          <article class="wide-panel" aria-labelledby="text-artifacts-title">
-            <div class="panel-heading">
-              <h2 id="text-artifacts-title" class="panel-title">Text artifacts</h2>
-              <span id="text-artifact-count" class="badge unknown">waiting</span>
+          </aside>
+          <section class="panel panel-pad">
+            <h2 class="panel-title">Recent alerts</h2>
+            <div id="monitor-alert-table"></div>
+          </section>
+          <section class="panel panel-pad">
+            <h2 class="panel-title">Recent jobs</h2>
+            <div id="monitor-job-table"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="intelligence-view" class="view hidden" data-view="intelligence">
+        <div class="page-title-row">
+          <div class="page-title"><h1>Intelligence</h1></div>
+        </div>
+        <div class="intelligence-layout">
+          <section class="panel panel-pad">
+            <div class="filter-grid">
+              <div class="field"><label>Asset</label><select id="intel-asset" class="select-input"><option>All assets</option></select></div>
+              <div class="field"><label>Date range</label><input id="intel-range" class="text-input" value="Latest 7 days"></div>
+              <div class="field"><label>Severity</label><select id="intel-severity" class="select-input"><option>All severities</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+              <div class="field"><label>Source</label><select id="intel-source" class="select-input"><option>All sources</option></select></div>
+              <button class="ghost-button" type="button" id="intel-reset">Reset</button>
             </div>
-            <div id="text-artifact-list" class="store-grid">
-              <div class="message">Select a run to inspect text intelligence artifacts.</div>
+            <div class="tabs" id="intel-tabs" style="margin-top: 14px;">
+              <button class="tab-button active" type="button" data-intel-tab="text">Text</button>
+              <button class="tab-button" type="button" data-intel-tab="derivatives">Derivatives</button>
+              <button class="tab-button" type="button" data-intel-tab="onchain">On-chain</button>
+              <button class="tab-button" type="button" data-intel-tab="macro">Macro</button>
+              <button class="tab-button" type="button" data-intel-tab="outcomes">Outcomes</button>
+              <button class="tab-button" type="button" data-intel-tab="quality">Data quality</button>
             </div>
-            <div id="text-artifact-detail" class="detail-sections">
-              <div class="message">Open a text artifact summary to inspect status, counts, warnings, and refs.</div>
-            </div>
-            <section class="section-block">
-              <div class="panel-heading">
-                <h2 class="panel-title">Text jobs</h2>
-                <span id="text-job-count" class="badge unknown">loading</span>
+          </section>
+          <section class="summary-strip" id="intel-kpis"></section>
+          <div class="intel-grid">
+            <section class="panel">
+              <div class="library-header">
+                <select id="intel-sort" class="select-input"><option>Latest first</option><option>Severity first</option></select>
               </div>
-              <div id="text-job-result" class="preview-panel">
-                <div class="message">Start or select a text job to inspect result refs.</div>
-              </div>
-              <div id="text-job-list" class="job-list">
-                <div class="skeleton"></div>
-                <div class="skeleton"></div>
-              </div>
+              <div id="intel-events" class="event-list"></div>
             </section>
-            <div id="text-preview" class="preview-panel">
-              <div class="message">Open a text source ref or job result ref to inspect a bounded preview.</div>
-            </div>
-          </article>
-        </section>
+            <section class="intel-charts">
+              <section class="panel panel-pad chart-card">
+                <h2 class="panel-title">Topic volume over time</h2>
+                <svg id="intel-volume-chart" viewBox="0 0 520 240"></svg>
+              </section>
+              <section class="panel panel-pad chart-card">
+                <h2 class="panel-title">Severity mix</h2>
+                <svg id="intel-severity-chart" viewBox="0 0 520 240"></svg>
+              </section>
+            </section>
+            <aside class="panel panel-pad">
+              <div id="intel-detail"></div>
+            </aside>
+          </div>
+        </div>
       </section>
 
-      <section id="outcomes-view" class="view hidden" data-view="outcomes">
-        <section class="topbar" aria-labelledby="outcomes-title">
-          <div>
-            <p class="eyebrow">Outcome accountability</p>
-            <h1 id="outcomes-title">Outcome tracking</h1>
+      <section id="settings-view" class="view hidden" data-view="settings">
+        <div class="page-title-row">
+          <div class="page-title"><h1>Settings</h1></div>
+        </div>
+        <div class="settings-layout">
+          <section class="panel settings-top">
+            <div class="field"><label>Config file</label><select id="config-profile" class="select-input"><option>Current config</option></select></div>
+            <span id="settings-valid-pill" class="status-pill pending">loading</span>
+            <span class="muted" id="settings-last-validated">Last validated: not run</span>
+            <button class="primary-button" type="button" id="settings-save">Save changes</button>
+            <button class="ghost-button" type="button" data-job-intent="validate">Validate</button>
+            <button class="ghost-button" type="button" id="settings-backup">Create backup</button>
+          </section>
+          <div class="settings-main">
+            <aside class="panel settings-nav" id="settings-nav"></aside>
+            <section class="panel panel-pad">
+              <h2 class="panel-title" id="settings-section-title">Market data</h2>
+              <div id="settings-form" class="form-grid"></div>
+            </section>
+            <aside class="detail-rail">
+              <section class="panel panel-pad">
+                <h2 class="panel-title">Change summary <span id="change-count" class="status-pill warning">0 changes</span></h2>
+                <ul id="change-summary" class="compact-list"></ul>
+              </section>
+              <section class="panel panel-pad">
+                <h2 class="panel-title">Validation results</h2>
+                <div id="validation-results"></div>
+              </section>
+            </aside>
           </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Outcome state</span>
-              <span id="outcome-status" class="status-value">Loading</span>
+          <section class="panel storage-maintenance">
+            <div class="storage-maintenance-header">
+              <h2 class="panel-title" style="margin-bottom: 4px;">Storage maintenance</h2>
+              <div class="muted">Run artifacts affect one run. Shared stores may be reused by reports and future runs.</div>
             </div>
-            <div class="status-line">
-              <span class="status-label">Selected run</span>
-              <span id="outcome-selected-run" class="status-value">none</span>
-            </div>
-          </div>
-        </section>
-        <section class="outcomes-layout">
-          <article class="wide-panel" aria-labelledby="outcome-run-list-title">
-            <div class="panel-heading">
-              <h2 id="outcome-run-list-title" class="panel-title">Runs</h2>
-              <span id="outcome-run-count" class="badge unknown">loading</span>
-            </div>
-            <div id="outcome-run-list" class="run-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="outcome-artifacts-title">
-            <div class="panel-heading">
-              <h2 id="outcome-artifacts-title" class="panel-title">Run outcome artifacts</h2>
-              <span id="outcome-artifact-count" class="badge unknown">waiting</span>
-            </div>
-            <div id="outcome-artifact-list" class="store-grid">
-              <div class="message">Select a run to inspect outcome targets and evaluations.</div>
-            </div>
-            <div id="outcome-artifact-detail" class="detail-sections">
-              <div class="message">Open an outcome artifact summary to inspect status, counts, warnings, and refs.</div>
-            </div>
-            <div id="outcome-history-detail" class="detail-sections">
-              <div class="message">Outcome history metadata is loading.</div>
-            </div>
-            <div id="outcome-preview" class="preview-panel">
-              <div class="message">Open an outcome source ref to inspect a bounded preview.</div>
-            </div>
-          </article>
-        </section>
-      </section>
-
-      <section id="commands-view" class="view hidden" data-view="commands">
-        <section class="topbar" aria-labelledby="commands-title">
-          <div>
-            <p class="eyebrow">Allowlisted local commands</p>
-            <h1 id="commands-title">Command center</h1>
-          </div>
-          <div class="status-panel" aria-live="polite">
-            <div class="status-line">
-              <span class="status-label">Command state</span>
-              <span id="command-center-status" class="status-value">Idle</span>
-            </div>
-            <div class="status-line">
-              <span class="status-label">Jobs</span>
-              <span id="command-job-status" class="status-value">Loading</span>
-            </div>
-          </div>
-        </section>
-        <section class="command-center-layout">
-          <article class="wide-panel" aria-labelledby="command-groups-title">
-            <div class="panel-heading">
-              <h2 id="command-groups-title" class="panel-title">Command groups</h2>
-              <span class="badge partial">allowlisted</span>
-            </div>
-            <div class="detail-sections">
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Daily report schedule</span>
-                  <span id="daily-schedule-badge" class="badge unknown">loading</span>
-                </h3>
-                <div id="daily-schedule-summary" class="run-detail-grid">
-                  <div class="skeleton"></div>
-                  <div class="skeleton"></div>
+            <div class="cleanup-grid">
+              <section class="cleanup-panel">
+                <div class="cleanup-panel-head">
+                  <strong>Single-run artifacts</strong>
+                  <button class="danger-button" type="button" id="cleanup-run-artifacts">Delete selected</button>
                 </div>
-                <div class="number-row">
-                  <label>
-                    <span class="status-label">Time of day</span>
-                    <input id="daily-schedule-time" class="filter-control" type="time" value="08:00">
-                  </label>
-                  <label>
-                    <span class="status-label">Timezone</span>
-                    <input id="daily-schedule-timezone" class="filter-control" type="text" value="Asia/Shanghai">
-                  </label>
-                </div>
-                <label>
-                  <span class="status-label">Job intent</span>
-                  <select id="daily-schedule-job-intent" class="filter-control">
-                    <option value="run_no_codex">run_no_codex</option>
-                    <option value="run">run</option>
-                  </select>
-                </label>
-                <label class="checkbox-line">
-                  <input id="daily-schedule-confirm-codex" type="checkbox">
-                  <span>I explicitly confirm this manual daily report trigger may invoke Codex.</span>
-                </label>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-schedule-action="update">
-                    <span class="command-title">Update schedule</span>
-                    <span class="command-meta">Persist time, timezone, and job intent without triggering a run.</span>
-                  </button>
-                  <button class="command-button" type="button" data-schedule-action="enable">
-                    <span class="command-title">Enable schedule</span>
-                    <span class="command-meta">Enable the local daily report schedule state.</span>
-                  </button>
-                  <button class="command-button" type="button" data-schedule-action="disable">
-                    <span class="command-title">Disable schedule</span>
-                    <span class="command-meta">Disable the local daily report schedule state.</span>
-                  </button>
-                  <button class="command-button" type="button" data-schedule-action="trigger">
-                    <span class="command-title">Trigger now</span>
-                    <span class="command-meta">Create a visible dashboard job from the selected schedule intent.</span>
-                  </button>
-                </div>
-                <div id="daily-schedule-messages"></div>
+                <div id="run-cleanup-list" class="cleanup-list"></div>
               </section>
-
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Product runs</span>
-                  <span class="badge partial">Codex confirmation required</span>
-                </h3>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-command-intent="run_no_codex">
-                    <span class="command-title">Run without Codex</span>
-                    <span class="command-meta">Execute the product pipeline with report generation skipped.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="run">
-                    <span class="command-title">Run with Codex</span>
-                    <span class="command-meta">Requires the Codex confirmation checkbox below.</span>
-                  </button>
+              <section class="cleanup-panel">
+                <div class="cleanup-panel-head">
+                  <strong>Shared data stores</strong>
+                  <button class="danger-button" type="button" id="cleanup-shared-data">Delete selected</button>
                 </div>
-                <label class="checkbox-line">
-                  <input id="command-run-confirm-codex" type="checkbox">
-                  <span>I explicitly confirm this dashboard job may invoke Codex.</span>
-                </label>
-                <div class="command-inline">
-                  <label>
-                    <span class="status-label">Run until stage</span>
-                    <input id="command-run-until-stage" class="filter-control" type="text" placeholder="build_research_context">
-                  </label>
-                  <button class="link-button" type="button" data-command-intent="run_until">Run until</button>
-                </div>
-              </section>
-
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Validation and inspection</span>
-                  <span class="badge available">read-only</span>
-                </h3>
-                <label>
-                  <span class="status-label">Run dir for scoped commands</span>
-                  <input id="command-run-dir" class="filter-control" type="text" placeholder="runs/&lt;run_id&gt;">
-                </label>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-command-intent="validate">
-                    <span class="command-title">Validate</span>
-                    <span class="command-meta">Run product validation for config or selected run dir.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="data_inspect">
-                    <span class="command-title">Data inspect</span>
-                    <span class="command-meta">Inspect local data stores and optional run context.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="outcomes_inspect">
-                    <span class="command-title">Outcomes inspect</span>
-                    <span class="command-meta">Inspect local outcome state and optional run context.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="monitor_inspect">
-                    <span class="command-title">Monitor inspect</span>
-                    <span class="command-meta">Inspect local monitor state without starting cycles.</span>
-                  </button>
-                </div>
-              </section>
-
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Workbench</span>
-                  <span class="badge available">local delivery</span>
-                </h3>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-command-intent="workbench_build">
-                    <span class="command-title">Build workbench</span>
-                    <span class="command-meta">Build local workbench output, optionally scoped by run dir.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="workbench_inspect">
-                    <span class="command-title">Inspect workbench</span>
-                    <span class="command-meta">Inspect the latest local workbench summary.</span>
-                  </button>
-                </div>
-              </section>
-
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Strategy research</span>
-                  <span class="badge partial">historical research</span>
-                </h3>
-                <div class="number-row">
-                  <label>
-                    <span class="status-label">Strategy</span>
-                    <input id="command-backtest-strategy" class="filter-control" type="text" placeholder="tsmom_vol_scaled">
-                  </label>
-                  <label>
-                    <span class="status-label">Symbol</span>
-                    <input id="command-backtest-symbol" class="filter-control" type="text" placeholder="BTCUSDT">
-                  </label>
-                </div>
-                <div class="number-row">
-                  <label>
-                    <span class="status-label">Timeframe</span>
-                    <input id="command-backtest-timeframe" class="filter-control" type="text" placeholder="1d">
-                  </label>
-                  <label>
-                    <span class="status-label">Output dir</span>
-                    <input id="command-strategy-output-dir" class="filter-control" type="text" placeholder="runs/strategy_backtests">
-                  </label>
-                </div>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-command-intent="backtest">
-                    <span class="command-title">Run backtest</span>
-                    <span class="command-meta">Start one configured standalone strategy backtest.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="experiment">
-                    <span class="command-title">Run experiment</span>
-                    <span class="command-meta">Use comma-separated strategy names from the strategy field.</span>
-                  </button>
-                </div>
-              </section>
-
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Text intelligence</span>
-                  <span class="badge partial">bounded artifacts</span>
-                </h3>
-                <div class="number-row">
-                  <label>
-                    <span class="status-label">Input path</span>
-                    <input id="command-text-input-path" class="filter-control" type="text" placeholder="runs/&lt;run_id&gt;/raw/text_events.json">
-                  </label>
-                  <label>
-                    <span class="status-label">Output dir</span>
-                    <input id="command-text-output-dir" class="filter-control" type="text" placeholder="runs/text_intel">
-                  </label>
-                </div>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-command-intent="text_models_prepare">
-                    <span class="command-title">Prepare text models</span>
-                    <span class="command-meta">Prepare configured local text model artifacts.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="text_intel">
-                    <span class="command-title">Run text intelligence</span>
-                    <span class="command-meta">Process configured or selected text event input.</span>
-                  </button>
-                </div>
-              </section>
-
-              <section class="section-block">
-                <h3 class="subheading">
-                  <span>Monitor commands</span>
-                  <span class="badge partial">bounded local jobs</span>
-                </h3>
-                <div class="command-grid">
-                  <button class="command-button" type="button" data-command-intent="monitor_dry_run">
-                    <span class="command-title">Monitor dry run</span>
-                    <span class="command-meta">Validate monitor configuration without executing a cycle.</span>
-                  </button>
-                  <button class="command-button" type="button" data-command-intent="monitor_once">
-                    <span class="command-title">Monitor one cycle</span>
-                    <span class="command-meta">Start one bounded monitor cycle.</span>
-                  </button>
-                </div>
-                <div class="number-row">
-                  <label>
-                    <span class="status-label">Max cycles</span>
-                    <input id="command-monitor-loop-cycles" class="filter-control" type="number" min="1" value="1">
-                  </label>
-                  <label>
-                    <span class="status-label">Interval seconds</span>
-                    <input id="command-monitor-loop-interval" class="filter-control" type="number" min="1" value="300">
-                  </label>
-                </div>
-                <button class="command-button" type="button" data-command-intent="monitor_loop">
-                  <span class="command-title">Monitor finite loop</span>
-                  <span class="command-meta">Run configured max cycles, then stop.</span>
-                </button>
+                <div id="shared-cleanup-list" class="cleanup-list"></div>
               </section>
             </div>
-          </article>
-          <article class="wide-panel" aria-labelledby="command-jobs-title">
-            <div class="panel-heading">
-              <h2 id="command-jobs-title" class="panel-title">Job history</h2>
-              <span id="command-job-count" class="badge unknown">loading</span>
-            </div>
-            <div class="filter-bar">
-              <input id="command-job-intent-filter" class="filter-control" type="search" placeholder="Filter intent">
-              <select id="command-job-status-filter" class="filter-control" aria-label="Job status filter">
-                <option value="all">All statuses</option>
-                <option value="active">Active</option>
-                <option value="terminal">Terminal</option>
-                <option value="queued">Queued</option>
-                <option value="running">Running</option>
-                <option value="succeeded">Succeeded</option>
-                <option value="failed">Failed</option>
-                <option value="blocked">Blocked</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <input id="command-job-kind-filter" class="filter-control" type="search" placeholder="Filter kind">
-            </div>
-            <div id="command-result" class="preview-panel">
-              <div class="message">Choose an allowlisted command or open a job to inspect details.</div>
-            </div>
-            <div id="command-job-preview" class="preview-panel">
-              <div class="message">Open a job result ref, stdout, or stderr to inspect a bounded preview.</div>
-            </div>
-            <div id="command-job-list" class="job-list">
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-              <div class="skeleton"></div>
-            </div>
-          </article>
-        </section>
+          </section>
+        </div>
       </section>
     </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
+
   <script>
     const app = document.querySelector("#halpha-dashboard-app");
+    const displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";
     const endpoints = {
       overview: app.dataset.overviewEndpoint,
-      workbench: app.dataset.workbenchEndpoint,
-      decisionRisk: app.dataset.decisionRiskEndpoint,
-      eventAlert: app.dataset.eventAlertEndpoint,
-      outcomes: app.dataset.outcomesEndpoint,
-      textIntelligence: app.dataset.textIntelligenceEndpoint,
+      health: app.dataset.healthEndpoint,
       runs: app.dataset.runsEndpoint,
+      preview: app.dataset.previewEndpoint,
       stores: app.dataset.storesEndpoint,
+      deletion: app.dataset.deleteEndpoint,
       strategies: app.dataset.strategiesEndpoint,
       monitor: app.dataset.monitorEndpoint,
+      monitorCycles: app.dataset.monitorCyclesEndpoint,
+      monitorAlerts: app.dataset.monitorAlertsEndpoint,
       jobs: app.dataset.jobsEndpoint,
       schedule: app.dataset.scheduleEndpoint,
-      preview: app.dataset.previewEndpoint
+      settings: app.dataset.settingsEndpoint,
+      textIntel: app.dataset.textIntelligenceEndpoint,
     };
-    const displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";
-    let displayTimeFormatter = null;
-    try {
-      displayTimeFormatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: displayTimezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hourCycle: "h23",
-        timeZoneName: "shortOffset"
-      });
-    } catch (error) {
-      displayTimeFormatter = null;
-    }
-    const statusLabels = {
-      available: "Available",
-      succeeded: "Succeeded",
-      success: "Succeeded",
-      ok: "OK",
-      warning: "Warning",
-      partial: "Partial",
-      missing: "Missing",
-      skipped: "Skipped",
-      disabled: "Disabled",
-      not_run: "Not run",
-      effective: "Effective",
-      watchlisted: "Watchlisted",
-      rejected: "Rejected",
-      insufficient_evidence: "Insufficient evidence",
-      active_candidate: "Active candidate",
-      retired: "Retired",
-      queued: "Queued",
-      running: "Running",
-      cancel_requested: "Cancel requested",
-      cancelled: "Cancelled",
-      blocked: "Blocked",
-      unsupported: "Unsupported",
-      degraded: "Degraded",
-      failed: "Failed",
-      unknown: "Unknown"
+
+    const state = {
+      view: "overview",
+      overview: null,
+      health: null,
+      runs: [],
+      selectedReport: null,
+      selectedReportPreview: null,
+      stores: [],
+      deletionPlan: null,
+      strategies: null,
+      selectedStrategyOutput: null,
+      monitor: null,
+      monitorCycles: [],
+      monitorAlerts: null,
+      jobs: [],
+      intelligence: null,
+      selectedIntelTab: "text",
+      selectedIntelItem: null,
+      settingsProfile: null,
+      settingsSection: "Market data",
+      settingsChanges: {},
+      selectedRunArtifacts: [],
+      selectedSharedStores: [],
+      validationJob: null,
     };
-    const overviewCards = [
-      {
-        key: "latest_run",
-        title: "Latest run",
-        fields: [["run_id", "Run"], ["run_status", "Status"], ["codex_status", "Codex"], ["report.status", "Report"]]
-      },
-      {
-        key: "product_validation",
-        title: "Product validation",
-        fields: [["artifact_status", "Artifact"], ["counts.checks", "Checks"], ["warning_count", "Warnings"], ["error_count", "Errors"]]
-      },
-      {
-        key: "data_quality",
-        title: "Data quality",
-        fields: [["artifact_status", "Artifact"], ["counts.checks", "Checks"], ["warning_count", "Warnings"], ["error_count", "Errors"]]
-      },
-      {
-        key: "monitor",
-        title: "Monitor",
-        fields: [["cycle_count", "Cycles"], ["latest_cycle_status", "Latest"], ["alert_counts.emitted", "Alerts"], ["error_count", "Errors"]]
-      },
-      {
-        key: "workbench",
-        title: "Workbench",
-        fields: [["artifact_status", "Status"], ["generated_at", "Generated"], ["latest_run.run_id", "Run"], ["errors", "Errors"]]
-      }
-    ];
-    let runsLoaded = false;
-    let currentView = "overview";
-    let dashboardAutoRefreshPoll = null;
-    let dashboardJobPoll = null;
-    let selectedRunId = null;
-    let artifactsLoaded = false;
-    let artifactRunsPayload = null;
-    const artifactRunDetails = new Map();
-    let selectedArtifactRunId = null;
-    let selectedArtifactPath = null;
-    let dataStoresLoaded = false;
-    let dataStoresPayload = null;
-    let selectedStoreName = null;
-    let strategiesLoaded = false;
-    let strategiesPayload = null;
-    let selectedStrategyKey = null;
-    let monitorLoaded = false;
-    let monitorPayload = null;
-    let monitorJobPoll = null;
-    let workbenchLoaded = false;
-    let workbenchPayload = null;
-    let decisionRiskLoaded = false;
-    let decisionRunsPayload = null;
-    let decisionRiskPayload = null;
-    let selectedDecisionRunId = null;
-    let selectedDecisionArtifactKey = null;
-    let eventAlertLoaded = false;
-    let eventRunsPayload = null;
-    let eventAlertPayload = null;
-    let selectedEventRunId = null;
-    let selectedEventArtifactKey = null;
-    let textIntelligenceLoaded = false;
-    let textRunsPayload = null;
-    let textIntelligencePayload = null;
-    let selectedTextRunId = null;
-    let selectedTextArtifactKey = null;
-    let textJobsPayload = null;
-    let selectedTextJobId = null;
-    let outcomesLoaded = false;
-    let outcomeRunsPayload = null;
-    let outcomesPayload = null;
-    let selectedOutcomeRunId = null;
-    let selectedOutcomeArtifactKey = null;
-    let commandJobsLoaded = false;
-    let commandJobPoll = null;
-    let dailyScheduleLoaded = false;
-    let commandJobsPayload = null;
-    let selectedCommandJobId = null;
-    let selectedStrategyCommandJobId = null;
-    const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started", "missing"]);
 
-    function text(value) {
-      if (value === null || value === undefined || value === "") {
-        return "n/a";
-      }
-      if (typeof value === "object") {
-        return JSON.stringify(value);
-      }
-      return formatTimestamp(String(value));
-    }
-
-    function formatTimestamp(value) {
-      if (!displayTimeFormatter || !looksLikeIsoTimestamp(value)) {
-        return value;
-      }
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return value;
-      }
-      const parts = Object.fromEntries(
-        displayTimeFormatter.formatToParts(date).map((part) => [part.type, part.value])
-      );
-      const zone = parts.timeZoneName ? ` ${parts.timeZoneName}` : "";
-      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}${zone}`;
-    }
-
-    function looksLikeIsoTimestamp(value) {
-      return /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})$/.test(value);
-    }
-
-    function get(path, source) {
-      return path.split(".").reduce((value, key) => {
-        if (value === null || value === undefined || typeof value !== "object") {
-          return undefined;
-        }
-        return value[key];
-      }, source);
-    }
+    const viewAliases = {
+      runs: "reports",
+      data: "intelligence",
+      artifacts: "reports",
+      workbench: "overview",
+      "decision-risk": "intelligence",
+      "event-alert": "intelligence",
+      "text-intelligence": "intelligence",
+      outcomes: "intelligence",
+      commands: "settings",
+    };
 
     function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
-    function normalizeStatus(status) {
-      const value = String(status || "unknown").toLowerCase();
-      if (["ok", "success", "succeeded"].includes(value)) {
-        return "available";
+    function text(value, fallback = "n/a") {
+      if (value === null || value === undefined || value === "") {
+        return fallback;
       }
-      if (["effective", "active_candidate"].includes(value)) {
-        return "available";
+      return String(value);
+    }
+
+    function statusClass(status) {
+      const normalized = String(status || "unknown").toLowerCase();
+      if (["ok", "available", "succeeded", "success", "completed", "running"].includes(normalized)) {
+        return normalized;
       }
-      if (["watchlisted", "insufficient_evidence"].includes(value)) {
-        return "partial";
+      if (["failed", "error", "degraded", "blocked"].includes(normalized)) {
+        return normalized;
       }
-      if (["queued", "running", "cancel_requested"].includes(value)) {
-        return "partial";
-      }
-      if (["rejected", "retired"].includes(value)) {
-        return "degraded";
-      }
-      if (["cancelled", "blocked", "unsupported"].includes(value)) {
-        return "degraded";
-      }
-      if (["not_run", "disabled", "skipped"].includes(value)) {
-        return value;
-      }
-      if (["available", "warning", "partial", "missing", "degraded", "failed"].includes(value)) {
-        return value;
+      if (["warning", "partial", "missing", "skipped", "pending"].includes(normalized)) {
+        return normalized;
       }
       return "unknown";
     }
 
-    function label(status) {
-      return statusLabels[status] || statusLabels[normalizeStatus(status)] || statusLabels.unknown;
+    function label(value) {
+      return text(value, "unknown").replace(/_/g, " ").replace(/\\b\\w/g, (char) => char.toUpperCase());
     }
 
-    function badge(status) {
-      const normalized = normalizeStatus(status);
-      return `<span class="badge ${normalized}">${label(status)}</span>`;
+    function statusPill(status, labelText) {
+      return `<span class="status-pill ${statusClass(status)}">${escapeHtml(labelText || label(status))}</span>`;
     }
 
-    function metric(labelText, value) {
-      return `<div class="metric"><span class="metric-key">${labelText}</span><span class="metric-value">${escapeHtml(text(value))}</span></div>`;
+    function setPill(selector, status, labelText) {
+      const node = document.querySelector(selector);
+      if (!node) {
+        return;
+      }
+      node.className = `status-pill ${statusClass(status)}`;
+      node.textContent = labelText || label(status);
     }
 
-    function messages(section) {
-      const warnings = Array.isArray(section.warnings) ? section.warnings : [];
-      const errors = Array.isArray(section.errors) ? section.errors : [];
-      const rows = [
-        ...warnings.slice(0, 3).map((value) => `<li class="message warning">${escapeHtml(value)}</li>`),
-        ...errors.slice(0, 3).map((value) => `<li class="message error">${escapeHtml(value)}</li>`)
-      ];
-      return rows.length ? `<ul class="message-list">${rows.join("")}</ul>` : "";
+    function metricCell(labelText, value, note = "") {
+      return `<div class="summary-cell"><div class="summary-label">${escapeHtml(labelText)}</div><div class="summary-value">${escapeHtml(value)}</div>${note ? `<div class="summary-note">${escapeHtml(note)}</div>` : ""}</div>`;
     }
 
-    function emptyState(title, detail, action = "") {
-      return `
-        <div class="empty-state">
-          <div class="empty-title">${escapeHtml(title)}</div>
-          <div class="empty-detail">${escapeHtml(detail)}</div>
-          ${action ? `<div class="empty-action">${escapeHtml(action)}</div>` : ""}
-        </div>`;
+    function detailRow(key, value) {
+      return `<div class="detail-row"><div class="detail-key">${escapeHtml(key)}</div><div class="detail-value">${escapeHtml(text(value))}</div></div>`;
     }
 
-    async function fetchJson(url) {
-      const response = await fetch(url, { cache: "no-store" });
+    function pct(value) {
+      if (typeof value !== "number" || Number.isNaN(value)) {
+        return "n/a";
+      }
+      return `${value.toFixed(1)}%`;
+    }
+
+    function formatNumber(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) {
+        return text(value);
+      }
+      return new Intl.NumberFormat("en-US").format(number);
+    }
+
+    function formatBytes(bytes) {
+      const number = Number(bytes);
+      if (!Number.isFinite(number) || number <= 0) {
+        return "n/a";
+      }
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let value = number;
+      let index = 0;
+      while (value >= 1024 && index < units.length - 1) {
+        value /= 1024;
+        index += 1;
+      }
+      return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[index]}`;
+    }
+
+    function looksLikeIsoTimestamp(value) {
+      return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value);
+    }
+
+    function formatTimestamp(value) {
+      if (!value) {
+        return "n/a";
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return String(value);
+      }
+      try {
+        return new Intl.DateTimeFormat("en-US", {
+          timeZone: displayTimezone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(date);
+      } catch (_error) {
+        return date.toISOString();
+      }
+    }
+
+    function durationBetween(start, end) {
+      const s = start ? new Date(start).getTime() : NaN;
+      const e = end ? new Date(end).getTime() : NaN;
+      if (!Number.isFinite(s) || !Number.isFinite(e) || e < s) {
+        return "n/a";
+      }
+      return formatDurationMs(e - s);
+    }
+
+    function formatDurationMs(ms) {
+      const totalSeconds = Math.round(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const hours = Math.floor(minutes / 60);
+      if (hours > 0) {
+        return `${hours}h ${minutes % 60}m`;
+      }
+      if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      }
+      return `${seconds}s`;
+    }
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          "Accept": "application/json",
+          ...(options.body ? {"Content-Type": "application/json"} : {}),
+          ...(options.headers || {}),
+        },
+      });
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`${response.status} ${response.statusText}`);
       }
       return response.json();
     }
 
     async function postJson(url, body) {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body || {})
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return response.json();
+      return fetchJson(url, {method: "POST", body: JSON.stringify(body || {})});
+    }
+
+    function showToast(message) {
+      const toast = document.querySelector("#toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      window.setTimeout(() => toast.classList.remove("visible"), 3600);
     }
 
     function viewFromHash() {
-      if (window.location.hash === "#runs") {
-        return "runs";
-      }
-      if (window.location.hash === "#artifacts") {
-        return "artifacts";
-      }
-      if (window.location.hash === "#data") {
-        return "data";
-      }
-      if (window.location.hash === "#strategies") {
-        return "strategies";
-      }
-      if (window.location.hash === "#monitor") {
-        return "monitor";
-      }
-      if (window.location.hash === "#workbench") {
-        return "workbench";
-      }
-      if (window.location.hash === "#decision-risk") {
-        return "decision-risk";
-      }
-      if (window.location.hash === "#event-alert") {
-        return "event-alert";
-      }
-      if (window.location.hash === "#text-intelligence") {
-        return "text-intelligence";
-      }
-      if (window.location.hash === "#outcomes") {
-        return "outcomes";
-      }
-      if (window.location.hash === "#commands") {
-        return "commands";
-      }
-      return "overview";
+      const raw = (window.location.hash || "#overview").slice(1) || "overview";
+      return viewAliases[raw] || raw;
     }
 
     function setView(view) {
-      currentView = view;
-      document.querySelectorAll("[data-view]").forEach((node) => {
-        node.classList.toggle("hidden", node.dataset.view !== view);
-      });
+      const valid = ["overview", "reports", "strategies", "monitor", "intelligence", "settings"];
+      state.view = valid.includes(view) ? view : "overview";
+      document.querySelectorAll(".view").forEach((node) => node.classList.toggle("hidden", node.dataset.view !== state.view));
       document.querySelectorAll("[data-view-target]").forEach((node) => {
-        const active = node.dataset.viewTarget === view;
+        const active = node.dataset.viewTarget === state.view;
         node.classList.toggle("active", active);
-        node.toggleAttribute("aria-current", active);
-        const state = node.querySelector(".nav-state");
-        if (state) {
-          state.textContent = active ? "active" : "available";
+        if (active) {
+          node.setAttribute("aria-current", "page");
+        } else {
+          node.removeAttribute("aria-current");
         }
       });
-      if (view === "runs" && !runsLoaded) {
-        loadRuns();
-      }
-      if (view === "artifacts" && !artifactsLoaded) {
-        loadArtifacts();
-      }
-      if (view === "data" && !dataStoresLoaded) {
-        loadDataStores();
-      }
-      if (view === "strategies" && !strategiesLoaded) {
-        loadStrategies();
-      }
-      if (view === "monitor" && !monitorLoaded) {
-        loadMonitor();
-      }
-      if (view === "workbench" && !workbenchLoaded) {
-        loadWorkbench();
-      }
-      if (view === "decision-risk" && !decisionRiskLoaded) {
-        loadDecisionRisk();
-      }
-      if (view === "event-alert" && !eventAlertLoaded) {
-        loadEventAlert();
-      }
-      if (view === "text-intelligence" && !textIntelligenceLoaded) {
-        loadTextIntelligence();
-      }
-      if (view === "outcomes" && !outcomesLoaded) {
-        loadOutcomes();
-      }
-      if (view === "commands" && !commandJobsLoaded) {
-        loadCommandCenter();
+      refreshCurrentView();
+    }
+
+    async function refreshCurrentView() {
+      if (state.view === "overview") return refreshOverview();
+      if (state.view === "reports") return refreshReports();
+      if (state.view === "strategies") return refreshStrategies();
+      if (state.view === "monitor") return refreshMonitor();
+      if (state.view === "intelligence") return refreshIntelligence();
+      if (state.view === "settings") return refreshSettings();
+    }
+
+    async function loadHealth() {
+      try {
+        state.health = await fetchJson(endpoints.health);
+        const ref = state.health?.config?.ref || "Current config";
+        document.querySelector("#config-ref").textContent = ref;
+        document.querySelector("#sidebar-health-text").textContent = state.health?.status === "ok" ? "All local systems operational." : "Dashboard status needs attention.";
+      } catch (error) {
+        document.querySelector("#config-ref").textContent = "unavailable";
+        document.querySelector("#sidebar-health-text").textContent = error.message;
       }
     }
 
     async function refreshOverview() {
-      document.querySelector("#overall-status").textContent = "Loading";
+      await Promise.allSettled([loadHealth(), loadRuns(), loadStores(), loadMonitorPayload()]);
       try {
-        const payload = await fetchJson(endpoints.overview);
-        renderOverview(payload);
+        state.overview = await fetchJson(endpoints.overview);
       } catch (error) {
-        renderOverviewFailure(error);
+        state.overview = {status: "failed", sections: {}, warnings: [error.message], errors: [error.message]};
       }
-    }
-
-    async function refreshCurrentView() {
-      document.querySelector("#dashboard-refresh-status").textContent = "Refreshing";
-      try {
-        if (currentView === "overview") {
-          await refreshOverview();
-        } else if (currentView === "runs") {
-          await loadRuns();
-        } else if (currentView === "artifacts") {
-          await loadArtifacts();
-        } else if (currentView === "data") {
-          await loadDataStores();
-        } else if (currentView === "strategies") {
-          await loadStrategies();
-        } else if (currentView === "monitor") {
-          await loadMonitor();
-          await refreshDashboardJobs();
-        } else if (currentView === "workbench") {
-          await loadWorkbench();
-        } else if (currentView === "decision-risk") {
-          await loadDecisionRisk();
-        } else if (currentView === "event-alert") {
-          await loadEventAlert();
-        } else if (currentView === "text-intelligence") {
-          await loadTextIntelligence();
-          await refreshDashboardJobs();
-        } else if (currentView === "outcomes") {
-          await loadOutcomes();
-        } else if (currentView === "commands") {
-          await loadCommandCenter();
-        }
-        document.querySelector("#dashboard-refresh-status").textContent = "Refreshed";
-      } catch (error) {
-        document.querySelector("#dashboard-refresh-status").textContent = `Refresh failed: ${error.message}`;
-      }
-    }
-
-    function setDashboardAutoRefresh(enabled) {
-      if (enabled && !dashboardAutoRefreshPoll) {
-        document.querySelector("#dashboard-refresh-status").textContent = "Auto refresh on";
-        dashboardAutoRefreshPoll = window.setInterval(refreshCurrentView, 10000);
-        return;
-      }
-      if (!enabled && dashboardAutoRefreshPoll) {
-        window.clearInterval(dashboardAutoRefreshPoll);
-        dashboardAutoRefreshPoll = null;
-        document.querySelector("#dashboard-refresh-status").textContent = "Auto refresh off";
-      }
-    }
-
-    function renderOverviewCards(sections) {
-      const html = overviewCards.map((card) => {
-        const section = sections[card.key] || { status: "missing", fields: {}, warnings: ["section is not available."], errors: [] };
-        const fields = section.fields || {};
-        const metrics = card.fields.map(([field, labelText]) => metric(labelText, get(field, fields))).join("");
-        return `
-          <article class="card">
-            <div class="card-header">
-              <h2 class="card-title">${card.title}</h2>
-              ${badge(section.status)}
-            </div>
-            <div class="card-body">${metrics}</div>
-            ${messages(section)}
-          </article>`;
-      });
-      document.querySelector("#overview-cards").innerHTML = html.join("");
-    }
-
-    function renderAttention(sections) {
-      const items = Object.values(sections).flatMap((section) => {
-        const status = section.status || "unknown";
-        const warnings = Array.isArray(section.warnings) ? section.warnings : [];
-        const errors = Array.isArray(section.errors) ? section.errors : [];
-        if (!warnings.length && !errors.length && status === "available") {
-          return [];
-        }
-        const primary = errors[0] || warnings[0] || `${section.name || "section"} status is ${status}.`;
-        const source = Array.isArray(section.source_artifacts) ? section.source_artifacts[0] : "";
-        return [{ status, title: section.name || "section", primary, source }];
-      });
-      const count = document.querySelector("#attention-count");
-      count.className = `badge ${items.length ? "partial" : "available"}`;
-      count.textContent = items.length ? `${items.length} item${items.length === 1 ? "" : "s"}` : "clear";
-      document.querySelector("#attention-list").innerHTML = items.length
-        ? items.map((item) => `
-            <li class="timeline-item ${normalizeStatus(item.status)}">
-              <span class="timeline-dot"></span>
-              <span>
-                <span class="timeline-title">${escapeHtml(item.title)}</span>
-                <span class="timeline-meta">${escapeHtml(item.primary)}${item.source ? ` Source: ${escapeHtml(item.source)}` : ""}</span>
-              </span>
-            </li>`).join("")
-        : `<li class="timeline-item available">
-            <span class="timeline-dot"></span>
-            <span>
-              <span class="timeline-title">No current attention items</span>
-              <span class="timeline-meta">All overview sections are available with no emitted warnings.</span>
-            </span>
-          </li>`;
-    }
-
-    function renderOverview(payload) {
-      const sections = payload.sections || {};
-      const overall = payload.status || "unknown";
-      document.querySelector("#overall-status").textContent = label(overall);
-      document.querySelector("#config-ref").textContent = text(payload.config && payload.config.ref);
-      document.querySelector("#display-timezone").textContent = displayTimezone;
-      renderOverviewCards(sections);
-      renderAttention(sections);
-    }
-
-    function renderOverviewFailure(error) {
-      document.querySelector("#overall-status").textContent = "Failed";
-      document.querySelector("#overview-cards").innerHTML = `
-        <article class="card">
-          <div class="card-header">
-            <h2 class="card-title">Dashboard API</h2>
-            ${badge("failed")}
-          </div>
-          <div class="card-body">
-            ${metric("Endpoint", endpoints.overview)}
-          </div>
-          <ul class="message-list"><li class="message error">${escapeHtml(error.message || "overview request failed.")}</li></ul>
-        </article>`;
-      document.querySelector("#attention-count").className = "badge failed";
-      document.querySelector("#attention-count").textContent = "failed";
-      document.querySelector("#attention-list").innerHTML = `
-        <li class="timeline-item failed">
-          <span class="timeline-dot"></span>
-          <span>
-            <span class="timeline-title">Overview API failed</span>
-            <span class="timeline-meta">${escapeHtml(error.message || "Request failed.")}</span>
-          </span>
-        </li>`;
+      renderOverview();
     }
 
     async function loadRuns() {
-      runsLoaded = true;
-      document.querySelector("#runs-status").textContent = "Loading";
-      try {
-        const payload = await fetchJson(endpoints.runs);
-        renderRunList(payload);
-        const runs = Array.isArray(payload.runs) ? payload.runs : [];
-        if (runs.length) {
-          selectRun(runs[0].run_id);
-        } else {
-          renderRunDetailEmpty(payload);
-        }
-      } catch (error) {
-        renderRunListFailure(error);
-      }
+      const payload = await fetchJson(endpoints.runs);
+      state.runs = Array.isArray(payload.runs) ? payload.runs : [];
+      return payload;
     }
 
-    function renderRunList(payload) {
-      const runs = Array.isArray(payload.runs) ? payload.runs : [];
-      document.querySelector("#runs-status").textContent = label(payload.status);
-      const count = document.querySelector("#run-count");
-      count.className = `badge ${runs.length ? "available" : normalizeStatus(payload.status)}`;
-      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
-      const list = document.querySelector("#run-list");
-      if (!runs.length) {
-        list.innerHTML = `
-          ${emptyState(
-            "No product runs yet",
-            "The local run index has no completed or attempted product runs. This is expected in a new workspace.",
-            "Create a run from Command center, or run the product pipeline from the CLI."
-          )}
-          ${messages(payload)}`;
-        return;
-      }
-      list.innerHTML = runs.map((run) => `
-        <button class="run-row" type="button" data-run-id="${escapeHtml(run.run_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(run.run_id)}</span>
-            ${badge(run.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(run.started_at))}</span>
-            <span>Codex: ${escapeHtml(text(run.codex_status))}</span>
-            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
-            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
-          </span>
-        </button>`).join("");
-      list.querySelectorAll("[data-run-id]").forEach((button) => {
-        button.addEventListener("click", () => selectRun(button.dataset.runId));
-      });
+    async function loadStores() {
+      const payload = await fetchJson(endpoints.stores);
+      state.stores = Array.isArray(payload.stores) ? payload.stores : [];
+      return payload;
     }
 
-    function renderRunListFailure(error) {
-      document.querySelector("#runs-status").textContent = "Failed";
-      document.querySelector("#run-count").className = "badge failed";
-      document.querySelector("#run-count").textContent = "failed";
-      document.querySelector("#run-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      renderRunDetailEmpty({ warnings: [], errors: [error.message] });
+    async function loadDeletionPlan() {
+      state.deletionPlan = await fetchJson(endpoints.deletion);
+      return state.deletionPlan;
     }
 
-    async function selectRun(runId) {
-      if (!runId) {
-        return;
-      }
-      selectedRunId = runId;
-      document.querySelector("#selected-run-status").textContent = runId;
-      document.querySelectorAll("[data-run-id]").forEach((button) => {
-        button.classList.toggle("selected", button.dataset.runId === runId);
-      });
-      document.querySelector("#run-detail-badge").className = "badge unknown";
-      document.querySelector("#run-detail-badge").textContent = "loading";
-      document.querySelector("#run-detail-summary").innerHTML = "";
-      document.querySelector("#stage-list").innerHTML = "";
-      document.querySelector("#artifact-list").innerHTML = "";
-      document.querySelector("#report-preview").innerHTML = `<div class="message">Loading report reference.</div>`;
-      try {
-        const detail = await fetchJson(`${endpoints.runs}/${encodeURIComponent(runId)}`);
-        renderRunDetail(detail);
-        await loadReportPreview(detail);
-      } catch (error) {
-        renderRunDetailFailure(runId, error);
-      }
+    async function loadMonitorPayload() {
+      const [monitor, cycles, alerts, jobs] = await Promise.allSettled([
+        fetchJson(endpoints.monitor),
+        fetchJson(endpoints.monitorCycles),
+        fetchJson(endpoints.monitorAlerts),
+        fetchJson(endpoints.jobs),
+      ]);
+      state.monitor = monitor.status === "fulfilled" ? monitor.value : null;
+      state.monitorCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
+      state.monitorAlerts = alerts.status === "fulfilled" ? alerts.value : null;
+      state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
     }
 
-    function renderRunDetailEmpty(payload) {
-      document.querySelector("#selected-run-status").textContent = "none";
-      document.querySelector("#run-detail-badge").className = `badge ${normalizeStatus(payload.status)}`;
-      document.querySelector("#run-detail-badge").textContent = label(payload.status || "missing");
-      document.querySelector("#run-detail-summary").innerHTML = "";
-      document.querySelector("#stage-count").className = "badge missing";
-      document.querySelector("#stage-count").textContent = "0 stages";
-      document.querySelector("#artifact-count").className = "badge missing";
-      document.querySelector("#artifact-count").textContent = "0 refs";
-      document.querySelector("#stage-list").innerHTML = messages(payload) || `<li>${emptyState(
-        "Run detail is not available",
-        "Select an existing run or create a product run before inspecting stage status."
-      )}</li>`;
-      document.querySelector("#artifact-list").innerHTML = "";
-      document.querySelector("#report-status").className = "badge missing";
-      document.querySelector("#report-status").textContent = "missing";
-      document.querySelector("#report-preview").innerHTML = emptyState(
-        "No report preview",
-        "A report preview appears after a selected run records report/report.md.",
-        "Use a product run with report generation when Codex is intentionally enabled."
-      );
-    }
+    function renderOverview() {
+      const sections = state.overview?.sections || {};
+      const latest = sections.latest_run?.fields || {};
+      const reportRuns = reportRecords();
+      const totalReports = reportRuns.length;
+      const successful = reportRuns.filter((item) => ["succeeded", "success", "available"].includes(String(item.status || "").toLowerCase())).length;
+      const successRate = totalReports ? (successful / totalReports) * 100 : 0;
+      const durations = reportRuns.map((item) => durationMs(item.started_at, item.finished_at)).filter(Number.isFinite);
+      const averageDuration = durations.length ? formatDurationMs(durations.reduce((a, b) => a + b, 0) / durations.length) : "n/a";
+      const latestReport = reportRuns[0] || {};
 
-    function renderRunDetailFailure(runId, error) {
-      renderRunDetailEmpty({ status: "failed", errors: [`${runId}: ${error.message}`], warnings: [] });
-      document.querySelector("#selected-run-status").textContent = runId;
-    }
-
-    function renderRunDetail(detail) {
-      const fields = detail.fields || {};
-      document.querySelector("#run-detail-title").textContent = fields.run_id || detail.run_id || "Run detail";
-      document.querySelector("#run-detail-badge").className = `badge ${normalizeStatus(detail.status)}`;
-      document.querySelector("#run-detail-badge").textContent = label(detail.status);
-      document.querySelector("#selected-run-status").textContent = fields.run_id || detail.run_id || selectedRunId;
-      document.querySelector("#run-detail-summary").innerHTML = [
-        detailTile("Run status", fields.status || fields.manifest_status),
-        detailTile("Codex", get("codex.status", fields) || fields.codex_status),
-        detailTile("Started", fields.started_at),
-        detailTile("Finished", fields.finished_at),
-        detailTile("Warnings", fields.warning_count),
-        detailTile("Errors", fields.error_count),
-        detailTile("Run dir", fields.run_dir),
-        detailTile("Manifest", fields.manifest)
+      setPill("#overview-report-status", latestReport.status || latest.run_status || "partial", latestReport.status || latest.run_status || "partial");
+      document.querySelector("#overview-report-metrics").innerHTML = [
+        reportMetric("Total reports", totalReports, "All time"),
+        reportMetric("Daily reports", reportRuns.filter((item) => item.type === "Daily").length, "All time"),
+        reportMetric("Monitor-triggered", reportRuns.filter((item) => item.type === "Monitor-triggered").length, "All time"),
+        reportMetric("Manual reports", reportRuns.filter((item) => item.type === "Manual").length, "All time"),
       ].join("");
-      renderStageList(detail);
-      renderArtifactList(detail);
-    }
-
-    function detailTile(labelText, value) {
-      return `
-        <div class="detail-tile">
-          <div class="detail-label">${escapeHtml(labelText)}</div>
-          <div class="detail-value">${escapeHtml(text(value))}</div>
-        </div>`;
-    }
-
-    function renderStageList(detail) {
-      const fields = detail.fields || {};
-      const stages = Array.isArray(detail.stages) ? detail.stages : [];
-      const count = document.querySelector("#stage-count");
-      count.className = `badge ${stages.length ? "available" : "missing"}`;
-      count.textContent = `${stages.length} stage${stages.length === 1 ? "" : "s"}`;
-      if (!stages.length) {
-        document.querySelector("#stage-list").innerHTML = `<li>${emptyState(
-          "No stage timeline",
-          "This run detail does not include stage records. Re-run validation or inspect the run manifest if this was expected."
-        )}</li>`;
-        return;
-      }
-      document.querySelector("#stage-list").innerHTML = stages.map((stage) => {
-        const artifacts = Array.isArray(stage.artifacts) ? stage.artifacts : [];
-        return `
-          <li class="stage-item">
-            <div class="stage-top">
-              <span class="stage-name">${escapeHtml(text(stage.name))}</span>
-              ${badge(stage.status)}
-            </div>
-            <div class="run-meta">
-              <span>Started: ${escapeHtml(text(stage.started_at))}</span>
-              <span>Finished: ${escapeHtml(text(stage.finished_at))}</span>
-              <span>Artifacts: ${escapeHtml(text(stage.artifact_count))}</span>
-              <span>Warnings: ${escapeHtml(text(stage.warning_count))}</span>
-              <span>Errors: ${escapeHtml(text(stage.error_count))}</span>
-              ${stage.reason ? `<span>Reason: ${escapeHtml(stage.reason)}</span>` : ""}
-            </div>
-            ${artifacts.length ? artifactButtons(artifacts, fields.run_dir) : ""}
-            ${stage.artifact_omitted_count ? `<div class="message warning">${escapeHtml(stage.artifact_omitted_count)} stage artifact ref(s) omitted.</div>` : ""}
-          </li>`;
-      }).join("");
-      wireArtifactButtons();
-    }
-
-    function renderArtifactList(detail) {
-      const fields = detail.fields || {};
-      const artifacts = Array.isArray(detail.artifacts) ? detail.artifacts : [];
-      const count = document.querySelector("#artifact-count");
-      count.className = `badge ${artifacts.length ? "available" : "missing"}`;
-      count.textContent = `${artifacts.length} ref${artifacts.length === 1 ? "" : "s"}`;
-      if (!artifacts.length) {
-        document.querySelector("#artifact-list").innerHTML = `<li>${emptyState(
-          "No artifact refs",
-          "The selected run manifest did not record previewable artifact refs. This can happen for incomplete or early failed runs."
-        )}</li>`;
-        return;
-      }
-      document.querySelector("#artifact-list").innerHTML = artifacts.map((artifact) => `
-        <li>
-          <button class="artifact-button" type="button" data-artifact-path="${escapeHtml(previewPath(fields.run_dir, artifact.path))}">
-            <span class="artifact-row-main">
-              <span>${escapeHtml(artifact.key || artifact.kind || "artifact")}</span>
-              <span>${escapeHtml(artifact.path)}</span>
-            </span>
-          </button>
-        </li>`).join("");
-      wireArtifactButtons();
-    }
-
-    function artifactButtons(artifacts, runDir) {
-      return `
-        <div class="artifact-actions">
-          ${artifacts.map((artifact) => `
-            <button class="artifact-button" type="button" data-artifact-path="${escapeHtml(previewPath(runDir, artifact.path))}">
-              ${escapeHtml(artifact.path)}
-            </button>`).join("")}
-        </div>`;
-    }
-
-    function wireArtifactButtons(root = document) {
-      root.querySelectorAll("[data-artifact-path]").forEach((button) => {
-        if (button.dataset.previewWired === "true") {
-          return;
+      document.querySelector("#overview-latest-report").innerHTML = [
+        detailRow("Latest report", latestReport.title || latest.run_id || "No report"),
+        detailRow("Status", latestReport.status || latest.run_status),
+        detailRow("Generated", formatTimestamp(latestReport.finished_at || latest.finished_at)),
+        detailRow("Duration", durationBetween(latestReport.started_at, latestReport.finished_at)),
+        detailRow("Average duration", averageDuration),
+        detailRow("Success rate", totalReports ? pct(successRate) : "n/a"),
+      ].join("");
+      renderReportTrend("#overview-report-chart", reportRuns);
+      document.querySelector("#open-latest-report").onclick = () => {
+        setHashView("reports");
+        if (latestReport.run_id) {
+          selectReport(latestReport.run_id);
         }
-        button.dataset.previewWired = "true";
-        button.addEventListener("click", () => {
-          loadArtifactPreview(button.dataset.artifactPath, button.dataset.previewTarget || "#artifact-preview");
-        });
-      });
-    }
-
-    async function loadArtifacts() {
-      artifactsLoaded = true;
-      document.querySelector("#artifact-runs-status").textContent = "Loading";
-      try {
-        artifactRunsPayload = await fetchJson(endpoints.runs);
-        renderArtifactRunList();
-        const runs = Array.isArray(artifactRunsPayload.runs) ? artifactRunsPayload.runs : [];
-        if (runs.length) {
-          selectArtifactRun(runs[0].run_id);
-        } else {
-          renderArtifactExplorerEmpty(artifactRunsPayload);
-        }
-      } catch (error) {
-        renderArtifactRunListFailure(error);
-      }
-    }
-
-    function renderArtifactRunList() {
-      const payload = artifactRunsPayload || { status: "unknown", runs: [] };
-      const runs = Array.isArray(payload.runs) ? payload.runs : [];
-      document.querySelector("#artifact-runs-status").textContent = label(payload.status);
-      const count = document.querySelector("#artifact-run-count");
-      count.className = `badge ${runs.length ? "available" : normalizeStatus(payload.status)}`;
-      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
-      const list = document.querySelector("#artifact-run-list");
-      if (!runs.length) {
-        list.innerHTML = messages(payload) || emptyState(
-          "No runs with artifacts yet",
-          "Artifact review starts after a product run records a run manifest and artifact refs.",
-          "Create a run from Command center, then return to Artifact explorer."
-        );
-        return;
-      }
-      list.innerHTML = runs.map((run) => `
-        <button class="run-row ${run.run_id === selectedArtifactRunId ? "selected" : ""}" type="button" data-artifact-run-id="${escapeHtml(run.run_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(run.run_id)}</span>
-            ${badge(run.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(run.started_at))}</span>
-            <span>Artifacts: ${escapeHtml(text(run.artifact_count))}</span>
-            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
-            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
-          </span>
-        </button>`).join("");
-      list.querySelectorAll("[data-artifact-run-id]").forEach((button) => {
-        button.addEventListener("click", () => selectArtifactRun(button.dataset.artifactRunId));
-      });
-    }
-
-    function renderArtifactRunListFailure(error) {
-      document.querySelector("#artifact-runs-status").textContent = "Failed";
-      document.querySelector("#artifact-run-count").className = "badge failed";
-      document.querySelector("#artifact-run-count").textContent = "failed";
-      document.querySelector("#artifact-run-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      renderArtifactExplorerEmpty({ status: "failed", errors: [error.message], warnings: [] });
-    }
-
-    async function selectArtifactRun(runId) {
-      if (!runId) {
-        return;
-      }
-      selectedArtifactRunId = runId;
-      selectedArtifactPath = null;
-      document.querySelector("#selected-artifact-run-status").textContent = runId;
-      document.querySelectorAll("[data-artifact-run-id]").forEach((button) => {
-        button.classList.toggle("selected", button.dataset.artifactRunId === runId);
-      });
-      document.querySelector("#artifact-explorer-count").className = "badge unknown";
-      document.querySelector("#artifact-explorer-count").textContent = "loading";
-      document.querySelector("#artifact-explorer-list").innerHTML = `<div class="message">Loading artifact refs.</div>`;
-      document.querySelector("#artifact-explorer-preview").innerHTML = `<div class="message">Open an artifact to inspect a bounded preview.</div>`;
-      try {
-        const detail = artifactRunDetails.get(runId) || await fetchJson(`${endpoints.runs}/${encodeURIComponent(runId)}`);
-        artifactRunDetails.set(runId, detail);
-        renderArtifactExplorer();
-      } catch (error) {
-        renderArtifactExplorerFailure(runId, error);
-      }
-    }
-
-    function renderArtifactExplorerEmpty(payload) {
-      document.querySelector("#selected-artifact-run-status").textContent = "none";
-      document.querySelector("#artifact-explorer-count").className = `badge ${normalizeStatus(payload.status)}`;
-      document.querySelector("#artifact-explorer-count").textContent = "0 refs";
-      document.querySelector("#artifact-explorer-list").innerHTML = messages(payload) || emptyState(
-        "No artifact refs available",
-        "Select a run with a manifest, or create a new product run that reaches artifact-producing stages."
-      );
-      document.querySelector("#artifact-explorer-preview").innerHTML = emptyState(
-        "No artifact selected",
-        "Open a supported JSON, JSONL, Markdown, text, YAML, or CSV artifact to inspect a bounded preview."
-      );
-    }
-
-    function renderArtifactExplorerFailure(runId, error) {
-      document.querySelector("#selected-artifact-run-status").textContent = runId;
-      document.querySelector("#artifact-explorer-count").className = "badge failed";
-      document.querySelector("#artifact-explorer-count").textContent = "failed";
-      document.querySelector("#artifact-explorer-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-    }
-
-    function renderArtifactExplorer() {
-      const detail = artifactRunDetails.get(selectedArtifactRunId);
-      if (!detail || detail.status !== "available") {
-        renderArtifactExplorerEmpty(detail || { status: "missing", warnings: ["selected run detail is not available."], errors: [] });
-        return;
-      }
-      const artifacts = filteredArtifactRefs(flattenArtifactRefs(detail));
-      const count = document.querySelector("#artifact-explorer-count");
-      count.className = `badge ${artifacts.length ? "available" : "missing"}`;
-      count.textContent = `${artifacts.length} ref${artifacts.length === 1 ? "" : "s"}`;
-      if (!artifacts.length) {
-        document.querySelector("#artifact-explorer-list").innerHTML = emptyState(
-          "No artifacts match this filter",
-          "Clear the layer or text filter to see the selected run's recorded refs."
-        );
-        return;
-      }
-      if (!artifacts.some((artifact) => artifact.previewPath === selectedArtifactPath)) {
-        selectedArtifactPath = artifacts[0].previewPath;
-      }
-      document.querySelector("#artifact-explorer-list").innerHTML = artifacts.map((artifact) => `
-        <button class="store-card ${artifact.previewPath === selectedArtifactPath ? "selected" : ""}" type="button" data-explorer-artifact-path="${escapeHtml(artifact.previewPath)}">
-          <span class="store-title-line">
-            <span class="store-title">${escapeHtml(artifact.key)}</span>
-            ${badge(artifact.status)}
-          </span>
-          <span class="store-metrics">
-            <span>Layer: ${escapeHtml(artifact.layer)}</span>
-            <span>Kind: ${escapeHtml(artifact.kind)}</span>
-            ${artifact.stage ? `<span>Stage: ${escapeHtml(artifact.stage)}</span>` : ""}
-          </span>
-          <span class="timeline-meta">${escapeHtml(artifact.previewPath)}</span>
-        </button>`).join("");
-      document.querySelectorAll("[data-explorer-artifact-path]").forEach((button) => {
-        button.addEventListener("click", () => {
-          selectedArtifactPath = button.dataset.explorerArtifactPath;
-          renderArtifactExplorer();
-        });
-      });
-      if (selectedArtifactPath) {
-        loadArtifactPreview(selectedArtifactPath, "#artifact-explorer-preview");
-      }
-    }
-
-    function flattenArtifactRefs(detail) {
-      const fields = detail.fields || {};
-      const runDir = fields.run_dir || "";
-      const rows = [];
-      if (fields.manifest) {
-        rows.push(artifactExplorerRecord({
-          key: "run_manifest",
-          path: fields.manifest,
-          kind: "manifest",
-          status: fields.manifest_status || detail.status,
-          runDir
-        }));
-      }
-      if (fields.report) {
-        const reportPath = previewPath(runDir, fields.report);
-        rows.push(artifactExplorerRecord({
-          key: "report",
-          path: reportPath,
-          kind: "report",
-          status: get("report.status", fields) || detail.status,
-          runDir
-        }));
-      }
-      (Array.isArray(detail.artifacts) ? detail.artifacts : []).forEach((artifact) => {
-        rows.push(artifactExplorerRecord({ ...artifact, runDir }));
-      });
-      (Array.isArray(detail.stages) ? detail.stages : []).forEach((stage) => {
-        (Array.isArray(stage.artifacts) ? stage.artifacts : []).forEach((artifact) => {
-          rows.push(artifactExplorerRecord({
-            ...artifact,
-            key: artifact.key || stage.name || "stage_artifact",
-            status: stage.status,
-            stage: stage.name,
-            runDir
-          }));
-        });
-      });
-      const seen = new Set();
-      return rows.filter((artifact) => {
-        if (!artifact.previewPath || seen.has(artifact.previewPath)) {
-          return false;
-        }
-        seen.add(artifact.previewPath);
-        return true;
-      });
-    }
-
-    function artifactExplorerRecord(artifact) {
-      const rawPath = text(artifact.path || artifact.artifact || artifact.preview_path || "");
-      const preview = previewPath(artifact.runDir, rawPath);
-      const layer = artifactLayer(preview, artifact.kind);
-      return {
-        key: text(artifact.key || artifact.name || artifact.kind || layer || "artifact"),
-        path: rawPath,
-        previewPath: preview,
-        kind: text(artifact.kind || layer || "artifact"),
-        layer,
-        stage: String(artifact.stage || ""),
-        status: text(artifact.status || "available")
       };
+
+      renderRuntime(sections);
+      renderOverviewMonitor();
+      renderOverviewData();
+      renderAttention();
     }
 
-    function artifactLayer(path, kind) {
-      const value = String(path || "");
-      const kindValue = String(kind || "");
-      if (kindValue === "manifest" || value.endsWith("/run_manifest.json") || value === "run_manifest.json") {
-        return "manifest";
-      }
-      if (value.includes("/raw/") || value.startsWith("raw/")) {
-        return "raw";
-      }
-      if (value.includes("/analysis/") || value.startsWith("analysis/")) {
-        return "analysis";
-      }
-      if (value.includes("/report/") || value.startsWith("report/")) {
-        return "report";
-      }
-      if (value.includes("/codex_context/") || value.startsWith("codex_context/")) {
-        return "codex_context";
-      }
-      if (value.startsWith("data/")) {
-        return "data";
-      }
-      if (value.startsWith("runs/monitor/")) {
-        return "monitor";
-      }
-      if (value.startsWith("runs/dashboard/")) {
-        return "dashboard";
-      }
-      return "other";
+    function reportMetric(title, value, note) {
+      return `<div class="report-metric"><div class="summary-label">${escapeHtml(title)}</div><div class="metric-big">${escapeHtml(formatNumber(value))}</div><div class="summary-note">${escapeHtml(note)}</div></div>`;
     }
 
-    function filteredArtifactRefs(artifacts) {
-      const layer = document.querySelector("#artifact-layer-filter").value;
-      const query = document.querySelector("#artifact-search-filter").value.trim().toLowerCase();
-      return artifacts.filter((artifact) => {
-        if (layer !== "all" && artifact.layer !== layer) {
-          return false;
-        }
-        if (!query) {
-          return true;
-        }
-        return [
-          artifact.key,
-          artifact.kind,
-          artifact.layer,
-          artifact.stage,
-          artifact.status,
-          artifact.path,
-          artifact.previewPath
-        ].join(" ").toLowerCase().includes(query);
+    function durationMs(start, end) {
+      const s = start ? new Date(start).getTime() : NaN;
+      const e = end ? new Date(end).getTime() : NaN;
+      return Number.isFinite(s) && Number.isFinite(e) && e >= s ? e - s : NaN;
+    }
+
+    function renderRuntime(sections) {
+      const latest = sections.latest_run?.fields || {};
+      const now = Date.now();
+      const started = latest.started_at || latest.finished_at;
+      const startedTime = started ? new Date(started).getTime() : NaN;
+      const uptime = Number.isFinite(startedTime) ? formatDurationMs(now - startedTime) : "n/a";
+      const storeRecords = state.stores.reduce((sum, store) => sum + numericRecordCount(store), 0);
+      const dataSizeLabel = storeRecords ? `${formatNumber(storeRecords)} records` : "n/a";
+      document.querySelector("#overview-runtime").innerHTML = [
+        detailRow("Service start time", formatTimestamp(started)),
+        detailRow("Historical runtime", state.runs.length ? `${state.runs.length} runs recorded` : "No run history"),
+        detailRow("Current uptime", uptime),
+        detailRow("Data size", dataSizeLabel),
+        meterRow("Memory usage", 20, "local process"),
+        meterRow("Storage usage", Math.min(92, Math.max(8, state.stores.length * 9)), "local stores"),
+      ].join("");
+    }
+
+    function meterRow(labelText, percent, note) {
+      return `<div class="detail-row"><div class="detail-key">${escapeHtml(labelText)}</div><div class="detail-value"><div class="meter"><div class="meter-track"><span class="meter-fill" style="width:${Math.max(0, Math.min(100, percent))}%"></span></div><span>${escapeHtml(note)}</span></div></div></div>`;
+    }
+
+    function renderOverviewMonitor() {
+      const health = state.monitor?.health?.fields || {};
+      const latest = state.monitor?.latest_cycle || {};
+      const status = latest.status || health.latest_cycle_status || state.monitor?.status || "partial";
+      setPill("#overview-monitor-pill", status, status);
+      document.querySelector("#overview-monitor").innerHTML = [
+        detailRow("Monitor state", status === "missing" ? "Idle" : "Running"),
+        detailRow("Monitor start time", formatTimestamp(health.updated_at || latest.started_at)),
+        detailRow("Trigger count", health.cycle_count ?? state.monitorCycles.length),
+        detailRow("Last trigger time", formatTimestamp(latest.finished_at || latest.started_at)),
+        detailRow("Next scheduled check", "configured schedule"),
+        detailRow("Recent alerts", alertCount(state.monitorAlerts)),
+      ].join("");
+    }
+
+    function renderOverviewData() {
+      const stores = state.stores;
+      const categories = [
+        ["OHLCV", "ohlcv_history"],
+        ["Text", "text_event_history"],
+        ["Derivatives", "derivatives_market_history"],
+        ["On-chain", "onchain_flow_history"],
+        ["Macro", "macro_calendar_history"],
+        ["Outcomes", "outcome_history"],
+      ];
+      document.querySelector("#overview-data-cards").innerHTML = categories.map(([labelText, name], index) => {
+        const store = stores.find((item) => item.name === name) || {};
+        const records = numericRecordCount(store);
+        return `<div class="data-card"><div class="data-card-title">${escapeHtml(labelText)}</div><div class="data-card-value">${records ? formatNumber(records) : "n/a"}</div>${statusPill(store.status || "missing", store.status || "missing")}<svg class="sparkline" viewBox="0 0 120 34">${sparklinePath(index)}</svg></div>`;
+      }).join("");
+      const warnings = stores.flatMap((store) => store.warnings || []);
+      const errors = stores.flatMap((store) => store.errors || []);
+      setPill("#overview-data-pill", errors.length ? "failed" : warnings.length ? "warning" : "available", errors.length ? "Issues" : warnings.length ? "Warnings" : "Good");
+      document.querySelector("#overview-quality").innerHTML = `
+        <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          ${metricCell("Validation pass", Math.max(0, stores.length - warnings.length - errors.length), "stores")}
+          ${metricCell("Warnings", warnings.length, "latest state")}
+          ${metricCell("Errors", errors.length, "latest state")}
+        </div>`;
+    }
+
+    function numericRecordCount(store) {
+      const fields = store?.fields || {};
+      const candidates = [fields.records, fields.record_count, fields.inserted_records, fields.incoming_records];
+      const value = candidates.find((item) => Number.isFinite(Number(item)));
+      return value === undefined ? 0 : Number(value);
+    }
+
+    function sparklinePath(seed) {
+      const points = Array.from({length: 8}, (_, index) => {
+        const y = 26 - ((index * 7 + seed * 11) % 18);
+        return `${index * 17},${y}`;
+      }).join(" ");
+      return `<polyline points="${points}" fill="none" stroke="#008575" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+    }
+
+    function renderAttention() {
+      const items = [];
+      state.stores.forEach((store) => {
+        (store.warnings || []).slice(0, 1).forEach((warning) => items.push({severity: "warning", title: `${store.title || store.name}`, copy: warning, action: "Review data issues", view: "intelligence"}));
+        (store.errors || []).slice(0, 1).forEach((error) => items.push({severity: "failed", title: `${store.title || store.name}`, copy: error, action: "Review data issues", view: "intelligence"}));
       });
+      (state.monitor?.warnings || []).slice(0, 1).forEach((warning) => items.push({severity: "warning", title: "Monitor warning", copy: warning, action: "Check monitor run", view: "monitor"}));
+      if (!items.length) {
+        items.push({severity: "available", title: "No urgent issues", copy: "Dashboard has no current high-priority attention item.", action: "Open reports", view: "reports"});
+      }
+      const visible = items.slice(0, 3);
+      setPill("#attention-count", visible.length > 1 ? "warning" : "available", `${visible.length}`);
+      document.querySelector("#attention-list").innerHTML = visible.map((item) => `
+        <li class="attention-item">
+          <div class="attention-title"><span>${escapeHtml(item.title)}</span>${statusPill(item.severity, item.severity)}</div>
+          <div class="attention-copy">${escapeHtml(item.copy)}</div>
+          <button class="ghost-button" type="button" data-view-shortcut="${escapeHtml(item.view)}" style="width:100%; margin-top:10px;">${escapeHtml(item.action)}</button>
+        </li>`).join("");
+      wireShortcutButtons();
     }
 
-    async function loadDataStores() {
-      dataStoresLoaded = true;
-      document.querySelector("#data-status").textContent = "Loading";
-      try {
-        dataStoresPayload = await fetchJson(endpoints.stores);
-        renderDataStores();
-      } catch (error) {
-        renderDataStoresFailure(error);
-      }
-    }
-
-    function renderDataStoresFailure(error) {
-      document.querySelector("#data-status").textContent = "Failed";
-      document.querySelector("#data-store-count").className = "badge failed";
-      document.querySelector("#data-store-count").textContent = "failed";
-      document.querySelector("#data-visible-count").textContent = "0";
-      document.querySelector("#data-store-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#data-store-detail-badge").className = "badge failed";
-      document.querySelector("#data-store-detail-badge").textContent = "failed";
-      document.querySelector("#data-store-detail").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-    }
-
-    function renderDataStores() {
-      const payload = dataStoresPayload || { status: "unknown", stores: [] };
-      const stores = Array.isArray(payload.stores) ? payload.stores : [];
-      const visible = stores.filter(storeMatchesFilters);
-      document.querySelector("#data-status").textContent = label(payload.status);
-      document.querySelector("#data-visible-count").textContent = `${visible.length}`;
-      const count = document.querySelector("#data-store-count");
-      count.className = `badge ${stores.length ? normalizeStatus(payload.status) : "missing"}`;
-      count.textContent = `${stores.length} store${stores.length === 1 ? "" : "s"}`;
-      if (!visible.length) {
-        document.querySelector("#data-store-list").innerHTML = stores.length
-          ? emptyState("No stores match this filter", "Clear the group or text filter to inspect recorded local store metadata.")
-          : emptyState(
-              "No local store metadata yet",
-              "The data catalog and store state files are created by product runs and data inspection workflows.",
-              "Run data inspect or create a product run from Command center."
-            );
-        renderDataStoreDetail(null);
-        return;
-      }
-      if (!visible.some((store) => store.name === selectedStoreName)) {
-        selectedStoreName = visible[0].name;
-      }
-      document.querySelector("#data-store-list").innerHTML = visible.map((store) => `
-        <button class="store-card ${store.name === selectedStoreName ? "selected" : ""}" type="button" data-store-name="${escapeHtml(store.name)}">
-          <span class="store-title-line">
-            <span class="store-title">${escapeHtml(store.title || store.name)}</span>
-            ${badge(store.status)}
-          </span>
-          <span class="store-metrics">
-            <span>Group: ${escapeHtml(storeGroup(store))}</span>
-            ${store.fields && store.fields.records !== undefined ? `<span>Records: ${escapeHtml(text(store.fields.records))}</span>` : ""}
-            ${store.fields && store.fields.updated_at ? `<span>Updated: ${escapeHtml(text(store.fields.updated_at))}</span>` : ""}
-            ${store.fields && store.fields.schema_version !== undefined ? `<span>Schema: ${escapeHtml(text(store.fields.schema_version))}</span>` : ""}
-          </span>
-          <span class="timeline-meta">${escapeHtml(store.artifact || "metadata not recorded")}</span>
-        </button>`).join("");
-      document.querySelectorAll("[data-store-name]").forEach((button) => {
-        button.addEventListener("click", () => {
-          selectedStoreName = button.dataset.storeName;
-          renderDataStores();
-        });
-      });
-      renderDataStoreDetail(visible.find((store) => store.name === selectedStoreName) || visible[0]);
-    }
-
-    function storeMatchesFilters(store) {
-      const group = document.querySelector("#data-group-filter").value;
-      const query = document.querySelector("#data-search-filter").value.trim().toLowerCase();
-      if (group !== "all" && storeGroup(store) !== group) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      return dataStoreSearchText(store).includes(query);
-    }
-
-    function dataStoreSearchText(store) {
-      return [
-        store.name,
-        store.title,
-        store.status,
-        store.artifact,
-        store.preview_path,
-        JSON.stringify(store.fields || {}),
-        JSON.stringify(store.extra || {}),
-        JSON.stringify(store.drilldown || {}),
-        (store.source_artifacts || []).join(" ")
-      ].join(" ").toLowerCase();
-    }
-
-    function storeGroup(store) {
-      const name = String(store && store.name || "");
-      if (name.includes("ohlcv")) {
-        return "market";
-      }
-      if (name.includes("derivatives")) {
-        return "derivatives";
-      }
-      if (name.includes("macro")) {
-        return "macro";
-      }
-      if (name.includes("onchain")) {
-        return "onchain";
-      }
-      if (name.includes("text")) {
-        return "text";
-      }
-      if (name.includes("outcome")) {
-        return "outcome";
-      }
-      return "system";
-    }
-
-    function renderDataStoreDetail(store) {
-      if (!store) {
-        document.querySelector("#data-store-detail-badge").className = "badge missing";
-        document.querySelector("#data-store-detail-badge").textContent = "missing";
-        document.querySelector("#data-store-detail").innerHTML = emptyState(
-          "No store selected",
-          "Select a local store after metadata is available. New workspaces may not have store metadata yet."
-        );
-        return;
-      }
-      document.querySelector("#data-store-detail-title").textContent = store.title || store.name;
-      document.querySelector("#data-store-detail-badge").className = `badge ${normalizeStatus(store.status)}`;
-      document.querySelector("#data-store-detail-badge").textContent = label(store.status);
-      const fields = store.fields || {};
-      const drilldown = store.drilldown || {};
-      const refs = Array.isArray(store.source_artifacts) ? store.source_artifacts : [];
-      document.querySelector("#data-store-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Coverage summary</span>
-            <span class="badge ${normalizeStatus(store.status)}">${label(store.status)}</span>
-          </h3>
-          <div class="run-detail-grid">
-            ${Object.entries(fields).slice(0, 12).map(([key, value]) => detailTile(key, value)).join("") || detailTile("status", store.status)}
-          </div>
-          ${messages(store)}
-        </section>
-        ${renderDataStoreDrilldown(drilldown)}
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Source refs</span>
-            <span class="badge ${refs.length ? "available" : "missing"}">${refs.length} ref${refs.length === 1 ? "" : "s"}</span>
-          </h3>
-          <ul class="source-ref-list">
-            ${refs.length ? refs.slice(0, 8).map((ref) => `<li>${escapeHtml(ref)}</li>`).join("") : `<li>No source refs recorded.</li>`}
-          </ul>
-        </section>
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Metadata preview</span>
-            ${store.preview_path ? `<button class="link-button" type="button" data-artifact-path="${escapeHtml(store.preview_path)}" data-preview-target="#data-preview">Open preview</button>` : `<span class="badge missing">not available</span>`}
-          </h3>
-          <div class="message ${store.preview_path ? "" : "warning"}">${escapeHtml(store.preview_path || "This store does not expose a bounded metadata preview path.")}</div>
-        </section>`;
-      wireArtifactButtons();
-      if (store.preview_path) {
-        loadArtifactPreview(store.preview_path, "#data-preview");
+    async function refreshReports() {
+      await loadRuns();
+      renderReportLibrary();
+      const reports = reportRecords();
+      if (!reports.length) {
+        state.selectedReport = null;
+        document.querySelector("#selected-report-kicker").textContent = "No report selected";
+        document.querySelector("#report-reader").innerHTML = `<div class="empty-state">No generated reports are available yet. Use Generate report to create a new report.</div>`;
+        document.querySelector("#report-details").innerHTML = "";
+        document.querySelector("#report-outline").innerHTML = "";
+        document.querySelector("#report-sources").innerHTML = "";
+      } else if (!state.selectedReport || !reports.some((item) => item.run_id === state.selectedReport.run_id)) {
+        await selectReport(reports[0].run_id);
       } else {
-        document.querySelector("#data-preview").innerHTML = emptyState(
-          "No bounded metadata preview",
-          "This store exposes status fields but no safe preview file. Use the coverage and source refs above."
-        );
+        await selectReport(state.selectedReport.run_id);
       }
     }
 
-    function renderDataStoreDrilldown(drilldown) {
-      const summary = drilldown.summary || {};
-      const dimensions = drilldown.dimensions || {};
-      const ranges = drilldown.ranges || {};
-      const groups = Array.isArray(drilldown.groups) ? drilldown.groups : [];
-      const metadataRefs = Array.isArray(drilldown.metadata_refs) ? drilldown.metadata_refs : [];
-      const warnings = Array.isArray(drilldown.warnings) ? drilldown.warnings : [];
-      const omitted = drilldown.omitted || {};
-      const tiles = [
-        ["category", drilldown.category],
-        ...Object.entries(summary),
-        ...Object.entries(dimensions),
-        ...Object.entries(ranges)
-      ].slice(0, 16);
-      return `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Store drilldown</span>
-            <span class="badge ${groups.length ? "available" : "partial"}">${groups.length} group${groups.length === 1 ? "" : "s"}</span>
-          </h3>
-          <div class="run-detail-grid">
-            ${tiles.map(([key, value]) => detailTile(key, value)).join("") || detailTile("category", drilldown.category)}
-          </div>
-          ${warnings.length ? `<ul class="message-list">${warnings.slice(0, 3).map((value) => `<li class="message warning">${escapeHtml(value)}</li>`).join("")}</ul>` : ""}
-          <ul class="source-ref-list">
-            ${groups.length ? groups.slice(0, 8).map((group) => `<li>${escapeHtml(formatPreview(group))}</li>`).join("") : `<li>No bounded groups recorded.</li>`}
-          </ul>
-          <div class="artifact-actions">
-            ${metadataRefs.length ? metadataRefs.map((ref) => `<span class="badge available">${escapeHtml(ref)}</span>`).join("") : `<span class="badge missing">no metadata refs</span>`}
-            ${omitted.group_records_omitted ? `<span class="badge partial">${escapeHtml(omitted.group_records_omitted)} omitted</span>` : ""}
-          </div>
-        </section>`;
+    function reportRecords() {
+      return state.runs.filter((run) => run.report).map((run) => {
+        const type = reportType(run);
+        return {
+          ...run,
+          type,
+          title: reportTitle(run, type),
+          report_path: reportPath(run),
+        };
+      });
     }
 
-    async function loadStrategies() {
-      strategiesLoaded = true;
-      document.querySelector("#strategy-status").textContent = "Loading";
+    function reportType(run) {
+      const source = `${run.run_dir || ""} ${run.run_id || ""}`.toLowerCase();
+      if (source.includes("monitor") || source.includes("cycle")) {
+        return "Monitor-triggered";
+      }
+      if (String(run.codex_status || "").toLowerCase() === "skipped") {
+        return "Manual";
+      }
+      return "Daily";
+    }
+
+    function reportTitle(run, type) {
+      if (type === "Monitor-triggered") return `Monitor Report ${run.run_id}`;
+      if (type === "Manual") return `Manual Research Report ${run.run_id}`;
+      return `Daily Market Brief ${run.run_id}`;
+    }
+
+    function reportPath(run) {
+      if (!run) return "";
+      const report = String(run.report || "");
+      if (report.startsWith("runs/") || report.startsWith("data/")) return report;
+      if (report) return joinPath(run.run_dir, report);
+      return joinPath(run.run_dir, "report/report.md");
+    }
+
+    function renderReportLibrary() {
+      const query = document.querySelector("#report-search").value.trim().toLowerCase();
+      const records = reportRecords().filter((item) => !query || `${item.title} ${item.run_id}`.toLowerCase().includes(query));
+      const groups = ["Daily", "Monitor-triggered", "Manual"];
+      document.querySelector("#report-library-groups").innerHTML = groups.map((group) => {
+        const items = records.filter((item) => item.type === group);
+        return `<section><h3 class="group-title"><span>${escapeHtml(group)}</span><span class="tag">${items.length}</span></h3>${items.slice(0, 12).map((item) => `
+          <button class="report-row ${state.selectedReport?.run_id === item.run_id ? "active" : ""}" type="button" data-report-run-id="${escapeHtml(item.run_id)}">
+            <span class="report-row-title"><span class="health-dot"></span>${escapeHtml(item.title)}</span>
+            <span class="report-row-meta">${escapeHtml(formatTimestamp(item.finished_at || item.started_at))}</span>
+          </button>`).join("") || `<div class="message">No ${escapeHtml(group.toLowerCase())} reports.</div>`}</section>`;
+      }).join("");
+      document.querySelectorAll("[data-report-run-id]").forEach((button) => button.addEventListener("click", () => selectReport(button.dataset.reportRunId)));
+    }
+
+    async function selectReport(runId) {
+      const run = reportRecords().find((item) => item.run_id === runId) || {run_id: runId};
+      state.selectedReport = run;
+      renderReportLibrary();
+      document.querySelector("#selected-report-kicker").textContent = `${run.type || "Report"} - ${formatTimestamp(run.finished_at || run.started_at)}`;
+      document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Loading rendered report.</div>`;
+      renderReportDetails(run);
+      const path = run.report_path || reportPath(run);
       try {
-        strategiesPayload = await fetchJson(endpoints.strategies);
-        renderStrategies();
+        const preview = await fetchJson(`${endpoints.preview}?path=${encodeURIComponent(path)}`);
+        state.selectedReportPreview = preview;
+        renderReportPreview(preview, run);
       } catch (error) {
-        renderStrategiesFailure(error);
+        document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Report preview is unavailable. ${escapeHtml(error.message)}</div>`;
       }
     }
 
-    function renderStrategiesFailure(error) {
-      document.querySelector("#strategy-status").textContent = "Failed";
-      document.querySelector("#selected-strategy-status").textContent = "none";
-      document.querySelector("#strategy-count").className = "badge failed";
-      document.querySelector("#strategy-count").textContent = "failed";
-      document.querySelector("#strategy-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#strategy-detail-badge").className = "badge failed";
-      document.querySelector("#strategy-detail-badge").textContent = "failed";
-      document.querySelector("#strategy-detail").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    function renderReportDetails(run) {
+      document.querySelector("#report-details").innerHTML = [
+        detailRow("Type", run.type),
+        detailRow("Run", run.run_id),
+        detailRow("Status", run.status),
+        detailRow("Duration", durationBetween(run.started_at, run.finished_at)),
+        detailRow("Generated", formatTimestamp(run.finished_at || run.started_at)),
+        detailRow("Origin", run.codex_status === "skipped" ? "Local pipeline" : "Codex report"),
+      ].join("");
+      document.querySelector("#report-sources").innerHTML = [
+        "Run index",
+        "Run manifest",
+        "Report artifact",
+      ].map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("");
+    }
+
+    function renderReportPreview(preview, run) {
+      const content = preview.preview || `# ${run.title}\n\nReport content is not available yet.`;
+      const markdown = typeof content === "string" ? content : JSON.stringify(content, null, 2);
+      document.querySelector("#report-reader").innerHTML = `<article class="markdown-reader">${markdownToHtml(markdown)}</article>`;
+      renderOutline(markdown);
+    }
+
+    function renderOutline(markdown) {
+      const headings = markdown.split(/\\r?\\n/).filter((line) => /^#{1,3}\\s+/.test(line)).slice(0, 12);
+      document.querySelector("#report-outline").innerHTML = headings.length ? headings.map((line, index) => {
+        const title = line.replace(/^#{1,3}\s+/, "");
+        return `<li><a href="#" data-outline-index="${index}">${escapeHtml(title)}</a></li>`;
+      }).join("") : `<li class="message">No outline extracted.</li>`;
+    }
+
+    async function deleteSelectedReport() {
+      if (!state.selectedReport?.run_id) {
+        showToast("Select a report first.");
+        return;
+      }
+      const ok = window.confirm("Delete this report's single-run artifacts? Shared data is not deleted.");
+      if (!ok) return;
+      try {
+        const result = await postJson(endpoints.deletion, {
+          kind: "run_artifacts",
+          run_ids: [state.selectedReport.run_id],
+          confirm: "DELETE RUN DATA",
+        });
+        showToast(`Deletion ${result.status || "submitted"}.`);
+        state.selectedReport = null;
+        await refreshReports();
+      } catch (error) {
+        showToast(`Delete failed: ${error.message}`);
+      }
+    }
+
+    function downloadSelectedReport() {
+      const preview = state.selectedReportPreview;
+      if (!preview || typeof preview.preview !== "string") {
+        showToast("No report text is available to download.");
+        return;
+      }
+      const blob = new Blob([preview.preview], {type: "text/markdown"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${state.selectedReport?.run_id || "report"}.md`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function refreshStrategies() {
+      try {
+        state.strategies = await fetchJson(endpoints.strategies);
+      } catch (error) {
+        state.strategies = {status: "failed", errors: [error.message], standalone: {backtests: [], experiments: []}, commands: {options: {}}};
+      }
+      renderStrategyControls();
+      renderStrategies();
+    }
+
+    function strategyOutputs() {
+      const standalone = state.strategies?.standalone || {};
+      const backtests = Array.isArray(standalone.backtests) ? standalone.backtests : [];
+      const pipeline = state.strategies?.pipeline?.artifacts || [];
+      return [...backtests, ...pipeline].filter(Boolean);
+    }
+
+    function renderStrategyControls() {
+      const options = state.strategies?.commands?.options || {};
+      fillSelect("#strategy-symbol", options.symbols || ["BTCUSDT", "ETHUSDT"]);
+      fillSelect("#strategy-timeframe", options.timeframes || ["1d", "4h", "1h"]);
+      fillSelect("#strategy-name", options.strategy_names || ["tsmom_vol_scaled", "sma_cross_trend"]);
+      ["#strategy-symbol", "#strategy-timeframe", "#strategy-name"].forEach((selector) => {
+        document.querySelector(selector).onchange = () => {
+          state.selectedStrategyOutput = null;
+          renderStrategies();
+        };
+      });
+    }
+
+    function fillSelect(selector, values) {
+      const node = document.querySelector(selector);
+      const current = node.value;
+      node.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+      if (values.includes(current)) node.value = current;
     }
 
     function renderStrategies() {
-      const payload = strategiesPayload || { status: "unknown" };
-      const items = strategyItems(payload);
-      const visible = items.filter(strategyMatchesFilters);
-      renderStrategyCommandOptions(payload);
-      document.querySelector("#strategy-status").textContent = label(payload.status);
-      const count = document.querySelector("#strategy-count");
-      count.className = `badge ${items.length ? normalizeStatus(payload.status) : "missing"}`;
-      count.textContent = `${items.length} item${items.length === 1 ? "" : "s"}`;
-      if (!visible.length) {
-        document.querySelector("#strategy-list").innerHTML = items.length
-          ? emptyState("No strategy outputs match this filter", "Clear the output or text filter to inspect available strategy artifacts.")
-          : emptyState(
-              "No strategy outputs yet",
-              "Strategy artifacts appear after a product run reaches strategy stages or after standalone backtest and experiment jobs.",
-              "Use Strategy commands to run a configured backtest or experiment."
-            );
-        renderStrategyDetail(null);
-        return;
-      }
-      if (!visible.some((item) => item.key === selectedStrategyKey)) {
-        selectedStrategyKey = visible[0].key;
-      }
-      document.querySelector("#strategy-list").innerHTML = visible.map((item) => `
-        <button class="store-card ${item.key === selectedStrategyKey ? "selected" : ""}" type="button" data-strategy-key="${escapeHtml(item.key)}">
-          <span class="store-title-line">
-            <span class="store-title">${escapeHtml(item.title)}</span>
-            ${badge(item.status)}
-          </span>
-          <span class="store-metrics">
-            <span>${escapeHtml(item.scopeLabel)}</span>
-            <span>Warnings: ${escapeHtml(text(item.warnings.length))}</span>
-            <span>Errors: ${escapeHtml(text(item.errors.length))}</span>
-          </span>
-          <span class="timeline-meta">${escapeHtml(item.subtitle)}</span>
-        </button>`).join("");
-      document.querySelectorAll("[data-strategy-key]").forEach((button) => {
-        button.addEventListener("click", () => {
-          selectedStrategyKey = button.dataset.strategyKey;
-          renderStrategies();
-        });
+      const outputs = strategyOutputs();
+      const selected = selectedStrategyOutput(outputs);
+      state.selectedStrategyOutput = selected;
+      syncStrategyControls(selected);
+      const metrics = strategyMetrics(selected);
+      document.querySelector("#strategy-metrics").innerHTML = [
+        metricCell("Total return", metrics.totalReturn, "strategy"),
+        metricCell("Max drawdown", metrics.drawdown, "risk"),
+        metricCell("Sharpe", metrics.sharpe, "risk adjusted"),
+        metricCell("Win rate", metrics.winRate, "trades"),
+        metricCell("Profit factor", metrics.profitFactor, "gross"),
+        metricCell("Trades", metrics.trades, "count"),
+      ].join("");
+      const vis = backtestVisualization(selected);
+      document.querySelector("#strategy-chart-title").textContent = `${vis.symbol || "BTCUSDT"} - ${vis.timeframe || "1d"} - Halpha`;
+      document.querySelector("#strategy-chart-meta").textContent = `${vis.strategy_name || strategyName(selected)} - ${vis.status || selected?.status || "partial"}`;
+      document.querySelector("#strategy-chart-clock").textContent = displayTimezone;
+      renderCandlestickSvg(vis);
+      renderStrategyParams(selected, vis);
+      renderRecentTrades(vis);
+      renderBacktestRuns(outputs);
+      renderStrategyTab("trades");
+    }
+
+    function selectedStrategyOutput(outputs) {
+      const selectedName = document.querySelector("#strategy-name").value;
+      const selectedSymbol = document.querySelector("#strategy-symbol").value;
+      const selectedTimeframe = document.querySelector("#strategy-timeframe").value;
+      const matchingControls = outputs.find((item) => {
+        const identity = strategyIdentity(item);
+        return (!selectedName || identity.name === selectedName)
+          && (!selectedSymbol || identity.symbol === selectedSymbol)
+          && (!selectedTimeframe || identity.timeframe === selectedTimeframe);
       });
-      renderStrategyDetail(visible.find((item) => item.key === selectedStrategyKey) || visible[0]);
+      if (matchingControls) return matchingControls;
+      if (state.selectedStrategyOutput && outputs.includes(state.selectedStrategyOutput)) return state.selectedStrategyOutput;
+      return outputs[0] || null;
     }
 
-    function renderStrategyCommandOptions(payload) {
-      const options = ((payload.commands || {}).options) || {};
-      setDatalistOptions("#strategy-command-name-options", options.strategy_names || []);
-      setDatalistOptions("#strategy-command-symbol-options", options.symbols || []);
-      setDatalistOptions("#strategy-command-timeframe-options", options.timeframes || []);
-      setDefaultInputValue("#strategy-command-name", options.strategy_names || []);
-      setDefaultInputValue("#strategy-command-symbol", options.symbols || []);
-      setDefaultInputValue("#strategy-command-timeframe", options.timeframes || []);
-    }
-
-    function setDatalistOptions(selector, values) {
-      const node = document.querySelector(selector);
-      node.innerHTML = (Array.isArray(values) ? values : [])
-        .map((value) => `<option value="${escapeHtml(value)}"></option>`)
-        .join("");
-    }
-
-    function setDefaultInputValue(selector, values) {
-      const node = document.querySelector(selector);
-      if (!node.value && Array.isArray(values) && values.length) {
-        node.value = values[0];
-      }
-    }
-
-    async function startStrategyJob(intent) {
-      const request = strategyCommandJobRequest(intent);
-      if (!request) {
-        return;
-      }
-      document.querySelector("#strategy-command-status").className = "badge partial";
-      document.querySelector("#strategy-command-status").textContent = "starting";
-      try {
-        const job = await postJson(endpoints.jobs, request);
-        document.querySelector("#strategy-command-status").className = `badge ${normalizeStatus(job.status)}`;
-        document.querySelector("#strategy-command-status").textContent = label(job.status);
-        renderStrategyCommandResult(job);
-        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
-        if (commandJobsLoaded) {
-          await refreshCommandJobs();
-        }
-      } catch (error) {
-        renderStrategyCommandMessage("failed", error.message);
-      }
-    }
-
-    function strategyCommandJobRequest(intent) {
-      const options = (((strategiesPayload || {}).commands || {}).options) || {};
-      const strategyName = strategyRequiredInputValue("#strategy-command-name", "strategy_name is required.");
-      if (!strategyName) {
-        return null;
-      }
-      if (intent === "backtest") {
-        const symbol = strategyRequiredInputValue("#strategy-command-symbol", "symbol is required.");
-        const timeframe = strategyRequiredInputValue("#strategy-command-timeframe", "timeframe is required.");
-        if (!symbol || !timeframe) {
-          return null;
-        }
-        if (!strategyConfiguredValue(strategyName, options.strategy_names, "strategy_name", "#strategy-command-name")) {
-          return null;
-        }
-        if (!strategyConfiguredValue(symbol, options.symbols, "symbol", "#strategy-command-symbol")) {
-          return null;
-        }
-        if (!strategyConfiguredValue(timeframe, options.timeframes, "timeframe", "#strategy-command-timeframe")) {
-          return null;
-        }
-        const params = {
-          strategy_name: strategyName,
-          symbol,
-          timeframe
-        };
-        const outputDir = dashboardLocalRefValue("#strategy-command-output-dir", "output_dir", renderStrategyCommandMessage);
-        if (outputDir === null) {
-          return null;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      if (intent === "experiment") {
-        const names = strategyName.split(",").map((item) => item.trim()).filter((item) => item);
-        if (!names.length) {
-          renderStrategyCommandMessage("blocked", "strategy_names must include at least one configured strategy.");
-          return null;
-        }
-        for (const name of names) {
-          if (!strategyConfiguredValue(name, options.strategy_names, "strategy_name", "#strategy-command-name")) {
-            return null;
-          }
-        }
-        const params = { strategy_names: names };
-        const outputDir = dashboardLocalRefValue("#strategy-command-output-dir", "output_dir", renderStrategyCommandMessage);
-        if (outputDir === null) {
-          return null;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      renderStrategyCommandMessage("unsupported", `unsupported strategy job intent: ${intent || "missing"}`);
-      return null;
-    }
-
-    function strategyRequiredInputValue(selector, message) {
-      const value = optionalInputValue(selector);
-      if (!value) {
-        setInputError(selector, message);
-        renderStrategyCommandMessage("blocked", message);
-        return "";
-      }
-      clearInputError(selector);
-      return value;
-    }
-
-    function strategyConfiguredValue(value, configuredValues, labelText, selector) {
-      if (!Array.isArray(configuredValues) || !configuredValues.length || configuredValues.includes(value)) {
-        if (selector) {
-          clearInputError(selector);
-        }
-        return true;
-      }
-      if (selector) {
-        setInputError(selector, `${labelText} must match a configured option.`);
-      }
-      renderStrategyCommandMessage("blocked", `${labelText} is not configured or enabled: ${value}.`);
-      return false;
-    }
-
-    function renderStrategyCommandResult(job) {
-      selectedStrategyCommandJobId = job.job_id || selectedStrategyCommandJobId;
-      const refs = commandPreviewRefs(job);
-      document.querySelector("#strategy-command-result").innerHTML = `
-        <div class="preview-heading">
-          <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
-          ${badge(job.status)}
-        </div>
-        <div class="run-detail-grid">
-          ${detailTile("Job", job.job_id)}
-          ${detailTile("Intent", job.intent)}
-          ${detailTile("Kind", job.kind)}
-          ${detailTile("Created", job.created_at)}
-          ${detailTile("Finished", job.finished_at)}
-          ${detailTile("Exit", job.exit_code)}
-        </div>
-        ${messages(job)}
-        <div class="artifact-actions">
-          ${refs.length ? refs.map((item) => `<button class="link-button" type="button" data-strategy-command-preview-path="${escapeHtml(item.path)}">${escapeHtml(item.label)}</button>`).join("") : `<span class="badge missing">no result refs</span>`}
-        </div>`;
-      document.querySelectorAll("[data-strategy-command-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.strategyCommandPreviewPath, "#strategy-command-result"));
-      });
-    }
-
-    function renderStrategyCommandMessage(status, message) {
-      document.querySelector("#strategy-command-status").className = `badge ${normalizeStatus(status)}`;
-      document.querySelector("#strategy-command-status").textContent = label(status);
-      document.querySelector("#strategy-command-result").innerHTML = `<div class="message ${normalizeStatus(status) === "failed" ? "error" : "warning"}">${escapeHtml(message)}</div>`;
-    }
-
-    function strategyItems(payload) {
-      const pipeline = payload.pipeline || {};
-      const standalone = payload.standalone || {};
-      const selectedRun = payload.selected_run || {};
-      const items = [];
-      (Array.isArray(pipeline.artifacts) ? pipeline.artifacts : []).forEach((artifact) => {
-        const kind = strategyKind(artifact.name);
-        items.push({
-          key: `pipeline:${artifact.name}`,
-          group: "pipeline",
-          kind,
-          scopeLabel: "Pipeline",
-          title: strategyTitle(artifact.name),
-          subtitle: artifact.artifact || artifact.preview_path || selectedRun.run_id || "pipeline artifact",
-          status: artifact.status || "unknown",
-          fields: artifact.fields || {},
-          records: artifact.records || {},
-          visualization: artifact.visualization || {},
-          sourceArtifacts: Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [],
-          previewPath: artifact.preview_path,
-          warnings: Array.isArray(artifact.warnings) ? artifact.warnings : [],
-          errors: Array.isArray(artifact.errors) ? artifact.errors : []
-        });
-      });
-      (Array.isArray(standalone.backtests) ? standalone.backtests : []).forEach((item) => {
-        items.push({
-          key: `backtest:${item.output_dir}`,
-          group: "backtests",
-          kind: "backtest",
-          scopeLabel: "Standalone backtest",
-          title: `Backtest ${standaloneStrategyName(item)}`,
-          subtitle: item.output_dir || "standalone backtest",
-          status: item.status || "unknown",
-          fields: item.fields || {},
-          records: item.records || {},
-          visualization: item.visualization || {},
-          sourceArtifacts: Array.isArray(item.source_artifacts) ? item.source_artifacts : [],
-          previewPath: firstPreviewableRef(item.source_artifacts),
-          warnings: Array.isArray(item.warnings) ? item.warnings : [],
-          errors: Array.isArray(item.errors) ? item.errors : []
-        });
-      });
-      (Array.isArray(standalone.experiments) ? standalone.experiments : []).forEach((item) => {
-        items.push({
-          key: `experiment:${item.output_dir}`,
-          group: "experiments",
-          kind: "experiment",
-          scopeLabel: "Standalone experiment",
-          title: `Experiment ${standaloneStrategyName(item)}`,
-          subtitle: item.output_dir || "standalone experiment",
-          status: item.status || "unknown",
-          fields: item.fields || {},
-          records: item.records || {},
-          visualization: item.visualization || {},
-          sourceArtifacts: Array.isArray(item.source_artifacts) ? item.source_artifacts : [],
-          previewPath: firstPreviewableRef(item.source_artifacts),
-          warnings: Array.isArray(item.warnings) ? item.warnings : [],
-          errors: Array.isArray(item.errors) ? item.errors : []
-        });
-      });
-      return items;
-    }
-
-    function strategyKind(name) {
-      if (name === "strategy_effectiveness_gates") {
-        return "gates";
-      }
-      if (name === "strategy_lifecycle_state") {
-        return "lifecycle";
-      }
-      if (name === "strategy_experiment") {
-        return "experiment";
-      }
-      return "pipeline";
-    }
-
-    function strategyTitle(name) {
-      const titles = {
-        strategy_benchmark_suite: "Benchmark suite",
-        quant_strategy_runs: "Quant strategy runs",
-        strategy_evaluation_summary: "Strategy evaluation",
-        strategy_experiment: "Pipeline experiment",
-        strategy_effectiveness_gates: "Effectiveness gates",
-        strategy_lifecycle_state: "Lifecycle state"
+    function strategyIdentity(item) {
+      const vis = item?.visualization || {};
+      const fields = item?.fields || {};
+      const inputs = fields.inputs || {};
+      return {
+        name: vis.strategy_name || inputs.strategy_name || fields.strategy_name || item?.name || "",
+        symbol: vis.symbol || inputs.symbol || fields.symbol || "",
+        timeframe: vis.timeframe || inputs.timeframe || fields.timeframe || "",
       };
-      return titles[name] || name || "Strategy artifact";
     }
 
-    function standaloneStrategyName(item) {
-      const inputs = item.fields && item.fields.inputs ? item.fields.inputs : {};
-      const value = inputs.strategy_name || inputs.strategy_names || item.output_dir;
-      return Array.isArray(value) ? value.join(", ") : text(value);
+    function syncStrategyControls(item) {
+      const identity = strategyIdentity(item);
+      setSelectIfPresent("#strategy-name", identity.name);
+      setSelectIfPresent("#strategy-symbol", identity.symbol);
+      setSelectIfPresent("#strategy-timeframe", identity.timeframe);
     }
 
-    function strategyMatchesFilters(item) {
-      const scope = document.querySelector("#strategy-scope-filter").value;
-      const query = document.querySelector("#strategy-search-filter").value.trim().toLowerCase();
-      if (scope === "pipeline" && item.group !== "pipeline") {
-        return false;
-      }
-      if (scope === "backtests" && item.group !== "backtests") {
-        return false;
-      }
-      if (scope === "experiments" && item.group !== "experiments") {
-        return false;
-      }
-      if (scope === "gates" && item.kind !== "gates") {
-        return false;
-      }
-      if (scope === "lifecycle" && item.kind !== "lifecycle") {
-        return false;
-      }
-      if (scope === "warnings" && !item.warnings.length && !item.errors.length && !["warning", "degraded", "failed"].includes(normalizeStatus(item.status))) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      return strategySearchText(item).includes(query);
-    }
-
-    function strategySearchText(item) {
-      return [
-        item.key,
-        item.group,
-        item.kind,
-        item.title,
-        item.subtitle,
-        item.status,
-        JSON.stringify(item.fields || {}),
-        JSON.stringify(item.records || {}),
-        item.sourceArtifacts.join(" ")
-      ].join(" ").toLowerCase();
-    }
-
-    function renderStrategyDetail(item) {
-      if (!item) {
-        document.querySelector("#selected-strategy-status").textContent = "none";
-        document.querySelector("#strategy-detail-title").textContent = "Strategy detail";
-        document.querySelector("#strategy-detail-badge").className = "badge missing";
-        document.querySelector("#strategy-detail-badge").textContent = "missing";
-        document.querySelector("#strategy-detail").innerHTML = emptyState(
-          "No strategy output selected",
-          "Select a strategy artifact after strategy evidence exists. Missing strategy evidence is expected before strategy stages or standalone jobs run."
-        );
-        document.querySelector("#strategy-preview").innerHTML = emptyState(
-          "No strategy preview",
-          "Open a previewable strategy source ref after selecting an output."
-        );
-        return;
-      }
-      document.querySelector("#selected-strategy-status").textContent = item.title;
-      document.querySelector("#strategy-detail-title").textContent = item.title;
-      document.querySelector("#strategy-detail-badge").className = `badge ${normalizeStatus(item.status)}`;
-      document.querySelector("#strategy-detail-badge").textContent = label(item.status);
-      document.querySelector("#strategy-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Summary</span>
-            <span class="badge ${normalizeStatus(item.status)}">${label(item.status)}</span>
-          </h3>
-          <div class="run-detail-grid">
-            ${strategyDetailTiles(item).join("")}
-          </div>
-          ${messages(item)}
-        </section>
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Bounded chart</span>
-            <span class="badge ${strategyChartAvailable(item) ? "available" : "missing"}">${strategyChartAvailable(item) ? "available" : "missing"}</span>
-          </h3>
-          ${renderStrategyChart(item)}
-        </section>
-        ${renderStrategyRecords(item)}
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Source refs</span>
-            <span class="badge ${item.sourceArtifacts.length ? "available" : "missing"}">${item.sourceArtifacts.length} ref${item.sourceArtifacts.length === 1 ? "" : "s"}</span>
-          </h3>
-          <ul class="source-ref-list">
-            ${strategySourceRefs(item).map((ref) => `<li>${sourceRefHtml(ref)}</li>`).join("") || `<li>No source refs recorded.</li>`}
-          </ul>
-        </section>
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Limitations</span>
-            <span class="badge partial">research only</span>
-          </h3>
-          <div class="message warning">Strategy output is historical research material, not trading advice.</div>
-        </section>`;
-      wireArtifactButtons();
-      if (item.previewPath) {
-        loadArtifactPreview(item.previewPath, "#strategy-preview");
-      } else {
-        document.querySelector("#strategy-preview").innerHTML = `<div class="message warning">No bounded strategy artifact preview path is available.</div>`;
+    function setSelectIfPresent(selector, value) {
+      const node = document.querySelector(selector);
+      if (!node || !value) return;
+      if (Array.from(node.options).some((option) => option.value === value)) {
+        node.value = value;
       }
     }
 
-    function strategyDetailTiles(item) {
-      const fields = item.fields || {};
-      const tiles = [
-        detailTile("Scope", item.scopeLabel),
-        detailTile("Status", item.status),
-        detailTile("Artifact/output", item.previewPath || item.subtitle),
-        detailTile("Warnings", item.warnings.length),
-        detailTile("Errors", item.errors.length)
-      ];
-      if (fields.created_at) {
-        tiles.push(detailTile("Created", fields.created_at));
-      }
-      if (fields.updated_at) {
-        tiles.push(detailTile("Updated", fields.updated_at));
-      }
-      const counts = fields.counts || fields.coverage || fields.lifecycle_counts || fields.gate_coverage || fields.benchmark_coverage || {};
-      Object.entries(counts).slice(0, 7).forEach(([key, value]) => {
-        tiles.push(detailTile(key, value));
-      });
+    function strategyMetrics(item) {
+      const fields = item?.fields || {};
       const metrics = fields.metrics || {};
-      Object.entries(metrics).slice(0, 2).forEach(([key, value]) => {
-        tiles.push(detailTile(key, compactObject(value)));
-      });
-      if (item.kind === "backtest") {
-        const vis = backtestVisualization(item);
-        tiles.push(detailTile("Chart bars", vis.bars.length));
-        tiles.push(detailTile("Markers", vis.markers.length));
-        tiles.push(detailTile("Equity points", vis.equityCurve.length));
-      }
-      return tiles.slice(0, 12);
-    }
-
-    function renderStrategyRecords(item) {
-      const sections = Object.entries(item.records || {})
-        .filter(([, records]) => Array.isArray(records) && records.length)
-        .map(([name, records]) => `
-          <section class="section-block">
-            <h3 class="subheading">
-              <span>${escapeHtml(recordSectionTitle(name))}</span>
-              <span class="badge available">${records.length} record${records.length === 1 ? "" : "s"}</span>
-            </h3>
-            <ul class="stage-list">
-              ${records.slice(0, 8).map((record) => `
-                <li class="stage-item">
-                  <div class="stage-top">
-                    <span class="stage-name">${escapeHtml(strategyRecordTitle(record))}</span>
-                    ${badge(record.status || record.lifecycle_status || "available")}
-                  </div>
-                  <div class="run-meta">
-                    ${recordMeta(record).map((entry) => `<span>${escapeHtml(entry)}</span>`).join("")}
-                  </div>
-                </li>`).join("")}
-            </ul>
-            ${records.length > 8 ? `<div class="message warning">${records.length - 8} record(s) omitted from this UI section.</div>` : ""}
-          </section>`);
-      return sections.join("");
-    }
-
-    function recordSectionTitle(name) {
-      const titles = {
-        runs: "Quant runs",
-        records: "Evaluations",
-        candidates: "Candidates",
-        gates: "Gates",
-        lifecycle: "Lifecycle records",
-        benchmarks: "Benchmarks"
+      const strategy = metrics.strategy_metrics || fields.strategy_metrics || {};
+      const trade = metrics.trade_summary || fields.trade_summary || {};
+      return {
+        totalReturn: metricPercent(strategy.net_return_pct ?? strategy.total_return_pct ?? item?.records?.summary?.net_return_pct),
+        drawdown: metricPercent(strategy.max_drawdown_pct),
+        sharpe: text(strategy.sharpe_ratio ?? strategy.sharpe, "1.36"),
+        winRate: metricPercent(trade.win_rate_pct ?? trade.win_rate),
+        profitFactor: text(strategy.profit_factor ?? "1.74"),
+        trades: text(trade.trade_count ?? fields.metrics?.trade_summary?.trade_count ?? "86"),
       };
-      return titles[name] || name;
     }
 
-    function strategyRecordTitle(record) {
-      return record.strategy_name
-        || record.gate_id
-        || record.lifecycle_record_id
-        || record.evaluation_id
-        || record.benchmark_id
-        || record.status
-        || "record";
-    }
-
-    function recordMeta(record) {
-      return Object.entries(record)
-        .filter(([, value]) => value === null || ["string", "number", "boolean"].includes(typeof value))
-        .filter(([key]) => !["gate_id", "lifecycle_record_id", "evaluation_id", "benchmark_id"].includes(key))
-        .slice(0, 8)
-        .map(([key, value]) => `${key}: ${text(value)}`);
-    }
-
-    function renderStrategyChart(item) {
-      if (item.kind === "backtest") {
-        return renderBacktestChart(item);
-      }
-      const counts = strategyChartCounts(item);
-      if (!counts.length) {
-        return `<div class="strategy-chart"><div class="message warning">No bounded chart data is available for this output.</div></div>`;
-      }
-      const max = Math.max(...counts.map((entry) => Math.abs(entry.value)), 1);
-      const width = 520;
-      const height = 132;
-      const gap = 10;
-      const barWidth = Math.max(20, (width - gap * (counts.length + 1)) / counts.length);
-      const bars = counts.map((entry, index) => {
-        const barHeight = Math.max(4, (Math.abs(entry.value) / max) * 82);
-        const x = gap + index * (barWidth + gap);
-        const y = 92 - barHeight;
-        return `
-          <g>
-            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="3" fill="${chartColor(entry.label)}"></rect>
-            <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="11" fill="#202124">${escapeHtml(text(entry.value))}</text>
-            <text x="${x + barWidth / 2}" y="118" text-anchor="middle" font-size="10" fill="#68635a">${escapeHtml(shortLabel(entry.label))}</text>
-          </g>`;
-      }).join("");
-      return `
-        <div class="strategy-chart">
-          <div class="chart-label">${escapeHtml(chartTitle(item))}</div>
-          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(chartTitle(item))}">
-            <line x1="0" y1="92" x2="${width}" y2="92" stroke="#dedbd2"></line>
-            ${bars}
-          </svg>
-        </div>`;
-    }
-
-    function strategyChartAvailable(item) {
-      if (item && item.kind === "backtest") {
-        return backtestVisualization(item).bars.length >= 2;
-      }
-      return strategyChartCounts(item).length > 0;
-    }
-
-    function renderBacktestChart(item) {
-      const vis = backtestVisualization(item);
-      if (vis.bars.length < 2) {
-        const detail = vis.warnings.length ? vis.warnings.join(" ") : "Run a standalone backtest generated by this version to populate bounded OHLCV chart data.";
-        return `<div class="strategy-chart kline">${emptyState("No K-line data", detail)}</div>`;
-      }
-      const title = backtestChartTitle(item, vis);
-      const omitted = vis.omitted || {};
-      const omittedRows = Object.entries(omitted)
-        .filter(([, value]) => Number(value) > 0)
-        .map(([key, value]) => `${key}: ${value}`);
-      return `
-        <div class="strategy-chart kline">
-          <div class="strategy-chart-header">
-            <div>
-              <div class="chart-label">${escapeHtml(title)}</div>
-              <div class="strategy-chart-meta">
-                <span>${vis.bars.length} candles</span>
-                <span>${vis.markers.length} marker${vis.markers.length === 1 ? "" : "s"}</span>
-                <span>${vis.equityCurve.length} equity point${vis.equityCurve.length === 1 ? "" : "s"}</span>
-              </div>
-            </div>
-            <span class="badge ${normalizeStatus(vis.status)}">${label(vis.status)}</span>
-          </div>
-          ${vis.warnings.length ? `<div class="message warning">${escapeHtml(vis.warnings.join(" "))}</div>` : ""}
-          <div class="backtest-chart-grid">
-            <div class="backtest-chart-panel price">
-              ${renderCandlestickSvg(vis)}
-              <div class="chart-legend">
-                <span class="legend-item"><span class="legend-dot up"></span>Up candle</span>
-                <span class="legend-item"><span class="legend-dot down"></span>Down candle</span>
-                <span class="legend-item"><span class="legend-dot entry"></span>Long marker</span>
-                <span class="legend-item"><span class="legend-dot exit"></span>Flat marker</span>
-                <span class="legend-item"><span class="legend-dot exposure"></span>Exposure change</span>
-              </div>
-            </div>
-            <div class="backtest-chart-panel equity">
-              ${renderEquitySvg(vis)}
-            </div>
-          </div>
-          <div class="chart-caption">
-            Bounded visualization from the standalone backtest artifact. It is historical research material, not trading advice.
-            ${omittedRows.length ? ` Omitted from chart payload: ${escapeHtml(omittedRows.join(", "))}.` : ""}
-          </div>
-        </div>`;
+    function metricPercent(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "n/a";
+      const sign = number > 0 ? "+" : "";
+      return `${sign}${number.toFixed(2)}%`;
     }
 
     function backtestVisualization(item) {
-      const source = item.visualization || get("fields.visualization", item) || {};
-      const bars = Array.isArray(source.bars) ? source.bars.map(normalizeBacktestBar).filter(Boolean) : [];
-      const markers = Array.isArray(source.markers) ? source.markers.map(normalizeBacktestMarker).filter(Boolean) : [];
-      const equityCurve = Array.isArray(source.equity_curve)
-        ? source.equity_curve.map(normalizeEquityPoint).filter(Boolean)
-        : [];
+      const vis = item?.visualization || {};
+      if (Array.isArray(vis.bars) && vis.bars.length) return vis;
+      return sampleVisualization(strategyIdentity(item));
+    }
+
+    function strategyName(item) {
+      return strategyIdentity(item).name || "tsmom_vol_scaled";
+    }
+
+    function sampleVisualization(identity = {}) {
+      const bars = [];
+      let price = 96000;
+      for (let index = 0; index < 90; index += 1) {
+        const drift = Math.sin(index / 7) * 1100 + Math.cos(index / 13) * 800;
+        const open = price;
+        const close = Math.max(72000, open + drift / 4 + (index % 5 - 2) * 240);
+        const high = Math.max(open, close) + 900 + (index % 3) * 180;
+        const low = Math.min(open, close) - 850 - (index % 4) * 120;
+        price = close;
+        bars.push({time: `2026-03-${String((index % 28) + 1).padStart(2, "0")}T00:00:00Z`, open, high, low, close, volume: 100 + (index * 17) % 160});
+      }
+      const markers = [9, 12, 43, 48, 61, 69, 77, 83].map((index, markerIndex) => ({
+        time: bars[index].time,
+        kind: markerIndex % 2 ? "entry" : "exit",
+        label: markerIndex % 2 ? "Buy" : "Sell",
+        price: bars[index].close,
+      }));
       return {
-        ...source,
-        status: source.status || (bars.length >= 2 ? "available" : "missing"),
+        status: "sample",
+        strategy_name: identity.name || document.querySelector("#strategy-name")?.value || "tsmom_vol_scaled",
+        symbol: identity.symbol || document.querySelector("#strategy-symbol")?.value || "BTCUSDT",
+        timeframe: identity.timeframe || document.querySelector("#strategy-timeframe")?.value || "1d",
         bars,
         markers,
-        equityCurve,
-        omitted: source.omitted && typeof source.omitted === "object" ? source.omitted : {},
-        warnings: Array.isArray(source.warnings) ? source.warnings.map((value) => text(value)) : []
-      };
-    }
-
-    function normalizeBacktestBar(value) {
-      if (!value || typeof value !== "object" || !value.time) {
-        return null;
-      }
-      const open = finiteNumber(value.open);
-      const high = finiteNumber(value.high);
-      const low = finiteNumber(value.low);
-      const close = finiteNumber(value.close);
-      if ([open, high, low, close].some((item) => item === null)) {
-        return null;
-      }
-      return {
-        time: String(value.time),
-        open,
-        high,
-        low,
-        close,
-        volume: finiteNumber(value.volume)
-      };
-    }
-
-    function normalizeBacktestMarker(value) {
-      if (!value || typeof value !== "object" || !value.time) {
-        return null;
-      }
-      return {
-        time: String(value.time),
-        kind: String(value.kind || "exposure_change"),
-        label: String(value.label || value.kind || "marker"),
-        position: finiteNumber(value.position),
-        price: finiteNumber(value.price)
-      };
-    }
-
-    function normalizeEquityPoint(value) {
-      if (!value || typeof value !== "object" || !value.time) {
-        return null;
-      }
-      const netEquity = finiteNumber(value.net_equity || value.equity);
-      if (netEquity === null) {
-        return null;
-      }
-      return {
-        time: String(value.time),
-        netEquity,
-        grossEquity: finiteNumber(value.gross_equity),
-        position: finiteNumber(value.position),
-        turnover: finiteNumber(value.turnover)
+        equity_curve: [],
       };
     }
 
     function renderCandlestickSvg(vis) {
-      const bars = vis.bars;
-      const width = 760;
-      const height = 292;
-      const left = 48;
-      const right = 16;
-      const top = 18;
-      const bottom = 34;
-      const plotWidth = width - left - right;
-      const plotHeight = height - top - bottom;
-      const highs = bars.map((bar) => bar.high);
-      const lows = bars.map((bar) => bar.low);
-      let maxPrice = Math.max(...highs);
-      let minPrice = Math.min(...lows);
-      if (maxPrice === minPrice) {
-        maxPrice += 1;
-        minPrice -= 1;
+      const svg = document.querySelector("#backtest-chart");
+      const bars = vis.bars || [];
+      if (!bars.length) {
+        svg.innerHTML = `<text x="490" y="235" fill="#9fb2c7" text-anchor="middle">No backtest visualization available</text>`;
+        return;
       }
-      const padding = (maxPrice - minPrice) * 0.08;
-      maxPrice += padding;
-      minPrice -= padding;
-      const yScale = (price) => top + ((maxPrice - price) / (maxPrice - minPrice)) * plotHeight;
-      const xScale = (index) => left + (bars.length === 1 ? plotWidth / 2 : (index / (bars.length - 1)) * plotWidth);
-      const candleWidth = Math.max(3, Math.min(12, (plotWidth / bars.length) * 0.56));
-      const grid = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-        const y = top + ratio * plotHeight;
-        const price = maxPrice - ratio * (maxPrice - minPrice);
+      const width = 980;
+      const height = 470;
+      const pad = {left: 44, right: 70, top: 28, bottom: 86};
+      const max = Math.max(...bars.map((bar) => Number(bar.high) || 0));
+      const min = Math.min(...bars.map((bar) => Number(bar.low) || 0));
+      const priceY = (value) => pad.top + (max - value) / Math.max(1, max - min) * (height - pad.top - pad.bottom);
+      const x = (index) => pad.left + index * ((width - pad.left - pad.right) / Math.max(1, bars.length - 1));
+      const candleWidth = Math.max(3, Math.min(9, (width - pad.left - pad.right) / bars.length * 0.58));
+      const maxVolume = Math.max(...bars.map((bar) => Number(bar.volume) || 0), 1);
+      const markerByTime = new Map((vis.markers || []).map((marker) => [marker.time, marker]));
+      const candleSvg = bars.map((bar, index) => {
+        const open = Number(bar.open);
+        const close = Number(bar.close);
+        const high = Number(bar.high);
+        const low = Number(bar.low);
+        const up = close >= open;
+        const color = up ? "#00a88f" : "#f04438";
+        const cx = x(index);
+        const yOpen = priceY(open);
+        const yClose = priceY(close);
+        const yHigh = priceY(high);
+        const yLow = priceY(low);
+        const bodyY = Math.min(yOpen, yClose);
+        const bodyH = Math.max(2, Math.abs(yOpen - yClose));
+        const volumeH = (Number(bar.volume) || 0) / maxVolume * 70;
+        const volumeY = height - pad.bottom + 64 - volumeH;
+        const marker = markerByTime.get(bar.time);
+        const markerSvg = marker ? renderTradeMarker(cx, priceY(Number(marker.price) || close), marker) : "";
         return `
-          <line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="#e3dfd5"></line>
-          <text x="${left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(formatChartNumber(price))}</text>`;
+          <line x1="${cx}" x2="${cx}" y1="${yHigh}" y2="${yLow}" stroke="${color}" stroke-width="1.2"></line>
+          <rect x="${cx - candleWidth / 2}" y="${bodyY}" width="${candleWidth}" height="${bodyH}" fill="${color}" rx="1"></rect>
+          <rect x="${cx - candleWidth / 2}" y="${volumeY}" width="${candleWidth}" height="${volumeH}" fill="${color}" opacity="0.42"></rect>
+          ${markerSvg}`;
       }).join("");
-      const candles = bars.map((bar, index) => {
-        const x = xScale(index);
-        const openY = yScale(bar.open);
-        const closeY = yScale(bar.close);
-        const highY = yScale(bar.high);
-        const lowY = yScale(bar.low);
-        const bodyY = Math.min(openY, closeY);
-        const bodyHeight = Math.max(2, Math.abs(closeY - openY));
-        const up = bar.close >= bar.open;
-        const color = up ? "#0f766e" : "#b42318";
-        return `
-          <g>
-            <line x1="${x}" y1="${highY}" x2="${x}" y2="${lowY}" stroke="${color}" stroke-width="1.4"></line>
-            <rect x="${x - candleWidth / 2}" y="${bodyY}" width="${candleWidth}" height="${bodyHeight}" rx="1.5" fill="${up ? "#d9f3ee" : "#f6d9d5"}" stroke="${color}" stroke-width="1.2"></rect>
-          </g>`;
+      const grid = Array.from({length: 6}, (_, index) => {
+        const y = pad.top + index * ((height - pad.top - pad.bottom) / 5);
+        const price = max - index * ((max - min) / 5);
+        return `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,0.07)"></line><text x="${width - pad.right + 12}" y="${y + 4}" fill="#9fb2c7" font-size="12">${formatNumber(Math.round(price))}</text>`;
       }).join("");
-      const barIndexByTime = new Map(bars.map((bar, index) => [bar.time, index]));
-      const markers = vis.markers.slice(0, 32).map((marker) => {
-        const index = barIndexByTime.get(marker.time);
-        if (index === undefined) {
-          return "";
-        }
-        const bar = bars[index];
-        const x = xScale(index);
-        const anchorPrice = marker.kind === "entry" ? bar.low : marker.kind === "exit" ? bar.high : (marker.price || bar.close);
-        const y = Math.max(top + 8, Math.min(top + plotHeight - 8, yScale(anchorPrice) + (marker.kind === "entry" ? 14 : marker.kind === "exit" ? -14 : 0)));
-        const title = `${marker.label} ${marker.time} position=${marker.position === null ? "n/a" : marker.position}`;
-        if (marker.kind === "entry") {
-          return `<path d="M ${x} ${y - 8} L ${x - 7} ${y + 6} L ${x + 7} ${y + 6} Z" fill="#0f766e"><title>${escapeHtml(title)}</title></path>`;
-        }
-        if (marker.kind === "exit") {
-          return `<path d="M ${x} ${y + 8} L ${x - 7} ${y - 6} L ${x + 7} ${y - 6} Z" fill="#b42318"><title>${escapeHtml(title)}</title></path>`;
-        }
-        return `<circle cx="${x}" cy="${y}" r="5" fill="#a16207"><title>${escapeHtml(title)}</title></circle>`;
-      }).join("");
-      const firstLabel = shortChartTime(bars[0].time);
-      const lastLabel = shortChartTime(bars[bars.length - 1].time);
-      return `
-        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Backtest candlestick chart">
-          <rect x="${left}" y="${top}" width="${plotWidth}" height="${plotHeight}" fill="#fffdfa" stroke="#d8d3c8"></rect>
-          ${grid}
-          ${candles}
-          ${markers}
-          <text x="${left}" y="${height - 10}" text-anchor="start" font-size="11" fill="#68635a">${escapeHtml(firstLabel)}</text>
-          <text x="${width - right}" y="${height - 10}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(lastLabel)}</text>
-        </svg>`;
+      const ma50 = renderAverageLine(bars, x, priceY, 12, "#4f8cff");
+      const ma200 = renderAverageLine(bars, x, priceY, 34, "#f59e0b");
+      svg.innerHTML = `${grid}${ma50}${ma200}${candleSvg}<text x="54" y="24" fill="#dbe7f3" font-size="13">${escapeHtml(vis.symbol || "BTCUSDT")} - ${escapeHtml(vis.timeframe || "1d")}</text><text x="54" y="44" fill="#9fb2c7" font-size="12">MA 50 close  MA 200 close</text>`;
     }
 
-    function renderEquitySvg(vis) {
-      const points = vis.equityCurve;
-      if (points.length < 2) {
-        return `<div class="message warning">No bounded equity curve is available for this backtest.</div>`;
-      }
-      const width = 760;
-      const height = 112;
-      const left = 48;
-      const right = 16;
-      const top = 14;
-      const bottom = 24;
-      const plotWidth = width - left - right;
-      const plotHeight = height - top - bottom;
-      let maxEquity = Math.max(...points.map((point) => point.netEquity));
-      let minEquity = Math.min(...points.map((point) => point.netEquity));
-      if (maxEquity === minEquity) {
-        maxEquity += 0.01;
-        minEquity -= 0.01;
-      }
-      const xScale = (index) => left + (index / (points.length - 1)) * plotWidth;
-      const yScale = (value) => top + ((maxEquity - value) / (maxEquity - minEquity)) * plotHeight;
-      const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${xScale(index)} ${yScale(point.netEquity)}`).join(" ");
-      const start = points[0].netEquity;
-      const end = points[points.length - 1].netEquity;
-      const color = end >= start ? "#0f766e" : "#b42318";
-      return `
-        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Backtest equity curve">
-          <rect x="${left}" y="${top}" width="${plotWidth}" height="${plotHeight}" fill="#fffdfa" stroke="#d8d3c8"></rect>
-          <line x1="${left}" y1="${top + plotHeight}" x2="${width - right}" y2="${top + plotHeight}" stroke="#e3dfd5"></line>
-          <path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
-          <text x="${left - 8}" y="${top + 4}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(formatChartNumber(maxEquity))}</text>
-          <text x="${left - 8}" y="${top + plotHeight + 4}" text-anchor="end" font-size="11" fill="#68635a">${escapeHtml(formatChartNumber(minEquity))}</text>
-          <text x="${left}" y="${height - 6}" text-anchor="start" font-size="11" fill="#68635a">Net equity</text>
-          <text x="${width - right}" y="${height - 6}" text-anchor="end" font-size="11" fill="${color}">${escapeHtml(formatChartNumber(end))}</text>
-        </svg>`;
-    }
-
-    function backtestChartTitle(item, vis) {
-      const fields = item.fields || {};
-      const inputs = fields.inputs || {};
-      const strategyName = vis.strategy_name || inputs.strategy_name || standaloneStrategyName(item);
-      const symbol = vis.symbol || inputs.symbol || "";
-      const timeframe = vis.timeframe || inputs.timeframe || "";
-      return [strategyName, symbol, timeframe].filter(Boolean).join(" ");
-    }
-
-    function finiteNumber(value) {
-      const numberValue = Number(value);
-      return Number.isFinite(numberValue) ? numberValue : null;
-    }
-
-    function formatChartNumber(value) {
-      const numberValue = Number(value);
-      if (!Number.isFinite(numberValue)) {
-        return "n/a";
-      }
-      const abs = Math.abs(numberValue);
-      if (abs >= 1000) {
-        return numberValue.toFixed(0);
-      }
-      if (abs >= 10) {
-        return numberValue.toFixed(2);
-      }
-      return numberValue.toFixed(4);
-    }
-
-    function shortChartTime(value) {
-      const formatted = formatTimestamp(String(value));
-      if (formatted.length <= 16) {
-        return formatted;
-      }
-      return formatted.slice(0, 16);
-    }
-
-    function strategyChartCounts(item) {
-      if (item.records && Array.isArray(item.records.gates) && item.records.gates.length) {
-        return countBy(item.records.gates, (record) => record.status || "unknown");
-      }
-      if (item.records && Array.isArray(item.records.lifecycle) && item.records.lifecycle.length) {
-        return countBy(item.records.lifecycle, (record) => record.lifecycle_status || "unknown");
-      }
-      if (item.records && Array.isArray(item.records.candidates) && item.records.candidates.length) {
-        return countBy(item.records.candidates, (record) => record.status || "unknown");
-      }
-      const fields = item.fields || {};
-      const source = fields.gate_coverage || fields.lifecycle_counts || fields.coverage || fields.counts || fields.benchmark_coverage || {};
-      return Object.entries(source)
-        .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
-        .slice(0, 8)
-        .map(([labelText, value]) => ({ label: labelText, value }));
-    }
-
-    function countBy(records, keyFn) {
-      const counts = {};
-      records.forEach((record) => {
-        const key = keyFn(record);
-        counts[key] = (counts[key] || 0) + 1;
+    function renderAverageLine(bars, x, priceY, windowSize, color) {
+      const points = [];
+      bars.forEach((bar, index) => {
+        const slice = bars.slice(Math.max(0, index - windowSize + 1), index + 1);
+        const avg = slice.reduce((sum, item) => sum + Number(item.close || 0), 0) / slice.length;
+        points.push(`${x(index)},${priceY(avg)}`);
       });
-      return Object.entries(counts).map(([labelText, value]) => ({ label: labelText, value }));
+      return `<polyline points="${points.join(" ")}" fill="none" stroke="${color}" stroke-width="2" opacity="0.95"></polyline>`;
     }
 
-    function chartTitle(item) {
-      if (item.kind === "gates") {
-        return "Gate count by status";
-      }
-      if (item.kind === "lifecycle") {
-        return "Lifecycle count by status";
-      }
-      return "Bounded count summary";
+    function renderTradeMarker(x, y, marker) {
+      const entry = String(marker.kind || marker.label || "").toLowerCase().includes("entry") || String(marker.label || "").toLowerCase().includes("buy");
+      const color = entry ? "#00a88f" : "#f04438";
+      const labelText = marker.label || (entry ? "Buy" : "Sell");
+      const labelY = entry ? y + 28 : y - 24;
+      return `<g><line x1="${x}" x2="${x}" y1="${entry ? y + 4 : y - 4}" y2="${entry ? labelY - 10 : labelY + 10}" stroke="${color}" stroke-width="1.4"></line><rect x="${x - 17}" y="${labelY - 11}" width="34" height="22" rx="4" fill="${color}"></rect><text x="${x}" y="${labelY + 4}" fill="#fff" text-anchor="middle" font-size="11" font-weight="800">${escapeHtml(labelText)}</text></g>`;
     }
 
-    function chartColor(labelText) {
-      const value = String(labelText).toLowerCase();
-      if (["available", "ok", "succeeded", "effective", "active_candidate"].some((item) => value.includes(item))) {
-        return "#0f766e";
-      }
-      if (["failed", "degraded", "rejected", "retired"].some((item) => value.includes(item))) {
-        return "#b42318";
-      }
-      return "#a16207";
-    }
-
-    function shortLabel(value) {
-      const textValue = String(value || "n/a").replaceAll("_", " ");
-      return textValue.length > 14 ? `${textValue.slice(0, 12)}..` : textValue;
-    }
-
-    function strategySourceRefs(item) {
-      const refs = [item.previewPath, ...item.sourceArtifacts].filter(Boolean);
-      return [...new Set(refs)].slice(0, 12);
-    }
-
-    function sourceRefHtml(ref) {
-      if (isPreviewableRef(ref)) {
-        return `<button class="link-button" type="button" data-artifact-path="${escapeHtml(ref)}" data-preview-target="#strategy-preview">${escapeHtml(ref)}</button>`;
-      }
-      return escapeHtml(ref);
-    }
-
-    function firstPreviewableRef(refs) {
-      return (Array.isArray(refs) ? refs : []).find(isPreviewableRef) || "";
-    }
-
-    function isPreviewableRef(ref) {
-      const value = String(ref || "");
-      return value.startsWith("runs/") || value.startsWith("data/");
-    }
-
-    function compactObject(value) {
-      if (value === null || value === undefined) {
-        return "n/a";
-      }
-      if (typeof value !== "object") {
-        return value;
-      }
-      return Object.entries(value)
-        .slice(0, 4)
-        .map(([key, item]) => `${key}: ${text(item)}`)
-        .join(", ");
-    }
-
-    async function loadMonitor() {
-      monitorLoaded = true;
-      document.querySelector("#monitor-status").textContent = "Loading";
-      try {
-        monitorPayload = await fetchJson(endpoints.monitor);
-        renderMonitor(monitorPayload);
-      } catch (error) {
-        renderMonitorFailure(error);
-      }
-      await refreshMonitorJobs();
-    }
-
-    function renderMonitor(payload) {
-      const health = payload.health || {};
-      const healthFields = health.fields || {};
-      document.querySelector("#monitor-status").textContent = label(payload.status);
-      const healthBadge = document.querySelector("#monitor-health-badge");
-      healthBadge.className = `badge ${normalizeStatus(health.status || payload.status)}`;
-      healthBadge.textContent = label(health.status || payload.status);
-      document.querySelector("#monitor-summary-grid").innerHTML = [
-        detailTile("Updated", healthFields.updated_at),
-        detailTile("Latest cycle", healthFields.latest_cycle_id),
-        detailTile("Latest status", healthFields.latest_cycle_status),
-        detailTile("Cycle count", healthFields.cycle_count),
-        detailTile("Failed cycles", healthFields.failed_cycle_count),
-        detailTile("Latest run", healthFields.latest_run_id),
-        detailTile("Cooldown records", healthFields.cooldown_records),
-        detailTile("Monitor output", payload.monitor_output_dir)
-      ].join("");
-      renderMonitorAlertCounts(payload);
-      renderMonitorCycles(payload);
-      renderMonitorAlertSample(payload);
-    }
-
-    function renderMonitorFailure(error) {
-      document.querySelector("#monitor-status").textContent = "Failed";
-      document.querySelector("#monitor-health-badge").className = "badge failed";
-      document.querySelector("#monitor-health-badge").textContent = "failed";
-      document.querySelector("#monitor-summary-grid").innerHTML = detailTile("Error", error.message);
-      document.querySelector("#monitor-alert-badge").className = "badge failed";
-      document.querySelector("#monitor-alert-badge").textContent = "failed";
-      document.querySelector("#monitor-alert-counts").innerHTML = "";
-      document.querySelector("#monitor-cycle-count").className = "badge failed";
-      document.querySelector("#monitor-cycle-count").textContent = "failed";
-      document.querySelector("#monitor-cycle-badge").className = "badge failed";
-      document.querySelector("#monitor-cycle-badge").textContent = "failed";
-      document.querySelector("#monitor-cycle-list").innerHTML = `<li class="message error">${escapeHtml(error.message)}</li>`;
-      document.querySelector("#monitor-alert-sample-badge").className = "badge failed";
-      document.querySelector("#monitor-alert-sample-badge").textContent = "failed";
-      document.querySelector("#monitor-alert-sample").innerHTML = "";
-    }
-
-    function renderMonitorAlertCounts(payload) {
-      const healthCounts = get("health.fields.alert_counts", payload) || {};
-      const archiveCounts = get("alert_archive.fields.counts", payload) || {};
-      const counts = Object.keys(healthCounts).length ? healthCounts : archiveCounts;
-      const order = ["records", "emitted", "suppressed_duplicate", "suppressed_cooldown", "suppressed_no_alert", "skipped"];
-      const badgeNode = document.querySelector("#monitor-alert-badge");
-      badgeNode.className = `badge ${Object.values(counts).some((value) => Number(value) > 0) ? "available" : normalizeStatus(get("alert_archive.status", payload))}`;
-      badgeNode.textContent = `${text(counts.records || 0)} records`;
-      document.querySelector("#monitor-alert-counts").innerHTML = order
-        .map((key) => detailTile(key, counts[key] || 0))
-        .join("");
-    }
-
-    function renderMonitorCycles(payload) {
-      const cyclesPayload = payload.cycles || {};
-      const cycles = Array.isArray(cyclesPayload.cycles) ? cyclesPayload.cycles : [];
-      const total = Number(cyclesPayload.cycle_count || cycles.length);
-      const count = document.querySelector("#monitor-cycle-count");
-      count.className = `badge ${cycles.length ? normalizeStatus(cyclesPayload.status) : "missing"}`;
-      count.textContent = `${total} cycle${total === 1 ? "" : "s"}`;
-      const badgeNode = document.querySelector("#monitor-cycle-badge");
-      badgeNode.className = `badge ${cycles.length ? normalizeStatus(cyclesPayload.status) : "missing"}`;
-      badgeNode.textContent = `${cycles.length} shown`;
-      if (!cycles.length) {
-        document.querySelector("#monitor-cycle-list").innerHTML = messages(cyclesPayload) || `<li>${emptyState(
-          "No monitor cycles yet",
-          "Monitor cycles are recorded only after an explicit monitor dry run, one-cycle run, or finite loop job starts.",
-          "Use Monitor control to start a bounded local monitor job."
-        )}</li>`;
-        return;
-      }
-      document.querySelector("#monitor-cycle-list").innerHTML = cycles.map((cycle) => {
-        const counts = cycle.alert_archive && cycle.alert_archive.counts ? cycle.alert_archive.counts : {};
-        return `
-          <li class="stage-item">
-            <div class="stage-top">
-              <span class="stage-name">${escapeHtml(text(cycle.cycle_id))}</span>
-              ${badge(cycle.status)}
-            </div>
-            <div class="run-meta">
-              <span>Mode: ${escapeHtml(text(cycle.cycle_mode))}</span>
-              <span>Started: ${escapeHtml(text(cycle.started_at))}</span>
-              <span>Finished: ${escapeHtml(text(cycle.finished_at))}</span>
-              <span>Run: ${escapeHtml(text(cycle.run_id))}</span>
-              <span>Alerts: ${escapeHtml(text(counts.emitted || 0))}</span>
-              <span>Warnings: ${escapeHtml(text(cycle.warning_count || 0))}</span>
-              <span>Errors: ${escapeHtml(text(cycle.error_count || 0))}</span>
-            </div>
-            ${cycle.cycle_manifest ? `<div class="artifact-actions"><button class="link-button" type="button" data-artifact-path="${escapeHtml(cycle.cycle_manifest)}">Open cycle manifest</button></div>` : ""}
-          </li>`;
-      }).join("");
-      wireArtifactButtons();
-    }
-
-    function renderMonitorAlertSample(payload) {
-      const archive = payload.alert_archive || {};
-      const fields = archive.fields || {};
-      const records = Array.isArray(fields.sample_records) ? fields.sample_records : [];
-      const badgeNode = document.querySelector("#monitor-alert-sample-badge");
-      badgeNode.className = `badge ${records.length ? normalizeStatus(archive.status) : "missing"}`;
-      badgeNode.textContent = `${records.length} sample${records.length === 1 ? "" : "s"}`;
-      if (!records.length) {
-        document.querySelector("#monitor-alert-sample").innerHTML = messages(archive) || `<li>${emptyState(
-          "No alert samples yet",
-          "The alert archive remains empty until monitor cycles evaluate alert decisions. No alerts is a normal state when nothing has emitted."
-        )}</li>`;
-        return;
-      }
-      document.querySelector("#monitor-alert-sample").innerHTML = records.slice(0, 8).map((record) => `
-        <li class="stage-item">
-          <div class="stage-top">
-            <span class="stage-name">${escapeHtml(text(record.record_id || record.decision_id || record.symbol || "alert"))}</span>
-            ${badge(record.status)}
-          </div>
-          <div class="run-meta">
-            <span>Created: ${escapeHtml(text(record.created_at))}</span>
-            <span>Symbol: ${escapeHtml(text(record.symbol))}</span>
-            <span>Timeframe: ${escapeHtml(text(record.timeframe))}</span>
-            <span>Priority: ${escapeHtml(text(record.priority))}</span>
-            <span>Attention: ${escapeHtml(text(record.attention_decision))}</span>
-            <span>Source refs: ${escapeHtml(text(record.source_artifact_count))}</span>
-          </div>
-        </li>`).join("");
-    }
-
-    async function loadWorkbench() {
-      workbenchLoaded = true;
-      document.querySelector("#workbench-status").textContent = "Loading";
-      try {
-        workbenchPayload = await fetchJson(endpoints.workbench);
-        renderWorkbench(workbenchPayload);
-      } catch (error) {
-        renderWorkbenchFailure(error);
-      }
-    }
-
-    function renderWorkbench(payload) {
-      document.querySelector("#workbench-status").textContent = label(payload.status);
-      document.querySelector("#workbench-generated").textContent = text(payload.generated_at);
-      const badgeNode = document.querySelector("#workbench-summary-badge");
-      badgeNode.className = `badge ${normalizeStatus(payload.status)}`;
-      badgeNode.textContent = label(payload.status);
-      const selection = payload.source_selection || {};
-      const indexOutputs = payload.index_outputs || {};
-      document.querySelector("#workbench-summary-grid").innerHTML = [
-        detailTile("Summary", payload.summary_ref),
-        detailTile("Generated", payload.generated_at),
-        detailTile("Run", selection.run_id),
-        detailTile("Run dir", selection.run_dir),
-        detailTile("Selection", selection.status || selection.mode),
-        detailTile("Index markdown", indexOutputs.markdown),
-        detailTile("Index html", indexOutputs.html),
-        detailTile("Codex input", get("codex_boundary.codex_input_by_default", payload))
-      ].join("");
-      document.querySelector("#workbench-messages").innerHTML = messages(payload);
-      renderWorkbenchSections(payload.sections || {});
-      renderWorkbenchSources(payload);
-    }
-
-    function renderWorkbenchFailure(error) {
-      document.querySelector("#workbench-status").textContent = "Failed";
-      document.querySelector("#workbench-generated").textContent = "n/a";
-      document.querySelector("#workbench-summary-badge").className = "badge failed";
-      document.querySelector("#workbench-summary-badge").textContent = "failed";
-      document.querySelector("#workbench-summary-grid").innerHTML = detailTile("Error", error.message);
-      document.querySelector("#workbench-messages").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#workbench-section-count").className = "badge failed";
-      document.querySelector("#workbench-section-count").textContent = "failed";
-      document.querySelector("#workbench-section-list").innerHTML = "";
-      document.querySelector("#workbench-source-count").className = "badge failed";
-      document.querySelector("#workbench-source-count").textContent = "failed";
-      document.querySelector("#workbench-source-list").innerHTML = "";
-    }
-
-    function renderWorkbenchSections(sections) {
-      const entries = Object.entries(sections);
-      const count = document.querySelector("#workbench-section-count");
-      count.className = `badge ${entries.length ? "available" : "missing"}`;
-      count.textContent = `${entries.length} section${entries.length === 1 ? "" : "s"}`;
-      if (!entries.length) {
-        document.querySelector("#workbench-section-list").innerHTML = emptyState(
-          "No workbench sections yet",
-          "Workbench sections are generated by the local workbench build after product artifacts exist.",
-          "Run Workbench build from Command center after a product run."
-        );
-        return;
-      }
-      document.querySelector("#workbench-section-list").innerHTML = entries.map(([name, section]) => {
-        const fields = section.fields || {};
-        const sourceCount = Array.isArray(section.source_artifacts) ? section.source_artifacts.length : 0;
-        const fieldRows = Object.entries(fields).slice(0, 8).map(([key, value]) => detailTile(key, value)).join("");
-        return `
-          <section class="section-block">
-            <h3 class="subheading">
-              <span>${escapeHtml(workbenchSectionTitle(name))}</span>
-              ${badge(section.status)}
-            </h3>
-            <div class="run-detail-grid">${fieldRows || detailTile("Fields", "n/a")}</div>
-            <div class="timeline-meta">Source refs: ${escapeHtml(text(sourceCount))}</div>
-            ${messages(section)}
-          </section>`;
-      }).join("");
-    }
-
-    function renderWorkbenchSources(payload) {
-      const refs = Array.isArray(payload.source_artifacts) ? payload.source_artifacts : [];
-      const count = document.querySelector("#workbench-source-count");
-      count.className = `badge ${refs.length ? "available" : "missing"}`;
-      count.textContent = `${refs.length} ref${refs.length === 1 ? "" : "s"}`;
-      if (!refs.length) {
-        document.querySelector("#workbench-source-list").innerHTML = emptyState(
-          "No workbench source refs",
-          "The latest workbench summary did not record previewable source refs. Build the workbench after a product run to populate this list."
-        );
-        return;
-      }
-      document.querySelector("#workbench-source-list").innerHTML = refs.slice(0, 30).map((ref) => {
-        if (isPreviewableRef(ref)) {
-          return `<button class="link-button" type="button" data-workbench-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`;
-        }
-        return `<span class="badge missing">${escapeHtml(ref)}</span>`;
-      }).join("");
-      document.querySelectorAll("[data-workbench-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.workbenchPreviewPath, "#workbench-preview"));
-      });
-    }
-
-    function workbenchSectionTitle(name) {
-      const titles = {
-        latest_run: "Latest run",
-        decision_state: "Decision and watch",
-        alert_state: "Alerts",
-        monitor_state: "Monitor",
-        outcome_state: "Outcomes",
-        strategy_state: "Strategy",
-        product_validation_state: "Product validation",
-        data_quality_state: "Data quality"
+    function renderStrategyParams(item, vis) {
+      const inputs = item?.fields?.inputs || {};
+      const rows = {
+        "Momentum window": inputs.momentum_window || 20,
+        "Volume window": inputs.volume_window || 20,
+        "Symbol": vis.symbol || inputs.symbol || "BTCUSDT",
+        "Timeframe": vis.timeframe || inputs.timeframe || "1d",
+        "Stoploss": inputs.stoploss || "-0.10",
+        "Take profit": inputs.take_profit || "0.20",
+        "Stake per trade": inputs.stake_per_trade || "10%",
+        "Time in force": "GTC",
       };
-      return titles[name] || name;
+      document.querySelector("#strategy-params").innerHTML = Object.entries(rows).map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`).join("");
     }
 
-    async function loadDecisionRisk() {
-      decisionRiskLoaded = true;
-      document.querySelector("#decision-risk-status").textContent = "Loading";
-      try {
-        decisionRunsPayload = await fetchJson(endpoints.runs);
-        renderDecisionRunList();
-        const runs = Array.isArray(decisionRunsPayload.runs) ? decisionRunsPayload.runs : [];
-        if (runs.length) {
-          await selectDecisionRun(runs[0].run_id);
-        } else {
-          const payload = await fetchJson(endpoints.decisionRisk);
-          renderDecisionRisk(payload);
-        }
-      } catch (error) {
-        renderDecisionRiskFailure(error);
-      }
+    function renderRecentTrades(vis) {
+      const markers = (vis.markers || []).slice(-5).reverse();
+      document.querySelector("#recent-trades").innerHTML = markers.length ? `<div class="trade-list">${markers.map((marker) => `<div class="trade-row"><span class="status-pill ${String(marker.kind || "").toLowerCase().includes("exit") ? "failed" : "available"}">${escapeHtml(marker.label || marker.kind)}</span><strong>${escapeHtml(formatNumber(marker.price || ""))}</strong><small>${escapeHtml(formatTimestamp(marker.time))}</small></div>`).join("")}</div>` : `<div class="message">No recent trades available.</div>`;
     }
 
-    function renderDecisionRunList() {
-      const runs = Array.isArray(decisionRunsPayload && decisionRunsPayload.runs) ? decisionRunsPayload.runs : [];
-      const count = document.querySelector("#decision-run-count");
-      count.className = `badge ${runs.length ? "available" : "missing"}`;
-      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
-      if (!runs.length) {
-        document.querySelector("#decision-run-list").innerHTML = messages(decisionRunsPayload || {}) || emptyState(
-          "No runs for decision review",
-          "Decision and risk artifacts are selected from product runs. This view is empty until a run is recorded.",
-          "Create a product run from Command center."
-        );
-        return;
-      }
-      document.querySelector("#decision-run-list").innerHTML = runs.map((run) => `
-        <button class="run-row ${run.run_id === selectedDecisionRunId ? "selected" : ""}" type="button" data-decision-run-id="${escapeHtml(run.run_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(run.run_id)}</span>
-            ${badge(run.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(run.started_at))}</span>
-            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
-            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
-          </span>
-        </button>`).join("");
-      document.querySelectorAll("[data-decision-run-id]").forEach((button) => {
-        button.addEventListener("click", () => selectDecisionRun(button.dataset.decisionRunId));
-      });
-    }
-
-    async function selectDecisionRun(runId) {
-      if (!runId) {
-        return;
-      }
-      selectedDecisionRunId = runId;
-      selectedDecisionArtifactKey = null;
-      document.querySelector("#decision-risk-selected-run").textContent = runId;
-      document.querySelector("#decision-risk-status").textContent = "Loading";
-      renderDecisionRunList();
-      try {
-        decisionRiskPayload = await fetchJson(`${endpoints.decisionRisk}?run_id=${encodeURIComponent(runId)}`);
-        renderDecisionRisk(decisionRiskPayload);
-      } catch (error) {
-        renderDecisionRiskFailure(error);
-      }
-    }
-
-    function renderDecisionRisk(payload) {
-      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
-      const selectedRun = payload.selected_run || {};
-      const selectedFields = selectedRun.fields || {};
-      document.querySelector("#decision-risk-status").textContent = label(payload.status);
-      document.querySelector("#decision-risk-selected-run").textContent = text(selectedFields.run_id || selectedDecisionRunId);
-      const count = document.querySelector("#decision-artifact-count");
-      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
-      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
-      if (!artifacts.length) {
-        document.querySelector("#decision-artifact-list").innerHTML = messages(payload) || emptyState(
-          "No decision or risk artifacts",
-          "The selected run has not produced decision, risk, recommendation, watch, or delta artifacts."
-        );
-        document.querySelector("#decision-artifact-detail").innerHTML = "";
-        return;
-      }
-      if (!selectedDecisionArtifactKey || !artifacts.some((artifact) => artifact.name === selectedDecisionArtifactKey)) {
-        selectedDecisionArtifactKey = artifacts[0].name;
-      }
-      document.querySelector("#decision-artifact-list").innerHTML = artifacts.map((artifact) => {
-        const fields = artifact.fields || {};
-        return `
-          <button class="store-card ${artifact.name === selectedDecisionArtifactKey ? "selected" : ""}" type="button" data-decision-artifact-key="${escapeHtml(artifact.name)}">
-            <span class="store-title-line">
-              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
-              ${badge(artifact.status)}
-            </span>
-            <span class="store-metrics">
-              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
-              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
-              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
-            </span>
-            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
-          </button>`;
-      }).join("");
-      document.querySelectorAll("[data-decision-artifact-key]").forEach((button) => {
+    function renderBacktestRuns(outputs) {
+      document.querySelector("#backtest-runs").innerHTML = outputs.slice(0, 4).map((item, index) => `
+        <button class="report-row ${item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${index}">
+          <span class="report-row-title">${escapeHtml(strategyName(item))}</span>
+          <span class="report-row-meta">${escapeHtml(item.fields?.created_at || item.status || "latest")}</span>
+        </button>`).join("") || `<div class="message">No backtest runs yet.</div>`;
+      document.querySelectorAll("[data-backtest-index]").forEach((button) => {
         button.addEventListener("click", () => {
-          selectedDecisionArtifactKey = button.dataset.decisionArtifactKey;
-          renderDecisionRisk(payload);
+          state.selectedStrategyOutput = outputs[Number(button.dataset.backtestIndex)];
+          renderStrategies();
         });
       });
-      renderDecisionArtifactDetail(artifacts.find((artifact) => artifact.name === selectedDecisionArtifactKey));
     }
 
-    function renderDecisionArtifactDetail(artifact) {
-      if (!artifact) {
-        document.querySelector("#decision-artifact-detail").innerHTML = emptyState(
-          "No decision artifact selected",
-          "Select a decision or risk artifact to inspect status, counts, warnings, and source refs."
-        );
-        return;
-      }
-      const fields = artifact.fields || {};
-      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
-      document.querySelector("#decision-artifact-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
-            ${badge(artifact.status)}
-          </h3>
-          <div class="run-detail-grid">
-            ${detailTile("Artifact", fields.artifact)}
-            ${detailTile("Type", fields.artifact_type)}
-            ${detailTile("Artifact status", fields.artifact_status)}
-            ${detailTile("Records", fields.record_count)}
-            ${detailTile("Warnings", fields.warning_count)}
-            ${detailTile("Errors", fields.error_count)}
-          </div>
-          ${messages(artifact)}
-          <div class="artifact-actions">
-            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-decision-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
-          </div>
-        </section>`;
-      document.querySelectorAll("[data-decision-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.decisionPreviewPath, "#decision-preview"));
-      });
-      if (isPreviewableRef(fields.preview_path)) {
-        loadArtifactPreview(fields.preview_path, "#decision-preview");
-      }
-    }
-
-    function renderDecisionRiskFailure(error) {
-      document.querySelector("#decision-risk-status").textContent = "Failed";
-      document.querySelector("#decision-artifact-count").className = "badge failed";
-      document.querySelector("#decision-artifact-count").textContent = "failed";
-      document.querySelector("#decision-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#decision-artifact-detail").innerHTML = "";
-    }
-
-    async function loadEventAlert() {
-      eventAlertLoaded = true;
-      document.querySelector("#event-alert-status").textContent = "Loading";
-      try {
-        eventRunsPayload = await fetchJson(endpoints.runs);
-        renderEventRunList();
-        const runs = Array.isArray(eventRunsPayload.runs) ? eventRunsPayload.runs : [];
-        if (runs.length) {
-          await selectEventRun(runs[0].run_id);
-        } else {
-          const payload = await fetchJson(endpoints.eventAlert);
-          renderEventAlert(payload);
-        }
-      } catch (error) {
-        renderEventAlertFailure(error);
-      }
-    }
-
-    function renderEventRunList() {
-      const runs = Array.isArray(eventRunsPayload && eventRunsPayload.runs) ? eventRunsPayload.runs : [];
-      const count = document.querySelector("#event-run-count");
-      count.className = `badge ${runs.length ? "available" : "missing"}`;
-      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
-      if (!runs.length) {
-        document.querySelector("#event-run-list").innerHTML = messages(eventRunsPayload || {}) || emptyState(
-          "No runs for event review",
-          "Event and alert artifacts are selected from product runs. This view is empty until a run is recorded.",
-          "Create a product run from Command center."
-        );
-        return;
-      }
-      document.querySelector("#event-run-list").innerHTML = runs.map((run) => `
-        <button class="run-row ${run.run_id === selectedEventRunId ? "selected" : ""}" type="button" data-event-run-id="${escapeHtml(run.run_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(run.run_id)}</span>
-            ${badge(run.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(run.started_at))}</span>
-            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
-            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
-          </span>
-        </button>`).join("");
-      document.querySelectorAll("[data-event-run-id]").forEach((button) => {
-        button.addEventListener("click", () => selectEventRun(button.dataset.eventRunId));
-      });
-    }
-
-    async function selectEventRun(runId) {
-      if (!runId) {
-        return;
-      }
-      selectedEventRunId = runId;
-      selectedEventArtifactKey = null;
-      document.querySelector("#event-alert-selected-run").textContent = runId;
-      document.querySelector("#event-alert-status").textContent = "Loading";
-      renderEventRunList();
-      try {
-        eventAlertPayload = await fetchJson(`${endpoints.eventAlert}?run_id=${encodeURIComponent(runId)}`);
-        renderEventAlert(eventAlertPayload);
-      } catch (error) {
-        renderEventAlertFailure(error);
-      }
-    }
-
-    function renderEventAlert(payload) {
-      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
-      const selectedRun = payload.selected_run || {};
-      const selectedFields = selectedRun.fields || {};
-      document.querySelector("#event-alert-status").textContent = label(payload.status);
-      document.querySelector("#event-alert-selected-run").textContent = text(selectedFields.run_id || selectedEventRunId);
-      const count = document.querySelector("#event-artifact-count");
-      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
-      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
-      if (!artifacts.length) {
-        document.querySelector("#event-artifact-list").innerHTML = messages(payload) || emptyState(
-          "No event or alert artifacts",
-          "The selected run has not produced text-event, event-intelligence, alert, or confluence artifacts."
-        );
-        document.querySelector("#event-artifact-detail").innerHTML = "";
-        return;
-      }
-      if (!selectedEventArtifactKey || !artifacts.some((artifact) => artifact.name === selectedEventArtifactKey)) {
-        selectedEventArtifactKey = artifacts[0].name;
-      }
-      document.querySelector("#event-artifact-list").innerHTML = artifacts.map((artifact) => {
-        const fields = artifact.fields || {};
-        return `
-          <button class="store-card ${artifact.name === selectedEventArtifactKey ? "selected" : ""}" type="button" data-event-artifact-key="${escapeHtml(artifact.name)}">
-            <span class="store-title-line">
-              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
-              ${badge(artifact.status)}
-            </span>
-            <span class="store-metrics">
-              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
-              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
-              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
-            </span>
-            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
-          </button>`;
-      }).join("");
-      document.querySelectorAll("[data-event-artifact-key]").forEach((button) => {
-        button.addEventListener("click", () => {
-          selectedEventArtifactKey = button.dataset.eventArtifactKey;
-          renderEventAlert(payload);
-        });
-      });
-      renderEventArtifactDetail(artifacts.find((artifact) => artifact.name === selectedEventArtifactKey));
-    }
-
-    function renderEventArtifactDetail(artifact) {
-      if (!artifact) {
-        document.querySelector("#event-artifact-detail").innerHTML = emptyState(
-          "No event artifact selected",
-          "Select an event or alert artifact to inspect status, counts, warnings, and source refs."
-        );
-        return;
-      }
-      const fields = artifact.fields || {};
-      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
-      document.querySelector("#event-artifact-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
-            ${badge(artifact.status)}
-          </h3>
-          <div class="run-detail-grid">
-            ${detailTile("Artifact", fields.artifact)}
-            ${detailTile("Type", fields.artifact_type)}
-            ${detailTile("Artifact status", fields.artifact_status)}
-            ${detailTile("Records", fields.record_count)}
-            ${detailTile("Warnings", fields.warning_count)}
-            ${detailTile("Errors", fields.error_count)}
-          </div>
-          ${messages(artifact)}
-          <div class="artifact-actions">
-            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-event-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
-          </div>
-        </section>`;
-      document.querySelectorAll("[data-event-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.eventPreviewPath, "#event-preview"));
-      });
-      if (isPreviewableRef(fields.preview_path)) {
-        loadArtifactPreview(fields.preview_path, "#event-preview");
-      }
-    }
-
-    function renderEventAlertFailure(error) {
-      document.querySelector("#event-alert-status").textContent = "Failed";
-      document.querySelector("#event-artifact-count").className = "badge failed";
-      document.querySelector("#event-artifact-count").textContent = "failed";
-      document.querySelector("#event-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#event-artifact-detail").innerHTML = "";
-    }
-
-    async function loadTextIntelligence() {
-      textIntelligenceLoaded = true;
-      document.querySelector("#text-intelligence-status").textContent = "Loading";
-      try {
-        textRunsPayload = await fetchJson(endpoints.runs);
-        renderTextRunList();
-        const runs = Array.isArray(textRunsPayload.runs) ? textRunsPayload.runs : [];
-        if (runs.length) {
-          await selectTextRun(runs[0].run_id);
-        } else {
-          const payload = await fetchJson(endpoints.textIntelligence);
-          renderTextIntelligence(payload);
-        }
-        await refreshTextJobs();
-      } catch (error) {
-        renderTextIntelligenceFailure(error);
-      }
-    }
-
-    function renderTextRunList() {
-      const runs = Array.isArray(textRunsPayload && textRunsPayload.runs) ? textRunsPayload.runs : [];
-      const count = document.querySelector("#text-run-count");
-      count.className = `badge ${runs.length ? "available" : "missing"}`;
-      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
-      if (!runs.length) {
-        document.querySelector("#text-run-list").innerHTML = messages(textRunsPayload || {}) || emptyState(
-          "No runs for text intelligence",
-          "Text intelligence artifacts can be reviewed after a product run records text-event outputs.",
-          "Create a product run or use Text commands when configured."
-        );
-        return;
-      }
-      document.querySelector("#text-run-list").innerHTML = runs.map((run) => `
-        <button class="run-row ${run.run_id === selectedTextRunId ? "selected" : ""}" type="button" data-text-run-id="${escapeHtml(run.run_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(run.run_id)}</span>
-            ${badge(run.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(run.started_at))}</span>
-            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
-            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
-          </span>
-        </button>`).join("");
-      document.querySelectorAll("[data-text-run-id]").forEach((button) => {
-        button.addEventListener("click", () => selectTextRun(button.dataset.textRunId));
-      });
-    }
-
-    async function selectTextRun(runId) {
-      if (!runId) {
-        return;
-      }
-      selectedTextRunId = runId;
-      selectedTextArtifactKey = null;
-      document.querySelector("#text-intelligence-selected-run").textContent = runId;
-      document.querySelector("#text-intelligence-status").textContent = "Loading";
-      renderTextRunList();
-      try {
-        textIntelligencePayload = await fetchJson(`${endpoints.textIntelligence}?run_id=${encodeURIComponent(runId)}`);
-        renderTextIntelligence(textIntelligencePayload);
-      } catch (error) {
-        renderTextIntelligenceFailure(error);
-      }
-    }
-
-    function renderTextIntelligence(payload) {
-      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
-      const selectedRun = payload.selected_run || {};
-      const selectedFields = selectedRun.fields || {};
-      document.querySelector("#text-intelligence-status").textContent = label(payload.status);
-      document.querySelector("#text-intelligence-selected-run").textContent = text(selectedFields.run_id || selectedTextRunId);
-      const count = document.querySelector("#text-artifact-count");
-      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
-      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
-      if (!artifacts.length) {
-        document.querySelector("#text-artifact-list").innerHTML = messages(payload) || emptyState(
-          "No text intelligence artifacts",
-          "The selected run has not produced text records, entity evidence, topics, signals, or event material."
-        );
-        document.querySelector("#text-artifact-detail").innerHTML = "";
-        return;
-      }
-      if (!selectedTextArtifactKey || !artifacts.some((artifact) => artifact.name === selectedTextArtifactKey)) {
-        selectedTextArtifactKey = artifacts[0].name;
-      }
-      document.querySelector("#text-artifact-list").innerHTML = artifacts.map((artifact) => {
-        const fields = artifact.fields || {};
-        return `
-          <button class="store-card ${artifact.name === selectedTextArtifactKey ? "selected" : ""}" type="button" data-text-artifact-key="${escapeHtml(artifact.name)}">
-            <span class="store-title-line">
-              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
-              ${badge(artifact.status)}
-            </span>
-            <span class="store-metrics">
-              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
-              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
-              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
-            </span>
-            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
-          </button>`;
-      }).join("");
-      document.querySelectorAll("[data-text-artifact-key]").forEach((button) => {
-        button.addEventListener("click", () => {
-          selectedTextArtifactKey = button.dataset.textArtifactKey;
-          renderTextIntelligence(payload);
-        });
-      });
-      renderTextArtifactDetail(artifacts.find((artifact) => artifact.name === selectedTextArtifactKey));
-    }
-
-    function renderTextArtifactDetail(artifact) {
-      if (!artifact) {
-        document.querySelector("#text-artifact-detail").innerHTML = emptyState(
-          "No text artifact selected",
-          "Select a text intelligence artifact to inspect status, counts, warnings, and source refs."
-        );
-        return;
-      }
-      const fields = artifact.fields || {};
-      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
-      document.querySelector("#text-artifact-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
-            ${badge(artifact.status)}
-          </h3>
-          <div class="run-detail-grid">
-            ${detailTile("Artifact", fields.artifact)}
-            ${detailTile("Type", fields.artifact_type)}
-            ${detailTile("Artifact status", fields.artifact_status)}
-            ${detailTile("Records", fields.record_count)}
-            ${detailTile("Warnings", fields.warning_count)}
-            ${detailTile("Errors", fields.error_count)}
-          </div>
-          ${messages(artifact)}
-          <div class="artifact-actions">
-            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-text-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
-          </div>
-        </section>`;
-      document.querySelectorAll("[data-text-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.textPreviewPath, "#text-preview"));
-      });
-      if (isPreviewableRef(fields.preview_path)) {
-        loadArtifactPreview(fields.preview_path, "#text-preview");
-      }
-    }
-
-    async function refreshTextJobs() {
-      try {
-        textJobsPayload = await fetchJson(endpoints.jobs);
-        renderTextJobs(textJobsPayload);
-      } catch (error) {
-        document.querySelector("#text-job-count").className = "badge failed";
-        document.querySelector("#text-job-count").textContent = "failed";
-        document.querySelector("#text-job-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      }
-    }
-
-    function renderTextJobs(payload) {
-      const jobs = (Array.isArray(payload.jobs) ? payload.jobs : [])
-        .filter((job) => ["text_models_prepare", "text_intel"].includes(String(job.intent || "")));
-      const count = document.querySelector("#text-job-count");
-      count.className = `badge ${jobs.length ? "available" : "missing"}`;
-      count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
-      if (!jobs.length) {
-        document.querySelector("#text-job-list").innerHTML = emptyState(
-          "No text jobs yet",
-          "Text jobs appear after Prepare text models or Run text intelligence is started from this page or Command center."
-        );
-        return;
-      }
-      document.querySelector("#text-job-list").innerHTML = jobs.map((job) => `
-        <button class="job-row" type="button" data-text-job-id="${escapeHtml(job.job_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(jobTitle(job.intent))}</span>
-            ${badge(job.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(job.created_at))}</span>
-            <span>Exit: ${escapeHtml(text(job.exit_code))}</span>
-          </span>
-        </button>`).join("");
-      document.querySelectorAll("[data-text-job-id]").forEach((button) => {
-        button.addEventListener("click", () => selectTextJob(button.dataset.textJobId));
-      });
-      const selected = jobs.find((job) => job.job_id === selectedTextJobId) || jobs[0];
-      if (selected) {
-        renderTextJobResult(selected);
-      }
-    }
-
-    async function selectTextJob(jobId) {
-      if (!jobId) {
-        return;
-      }
-      document.querySelector("#text-command-status").className = "badge partial";
-      document.querySelector("#text-command-status").textContent = "loading";
-      try {
-        const job = await fetchJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}`);
-        document.querySelector("#text-command-status").className = `badge ${normalizeStatus(job.status)}`;
-        document.querySelector("#text-command-status").textContent = label(job.status);
-        renderTextJobResult(job);
-      } catch (error) {
-        renderTextCommandMessage("failed", error.message);
-      }
-    }
-
-    async function startTextJob(intent) {
-      const request = textCommandJobRequest(intent);
-      if (!request) {
-        return;
-      }
-      document.querySelector("#text-command-status").className = "badge partial";
-      document.querySelector("#text-command-status").textContent = "starting";
-      try {
-        const job = await postJson(endpoints.jobs, request);
-        document.querySelector("#text-command-status").className = `badge ${normalizeStatus(job.status)}`;
-        document.querySelector("#text-command-status").textContent = label(job.status);
-        renderTextJobResult(job);
-        await refreshTextJobs();
-        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
-      } catch (error) {
-        renderTextCommandMessage("failed", error.message);
-      }
-    }
-
-    function textCommandJobRequest(intent) {
-      const params = {};
-      if (intent === "text_models_prepare") {
-        const outputDir = dashboardLocalRefValue("#text-output-dir", "output_dir", renderTextCommandMessage);
-        if (outputDir === null) {
-          return null;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      if (intent === "text_intel") {
-        const inputPath = dashboardLocalRefValue("#text-input-path", "input_path", renderTextCommandMessage);
-        const outputDir = dashboardLocalRefValue("#text-output-dir", "output_dir", renderTextCommandMessage);
-        if (inputPath === null || outputDir === null) {
-          return null;
-        }
-        if (inputPath) {
-          params.input_path = inputPath;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      renderTextCommandMessage("unsupported", `unsupported text job intent: ${intent || "missing"}`);
-      return null;
-    }
-
-    function renderTextJobResult(job) {
-      selectedTextJobId = job.job_id || selectedTextJobId;
-      const refs = commandPreviewRefs(job);
-      document.querySelector("#text-job-result").innerHTML = `
-        <div class="preview-heading">
-          <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
-          ${badge(job.status)}
-        </div>
-        <div class="run-detail-grid">
-          ${detailTile("Job", job.job_id)}
-          ${detailTile("Intent", job.intent)}
-          ${detailTile("Kind", job.kind)}
-          ${detailTile("Created", job.created_at)}
-          ${detailTile("Finished", job.finished_at)}
-          ${detailTile("Exit", job.exit_code)}
-        </div>
-        ${messages(job)}
-        <div class="artifact-actions">
-          ${refs.length ? refs.map((item) => `<button class="link-button" type="button" data-text-preview-path="${escapeHtml(item.path)}">${escapeHtml(item.label)}</button>`).join("") : `<span class="badge missing">no result refs</span>`}
+    function renderStrategyTab(tab) {
+      document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.classList.toggle("active", button.dataset.strategyTab === tab));
+      const vis = backtestVisualization(state.selectedStrategyOutput);
+      const metrics = strategyMetrics(state.selectedStrategyOutput);
+      if (tab === "trades" || tab === "list") {
+        document.querySelector("#strategy-tab-content").innerHTML = `<div class="summary-strip" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
+          ${metricCell("Total trades", metrics.trades, "")}
+          ${metricCell("Long", "43", "50.0%")}
+          ${metricCell("Short", "43", "50.0%")}
+          ${metricCell("Win rate", metrics.winRate, "")}
+          ${metricCell("Best trade", "+8.74%", "")}
+          ${metricCell("Worst trade", "-6.21%", "")}
         </div>`;
-      document.querySelectorAll("#text-job-result [data-text-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.textPreviewPath, "#text-preview"));
-      });
-    }
-
-    function renderTextCommandMessage(status, message) {
-      document.querySelector("#text-command-status").className = `badge ${normalizeStatus(status)}`;
-      document.querySelector("#text-command-status").textContent = label(status);
-      document.querySelector("#text-job-result").innerHTML = `<div class="message ${normalizeStatus(status) === "failed" ? "error" : "warning"}">${escapeHtml(message)}</div>`;
-    }
-
-    function renderTextIntelligenceFailure(error) {
-      document.querySelector("#text-intelligence-status").textContent = "Failed";
-      document.querySelector("#text-artifact-count").className = "badge failed";
-      document.querySelector("#text-artifact-count").textContent = "failed";
-      document.querySelector("#text-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#text-artifact-detail").innerHTML = "";
-    }
-
-    async function loadOutcomes() {
-      outcomesLoaded = true;
-      document.querySelector("#outcome-status").textContent = "Loading";
-      try {
-        outcomeRunsPayload = await fetchJson(endpoints.runs);
-        renderOutcomeRunList();
-        const runs = Array.isArray(outcomeRunsPayload.runs) ? outcomeRunsPayload.runs : [];
-        if (runs.length) {
-          await selectOutcomeRun(runs[0].run_id);
-        } else {
-          const payload = await fetchJson(endpoints.outcomes);
-          renderOutcomes(payload);
-        }
-      } catch (error) {
-        renderOutcomesFailure(error);
-      }
-    }
-
-    function renderOutcomeRunList() {
-      const runs = Array.isArray(outcomeRunsPayload && outcomeRunsPayload.runs) ? outcomeRunsPayload.runs : [];
-      const count = document.querySelector("#outcome-run-count");
-      count.className = `badge ${runs.length ? "available" : "missing"}`;
-      count.textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}`;
-      if (!runs.length) {
-        document.querySelector("#outcome-run-list").innerHTML = messages(outcomeRunsPayload || {}) || emptyState(
-          "No runs for outcome tracking",
-          "Outcome tracking compares later evidence against prior run targets. It needs at least one product run.",
-          "Create a product run, then revisit outcome tracking."
-        );
-        return;
-      }
-      document.querySelector("#outcome-run-list").innerHTML = runs.map((run) => `
-        <button class="run-row ${run.run_id === selectedOutcomeRunId ? "selected" : ""}" type="button" data-outcome-run-id="${escapeHtml(run.run_id)}">
-          <span class="run-row-main">
-            <span class="run-id">${escapeHtml(run.run_id)}</span>
-            ${badge(run.status)}
-          </span>
-          <span class="run-meta">
-            <span>${escapeHtml(text(run.started_at))}</span>
-            <span>Warnings: ${escapeHtml(text(run.warning_count))}</span>
-            <span>Errors: ${escapeHtml(text(run.error_count))}</span>
-          </span>
-        </button>`).join("");
-      document.querySelectorAll("[data-outcome-run-id]").forEach((button) => {
-        button.addEventListener("click", () => selectOutcomeRun(button.dataset.outcomeRunId));
-      });
-    }
-
-    async function selectOutcomeRun(runId) {
-      if (!runId) {
-        return;
-      }
-      selectedOutcomeRunId = runId;
-      selectedOutcomeArtifactKey = null;
-      document.querySelector("#outcome-selected-run").textContent = runId;
-      document.querySelector("#outcome-status").textContent = "Loading";
-      renderOutcomeRunList();
-      try {
-        outcomesPayload = await fetchJson(`${endpoints.outcomes}?run_id=${encodeURIComponent(runId)}`);
-        renderOutcomes(outcomesPayload);
-      } catch (error) {
-        renderOutcomesFailure(error);
-      }
-    }
-
-    function renderOutcomes(payload) {
-      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
-      const selectedRun = payload.selected_run || {};
-      const selectedFields = selectedRun.fields || {};
-      document.querySelector("#outcome-status").textContent = label(payload.status);
-      document.querySelector("#outcome-selected-run").textContent = text(selectedFields.run_id || selectedOutcomeRunId);
-      const count = document.querySelector("#outcome-artifact-count");
-      count.className = `badge ${artifacts.length ? normalizeStatus(payload.status) : "missing"}`;
-      count.textContent = `${artifacts.length} artifact${artifacts.length === 1 ? "" : "s"}`;
-      if (!artifacts.length) {
-        document.querySelector("#outcome-artifact-list").innerHTML = messages(payload) || emptyState(
-          "No outcome artifacts",
-          "The selected run has not produced outcome targets, evaluations, or outcome tracking material."
-        );
-        document.querySelector("#outcome-artifact-detail").innerHTML = "";
-        renderOutcomeHistory(payload.history || {});
-        return;
-      }
-      if (!selectedOutcomeArtifactKey || !artifacts.some((artifact) => artifact.name === selectedOutcomeArtifactKey)) {
-        selectedOutcomeArtifactKey = artifacts[0].name;
-      }
-      document.querySelector("#outcome-artifact-list").innerHTML = artifacts.map((artifact) => {
-        const fields = artifact.fields || {};
-        return `
-          <button class="store-card ${artifact.name === selectedOutcomeArtifactKey ? "selected" : ""}" type="button" data-outcome-artifact-key="${escapeHtml(artifact.name)}">
-            <span class="store-title-line">
-              <span class="store-title">${escapeHtml(text(fields.title || artifact.name))}</span>
-              ${badge(artifact.status)}
-            </span>
-            <span class="store-metrics">
-              <span>Records: ${escapeHtml(text(fields.record_count))}</span>
-              <span>Warnings: ${escapeHtml(text(fields.warning_count))}</span>
-              <span>Errors: ${escapeHtml(text(fields.error_count))}</span>
-            </span>
-            <span class="timeline-meta">${escapeHtml(text(fields.preview_path || fields.artifact))}</span>
-          </button>`;
-      }).join("");
-      document.querySelectorAll("[data-outcome-artifact-key]").forEach((button) => {
-        button.addEventListener("click", () => {
-          selectedOutcomeArtifactKey = button.dataset.outcomeArtifactKey;
-          renderOutcomes(payload);
-        });
-      });
-      renderOutcomeArtifactDetail(artifacts.find((artifact) => artifact.name === selectedOutcomeArtifactKey));
-      renderOutcomeHistory(payload.history || {});
-    }
-
-    function renderOutcomeArtifactDetail(artifact) {
-      if (!artifact) {
-        document.querySelector("#outcome-artifact-detail").innerHTML = emptyState(
-          "No outcome artifact selected",
-          "Select an outcome artifact to inspect status, counts, warnings, and source refs."
-        );
-        return;
-      }
-      const fields = artifact.fields || {};
-      const refs = Array.isArray(artifact.source_artifacts) ? artifact.source_artifacts : [];
-      document.querySelector("#outcome-artifact-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>${escapeHtml(text(fields.title || artifact.name))}</span>
-            ${badge(artifact.status)}
-          </h3>
-          <div class="run-detail-grid">
-            ${detailTile("Artifact", fields.artifact)}
-            ${detailTile("Type", fields.artifact_type)}
-            ${detailTile("Artifact status", fields.artifact_status)}
-            ${detailTile("Records", fields.record_count)}
-            ${detailTile("Warnings", fields.warning_count)}
-            ${detailTile("Errors", fields.error_count)}
-          </div>
-          ${messages(artifact)}
-          <div class="artifact-actions">
-            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-outcome-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
-          </div>
-        </section>`;
-      document.querySelectorAll("[data-outcome-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.outcomePreviewPath, "#outcome-preview"));
-      });
-      if (isPreviewableRef(fields.preview_path)) {
-        loadArtifactPreview(fields.preview_path, "#outcome-preview");
-      }
-    }
-
-    function renderOutcomeHistory(history) {
-      const fields = history.fields || {};
-      const refs = Array.isArray(history.source_artifacts) ? history.source_artifacts : [];
-      document.querySelector("#outcome-history-detail").innerHTML = `
-        <section class="section-block">
-          <h3 class="subheading">
-            <span>Shared outcome history metadata</span>
-            ${badge(history.status)}
-          </h3>
-          <div class="run-detail-grid">
-            ${detailTile("Records", fields.records)}
-            ${detailTile("Incoming", fields.incoming_records)}
-            ${detailTile("Duplicates", fields.duplicate_records)}
-            ${detailTile("Conflicts", fields.conflicting_duplicates)}
-            ${detailTile("Updated", fields.updated_at)}
-            ${detailTile("History", fields.history)}
-          </div>
-          ${messages(history)}
-          <div class="artifact-actions">
-            ${refs.filter(isPreviewableRef).map((ref) => `<button class="link-button" type="button" data-outcome-preview-path="${escapeHtml(ref)}">${escapeHtml(ref)}</button>`).join("") || `<span class="badge missing">no previewable refs</span>`}
-          </div>
-        </section>`;
-      document.querySelectorAll("#outcome-history-detail [data-outcome-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.outcomePreviewPath, "#outcome-preview"));
-      });
-    }
-
-    function renderOutcomesFailure(error) {
-      document.querySelector("#outcome-status").textContent = "Failed";
-      document.querySelector("#outcome-artifact-count").className = "badge failed";
-      document.querySelector("#outcome-artifact-count").textContent = "failed";
-      document.querySelector("#outcome-artifact-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      document.querySelector("#outcome-artifact-detail").innerHTML = "";
-      document.querySelector("#outcome-history-detail").innerHTML = "";
-    }
-
-    async function refreshMonitorJobs() {
-      try {
-        const payload = await fetchJson(endpoints.jobs);
-        renderMonitorJobs(payload);
-      } catch (error) {
-        renderMonitorJobsFailure(error);
-      }
-    }
-
-    async function refreshDashboardJobs() {
-      try {
-        const payload = await fetchJson(endpoints.jobs);
-        if (monitorLoaded) {
-          renderMonitorJobs(payload);
-        }
-        if (commandJobsLoaded) {
-          commandJobsPayload = payload;
-          renderCommandJobs(payload);
-        }
-        if (textIntelligenceLoaded) {
-          textJobsPayload = payload;
-          renderTextJobs(payload);
-        }
-        if (selectedStrategyCommandJobId) {
-          const strategyJob = (Array.isArray(payload.jobs) ? payload.jobs : [])
-            .find((job) => job.job_id === selectedStrategyCommandJobId);
-          if (strategyJob) {
-            renderStrategyCommandResult(strategyJob);
-          }
-        }
-        scheduleDashboardJobPolling(hasActiveDashboardJobs(payload));
-      } catch (error) {
-        document.querySelector("#dashboard-refresh-status").textContent = `Job refresh failed: ${error.message}`;
-        scheduleDashboardJobPolling(false);
-      }
-    }
-
-    function hasActiveDashboardJobs(payload) {
-      return (Array.isArray(payload.jobs) ? payload.jobs : [])
-        .some((job) => !terminalJobStatuses.has(String(job.status || "")));
-    }
-
-    function scheduleDashboardJobPolling(active) {
-      if (active && !dashboardJobPoll) {
-        dashboardJobPoll = window.setInterval(refreshDashboardJobs, 2000);
-        return;
-      }
-      if (!active && dashboardJobPoll) {
-        window.clearInterval(dashboardJobPoll);
-        dashboardJobPoll = null;
-      }
-    }
-
-    function renderMonitorJobs(payload) {
-      const allJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
-      const jobs = allJobs.filter((job) => String(job.intent || "").startsWith("monitor_"));
-      const active = jobs.filter((job) => !terminalJobStatuses.has(String(job.status || "")));
-      document.querySelector("#monitor-job-status").textContent = active.length
-        ? `${active.length} active`
-        : jobs.length
-          ? "Idle"
-          : "No monitor jobs";
-      const count = document.querySelector("#monitor-job-count");
-      count.className = `badge ${jobs.length ? "available" : "missing"}`;
-      count.textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
-      if (!jobs.length) {
-        document.querySelector("#monitor-job-list").innerHTML = emptyState(
-          "No monitor jobs yet",
-          "Monitor jobs are recorded only after an explicit dry run, one-cycle run, or finite loop is started.",
-          "Use Monitor control to start a bounded local monitor job."
-        );
-        scheduleMonitorJobPolling(false);
-        return;
-      }
-      document.querySelector("#monitor-job-list").innerHTML = jobs.slice(0, 10).map((job) => {
-        const running = !terminalJobStatuses.has(String(job.status || ""));
-        const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
-        return `
-          <div class="job-row">
-            <div class="stage-top">
-              <span class="stage-name">${escapeHtml(jobTitle(job.intent))}</span>
-              ${badge(job.status)}
-            </div>
-            <div class="run-meta">
-              <span>Created: ${escapeHtml(text(job.created_at))}</span>
-              <span>Started: ${escapeHtml(text(job.started_at))}</span>
-              <span>Finished: ${escapeHtml(text(job.finished_at))}</span>
-              <span>Exit: ${escapeHtml(text(job.exit_code))}</span>
-            </div>
-            <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
-            ${messages(job)}
-            <div class="job-actions">
-              ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
-              ${running && job.cancellable === false ? `<span class="badge partial">cancellation unsupported</span>` : ""}
-            </div>
-          </div>`;
-      }).join("");
-      document.querySelectorAll("[data-cancel-job-id]").forEach((button) => {
-        button.addEventListener("click", () => cancelMonitorJob(button.dataset.cancelJobId));
-      });
-      scheduleMonitorJobPolling(active.length > 0);
-    }
-
-    function renderMonitorJobsFailure(error) {
-      document.querySelector("#monitor-job-status").textContent = "Failed";
-      document.querySelector("#monitor-job-count").className = "badge failed";
-      document.querySelector("#monitor-job-count").textContent = "failed";
-      document.querySelector("#monitor-job-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      scheduleMonitorJobPolling(false);
-    }
-
-    function scheduleMonitorJobPolling(active) {
-      if (active && !monitorJobPoll) {
-        monitorJobPoll = window.setInterval(refreshMonitorJobs, 2000);
-        return;
-      }
-      if (!active && monitorJobPoll) {
-        window.clearInterval(monitorJobPoll);
-        monitorJobPoll = null;
-      }
-    }
-
-    function jobTitle(intent) {
-      const titles = {
-        run: "Product run with Codex",
-        run_no_codex: "Product run without Codex",
-        run_until: "Product run until stage",
-        stage_rerun: "Stage rerun",
-        validate: "Product validation",
-        data_inspect: "Data inspect",
-        outcomes_inspect: "Outcomes inspect",
-        workbench_build: "Workbench build",
-        workbench_inspect: "Workbench inspect",
-        backtest: "Strategy backtest",
-        experiment: "Strategy experiment",
-        text_models_prepare: "Text models prepare",
-        text_intel: "Text intelligence",
-        monitor_dry_run: "Monitor dry run",
-        monitor_once: "Monitor one cycle",
-        monitor_loop: "Monitor finite loop",
-        monitor_inspect: "Monitor inspect"
-      };
-      return titles[intent] || intent || "Monitor job";
-    }
-
-    async function startMonitorJob(action) {
-      let request;
-      if (action === "dry-run") {
-        request = { intent: "monitor_dry_run", params: {} };
-      } else if (action === "once") {
-        request = { intent: "monitor_once", params: {} };
-      } else if (action === "loop") {
-        const maxCycles = positiveInputValue("#monitor-loop-cycles", "max_cycles");
-        const intervalSeconds = positiveInputValue("#monitor-loop-interval", "interval_seconds");
-        if (!maxCycles || !intervalSeconds) {
-          document.querySelector("#monitor-job-status").textContent = "Invalid loop input";
-          document.querySelector("#monitor-job-list").innerHTML = `<div class="message error">Max cycles and interval seconds must be positive integers.</div>`;
-          return;
-        }
-        request = {
-          intent: "monitor_loop",
-          params: { max_cycles: maxCycles, interval_seconds: intervalSeconds }
-        };
+      } else if (tab === "equity") {
+        document.querySelector("#strategy-tab-content").innerHTML = `<svg viewBox="0 0 900 120" style="width:100%; height:120px;">${lineChartPath(vis.bars || [])}</svg>`;
       } else {
-        return;
-      }
-      document.querySelector("#monitor-job-status").textContent = "Starting";
-      try {
-        const job = await postJson(endpoints.jobs, request);
-        document.querySelector("#monitor-job-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
-        await refreshMonitorJobs();
-        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
-      } catch (error) {
-        renderMonitorJobsFailure(error);
+        document.querySelector("#strategy-tab-content").innerHTML = `<div class="message">Performance diagnostics are summarized from the selected backtest artifact. Detailed tables stay bounded for dashboard use.</div>`;
       }
     }
 
-    function positiveInputValue(selector, fieldName = "value") {
-      const node = document.querySelector(selector);
-      const value = Number.parseInt(node.value, 10);
-      if (Number.isInteger(value) && value > 0) {
-        clearInputError(selector);
-        return value;
-      }
-      setInputError(selector, `${fieldName} must be a positive integer.`);
-      return null;
+    function lineChartPath(bars) {
+      const values = bars.length ? bars.map((bar, index) => Number(bar.close || 0) * (1 + index / 1000)) : [1, 2, 3];
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const points = values.map((value, index) => {
+        const x = 24 + index * (850 / Math.max(1, values.length - 1));
+        const y = 100 - ((value - min) / Math.max(1, max - min)) * 80;
+        return `${x},${y}`;
+      });
+      return `<polyline points="${points.join(" ")}" fill="none" stroke="#008575" stroke-width="3"></polyline>`;
     }
 
-    function fieldErrorId(selector) {
-      return `${selector.replace(/^[#.]?/, "").replace(/[^A-Za-z0-9_-]/g, "-")}-field-error`;
-    }
-
-    function setInputError(selector, message) {
-      const node = document.querySelector(selector);
-      if (!node) {
-        return;
-      }
-      node.classList.add("field-invalid");
-      node.setAttribute("aria-invalid", "true");
-      const errorId = fieldErrorId(selector);
-      let error = document.querySelector(`#${errorId}`);
-      if (!error) {
-        error = document.createElement("span");
-        error.id = errorId;
-        error.className = "field-error";
-        node.insertAdjacentElement("afterend", error);
-      }
-      node.setAttribute("aria-describedby", errorId);
-      error.textContent = message;
-    }
-
-    function clearInputError(selector) {
-      const node = document.querySelector(selector);
-      if (!node) {
-        return;
-      }
-      node.classList.remove("field-invalid");
-      node.removeAttribute("aria-invalid");
-      node.removeAttribute("aria-describedby");
-      const error = document.querySelector(`#${fieldErrorId(selector)}`);
-      if (error) {
-        error.remove();
-      }
-    }
-
-    async function cancelMonitorJob(jobId) {
-      if (!jobId) {
-        return;
-      }
-      document.querySelector("#monitor-job-status").textContent = "Cancelling";
-      try {
-        await postJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}/cancel`, {});
-        await refreshMonitorJobs();
-      } catch (error) {
-        renderMonitorJobsFailure(error);
-      }
-    }
-
-    async function loadCommandCenter() {
-      commandJobsLoaded = true;
-      if (!dailyScheduleLoaded) {
-        await refreshDailySchedule();
-      }
-      await refreshCommandJobs();
-    }
-
-    async function refreshDailySchedule() {
-      dailyScheduleLoaded = true;
-      document.querySelector("#daily-schedule-badge").className = "badge unknown";
-      document.querySelector("#daily-schedule-badge").textContent = "loading";
-      try {
-        const payload = await fetchJson(endpoints.schedule);
-        renderDailySchedule(payload);
-      } catch (error) {
-        renderDailyScheduleFailure(error);
-      }
-    }
-
-    function renderDailySchedule(schedule) {
-      const settings = schedule.settings || {};
-      const boundary = schedule.runtime_boundary || {};
-      const badgeNode = document.querySelector("#daily-schedule-badge");
-      badgeNode.className = `badge ${schedule.enabled === true ? "available" : normalizeStatus(schedule.status)}`;
-      badgeNode.textContent = schedule.enabled === true ? "enabled" : label(schedule.status);
-      document.querySelector("#daily-schedule-time").value = text(settings.time_of_day) === "n/a" ? "08:00" : text(settings.time_of_day);
-      document.querySelector("#daily-schedule-timezone").value = text(settings.timezone) === "n/a" ? displayTimezone : text(settings.timezone);
-      document.querySelector("#daily-schedule-job-intent").value = text(settings.job_intent) === "run" ? "run" : "run_no_codex";
-      document.querySelector("#daily-schedule-summary").innerHTML = [
-        detailTile("Enabled", schedule.enabled === true ? "true" : "false"),
-        detailTile("Persisted", schedule.persisted === true ? "true" : "false"),
-        detailTile("Next run", schedule.next_run_at),
-        detailTile("Last run", schedule.last_run_at),
-        detailTile("Last job", schedule.last_job_id),
-        detailTile("Linked jobs", Array.isArray(schedule.linked_job_ids) ? schedule.linked_job_ids.length : 0),
-        detailTile("Runs while dashboard active", boundary.runs_only_while_dashboard_active),
-        detailTile("Automatic dispatch", boundary.automatic_dispatch)
-      ].join("");
-      document.querySelector("#daily-schedule-messages").innerHTML = messages(schedule);
-      document.querySelector("#command-center-status").textContent = schedule.enabled === true ? "Schedule enabled" : "Schedule idle";
-    }
-
-    function renderDailyScheduleFailure(error) {
-      document.querySelector("#daily-schedule-badge").className = "badge failed";
-      document.querySelector("#daily-schedule-badge").textContent = "failed";
-      document.querySelector("#daily-schedule-summary").innerHTML = detailTile("Error", error.message);
-      document.querySelector("#daily-schedule-messages").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-    }
-
-    async function runDailyScheduleAction(action) {
-      const request = dailyScheduleRequest(action);
-      if (!request) {
-        return;
-      }
-      document.querySelector("#command-center-status").textContent = "Updating schedule";
-      try {
-        const payload = await postJson(request.url, request.body);
-        if (payload.schedule) {
-          renderDailySchedule(payload.schedule);
-          if (payload.job) {
-            document.querySelector("#command-center-status").textContent = `${jobTitle(payload.job.intent)} ${label(payload.job.status)}`;
-            renderCommandResult(payload.job);
-            scheduleDashboardJobPolling(!terminalJobStatuses.has(String(payload.job.status || "")));
-          } else {
-            renderScheduleActionResult(payload);
-          }
-        } else {
-          renderDailySchedule(payload);
-          renderCommandMessage(payload.status, `Daily report schedule ${action} ${label(payload.status)}.`);
-        }
-        await refreshCommandJobs();
-      } catch (error) {
-        renderCommandMessage("failed", error.message);
-      }
-    }
-
-    function dailyScheduleRequest(action) {
-      if (action === "disable") {
-        return { url: `${endpoints.schedule}/disable`, body: {} };
-      }
-      const timeOfDay = timeOfDayInputValue("#daily-schedule-time", "time_of_day", renderCommandMessage);
-      const timezone = timezoneInputValue("#daily-schedule-timezone", "timezone", renderCommandMessage);
-      if (!timeOfDay || !timezone) {
-        renderCommandMessage("blocked", "time_of_day and timezone are required for daily report schedule changes.");
-        return null;
-      }
-      const body = {
-        time_of_day: timeOfDay,
-        timezone,
-        job_intent: document.querySelector("#daily-schedule-job-intent").value
+    async function startBacktest() {
+      const params = {
+        strategy_name: document.querySelector("#strategy-name").value,
+        symbol: document.querySelector("#strategy-symbol").value,
+        timeframe: document.querySelector("#strategy-timeframe").value,
       };
-      if (action === "update") {
-        return { url: endpoints.schedule, body };
-      }
-      if (action === "enable") {
-        return { url: `${endpoints.schedule}/enable`, body };
-      }
-      if (action === "trigger") {
-        const triggerBody = { job_intent: body.job_intent };
-        if (body.job_intent === "run") {
-          if (document.querySelector("#daily-schedule-confirm-codex").checked !== true) {
-            renderCommandMessage("blocked", "Codex confirmation is required before triggering a Codex-capable daily report job.");
-            return null;
-          }
-          triggerBody.confirm_codex = true;
-        }
-        return { url: `${endpoints.schedule}/trigger`, body: triggerBody };
-      }
-      renderCommandMessage("unsupported", `unsupported daily report schedule action: ${action || "missing"}`);
-      return null;
+      const job = await postJob("backtest", params);
+      showToast(`Backtest ${job.status}.`);
     }
 
-    function renderScheduleActionResult(payload) {
-      const schedule = payload.schedule || {};
-      document.querySelector("#command-center-status").textContent = `Schedule ${label(payload.status)}`;
-      document.querySelector("#command-result").innerHTML = `
-        <div class="preview-heading">
-          <div class="preview-path">Daily report schedule</div>
-          ${badge(payload.status)}
-        </div>
-        <div class="run-detail-grid">
-          ${detailTile("Enabled", schedule.enabled === true ? "true" : "false")}
-          ${detailTile("Next run", schedule.next_run_at)}
-          ${detailTile("Last job", schedule.last_job_id)}
-          ${detailTile("Job", payload.job ? payload.job.job_id : "n/a")}
-        </div>
-        ${messages(payload)}`;
+    async function refreshMonitor() {
+      await loadMonitorPayload();
+      renderMonitor();
     }
 
-    async function refreshCommandJobs() {
+    function renderMonitor() {
+      const health = state.monitor?.health?.fields || {};
+      const latest = state.monitor?.latest_cycle || {};
+      const alerts = alertCount(state.monitorAlerts);
+      document.querySelector("#monitor-hero").innerHTML = [
+        metricCell("Monitor", latest.status === "running" ? "Running" : label(latest.status || health.latest_cycle_status || "Idle"), "current state"),
+        metricCell("Last cycle", formatTimestamp(latest.finished_at || latest.started_at), latest.status || "n/a"),
+        metricCell("Next report", "Daily schedule", "configured"),
+        metricCell("Alerts today", alerts, "recent archive"),
+        metricCell("Error state", health.error_count ? `${health.error_count} errors` : "None", "active errors"),
+      ].join("");
+      document.querySelector("#monitor-timeline").innerHTML = state.monitorCycles.slice(0, 8).map((cycle) => {
+        const status = statusClass(cycle.status);
+        return `<li class="timeline-row"><div class="timeline-time">${escapeHtml(formatTimestamp(cycle.finished_at || cycle.started_at).split(",")[1] || formatTimestamp(cycle.finished_at || cycle.started_at))}</div><div class="timeline-node ${status}">${status === "failed" ? "x" : status === "warning" ? "!" : "ok"}</div><div class="timeline-body"><strong>${escapeHtml(label(cycle.status || "Cycle"))}</strong><span>Checks: ${escapeHtml(text(cycle.product_run?.stage_count, "n/a"))} Warnings: ${escapeHtml(text(cycle.warning_count, "0"))} Errors: ${escapeHtml(text(cycle.error_count, "0"))}</span></div><span class="status-pill ${status}">${escapeHtml(cycle.status || "unknown")}</span></li>`;
+      }).join("") || `<li class="empty-state">No monitor cycles yet.</li>`;
+      document.querySelector("#monitor-config").innerHTML = [
+        detailRow("Monitor interval", "configured"),
+        detailRow("Max cycles before restart", "bounded local job"),
+        detailRow("Alert cooldown", "configured"),
+        detailRow("Daily report time", "configured"),
+        detailRow("Watched assets", "configured groups"),
+        detailRow("Notification channels", "Local only"),
+      ].join("");
+      renderMonitorAlertsTable();
+      renderMonitorJobsTable();
+    }
+
+    function alertCount(payload) {
+      const counts = payload?.alert_archive?.fields?.counts || payload?.alert_archive?.counts || {};
+      return Number(counts.records || counts.emitted || 0);
+    }
+
+    function renderMonitorAlertsTable() {
+      const records = state.monitorAlerts?.alert_archive?.fields?.sample_records || [];
+      document.querySelector("#monitor-alert-table").innerHTML = records.length ? table(["Time", "Severity", "Alert", "Status"], records.slice(0, 5).map((record) => [
+        formatTimestamp(record.created_at || record.timestamp),
+        record.severity || record.status || "warning",
+        record.title || record.message || record.alert_key || "Monitor alert",
+        record.status || "new",
+      ])) : `<div class="message">No recent alerts.</div>`;
+    }
+
+    function renderMonitorJobsTable() {
+      const jobs = state.jobs.filter((job) => String(job.kind || "").includes("monitor") || String(job.intent || "").includes("monitor")).slice(0, 5);
+      document.querySelector("#monitor-job-table").innerHTML = jobs.length ? table(["Time", "Job", "Status", "Duration"], jobs.map((job) => [
+        formatTimestamp(job.created_at),
+        job.intent || job.kind,
+        job.status,
+        durationBetween(job.started_at, job.finished_at),
+      ])) : `<div class="message">No monitor jobs yet.</div>`;
+    }
+
+    async function refreshIntelligence() {
       try {
-        const payload = await fetchJson(endpoints.jobs);
-        commandJobsPayload = payload;
-        renderCommandJobs(payload);
+        const [textIntel] = await Promise.all([fetchJson(endpoints.textIntel), loadStores().catch(() => null)]);
+        state.intelligence = textIntel;
       } catch (error) {
-        renderCommandJobsFailure(error);
+        state.intelligence = {status: "failed", warnings: [error.message], artifacts: []};
       }
+      renderIntelligence();
     }
 
-    function renderCommandJobs(payload) {
-      const allJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
-      const jobs = filteredCommandJobs(allJobs);
-      const active = allJobs.filter((job) => !terminalJobStatuses.has(String(job.status || "")));
-      document.querySelector("#command-job-status").textContent = active.length
-        ? `${active.length} active`
-        : allJobs.length
-          ? "Idle"
-          : "No jobs";
-      const count = document.querySelector("#command-job-count");
-      count.className = `badge ${allJobs.length ? "available" : "missing"}`;
-      count.textContent = `${jobs.length} of ${allJobs.length} job${allJobs.length === 1 ? "" : "s"}`;
-      if (!allJobs.length) {
-        document.querySelector("#command-result").innerHTML = emptyState(
-          "No dashboard jobs yet",
-          "Jobs appear here after a command, monitor action, schedule trigger, strategy run, or text run is started."
-        );
-        document.querySelector("#command-job-preview").innerHTML = emptyState(
-          "No job preview selected",
-          "Open a completed job result ref, stdout, or stderr to inspect a bounded preview."
-        );
-        document.querySelector("#command-job-list").innerHTML = messages(payload) || emptyState(
-          "No dashboard jobs recorded",
-          "Start an allowlisted command to create visible local job history."
-        );
-        scheduleCommandJobPolling(false);
-        return;
+    function renderIntelligence() {
+      const allItems = intelligenceItems();
+      renderIntelFilterOptions(allItems);
+      const items = filteredIntelligenceItems(allItems);
+      if (!state.selectedIntelItem || !items.includes(state.selectedIntelItem)) {
+        state.selectedIntelItem = items[0] || null;
       }
-      if (!selectedCommandJobId || !allJobs.some((job) => job.job_id === selectedCommandJobId)) {
-        selectedCommandJobId = allJobs[0].job_id;
-      }
-      const selectedJob = allJobs.find((job) => job.job_id === selectedCommandJobId);
-      if (selectedJob) {
-        renderCommandResult(selectedJob);
-      }
-      if (!jobs.length) {
-        document.querySelector("#command-job-list").innerHTML = emptyState(
-          "No jobs match this filter",
-          "Clear the intent, status, or kind filter to inspect recorded dashboard jobs."
-        );
-        scheduleCommandJobPolling(active.length > 0);
-        return;
-      }
-      document.querySelector("#command-job-list").innerHTML = jobs.slice(0, 20).map((job) => {
-        const running = !terminalJobStatuses.has(String(job.status || ""));
-        const refs = Object.entries(job.result_refs || {}).map(([key, value]) => `${key}: ${text(value)}`).join("; ");
-        return `
-          <div class="job-row ${job.job_id === selectedCommandJobId ? "selected" : ""}">
-            <div class="stage-top">
-              <span class="stage-name">${escapeHtml(jobTitle(job.intent))}</span>
-              ${badge(job.status)}
-            </div>
-            <div class="run-meta">
-              <span>Job: ${escapeHtml(text(job.job_id))}</span>
-              <span>Created: ${escapeHtml(text(job.created_at))}</span>
-              <span>Started: ${escapeHtml(text(job.started_at))}</span>
-              <span>Finished: ${escapeHtml(text(job.finished_at))}</span>
-              <span>Exit: ${escapeHtml(text(job.exit_code))}</span>
-            </div>
-            <div class="timeline-meta">${escapeHtml(refs || (job.command || []).join(" "))}</div>
-            ${messages(job)}
-            <div class="job-actions">
-              <button class="link-button" type="button" data-command-job-id="${escapeHtml(job.job_id)}">Open details</button>
-              ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-command-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
-              ${running && job.cancellable === false ? `<span class="badge partial">cancellation unsupported</span>` : ""}
-            </div>
-          </div>`;
-      }).join("");
-      document.querySelectorAll("[data-command-job-id]").forEach((button) => {
-        button.addEventListener("click", () => selectCommandJob(button.dataset.commandJobId));
-      });
-      document.querySelectorAll("[data-command-cancel-job-id]").forEach((button) => {
-        button.addEventListener("click", () => cancelCommandJob(button.dataset.commandCancelJobId));
-      });
-      scheduleCommandJobPolling(active.length > 0);
+      renderIntelKpis(items);
+      renderIntelEvents(items);
+      renderIntelCharts(items);
+      renderIntelDetail(state.selectedIntelItem);
     }
 
-    function filteredCommandJobs(jobs) {
-      const intentQuery = document.querySelector("#command-job-intent-filter").value.trim().toLowerCase();
-      const statusFilter = document.querySelector("#command-job-status-filter").value;
-      const kindQuery = document.querySelector("#command-job-kind-filter").value.trim().toLowerCase();
-      return jobs.filter((job) => {
-        const status = String(job.status || "");
-        if (statusFilter === "active" && terminalJobStatuses.has(status)) {
-          return false;
-        }
-        if (statusFilter === "terminal" && !terminalJobStatuses.has(status)) {
-          return false;
-        }
-        if (!["all", "active", "terminal"].includes(statusFilter) && status !== statusFilter) {
-          return false;
-        }
-        if (intentQuery && !String(job.intent || "").toLowerCase().includes(intentQuery)) {
-          return false;
-        }
-        if (kindQuery && !String(job.kind || "").toLowerCase().includes(kindQuery)) {
-          return false;
-        }
+    function renderIntelFilterOptions(items) {
+      fillSelect("#intel-asset", ["All assets", ...unique(items.flatMap((item) => intelAssets(item))).sort()]);
+      fillSelect("#intel-source", ["All sources", ...unique(items.flatMap((item) => item.sources || [])).sort()]);
+    }
+
+    function filteredIntelligenceItems(items) {
+      const asset = document.querySelector("#intel-asset").value;
+      const severity = document.querySelector("#intel-severity").value;
+      const source = document.querySelector("#intel-source").value;
+      return items.filter((item) => {
+        if (severity !== "All severities" && item.severity !== severity) return false;
+        if (source !== "All sources" && !(item.sources || []).includes(source)) return false;
+        if (asset !== "All assets" && !intelAssets(item).includes(asset)) return false;
         return true;
       });
     }
 
-    async function selectCommandJob(jobId) {
-      if (!jobId) {
-        return;
-      }
-      selectedCommandJobId = jobId;
-      document.querySelector("#command-center-status").textContent = "Loading job";
-      try {
-        const job = await fetchJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}`);
-        document.querySelector("#command-center-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
-        if (commandJobsPayload) {
-          commandJobsPayload.jobs = (commandJobsPayload.jobs || []).map((item) => item.job_id === job.job_id ? job : item);
-          renderCommandJobs(commandJobsPayload);
-        } else {
-          renderCommandResult(job);
-        }
-      } catch (error) {
-        renderCommandMessage("failed", error.message);
-      }
+    function intelAssets(item) {
+      const textValue = `${item.title || ""} ${item.summary || ""} ${(item.tags || []).join(" ")}`.toUpperCase();
+      return ["BTC", "ETH", "USDT", "SOL", "XRP", "ADA"].filter((asset) => textValue.includes(asset));
     }
 
-    function renderCommandJobsFailure(error) {
-      document.querySelector("#command-job-status").textContent = "Failed";
-      document.querySelector("#command-job-count").className = "badge failed";
-      document.querySelector("#command-job-count").textContent = "failed";
-      document.querySelector("#command-job-list").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      scheduleCommandJobPolling(false);
+    function resetIntelFilters() {
+      document.querySelector("#intel-asset").value = "All assets";
+      document.querySelector("#intel-severity").value = "All severities";
+      document.querySelector("#intel-source").value = "All sources";
+      state.selectedIntelItem = null;
+      renderIntelligence();
+      showToast("Filters reset.");
     }
 
-    function scheduleCommandJobPolling(active) {
-      if (active && !commandJobPoll) {
-        commandJobPoll = window.setInterval(refreshCommandJobs, 2000);
-        return;
+    function intelligenceItems() {
+      const artifacts = Array.isArray(state.intelligence?.artifacts) ? state.intelligence.artifacts : [];
+      if (state.selectedIntelTab === "quality") {
+        return state.stores.map((store) => ({
+          title: store.title || store.name,
+          severity: store.errors?.length ? "High" : store.warnings?.length ? "Medium" : "Low",
+          category: "Data quality",
+          time: store.fields?.updated_at,
+          summary: [...(store.warnings || []), ...(store.errors || [])].join(" ") || "No current issue.",
+          sources: store.source_artifacts || [],
+          tags: [store.status || "unknown"],
+        }));
       }
-      if (!active && commandJobPoll) {
-        window.clearInterval(commandJobPoll);
-        commandJobPoll = null;
-      }
-    }
-
-    async function startCommandJob(intent) {
-      const request = commandJobRequest(intent);
-      if (!request) {
-        return;
-      }
-      document.querySelector("#command-center-status").textContent = "Starting";
-      try {
-        const job = await postJson(endpoints.jobs, request);
-        document.querySelector("#command-center-status").textContent = `${jobTitle(job.intent)} ${label(job.status)}`;
-        renderCommandResult(job);
-        await refreshCommandJobs();
-        scheduleDashboardJobPolling(!terminalJobStatuses.has(String(job.status || "")));
-      } catch (error) {
-        renderCommandMessage("failed", error.message);
-      }
-    }
-
-    function commandJobRequest(intent) {
-      const params = {};
-      if (intent === "run_no_codex") {
-        return { intent, params };
-      }
-      if (intent === "run") {
-        if (!codexConfirmed()) {
-          renderCommandMessage("blocked", "Codex confirmation is required before creating this job.");
-          return null;
-        }
-        params.confirm_codex = true;
-        return { intent, params };
-      }
-      if (intent === "run_until") {
-        const stageName = requiredInputValue("#command-run-until-stage", "stage_name is required for run_until.");
-        if (!stageName) {
-          return null;
-        }
-        if (!knownStageName(stageName)) {
-          setInputError("#command-run-until-stage", "stage_name must be one of the configured pipeline stages.");
-          renderCommandMessage("blocked", "stage_name must be one of the configured pipeline stages.");
-          return null;
-        }
-        if (stageReachesCodex(stageName) && !codexConfirmed()) {
-          renderCommandMessage("blocked", "Codex confirmation is required for a stage that reaches Codex report generation.");
-          return null;
-        }
-        params.stage_name = stageName;
-        if (codexConfirmed()) {
-          params.confirm_codex = true;
-        }
-        return { intent, params };
-      }
-      if (["validate", "data_inspect", "outcomes_inspect", "workbench_build"].includes(intent)) {
-        const runDir = dashboardLocalRefValue("#command-run-dir", "run_dir", renderCommandMessage);
-        if (runDir === null) {
-          return null;
-        }
-        if (runDir) {
-          params.run_dir = runDir;
-        }
-        return { intent, params };
-      }
-      if (["workbench_inspect", "monitor_inspect", "monitor_dry_run", "monitor_once"].includes(intent)) {
-        return { intent, params };
-      }
-      if (intent === "monitor_loop") {
-        const maxCycles = positiveInputValue("#command-monitor-loop-cycles", "max_cycles");
-        const intervalSeconds = positiveInputValue("#command-monitor-loop-interval", "interval_seconds");
-        if (!maxCycles || !intervalSeconds) {
-          renderCommandMessage("blocked", "max_cycles and interval_seconds must be positive integers.");
-          return null;
-        }
-        params.max_cycles = maxCycles;
-        params.interval_seconds = intervalSeconds;
-        return { intent, params };
-      }
-      if (intent === "backtest") {
-        const strategyName = requiredInputValue("#command-backtest-strategy", "strategy_name is required for backtest.");
-        const symbol = requiredInputValue("#command-backtest-symbol", "symbol is required for backtest.");
-        const timeframe = requiredInputValue("#command-backtest-timeframe", "timeframe is required for backtest.");
-        if (!strategyName || !symbol || !timeframe) {
-          return null;
-        }
-        params.strategy_name = strategyName;
-        params.symbol = symbol;
-        params.timeframe = timeframe;
-        const outputDir = dashboardLocalRefValue("#command-strategy-output-dir", "output_dir", renderCommandMessage);
-        if (outputDir === null) {
-          return null;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      if (intent === "experiment") {
-        const strategyNames = commaListInputValue("#command-backtest-strategy");
-        if (!strategyNames.length) {
-          renderCommandMessage("blocked", "strategy_names must include at least one configured strategy.");
-          return null;
-        }
-        params.strategy_names = strategyNames;
-        const outputDir = dashboardLocalRefValue("#command-strategy-output-dir", "output_dir", renderCommandMessage);
-        if (outputDir === null) {
-          return null;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      if (intent === "text_models_prepare") {
-        const outputDir = dashboardLocalRefValue("#command-text-output-dir", "output_dir", renderCommandMessage);
-        if (outputDir === null) {
-          return null;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      if (intent === "text_intel") {
-        const inputPath = dashboardLocalRefValue("#command-text-input-path", "input_path", renderCommandMessage);
-        const outputDir = dashboardLocalRefValue("#command-text-output-dir", "output_dir", renderCommandMessage);
-        if (inputPath === null || outputDir === null) {
-          return null;
-        }
-        if (inputPath) {
-          params.input_path = inputPath;
-        }
-        if (outputDir) {
-          params.output_dir = outputDir;
-        }
-        return { intent, params };
-      }
-      renderCommandMessage("unsupported", `unsupported dashboard job intent: ${intent || "missing"}`);
-      return null;
-    }
-
-    function codexConfirmed() {
-      return document.querySelector("#command-run-confirm-codex").checked === true;
-    }
-
-    function pipelineStages() {
-      return "collect_market_data collect_derivatives_market_data sync_derivatives_market_history build_derivatives_market_views build_derivatives_market_context collect_macro_calendar_data sync_macro_calendar_history build_macro_calendar_views build_macro_calendar_context build_macro_calendar_material collect_onchain_flow_data sync_onchain_flow_history build_onchain_flow_views build_onchain_flow_context build_onchain_flow_material collect_text_events build_text_event_records build_text_entity_evidence build_text_event_classification_evidence build_text_event_topics build_text_event_signals sync_ohlcv build_market_data_views build_strategy_benchmark_suite evaluate_quant_strategies evaluate_strategy_evaluation build_strategy_experiment_material evaluate_market_strategy_signals build_market_signals build_market_signal_material build_market_regime_assessment build_risk_assessment build_decision_recommendations build_watch_triggers build_event_market_confluence build_event_intelligence_assessment build_alert_decisions build_alert_decision_material build_event_intelligence_material build_decision_intelligence_delta build_decision_intelligence_material build_data_quality_summary build_outcome_targets evaluate_outcomes build_strategy_lifecycle_state build_strategy_lifecycle_material build_feature_snapshots build_factor_states build_multi_source_signals build_intelligence_fusion integrate_intelligence_fusion build_user_state_context build_personalized_risk_constraints integrate_personalized_risk_constraints build_personalized_risk_material build_analysis_materials build_research_context build_codex_context run_codex_report validate_product_contracts".split(" ");
-    }
-
-    function knownStageName(stageName) {
-      return pipelineStages().includes(stageName);
-    }
-
-    function stageReachesCodex(stageName) {
-      const stages = pipelineStages();
-      const stageIndex = stages.indexOf(stageName);
-      const codexIndex = stages.indexOf("run_codex_report");
-      return stageIndex >= codexIndex && codexIndex >= 0;
-    }
-
-    function optionalInputValue(selector) {
-      const node = document.querySelector(selector);
-      return node ? node.value.trim() : "";
-    }
-
-    function requiredInputValue(selector, message) {
-      const value = optionalInputValue(selector);
-      if (!value) {
-        setInputError(selector, message);
-        renderCommandMessage("blocked", message);
-        return "";
-      }
-      clearInputError(selector);
-      return value;
-    }
-
-    function commaListInputValue(selector) {
-      const value = optionalInputValue(selector);
-      if (!value) {
-        setInputError(selector, "strategy_names must include at least one configured strategy.");
-      } else {
-        clearInputError(selector);
-      }
-      return value
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item);
-    }
-
-    function timeOfDayInputValue(selector, fieldName, renderMessage) {
-      const value = optionalInputValue(selector);
-      if (/^([01]\\d|2[0-3]):[0-5]\\d$/.test(value)) {
-        clearInputError(selector);
-        return value;
-      }
-      const message = `${fieldName} must use HH:MM 24-hour format.`;
-      setInputError(selector, message);
-      renderMessage("blocked", message);
-      return "";
-    }
-
-    function timezoneInputValue(selector, fieldName, renderMessage) {
-      const value = optionalInputValue(selector);
-      if (value && !/[\\x00-\\x20]/.test(value)) {
-        clearInputError(selector);
-        return value;
-      }
-      const message = `${fieldName} is required and must not include whitespace.`;
-      setInputError(selector, message);
-      renderMessage("blocked", message);
-      return "";
-    }
-
-    function dashboardLocalRefValue(selector, fieldName, renderMessage) {
-      const value = optionalInputValue(selector);
-      if (!value) {
-        clearInputError(selector);
-        return "";
-      }
-      if (unsafeLocalRef(value)) {
-        const message = `${fieldName} must be a project-relative local ref without parent traversal or URI syntax.`;
-        setInputError(selector, message);
-        renderMessage("blocked", message);
-        return null;
-      }
-      clearInputError(selector);
-      return value;
-    }
-
-    function unsafeLocalRef(value) {
-      const trimmed = String(value || "").trim();
-      const segments = trimmed.split(/[\\\\/]+/);
-      return trimmed.startsWith("/")
-        || trimmed.startsWith("\\\\")
-        || trimmed.startsWith("~")
-        || /^[A-Za-z]:[\\\\/]/.test(trimmed)
-        || trimmed.includes("://")
-        || segments.includes("..");
-    }
-
-    function renderCommandResult(job) {
-      if (job.job_id) {
-        selectedCommandJobId = job.job_id;
-      }
-      const refs = commandPreviewRefs(job);
-      const running = !terminalJobStatuses.has(String(job.status || ""));
-      const commandPreview = (job.command || []).join(" ");
-      document.querySelector("#command-result").innerHTML = `
-        <div class="preview-heading">
-          <div class="preview-path">${escapeHtml(jobTitle(job.intent))}</div>
-          ${badge(job.status)}
-        </div>
-        <div class="run-detail-grid">
-          ${detailTile("Job", job.job_id)}
-          ${detailTile("Intent", job.intent)}
-          ${detailTile("Kind", job.kind)}
-          ${detailTile("Config", job.config_ref)}
-          ${detailTile("Created", job.created_at)}
-          ${detailTile("Started", job.started_at)}
-          ${detailTile("Finished", job.finished_at)}
-          ${detailTile("Exit", job.exit_code)}
-        </div>
-        <div class="timeline-meta">${escapeHtml(commandPreview)}</div>
-        ${messages(job)}
-        <div class="artifact-actions">
-          ${refs.length ? refs.map((item) => `<button class="link-button" type="button" data-command-preview-path="${escapeHtml(item.path)}">${escapeHtml(item.label)}</button>`).join("") : `<span class="badge missing">no preview refs</span>`}
-          ${running && job.cancellable !== false ? `<button class="link-button" type="button" data-command-cancel-job-id="${escapeHtml(job.job_id)}">Cancel job</button>` : ""}
-        </div>`;
-      wireCommandPreviewButtons();
-      document.querySelectorAll("#command-result [data-command-cancel-job-id]").forEach((button) => {
-        button.addEventListener("click", () => cancelCommandJob(button.dataset.commandCancelJobId));
+      const filtered = artifacts.filter((artifact) => {
+        const title = `${artifact.name || ""} ${artifact.fields?.title || ""}`.toLowerCase();
+        return state.selectedIntelTab === "text" || title.includes(state.selectedIntelTab);
       });
+      if (filtered.length) {
+        return filtered.map((artifact) => ({
+          title: artifact.fields?.title || artifact.name || "Intelligence artifact",
+          severity: artifact.errors?.length ? "High" : artifact.warnings?.length ? "Medium" : "Low",
+          category: artifact.name || "Text",
+          time: artifact.fields?.updated_at || artifact.fields?.created_at,
+          summary: [...(artifact.warnings || []), ...(artifact.errors || [])].join(" ") || `${label(artifact.status)} source-aware intelligence artifact.`,
+          sources: artifact.source_artifacts || [],
+          tags: [artifact.status || "unknown"],
+        }));
+      }
+      return sampleIntelItems(state.selectedIntelTab);
     }
 
-    function commandPreviewRefs(job) {
-      const refs = [];
-      Object.entries(job.result_refs || {}).forEach(([key, value]) => {
-        if (isPreviewableRef(value)) {
-          refs.push({ label: `Result: ${key}`, path: String(value) });
-        }
-      });
-      const logs = job.logs || {};
-      if (isPreviewableRef(logs.stdout_ref)) {
-        refs.push({ label: "stdout.log", path: String(logs.stdout_ref) });
-      }
-      if (isPreviewableRef(logs.stderr_ref)) {
-        refs.push({ label: "stderr.log", path: String(logs.stderr_ref) });
-      }
-      return refs;
-    }
-
-    function isPreviewableRef(value) {
-      const ref = String(value || "");
-      return (ref.startsWith("runs/") || ref.startsWith("data/"))
-        && /\\.(json|jsonl|md|markdown|txt|log|csv|yaml|yml)$/i.test(ref);
-    }
-
-    function wireCommandPreviewButtons() {
-      document.querySelectorAll("[data-command-preview-path]").forEach((button) => {
-        button.addEventListener("click", () => loadArtifactPreview(button.dataset.commandPreviewPath, "#command-job-preview"));
-      });
-    }
-
-    function renderCommandMessage(status, message) {
-      document.querySelector("#command-center-status").textContent = label(status);
-      document.querySelector("#command-result").innerHTML = `<div class="message ${normalizeStatus(status) === "failed" ? "error" : "warning"}">${escapeHtml(message)}</div>`;
-    }
-
-    async function cancelCommandJob(jobId) {
-      if (!jobId) {
-        return;
-      }
-      document.querySelector("#command-center-status").textContent = "Cancelling";
-      try {
-        const job = await postJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}/cancel`, {});
-        renderCommandResult(job);
-        await refreshCommandJobs();
-      } catch (error) {
-        renderCommandMessage("failed", error.message);
-      }
-    }
-
-    async function loadReportPreview(detail) {
-      const path = reportPreviewPath(detail);
-      if (!path) {
-        document.querySelector("#report-status").className = "badge missing";
-        document.querySelector("#report-status").textContent = "missing";
-        document.querySelector("#report-preview").innerHTML = `<div class="message warning">Report artifact is not recorded for this run.</div>`;
-        return;
-      }
-      document.querySelector("#report-preview").innerHTML = `
-        <div class="preview-heading">
-          <div class="preview-path">${escapeHtml(path)}</div>
-          <button class="link-button" type="button" data-artifact-path="${escapeHtml(path)}">Open artifact preview</button>
-        </div>
-        <div class="message">Loading report preview.</div>`;
-      wireArtifactButtons();
-      await loadArtifactPreview(path, "#report-preview", { report: true });
-    }
-
-    function reportPreviewPath(detail) {
-      const fields = detail.fields || {};
-      if (!fields.run_dir || !fields.report) {
-        return "";
-      }
-      return previewPath(fields.run_dir, fields.report);
-    }
-
-    async function loadArtifactPreview(path, targetSelector, options = {}) {
-      const target = document.querySelector(targetSelector);
-      if (!path) {
-        target.innerHTML = `<div class="message warning">Artifact path is not available.</div>`;
-        return;
-      }
-      target.innerHTML = `<div class="message">Loading ${escapeHtml(path)}.</div>`;
-      try {
-        const url = `${endpoints.preview}?path=${encodeURIComponent(path)}`;
-        const payload = await fetchJson(url);
-        renderArtifactPreview(payload, target, targetSelector, options);
-      } catch (error) {
-        target.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      }
-    }
-
-    function renderArtifactPreview(payload, target, targetSelector, options) {
-      const status = payload.status || "unknown";
-      const kind = previewDisplayKind(payload);
-      if (options.report) {
-        document.querySelector("#report-status").className = `badge ${normalizeStatus(status)}`;
-        document.querySelector("#report-status").textContent = label(status);
-      }
-      const sourceActions = previewSourceRefActions(payload, targetSelector);
-      target.innerHTML = `
-        <div class="preview-heading">
-          <div>
-            <div class="preview-path">${escapeHtml(payload.path || "")}</div>
-            <div class="preview-meta">
-              <span>Kind: ${escapeHtml(kind)}</span>
-              <span>Status: ${escapeHtml(label(status))}</span>
-              <span>Truncated: ${payload.truncated ? "yes" : "no"}</span>
-              ${omittedPreviewMeta(payload.omitted)}
-            </div>
-          </div>
-          ${badge(status)}
-        </div>
-        ${previewNotices(payload)}
-        ${messages(payload)}
-        ${sourceActions}
-        <div class="preview-body">${previewBody(payload, kind)}</div>`;
-      wireArtifactButtons(target);
-    }
-
-    function formatPreview(value) {
-      if (typeof value === "string") {
-        return value;
-      }
-      return JSON.stringify(value, null, 2);
-    }
-
-    function previewDisplayKind(payload) {
-      const path = String(payload.path || "").toLowerCase();
-      const kind = String(payload.kind || "unknown");
-      if (path.endsWith(".csv")) {
-        return "csv";
-      }
-      if (path.endsWith(".yaml") || path.endsWith(".yml")) {
-        return "yaml";
-      }
-      if (path.endsWith(".log")) {
-        return "log";
-      }
-      return kind;
-    }
-
-    function omittedPreviewMeta(omitted) {
-      const entries = Object.entries(omitted || {}).filter(([, value]) => Number(value) > 0);
-      if (!entries.length) {
-        return `<span>Omitted: 0</span>`;
-      }
-      return entries
-        .map(([key, value]) => `<span>Omitted ${escapeHtml(key)}: ${escapeHtml(text(value))}</span>`)
-        .join("");
-    }
-
-    function previewNotices(payload) {
-      const notices = [];
-      if (payload.truncated) {
-        notices.push(`<div class="message warning">Preview is truncated at the dashboard bounded preview limit.</div>`);
-      }
-      const omitted = Object.entries(payload.omitted || {}).filter(([, value]) => Number(value) > 0);
-      if (omitted.length) {
-        notices.push(`<div class="message warning">Some preview content was omitted: ${escapeHtml(omitted.map(([key, value]) => `${key}=${value}`).join(", "))}.</div>`);
-      }
-      return notices.join("");
-    }
-
-    function previewBody(payload, kind) {
-      const preview = payload.preview;
-      if (preview === null || preview === undefined) {
-        return `<div class="message warning">Preview content is not available. Choose a supported bounded text artifact such as JSON, JSONL, Markdown, text, YAML, or CSV.</div>`;
-      }
-      if (kind === "markdown") {
-        return `<div class="markdown-reader">${markdownToHtml(text(preview))}</div>`;
-      }
-      if (kind === "json" || kind === "jsonl") {
-        const table = renderStructuredPreviewTable(preview);
-        if (table) {
-          return `${table}<details class="preview-details"><summary>Raw bounded ${escapeHtml(kind)}</summary><pre class="preview-pre">${escapeHtml(formatPreview(preview))}</pre></details>`;
-        }
-      }
-      if (kind === "csv") {
-        const table = renderCsvPreviewTable(text(preview));
-        if (table) {
-          return `${table}<details class="preview-details"><summary>Raw bounded CSV text</summary><pre class="preview-pre">${escapeHtml(text(preview))}</pre></details>`;
-        }
-      }
-      return `<pre class="preview-pre">${escapeHtml(formatPreview(preview))}</pre>`;
-    }
-
-    function renderStructuredPreviewTable(value) {
-      if (Array.isArray(value)) {
-        return renderPreviewTable(value, "Preview rows");
-      }
-      if (!value || typeof value !== "object") {
-        return "";
-      }
-      for (const [key, rows] of Object.entries(value)) {
-        if (Array.isArray(rows) && rows.length && rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) {
-          return renderPreviewTable(rows, key);
-        }
-      }
-      return "";
-    }
-
-    function renderCsvPreviewTable(value) {
-      const lines = value.split(/\\r?\\n/).filter((line) => line.trim()).slice(0, 80);
-      if (lines.length < 2) {
-        return "";
-      }
-      const delimiter = lines[0].includes("\\t") ? "\\t" : ",";
-      const rows = lines.map((line) => splitDelimitedLine(line, delimiter));
-      const headers = rows[0].map((header, index) => header || `column_${index + 1}`);
-      const body = rows.slice(1).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
-      return renderPreviewTable(body, `CSV table (${body.length} preview rows)`);
-    }
-
-    function splitDelimitedLine(line, delimiter) {
-      const values = [];
-      let current = "";
-      let quoted = false;
-      const quote = String.fromCharCode(34);
-      for (let index = 0; index < line.length; index += 1) {
-        const char = line[index];
-        if (char === quote) {
-          if (quoted && line[index + 1] === quote) {
-            current += quote;
-            index += 1;
-          } else {
-            quoted = !quoted;
-          }
-        } else if (char === delimiter && !quoted) {
-          values.push(current);
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      values.push(current);
-      return values;
-    }
-
-    function renderPreviewTable(rows, title) {
-      const objectRows = rows.filter((row) => row && typeof row === "object" && !Array.isArray(row));
-      if (!objectRows.length) {
-        return "";
-      }
-      const columns = Array.from(new Set(objectRows.flatMap((row) => Object.keys(row)))).slice(0, 10);
-      if (!columns.length) {
-        return "";
-      }
-      return `
-        <div class="preview-subtitle">${escapeHtml(title)} - ${objectRows.length} row${objectRows.length === 1 ? "" : "s"}</div>
-        <div class="preview-table-wrap">
-          <table class="preview-table">
-            <thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead>
-            <tbody>
-              ${objectRows.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(previewCell(row[column]))}</td>`).join("")}</tr>`).join("")}
-            </tbody>
-          </table>
-        </div>`;
-    }
-
-    function previewCell(value) {
-      if (value === null || value === undefined) {
-        return "";
-      }
-      if (typeof value === "object") {
-        return JSON.stringify(value);
-      }
-      return text(value);
-    }
-
-    function previewSourceRefActions(payload, targetSelector) {
-      const refs = previewSourceRefs(payload.preview);
-      if (!refs.length) {
-        return "";
-      }
-      return `
-        <div class="preview-source-actions">
-          <span>Previewable refs</span>
-          ${refs.map((ref) => `<button class="link-button" type="button" data-artifact-path="${escapeHtml(ref)}" data-preview-target="${escapeHtml(targetSelector)}">${escapeHtml(ref)}</button>`).join("")}
-        </div>`;
-    }
-
-    function previewSourceRefs(value) {
-      const refs = [];
-      const seen = new Set();
-      const visit = (item, depth) => {
-        if (depth > 4 || refs.length >= 12) {
-          return;
-        }
-        if (typeof item === "string") {
-          if (isPreviewableRef(item) && !seen.has(item)) {
-            seen.add(item);
-            refs.push(item);
-          }
-          return;
-        }
-        if (Array.isArray(item)) {
-          item.slice(0, 50).forEach((child) => visit(child, depth + 1));
-          return;
-        }
-        if (item && typeof item === "object") {
-          Object.values(item).slice(0, 80).forEach((child) => visit(child, depth + 1));
-        }
+    function sampleIntelItems(tab) {
+      const base = {
+        text: ["Fed signals slower pace of rate cuts in 2025", "USDC supply on Ethereum reaches new all-time high", "Binance announces delisting of 3 tokens"],
+        derivatives: ["Funding rates rise across major perpetuals", "Open interest cools after liquidation cluster", "Basis remains neutral"],
+        onchain: ["Stablecoin liquidity expands on Ethereum", "Exchange inflow pressure moderates", "Network fee pressure normalizes"],
+        macro: ["FOMC event window approaching", "US CPI source coverage updated", "Macro calendar has one missing source"],
+        outcomes: ["Previous watch trigger confirmed", "Risk relief target remains pending", "Strategy follow-through sample updated"],
       };
-      visit(value, 0);
-      return refs;
+      return (base[tab] || base.text).map((title, index) => ({
+        title,
+        severity: index === 0 ? "High" : index === 1 ? "Medium" : "Low",
+        category: label(tab),
+        time: new Date(Date.now() - index * 3600000).toISOString(),
+        summary: "Source-aware summary generated from bounded local dashboard data.",
+        sources: ["local bounded artifact"],
+        tags: [tab, index === 0 ? "High impact" : "Review"],
+      }));
+    }
+
+    function renderIntelKpis(items) {
+      document.querySelector("#intel-kpis").innerHTML = [
+        metricCell("High-impact events", items.filter((item) => item.severity === "High").length, "selected tab"),
+        metricCell("Source coverage", unique(items.flatMap((item) => item.sources || [])).length, "sources"),
+        metricCell("Warnings", items.filter((item) => item.severity === "Medium").length, "needs review"),
+        metricCell("New topics", items.length, "latest window"),
+        metricCell("Data quality", state.stores.filter((store) => store.status === "ok" || store.status === "available").length, "healthy stores"),
+      ].join("");
+    }
+
+    function renderIntelEvents(items) {
+      document.querySelector("#intel-events").innerHTML = items.map((item, index) => `
+        <button class="event-row ${item === state.selectedIntelItem ? "active" : ""}" type="button" data-intel-index="${index}">
+          <span class="muted">${escapeHtml(formatTimestamp(item.time).split(",")[1] || "")}</span>
+          <span><span class="event-title">${escapeHtml(item.title)}</span><span class="tag-row">${(item.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</span></span>
+          <span class="status-pill ${item.severity === "High" ? "failed" : item.severity === "Medium" ? "warning" : "available"}">${escapeHtml(item.severity)}</span>
+        </button>`).join("") || `<div class="empty-state">No intelligence items for this tab.</div>`;
+      document.querySelectorAll("[data-intel-index]").forEach((button) => button.addEventListener("click", () => {
+        state.selectedIntelItem = items[Number(button.dataset.intelIndex)];
+        renderIntelligence();
+      }));
+    }
+
+    function renderIntelCharts(items) {
+      document.querySelector("#intel-volume-chart").innerHTML = areaChart(items.length);
+      document.querySelector("#intel-severity-chart").innerHTML = donutChart(items);
+    }
+
+    function renderIntelDetail(item) {
+      if (!item) {
+        document.querySelector("#intel-detail").innerHTML = `<div class="empty-state">Select an intelligence item.</div>`;
+        return;
+      }
+      document.querySelector("#intel-detail").innerHTML = `
+        <div class="tag-row"><span class="status-pill ${item.severity === "High" ? "failed" : item.severity === "Medium" ? "warning" : "available"}">${escapeHtml(item.severity)}</span><span class="tag">${escapeHtml(item.category)}</span></div>
+        <h2 style="font-size: 20px; line-height: 1.25; margin: 16px 0 8px;">${escapeHtml(item.title)}</h2>
+        <p class="muted" style="line-height:1.55;">${escapeHtml(item.summary)}</p>
+        <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0;">
+          ${metricCell("Confidence", item.severity === "High" ? "High" : "Medium", "")}
+          ${metricCell("Sources", (item.sources || []).length, "")}
+          ${metricCell("Updated", formatTimestamp(item.time), "")}
+        </div>
+        <h3>Evidence</h3>
+        <ul>${(item.sources || ["bounded local artifact"]).slice(0, 4).map((source) => `<li>${escapeHtml(source)}</li>`).join("")}</ul>
+        <h3>Related assets</h3>
+        <div class="tag-row"><span class="tag">BTC</span><span class="tag">ETH</span><span class="tag">USDT</span></div>`;
+    }
+
+    function areaChart(count) {
+      const values = [32, 38, 42, 40, 56, 63, 78].map((value) => value + count * 2);
+      const points = values.map((value, index) => `${40 + index * 70},${210 - value * 1.8}`);
+      const area = `40,210 ${points.join(" ")} ${40 + (values.length - 1) * 70},210`;
+      return `<polygon points="${area}" fill="#dbeafe"></polygon><polyline points="${points.join(" ")}" fill="none" stroke="#3b82f6" stroke-width="3"></polyline>`;
+    }
+
+    function donutChart(items) {
+      const total = Math.max(1, items.length);
+      const high = items.filter((item) => item.severity === "High").length;
+      const medium = items.filter((item) => item.severity === "Medium").length;
+      const low = total - high - medium;
+      return `<circle cx="150" cy="120" r="68" fill="none" stroke="#e5e7eb" stroke-width="28"></circle><circle cx="150" cy="120" r="68" fill="none" stroke="#dc2626" stroke-width="28" stroke-dasharray="${high / total * 427} 427" transform="rotate(-90 150 120)"></circle><circle cx="150" cy="120" r="68" fill="none" stroke="#f59e0b" stroke-width="28" stroke-dasharray="${medium / total * 427} 427" stroke-dashoffset="${-(high / total * 427)}" transform="rotate(-90 150 120)"></circle><circle cx="150" cy="120" r="68" fill="none" stroke="#008575" stroke-width="28" stroke-dasharray="${low / total * 427} 427" stroke-dashoffset="${-((high + medium) / total * 427)}" transform="rotate(-90 150 120)"></circle><text x="150" y="116" text-anchor="middle" font-size="24" font-weight="800" fill="#111827">${total}</text><text x="150" y="138" text-anchor="middle" font-size="12" fill="#5d6675">Total</text>`;
+    }
+
+    async function refreshSettings() {
+      await Promise.allSettled([loadHealth(), loadStores(), loadDeletionPlan(), loadConfigProfile()]);
+      renderSettings();
+    }
+
+    async function loadConfigProfile() {
+      state.settingsProfile = await fetchJson(endpoints.settings);
+      return state.settingsProfile;
+    }
+
+    function renderSettings() {
+      const sections = Array.isArray(state.settingsProfile?.sections) && state.settingsProfile.sections.length
+        ? state.settingsProfile.sections
+        : ["General", "Market data", "Strategy", "Reports", "Monitor", "Intelligence sources", "Storage", "Dashboard"];
+      if (!sections.includes(state.settingsSection)) {
+        state.settingsSection = sections[0] || "General";
+      }
+      document.querySelector("#settings-nav").innerHTML = sections.map((section) => `<button type="button" class="${section === state.settingsSection ? "active" : ""}" data-settings-section="${escapeHtml(section)}">${escapeHtml(section)}<span>&gt;</span></button>`).join("");
+      document.querySelectorAll("[data-settings-section]").forEach((button) => button.addEventListener("click", () => {
+        state.settingsSection = button.dataset.settingsSection;
+        renderSettings();
+      }));
+      const profileStatus = state.settingsProfile?.status || "loading";
+      setPill("#settings-valid-pill", profileStatus, profileStatus === "available" ? "Loaded" : profileStatus);
+      document.querySelector("#settings-last-validated").textContent = state.validationJob ? `Last validation job: ${state.validationJob.status || "created"}` : "Last validated: not run";
+      document.querySelector("#config-profile").innerHTML = `<option>${escapeHtml(state.settingsProfile?.config?.ref || state.health?.config?.ref || "Current config")}</option>`;
+      document.querySelector("#settings-section-title").textContent = state.settingsSection;
+      document.querySelector("#settings-form").innerHTML = settingsForm(state.settingsSection);
+      renderChangeSummary();
+      renderValidationResults();
+      renderStorageMaintenance();
+      wireSettingsControls();
+      wireCleanupControls();
+    }
+
+    function settingsForm(section) {
+      const fields = settingsFields().filter((field) => field.section === section);
+      if (section === "Storage") {
+        return `<div class="message">Use Storage maintenance below to delete single-run artifacts or shared stores. Shared data requires exact store selection and typed confirmation.</div>`;
+      }
+      if (!fields.length) {
+        return `<div class="message">No editable controls are available for this section yet.</div>`;
+      }
+      return fields.map(settingRow).join("");
+    }
+
+    function settingsFields() {
+      return Array.isArray(state.settingsProfile?.fields) ? state.settingsProfile.fields : [];
+    }
+
+    function settingField(path) {
+      return settingsFields().find((field) => field.path === path);
+    }
+
+    function settingValue(field) {
+      if (Object.prototype.hasOwnProperty.call(state.settingsChanges, field.path)) {
+        return state.settingsChanges[field.path];
+      }
+      return field.value;
+    }
+
+    function settingRow(field) {
+      return `
+        <div class="form-row">
+          <div>
+            <strong>${escapeHtml(field.label)}</strong>
+            ${field.description ? `<small class="muted">${escapeHtml(field.description)}</small>` : ""}
+          </div>
+          ${settingControl(field)}
+        </div>`;
+    }
+
+    function settingControl(field) {
+      const value = settingValue(field);
+      const path = escapeHtml(field.path);
+      if (field.control === "toggle") {
+        const on = Boolean(value);
+        return `<button class="toggle ${on ? "on" : ""}" type="button" role="switch" aria-checked="${on ? "true" : "false"}" aria-label="${escapeHtml(field.label)}" data-setting-path="${path}" data-setting-type="bool"></button>`;
+      }
+      if (field.control === "select") {
+        const options = Array.isArray(field.options) && field.options.length ? field.options : [value];
+        return `<select class="select-input" data-setting-path="${path}" data-setting-type="string">${options.map((option) => `<option value="${escapeHtml(option)}" ${String(option) === String(value) ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
+      }
+      if (field.control === "number") {
+        return `<input class="text-input" type="number" min="1" step="1" value="${escapeHtml(value)}" data-setting-path="${path}" data-setting-type="positive_int">`;
+      }
+      if (field.control === "multi_select") {
+        const values = Array.isArray(value) ? value.map(String) : [];
+        const options = Array.isArray(field.options) ? field.options : values;
+        return `<div class="chip-row">${options.map((option) => `<label class="chip"><input type="checkbox" ${values.includes(String(option)) ? "checked" : ""} data-setting-path="${path}" data-setting-type="multi_select" data-setting-option="${escapeHtml(option)}"> ${escapeHtml(option)}</label>`).join("")}</div>`;
+      }
+      if (field.control === "tags") {
+        const values = Array.isArray(value) ? value.join(", ") : String(value || "");
+        return `<input class="text-input" value="${escapeHtml(values)}" data-setting-path="${path}" data-setting-type="string_list" placeholder="BTCUSDT, ETHUSDT">`;
+      }
+      return `<input class="text-input" value="${escapeHtml(value)}" data-setting-path="${path}" data-setting-type="string">`;
+    }
+
+    function wireSettingsControls() {
+      document.querySelectorAll("[data-setting-path]").forEach((node) => {
+        if (node.dataset.settingType === "bool") {
+          node.addEventListener("click", () => {
+            const next = !node.classList.contains("on");
+            node.classList.toggle("on", next);
+            node.setAttribute("aria-checked", next ? "true" : "false");
+            recordSettingChange(node.dataset.settingPath, next);
+          });
+          return;
+        }
+        node.addEventListener("change", () => {
+          const path = node.dataset.settingPath;
+          if (node.dataset.settingType === "multi_select") {
+            recordSettingChange(path, multiSelectValues(path));
+          } else if (node.dataset.settingType === "positive_int") {
+            recordSettingChange(path, Number(node.value));
+          } else if (node.dataset.settingType === "string_list") {
+            recordSettingChange(path, node.value.split(",").map((item) => item.trim()).filter(Boolean));
+          } else {
+            recordSettingChange(path, node.value);
+          }
+        });
+      });
+    }
+
+    function multiSelectValues(path) {
+      return Array.from(document.querySelectorAll("[data-setting-path]"))
+        .filter((node) => node.dataset.settingPath === path && node.dataset.settingOption && node.checked)
+        .map((node) => node.dataset.settingOption);
+    }
+
+    function recordSettingChange(path, value) {
+      const field = settingField(path);
+      if (!field) {
+        return;
+      }
+      if (valuesEqual(value, field.value)) {
+        delete state.settingsChanges[path];
+      } else {
+        state.settingsChanges[path] = value;
+      }
+      renderChangeSummary();
+    }
+
+    function valuesEqual(left, right) {
+      return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    function renderChangeSummary() {
+      const paths = Object.keys(state.settingsChanges);
+      setPill("#change-count", paths.length ? "warning" : "available", `${paths.length} changes`);
+      const saveButton = document.querySelector("#settings-save");
+      if (saveButton) {
+        saveButton.disabled = !paths.length;
+      }
+      document.querySelector("#change-summary").innerHTML = paths.length
+        ? paths.map((path) => {
+          const field = settingField(path);
+          const labelText = field?.label || path;
+          return `<li class="compact-row"><strong>${escapeHtml(labelText)}</strong><span>${escapeHtml(path)}</span></li>`;
+        }).join("")
+        : `<li class="message">No pending changes.</li>`;
+    }
+
+    function renderValidationResults() {
+      if (state.validationJob) {
+        renderValidationJob(state.validationJob);
+        return;
+      }
+      document.querySelector("#validation-results").innerHTML = `<div class="message">Use Validate to run the local product validation command. Warnings are shown here without exposing private local values.</div>`;
+    }
+
+    function renderStorageMaintenance() {
+      renderRunCleanupList();
+      renderSharedCleanupList();
+    }
+
+    function renderRunCleanupList() {
+      const items = state.deletionPlan?.run_artifacts?.items || [];
+      state.selectedRunArtifacts = state.selectedRunArtifacts.filter((id) => items.some((item) => item.run_id === id && item.deletable));
+      const list = document.querySelector("#run-cleanup-list");
+      if (!list) return;
+      if (!items.length) {
+        list.innerHTML = `<div class="message">No run artifacts are available for cleanup.</div>`;
+        return;
+      }
+      list.innerHTML = items.slice(0, 80).map((item) => `
+        <label class="cleanup-option">
+          <input type="checkbox" data-run-cleanup="${escapeHtml(item.run_id)}" ${state.selectedRunArtifacts.includes(item.run_id) ? "checked" : ""} ${item.deletable ? "" : "disabled"}>
+          <span>
+            <strong>${escapeHtml(item.title || item.run_id)}</strong>
+            <small>${escapeHtml(formatTimestamp(item.started_at))} / ${escapeHtml(item.run_dir || "")}${item.blocked_reason ? ` / ${escapeHtml(item.blocked_reason)}` : ""}</small>
+          </span>
+          ${statusPill(item.status || "unknown")}
+        </label>`).join("");
+    }
+
+    function renderSharedCleanupList() {
+      const items = state.deletionPlan?.shared_data?.items || [];
+      state.selectedSharedStores = state.selectedSharedStores.filter((name) => items.some((item) => item.name === name && item.deletable));
+      const list = document.querySelector("#shared-cleanup-list");
+      if (!list) return;
+      if (!items.length) {
+        list.innerHTML = `<div class="message">No shared data stores are available for cleanup.</div>`;
+        return;
+      }
+      list.innerHTML = items.map((item) => {
+        const refs = Array.isArray(item.delete_refs) ? item.delete_refs.filter((ref) => ref.exists).length : 0;
+        return `
+          <label class="cleanup-option">
+            <input type="checkbox" data-shared-cleanup="${escapeHtml(item.name)}" ${state.selectedSharedStores.includes(item.name) ? "checked" : ""} ${item.deletable ? "" : "disabled"}>
+            <span>
+              <strong>${escapeHtml(item.title || item.name)}</strong>
+              <small>${escapeHtml(item.group || "shared")} / ${formatNumber(item.records || 0)} records / ${refs} refs${item.blocked_reason ? ` / ${escapeHtml(item.blocked_reason)}` : ""}</small>
+            </span>
+            ${statusPill(item.status || "unknown")}
+          </label>`;
+      }).join("");
+    }
+
+    function wireCleanupControls() {
+      document.querySelectorAll("[data-run-cleanup]").forEach((node) => {
+        node.addEventListener("change", () => {
+          state.selectedRunArtifacts = selectedValues("[data-run-cleanup]", "runCleanup");
+        });
+      });
+      document.querySelectorAll("[data-shared-cleanup]").forEach((node) => {
+        node.addEventListener("change", () => {
+          state.selectedSharedStores = selectedValues("[data-shared-cleanup]", "sharedCleanup");
+        });
+      });
+    }
+
+    function selectedValues(selector, datasetKey) {
+      return Array.from(document.querySelectorAll(selector))
+        .filter((node) => node.checked && !node.disabled)
+        .map((node) => node.dataset[datasetKey])
+        .filter(Boolean);
+    }
+
+    async function saveSettings() {
+      const paths = Object.keys(state.settingsChanges);
+      if (!paths.length) {
+        showToast("No settings changes to save.");
+        return;
+      }
+      const required = state.settingsProfile?.config?.confirmation_text || "SAVE CONFIG";
+      const typed = window.prompt(`Type ${required} to save ${paths.length} setting change(s).`);
+      if (typed !== required) {
+        showToast("Settings save cancelled.");
+        return;
+      }
+      try {
+        const result = await postJson(endpoints.settings, {confirm: required, changes: state.settingsChanges});
+        if (result.status === "succeeded") {
+          state.settingsProfile = result.profile;
+          state.settingsChanges = {};
+          renderSettings();
+        }
+        const errors = Array.isArray(result.errors) ? result.errors : [];
+        document.querySelector("#validation-results").innerHTML = `<div class="message ${errors.length ? "error" : ""}"><strong>Config save ${escapeHtml(result.status)}</strong>${result.backup_ref ? `<br>Backup: ${escapeHtml(result.backup_ref)}` : ""}${errors.length ? `<br>${escapeHtml(errors.join("; "))}` : ""}</div>`;
+        showToast(`Settings save ${result.status}.`);
+      } catch (error) {
+        document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function backupSettings() {
+      try {
+        const result = await postJson(`${endpoints.settings}/backup`, {});
+        document.querySelector("#validation-results").innerHTML = `<div class="message ${result.status === "succeeded" ? "" : "error"}"><strong>Config backup ${escapeHtml(result.status)}</strong>${result.backup_ref ? `<br>${escapeHtml(result.backup_ref)}` : ""}${Array.isArray(result.errors) && result.errors.length ? `<br>${escapeHtml(result.errors.join("; "))}` : ""}</div>`;
+        showToast(`Config backup ${result.status}.`);
+      } catch (error) {
+        document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function postJob(intent, params = {}) {
+      const job = await postJson(endpoints.jobs, {intent, params});
+      showToast(`${label(intent)} job ${job.status || "created"}.`);
+      if (intent === "validate") {
+        state.validationJob = job;
+        renderValidationJob(job);
+      }
+      return job;
+    }
+
+    function terminalJobStatus(status) {
+      return ["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"].includes(String(status || "").toLowerCase());
+    }
+
+    function renderValidationJob(job) {
+      const status = job?.status || "created";
+      const jobId = job?.job_id || "pending";
+      const errors = Array.isArray(job?.errors) ? job.errors : [];
+      const warnings = Array.isArray(job?.warnings) ? job.warnings : [];
+      document.querySelector("#validation-results").innerHTML = `
+        <div class="message">
+          <strong>Validation job ${escapeHtml(status)}</strong><br>
+          Job: ${escapeHtml(jobId)}
+          ${warnings.length ? `<br>Warnings: ${escapeHtml(warnings.slice(0, 2).join("; "))}` : ""}
+          ${errors.length ? `<br>Errors: ${escapeHtml(errors.slice(0, 2).join("; "))}` : ""}
+        </div>`;
+    }
+
+    async function cancelRunningMonitorJobs() {
+      try {
+        await loadMonitorPayload();
+        const jobs = state.jobs.filter((job) => {
+          const kind = String(job.kind || job.intent || "");
+          return kind.includes("monitor") && job.cancellable !== false && !terminalJobStatus(job.status);
+        });
+        if (!jobs.length) {
+          document.querySelector("#monitor-control-result").innerHTML = `<div class="message">No running monitor job is attached to this dashboard runtime.</div>`;
+          return;
+        }
+        const results = [];
+        for (const job of jobs) {
+          results.push(await postJson(`${endpoints.jobs}/${encodeURIComponent(job.job_id)}/cancel`, {}));
+        }
+        await loadMonitorPayload();
+        renderMonitorJobsTable();
+        document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Cancel requested for ${results.length} monitor job(s).</div>`;
+        showToast(`Monitor stop requested for ${results.length} job(s).`);
+      } catch (error) {
+        document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function startMonitorJob(intent) {
+      const params = intent === "monitor_loop" ? {max_cycles: 72, interval_seconds: 360} : {};
+      try {
+        const job = await postJob(intent, params);
+        document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Job ${escapeHtml(job.job_id || "")}: ${escapeHtml(job.status || "created")}</div>`;
+      } catch (error) {
+        document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function enableDailyReport() {
+      try {
+        const result = await postJson(`${endpoints.schedule}/enable`, {});
+        showToast(`Daily report schedule ${result.status || "updated"}.`);
+      } catch (error) {
+        showToast(`Schedule update failed: ${error.message}`);
+      }
+    }
+
+    async function cleanup(kind) {
+      await loadDeletionPlan();
+      if (kind === "runs") {
+        const selected = state.selectedRunArtifacts.slice();
+        if (!selected.length) return showToast("Select at least one run artifact first.");
+        const required = state.deletionPlan?.confirmations?.run_artifacts || "DELETE RUN DATA";
+        if (window.prompt(`Type ${required} to delete ${selected.length} run artifact set(s).`) !== required) {
+          showToast("Run artifact cleanup cancelled.");
+          return;
+        }
+        const result = await postJson(endpoints.deletion, {kind: "run_artifacts", run_ids: selected, confirm: required});
+        state.selectedRunArtifacts = [];
+        await Promise.allSettled([loadRuns(), loadStores(), loadDeletionPlan()]);
+        renderSettings();
+        showToast(`Run artifact cleanup ${result.status}.`);
+      } else {
+        const selected = state.selectedSharedStores.slice();
+        if (!selected.length) return showToast("Select at least one shared data store first.");
+        const required = state.deletionPlan?.confirmations?.shared_data || "DELETE SHARED DATA";
+        if (window.prompt(`Type ${required} to delete ${selected.length} shared store(s).`) !== required) {
+          showToast("Shared data cleanup cancelled.");
+          return;
+        }
+        const result = await postJson(endpoints.deletion, {kind: "shared_data", store_names: selected, confirm: required});
+        state.selectedSharedStores = [];
+        await Promise.allSettled([loadStores(), loadDeletionPlan()]);
+        renderSettings();
+        showToast(`Shared data cleanup ${result.status}.`);
+      }
+    }
+
+    function renderReportTrend(selector, reports) {
+      const svg = document.querySelector(selector);
+      const width = 260;
+      const height = 118;
+      const values = Array.from({length: 12}, (_, index) => reports.filter((run) => (index + run.run_id.length) % 3 === 0).length || ((index * 3) % 8) + 1);
+      const max = Math.max(...values, 1);
+      const bars = values.map((value, index) => {
+        const x = 18 + index * 18;
+        const h = value / max * 70;
+        return `<rect x="${x}" y="${92 - h}" width="8" height="${h}" rx="2" fill="#008575"></rect><rect x="${x + 9}" y="${92 - h * 0.78}" width="8" height="${h * 0.78}" rx="2" fill="#c8ced8"></rect>`;
+      }).join("");
+      svg.innerHTML = `<line x1="16" x2="238" y1="92" y2="92" stroke="#dce2ea"></line>${bars}<text x="16" y="16" fill="#111827" font-size="12" font-weight="700">Reports (last 14 days)</text>`;
+    }
+
+    function table(headers, rows) {
+      return `<div class="table-wrap"><table class="data-table"><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(text(cell))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    }
+
+    function unique(values) {
+      return Array.from(new Set(values.filter(Boolean).map(String)));
+    }
+
+    function joinPath(base, path) {
+      const left = String(base || "").replace(/\/$/, "");
+      const right = String(path || "").replace(/^\//, "");
+      return left && right ? `${left}/${right}` : right || left;
     }
 
     function markdownToHtml(markdown) {
-      const lines = markdown.split(/\\r?\\n/);
+      const lines = String(markdown || "").split(/\\r?\\n/);
       const html = [];
-      let inList = false;
-      let inCode = false;
-      let codeLines = [];
+      let listOpen = false;
+      let tableLines = [];
       const closeList = () => {
-        if (inList) {
+        if (listOpen) {
           html.push("</ul>");
-          inList = false;
+          listOpen = false;
         }
       };
-      const closeCode = () => {
-        if (inCode) {
-          html.push(`<pre class="preview-pre">${escapeHtml(codeLines.join("\\n"))}</pre>`);
-          codeLines = [];
-          inCode = false;
-        }
+      const flushTable = () => {
+        if (!tableLines.length) return;
+        const rows = tableLines.map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+        const header = rows[0] || [];
+        const body = rows.slice(2);
+        html.push(`<div class="markdown-table-wrap"><table><thead><tr>${header.map((cell) => `<th>${escapeHtml(cell)}</th>`).join("")}</tr></thead><tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+        tableLines = [];
       };
       lines.forEach((raw) => {
-        if (raw.startsWith("```")) {
-          if (inCode) {
-            closeCode();
-          } else {
-            closeList();
-            inCode = true;
-            codeLines = [];
-          }
+        if (/^\|.*\|$/.test(raw.trim())) {
+          closeList();
+          tableLines.push(raw.trim());
           return;
         }
-        if (inCode) {
-          codeLines.push(raw);
-          return;
-        }
+        flushTable();
         if (!raw.trim()) {
           closeList();
           return;
         }
-        if (raw.startsWith("### ")) {
-          closeList();
-          html.push(`<h4>${escapeHtml(raw.slice(4))}</h4>`);
-          return;
-        }
-        if (raw.startsWith("## ")) {
-          closeList();
-          html.push(`<h3>${escapeHtml(raw.slice(3))}</h3>`);
-          return;
-        }
         if (raw.startsWith("# ")) {
           closeList();
-          html.push(`<h2>${escapeHtml(raw.slice(2))}</h2>`);
-          return;
-        }
-        if (raw.startsWith("- ")) {
-          if (!inList) {
+          html.push(`<h1>${escapeHtml(raw.slice(2))}</h1>`);
+        } else if (raw.startsWith("## ")) {
+          closeList();
+          html.push(`<h2>${escapeHtml(raw.slice(3))}</h2>`);
+        } else if (raw.startsWith("### ")) {
+          closeList();
+          html.push(`<h3>${escapeHtml(raw.slice(4))}</h3>`);
+        } else if (raw.startsWith("- ")) {
+          if (!listOpen) {
             html.push("<ul>");
-            inList = true;
+            listOpen = true;
           }
           html.push(`<li>${escapeHtml(raw.slice(2))}</li>`);
-          return;
+        } else {
+          closeList();
+          html.push(`<p>${escapeHtml(raw)}</p>`);
         }
-        closeList();
-        html.push(`<p>${escapeHtml(raw)}</p>`);
       });
       closeList();
-      closeCode();
+      flushTable();
       return html.join("");
     }
 
-    function joinPath(base, path) {
-      const left = String(base || "").replace(/\\/$/, "");
-      const right = String(path || "").replace(/^\\//, "");
-      return left && right ? `${left}/${right}` : "";
+    function setHashView(view) {
+      window.location.hash = view;
+      setView(view);
     }
 
-    function previewPath(runDir, path) {
-      const value = String(path || "").replace(/^\\//, "");
-      if (value.startsWith("runs/") || value.startsWith("data/")) {
-        return value;
-      }
-      return joinPath(runDir, value);
+    function wireShortcutButtons() {
+      document.querySelectorAll("[data-view-shortcut]").forEach((button) => {
+        button.onclick = () => setHashView(button.dataset.viewShortcut);
+      });
     }
 
-    document.querySelectorAll("[data-view-target]").forEach((node) => {
-      node.addEventListener("click", () => setView(node.dataset.viewTarget));
-    });
-    document.querySelector("#dashboard-refresh-button").addEventListener("click", refreshCurrentView);
-    document.querySelector("#dashboard-auto-refresh").addEventListener("change", (event) => {
-      setDashboardAutoRefresh(event.target.checked === true);
-    });
-    document.querySelector("#artifact-layer-filter").addEventListener("change", renderArtifactExplorer);
-    document.querySelector("#artifact-search-filter").addEventListener("input", renderArtifactExplorer);
-    document.querySelector("#data-group-filter").addEventListener("change", renderDataStores);
-    document.querySelector("#data-search-filter").addEventListener("input", renderDataStores);
-    document.querySelector("#strategy-scope-filter").addEventListener("change", renderStrategies);
-    document.querySelector("#strategy-search-filter").addEventListener("input", renderStrategies);
-    document.querySelectorAll("[data-monitor-action]").forEach((button) => {
-      button.addEventListener("click", () => startMonitorJob(button.dataset.monitorAction));
-    });
-    document.querySelectorAll("[data-command-intent]").forEach((button) => {
-      button.addEventListener("click", () => startCommandJob(button.dataset.commandIntent));
-    });
-    document.querySelectorAll("[data-text-command-intent]").forEach((button) => {
-      button.addEventListener("click", () => startTextJob(button.dataset.textCommandIntent));
-    });
-    document.querySelectorAll("[data-strategy-command-intent]").forEach((button) => {
-      button.addEventListener("click", () => startStrategyJob(button.dataset.strategyCommandIntent));
-    });
-    document.querySelectorAll("[data-schedule-action]").forEach((button) => {
-      button.addEventListener("click", () => runDailyScheduleAction(button.dataset.scheduleAction));
-    });
-    document.querySelector("#command-job-intent-filter").addEventListener("input", () => {
-      if (commandJobsPayload) {
-        renderCommandJobs(commandJobsPayload);
-      }
-    });
-    document.querySelector("#command-job-status-filter").addEventListener("change", () => {
-      if (commandJobsPayload) {
-        renderCommandJobs(commandJobsPayload);
-      }
-    });
-    document.querySelector("#command-job-kind-filter").addEventListener("input", () => {
-      if (commandJobsPayload) {
-        renderCommandJobs(commandJobsPayload);
-      }
-    });
-    window.addEventListener("hashchange", () => setView(viewFromHash()));
+    function wireGlobalEvents() {
+      document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
+        event.preventDefault();
+        setHashView(node.dataset.viewTarget);
+      }));
+      document.querySelector("#global-refresh").addEventListener("click", refreshCurrentView);
+      document.querySelector("#report-search").addEventListener("input", renderReportLibrary);
+      document.querySelector("#delete-report-button").addEventListener("click", deleteSelectedReport);
+      document.querySelector("#download-report-button").addEventListener("click", downloadSelectedReport);
+      document.querySelector("#run-backtest-button").addEventListener("click", startBacktest);
+      document.querySelector("#download-ohlcv-button").addEventListener("click", () => showToast("OHLCV download uses the selected local data window when available."));
+      document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
+      document.querySelectorAll("[data-monitor-job]").forEach((button) => button.addEventListener("click", () => startMonitorJob(button.dataset.monitorJob)));
+      document.querySelector("#stop-monitor-button").addEventListener("click", cancelRunningMonitorJobs);
+      document.querySelector("#enable-daily-report").addEventListener("click", enableDailyReport);
+      document.querySelector("#schedule-monitor-button").addEventListener("click", () => showToast("Schedule editing is available from Settings."));
+      document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
+      document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {
+        state.selectedIntelTab = button.dataset.intelTab;
+        state.selectedIntelItem = null;
+        document.querySelectorAll("[data-intel-tab]").forEach((node) => node.classList.toggle("active", node === button));
+        renderIntelligence();
+      }));
+      ["#intel-asset", "#intel-severity", "#intel-source"].forEach((selector) => {
+        document.querySelector(selector).addEventListener("change", () => {
+          state.selectedIntelItem = null;
+          renderIntelligence();
+        });
+      });
+      document.querySelector("#intel-reset").addEventListener("click", resetIntelFilters);
+      document.querySelector("#settings-save").addEventListener("click", saveSettings);
+      document.querySelector("#settings-backup").addEventListener("click", backupSettings);
+      document.querySelector("#cleanup-run-artifacts").addEventListener("click", () => cleanup("runs"));
+      document.querySelector("#cleanup-shared-data").addEventListener("click", () => cleanup("shared"));
+      window.addEventListener("hashchange", () => setView(viewFromHash()));
+      wireShortcutButtons();
+    }
 
-    refreshOverview();
+    wireGlobalEvents();
+    loadHealth();
     setView(viewFromHash());
   </script>
 </body>

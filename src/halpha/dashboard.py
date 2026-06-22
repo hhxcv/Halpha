@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from contextlib import closing
+from copy import deepcopy
+from datetime import datetime, timezone
 import json
 from json import JSONDecodeError
 from pathlib import Path
+import shutil
 import sqlite3
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from .config import ConfigError, load_config
 from .data_inspection import DataInspectionError, inspect_local_store_state
 from .dashboard_jobs import DashboardJobManager
 from .dashboard_monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
@@ -35,9 +39,48 @@ MAX_PREVIEW_CHARS = 20_000
 MAX_PREVIEW_ROWS = 100
 MAX_STAGE_ARTIFACT_REFS = 20
 MAX_STORE_DRILLDOWN_ITEMS = 12
+MAX_DELETION_RUN_ITEMS = 500
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY_FILENAME}"
+RUN_ARTIFACT_DELETE_CONFIRMATION = "DELETE RUN DATA"
+SHARED_DATA_DELETE_CONFIRMATION = "DELETE SHARED DATA"
+CONFIG_SAVE_CONFIRMATION = "SAVE CONFIG"
+CONFIG_BACKUP_DIR = "runs/dashboard/config_backups"
+SHARED_DATA_ALLOWED_ROOTS = {"data"}
+SHARED_DATA_STORE_DELETE_REFS = {
+    "research_data_catalog": ("data/research/metadata/research_data_catalog.json",),
+    "run_index": (RUN_INDEX_ARTIFACT,),
+    "text_event_history": (
+        "data/research/metadata/text_event_history_state.json",
+        "data/research/text_events",
+    ),
+    "ohlcv_history": (
+        "data/market/metadata/ohlcv_schema.json",
+        "data/market/metadata/ohlcv_sync_state.json",
+        "data/market/ohlcv",
+    ),
+    "derivatives_market_history": (
+        "data/market/metadata/derivatives_market_schema.json",
+        "data/market/metadata/derivatives_market_state.json",
+        "data/market/derivatives",
+    ),
+    "macro_calendar_history": (
+        "data/macro/metadata/macro_calendar_schema.json",
+        "data/macro/metadata/macro_calendar_state.json",
+        "data/macro/calendar",
+    ),
+    "onchain_flow_history": (
+        "data/onchain/metadata/onchain_flow_schema.json",
+        "data/onchain/metadata/onchain_flow_state.json",
+        "data/onchain/flow",
+    ),
+    "outcome_history": (
+        OUTCOME_HISTORY_STATE_ARTIFACT,
+        OUTCOME_HISTORY_ARTIFACT,
+        "data/research/outcomes",
+    ),
+}
 DECISION_RISK_ARTIFACTS = (
     ("market_regime_assessment", "Market regime", "analysis/market_regime_assessment.json"),
     ("risk_assessment", "Risk assessment", "analysis/risk_assessment.json"),
@@ -93,6 +136,223 @@ DATA_STORE_TITLES = {
     "outcome_history": "Outcome history",
 }
 SAFE_METADATA_PREVIEW_SUFFIXES = {".json", ".md", ".markdown", ".txt", ".yaml", ".yml"}
+CONFIG_PROFILE_SECTIONS = (
+    "General",
+    "Market data",
+    "Strategy",
+    "Reports",
+    "Monitor",
+    "Intelligence sources",
+    "Storage",
+    "Dashboard",
+)
+CONFIG_PROFILE_FIELDS = (
+    {
+        "section": "General",
+        "label": "Run timezone",
+        "path": "run.timezone",
+        "control": "select",
+        "value_type": "string",
+        "options": ("Asia/Shanghai", "UTC"),
+        "description": "Default timezone used by local run artifacts.",
+    },
+    {
+        "section": "Dashboard",
+        "label": "Display timezone",
+        "path": "dashboard.display_timezone",
+        "control": "select",
+        "value_type": "string",
+        "options": ("Asia/Shanghai", "UTC"),
+        "description": "Timezone used for timestamps displayed in dashboard pages.",
+    },
+    {
+        "section": "Market data",
+        "label": "Enable market data",
+        "path": "market.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Collect market data for research runs.",
+    },
+    {
+        "section": "Market data",
+        "label": "Source",
+        "path": "market.source",
+        "control": "select",
+        "value_type": "string",
+        "options": ("binance",),
+        "description": "Configured public market data source.",
+    },
+    {
+        "section": "Market data",
+        "label": "Symbols",
+        "path": "market.symbols",
+        "control": "tags",
+        "value_type": "string_list",
+        "description": "Comma-separated market symbols used by the local research pipeline.",
+    },
+    {
+        "section": "Market data",
+        "label": "OHLCV timeframes",
+        "path": "market.ohlcv.timeframes",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": ("1d", "1h"),
+        "description": "Reusable OHLCV windows maintained outside single-run artifacts.",
+    },
+    {
+        "section": "Market data",
+        "label": "Daily lookback",
+        "path": "market.ohlcv.lookback.1d",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Number of daily candles to collect.",
+    },
+    {
+        "section": "Market data",
+        "label": "Hourly lookback",
+        "path": "market.ohlcv.lookback.1h",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Number of hourly candles to collect.",
+    },
+    {
+        "section": "Market data",
+        "label": "Use proxy",
+        "path": "market.proxy.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Enable a configured proxy without exposing proxy URL values in the dashboard.",
+    },
+    {
+        "section": "Market data",
+        "label": "Enable derivatives",
+        "path": "market.derivatives.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Collect public derivatives market evidence when the derivatives source is configured.",
+    },
+    {
+        "section": "Strategy",
+        "label": "Enable quant research",
+        "path": "quant.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Enable configured strategy evaluation and backtest evidence.",
+    },
+    {
+        "section": "Reports",
+        "label": "Report title",
+        "path": "report.title",
+        "control": "text",
+        "value_type": "string",
+        "description": "Human-readable report title used by generated Markdown reports.",
+    },
+    {
+        "section": "Reports",
+        "label": "Report language",
+        "path": "report.language",
+        "control": "select",
+        "value_type": "string",
+        "options": ("zh-CN",),
+        "description": "Final reports are Simplified Chinese unless requested otherwise.",
+    },
+    {
+        "section": "Reports",
+        "label": "Enable Codex report",
+        "path": "codex.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Allow report generation through the configured local Codex command.",
+    },
+    {
+        "section": "Monitor",
+        "label": "Enable monitor",
+        "path": "monitor.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Enable local monitor configuration.",
+    },
+    {
+        "section": "Monitor",
+        "label": "Interval seconds",
+        "path": "monitor.interval_seconds",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Delay between monitor loop cycles.",
+    },
+    {
+        "section": "Monitor",
+        "label": "Max cycles",
+        "path": "monitor.max_cycles",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Maximum monitor cycles for a bounded local loop.",
+    },
+    {
+        "section": "Monitor",
+        "label": "Cooldown seconds",
+        "path": "monitor.cooldown_seconds",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Alert cooldown window.",
+    },
+    {
+        "section": "Monitor",
+        "label": "No Codex in monitor",
+        "path": "monitor.no_codex",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Keep monitor cycles deterministic unless explicit report generation is requested.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Enable text collection",
+        "path": "text.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Collect configured public text sources.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Max text items",
+        "path": "text.max_items",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Maximum collected text items per run.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Enable text intelligence",
+        "path": "text.intelligence.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Enable local text intelligence evidence generation.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Allow model download",
+        "path": "text.intelligence.allow_model_download",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Permit configured model download when local models are missing.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Enable macro calendar",
+        "path": "macro_calendar.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Collect configured public scheduled-event evidence.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Enable on-chain flow",
+        "path": "onchain_flow.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Collect configured public on-chain and exchange-flow evidence.",
+    },
+)
 
 
 class DashboardError(Exception):
@@ -143,6 +403,18 @@ def create_dashboard_app(
     def health_endpoint() -> dict[str, Any]:
         return health
 
+    @app.get("/api/config/profile")
+    def config_profile_endpoint() -> dict[str, Any]:
+        return dashboard_config_profile(config, config_path=config_path)
+
+    @app.post("/api/config/profile")
+    def config_profile_save_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        return dashboard_save_config_profile(config, config_path=config_path, request=request)
+
+    @app.post("/api/config/profile/backup")
+    def config_profile_backup_endpoint() -> dict[str, Any]:
+        return dashboard_backup_config(config_path=config_path)
+
     @app.get("/api/overview")
     def overview_endpoint() -> dict[str, Any]:
         return dashboard_overview(config, config_path=config_path)
@@ -182,6 +454,14 @@ def create_dashboard_app(
     @app.get("/api/data/stores")
     def data_stores_endpoint() -> dict[str, Any]:
         return dashboard_data_stores(config, config_path=config_path)
+
+    @app.get("/api/data/deletion")
+    def data_deletion_plan_endpoint() -> dict[str, Any]:
+        return dashboard_data_deletion_plan(config, config_path=config_path)
+
+    @app.post("/api/data/deletion")
+    def data_deletion_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        return dashboard_delete_data(config, config_path=config_path, request=request)
 
     @app.get("/api/strategies")
     def strategies_endpoint(run_id: str | None = None) -> dict[str, Any]:
@@ -295,6 +575,8 @@ def dashboard_health(
             "run_history_api": "available",
             "artifact_preview_api": "available",
             "data_store_api": "available",
+            "data_deletion_api": "available",
+            "config_profile_api": "available",
             "strategy_research_api": "available",
             "monitor_api": "available",
             "workbench_api": "available",
@@ -323,6 +605,146 @@ def dashboard_display_timezone(config: dict[str, Any]) -> str:
             continue
         return timezone_name
     return DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
+
+
+def dashboard_config_profile(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
+    fields = [_config_profile_field(config, field) for field in CONFIG_PROFILE_FIELDS]
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_config_profile",
+        "status": "available",
+        "config": {
+            "ref": dashboard_config_ref(config_path),
+            "editable": True,
+            "confirmation_text": CONFIG_SAVE_CONFIRMATION,
+        },
+        "sections": list(CONFIG_PROFILE_SECTIONS),
+        "fields": fields,
+        "warnings": [],
+        "errors": [],
+        "omitted": {
+            "absolute_local_paths_embedded": False,
+            "proxy_urls_embedded": False,
+            "credentials_embedded": False,
+            "raw_config_text_embedded": False,
+        },
+    }
+
+
+def dashboard_backup_config(*, config_path: Path) -> dict[str, Any]:
+    backup, error = _backup_dashboard_config(config_path)
+    if error:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_config_backup",
+            "status": "failed",
+            "config": {"ref": dashboard_config_ref(config_path)},
+            "backup_ref": None,
+            "warnings": [],
+            "errors": [error],
+            "omitted": {"absolute_local_paths_embedded": False},
+        }
+    base = _config_base(config_path)
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_config_backup",
+        "status": "succeeded",
+        "config": {"ref": dashboard_config_ref(config_path)},
+        "backup_ref": _safe_ref(backup, base=base) if backup else None,
+        "warnings": [],
+        "errors": [],
+        "omitted": {"absolute_local_paths_embedded": False},
+    }
+
+
+def dashboard_save_config_profile(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    if request.get("confirm") != CONFIG_SAVE_CONFIRMATION:
+        return _config_save_result(
+            config,
+            config_path=config_path,
+            status="blocked",
+            errors=["confirmation text does not match config save requirement."],
+        )
+
+    changes = request.get("changes")
+    if not isinstance(changes, dict) or not changes:
+        return _config_save_result(
+            config,
+            config_path=config_path,
+            status="skipped",
+            warnings=["no config changes were submitted."],
+        )
+
+    next_config = deepcopy(config)
+    changed_paths: list[str] = []
+    errors: list[str] = []
+    for path, raw_value in sorted(changes.items()):
+        if not isinstance(path, str):
+            errors.append("config change path must be a string.")
+            continue
+        field = _config_profile_field_definition(path)
+        if field is None:
+            errors.append(f"{path} is not editable from the dashboard settings UI.")
+            continue
+        value, error = _coerce_config_profile_value(raw_value, field)
+        if error:
+            errors.append(f"{path}: {error}")
+            continue
+        _set_config_value(next_config, path, value)
+        changed_paths.append(path)
+    if errors:
+        return _config_save_result(config, config_path=config_path, status="failed", errors=errors)
+
+    serialized, error = _serialize_config_yaml(next_config)
+    if error:
+        return _config_save_result(config, config_path=config_path, status="failed", errors=[error])
+
+    temp_path = config_path.with_name(f".{config_path.name}.dashboard-save.tmp")
+    backup_path: Path | None = None
+    try:
+        temp_path.write_text(serialized, encoding="utf-8")
+        try:
+            validated = load_config(temp_path)
+        except ConfigError as exc:
+            return _config_save_result(
+                config,
+                config_path=config_path,
+                status="failed",
+                errors=[sanitize_dashboard_message(str(exc), config_path=temp_path)],
+            )
+        backup_path, backup_error = _backup_dashboard_config(config_path)
+        if backup_error:
+            return _config_save_result(config, config_path=config_path, status="failed", errors=[backup_error])
+        temp_path.replace(config_path)
+    except OSError as exc:
+        return _config_save_result(
+            config,
+            config_path=config_path,
+            status="failed",
+            errors=[sanitize_dashboard_message(f"config file could not be saved: {exc}", config_path=config_path)],
+        )
+    finally:
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+        except OSError:
+            pass
+
+    config.clear()
+    config.update(validated)
+    base = _config_base(config_path)
+    return _config_save_result(
+        config,
+        config_path=config_path,
+        status="succeeded",
+        changed_paths=changed_paths,
+        backup_ref=_safe_ref(backup_path, base=base) if backup_path else None,
+    )
 
 
 def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
@@ -982,6 +1404,210 @@ def dashboard_data_stores(config: dict[str, Any], *, config_path: Path) -> dict[
     }
 
 
+def dashboard_data_deletion_plan(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
+    base = _config_base(config_path)
+    run_section = _run_artifact_deletion_section(config, config_path=config_path, base=base)
+    shared_section = _shared_data_deletion_section(config, config_path=config_path, base=base)
+    statuses = [run_section["status"], shared_section["status"]]
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_data_deletion_plan",
+        "status": _overall_status(statuses),
+        "confirmations": {
+            "run_artifacts": RUN_ARTIFACT_DELETE_CONFIRMATION,
+            "shared_data": SHARED_DATA_DELETE_CONFIRMATION,
+        },
+        "run_artifacts": run_section,
+        "shared_data": shared_section,
+        "warnings": [
+            *run_section.get("warnings", []),
+            *shared_section.get("warnings", []),
+        ],
+        "errors": [
+            *run_section.get("errors", []),
+            *shared_section.get("errors", []),
+        ],
+        "omitted": {
+            "absolute_local_paths_embedded": False,
+            "raw_shared_data_embedded": False,
+            "run_artifact_contents_embedded": False,
+        },
+    }
+
+
+def dashboard_delete_data(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    kind = request.get("kind")
+    if kind == "run_artifacts":
+        return _delete_run_artifacts(config, config_path=config_path, request=request)
+    if kind == "shared_data":
+        return _delete_shared_data(config, config_path=config_path, request=request)
+    return _deletion_result(
+        kind=str(kind or "unknown"),
+        status="failed",
+        errors=["kind must be run_artifacts or shared_data."],
+    )
+
+
+def _config_profile_field(config: dict[str, Any], field: dict[str, Any]) -> dict[str, Any]:
+    path = str(field["path"])
+    value = _get_config_value(config, path)
+    if value is None:
+        value = _config_profile_default(field)
+    result = {
+        "section": field["section"],
+        "label": field["label"],
+        "path": path,
+        "control": field["control"],
+        "value_type": field["value_type"],
+        "value": value,
+        "description": field.get("description") or "",
+    }
+    options = field.get("options")
+    if isinstance(options, tuple):
+        result["options"] = list(options)
+    return result
+
+
+def _config_profile_field_definition(path: str) -> dict[str, Any] | None:
+    for field in CONFIG_PROFILE_FIELDS:
+        if field.get("path") == path:
+            return field
+    return None
+
+
+def _config_profile_default(field: dict[str, Any]) -> Any:
+    value_type = field.get("value_type")
+    if value_type == "bool":
+        return False
+    if value_type == "positive_int":
+        return 1
+    if value_type == "string_list":
+        options = field.get("options")
+        return [options[0]] if isinstance(options, tuple) and options else []
+    options = field.get("options")
+    if isinstance(options, tuple) and options:
+        return options[0]
+    return ""
+
+
+def _get_config_value(config: dict[str, Any], path: str) -> Any:
+    current: Any = config
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+def _set_config_value(config: dict[str, Any], path: str, value: Any) -> None:
+    current: dict[str, Any] = config
+    parts = path.split(".")
+    for part in parts[:-1]:
+        child = current.get(part)
+        if not isinstance(child, dict):
+            child = {}
+            current[part] = child
+        current = child
+    current[parts[-1]] = value
+
+
+def _coerce_config_profile_value(raw_value: Any, field: dict[str, Any]) -> tuple[Any, str | None]:
+    value_type = field.get("value_type")
+    options = field.get("options")
+    if value_type == "bool":
+        if isinstance(raw_value, bool):
+            return raw_value, None
+        return None, "value must be true or false."
+    if value_type == "positive_int":
+        if isinstance(raw_value, bool):
+            return None, "value must be a positive integer."
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            return None, "value must be a positive integer."
+        if value <= 0:
+            return None, "value must be a positive integer."
+        return value, None
+    if value_type == "string_list":
+        if not isinstance(raw_value, list):
+            return None, "value must be a list of strings."
+        values = [str(value).strip() for value in raw_value if str(value).strip()]
+        if not values:
+            return None, "value must include at least one string."
+        if isinstance(options, tuple):
+            unsupported = sorted(set(values) - set(str(option) for option in options))
+            if unsupported:
+                return None, f"unsupported value(s): {', '.join(unsupported)}."
+        return values, None
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        return None, "value must be a non-empty string."
+    value = raw_value.strip()
+    if isinstance(options, tuple) and value not in options:
+        return None, f"value must be one of: {', '.join(str(option) for option in options)}."
+    return value, None
+
+
+def _serialize_config_yaml(config: dict[str, Any]) -> tuple[str, str | None]:
+    try:
+        import yaml
+    except ModuleNotFoundError:
+        return "", "PyYAML is required to save YAML config files."
+    try:
+        return yaml.safe_dump(config, allow_unicode=True, sort_keys=False), None
+    except yaml.YAMLError as exc:
+        return "", f"config could not be serialized as YAML: {exc}"
+
+
+def _backup_dashboard_config(config_path: Path) -> tuple[Path | None, str | None]:
+    base = _config_base(config_path)
+    source = config_path if config_path.is_absolute() else base / config_path.name
+    if not source.exists():
+        return None, f"{dashboard_config_ref(config_path)} was not found."
+    safe_stem = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in source.stem) or "config"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    backup_dir = base / CONFIG_BACKUP_DIR
+    backup_path = backup_dir / f"{safe_stem}-{stamp}.yaml.bak"
+    try:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, backup_path)
+    except OSError as exc:
+        return None, sanitize_dashboard_message(f"config backup could not be created: {exc}", config_path=config_path)
+    return backup_path, None
+
+
+def _config_save_result(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    status: str,
+    changed_paths: list[str] | None = None,
+    backup_ref: str | None = None,
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_config_save_result",
+        "status": status,
+        "config": {"ref": dashboard_config_ref(config_path)},
+        "changed_paths": changed_paths or [],
+        "backup_ref": backup_ref,
+        "profile": dashboard_config_profile(config, config_path=config_path),
+        "warnings": warnings or [],
+        "errors": errors or [],
+        "omitted": {
+            "absolute_local_paths_embedded": False,
+            "raw_config_text_embedded": False,
+            "credentials_embedded": False,
+        },
+    }
+
+
 def validate_dashboard_host(host: str) -> None:
     if host not in LOCAL_DASHBOARD_HOSTS:
         supported = ", ".join(sorted(LOCAL_DASHBOARD_HOSTS))
@@ -1119,7 +1745,10 @@ def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | No
         ).fetchone()
         if run and all(isinstance(value, str) and value for value in run):
             return run[0], run[1], run[2]
-    return None
+    return _fallback_latest_run(connection, succeeded_only=True) or _fallback_latest_run(
+        connection,
+        succeeded_only=False,
+    )
 
 
 def _run_artifact_index(connection: sqlite3.Connection) -> dict[str, dict[str, list[str]]]:
@@ -1744,6 +2373,507 @@ def _dashboard_store_overall_status(statuses: list[str]) -> str:
             return "partial"
         return "available"
     return "partial"
+
+
+def _run_artifact_deletion_section(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    base: Path,
+) -> dict[str, Any]:
+    run_root = _dashboard_run_output_dir(config, base=base)
+    root_safe = _safe_ref(run_root, base=base)
+    root_blocked = _deletion_root_block_reason(run_root, base=base)
+    runs_payload = dashboard_runs(config_path=config_path, limit=MAX_DELETION_RUN_ITEMS)
+    runs = _list(runs_payload.get("runs"))
+    items = [
+        _run_artifact_delete_item(run, run_root=run_root, root_blocked=root_blocked, base=base)
+        for run in runs
+        if isinstance(run, dict)
+    ]
+    blocked_count = sum(1 for item in items if not item["deletable"])
+    warnings = _string_list(runs_payload.get("warnings"))
+    if root_blocked:
+        warnings.append(root_blocked)
+    return {
+        "status": "partial" if blocked_count else str(runs_payload.get("status") or "unknown"),
+        "run_output_dir": root_safe,
+        "confirmation_text": RUN_ARTIFACT_DELETE_CONFIRMATION,
+        "items": items,
+        "counts": {
+            "runs": len(items),
+            "deletable": sum(1 for item in items if item["deletable"]),
+            "blocked": blocked_count,
+        },
+        "warnings": warnings,
+        "errors": _string_list(runs_payload.get("errors")),
+    }
+
+
+def _shared_data_deletion_section(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    base: Path,
+) -> dict[str, Any]:
+    stores_payload = dashboard_data_stores(config, config_path=config_path)
+    stores = _list(stores_payload.get("stores"))
+    items = [
+        _shared_data_delete_item(store, config=config, base=base)
+        for store in stores
+        if isinstance(store, dict)
+    ]
+    blocked_count = sum(1 for item in items if not item["deletable"])
+    warnings = [
+        "shared data may be reused by multiple reports and future runs; deletion requires explicit confirmation.",
+        *_string_list(stores_payload.get("warnings")),
+    ]
+    return {
+        "status": "partial" if blocked_count else str(stores_payload.get("status") or "unknown"),
+        "allowed_roots": sorted(SHARED_DATA_ALLOWED_ROOTS),
+        "confirmation_text": SHARED_DATA_DELETE_CONFIRMATION,
+        "items": items,
+        "counts": {
+            "stores": len(items),
+            "deletable": sum(1 for item in items if item["deletable"]),
+            "blocked": blocked_count,
+        },
+        "warnings": warnings,
+        "errors": _string_list(stores_payload.get("errors")),
+    }
+
+
+def _run_artifact_delete_item(
+    run: dict[str, Any],
+    *,
+    run_root: Path,
+    root_blocked: str | None,
+    base: Path,
+) -> dict[str, Any]:
+    run_id = str(run.get("run_id") or "")
+    target, safe_ref, reason = _resolve_deletion_ref(str(run.get("run_dir") or ""), base=base)
+    blocked_reason = root_blocked or reason
+    if not blocked_reason and target is not None:
+        if not _is_path_within(target, run_root):
+            blocked_reason = "run directory is outside the configured run output directory."
+        elif _same_path(target, run_root):
+            blocked_reason = "run output root cannot be deleted from a run selection."
+    return {
+        "run_id": run_id,
+        "title": run_id,
+        "status": str(run.get("status") or "unknown"),
+        "started_at": run.get("started_at"),
+        "finished_at": run.get("finished_at"),
+        "warning_count": _int(run.get("warning_count")),
+        "error_count": _int(run.get("error_count")),
+        "run_dir": safe_ref,
+        "manifest": run.get("manifest"),
+        "exists": bool(target and target.exists()),
+        "deletable": blocked_reason is None,
+        "blocked_reason": blocked_reason,
+    }
+
+
+def _shared_data_delete_item(
+    store: dict[str, Any],
+    *,
+    config: dict[str, Any],
+    base: Path,
+) -> dict[str, Any]:
+    name = str(store.get("name") or "")
+    refs = _shared_store_delete_refs(name, store, config=config)
+    records = [_shared_delete_ref_record(ref, base=base) for ref in refs]
+    existing_records = [record for record in records if record["exists"]]
+    blocked_records = [record for record in records if not record["deletable"]]
+    blocked_reason = None
+    if blocked_records:
+        blocked_reason = "one or more refs are outside the shared-data deletion boundary."
+    elif not existing_records:
+        blocked_reason = "no existing shared data refs were found for this store."
+    return {
+        "name": name,
+        "title": str(store.get("title") or name),
+        "status": str(store.get("status") or "unknown"),
+        "group": _data_store_category(name),
+        "records": _int(_dict(store.get("fields")).get("records")),
+        "delete_refs": records,
+        "deletable": blocked_reason is None,
+        "blocked_reason": blocked_reason,
+        "warnings": _string_list(store.get("warnings")),
+        "errors": _string_list(store.get("errors")),
+    }
+
+
+def _shared_store_delete_refs(name: str, store: dict[str, Any], *, config: dict[str, Any]) -> list[str]:
+    refs: list[str] = list(SHARED_DATA_STORE_DELETE_REFS.get(name, ()))
+    if name == "ohlcv_history":
+        refs.extend(_configured_ohlcv_storage_refs(config))
+    if name == "outcome_history":
+        fields = _dict(store.get("fields"))
+        refs.extend(
+            str(value)
+            for value in (fields.get("history"), fields.get("storage_path"))
+            if isinstance(value, str) and value
+        )
+    return _unique_refs(refs)
+
+
+def _configured_ohlcv_storage_refs(config: dict[str, Any]) -> list[str]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+    storage_dir = ohlcv.get("storage_dir")
+    return [storage_dir] if isinstance(storage_dir, str) and storage_dir.strip() else []
+
+
+def _shared_delete_ref_record(ref: str, *, base: Path) -> dict[str, Any]:
+    target, safe_ref, reason = _resolve_deletion_ref(ref, base=base)
+    blocked_reason = reason
+    if not blocked_reason and target is not None:
+        parts = Path(safe_ref).parts
+        if not parts or parts[0] not in SHARED_DATA_ALLOWED_ROOTS:
+            blocked_reason = "shared data deletion is limited to configured project data refs."
+        elif len(parts) == 1:
+            blocked_reason = "shared data root cannot be deleted as one operation."
+    return {
+        "ref": safe_ref,
+        "exists": bool(target and target.exists()),
+        "kind": "directory" if target and target.exists() and target.is_dir() and not target.is_symlink() else "file",
+        "deletable": blocked_reason is None,
+        "blocked_reason": blocked_reason,
+    }
+
+
+def _delete_run_artifacts(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    if request.get("confirm") != RUN_ARTIFACT_DELETE_CONFIRMATION:
+        return _deletion_result(
+            kind="run_artifacts",
+            status="blocked",
+            errors=["confirmation text does not match run artifact deletion requirement."],
+        )
+    requested_ids = _unique_refs(str(item) for item in _list(request.get("run_ids")) if isinstance(item, str))
+    if not requested_ids:
+        return _deletion_result(
+            kind="run_artifacts",
+            status="failed",
+            errors=["run_ids must contain at least one run id."],
+        )
+
+    base = _config_base(config_path)
+    plan = dashboard_data_deletion_plan(config, config_path=config_path)
+    candidates = {
+        str(item.get("run_id")): item
+        for item in _list(_dict(plan.get("run_artifacts")).get("items"))
+        if isinstance(item, dict)
+    }
+    deleted: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+    index_deleted_ids: list[str] = []
+
+    for run_id in requested_ids:
+        item = candidates.get(run_id)
+        if item is None:
+            blocked.append({"id": run_id, "reason": "run id is not present in the deletion plan."})
+            continue
+        if not item.get("deletable"):
+            blocked.append({"id": run_id, "reason": item.get("blocked_reason") or "run is not deletable."})
+            continue
+        target, safe_ref, reason = _resolve_deletion_ref(str(item.get("run_dir") or ""), base=base)
+        if reason or target is None:
+            blocked.append({"id": run_id, "reason": reason or "run directory could not be resolved."})
+            continue
+        error = _delete_local_path(target)
+        if error:
+            blocked.append({"id": run_id, "ref": safe_ref, "reason": error})
+            continue
+        if item.get("exists"):
+            deleted.append({"id": run_id, "ref": safe_ref})
+        else:
+            skipped.append({"id": run_id, "ref": safe_ref, "reason": "run directory was already missing."})
+        index_deleted_ids.append(run_id)
+
+    index_result = _delete_run_index_records(config_path, index_deleted_ids)
+    warnings = _string_list(index_result.get("warnings"))
+    errors = _string_list(index_result.get("errors"))
+    status = _deletion_status(deleted=deleted, skipped=skipped, blocked=blocked, errors=errors)
+    return _deletion_result(
+        kind="run_artifacts",
+        status=status,
+        deleted=deleted,
+        skipped=skipped,
+        blocked=blocked,
+        warnings=warnings,
+        errors=errors,
+        index=index_result,
+    )
+
+
+def _delete_shared_data(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    if request.get("confirm") != SHARED_DATA_DELETE_CONFIRMATION:
+        return _deletion_result(
+            kind="shared_data",
+            status="blocked",
+            errors=["confirmation text does not match shared data deletion requirement."],
+        )
+    requested_names = _unique_refs(str(item) for item in _list(request.get("store_names")) if isinstance(item, str))
+    if not requested_names:
+        return _deletion_result(
+            kind="shared_data",
+            status="failed",
+            errors=["store_names must contain at least one shared data store name."],
+        )
+
+    base = _config_base(config_path)
+    plan = dashboard_data_deletion_plan(config, config_path=config_path)
+    candidates = {
+        str(item.get("name")): item
+        for item in _list(_dict(plan.get("shared_data")).get("items"))
+        if isinstance(item, dict)
+    }
+    deleted: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+
+    for name in requested_names:
+        item = candidates.get(name)
+        if item is None:
+            blocked.append({"id": name, "reason": "store name is not present in the deletion plan."})
+            continue
+        if not item.get("deletable"):
+            blocked.append({"id": name, "reason": item.get("blocked_reason") or "store is not deletable."})
+            continue
+        for record in _list(item.get("delete_refs")):
+            if not isinstance(record, dict):
+                continue
+            ref = str(record.get("ref") or "")
+            if not record.get("deletable"):
+                blocked.append({"id": name, "ref": ref, "reason": record.get("blocked_reason") or "ref is not deletable."})
+                continue
+            target, safe_ref, reason = _resolve_deletion_ref(ref, base=base)
+            if reason or target is None:
+                blocked.append({"id": name, "ref": ref, "reason": reason or "ref could not be resolved."})
+                continue
+            if not target.exists() and not target.is_symlink():
+                skipped.append({"id": name, "ref": safe_ref, "reason": "ref was already missing."})
+                continue
+            error = _delete_local_path(target)
+            if error:
+                blocked.append({"id": name, "ref": safe_ref, "reason": error})
+            else:
+                deleted.append({"id": name, "ref": safe_ref})
+
+    status = _deletion_status(deleted=deleted, skipped=skipped, blocked=blocked, errors=[])
+    return _deletion_result(
+        kind="shared_data",
+        status=status,
+        deleted=deleted,
+        skipped=skipped,
+        blocked=blocked,
+        warnings=["shared data deletion completed only for explicitly selected, project-local refs."],
+    )
+
+
+def _deletion_result(
+    *,
+    kind: str,
+    status: str,
+    deleted: list[dict[str, Any]] | None = None,
+    skipped: list[dict[str, Any]] | None = None,
+    blocked: list[dict[str, Any]] | None = None,
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+    index: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    result = {
+        "schema_version": 1,
+        "artifact_type": "dashboard_data_deletion_result",
+        "kind": kind,
+        "status": status,
+        "deleted": deleted or [],
+        "skipped": skipped or [],
+        "blocked": blocked or [],
+        "warnings": warnings or [],
+        "errors": errors or [],
+        "omitted": {
+            "absolute_local_paths_embedded": False,
+            "deleted_contents_embedded": False,
+        },
+    }
+    if index is not None:
+        result["index"] = index
+    return result
+
+
+def _deletion_status(
+    *,
+    deleted: list[dict[str, Any]],
+    skipped: list[dict[str, Any]],
+    blocked: list[dict[str, Any]],
+    errors: list[str],
+) -> str:
+    if errors:
+        return "failed"
+    if blocked and not (deleted or skipped):
+        return "blocked"
+    if blocked:
+        return "partial"
+    if deleted or skipped:
+        return "succeeded"
+    return "missing"
+
+
+def _delete_run_index_records(config_path: Path, run_ids: list[str]) -> dict[str, Any]:
+    if not run_ids:
+        return {"status": "skipped", "deleted_run_ids": [], "warnings": [], "errors": []}
+    index_path = run_index_path(config_path)
+    if not index_path.exists():
+        return {
+            "status": "missing",
+            "deleted_run_ids": [],
+            "warnings": ["local run index was not found."],
+            "errors": [],
+        }
+    deleted: list[str] = []
+    try:
+        with closing(sqlite3.connect(index_path)) as connection:
+            with connection:
+                connection.execute("PRAGMA foreign_keys = ON")
+                for run_id in run_ids:
+                    row = connection.execute("SELECT run_id FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+                    if row is None:
+                        continue
+                    connection.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
+                    deleted.append(run_id)
+                connection.execute(
+                    "DELETE FROM run_latest WHERE run_id IN (%s)" % ",".join("?" for _ in run_ids),
+                    run_ids,
+                )
+                _refresh_run_latest_records(connection)
+    except sqlite3.Error as exc:
+        return {
+            "status": "failed",
+            "deleted_run_ids": deleted,
+            "warnings": [],
+            "errors": [f"{RUN_INDEX_ARTIFACT} could not be updated: {exc}"],
+        }
+    return {"status": "succeeded", "deleted_run_ids": deleted, "warnings": [], "errors": []}
+
+
+def _refresh_run_latest_records(connection: sqlite3.Connection) -> None:
+    updated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    connection.execute("DELETE FROM run_latest WHERE key IN (?, ?)", ("latest_run", "latest_successful_run"))
+    latest = _fallback_latest_run(connection, succeeded_only=False)
+    if latest:
+        connection.execute(
+            "INSERT OR REPLACE INTO run_latest (key, run_id, updated_at) VALUES (?, ?, ?)",
+            ("latest_run", latest[0], updated_at),
+        )
+    latest_successful = _fallback_latest_run(connection, succeeded_only=True)
+    if latest_successful:
+        connection.execute(
+            "INSERT OR REPLACE INTO run_latest (key, run_id, updated_at) VALUES (?, ?, ?)",
+            ("latest_successful_run", latest_successful[0], updated_at),
+        )
+
+
+def _fallback_latest_run(
+    connection: sqlite3.Connection,
+    *,
+    succeeded_only: bool,
+) -> tuple[str, str, str] | None:
+    where = "WHERE status = 'succeeded'" if succeeded_only else ""
+    row = connection.execute(
+        f"""
+        SELECT run_id, run_dir, manifest_path
+        FROM runs
+        {where}
+        ORDER BY COALESCE(started_at, '') DESC, run_id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if row and all(isinstance(value, str) and value for value in row):
+        return row[0], row[1], row[2]
+    return None
+
+
+def _delete_local_path(path: Path) -> str | None:
+    try:
+        if path.is_symlink() or path.is_file():
+            path.unlink()
+            return None
+        if path.is_dir():
+            shutil.rmtree(path)
+            return None
+        return None
+    except OSError as exc:
+        detail = exc.strerror or exc.__class__.__name__
+        return f"{path.name} could not be deleted: {detail}"
+
+
+def _dashboard_run_output_dir(config: dict[str, Any], *, base: Path) -> Path:
+    run = config.get("run") if isinstance(config.get("run"), dict) else {}
+    output_dir = Path(str(run.get("output_dir") or "runs"))
+    return output_dir if output_dir.is_absolute() else base / output_dir
+
+
+def _deletion_root_block_reason(path: Path, *, base: Path) -> str | None:
+    if not _is_path_within(path, base):
+        return "configured deletion root is outside the project boundary."
+    return None
+
+
+def _resolve_deletion_ref(ref: str, *, base: Path) -> tuple[Path | None, str, str | None]:
+    raw = str(ref or "").replace("\\", "/").strip()
+    if not raw:
+        return None, "", "ref is required."
+    if raw == EXTERNAL_ARTIFACT_REF:
+        return None, EXTERNAL_ARTIFACT_REF, "external artifact refs cannot be deleted from the dashboard."
+    path = Path(raw)
+    if not path.is_absolute() and any(part in {"", ".", ".."} for part in path.parts):
+        return None, raw, "ref must not contain traversal segments."
+    target = path if path.is_absolute() else base / path
+    try:
+        resolved = target.resolve()
+        resolved.relative_to(base.resolve())
+    except (OSError, ValueError):
+        return None, EXTERNAL_ARTIFACT_REF, "ref must stay under the configured project root."
+    return target, _safe_ref(resolved, base=base), None
+
+
+def _is_path_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def _same_path(left: Path, right: Path) -> bool:
+    try:
+        return left.resolve() == right.resolve()
+    except OSError:
+        return False
+
+
+def _unique_refs(values: Any) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        clean = value.strip()
+        if clean and clean not in unique:
+            unique.append(clean)
+    return unique
 
 
 def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -> dict[str, Any]:
