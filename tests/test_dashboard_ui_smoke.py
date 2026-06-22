@@ -207,6 +207,27 @@ def test_dashboard_interaction_hooks_cover_redesigned_workflows(tmp_path: Path) 
     assert "selectedSharedStores" in script
 
 
+def test_dashboard_uses_in_app_confirmation_dialogs(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert 'id="dashboard-dialog-backdrop"' in html
+    assert 'role="dialog"' in html
+    assert 'aria-modal="true"' in html
+    assert 'id="dashboard-dialog-input"' in html
+    assert ".dialog-backdrop" in css
+    assert ".dialog-actions" in css
+    assert "openDashboardDialog" in script
+    assert "confirmDashboardAction" in script
+    assert "typedDashboardConfirmation" in script
+    assert "closeDashboardDialog(false)" in script
+    assert "updateDialogConfirmState" in script
+    assert "window.confirm" not in script
+    assert "window.prompt" not in script
+    assert "window.alert" not in script
+
+
 def test_dashboard_shell_exposes_configured_display_timezone(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     script = _script_block(html)

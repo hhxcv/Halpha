@@ -46,6 +46,8 @@ def test_dashboard_browser_smoke_static_navigation_contract(tmp_path: Path) -> N
     assert 'document.querySelectorAll("[data-view-target]")' in script
     assert "setHashView(node.dataset.viewTarget)" in script
     assert "view is stuck loading" in _PLAYWRIGHT_SMOKE_SPEC
+    assert "dashboard-dialog-backdrop" in html
+    assert "Generate report dialog did not open" in _PLAYWRIGHT_SMOKE_SPEC
     assert "expect(errors).toEqual([])" in _PLAYWRIGHT_SMOKE_SPEC
 
 
@@ -127,6 +129,12 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
       await page.goto(url, {waitUntil: "domcontentloaded"});
       await page.waitForSelector('[data-view-target="overview"]', {timeout: 10000});
+      await page.click('[data-report-job="generate"]');
+      await page.waitForSelector('#dashboard-dialog-backdrop:not(.hidden)', {timeout: 5000});
+      const dialogTitle = await page.locator("#dashboard-dialog-title").innerText();
+      if (!dialogTitle.includes("Generate report")) throw new Error("Generate report dialog did not open");
+      await page.click("#dashboard-dialog-cancel");
+      await page.waitForSelector('#dashboard-dialog-backdrop.hidden', {state: "attached", timeout: 5000});
 
       for (const view of views) {
         await page.click(`[data-view-target="${view}"]`);
