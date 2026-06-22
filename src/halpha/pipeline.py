@@ -158,6 +158,10 @@ def run_pipeline_stage(
     _validate_stage(stage, option_name="stage")
     clock = _clock(now)
     run = _load_run_context(config, config_path=config_path, run_dir=run_dir)
+    LOGGER.info(
+        "Pipeline single stage started.",
+        extra={"event": "pipeline.single_stage.start", "run_id": run.run_id, "stage": stage},
+    )
     run.manifest["status"] = "running"
     run.manifest["single_stage_validation"] = {
         "stage": stage,
@@ -193,6 +197,10 @@ def run_pipeline_stage(
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
     _record_terminal_local_data_state(config, run, clock=clock)
+    LOGGER.info(
+        "Pipeline single stage succeeded.",
+        extra={"event": "pipeline.single_stage.succeeded", "run_id": run.run_id, "stage": stage},
+    )
     return RunResult(True, run, 0, None, None)
 
 
@@ -371,6 +379,10 @@ def _run_stage_handler(
     stage_record: dict[str, Any],
     clock: Callable[[], datetime],
 ) -> RunResult | None:
+    LOGGER.debug(
+        "Pipeline stage started.",
+        extra={"event": "pipeline.stage.start", "run_id": run.run_id, "stage": stage},
+    )
     try:
         artifacts = handler(config, run)
     except PipelineError as exc:
@@ -378,15 +390,15 @@ def _run_stage_handler(
         failed_stage = exc.stage or stage
         reason = redact_private_text(str(exc), config_path=run.config_path, config=config)
         error = _error_summary(
-        failed_stage,
-        reason,
-        details=exc.error_details,
-        diagnostic=(
-            bounded_exception_diagnostic(exc, context={"pipeline_exit_code": exc.exit_code})
-            if exc.error_details
-            else None
-        ),
-    )
+            failed_stage,
+            reason,
+            details=exc.error_details,
+            diagnostic=(
+                bounded_exception_diagnostic(exc, context={"pipeline_exit_code": exc.exit_code})
+                if exc.error_details
+                else None
+            ),
+        )
         stage_record["status"] = "failed"
         stage_record["finished_at"] = finished_at
         stage_record["artifacts"] = exc.artifacts
@@ -433,6 +445,15 @@ def _run_stage_handler(
     stage_record["finished_at"] = finished_at
     stage_record["artifacts"] = artifacts or []
     _set_codex_status(run, stage=stage, status="succeeded")
+    LOGGER.debug(
+        "Pipeline stage succeeded.",
+        extra={
+            "event": "pipeline.stage.succeeded",
+            "run_id": run.run_id,
+            "stage": stage,
+            "artifact_count": len(stage_record["artifacts"]),
+        },
+    )
     return None
 
 
@@ -452,6 +473,10 @@ def _skip_stage(
         run.manifest["codex"]["status"] = "skipped"
         run.manifest["codex"]["exit_code"] = None
         run.manifest["codex"]["skip_reason"] = reason
+    LOGGER.info(
+        "Pipeline stage skipped.",
+        extra={"event": "pipeline.stage.skipped", "run_id": run.run_id, "stage": stage, "reason": reason},
+    )
 
 
 def _record_stage_failure_context(
@@ -485,6 +510,18 @@ def _record_not_run_stages(run: RunContext, stages: list[str], *, reason: str) -
             run.manifest["codex"]["status"] = "not_run"
             run.manifest["codex"]["exit_code"] = None
             run.manifest["codex"]["skip_reason"] = reason
+    if stages:
+        LOGGER.info(
+            "Pipeline stages marked not run.",
+            extra={
+                "event": "pipeline.stages.not_run",
+                "run_id": run.run_id,
+                "stage_count": len(stages),
+                "first_stage": stages[0],
+                "last_stage": stages[-1],
+                "reason": reason,
+            },
+        )
 
 
 

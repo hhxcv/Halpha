@@ -721,6 +721,7 @@ they are not proof of a real-source product run.
   - `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
   - `docs/delivery-workbench-contracts.md`: local delivery and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
   - `docs/product-stability-contracts.md`: product validation, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
+  - `docs/logging-standards.md`: local JSON logging levels, event shape, privacy boundaries, context fields, and anti-noise rules.
   - `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.

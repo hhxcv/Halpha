@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
+from halpha.cli import main
+from halpha.config import load_config
 from halpha.logging_utils import configure_local_logging
+from halpha.pipeline import run_pipeline
 
 
 def test_local_logging_writes_json_lines_and_redacts_private_values(tmp_path: Path) -> None:
@@ -28,3 +32,81 @@ def test_local_logging_writes_json_lines_and_redacts_private_values(tmp_path: Pa
     assert "<redacted>" in content
     assert secret not in content
     assert str(tmp_path) not in content
+
+
+def test_pipeline_logging_records_stage_lifecycle_without_info_noise(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    log_path = configure_local_logging(config_path=config_path, config=config, level=logging.DEBUG)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_market_data",
+        now=datetime(2026, 6, 20, tzinfo=timezone.utc),
+        stage_handlers={"collect_market_data": lambda config, run: []},
+    )
+
+    assert result.succeeded is True
+    events = _log_events(log_path)
+    by_event = {event["event"]: event for event in events if "event" in event}
+    assert by_event["pipeline.run.start"]["run_id"] == result.run.run_id
+    assert by_event["pipeline.stage.start"]["stage"] == "collect_market_data"
+    assert by_event["pipeline.stage.start"]["level"] == "DEBUG"
+    assert by_event["pipeline.stage.succeeded"]["artifact_count"] == 0
+    assert by_event["pipeline.stage.succeeded"]["level"] == "DEBUG"
+    assert by_event["pipeline.stages.not_run"]["stage_count"] > 0
+    assert by_event["pipeline.run.succeeded"]["run_id"] == result.run.run_id
+
+
+def test_validate_command_logging_records_failure_without_private_values(tmp_path: Path, capsys) -> None:
+    config_path = _write_config(tmp_path, proxy_url="http://private-proxy.example:7890")
+
+    exit_code = main(["validate", "--config", str(config_path)])
+
+    assert exit_code == 3
+    capsys.readouterr()
+    log_path = tmp_path / "logs" / "halpha.log"
+    log_text = log_path.read_text(encoding="utf-8")
+    events = _log_events(log_path)
+    assert "cli.command.start" in {event.get("event") for event in events}
+    failed = next(event for event in events if event.get("event") == "cli.command.failed")
+    assert failed["command"] == "validate"
+    assert failed["stage"] == "product_validation"
+    assert failed["exit_code"] == 3
+    assert "private-proxy.example" not in log_text
+    assert str(config_path) not in log_text
+    assert str(tmp_path) not in log_text
+
+
+def _log_events(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _write_config(tmp_path: Path, *, proxy_url: str | None = None) -> Path:
+    proxy_block = ""
+    if proxy_url is not None:
+        proxy_block = f"""
+  proxy:
+    enabled: true
+    url: {proxy_url}
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+market:
+  enabled: false
+{proxy_block.rstrip()}
+text:
+  enabled: false
+  sources: []
+report:
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path

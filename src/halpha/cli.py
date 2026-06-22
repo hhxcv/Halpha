@@ -337,15 +337,19 @@ def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = N
 def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
     config_path = Path(config_arg)
     run_dir = Path(run_dir_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("stage", stage_name=stage_name)
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("stage", stage="config", reason=str(exc), stage_name=stage_name, exit_code=2)
         print("Halpha stage failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         result = run_pipeline_stage(
             config,
@@ -354,11 +358,19 @@ def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
             stage=stage_name,
         )
     except StageSelectionError as exc:
+        _log_command_failed("stage", stage="cli", reason=str(exc), stage_name=stage_name, exit_code=2)
         print("Halpha stage failed.")
         print("stage: cli")
         print(f"reason: {exc}")
         return 2
     except PipelineError as exc:
+        _log_command_failed(
+            "stage",
+            stage=exc.stage or stage_name,
+            reason=str(exc),
+            stage_name=stage_name,
+            exit_code=exc.exit_code,
+        )
         print("Halpha stage failed.")
         print(f"stage: {exc.stage or stage_name}")
         print(f"reason: {exc}")
@@ -370,8 +382,17 @@ def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
         print(f"run_id: {result.run.run_id}")
         print(f"stage: {stage_name}")
         print(f"manifest: {manifest}")
+        _log_command_succeeded("stage", stage_name=stage_name, run_id=result.run.run_id)
         return 0
 
+    _log_command_failed(
+        "stage",
+        stage=result.failed_stage or stage_name,
+        reason=result.reason or "stage failed",
+        stage_name=stage_name,
+        run_id=result.run.run_id,
+        exit_code=result.exit_code,
+    )
     print("Halpha stage failed.")
     print(f"stage: {result.failed_stage}")
     print(f"reason: {result.reason}")
@@ -381,15 +402,19 @@ def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
 
 def _validate(config_arg: str, *, run_dir: str | None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("validate", explicit_run=run_dir is not None)
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("validate", stage="config", reason=str(exc), exit_code=2)
         print("Halpha product validation failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     result = inspect_product_validation(
         config,
         config_path=config_path,
@@ -397,6 +422,17 @@ def _validate(config_arg: str, *, run_dir: str | None) -> int:
     )
     for line in result.lines:
         print(line)
+    if result.exit_code == 0:
+        _log_command_succeeded("validate", status=result.status, explicit_run=run_dir is not None)
+    else:
+        _log_command_failed(
+            "validate",
+            stage="product_validation",
+            reason=result.status,
+            status=result.status,
+            explicit_run=run_dir is not None,
+            exit_code=result.exit_code,
+        )
     return result.exit_code
 
 
@@ -464,15 +500,25 @@ def _backtest(
     output_dir: str | None,
 ) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start(
+        "backtest",
+        strategy_name=strategy_name,
+        symbol=symbol,
+        timeframe=timeframe,
+        output_dir_requested=output_dir is not None,
+    )
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("backtest", stage="config", reason=str(exc), exit_code=2)
         print("Halpha backtest failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         result = run_standalone_strategy_backtest(
             config,
@@ -483,6 +529,7 @@ def _backtest(
             output_dir=Path(output_dir) if output_dir else None,
         )
     except StandaloneBacktestError as exc:
+        _log_command_failed("backtest", stage="backtest", reason=str(exc), exit_code=exc.exit_code)
         print("Halpha backtest failed.")
         print("stage: backtest")
         print(f"reason: {exc}")
@@ -495,8 +542,25 @@ def _backtest(
         print(f"status: {result.status}")
         print(f"strategy_backtest: {artifact}")
         print(f"manifest: {manifest}")
+        _log_command_succeeded(
+            "backtest",
+            status=result.status,
+            strategy_name=strategy_name,
+            symbol=symbol,
+            timeframe=timeframe,
+        )
         return 0
 
+    _log_command_failed(
+        "backtest",
+        stage="backtest",
+        reason=result.reason or result.status,
+        status=result.status,
+        strategy_name=strategy_name,
+        symbol=symbol,
+        timeframe=timeframe,
+        exit_code=result.exit_code,
+    )
     print("Halpha backtest failed.")
     print(f"status: {result.status}")
     print(f"reason: {result.reason}")
@@ -512,15 +576,23 @@ def _experiment(
     output_dir: str | None,
 ) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start(
+        "experiment",
+        strategy_count=len(strategy_names or []),
+        output_dir_requested=output_dir is not None,
+    )
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("experiment", stage="config", reason=str(exc), exit_code=2)
         print("Halpha experiment failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         result = run_strategy_experiment(
             config,
@@ -529,6 +601,7 @@ def _experiment(
             output_dir=Path(output_dir) if output_dir else None,
         )
     except StrategyExperimentError as exc:
+        _log_command_failed("experiment", stage="experiment", reason=str(exc), exit_code=exc.exit_code)
         print("Halpha experiment failed.")
         print("stage: experiment")
         print(f"reason: {exc}")
@@ -544,20 +617,35 @@ def _experiment(
     print(f"strategy_benchmark_suite: {benchmark_suite}")
     print(f"strategy_effectiveness_gates: {gates}")
     print(f"manifest: {manifest}")
+    if result.exit_code == 0:
+        _log_command_succeeded("experiment", status=result.status, strategy_count=len(strategy_names or []))
+    else:
+        _log_command_failed(
+            "experiment",
+            stage="experiment",
+            reason=result.status,
+            status=result.status,
+            strategy_count=len(strategy_names or []),
+            exit_code=result.exit_code,
+        )
     return result.exit_code
 
 
 def _text_models_prepare(config_arg: str, *, output_dir: str | None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("text-models prepare", output_dir_requested=output_dir is not None)
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("text-models prepare", stage="config", reason=str(exc), exit_code=2)
         print("Halpha text model preparation failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     result = prepare_text_models(
         config,
         config_path=config_path,
@@ -569,8 +657,20 @@ def _text_models_prepare(config_arg: str, *, output_dir: str | None) -> int:
         print("Halpha text model preparation completed.")
         print(f"status: {result.status}")
         print(f"manifest: {manifest}")
+        _log_command_succeeded("text-models prepare", status=result.status)
         return 0
 
+    _log_command_failed(
+        "text-models prepare",
+        stage="text_models",
+        reason=(
+            str(result.manifest.get("errors", [result.status])[0])
+            if result.manifest.get("errors")
+            else result.status
+        ),
+        status=result.status,
+        exit_code=result.exit_code,
+    )
     print("Halpha text model preparation failed.")
     print(f"status: {result.status}")
     if result.manifest.get("errors"):
@@ -581,15 +681,23 @@ def _text_models_prepare(config_arg: str, *, output_dir: str | None) -> int:
 
 def _text_intel(config_arg: str, *, input_path: str | None, output_dir: str | None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start(
+        "text-intel",
+        input_path_provided=input_path is not None,
+        output_dir_requested=output_dir is not None,
+    )
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("text-intel", stage="config", reason=str(exc), exit_code=2)
         print("Halpha text intelligence failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     result = run_standalone_text_intelligence(
         config,
         config_path=config_path,
@@ -609,8 +717,16 @@ def _text_intel(config_arg: str, *, input_path: str | None, output_dir: str | No
         print("text_event_signals: analysis/text_event_signals.json")
         print("event_intelligence_material: analysis/event_intelligence_material.md")
         print(f"manifest: {manifest}")
+        _log_command_succeeded("text-intel", status=result.status)
         return 0
 
+    _log_command_failed(
+        "text-intel",
+        stage="text_intelligence",
+        reason=result.reason or result.status,
+        status=result.status,
+        exit_code=result.exit_code,
+    )
     print("Halpha text intelligence failed.")
     print(f"status: {result.status}")
     if result.reason:
@@ -622,15 +738,19 @@ def _text_intel(config_arg: str, *, input_path: str | None, output_dir: str | No
 
 def _data_inspect(config_arg: str, *, run_dir: str | None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("data inspect", explicit_run=run_dir is not None)
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("data inspect", stage="config", reason=str(exc), exit_code=2)
         print("Halpha data inspection failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         result = inspect_local_data(
             config,
@@ -638,6 +758,7 @@ def _data_inspect(config_arg: str, *, run_dir: str | None) -> int:
             run_dir=Path(run_dir) if run_dir else None,
         )
     except DataInspectionError as exc:
+        _log_command_failed("data inspect", stage="data_inspect", reason=str(exc), exit_code=exc.exit_code)
         print("Halpha data inspection failed.")
         print("stage: data_inspect")
         print(f"reason: {exc}")
@@ -645,20 +766,25 @@ def _data_inspect(config_arg: str, *, run_dir: str | None) -> int:
 
     for line in result.lines:
         print(line)
+    _log_command_succeeded("data inspect", status=result.status, explicit_run=run_dir is not None)
     return 0
 
 
 def _outcomes_inspect(config_arg: str, *, run_dir: str | None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("outcomes inspect", explicit_run=run_dir is not None)
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("outcomes inspect", stage="config", reason=str(exc), exit_code=2)
         print("Halpha outcome inspection failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         result = inspect_local_outcomes(
             config,
@@ -666,6 +792,12 @@ def _outcomes_inspect(config_arg: str, *, run_dir: str | None) -> int:
             run_dir=Path(run_dir) if run_dir else None,
         )
     except OutcomeInspectionError as exc:
+        _log_command_failed(
+            "outcomes inspect",
+            stage="outcomes_inspect",
+            reason=str(exc),
+            exit_code=exc.exit_code,
+        )
         print("Halpha outcome inspection failed.")
         print("stage: outcomes_inspect")
         print(f"reason: {exc}")
@@ -673,6 +805,7 @@ def _outcomes_inspect(config_arg: str, *, run_dir: str | None) -> int:
 
     for line in result.lines:
         print(line)
+    _log_command_succeeded("outcomes inspect", status=result.status, explicit_run=run_dir is not None)
     return 0
 
 
@@ -837,32 +970,49 @@ def _monitor_run(
 
 def _monitor_inspect(config_arg: str) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("monitor inspect")
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("monitor inspect", stage="config", reason=str(exc), exit_code=2)
         print("Halpha monitor inspection failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     result = inspect_monitor_health(config, config_path=config_path)
     for line in result.lines:
         print(line)
+    if result.exit_code == 0:
+        _log_command_succeeded("monitor inspect")
+    else:
+        _log_command_failed(
+            "monitor inspect",
+            stage="monitor_inspect",
+            reason="monitor inspection failed",
+            exit_code=result.exit_code,
+        )
     return result.exit_code
 
 
 def _workbench_build(config_arg: str, *, run_dir: str | None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("workbench build", explicit_run=run_dir is not None)
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("workbench build", stage="config", reason=str(exc), exit_code=2)
         print("Halpha workbench build failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     result = build_workbench_summary(
         config,
         config_path=config_path,
@@ -885,23 +1035,41 @@ def _workbench_build(config_arg: str, *, run_dir: str | None) -> int:
         if isinstance(fields, dict) and fields.get("selection_key"):
             print(f"latest_run_source: {fields['selection_key']}")
     print("codex: not_run")
+    _log_command_succeeded(
+        "workbench build",
+        status=str(result.summary.get("status") or "unknown"),
+        explicit_run=run_dir is not None,
+    )
     return 0
 
 
 def _workbench_inspect(config_arg: str) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start("workbench inspect")
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        _log_command_failed("workbench inspect", stage="config", reason=str(exc), exit_code=2)
         print("Halpha workbench inspection failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     result = inspect_workbench_summary(config, config_path=config_path)
     for line in result.lines:
         print(line)
+    if result.exit_code == 0:
+        _log_command_succeeded("workbench inspect")
+    else:
+        _log_command_failed(
+            "workbench inspect",
+            stage="workbench_inspect",
+            reason="workbench inspection failed",
+            exit_code=result.exit_code,
+        )
     return result.exit_code
 
 
@@ -916,6 +1084,49 @@ def _safe_local_display_path(path: Path) -> str:
 def _dashboard_url(host: str, port: int) -> str:
     display_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
     return f"http://{display_host}:{port}"
+
+
+def _log_command_start(command: str, **fields) -> None:
+    LOGGER.info(
+        "Halpha command started.",
+        extra=_command_log_extra("cli.command.start", command, **fields),
+    )
+
+
+def _log_command_succeeded(command: str, **fields) -> None:
+    LOGGER.info(
+        "Halpha command succeeded.",
+        extra=_command_log_extra("cli.command.succeeded", command, **fields),
+    )
+
+
+def _log_command_failed(
+    command: str,
+    *,
+    stage: str,
+    reason: str,
+    exit_code: int | None = None,
+    **fields,
+) -> None:
+    LOGGER.warning(
+        "Halpha command failed.",
+        extra=_command_log_extra(
+            "cli.command.failed",
+            command,
+            stage=stage,
+            reason=reason,
+            exit_code=exit_code,
+            **fields,
+        ),
+    )
+
+
+def _command_log_extra(event: str, command: str, **fields) -> dict:
+    extra = {"event": event, "command": command}
+    for key, value in fields.items():
+        if value is not None:
+            extra[key] = value
+    return extra
 
 
 def _configure_logging(config_path: Path, *, config: dict | None = None) -> None:
