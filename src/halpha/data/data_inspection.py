@@ -44,7 +44,7 @@ USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
-M13_CHECK_NAMES = {
+FEATURE_FACTOR_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
     "multi_source_signals",
@@ -54,7 +54,7 @@ FUSION_CHECK_NAMES = {
     "intelligence_fusion",
     "intelligence_fusion_material",
 }
-M15_CHECK_NAMES = {
+PERSONALIZED_RISK_CHECK_NAMES = {
     "user_state_context",
     "personalized_risk_constraints",
     "personalized_risk_material",
@@ -450,14 +450,14 @@ def _feature_factor_artifacts_section(
         "multi_source_signals": _dict(manifest.get("multi_source_signals")),
         "factor_signal_material": _dict(manifest.get("factor_signal_material")),
     }
-    has_m13_artifacts = any(
+    has_feature_factor_artifacts = any(
         artifacts.get(key)
         for key in ("feature_snapshots", "factor_states", "multi_source_signals", "factor_signal_material")
     ) or any(summary for summary in artifact_summaries.values())
 
     quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
-    quality_counts = _m13_quality_check_counts(quality)
-    if not has_m13_artifacts and not any(quality_counts.values()):
+    quality_counts = _feature_factor_quality_check_counts(quality)
+    if not has_feature_factor_artifacts and not any(quality_counts.values()):
         return _section(
             "feature_factor_artifacts",
             "skipped",
@@ -466,7 +466,7 @@ def _feature_factor_artifacts_section(
                 "run_id": manifest.get("run_id"),
                 "run_status": manifest.get("status"),
             },
-            reason="M13 feature/factor artifacts were not found in this run.",
+            reason="feature/factor artifacts were not found in this run.",
         )
 
     budget = _codex_material_budget(manifest, FACTOR_SIGNAL_MATERIAL_ARTIFACT)
@@ -486,11 +486,11 @@ def _feature_factor_artifacts_section(
         "signal_errors": _int(counts.get("multi_source_signal_errors")),
         "material_records": _int(counts.get("factor_signal_material_records")),
         "material_omitted_records": _int(counts.get("factor_signal_material_omitted_records")),
-        "m13_quality_ok": quality_counts["ok"],
-        "m13_quality_warning": quality_counts["warning"],
-        "m13_quality_degraded": quality_counts["degraded"],
-        "m13_quality_skipped": quality_counts["skipped"],
-        "m13_quality_failed": quality_counts["failed"],
+        "feature_factor_quality_ok": quality_counts["ok"],
+        "feature_factor_quality_warning": quality_counts["warning"],
+        "feature_factor_quality_degraded": quality_counts["degraded"],
+        "feature_factor_quality_skipped": quality_counts["skipped"],
+        "feature_factor_quality_failed": quality_counts["failed"],
         "manifest": _safe_path(manifest_path, base=base),
     }
     if budget:
@@ -834,7 +834,7 @@ def _personalized_risk_section(
     ) or any((user_state_summary, constraint_summary, integration_summary, material_summary))
 
     quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
-    quality_counts = _m15_quality_check_counts(quality)
+    quality_counts = _personalized_risk_quality_check_counts(quality)
     if not has_personalized_artifacts and not any(quality_counts.values()):
         return _section(
             "personalized_risk",
@@ -879,11 +879,11 @@ def _personalized_risk_section(
         "material_status": material_summary.get("status") or "unknown",
         "material_records": _int(counts.get("personalized_risk_material_records")),
         "material_omitted_records": _int(counts.get("personalized_risk_material_omitted_records")),
-        "m15_quality_ok": quality_counts["ok"],
-        "m15_quality_warning": quality_counts["warning"],
-        "m15_quality_degraded": quality_counts["degraded"],
-        "m15_quality_skipped": quality_counts["skipped"],
-        "m15_quality_failed": quality_counts["failed"],
+        "personalized_risk_quality_ok": quality_counts["ok"],
+        "personalized_risk_quality_warning": quality_counts["warning"],
+        "personalized_risk_quality_degraded": quality_counts["degraded"],
+        "personalized_risk_quality_skipped": quality_counts["skipped"],
+        "personalized_risk_quality_failed": quality_counts["failed"],
         "manifest": _safe_path(manifest_path, base=base),
     }
     if budget:
@@ -1171,16 +1171,16 @@ def _store_statuses(catalog: dict[str, Any]) -> str | None:
     return ", ".join(sorted(statuses)) if statuses else None
 
 
-def _m13_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
-    return _named_quality_check_counts(quality, M13_CHECK_NAMES)
+def _feature_factor_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
+    return _named_quality_check_counts(quality, FEATURE_FACTOR_CHECK_NAMES)
 
 
 def _fusion_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
     return _named_quality_check_counts(quality, FUSION_CHECK_NAMES)
 
 
-def _m15_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
-    return _named_quality_check_counts(quality, M15_CHECK_NAMES)
+def _personalized_risk_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
+    return _named_quality_check_counts(quality, PERSONALIZED_RISK_CHECK_NAMES)
 
 
 def _named_quality_check_counts(quality: dict[str, Any], names: set[str]) -> dict[str, int]:
@@ -1325,3 +1325,4 @@ def _status_count(records: list[Any], status: str) -> int:
 
 def _inspection_section_status(summary: dict[str, Any], key: str) -> str:
     return str(_dict(summary.get(key)).get("status") or "unknown")
+

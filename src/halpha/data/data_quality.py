@@ -34,12 +34,12 @@ def build_data_quality_summary(
     now: datetime | str | None = None,
 ) -> list[str]:
     created_at = _format_utc(now)
-    checks = _data_quality_checks(config, run, now=created_at, m13_expected=False)
+    checks = _data_quality_checks(config, run, now=created_at, post_artifacts_expected=False)
     _write_data_quality_summary(run, created_at=created_at, checks=checks)
     return [DATA_QUALITY_SUMMARY_ARTIFACT]
 
 
-def refresh_m13_data_quality_checks(
+def refresh_post_data_quality_checks(
     config: dict[str, Any],
     run: RunContext,
     *,
@@ -49,7 +49,7 @@ def refresh_m13_data_quality_checks(
     created_at = _format_utc(now)
     existing, error = _read_json(run.analysis_dir / "data_quality_summary.json")
     if error:
-        checks = _data_quality_checks(config, run, now=created_at, m13_expected=True)
+        checks = _data_quality_checks(config, run, now=created_at, post_artifacts_expected=True)
     else:
         checks = [
             check
@@ -66,7 +66,7 @@ def _data_quality_checks(
     run: RunContext,
     *,
     now: str,
-    m13_expected: bool,
+    post_artifacts_expected: bool,
 ) -> list[dict[str, Any]]:
     checks = [
         _raw_market_check(config, run, now=now),
@@ -90,7 +90,7 @@ def _data_quality_checks(
         _research_data_catalog_check(run),
         _run_index_check(run),
         _partial_collection_check(run),
-        *post_data_quality_artifact_checks(run, expected=m13_expected),
+        *post_data_quality_artifact_checks(run, expected=post_artifacts_expected),
     ]
     return checks
 
@@ -1429,3 +1429,4 @@ def _format_utc(value: datetime | str | None) -> str:
 
 def _unique_sorted(values: list[str]) -> list[str]:
     return sorted(set(values))
+
