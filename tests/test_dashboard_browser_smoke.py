@@ -16,6 +16,7 @@ import uvicorn
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
+from halpha.dashboard_ui_script import dashboard_script
 
 
 BROWSER_SMOKE_ENABLED = os.environ.get("HALPHA_BROWSER_SMOKE") == "1"
@@ -29,13 +30,15 @@ def test_dashboard_browser_smoke_static_navigation_contract(tmp_path: Path) -> N
     response = TestClient(app).get("/")
     assert response.status_code == 200
     html = response.text
+    script = dashboard_script()
     for view in _PRIMARY_VIEWS:
         assert f'data-view-target="{view}"' in html
         assert f'id="{view}-view"' in html
         assert f'"{view}"' in _PLAYWRIGHT_SMOKE_SPEC
     assert "await page.waitForSelector(`#${view}-view:not(.hidden)`" in _PLAYWRIGHT_SMOKE_SPEC
-    assert 'document.querySelectorAll("[data-view-target]")' in html
-    assert "setHashView(node.dataset.viewTarget)" in html
+    assert '<script src="/assets/dashboard.js" defer></script>' in html
+    assert 'document.querySelectorAll("[data-view-target]")' in script
+    assert "setHashView(node.dataset.viewTarget)" in script
     assert "view is stuck loading" in _PLAYWRIGHT_SMOKE_SPEC
     assert "expect(errors).toEqual([])" in _PLAYWRIGHT_SMOKE_SPEC
 

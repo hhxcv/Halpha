@@ -23,7 +23,7 @@ EXPECTED_DASHBOARD_VIEWS = {
 }
 
 
-def test_dashboard_ui_source_sections_are_split() -> None:
+def test_dashboard_ui_source_sections_are_static_assets() -> None:
     css = dashboard_css()
     script = dashboard_script()
     shell = dashboard_shell_html(css="", script="")
@@ -33,8 +33,30 @@ def test_dashboard_ui_source_sections_are_split() -> None:
     assert "function renderReportLibrary" in script
     assert "function renderSettings" in script
     assert "__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__" in shell
-    assert "__HALPHA_DASHBOARD_CSS__" not in shell
-    assert "__HALPHA_DASHBOARD_SCRIPT__" not in shell
+    assert '<link rel="stylesheet" href="/assets/dashboard.css">' in shell
+    assert '<script src="/assets/dashboard.js" defer></script>' in shell
+    assert "<style>" not in shell
+    assert "\n  <script>\n" not in shell
+
+
+def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
+    client = _dashboard_client(tmp_path)
+
+    html = client.get("/")
+    css = client.get("/assets/dashboard.css")
+    script = client.get("/assets/dashboard.js")
+    missing = client.get("/assets/missing.js")
+
+    assert html.status_code == 200
+    assert '<link rel="stylesheet" href="/assets/dashboard.css">' in html.text
+    assert '<script src="/assets/dashboard.js" defer></script>' in html.text
+    assert css.status_code == 200
+    assert css.headers["content-type"].startswith("text/css")
+    assert ".reports-layout" in css.text
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("application/javascript")
+    assert "function renderReportLibrary" in script.text
+    assert missing.status_code == 404
 
 
 class DashboardShellParser(HTMLParser):
@@ -269,21 +291,29 @@ def test_dashboard_shell_has_no_unwired_dashboard_controls_or_fabricated_sources
 
 
 def _dashboard_html(tmp_path: Path) -> str:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    client = _dashboard_client(tmp_path)
     response = client.get("/")
     assert response.status_code == 200
     return response.text
 
 
+def _dashboard_client(tmp_path: Path) -> TestClient:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    return TestClient(create_dashboard_app(config, config_path=config_path))
+
+
 def _style_block(html: str) -> str:
+    if "<style>" not in html:
+        return dashboard_css()
     start = html.index("<style>") + len("<style>")
     end = html.index("</style>", start)
     return html[start:end]
 
 
 def _script_block(html: str) -> str:
+    if "<script>" not in html:
+        return dashboard_script()
     start = html.index("<script>") + len("<script>")
     end = html.index("</script>", start)
     return html[start:end]
