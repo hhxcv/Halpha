@@ -160,7 +160,18 @@ blocks browser automation against the local-only dashboard bind, record that
 limitation in the PR and rely on TestClient shell/API coverage plus static
 responsive and interaction-contract tests.
 
-The opt-in browser smoke check is:
+The standard local browser-smoke command is:
+
+```bash
+python -m pytest tests/test_dashboard_browser_smoke.py -q
+```
+
+By default this runs a deterministic static navigation contract check and skips
+the real browser launch. The default check must fail if primary navigation
+targets, view section IDs, or the Playwright stuck-loading and console-error
+assertions drift out of the dashboard shell.
+
+The opt-in real-browser smoke check is:
 
 ```bash
 HALPHA_BROWSER_SMOKE=1 python -m pytest tests/test_dashboard_browser_smoke.py -q
@@ -173,11 +184,12 @@ $env:HALPHA_BROWSER_SMOKE = "1"
 python -m pytest tests\test_dashboard_browser_smoke.py -q
 ```
 
-Without `HALPHA_BROWSER_SMOKE=1`, the browser smoke test is skipped so default
-unit runs do not download or launch browser tooling. When enabled, the test
-starts the local dashboard server, drives the primary views with Playwright
-Chromium through `npx`, fails on stuck loading or broken navigation, and fails
-on browser console or page errors.
+Without `HALPHA_BROWSER_SMOKE=1`, only the Playwright launch is skipped so
+default unit runs do not download or launch browser tooling. When enabled, the
+test starts the local dashboard server, drives the primary views with
+Playwright Chromium through `npx`, fails on stuck loading or broken navigation,
+and fails on browser console or page errors. Tests that require Playwright are
+marked `browser_smoke`.
 
 ## Artifact Preview Rules
 

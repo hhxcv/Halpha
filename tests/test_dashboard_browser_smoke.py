@@ -10,6 +10,7 @@ import threading
 import time
 from urllib.request import urlopen
 
+from fastapi.testclient import TestClient
 import pytest
 import uvicorn
 
@@ -17,12 +18,33 @@ from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("HALPHA_BROWSER_SMOKE") != "1",
+BROWSER_SMOKE_ENABLED = os.environ.get("HALPHA_BROWSER_SMOKE") == "1"
+
+
+def test_dashboard_browser_smoke_static_navigation_contract(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    app = create_dashboard_app(config, config_path=config_path)
+
+    response = TestClient(app).get("/")
+    assert response.status_code == 200
+    html = response.text
+    for view in _PRIMARY_VIEWS:
+        assert f'data-view-target="{view}"' in html
+        assert f'id="{view}-view"' in html
+        assert f'"{view}"' in _PLAYWRIGHT_SMOKE_SPEC
+    assert "await page.waitForSelector(`#${view}-view:not(.hidden)`" in _PLAYWRIGHT_SMOKE_SPEC
+    assert 'document.querySelectorAll("[data-view-target]")' in html
+    assert "setHashView(node.dataset.viewTarget)" in html
+    assert "view is stuck loading" in _PLAYWRIGHT_SMOKE_SPEC
+    assert "expect(errors).toEqual([])" in _PLAYWRIGHT_SMOKE_SPEC
+
+
+@pytest.mark.browser_smoke
+@pytest.mark.skipif(
+    not BROWSER_SMOKE_ENABLED,
     reason="set HALPHA_BROWSER_SMOKE=1 to run local Playwright dashboard smoke checks",
 )
-
-
 def test_dashboard_primary_pages_browser_smoke(tmp_path: Path) -> None:
     npx = shutil.which("npx") or shutil.which("npx.cmd")
     if npx is None:
@@ -123,6 +145,9 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
     });
     """
 ).strip()
+
+
+_PRIMARY_VIEWS = ("overview", "reports", "strategies", "monitor", "intelligence", "settings")
 
 
 def _free_port() -> int:

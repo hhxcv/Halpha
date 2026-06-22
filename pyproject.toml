@@ -37,3 +37,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "browser_smoke: opt-in local browser smoke checks that launch Playwright through npx",
+]
