@@ -2132,7 +2132,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     function looksLikeIsoTimestamp(value) {
-      return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value);
+      return typeof value === "string" && /^\\d{4}-\\d{2}-\\d{2}T/.test(value);
     }
 
     function formatTimestamp(value) {
@@ -2589,7 +2589,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     function renderOutline(markdown) {
       const headings = markdown.split(/\\r?\\n/).filter((line) => /^#{1,3}\\s+/.test(line)).slice(0, 12);
       document.querySelector("#report-outline").innerHTML = headings.length ? headings.map((line, index) => {
-        const title = line.replace(/^#{1,3}\s+/, "");
+        const title = line.replace(/^#{1,3}\\s+/, "");
         return `<li><a href="#" data-outline-index="${index}">${escapeHtml(title)}</a></li>`;
       }).join("") : `<li class="message">No outline extracted.</li>`;
     }
@@ -3886,8 +3886,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     function joinPath(base, path) {
-      const left = String(base || "").replace(/\/$/, "");
-      const right = String(path || "").replace(/^\//, "");
+      const left = String(base || "").replace(/\\/$/, "");
+      const right = String(path || "").replace(/^\\//, "");
       return left && right ? `${left}/${right}` : right || left;
     }
 
@@ -3911,7 +3911,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         tableLines = [];
       };
       lines.forEach((raw) => {
-        if (/^\|.*\|$/.test(raw.trim())) {
+        if (/^\\|.*\\|$/.test(raw.trim())) {
           closeList();
           tableLines.push(raw.trim());
           return;

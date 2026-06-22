@@ -11,6 +11,7 @@ import threading
 from typing import Any
 from uuid import uuid4
 
+from .dashboard_time import parse_utc_timestamp, utc_now_timestamp
 from .pipeline import STAGE_ORDER
 from .storage import write_json
 
@@ -853,24 +854,12 @@ def _process_is_alive(pid: Any) -> bool:
 
 def _job_recently_updated(job: dict[str, Any], *, grace_seconds: int) -> bool:
     for key in ("updated_at", "started_at", "created_at"):
-        timestamp = _parse_utc(job.get(key))
+        timestamp = parse_utc_timestamp(job.get(key))
         if timestamp is None:
             continue
         age = datetime.now(timezone.utc) - timestamp
         return age.total_seconds() < grace_seconds
     return False
-
-
-def _parse_utc(value: Any) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        return None
-    return parsed.astimezone(timezone.utc)
 
 
 def _config_private_values(config: dict[str, Any]) -> set[str]:
@@ -927,4 +916,4 @@ def _safe_ref(path: Path, *, base: Path) -> str:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return utc_now_timestamp()
