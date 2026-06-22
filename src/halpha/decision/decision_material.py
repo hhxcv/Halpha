@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
+from json import JSONDecodeError
+from pathlib import Path
 from typing import Any
 
-from halpha.runtime.pipeline_contracts import PipelineError
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 
 
 BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE = "build_decision_intelligence_material"
@@ -11,6 +15,7 @@ RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
 WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
 DECISION_INTELLIGENCE_DELTA_ARTIFACT = "analysis/decision_intelligence_delta.json"
+DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
 SCHEMA_VERSION = 1
 DECISION_MATERIAL_INPUT_ARTIFACTS = {
     "market_regime_assessment": MARKET_REGIME_ASSESSMENT_ARTIFACT,
@@ -19,6 +24,67 @@ DECISION_MATERIAL_INPUT_ARTIFACTS = {
     "watch_triggers": WATCH_TRIGGERS_ARTIFACT,
     "decision_intelligence_delta": DECISION_INTELLIGENCE_DELTA_ARTIFACT,
 }
+DECISION_MATERIAL_INPUT_PRODUCER_STAGES = {
+    "market_regime_assessment": "build_market_regime_assessment",
+    "risk_assessment": "build_risk_assessment",
+    "decision_recommendations": "build_decision_recommendations",
+    "watch_triggers": "build_watch_triggers",
+    "decision_intelligence_delta": "build_decision_intelligence_delta",
+}
+
+
+@dataclass(frozen=True)
+class DecisionMaterialBuildResult:
+    artifacts: list[str]
+    enabled: bool
+    status: str
+    record_count: int
+    reason: str | None = None
+
+
+def build_decision_intelligence_material_artifact(
+    config: dict[str, Any],
+    run: RunContext,
+) -> DecisionMaterialBuildResult:
+    if not _quant_enabled(config):
+        run.manifest["counts"]["decision_intelligence_material_records"] = 0
+        return DecisionMaterialBuildResult(
+            artifacts=[],
+            enabled=False,
+            status="skipped",
+            record_count=0,
+            reason="quant_disabled",
+        )
+
+    artifacts = read_decision_material_inputs(run)
+    decision_record_count = decision_material_record_count(artifacts)
+    output_path = run.analysis_dir / "decision_intelligence_material.md"
+    output_path.write_text(
+        render_decision_intelligence_material(artifacts, run_id=run.run_id),
+        encoding="utf-8",
+    )
+    run.manifest["artifacts"]["decision_intelligence_material"] = DECISION_INTELLIGENCE_MATERIAL_ARTIFACT
+    run.manifest["counts"]["decision_intelligence_material_records"] = decision_record_count
+    return DecisionMaterialBuildResult(
+        artifacts=[DECISION_INTELLIGENCE_MATERIAL_ARTIFACT],
+        enabled=True,
+        status="succeeded",
+        record_count=decision_record_count,
+    )
+
+
+def read_decision_material_inputs(run: RunContext) -> dict[str, dict[str, Any]]:
+    artifacts = {
+        artifact_key: _read_json_artifact(
+            run.run_dir / artifact_name,
+            artifact_name,
+            producer_stage=DECISION_MATERIAL_INPUT_PRODUCER_STAGES[artifact_key],
+            stage=BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE,
+        )
+        for artifact_key, artifact_name in DECISION_MATERIAL_INPUT_ARTIFACTS.items()
+    }
+    validate_decision_material_inputs(artifacts)
+    return artifacts
 
 
 def validate_decision_material_inputs(artifacts: dict[str, dict[str, Any]]) -> None:
@@ -664,6 +730,30 @@ def _change_key(change: dict[str, Any]) -> tuple[str, str, str]:
     )
 
 
+def _read_json_artifact(path: Path, artifact: str, *, producer_stage: str, stage: str) -> dict[str, Any]:
+    if not path.exists():
+        raise PipelineError(
+            f"{artifact} was not found; {producer_stage} must run first.",
+            stage=stage,
+            exit_code=3,
+        )
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except JSONDecodeError as exc:
+        raise PipelineError(
+            f"{artifact} is not valid JSON: {exc.msg}.",
+            stage=stage,
+            exit_code=3,
+        ) from exc
+    if not isinstance(payload, dict):
+        raise PipelineError(
+            f"{artifact} must contain a JSON object.",
+            stage=stage,
+            exit_code=3,
+        )
+    return payload
+
+
 def _records_from_artifact(artifact: dict[str, Any], artifact_name: str, *, stage: str) -> list[dict[str, Any]]:
     records = artifact.get("records")
     if not isinstance(records, list):
@@ -700,6 +790,10 @@ def _count_by_clean_text(records: list[dict[str, Any]], field: str) -> dict[str,
 
 def _mapping(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _quant_enabled(config: dict[str, Any]) -> bool:
+    return bool(_mapping(config.get("quant")).get("enabled"))
 
 
 def _string_list(value: Any) -> list[str]:

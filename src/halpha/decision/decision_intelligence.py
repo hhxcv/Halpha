@@ -6,9 +6,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from halpha.decision.decision_material import (
-    decision_material_record_count,
-    render_decision_intelligence_material,
-    validate_decision_material_inputs,
+    build_decision_intelligence_material_artifact,
 )
 from halpha.decision.decision_delta import build_decision_intelligence_delta_artifact
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
@@ -492,19 +490,10 @@ def build_decision_intelligence_delta(
 
 
 def build_decision_intelligence_material(config: dict[str, Any], run: RunContext) -> list[str]:
-    if not _quant_enabled(config):
-        run.manifest["counts"]["decision_intelligence_material_records"] = 0
-        return []
+    result = build_decision_intelligence_material_artifact(config, run)
+    if not result.enabled:
+        return result.artifacts
 
-    inputs = _read_decision_material_inputs(run)
-    decision_record_count = decision_material_record_count(inputs)
-    output_path = run.analysis_dir / "decision_intelligence_material.md"
-    output_path.write_text(
-        render_decision_intelligence_material(inputs, run_id=run.run_id),
-        encoding="utf-8",
-    )
-    run.manifest["artifacts"]["decision_intelligence_material"] = DECISION_INTELLIGENCE_MATERIAL_ARTIFACT
-    run.manifest["counts"]["decision_intelligence_material_records"] = decision_record_count
     previous_run = _mapping(run.manifest.get("decision_intelligence")).get(
         "previous_run",
         _previous_run_summary("not_checked"),
@@ -514,12 +503,12 @@ def build_decision_intelligence_material(config: dict[str, Any], run: RunContext
     _record_decision_intelligence_manifest(
         run,
         enabled=True,
-        status="succeeded",
+        status=result.status,
         previous_run=previous_run,
         warnings=warnings,
         errors=errors,
     )
-    return [DECISION_INTELLIGENCE_MATERIAL_ARTIFACT]
+    return result.artifacts
 
 
 def record_decision_intelligence_failure(
@@ -541,43 +530,6 @@ def record_decision_intelligence_failure(
         warnings=warnings,
         errors=errors,
     )
-
-
-def _read_decision_material_inputs(run: RunContext) -> dict[str, dict[str, Any]]:
-    artifacts = {
-        "market_regime_assessment": _read_json_artifact(
-            run.analysis_dir / "market_regime_assessment.json",
-            MARKET_REGIME_ASSESSMENT_ARTIFACT,
-            producer_stage=BUILD_MARKET_REGIME_ASSESSMENT_STAGE,
-            stage=BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE,
-        ),
-        "risk_assessment": _read_json_artifact(
-            run.analysis_dir / "risk_assessment.json",
-            RISK_ASSESSMENT_ARTIFACT,
-            producer_stage=BUILD_RISK_ASSESSMENT_STAGE,
-            stage=BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE,
-        ),
-        "decision_recommendations": _read_json_artifact(
-            run.analysis_dir / "decision_recommendations.json",
-            DECISION_RECOMMENDATIONS_ARTIFACT,
-            producer_stage=BUILD_DECISION_RECOMMENDATIONS_STAGE,
-            stage=BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE,
-        ),
-        "watch_triggers": _read_json_artifact(
-            run.analysis_dir / "watch_triggers.json",
-            WATCH_TRIGGERS_ARTIFACT,
-            producer_stage=BUILD_WATCH_TRIGGERS_STAGE,
-            stage=BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE,
-        ),
-        "decision_intelligence_delta": _read_json_artifact(
-            run.analysis_dir / "decision_intelligence_delta.json",
-            DECISION_INTELLIGENCE_DELTA_ARTIFACT,
-            producer_stage=BUILD_DECISION_INTELLIGENCE_DELTA_STAGE,
-            stage=BUILD_DECISION_INTELLIGENCE_MATERIAL_STAGE,
-        ),
-    }
-    validate_decision_material_inputs(artifacts)
-    return artifacts
 
 
 def _previous_run_summary(status: str, *, run_id: str | None = None, path: str | None = None) -> dict[str, Any]:
