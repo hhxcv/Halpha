@@ -1392,6 +1392,54 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_strategies_endpoint_groups_repeated_warnings(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_strategy_artifacts(run)
+    write_json(
+        run.analysis_dir / "strategy_experiment.json",
+        {
+            "artifact_type": "strategy_experiment",
+            "created_at": "2026-06-20T00:04:00Z",
+            "status": "warning",
+            "coverage": {"strategy_candidates": 1, "evaluations": 1},
+            "candidates": [
+                {
+                    "strategy_name": "tsmom_vol_scaled",
+                    "status": "succeeded",
+                    "summary": {"benchmark_records": 1},
+                    "evaluations": [{"status": "succeeded"}],
+                    "warnings": [],
+                    "errors": [],
+                }
+            ],
+            "source_artifacts": ["analysis/strategy_benchmark_suite.json"],
+            "warnings": [
+                {"code": "small_sample", "message": "sample is small."},
+                {"code": "small_sample", "message": "sample is small."},
+                "sample is small.",
+            ],
+            "errors": [],
+        },
+    )
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    payload = response.json()
+    pipeline = {item["name"]: item for item in payload["pipeline"]["artifacts"]}
+    groups = pipeline["strategy_experiment"]["warning_groups"]
+    assert groups[0]["message"] == "sample is small."
+    assert groups[0]["count"] == 3
+    assert "runs/run-1/analysis/strategy_experiment.json" in groups[0]["sources"]
+    assert "analysis/strategy_benchmark_suite.json" in groups[0]["sources"]
+    assert any(group["message"] == "sample is small." and group["count"] == 3 for group in payload["warning_groups"])
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_strategies_endpoint_reports_configured_command_options() -> None:
     config_path = Path("config.example.yaml")
     config = load_config(config_path)
