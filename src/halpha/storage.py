@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from contextlib import suppress
 import json
 from json import JSONDecodeError
+import os
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 
 def ensure_directory(path: Path) -> None:
@@ -13,7 +16,21 @@ def ensure_directory(path: Path) -> None:
 def write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
-    path.write_text(f"{text}\n", encoding="utf-8")
+    _atomic_write_text(path, f"{text}\n")
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    temp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    try:
+        with temp_path.open("w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
+        with suppress(OSError):
+            if temp_path.exists():
+                temp_path.unlink()
 
 
 def display_path(path: Path, *, base: Path | None = None) -> str:
