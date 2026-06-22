@@ -915,14 +915,15 @@ def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) 
 def test_dashboard_job_manager_marks_stale_running_job_blocked(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    job_dir = tmp_path / "runs" / "dashboard" / "jobs" / "stale-job"
+    job_id = "20260622T000000Z_deadbeef"
+    job_dir = tmp_path / "runs" / "dashboard" / "jobs" / job_id
     job_dir.mkdir(parents=True)
     (job_dir / "job.json").write_text(
         json.dumps(
             {
                 "schema_version": 1,
                 "artifact_type": "dashboard_job",
-                "job_id": "stale-job",
+                "job_id": job_id,
                 "intent": "monitor_loop",
                 "kind": "monitor_loop",
                 "status": "running",
@@ -937,7 +938,7 @@ def test_dashboard_job_manager_marks_stale_running_job_blocked(tmp_path: Path) -
     )
     manager = DashboardJobManager(config, config_path=config_path)
 
-    detail = manager.get_job("stale-job")
+    detail = manager.get_job(job_id)
     listed = manager.list_jobs()["jobs"][0]
     index = json.loads((tmp_path / "runs" / "dashboard" / "jobs" / "index.json").read_text(encoding="utf-8"))
 
@@ -972,6 +973,28 @@ def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> 
     assert detail_response.json()["status"] == "succeeded"
     assert str(tmp_path) not in list_response.text
     assert str(tmp_path) not in detail_response.text
+
+
+def test_dashboard_job_api_rejects_path_shaped_job_ids(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    outside = tmp_path / "runs" / "dashboard" / "outside_jobs"
+    outside.mkdir(parents=True)
+    (outside / "job.json").write_text(
+        json.dumps({"schema_version": 1, "artifact_type": "dashboard_job", "job_id": "outside", "status": "leaked"}),
+        encoding="utf-8",
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    detail_response = client.get("/api/jobs/..%5Coutside_jobs")
+    cancel_response = client.post("/api/jobs/..%5Coutside_jobs/cancel")
+
+    assert detail_response.status_code == 200
+    assert cancel_response.status_code == 200
+    assert detail_response.json()["status"] == "missing"
+    assert cancel_response.json()["status"] == "missing"
+    assert "leaked" not in detail_response.text
+    assert "leaked" not in cancel_response.text
 
 
 class _FakeProcess:
