@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 from typing import Sequence
 
@@ -16,6 +17,7 @@ from .dashboard import (
     validate_dashboard_port,
 )
 from .data_inspection import DataInspectionError, inspect_local_data
+from .logging_utils import configure_local_logging
 from .monitoring import (
     inspect_monitor_health,
     load_monitor_config,
@@ -32,6 +34,9 @@ from .storage import display_path
 from .strategy_experiment import StrategyExperimentError, run_strategy_experiment
 from .text_models import prepare_text_models
 from .workbench import build_workbench_summary, inspect_workbench_summary
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -258,15 +263,25 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = None) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    LOGGER.info(
+        "Halpha command started.",
+        extra={"event": "cli.command.start", "command": "run", "no_codex": no_codex, "until_stage": until_stage},
+    )
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        LOGGER.warning(
+            "Halpha command failed.",
+            extra={"event": "cli.command.failed", "command": "run", "stage": "config", "reason": str(exc)},
+        )
         print("Halpha run failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         result = run_pipeline(
             config,
@@ -275,6 +290,10 @@ def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = N
             skip_codex=no_codex,
         )
     except StageSelectionError as exc:
+        LOGGER.warning(
+            "Halpha command failed.",
+            extra={"event": "cli.command.failed", "command": "run", "stage": "cli", "reason": str(exc)},
+        )
         print("Halpha run failed.")
         print("stage: cli")
         print(f"reason: {exc}")
@@ -291,8 +310,23 @@ def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = N
         if result.run.manifest.get("codex", {}).get("status") == "skipped":
             print("codex: skipped")
         print(f"manifest: {manifest}")
+        LOGGER.info(
+            "Halpha command succeeded.",
+            extra={"event": "cli.command.succeeded", "command": "run", "run_id": result.run.run_id},
+        )
         return 0
 
+    LOGGER.warning(
+        "Halpha command failed.",
+        extra={
+            "event": "cli.command.failed",
+            "command": "run",
+            "stage": result.failed_stage,
+            "run_id": result.run.run_id,
+            "exit_code": result.exit_code,
+            "reason": result.reason,
+        },
+    )
     print("Halpha run failed.")
     print(f"stage: {result.failed_stage}")
     print(f"reason: {result.reason}")
@@ -368,30 +402,56 @@ def _validate(config_arg: str, *, run_dir: str | None) -> int:
 
 def _dashboard(config_arg: str, *, host: str, port: int) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    LOGGER.info(
+        "Halpha command started.",
+        extra={"event": "cli.command.start", "command": "dashboard", "host": host, "port": port},
+    )
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        LOGGER.warning(
+            "Halpha command failed.",
+            extra={"event": "cli.command.failed", "command": "dashboard", "stage": "config", "reason": str(exc)},
+        )
         print("Halpha dashboard failed.")
         print("stage: config")
         print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path)}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     try:
         validate_dashboard_host(host)
         validate_dashboard_port(port)
         print("Halpha dashboard starting.")
         print(f"url: {_dashboard_url(host, port)}")
         print(f"config: {dashboard_config_ref(config_path)}")
+        LOGGER.info(
+            "Halpha dashboard service starting.",
+            extra={"event": "dashboard.service.start", "host": host, "port": port},
+        )
         run_dashboard_service(config, config_path=config_path, host=host, port=port)
     except DashboardError as exc:
+        LOGGER.error(
+            "Halpha dashboard service failed.",
+            extra={"event": "dashboard.service.failed", "host": host, "port": port, "reason": str(exc)},
+        )
         print("Halpha dashboard failed.")
         print("stage: dashboard")
         print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path)}")
         return exc.exit_code
     except KeyboardInterrupt:
+        LOGGER.info(
+            "Halpha dashboard service stopped.",
+            extra={"event": "dashboard.service.stopped", "host": host, "port": port},
+        )
         print("Halpha dashboard stopped.")
         return 0
+    LOGGER.info(
+        "Halpha dashboard service stopped.",
+        extra={"event": "dashboard.service.stopped", "host": host, "port": port},
+    )
     return 0
 
 
@@ -625,17 +685,43 @@ def _monitor_run(
     interval_seconds: int | None,
 ) -> int:
     config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    LOGGER.info(
+        "Halpha command started.",
+        extra={
+            "event": "cli.command.start",
+            "command": "monitor run",
+            "dry_run": dry_run,
+            "once": once,
+            "max_cycles": max_cycles,
+            "interval_seconds": interval_seconds,
+        },
+    )
 
     try:
         config = load_config(config_path)
     except ConfigError as exc:
+        LOGGER.warning(
+            "Halpha command failed.",
+            extra={"event": "cli.command.failed", "command": "monitor run", "stage": "config", "reason": str(exc)},
+        )
         print("Halpha monitor run failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
 
+    _configure_logging(config_path=config_path, config=config)
     if not dry_run:
         if interval_seconds is not None and max_cycles is None:
+            LOGGER.warning(
+                "Halpha command failed.",
+                extra={
+                    "event": "cli.command.failed",
+                    "command": "monitor run",
+                    "stage": "monitor",
+                    "reason": "--interval-seconds requires --max-cycles.",
+                },
+            )
             print("Halpha monitor run failed.")
             print("stage: monitor")
             print("reason: --interval-seconds requires --max-cycles.")
@@ -663,8 +749,31 @@ def _monitor_run(
             if result.reason:
                 print(f"reason: {result.reason}")
             print(f"health_state: {health}")
+            LOGGER.log(
+                logging.INFO if result.succeeded else logging.WARNING,
+                "Halpha monitor loop finished.",
+                extra={
+                    "event": "monitor.loop.finished",
+                    "loop_id": result.loop_id,
+                    "status": result.status,
+                    "completed_cycles": result.completed_cycles,
+                    "max_cycles": result.max_cycles,
+                    "stop_reason": result.stop_reason,
+                    "exit_code": result.exit_code,
+                    "reason": result.reason,
+                },
+            )
             return result.exit_code
         if not once:
+            LOGGER.warning(
+                "Halpha command failed.",
+                extra={
+                    "event": "cli.command.failed",
+                    "command": "monitor run",
+                    "stage": "monitor",
+                    "reason": "choose --dry-run, --once, or --max-cycles.",
+                },
+            )
             print("Halpha monitor run failed.")
             print("stage: monitor")
             print("reason: choose --dry-run, --once, or --max-cycles.")
@@ -679,8 +788,32 @@ def _monitor_run(
             print(f"target_stage: {result.target_stage}")
             print(f"no_codex: {str(result.no_codex).lower()}")
             print(f"monitor_manifest: {manifest}")
+            LOGGER.info(
+                "Halpha monitor cycle finished.",
+                extra={
+                    "event": "monitor.cycle.finished",
+                    "cycle_id": result.cycle_id,
+                    "status": result.status,
+                    "run_id": result.run_id,
+                    "target_stage": result.target_stage,
+                    "no_codex": result.no_codex,
+                    "exit_code": result.exit_code,
+                },
+            )
             return result.exit_code
 
+        LOGGER.warning(
+            "Halpha monitor cycle failed.",
+            extra={
+                "event": "monitor.cycle.finished",
+                "cycle_id": result.cycle_id,
+                "status": result.status,
+                "target_stage": result.target_stage,
+                "no_codex": result.no_codex,
+                "exit_code": result.exit_code,
+                "reason": result.reason,
+            },
+        )
         print("Halpha monitor run failed.")
         print("stage: monitor")
         if result.reason:
@@ -695,6 +828,10 @@ def _monitor_run(
     print("cycle_execution: not_run")
     for line in monitor_config_lines(settings):
         print(line)
+    LOGGER.info(
+        "Halpha monitor dry run finished.",
+        extra={"event": "monitor.dry_run.finished", "status": "succeeded"},
+    )
     return 0
 
 
@@ -779,6 +916,13 @@ def _safe_local_display_path(path: Path) -> str:
 def _dashboard_url(host: str, port: int) -> str:
     display_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
     return f"http://{display_host}:{port}"
+
+
+def _configure_logging(config_path: Path, *, config: dict | None = None) -> None:
+    try:
+        configure_local_logging(config_path=config_path, config=config)
+    except OSError:
+        return
 
 
 def _positive_int_arg(value: str) -> int:

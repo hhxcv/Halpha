@@ -4,12 +4,16 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import logging
 from pathlib import Path
 import time
 from typing import Any, Callable
 
 from .pipeline import RunResult, StageSelectionError, run_pipeline
 from .storage import write_json
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 DEFAULT_MONITOR_ENABLED = False
@@ -156,6 +160,18 @@ def run_monitor_cycle(
         "errors": [],
     }
     write_json(manifest_path, manifest)
+    LOGGER.info(
+        "Monitor cycle started.",
+        extra={
+            "event": "monitor.cycle.start",
+            "cycle_id": cycle_id,
+            "cycle_mode": cycle_mode,
+            "loop_id": loop_id,
+            "cycle_sequence": cycle_sequence,
+            "target_stage": settings.target_stage,
+            "no_codex": settings.no_codex,
+        },
+    )
 
     try:
         pipeline_result = pipeline_runner(
@@ -177,6 +193,16 @@ def run_monitor_cycle(
         )
         write_json(manifest_path, manifest)
         _write_monitor_health_state(output_dir, config_base=base, timestamp=finished_at)
+        LOGGER.error(
+            "Monitor cycle failed.",
+            extra={
+                "event": "monitor.cycle.failed",
+                "cycle_id": cycle_id,
+                "target_stage": settings.target_stage,
+                "exit_code": 2,
+                "reason": reason,
+            },
+        )
         return MonitorCycleResult(
             succeeded=False,
             exit_code=2,
@@ -220,6 +246,20 @@ def run_monitor_cycle(
     )
     write_json(manifest_path, manifest)
     _write_monitor_health_state(output_dir, config_base=base, timestamp=finished_at)
+    LOGGER.log(
+        logging.INFO if pipeline_result.succeeded else logging.WARNING,
+        "Monitor cycle finished.",
+        extra={
+            "event": "monitor.cycle.finished",
+            "cycle_id": cycle_id,
+            "status": status,
+            "run_id": pipeline_result.run.run_id,
+            "target_stage": settings.target_stage,
+            "no_codex": settings.no_codex,
+            "exit_code": pipeline_result.exit_code,
+            "reason": pipeline_result.reason,
+        },
+    )
 
     return MonitorCycleResult(
         succeeded=pipeline_result.succeeded,
@@ -260,6 +300,15 @@ def run_monitor_loop(
     status = "succeeded"
     stop_reason = "max_cycles_reached"
     reason: str | None = None
+    LOGGER.info(
+        "Monitor loop started.",
+        extra={
+            "event": "monitor.loop.start",
+            "loop_id": loop_id,
+            "max_cycles": max_cycles,
+            "interval_seconds": interval_seconds,
+        },
+    )
 
     for index in range(max_cycles):
         cycle_now = started_at + timedelta(seconds=interval_seconds * index) if now is not None else None
@@ -295,6 +344,19 @@ def run_monitor_loop(
             "started_at": _utc_timestamp(started_at),
             "finished_at": _utc_timestamp(finished_at),
             "latest_cycle_id": cycle_results[-1].cycle_id if cycle_results else None,
+        },
+    )
+    LOGGER.log(
+        logging.INFO if status == "succeeded" else logging.WARNING,
+        "Monitor loop finished.",
+        extra={
+            "event": "monitor.loop.finished",
+            "loop_id": loop_id,
+            "status": status,
+            "max_cycles": max_cycles,
+            "completed_cycles": len(cycle_results),
+            "stop_reason": stop_reason,
+            "reason": reason,
         },
     )
     return MonitorLoopResult(
