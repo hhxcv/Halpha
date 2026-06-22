@@ -93,6 +93,35 @@ def test_dashboard_job_logging_includes_context_without_private_values(tmp_path:
     assert str(tmp_path) not in log_text
 
 
+def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_private_config(tmp_path)
+    config = load_config(config_path)
+    secret = "http://private-proxy.example:7890"
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise OSError(f"cannot start with {secret} at {config_path}")
+
+    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+    job_text = (tmp_path / "runs" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
+        encoding="utf-8"
+    )
+
+    assert completed["status"] == "failed"
+    assert completed["diagnostic"] == {
+        "exception_type": "OSError",
+        "traceback_embedded": False,
+        "context": {"phase": "process_start"},
+    }
+    assert "<redacted>" in completed["errors"][0]
+    assert secret not in job_text
+    assert str(config_path) not in job_text
+    assert str(tmp_path) not in job_text
+
+
 def test_dashboard_job_manager_preserves_relative_config_ref(
     tmp_path: Path,
     monkeypatch,
