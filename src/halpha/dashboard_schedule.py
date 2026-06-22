@@ -8,7 +8,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .dashboard_jobs import DashboardJobManager
-from .storage import write_json
+from .storage import config_base as _config_base, write_json
 
 
 DASHBOARD_SCHEDULES_DIR = "runs/dashboard/schedules"
@@ -357,13 +357,6 @@ def _report_generation_state(settings: dict[str, Any]) -> dict[str, Any]:
         "requires_codex_confirmation": False,
         "description": "Runs the local pipeline with Codex skipped; no report artifact is expected.",
     }
-
-
-def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
 
 
 def _bounded_string_list(value: Any, *, limit: int) -> list[str]:

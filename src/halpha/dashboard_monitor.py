@@ -12,6 +12,11 @@ from .monitoring import (
     MONITOR_HEALTH_STATE_FILENAME,
     load_monitor_config,
 )
+from .storage import (
+    config_base as _config_base,
+    read_json_object as _read_json_object_payload,
+    safe_local_ref,
+)
 
 
 MAX_CYCLE_SUMMARIES = 20
@@ -408,17 +413,11 @@ def _component(
 
 
 def _read_json_object(path: Path) -> tuple[dict[str, Any], str, str | None]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {}, "missing", f"{path.name} was not found."
-    except OSError as exc:
-        return {}, "failed", f"{path.name} could not be read: {exc}."
-    except JSONDecodeError as exc:
-        return {}, "failed", f"{path.name} is not valid JSON: {exc.msg}."
-    if not isinstance(data, dict):
-        return {}, "failed", f"{path.name} must be a JSON object."
-    return data, "available", None
+    data, error = _read_json_object_payload(path)
+    if error is None:
+        return data, "available", None
+    status = "missing" if error == f"{path.name} was not found." else "failed"
+    return {}, status, error
 
 
 def _monitor_output_dir(config: dict[str, Any], *, base: Path) -> Path:
@@ -505,18 +504,7 @@ def _safe_artifact_ref(value: Any, *, base: Path) -> str | None:
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    target = path if path.is_absolute() else base / path
-    try:
-        return target.resolve().relative_to(base.resolve()).as_posix()
-    except (OSError, ValueError):
-        return EXTERNAL_ARTIFACT_REF
-
-
-def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
+    return safe_local_ref(path, base=base, external_ref=EXTERNAL_ARTIFACT_REF)
 
 
 def _string_list(value: Any) -> list[str]:

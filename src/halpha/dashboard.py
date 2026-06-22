@@ -21,6 +21,12 @@ from .dashboard_ui import dashboard_index_html
 from .monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
 from .outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
 from .run_index import RUN_INDEX_ARTIFACT, run_index_path
+from .storage import (
+    config_base as _config_base,
+    read_json_object,
+    resolve_local_ref,
+    safe_local_ref,
+)
 from .workbench import DEFAULT_WORKBENCH_OUTPUT_DIR, WORKBENCH_SUMMARY_FILENAME
 
 
@@ -3151,46 +3157,20 @@ def _section(
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
-    if path.name == REJECTED_EXTERNAL_REF_NAME:
-        return {}, "external artifact reference was rejected."
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {}, f"{path.name} was not found."
-    except OSError as exc:
-        return {}, f"{path.name} could not be read: {exc}."
-    except JSONDecodeError as exc:
-        return {}, f"{path.name} is not valid JSON: {exc.msg}."
-    if not isinstance(loaded, dict):
-        return {}, f"{path.name} must be a JSON object."
-    return loaded, None
+    return read_json_object(path, external_ref_name=REJECTED_EXTERNAL_REF_NAME)
 
 
 def _resolve_ref(value: str, *, base: Path) -> Path:
-    path = Path(value)
-    target = path if path.is_absolute() else base / path
-    try:
-        target.resolve().relative_to(base.resolve())
-    except (OSError, ValueError):
-        return base / REJECTED_EXTERNAL_REF_NAME
-    return target
+    return resolve_local_ref(value, base=base, rejected_name=REJECTED_EXTERNAL_REF_NAME)
 
 
 def _safe_ref(path: Path, *, base: Path) -> str:
-    if path.name == REJECTED_EXTERNAL_REF_NAME:
-        return EXTERNAL_ARTIFACT_REF
-    target = path if path.is_absolute() else base / path
-    try:
-        return target.resolve().relative_to(base.resolve()).as_posix()
-    except (OSError, ValueError):
-        return EXTERNAL_ARTIFACT_REF
-
-
-def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
+    return safe_local_ref(
+        path,
+        base=base,
+        external_ref=EXTERNAL_ARTIFACT_REF,
+        rejected_name=REJECTED_EXTERNAL_REF_NAME,
+    )
 
 
 def _artifact_ref(manifest: dict[str, Any], key: str, default: str) -> str | None:
