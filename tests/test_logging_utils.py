@@ -79,6 +79,48 @@ def test_validate_command_logging_records_failure_without_private_values(tmp_pat
     assert str(tmp_path) not in log_text
 
 
+def test_market_collector_logging_records_bounded_summary(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_market_config(tmp_path)
+    config = load_config(config_path)
+    log_path = configure_local_logging(config_path=config_path, config=config)
+
+    def fake_urlopen(request, timeout):
+        return _FakeResponse(
+            {
+                "symbol": "BTCUSDT",
+                "lastPrice": "68000.00",
+                "priceChangePercent": "1.25",
+                "volume": "123.45",
+                "quoteVolume": "8394600.00",
+                "closeTime": _millis(datetime(2026, 6, 5, 0, 30, tzinfo=timezone.utc)),
+            }
+        )
+
+    monkeypatch.setattr("halpha.collectors.market.urlopen", fake_urlopen)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_market_data",
+        now=datetime(2026, 6, 20, tzinfo=timezone.utc),
+    )
+
+    assert result.succeeded is True
+    log_text = log_path.read_text(encoding="utf-8")
+    events = _log_events(log_path)
+    started = next(event for event in events if event.get("event") == "collector.market.start")
+    finished = next(event for event in events if event.get("event") == "collector.market.finished")
+    assert started["source"] == "binance"
+    assert started["symbol_count"] == 1
+    assert finished["status"] == "succeeded"
+    assert finished["item_count"] == 1
+    assert finished["error_count"] == 0
+    assert finished["artifact"] == "raw/market.json"
+    assert "68000.00" not in log_text
+    assert str(config_path) not in log_text
+    assert str(tmp_path) not in log_text
+
+
 def _log_events(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
@@ -110,3 +152,45 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _write_market_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+text:
+  enabled: false
+  sources: []
+report:
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+class _FakeResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self) -> bytes:
+        return json.dumps(self.payload).encode("utf-8")
+
+
+def _millis(value: datetime) -> int:
+    return int(value.timestamp() * 1000)
