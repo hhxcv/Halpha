@@ -341,7 +341,7 @@ def test_codex_runner_rejects_report_without_risk_section(tmp_path: Path, monkey
     assert result.succeeded is False
     assert result.exit_code == 1
     assert result.failed_stage == "run_codex_report"
-    assert result.reason == "Codex stdout did not include a risk section; report/report.md was not written."
+    assert result.reason == "Codex stdout did not include a Markdown risk section heading; report/report.md was not written."
     assert not (result.run.report_dir / "report.md").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
@@ -350,7 +350,7 @@ def test_codex_runner_rejects_report_without_risk_section(tmp_path: Path, monkey
     assert manifest["codex"]["exit_code"] == 0
     assert failed_stage["error"] == {
         "stage": "run_codex_report",
-        "message": "Codex stdout did not include a risk section; report/report.md was not written.",
+        "message": "Codex stdout did not include a Markdown risk section heading; report/report.md was not written.",
         "exit_code": 0,
         "diagnostic": {
             "exception_type": "PipelineError",
@@ -358,6 +358,32 @@ def test_codex_runner_rejects_report_without_risk_section(tmp_path: Path, monkey
             "context": {"pipeline_exit_code": 1},
         },
     }
+
+
+def test_codex_runner_rejects_report_that_only_mentions_risk_without_heading(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fake_run(command, input, text, encoding, errors, capture_output, timeout, cwd):
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout="# 每日市场简报\n\n正文提到了风险，但没有风险提示章节标题。\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_run)
+
+    result = run_pipeline(config, config_path=config_path)
+
+    assert result.succeeded is False
+    assert result.exit_code == 1
+    assert result.failed_stage == "run_codex_report"
+    assert result.reason == "Codex stdout did not include a Markdown risk section heading; report/report.md was not written."
+    assert not (result.run.report_dir / "report.md").exists()
 
 
 def test_codex_runner_records_timeout_without_cli_exit_code(tmp_path: Path, monkeypatch) -> None:
