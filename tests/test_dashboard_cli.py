@@ -966,6 +966,24 @@ def test_dashboard_artifact_preview_rejects_unsafe_paths(tmp_path: Path) -> None
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_artifact_preview_returns_malformed_json_error(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    artifact_path = tmp_path / "runs" / "run-1" / "analysis" / "broken.json"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text('{"status": "ok"', encoding="utf-8")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/artifacts/preview", params={"path": "runs/run-1/analysis/broken.json"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["preview"] is None
+    assert "not valid JSON" in payload["errors"][0]
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_artifact_preview_rejects_unsupported_store_files(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
