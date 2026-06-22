@@ -20,9 +20,57 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M20 - Local Web Dashboard and Operations Console v1
+### M21 - Technical Debt and Product Reliability Cleanup v1
 
 Status: active.
+
+Goal:
+
+```text
+Repair current product debt so existing Halpha capabilities are trustworthy, inspectable, and coherent before adding new capability depth.
+```
+
+The loop is complete when Halpha can:
+
+* keep `MILESTONES.md`, GitHub milestone state, and local project status aligned around the current active milestone;
+* make run history, latest run, latest successful run, latest report, monitor state, and shared data state explicit instead of mixing their meanings;
+* detect and surface run-index drift, missing manifests, dangling artifact refs, nested run roots, stale records, and cleanup candidates without treating them as healthy state;
+* list reports only when report artifacts are available, and mark missing or dangling report references as diagnostics instead of user-readable reports;
+* make dashboard-triggered report generation, command jobs, finite monitor jobs, and daily report schedules visibly interactive, traceable, and tied to concrete job or run identifiers;
+* keep daily report scheduling semantics aligned with actual report generation behavior, including explicit Codex execution boundaries and user confirmation where needed;
+* persist dashboard job lifecycle corrections so stale `running` records do not survive after process-loss detection;
+* keep monitor, workbench, product-validation, data-quality, reusable-store, and selected-run states source-aware, timestamped, and stale or failed when their underlying artifacts are stale or failed;
+* distinguish reusable shared-store state from per-run snapshots in CLI and dashboard outputs;
+* reduce duplicated status, timestamp, JSON, and source-ref handling where it directly improves correctness, diagnostics, or testability;
+* remove or repair dashboard and backend dead paths, fake states, unimplemented visible entries, and old-dashboard leftovers without weakening the M20 user-facing design;
+* add focused tests for repaired APIs, state transitions, report availability, job lifecycle persistence, monitor failure surfacing, data-store diagnostics, and browser-level dashboard smoke flows;
+* update durable docs and contracts only where user-visible behavior or artifact semantics changed.
+
+M21 favors:
+
+* correctness and truthful status over new features;
+* repairing current user-visible workflows over broad refactors;
+* source-backed diagnostics over optimistic summaries;
+* small issue-sized fixes over large rewrites;
+* preserving the M20 dashboard design while making its data and controls real;
+* deterministic local artifacts and CLI recovery paths over hidden dashboard state;
+* tests that reproduce the bug or stale state being fixed.
+
+M21 does not require:
+
+* new market, text, derivatives, macro/calendar, on-chain, strategy, outcome, report, or dashboard feature depth beyond fixing existing behavior;
+* another dashboard redesign or replacing the M20 primary user interface;
+* hosted services, remote sync, multi-user permissions, cloud jobs, external workflow engines, Redis, Celery, Prefect, Airflow, Kafka, or websocket infrastructure;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* complete module decomposition for every large source file before concrete defects are fixed;
+* automatic migration or destructive cleanup of local artifacts without explicit user action and clear diagnostics;
+* making Codex or another LLM the source of product state, validation results, cleanup decisions, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M20 - Local Web Dashboard and Operations Console v1
+
+Status: completed.
 
 Goal:
 
@@ -65,8 +113,6 @@ M20 does not require:
 * mobile app support;
 * a hidden background service, external workflow engine, Redis, Celery, Prefect, Airflow, Kafka, or hosted scheduler;
 * complete UI coverage for every artifact field before the main dashboard workflows are stable.
-
-## Completed Milestones
 
 ### M19 - Local Product Stabilization v1
 
