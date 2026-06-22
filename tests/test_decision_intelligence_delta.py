@@ -3,11 +3,32 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from halpha.config import load_config
+from halpha.decision_delta import build_decision_intelligence_delta_artifact
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+def test_decision_delta_artifact_builder_reports_quant_disabled_result() -> None:
+    run = SimpleNamespace(manifest={"artifacts": {}, "counts": {}})
+
+    result = build_decision_intelligence_delta_artifact({"quant": {"enabled": False}}, run)
+
+    assert result.artifacts == []
+    assert result.enabled is False
+    assert result.status == "skipped"
+    assert result.reason == "quant_disabled"
+    assert result.previous_run == {
+        "status": "not_checked",
+        "run_id": None,
+        "path": None,
+    }
+    assert result.warnings == []
+    assert result.errors == []
+    assert run.manifest["counts"]["decision_delta_changed_records"] == 0
 
 
 def test_decision_intelligence_delta_records_no_previous_run(tmp_path: Path) -> None:
