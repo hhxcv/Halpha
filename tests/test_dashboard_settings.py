@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from halpha.dashboard_settings import dashboard_config_profile, dashboard_save_config_profile
+from halpha.dashboard.settings import dashboard_config_profile, dashboard_save_config_profile
 
 
 def test_dashboard_settings_profile_excludes_monitor_enable_control(tmp_path: Path) -> None:

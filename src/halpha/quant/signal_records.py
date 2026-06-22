@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from ..market_data_views import MARKET_DATA_VIEWS_ARTIFACT
+from halpha.market.market_data_views import MARKET_DATA_VIEWS_ARTIFACT
 from .strategy_records import STRATEGY_VERSION, warning
 
 

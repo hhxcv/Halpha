@@ -7,7 +7,7 @@ from typing import Any
 
 from halpha.pipeline import RunContext
 from halpha.storage import write_json
-from halpha.strategy_lifecycle import build_strategy_lifecycle_state
+from halpha.strategy.strategy_lifecycle import build_strategy_lifecycle_state
 
 
 def test_strategy_lifecycle_state_records_degradation_and_versions(tmp_path: Path) -> None:

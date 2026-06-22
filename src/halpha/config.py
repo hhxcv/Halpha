@@ -7,8 +7,8 @@ from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .monitoring import SUPPORTED_MONITOR_FIELDS
-from .quant.registry import SUPPORTED_STRATEGY_NAMES
+from halpha.monitor.monitoring import SUPPORTED_MONITOR_FIELDS
+from halpha.quant.registry import SUPPORTED_STRATEGY_NAMES
 
 
 CONFIG_SECTIONS = {

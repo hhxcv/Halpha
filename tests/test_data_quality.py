@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.data_quality import build_data_quality_summary, refresh_m13_data_quality_checks
-from halpha.data_quality_post_artifacts import (
+from halpha.data.data_quality import build_data_quality_summary, refresh_m13_data_quality_checks
+from halpha.data.data_quality_post_artifacts import (
     POST_DATA_QUALITY_CHECK_NAMES,
     post_data_quality_artifact_checks,
 )

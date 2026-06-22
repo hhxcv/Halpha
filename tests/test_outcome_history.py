@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from halpha.outcome_history import write_outcome_history
+from halpha.outcome.outcome_history import write_outcome_history
 from halpha.pipeline import RunContext
 
 

@@ -6,7 +6,7 @@ from typing import Any
 import ccxt
 import pytest
 
-from halpha.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, _fetch_configured_ohlcv
+from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, _fetch_configured_ohlcv
 
 
 def test_internal_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:

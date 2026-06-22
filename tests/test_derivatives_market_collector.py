@@ -20,7 +20,7 @@ def test_pipeline_collects_derivatives_market_raw_artifact(tmp_path: Path, monke
         requested_urls.append(request.full_url)
         return _FakeResponse(payloads[request.full_url])
 
-    monkeypatch.setattr("halpha.derivatives_source.urlopen", fake_urlopen)
+    monkeypatch.setattr("halpha.market.derivatives_source.urlopen", fake_urlopen)
 
     result = run_pipeline(
         config,
@@ -85,7 +85,7 @@ def test_pipeline_collects_partial_derivatives_failures_without_fake_records(
             raise HTTPError(request.full_url, 400, "Bad Request", None, BytesIO(body))
         return _FakeResponse(payloads[request.full_url])
 
-    monkeypatch.setattr("halpha.derivatives_source.urlopen", fake_urlopen)
+    monkeypatch.setattr("halpha.market.derivatives_source.urlopen", fake_urlopen)
 
     result = run_pipeline(
         config,
@@ -129,7 +129,7 @@ def test_disabled_derivatives_config_does_not_write_fake_raw_artifact(tmp_path: 
         requested_urls.append(request.full_url)
         return _FakeResponse({})
 
-    monkeypatch.setattr("halpha.derivatives_source.urlopen", fake_urlopen)
+    monkeypatch.setattr("halpha.market.derivatives_source.urlopen", fake_urlopen)
 
     result = run_pipeline(
         config,

@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
-from halpha.ohlcv_store import OHLCVParquetStore
+from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
 from halpha.quant.registry import get_strategy_definition
 

@@ -7,9 +7,9 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
-from halpha.derivatives_history import sync_derivatives_market_history
-from halpha.derivatives_market_context import build_derivatives_market_context
-from halpha.derivatives_market_views import build_derivatives_market_views
+from halpha.market.derivatives_history import sync_derivatives_market_history
+from halpha.market.derivatives_market_context import build_derivatives_market_context
+from halpha.market.derivatives_market_views import build_derivatives_market_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 

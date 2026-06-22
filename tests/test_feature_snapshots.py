@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.feature_snapshots import build_feature_snapshots
+from halpha.decision.feature_snapshots import build_feature_snapshots
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 

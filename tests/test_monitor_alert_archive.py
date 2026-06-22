@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from halpha.config import load_config
-from halpha.monitoring import run_monitor_cycle
+from halpha.monitor.monitoring import run_monitor_cycle
 
 
 def test_monitor_cycle_emits_first_alert_and_persists_cooldown_state(tmp_path: Path) -> None:

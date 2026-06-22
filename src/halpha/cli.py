@@ -5,8 +5,8 @@ import logging
 from pathlib import Path
 from typing import Sequence
 
-from .config import ConfigError, load_config
-from .dashboard import (
+from halpha.config import ConfigError, load_config
+from halpha.dashboard import (
     DEFAULT_DASHBOARD_HOST,
     DEFAULT_DASHBOARD_PORT,
     DashboardError,
@@ -16,24 +16,24 @@ from .dashboard import (
     validate_dashboard_host,
     validate_dashboard_port,
 )
-from .data_inspection import DataInspectionError, inspect_local_data
-from .logging_utils import configure_local_logging
-from .monitoring import (
+from halpha.data.data_inspection import DataInspectionError, inspect_local_data
+from halpha.runtime.logging_utils import configure_local_logging
+from halpha.monitor.monitoring import (
     inspect_monitor_health,
     load_monitor_config,
     monitor_config_lines,
     run_monitor_cycle,
     run_monitor_loop,
 )
-from .outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
-from .pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipeline_stage
-from .product_validation_inspection import inspect_product_validation
-from .standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
-from .standalone_text_intelligence import run_standalone_text_intelligence
-from .storage import display_path
-from .strategy_experiment import StrategyExperimentError, run_strategy_experiment
-from .text_models import prepare_text_models
-from .workbench import build_workbench_summary, inspect_workbench_summary
+from halpha.outcome.outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
+from halpha.pipeline import PipelineError, StageSelectionError, run_pipeline, run_pipeline_stage
+from halpha.product.product_validation_inspection import inspect_product_validation
+from halpha.strategy.standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
+from halpha.text.standalone_text_intelligence import run_standalone_text_intelligence
+from halpha.storage import display_path
+from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
+from halpha.text.text_models import prepare_text_models
+from halpha.workbench.workbench import build_workbench_summary, inspect_workbench_summary
 
 
 LOGGER = logging.getLogger(__name__)

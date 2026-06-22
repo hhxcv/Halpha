@@ -9,7 +9,7 @@ from halpha.storage import write_json
 
 
 def test_text_entity_evidence_accepts_configured_asset_alias(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _unavailable_ner_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _unavailable_ner_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT", "ETHUSDT"])
     config = load_config(config_path)
 
@@ -53,7 +53,7 @@ def test_text_entity_evidence_keeps_ambiguous_asset_references_unknown(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT", "BTCUSDC"])
     config = load_config(config_path)
 
@@ -81,7 +81,7 @@ def test_text_entity_evidence_uses_available_ner_model_as_traceable_evidence(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _available_ner_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _available_ner_model)
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"])
     config = load_config(config_path)
 

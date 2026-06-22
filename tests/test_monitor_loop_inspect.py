@@ -10,7 +10,7 @@ import pytest
 
 from halpha.cli import main
 from halpha.config import load_config
-from halpha.monitoring import run_monitor_loop
+from halpha.monitor.monitoring import run_monitor_loop
 
 
 def test_monitor_loop_runs_finite_count_and_writes_health_state(tmp_path: Path) -> None:

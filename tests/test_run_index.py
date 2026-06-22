@@ -8,8 +8,8 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
-from halpha.product_validation_inspection import inspect_product_validation
-from halpha.run_index import write_run_index
+from halpha.product.product_validation_inspection import inspect_product_validation
+from halpha.data.run_index import write_run_index
 
 
 def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:

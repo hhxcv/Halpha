@@ -19,10 +19,10 @@ def test_golden_corpus_accepts_traceable_high_confidence_event_outputs(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _unavailable_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _golden_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _golden_sentiment_model)
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _golden_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _unavailable_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _golden_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _golden_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _golden_embedding_model)
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
@@ -58,10 +58,10 @@ def test_golden_corpus_keeps_model_unavailable_classification_unknown(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr("halpha.text_entity_evidence._load_ner_model", _unavailable_ner_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_classifier_model", _unavailable_classifier_model)
-    monkeypatch.setattr("halpha.text_event_classification._load_sentiment_model", _unavailable_sentiment_model)
-    monkeypatch.setattr("halpha.text_event_topics._load_embedding_model", _unavailable_embedding_model)
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _unavailable_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _unavailable_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _unavailable_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _unavailable_embedding_model)
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 

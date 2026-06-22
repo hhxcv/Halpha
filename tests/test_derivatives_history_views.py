@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.derivatives_history import sync_derivatives_market_history
-from halpha.derivatives_market_views import build_derivatives_market_views, load_derivatives_market_view_records
+from halpha.market.derivatives_history import sync_derivatives_market_history
+from halpha.market.derivatives_market_views import build_derivatives_market_views, load_derivatives_market_view_records
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 

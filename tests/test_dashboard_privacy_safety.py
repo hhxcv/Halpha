@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.dashboard_jobs import MAX_JOB_LOG_CHARS
+from halpha.dashboard.jobs import MAX_JOB_LOG_CHARS
 from halpha.storage import write_json
 
 
@@ -101,7 +101,7 @@ def test_dashboard_job_api_redacts_private_values_from_response_and_logs(
     def fake_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         return _FakeProcess(stdout=stdout, stderr=stderr, returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     create_response = client.post("/api/jobs", json={"intent": "validate", "params": {}})
@@ -134,7 +134,7 @@ def test_dashboard_command_safety_rejects_unsupported_args_and_codex_without_con
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("blocked dashboard job must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     unsupported = client.post("/api/jobs", json={"intent": "shell", "params": {"command": "echo no"}}).json()

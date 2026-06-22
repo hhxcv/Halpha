@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.dashboard_jobs import DashboardJobManager, MAX_JOB_LOG_CHARS
+from halpha.dashboard.jobs import DashboardJobManager, MAX_JOB_LOG_CHARS
 
 
 def test_dashboard_job_api_rejects_unsupported_intent_before_process(
@@ -22,7 +22,7 @@ def test_dashboard_job_api_rejects_unsupported_intent_before_process(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsupported intent must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.post("/api/jobs", json={"intent": "shell", "params": {"command": "echo no"}})
@@ -48,7 +48,7 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     secret = "http://private-proxy.example:7890"
     stdout = f"{secret}\n{config_path}\n" + ("x" * (MAX_JOB_LOG_CHARS + 12))
     fake_process = _FakeProcess(stdout=stdout, stderr=f"stderr {secret}", returncode=0)
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
@@ -77,7 +77,7 @@ def test_dashboard_job_logging_includes_context_without_private_values(tmp_path:
     config = load_config(config_path)
     secret = "http://private-proxy.example:7890"
     fake_process = _FakeProcess(stdout=f"stdout {secret}", stderr="", returncode=0)
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
@@ -101,7 +101,7 @@ def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, 
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise OSError(f"cannot start with {secret} at {config_path}")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
@@ -131,7 +131,7 @@ def test_dashboard_job_manager_preserves_relative_config_ref(
     _write_config(tmp_path)
     config = load_config(config_path)
     monkeypatch.setattr(
-        "halpha.dashboard_jobs.subprocess.Popen",
+        "halpha.dashboard.jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout="config.yaml", stderr="", returncode=0),
     )
     manager = DashboardJobManager(config, config_path=config_path)
@@ -154,7 +154,7 @@ def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, 
         commands.append(command)
         return _FakeProcess(stdout="ok", stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         ("validate", {}, ["python", "-m", "halpha", "validate", "--config", "<external-config>"]),
@@ -241,7 +241,7 @@ def test_dashboard_job_manager_accepts_monitor_command_intents(tmp_path: Path, m
         commands.append(command)
         return _FakeProcess(stdout=outputs[index], stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         (
@@ -308,7 +308,7 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
         commands.append(command)
         return _FakeProcess(stdout=stdout, stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         ("run", {"confirm_codex": True}, ["python", "-m", "halpha", "run", "--config", "<external-config>"]),
@@ -427,7 +427,7 @@ def test_dashboard_job_manager_accepts_strategy_and_text_command_intents(
         commands.append(command)
         return _FakeProcess(stdout=outputs[index], stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         (
@@ -551,7 +551,7 @@ def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: P
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsafe run_dir must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "data_inspect", "params": {"run_dir": "../outside"}})
@@ -570,7 +570,7 @@ def test_dashboard_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsafe run_dir must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job(
@@ -591,7 +591,7 @@ def test_dashboard_job_manager_rejects_invalid_stage_name_before_process(tmp_pat
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid stage_name must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "run_until", "params": {"stage_name": "not_a_stage"}})
@@ -610,7 +610,7 @@ def test_dashboard_job_manager_rejects_unconfigured_strategy_values_before_proce
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid configured values must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         (
@@ -651,7 +651,7 @@ def test_dashboard_job_manager_rejects_unsafe_strategy_text_paths_before_process
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsafe paths must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         (
@@ -696,7 +696,7 @@ def test_dashboard_job_manager_rejects_invalid_monitor_loop_params_before_proces
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid monitor loop params must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         ({"intent": "monitor_loop", "params": {}}, "max_cycles must be a positive integer"),
@@ -721,7 +721,7 @@ def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_pa
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("Codex-capable jobs must not start without confirmation")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         {"intent": "run", "params": {}},
@@ -745,7 +745,7 @@ def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsupported params must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "monitor_inspect", "params": {"run_dir": "runs/run-1"}})
@@ -765,7 +765,7 @@ def test_dashboard_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard_jobs.subprocess.Popen",
+        "halpha.dashboard.jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -792,7 +792,7 @@ def test_dashboard_job_api_starts_strategy_command_intent(tmp_path: Path, monkey
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard_jobs.subprocess.Popen",
+        "halpha.dashboard.jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -834,7 +834,7 @@ def test_dashboard_job_manager_normalizes_result_refs_without_external_path_leak
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard_jobs.subprocess.Popen",
+        "halpha.dashboard.jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
     manager = DashboardJobManager(config, config_path=config_path)
@@ -869,7 +869,7 @@ def test_dashboard_job_manager_marks_relative_artifacts_external_when_output_dir
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard_jobs.subprocess.Popen",
+        "halpha.dashboard.jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
     manager = DashboardJobManager(config, config_path=config_path)
@@ -897,7 +897,7 @@ def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) 
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     fake_process = _BlockingProcess()
-    monkeypatch.setattr("halpha.dashboard_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
     manager = DashboardJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
@@ -954,7 +954,7 @@ def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> 
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     monkeypatch.setattr(
-        "halpha.dashboard_jobs.subprocess.Popen",
+        "halpha.dashboard.jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout="ok", stderr="", returncode=0),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from halpha.pipeline import PipelineError, RunContext
-from halpha.user_state import build_user_state_context
+from halpha.decision.user_state import build_user_state_context
 
 
 def test_build_user_state_context_skips_when_not_configured(tmp_path: Path) -> None:

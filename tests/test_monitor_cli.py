@@ -9,7 +9,7 @@ import pytest
 
 from halpha.cli import main
 from halpha.config import load_config
-from halpha.monitoring import run_monitor_cycle
+from halpha.monitor.monitoring import run_monitor_cycle
 
 
 def test_monitor_help_mentions_run_and_inspect(capsys) -> None:

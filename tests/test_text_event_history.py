@@ -7,7 +7,7 @@ from typing import Any
 import pyarrow.parquet as pq
 
 from halpha.pipeline import RunContext
-from halpha.text_event_history import write_text_event_history
+from halpha.text.text_event_history import write_text_event_history
 
 
 def test_text_event_history_appends_records_and_updates_manifest(tmp_path: Path) -> None:

@@ -315,7 +315,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
 
     monkeypatch.setattr("halpha.collectors.market.urlopen", fake_market_urlopen)
     monkeypatch.setattr("halpha.collectors.text.urlopen", fake_text_urlopen)
-    monkeypatch.setattr("halpha.ohlcv_sync.CCXTOHLCVSource", FakeOHLCVSource)
+    monkeypatch.setattr("halpha.market.ohlcv_sync.CCXTOHLCVSource", FakeOHLCVSource)
     monkeypatch.setattr("halpha.codex.runner.subprocess.run", fake_codex_run)
 
     exit_code = main(["run", "--config", str(config_path)])

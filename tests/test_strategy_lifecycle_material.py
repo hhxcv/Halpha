@@ -7,7 +7,7 @@ import pytest
 
 from halpha.pipeline import RunContext
 from halpha.storage import write_json
-from halpha.strategy_lifecycle_material import build_strategy_lifecycle_material
+from halpha.strategy.strategy_lifecycle_material import build_strategy_lifecycle_material
 
 
 def test_strategy_lifecycle_material_bounds_records_and_omissions(tmp_path: Path) -> None:

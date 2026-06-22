@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from halpha.history_merge import merge_history_records
+from halpha.data.history_merge import merge_history_records
 
 
 def test_merge_history_records_inserts_and_merges_duplicate_metadata() -> None:

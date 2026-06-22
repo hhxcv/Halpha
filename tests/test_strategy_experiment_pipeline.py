@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from halpha.config import load_config
-from halpha.ohlcv_store import OHLCVParquetStore
+from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
 
 

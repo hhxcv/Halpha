@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from halpha.personalized_integration import integrate_personalized_risk_constraints
+from halpha.decision.personalized_integration import integrate_personalized_risk_constraints
 from halpha.pipeline import RunContext
 from halpha.storage import write_json
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from halpha.public_http import market_proxy_url_from_market, urlopen_from_public_proxy
+from halpha.runtime.public_http import market_proxy_url_from_market, urlopen_from_public_proxy
 
 
 class PublicHTTPTestError(Exception):
