@@ -885,18 +885,34 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
         and _dict(run.get("report_state")).get("artifact")
     ]
     report_diagnostics = missing_report_diagnostics[:20]
+    missing_index_diagnostics = [
+        {
+            "run_id": run["run_id"],
+            "status": run["integrity_state"]["status"],
+            "missing": run["integrity_state"].get("missing", []),
+            "run_dir": run["integrity_state"].get("run_dir"),
+            "manifest": run["integrity_state"].get("manifest"),
+        }
+        for run in runs
+        if _dict(run.get("integrity_state")).get("status") != "available"
+    ]
+    index_diagnostics = missing_index_diagnostics[:20]
+    warnings: list[str] = []
+    if missing_index_diagnostics:
+        warnings.append(f"{len(missing_index_diagnostics)} run index row(s) reference missing run artifacts.")
+    if missing_report_diagnostics:
+        warnings.append(
+            f"{len(missing_report_diagnostics)} recorded report artifact(s) were missing and omitted from report lists."
+        )
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_run_list",
-        "status": "available",
+        "status": "partial" if missing_index_diagnostics else "available",
         "source_artifacts": [RUN_INDEX_ARTIFACT],
         "runs": runs,
+        "index_diagnostics": index_diagnostics,
         "report_diagnostics": report_diagnostics,
-        "warnings": [
-            f"{len(missing_report_diagnostics)} recorded report artifact(s) were missing and omitted from report lists."
-        ]
-        if missing_report_diagnostics
-        else [],
+        "warnings": warnings,
         "errors": [],
     }
 
@@ -2533,6 +2549,7 @@ def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -
     run_dir = _resolve_ref(str(row[1]), base=base)
     manifest_path = _resolve_ref(str(row[9]), base=base)
     report_paths = artifacts.get("report", [])
+    integrity_state = _run_integrity_state(run_dir, manifest_path, base=base)
     report_state = _run_report_state(
         run_dir,
         report_paths[0] if report_paths else None,
@@ -2550,8 +2567,23 @@ def _run_list_record(row: Any, artifacts: dict[str, list[str]], *, base: Path) -
         "warning_count": int(row[7] or 0),
         "error_count": int(row[8] or 0),
         "manifest": _safe_ref(manifest_path, base=base),
+        "integrity_state": integrity_state,
         "report": report_state.get("artifact") if report_state.get("status") == "available" else None,
         "report_state": report_state,
+    }
+
+
+def _run_integrity_state(run_dir: Path, manifest_path: Path, *, base: Path) -> dict[str, Any]:
+    missing: list[str] = []
+    if not run_dir.is_dir():
+        missing.append("run_dir")
+    if not manifest_path.is_file():
+        missing.append("manifest")
+    return {
+        "status": "available" if not missing else "missing",
+        "run_dir": _safe_ref(run_dir, base=base),
+        "manifest": _safe_ref(manifest_path, base=base),
+        "missing": missing,
     }
 
 
