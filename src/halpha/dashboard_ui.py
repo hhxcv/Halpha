@@ -1483,6 +1483,14 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       color: var(--red);
     }
 
+    .job-status {
+      margin-top: 12px;
+    }
+
+    .job-status strong {
+      color: var(--text);
+    }
+
     .toast {
       position: fixed;
       right: 18px;
@@ -1696,9 +1704,10 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
                 <div>
                   <svg id="overview-report-chart" class="chart-mini" viewBox="0 0 260 118" role="img" aria-label="Reports in the last 14 days"></svg>
                   <div class="toolbar-actions" style="margin-top: 14px;">
-                    <button class="primary-button" type="button" data-job-intent="run_no_codex">Generate report</button>
+                    <button class="primary-button" type="button" data-report-job="generate">Generate report</button>
                     <button class="ghost-button" type="button" id="open-latest-report">Open latest</button>
                   </div>
+                  <div id="overview-report-job-status" class="message job-status hidden"></div>
                 </div>
               </div>
             </section>
@@ -1729,7 +1738,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
             <section class="panel panel-pad">
               <h2 class="panel-title">Quick actions</h2>
               <div class="action-list">
-                <button class="ghost-button" type="button" data-job-intent="run_no_codex">Generate report</button>
+                <button class="ghost-button" type="button" data-report-job="generate">Generate report</button>
                 <button class="ghost-button" type="button" data-view-shortcut="strategies">Run strategy backtest</button>
                 <button class="ghost-button" type="button" data-view-shortcut="intelligence">Review intelligence</button>
                 <button class="ghost-button" type="button" data-view-shortcut="monitor">Monitor control</button>
@@ -1753,12 +1762,13 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
             <div class="report-toolbar">
               <div id="selected-report-kicker" class="muted">Select a report</div>
               <div class="toolbar-actions">
-                <button class="primary-button" type="button" data-job-intent="run_no_codex">Generate report</button>
+                <button class="primary-button" type="button" data-report-job="generate">Generate report</button>
                 <button class="danger-button" type="button" id="delete-report-button">Delete report</button>
                 <button class="ghost-button" type="button" id="download-report-button">Download</button>
                 <input id="report-reader-search" class="search-input" type="search" placeholder="Search in report..." style="width: 210px;">
               </div>
             </div>
+            <div id="reports-report-job-status" class="message job-status hidden"></div>
             <div id="report-reader" class="report-reader">
               <div class="empty-state">Loading report library.</div>
             </div>
@@ -2012,6 +2022,8 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       selectedReport: null,
       selectedReportDetail: null,
       selectedReportPreview: null,
+      reportJob: null,
+      generatedReportRunId: null,
       reportSearchTerm: "",
       stores: [],
       deletionPlan: null,
@@ -2258,6 +2270,12 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       return payload;
     }
 
+    async function loadJobs() {
+      const payload = await fetchJson(endpoints.jobs);
+      state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+      return payload;
+    }
+
     async function loadDeletionPlan() {
       state.deletionPlan = await fetchJson(endpoints.deletion);
       return state.deletionPlan;
@@ -2268,7 +2286,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         fetchJson(endpoints.monitor),
         fetchJson(endpoints.monitorCycles),
         fetchJson(endpoints.monitorAlerts),
-        fetchJson(endpoints.jobs),
+        loadJobs(),
         fetchJson(endpoints.schedule),
       ]);
       state.monitor = monitor.status === "fulfilled" ? monitor.value : null;
@@ -2289,7 +2307,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const averageDuration = durations.length ? formatDurationMs(durations.reduce((a, b) => a + b, 0) / durations.length) : "n/a";
       const latestReport = reportRuns[0] || {};
 
-      setPill("#overview-report-status", latestReport.status || latest.run_status || "partial", latestReport.status || latest.run_status || "partial");
+      setPill("#overview-report-status", latestReport.status || "missing", latestReport.status || "No report");
       document.querySelector("#overview-report-metrics").innerHTML = [
         reportMetric("Total reports", totalReports, "All time"),
         reportMetric("Daily reports", reportRuns.filter((item) => item.type === "Daily").length, "All time"),
@@ -2297,9 +2315,9 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
         reportMetric("Manual reports", reportRuns.filter((item) => item.type === "Manual").length, "All time"),
       ].join("");
       document.querySelector("#overview-latest-report").innerHTML = [
-        detailRow("Latest report", latestReport.title || latest.run_id || "No report"),
-        detailRow("Status", latestReport.status || latest.run_status),
-        detailRow("Generated", formatTimestamp(latestReport.finished_at || latest.finished_at)),
+        detailRow("Latest report", latestReport.title || "No generated report"),
+        detailRow("Status", latestReport.status || "n/a"),
+        detailRow("Generated", formatTimestamp(latestReport.finished_at)),
         detailRow("Duration", durationBetween(latestReport.started_at, latestReport.finished_at)),
         detailRow("Average duration", averageDuration),
         detailRow("Success rate", totalReports ? pct(successRate) : "n/a"),
@@ -2311,6 +2329,10 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
           selectReport(latestReport.run_id);
         }
       };
+      if (!state.reportJob) {
+        state.reportJob = latestReportJob();
+      }
+      renderReportJob(state.reportJob);
 
       renderRuntime(sections);
       renderOverviewMonitor();
@@ -2420,7 +2442,11 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
     }
 
     async function refreshReports() {
-      await loadRuns();
+      await Promise.allSettled([loadRuns(), loadJobs()]);
+      if (!state.reportJob) {
+        state.reportJob = latestReportJob();
+      }
+      renderReportJob(state.reportJob);
       renderReportLibrary();
       const reports = reportRecords();
       if (!reports.length) {
@@ -2480,11 +2506,14 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       const groups = ["Daily", "Monitor-triggered", "Manual"];
       document.querySelector("#report-library-groups").innerHTML = groups.map((group) => {
         const items = records.filter((item) => item.type === group);
-        return `<section><h3 class="group-title"><span>${escapeHtml(group)}</span><span class="tag">${items.length}</span></h3>${items.slice(0, 12).map((item) => `
+        return `<section><h3 class="group-title"><span>${escapeHtml(group)}</span><span class="tag">${items.length}</span></h3>${items.slice(0, 12).map((item) => {
+          const generated = item.run_id === state.generatedReportRunId;
+          return `
           <button class="report-row ${state.selectedReport?.run_id === item.run_id ? "active" : ""}" type="button" data-report-run-id="${escapeHtml(item.run_id)}">
-            <span class="report-row-title"><span class="health-dot"></span>${escapeHtml(item.title)}</span>
+            <span class="report-row-title"><span class="health-dot"></span>${escapeHtml(item.title)}${generated ? ` <span class="tag">new</span>` : ""}</span>
             <span class="report-row-meta">${escapeHtml(formatTimestamp(item.finished_at || item.started_at))}</span>
-          </button>`).join("") || `<div class="message">No ${escapeHtml(group.toLowerCase())} reports.</div>`}</section>`;
+          </button>`;
+        }).join("") || `<div class="message">No ${escapeHtml(group.toLowerCase())} reports.</div>`}</section>`;
       }).join("");
       document.querySelectorAll("[data-report-run-id]").forEach((button) => button.addEventListener("click", () => selectReport(button.dataset.reportRunId)));
     }
@@ -3547,6 +3576,157 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       return job;
     }
 
+    async function fetchJob(jobId) {
+      return fetchJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}`);
+    }
+
+    function latestReportJob() {
+      const jobs = Array.isArray(state.jobs) ? state.jobs : [];
+      return jobs.find((job) => job.intent === "run") || null;
+    }
+
+    function reportJobRefs(job) {
+      return job?.result_refs && typeof job.result_refs === "object" ? job.result_refs : {};
+    }
+
+    function renderReportJob(job) {
+      const nodes = [
+        document.querySelector("#overview-report-job-status"),
+        document.querySelector("#reports-report-job-status"),
+      ].filter(Boolean);
+      if (!nodes.length) {
+        return;
+      }
+      if (!job) {
+        nodes.forEach((node) => {
+          node.classList.add("hidden");
+          node.innerHTML = "";
+        });
+        setReportButtonsDisabled(false);
+        return;
+      }
+      const refs = reportJobRefs(job);
+      const status = job.status || "created";
+      const runId = refs.run_id || state.generatedReportRunId || "";
+      const reportRef = refs.report || "";
+      const manifestRef = refs.run_manifest || refs.manifest || "";
+      if (runId) {
+        state.generatedReportRunId = runId;
+      }
+      const warnings = Array.isArray(job.warnings) ? job.warnings : [];
+      const errors = Array.isArray(job.errors) ? job.errors : [];
+      const detail = [
+        `Job: ${job.job_id || "pending"}`,
+        runId ? `Run: ${runId}` : "",
+        reportRef ? `Report: ${reportRef}` : manifestRef ? `Manifest: ${manifestRef}` : "",
+      ].filter(Boolean).join(" | ");
+      const hint = reportRef
+        ? "Report artifact recorded. Open the Reports view to read it."
+        : terminalJobStatus(status)
+          ? "No report artifact is recorded for this job yet."
+          : "The job is still running; the report list will refresh after completion.";
+      nodes.forEach((node) => {
+        node.className = `message job-status ${errors.length || statusClass(status) === "failed" ? "error" : warnings.length ? "warning" : ""}`.trim();
+        node.innerHTML = `
+          <strong>Report job ${escapeHtml(label(status))}</strong><br>
+          ${escapeHtml(detail)}
+          <br>${escapeHtml(hint)}
+          ${warnings.length ? `<br>Warnings: ${escapeHtml(warnings.slice(0, 2).join("; "))}` : ""}
+          ${errors.length ? `<br>Errors: ${escapeHtml(errors.slice(0, 2).join("; "))}` : ""}
+        `;
+      });
+      setReportButtonsDisabled(!terminalJobStatus(status));
+    }
+
+    function setReportButtonsDisabled(disabled) {
+      document.querySelectorAll("[data-report-job]").forEach((button) => {
+        button.disabled = Boolean(disabled);
+      });
+    }
+
+    async function startReportJob() {
+      const ok = window.confirm("Generate a full Codex report now? This can take a while and will create a new run.");
+      if (!ok) {
+        showToast("Report generation cancelled.");
+        return;
+      }
+      const pending = {
+        job_id: "pending",
+        intent: "run",
+        kind: "product_run",
+        status: "creating",
+        created_at: new Date().toISOString(),
+        result_refs: {},
+        warnings: [],
+        errors: [],
+      };
+      state.reportJob = pending;
+      renderReportJob(pending);
+      try {
+        const job = await postJob("run", {confirm_codex: true});
+        state.reportJob = job;
+        renderReportJob(job);
+        if (job.job_id) {
+          pollReportJob(job.job_id);
+        }
+      } catch (error) {
+        state.reportJob = {
+          ...pending,
+          status: "failed",
+          errors: [error.message],
+        };
+        renderReportJob(state.reportJob);
+        showToast(`Report generation failed: ${error.message}`);
+      }
+    }
+
+    async function pollReportJob(jobId) {
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        await wait(3000);
+        try {
+          const job = await fetchJob(jobId);
+          state.reportJob = job;
+          renderReportJob(job);
+          if (terminalJobStatus(job.status)) {
+            await Promise.allSettled([loadRuns(), loadJobs()]);
+            renderReportJob(job);
+            const runId = reportJobRefs(job).run_id;
+            if (runId) {
+              state.generatedReportRunId = runId;
+              if (state.view === "reports") {
+                await refreshReports();
+                const report = reportRecords().find((item) => item.run_id === runId);
+                if (report) {
+                  await selectReport(runId);
+                }
+              } else if (state.view === "overview") {
+                renderOverview();
+              }
+            }
+            showToast(`Report job ${job.status || "completed"}.`);
+            return;
+          }
+        } catch (error) {
+          state.reportJob = {
+            job_id: jobId,
+            intent: "run",
+            kind: "product_run",
+            status: "failed",
+            result_refs: {},
+            errors: [error.message],
+            warnings: [],
+          };
+          renderReportJob(state.reportJob);
+          return;
+        }
+      }
+      showToast("Report job is still running. Refresh the dashboard to check status.");
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
     function terminalJobStatus(status) {
       return ["succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"].includes(String(status || "").toLowerCase());
     }
@@ -3805,6 +3985,7 @@ def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TI
       document.querySelector("#stop-monitor-button").addEventListener("click", cancelRunningMonitorJobs);
       document.querySelector("#enable-daily-report").addEventListener("click", enableDailyReport);
       document.querySelector("#schedule-monitor-button").addEventListener("click", showMonitorSchedule);
+      document.querySelectorAll("[data-report-job]").forEach((button) => button.addEventListener("click", startReportJob));
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {
         state.selectedIntelTab = button.dataset.intelTab;

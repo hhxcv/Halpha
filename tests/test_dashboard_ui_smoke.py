@@ -174,10 +174,19 @@ def test_dashboard_shell_does_not_emit_nul_or_non_ascii_control_characters(tmp_p
 
 
 def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path) -> None:
-    script = _script_block(_dashboard_html(tmp_path))
+    html = _dashboard_html(tmp_path)
+    script = _script_block(html)
 
     assert "renderReportPreview(preview, run)" in script
     assert "markdownToHtml(markdown, state.reportSearchTerm)" in script
+    assert 'data-report-job="generate"' in html
+    assert 'data-job-intent="run_no_codex"' not in html
+    assert 'id="overview-report-job-status"' in html
+    assert 'id="reports-report-job-status"' in html
+    assert "startReportJob" in script
+    assert 'postJob("run", {confirm_codex: true})' in script
+    assert "pollReportJob" in script
+    assert "state.generatedReportRunId" in script
     assert "postJob(intent, params = {})" in script
     assert "renderValidationJob(job)" in script
     assert "startMonitorJob(intent)" in script
