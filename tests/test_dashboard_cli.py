@@ -831,10 +831,18 @@ def test_dashboard_data_stores_endpoint_reports_missing_metadata(tmp_path: Path)
     payload = response.json()
     assert payload["artifact_type"] == "dashboard_data_stores"
     assert payload["status"] == "partial"
+    assert payload["state_scope"] == "shared_reusable_stores"
+    assert payload["run_snapshot_scope"] == "not_included"
     stores = {store["name"]: store for store in payload["stores"]}
     assert stores["research_data_catalog"]["status"] == "skipped"
     assert stores["run_index"]["status"] == "skipped"
+    assert stores["run_index"]["state_scope"] == "local_run_index"
+    assert stores["run_index"]["source_label"] == "Local run index"
+    assert stores["run_index"]["run_snapshot"] is False
     assert stores["text_event_history"]["status"] == "skipped"
+    assert stores["text_event_history"]["state_scope"] == "shared_reusable_store"
+    assert stores["text_event_history"]["source_label"] == "Shared reusable store"
+    assert stores["text_event_history"]["run_snapshot"] is False
     assert stores["outcome_history"]["status"] == "skipped"
     assert stores["run_index"]["preview_path"] is None
     assert payload["omitted"]["full_raw_histories_embedded"] is False
@@ -865,6 +873,8 @@ def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path)
 
     run_index = stores["run_index"]
     assert run_index["status"] == "ok"
+    assert run_index["state_scope"] == "local_run_index"
+    assert run_index["source_label"] == "Local run index"
     assert run_index["fields"]["runs"] == 1
     assert run_index["drilldown"]["category"] == "system"
     assert run_index["drilldown"]["omitted"]["sqlite_table_contents_embedded"] is False
@@ -872,6 +882,8 @@ def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path)
 
     ohlcv = stores["ohlcv_history"]
     assert ohlcv["status"] == "ok"
+    assert ohlcv["state_scope"] == "shared_reusable_store"
+    assert ohlcv["source_label"] == "Shared reusable store"
     assert ohlcv["fields"]["records"] == 3
     assert ohlcv["drilldown"]["category"] == "market"
     assert ohlcv["drilldown"]["dimensions"]["symbols"] == "BTCUSDT"

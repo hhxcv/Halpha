@@ -1058,6 +1058,8 @@ def dashboard_data_stores(config: dict[str, Any], *, config_path: Path) -> dict[
         "schema_version": 1,
         "artifact_type": "dashboard_data_stores",
         "status": _dashboard_store_overall_status(statuses),
+        "state_scope": "shared_reusable_stores",
+        "run_snapshot_scope": "not_included",
         "source_artifacts": sorted(
             {
                 artifact
@@ -1693,9 +1695,11 @@ def _dashboard_store_section(section: dict[str, Any], *, config_path: Path) -> d
     extra = _bounded_mapping(section.get("extra"))
     source_artifacts = [artifact] if isinstance(artifact, str) and artifact else []
     warnings = [reason] if isinstance(reason, str) and reason else []
+    scope = _data_store_scope(name)
     return {
         "name": name,
         "title": DATA_STORE_TITLES.get(name, str(section.get("name") or "Unknown")),
+        **scope,
         "status": str(section.get("status") or "unknown"),
         "artifact": artifact if isinstance(artifact, str) else None,
         "preview_path": _metadata_preview_path(artifact),
@@ -1723,6 +1727,7 @@ def _outcome_history_store_section(config_path: Path) -> dict[str, Any]:
         return {
             "name": "outcome_history",
             "title": DATA_STORE_TITLES["outcome_history"],
+            **_data_store_scope("outcome_history"),
             "status": "skipped",
             "artifact": OUTCOME_HISTORY_STATE_ARTIFACT,
             "preview_path": None,
@@ -1756,6 +1761,7 @@ def _outcome_history_store_section(config_path: Path) -> dict[str, Any]:
     return {
         "name": "outcome_history",
         "title": DATA_STORE_TITLES["outcome_history"],
+        **_data_store_scope("outcome_history"),
         "status": str(data.get("status") or "unknown"),
         "artifact": OUTCOME_HISTORY_STATE_ARTIFACT,
         "preview_path": OUTCOME_HISTORY_STATE_ARTIFACT,
@@ -1771,6 +1777,20 @@ def _outcome_history_store_section(config_path: Path) -> dict[str, Any]:
         "source_artifacts": [OUTCOME_HISTORY_STATE_ARTIFACT, *_string_list(data.get("source_artifacts"))],
         "warnings": _string_list(data.get("warnings")),
         "errors": _string_list(data.get("errors")),
+    }
+
+
+def _data_store_scope(name: str) -> dict[str, Any]:
+    if name == "run_index":
+        return {
+            "state_scope": "local_run_index",
+            "source_label": "Local run index",
+            "run_snapshot": False,
+        }
+    return {
+        "state_scope": "shared_reusable_store",
+        "source_label": "Shared reusable store",
+        "run_snapshot": False,
     }
 
 
