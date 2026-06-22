@@ -3,9 +3,7 @@ from __future__ import annotations
 from html import escape
 
 from halpha.dashboard.assets import dashboard_asset_text
-
-
-DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = "Asia/Shanghai"
+from halpha.dashboard.constants import DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
 
 
 def dashboard_index_html(*, display_timezone: str = DEFAULT_DASHBOARD_DISPLAY_TIMEZONE) -> str:
