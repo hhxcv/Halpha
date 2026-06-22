@@ -3,11 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import json
 from json import JSONDecodeError
+import threading
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from halpha.dashboard.jobs import DashboardJobManager
+from halpha.dashboard.time import parse_utc_timestamp
 from halpha.storage import config_base as _config_base, write_json
 
 
@@ -15,6 +17,7 @@ DASHBOARD_SCHEDULES_DIR = "runs/dashboard/schedules"
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
 DAILY_REPORT_SCHEDULE_ARTIFACT = f"{DASHBOARD_SCHEDULES_DIR}/{DAILY_REPORT_SCHEDULE_FILENAME}"
 MAX_LINKED_JOB_IDS = 20
+DAILY_REPORT_DISPATCH_INTERVAL_SECONDS = 30
 SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run", "run_no_codex"}
 DEFAULT_DAILY_REPORT_JOB_INTENT = "run"
 DEFAULT_DASHBOARD_TIMEZONE = "Asia/Shanghai"
@@ -33,6 +36,9 @@ class DashboardScheduleManager:
         self.base = _config_base(self.config_path)
         self.job_manager = job_manager
         self.daily_report_path = self.base / DAILY_REPORT_SCHEDULE_ARTIFACT
+        self._dispatch_lock = threading.Lock()
+        self._dispatcher_stop = threading.Event()
+        self._dispatcher_thread: threading.Thread | None = None
 
     def read_daily_report_schedule(self) -> dict[str, Any]:
         if not self.daily_report_path.exists():
@@ -126,6 +132,68 @@ class DashboardScheduleManager:
             "errors": [],
         }
 
+    def dispatch_due_daily_report(self) -> dict[str, Any]:
+        with self._dispatch_lock:
+            current = self.read_daily_report_schedule()
+            if current["status"] == "failed":
+                return _dispatch_response("failed", current, job=None, errors=list(current.get("errors") or []))
+            if current.get("enabled") is not True:
+                return _dispatch_response(
+                    "skipped",
+                    current,
+                    job=None,
+                    warnings=["daily report schedule is disabled."],
+                )
+            next_run_at = parse_utc_timestamp(current.get("next_run_at"))
+            if next_run_at is None:
+                blocked = self._record_dispatch_blocked(current, "daily report schedule next_run_at is missing.")
+                return _dispatch_response("blocked", blocked, job=None, errors=list(blocked.get("errors") or []))
+            if next_run_at > _utc_now_datetime():
+                return _dispatch_response(
+                    "skipped",
+                    current,
+                    job=None,
+                    warnings=["daily report schedule is not due."],
+                )
+            settings = current.get("settings") if isinstance(current.get("settings"), dict) else {}
+            intent = str(settings.get("job_intent") or DEFAULT_DAILY_REPORT_JOB_INTENT)
+            if intent == "run":
+                error = "automatic Codex-capable daily report dispatch requires manual confirmation."
+                blocked = self._record_dispatch_blocked(current, error)
+                return _dispatch_response("blocked", blocked, job=None, errors=[error])
+            job = self.job_manager.create_job({"intent": intent, "params": {}})
+            updated = self._record_triggered_job(current, job)
+            return _dispatch_response("available", updated, job=job)
+
+    def start_daily_report_dispatcher(
+        self,
+        *,
+        interval_seconds: float = DAILY_REPORT_DISPATCH_INTERVAL_SECONDS,
+    ) -> None:
+        if self._dispatcher_thread and self._dispatcher_thread.is_alive():
+            return
+        self._dispatcher_stop.clear()
+        thread = threading.Thread(
+            target=self._daily_report_dispatch_loop,
+            args=(max(float(interval_seconds), 0.01),),
+            name="dashboard-daily-report-dispatcher",
+            daemon=True,
+        )
+        self._dispatcher_thread = thread
+        thread.start()
+
+    def stop_daily_report_dispatcher(self) -> None:
+        self._dispatcher_stop.set()
+        thread = self._dispatcher_thread
+        if thread and thread.is_alive():
+            thread.join(timeout=2)
+        self._dispatcher_thread = None
+
+    def _daily_report_dispatch_loop(self, interval_seconds: float) -> None:
+        while not self._dispatcher_stop.is_set():
+            self.dispatch_due_daily_report()
+            self._dispatcher_stop.wait(interval_seconds)
+
     def _default_daily_report_state(self, *, status: str, persisted: bool) -> dict[str, Any]:
         now = _utc_now()
         return {
@@ -152,7 +220,7 @@ class DashboardScheduleManager:
                 "hidden_service": False,
                 "hosted_scheduler": False,
                 "os_scheduler": False,
-                "automatic_dispatch": "not_implemented",
+                "automatic_dispatch": "dashboard_active_dispatcher",
             },
             "source_artifacts": [DAILY_REPORT_SCHEDULE_ARTIFACT],
             "created_at": now,
@@ -176,10 +244,13 @@ class DashboardScheduleManager:
                 default["status"] = "failed"
                 default["errors"] = [validation_error]
                 return default
-            next_run_at = _next_run_at(settings["time_of_day"], settings["timezone"])
+            next_run_at = _stored_or_next_run_at(data.get("next_run_at"), settings)
+        status = str(data.get("status") or "available")
+        if status not in {"available", "blocked"}:
+            status = "available"
         default.update(
             {
-                "status": "available",
+                "status": status,
                 "enabled": enabled,
                 "persisted": True,
                 "settings": settings,
@@ -255,6 +326,30 @@ class DashboardScheduleManager:
         write_json(self.daily_report_path, state)
         return state
 
+    def _record_dispatch_blocked(self, current: dict[str, Any], error: str) -> dict[str, Any]:
+        default_settings = self._default_daily_report_state(status="available", persisted=True)["settings"]
+        settings = dict(current.get("settings") or default_settings)
+        now = _utc_now()
+        state = self._default_daily_report_state(status="blocked", persisted=True)
+        state.update(
+            {
+                "enabled": current.get("enabled") is True,
+                "settings": settings,
+                "report_generation": _report_generation_state(settings),
+                "next_run_at": _next_run_at(settings["time_of_day"], settings["timezone"]),
+                "last_run_at": current.get("last_run_at"),
+                "last_job_id": current.get("last_job_id"),
+                "linked_job_ids": _bounded_string_list(current.get("linked_job_ids"), limit=MAX_LINKED_JOB_IDS),
+                "linked_report_refs": _bounded_string_list(current.get("linked_report_refs"), limit=MAX_LINKED_JOB_IDS),
+                "created_at": current.get("created_at") or now,
+                "updated_at": now,
+                "warnings": _bounded_string_list(current.get("warnings"), limit=20),
+                "errors": _unique([error, *_bounded_string_list(current.get("errors"), limit=20)])[:20],
+            }
+        )
+        write_json(self.daily_report_path, state)
+        return state
+
     def _blocked_daily_report_state(self, current: dict[str, Any], error: str) -> dict[str, Any]:
         state = dict(current)
         state["status"] = "blocked"
@@ -320,6 +415,32 @@ def _next_run_at(time_of_day: str, timezone_name: str) -> str:
     if candidate <= now:
         candidate += timedelta(days=1)
     return _format_utc(candidate.astimezone(timezone.utc))
+
+
+def _stored_or_next_run_at(value: Any, settings: dict[str, Any]) -> str:
+    stored = parse_utc_timestamp(value)
+    if stored is not None:
+        return _format_utc(stored)
+    return _next_run_at(settings["time_of_day"], settings["timezone"])
+
+
+def _dispatch_response(
+    status: str,
+    schedule: dict[str, Any],
+    *,
+    job: dict[str, Any] | None,
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_daily_report_dispatch",
+        "status": status,
+        "schedule": schedule,
+        "job": job,
+        "warnings": warnings or [],
+        "errors": errors or [],
+    }
 
 
 def _format_utc(value: datetime) -> str:
