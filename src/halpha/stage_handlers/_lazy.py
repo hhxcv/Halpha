@@ -13,4 +13,6 @@ def lazy_stage_handler(module_name: str, function_name: str) -> StageHandler:
 
     handler.__name__ = function_name
     handler.__qualname__ = function_name
+    handler.stage_module = module_name  # type: ignore[attr-defined]
+    handler.stage_function = function_name  # type: ignore[attr-defined]
     return handler

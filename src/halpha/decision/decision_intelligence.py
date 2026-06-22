@@ -61,7 +61,7 @@ TRIGGER_TYPES = (
 )
 
 
-def build_market_regime_assessment(
+def _build_market_regime_assessment_artifact(
     config: dict[str, Any],
     run: RunContext,
     *,
@@ -119,7 +119,7 @@ def build_market_regime_assessment(
     return [MARKET_REGIME_ASSESSMENT_ARTIFACT]
 
 
-def build_risk_assessment(
+def _build_risk_assessment_artifact(
     config: dict[str, Any],
     run: RunContext,
     *,
@@ -229,7 +229,7 @@ def build_risk_assessment(
     return [RISK_ASSESSMENT_ARTIFACT]
 
 
-def build_decision_recommendations(
+def _build_decision_recommendations_artifact(
     config: dict[str, Any],
     run: RunContext,
     *,
@@ -349,7 +349,7 @@ def build_decision_recommendations(
     return [DECISION_RECOMMENDATIONS_ARTIFACT]
 
 
-def build_watch_triggers(
+def _build_watch_triggers_artifact(
     config: dict[str, Any],
     run: RunContext,
     *,
