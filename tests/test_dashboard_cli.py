@@ -47,6 +47,8 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["run_history_api"] == "available"
     assert payload["features"]["artifact_preview_api"] == "available"
     assert payload["features"]["data_store_api"] == "available"
+    assert payload["features"]["data_deletion_api"] == "available"
+    assert payload["features"]["config_profile_api"] == "available"
     assert payload["features"]["strategy_research_api"] == "available"
     assert payload["features"]["monitor_api"] == "available"
     assert payload["features"]["workbench_api"] == "available"
@@ -81,99 +83,52 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert response.headers["cache-control"] == "no-store, max-age=0"
     assert response.headers["pragma"] == "no-cache"
     assert "halpha-dashboard-app" in response.text
-    assert "Operational overview" in response.text
-    assert "Refresh view" in response.text
-    assert "Auto refresh reads only" in response.text
+    assert "System status, reports, monitor, and data health" in response.text
     assert "refreshCurrentView" in response.text
-    assert "scheduleDashboardJobPolling" in response.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
-    assert 'data-workbench-endpoint="/api/workbench"' in response.text
-    assert 'data-decision-risk-endpoint="/api/decision-risk"' in response.text
-    assert 'data-event-alert-endpoint="/api/event-alert"' in response.text
-    assert 'data-outcomes-endpoint="/api/outcomes"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
+    assert 'data-delete-endpoint="/api/data/deletion"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
     assert 'data-monitor-endpoint="/api/monitor"' in response.text
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
+    assert 'data-settings-endpoint="/api/config/profile"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert 'data-display-timezone="Asia/Shanghai"' in response.text
-    assert '<span id="display-timezone" class="status-value">Asia/Shanghai</span>' in response.text
-    assert "formatTimestamp(String(value))" in response.text
-    assert "Runs &amp; reports" in response.text
-    assert 'href="#artifacts" data-view-target="artifacts"' in response.text
-    assert "Artifact explorer" in response.text
-    assert "Artifact inventory" in response.text
-    assert "Artifact review</span>\n                <span class=\"planned-state\">available" in response.text
-    assert "Report preview" in response.text
-    assert "preview-meta" in response.text
-    assert "preview-table" in response.text
-    assert "previewDisplayKind" in response.text
-    assert "previewSourceRefs" in response.text
-    assert "Some preview content was omitted" in response.text
-    assert "Preview content is not available" in response.text
-    assert "Store coverage" in response.text
-    assert "Store drilldown" in response.text
-    assert "Strategy lab" in response.text
-    assert "Historical strategy research" in response.text
-    assert "Strategy commands" in response.text
-    assert "Run configured backtest" in response.text
-    assert "Run configured experiment" in response.text
-    assert "not configured or enabled" in response.text
-    assert "field-invalid" in response.text
-    assert "setInputError" in response.text
-    assert "stage_name must be one of the configured pipeline stages." in response.text
-    assert "must be a project-relative local ref without parent traversal or URI syntax." in response.text
+    assert '<strong id="display-timezone">Asia/Shanghai</strong>' in response.text
+    assert "formatTimestamp(value)" in response.text
+    assert 'href="#overview" data-view-target="overview"' in response.text
+    assert 'href="#reports" data-view-target="reports"' in response.text
+    assert 'href="#strategies" data-view-target="strategies"' in response.text
+    assert 'href="#monitor" data-view-target="monitor"' in response.text
+    assert 'href="#intelligence" data-view-target="intelligence"' in response.text
+    assert 'href="#settings" data-view-target="settings"' in response.text
+    assert 'href="#artifacts"' not in response.text
+    assert 'href="#commands"' not in response.text
+    assert "Report operations" in response.text
+    assert "All reports" in response.text
+    assert "Report outline" in response.text
+    assert "Markdown" not in response.text
+    assert "Backtest candlestick chart" in response.text
+    assert "Strategy parameters" in response.text
+    assert "Monitor timeline" in response.text
+    assert "Controls" in response.text
+    assert "Intelligence" in response.text
+    assert "Topic volume over time" in response.text
+    assert "Settings" in response.text
+    assert "Config file" in response.text
+    assert "Storage maintenance" in response.text
+    assert "DELETE RUN DATA" in response.text
     assert "empty-state" in response.text
-    assert "No product runs yet" in response.text
-    assert "No dashboard jobs yet" in response.text
     assert "No monitor cycles yet" in response.text
-    assert 'renderCommandMessage("failed", error.message)' in response.text
-    assert "Monitor control" in response.text
-    assert 'href="#workbench" data-view-target="workbench"' in response.text
-    assert "Workbench summary" in response.text
-    assert "State sections" in response.text
-    assert 'href="#decision-risk" data-view-target="decision-risk"' in response.text
-    assert "Decision &amp; risk" in response.text
-    assert "Decision artifacts" in response.text
-    assert 'href="#event-alert" data-view-target="event-alert"' in response.text
-    assert "Event &amp; alerts" in response.text
-    assert "Event and alert artifacts" in response.text
-    assert 'href="#text-intelligence" data-view-target="text-intelligence"' in response.text
-    assert "Text intelligence" in response.text
-    assert "Text artifacts" in response.text
-    assert "Text commands" in response.text
-    assert 'href="#outcomes" data-view-target="outcomes"' in response.text
-    assert "Outcome tracking" in response.text
-    assert "Run outcome artifacts" in response.text
     assert "Dry run" in response.text
     assert "Run one cycle" in response.text
-    assert "Start finite loop" in response.text
-    assert "Cancel job" in response.text
-    assert "cancellation unsupported" in response.text
-    assert "bounded local jobs" in response.text
-    assert 'href="#commands" data-view-target="commands"' in response.text
-    assert "Command center" in response.text
-    assert "Command groups" in response.text
-    assert "Daily report schedule" in response.text
-    assert "Update schedule" in response.text
-    assert "Enable schedule" in response.text
-    assert "Disable schedule" in response.text
-    assert "Trigger now" in response.text
-    assert "Filter intent" in response.text
-    assert "Filter kind" in response.text
-    assert "Open a job result ref, stdout, or stderr" in response.text
-    assert "Run without Codex" in response.text
-    assert "Run with Codex" in response.text
-    assert "Codex confirmation is required before creating this job." in response.text
-    assert "Data inspect" in response.text
-    assert "Outcomes inspect" in response.text
     assert "Run backtest" in response.text
-    assert "Run text intelligence" in response.text
-    assert '<span class="nav-state">pending</span>' not in response.text
-    assert '<span class="planned-state">planned</span>' not in response.text
+    assert "Generate report" in response.text
+    assert "Save changes" in response.text
+    assert "Config save is staged" not in response.text
     assert str(tmp_path) not in response.text
 
 
@@ -193,7 +148,7 @@ def test_dashboard_root_uses_configured_display_timezone(tmp_path: Path) -> None
 
     assert response.status_code == 200
     assert 'data-display-timezone="UTC"' in response.text
-    assert '<span id="display-timezone" class="status-value">UTC</span>' in response.text
+    assert '<strong id="display-timezone">UTC</strong>' in response.text
 
 
 def test_dashboard_display_timezone_falls_back_to_run_timezone() -> None:
@@ -203,6 +158,110 @@ def test_dashboard_display_timezone_falls_back_to_run_timezone() -> None:
 def test_dashboard_display_timezone_defaults_to_east_8() -> None:
     assert dashboard_display_timezone({"run": {}}) == "Asia/Shanghai"
     assert dashboard_display_timezone({"dashboard": {"display_timezone": "Invalid/Zone"}, "run": {}}) == "Asia/Shanghai"
+
+
+def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/config/profile")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_config_profile"
+    assert payload["status"] == "available"
+    assert payload["config"]["ref"] == "<external-config>"
+    assert payload["config"]["confirmation_text"] == "SAVE CONFIG"
+    assert payload["sections"] == [
+        "General",
+        "Market data",
+        "Strategy",
+        "Reports",
+        "Monitor",
+        "Intelligence sources",
+        "Storage",
+        "Dashboard",
+    ]
+    fields = {field["path"]: field for field in payload["fields"]}
+    assert fields["dashboard.display_timezone"]["value"] == "Asia/Shanghai"
+    assert fields["market.enabled"]["control"] == "toggle"
+    assert fields["market.symbols"]["control"] == "tags"
+    assert fields["market.ohlcv.timeframes"]["options"] == ["1d", "1h"]
+    assert payload["omitted"]["raw_config_text_embedded"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_config_backup_endpoint_creates_bounded_backup_ref(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post("/api/config/profile/backup", json={})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_config_backup"
+    assert payload["status"] == "succeeded"
+    assert payload["backup_ref"].startswith("runs/dashboard/config_backups/config-")
+    assert (tmp_path / payload["backup_ref"]).exists()
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post(
+        "/api/config/profile",
+        json={
+            "confirm": "SAVE CONFIG",
+            "changes": {
+                "dashboard.display_timezone": "UTC",
+                "monitor.interval_seconds": 600,
+                "text.max_items": 12,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["changed_paths"] == [
+        "dashboard.display_timezone",
+        "monitor.interval_seconds",
+        "text.max_items",
+    ]
+    assert payload["backup_ref"].startswith("runs/dashboard/config_backups/config-")
+    saved = load_config(config_path)
+    assert saved["dashboard"]["display_timezone"] == "UTC"
+    assert saved["monitor"]["interval_seconds"] == 600
+    assert saved["text"]["max_items"] == 12
+    assert dashboard_display_timezone(config) == "UTC"
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_config_save_rejects_unknown_path_and_wrong_confirmation(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    blocked = client.post(
+        "/api/config/profile",
+        json={"confirm": "SAVE", "changes": {"dashboard.display_timezone": "UTC"}},
+    ).json()
+    failed = client.post(
+        "/api/config/profile",
+        json={"confirm": "SAVE CONFIG", "changes": {"local.secret": "value"}},
+    ).json()
+
+    assert blocked["status"] == "blocked"
+    assert failed["status"] == "failed"
+    assert "local.secret is not editable" in failed["errors"][0]
+    assert "dashboard" not in load_config(config_path)
+    assert str(tmp_path) not in str(blocked)
+    assert str(tmp_path) not in str(failed)
 
 
 def test_dashboard_overview_endpoint_reports_missing_local_state(tmp_path: Path) -> None:
@@ -1126,6 +1185,153 @@ def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path)
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_data_deletion_plan_separates_run_and_shared_data(tmp_path: Path) -> None:
+    config_path = _write_data_store_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    _write_dashboard_data_store_metadata(tmp_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/data/deletion")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_data_deletion_plan"
+    assert payload["confirmations"]["run_artifacts"] == "DELETE RUN DATA"
+    assert payload["confirmations"]["shared_data"] == "DELETE SHARED DATA"
+    assert payload["run_artifacts"]["items"][0]["run_id"] == "run-1"
+    assert payload["run_artifacts"]["items"][0]["run_dir"] == "runs/run-1"
+    assert payload["run_artifacts"]["items"][0]["deletable"] is True
+    shared = {item["name"]: item for item in payload["shared_data"]["items"]}
+    assert shared["run_index"]["delete_refs"][0]["ref"] == "data/research/index.sqlite"
+    assert shared["ohlcv_history"]["deletable"] is True
+    assert payload["omitted"]["absolute_local_paths_embedded"] is False
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_data_deletion_plan_blocks_external_shared_refs(tmp_path: Path) -> None:
+    config_path = _write_data_store_config(tmp_path)
+    config = load_config(config_path)
+    config["market"]["ohlcv"]["storage_dir"] = str(tmp_path.parent / "external_ohlcv")
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    _write_dashboard_data_store_metadata(tmp_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/data/deletion")
+
+    assert response.status_code == 200
+    payload = response.json()
+    shared = {item["name"]: item for item in payload["shared_data"]["items"]}
+    ohlcv = shared["ohlcv_history"]
+    assert ohlcv["deletable"] is False
+    assert any(ref["ref"] == "<external-artifact>" for ref in ohlcv["delete_refs"])
+    assert str(tmp_path.parent) not in response.text
+
+
+def test_dashboard_data_deletion_requires_confirmation(tmp_path: Path) -> None:
+    config_path = _write_data_store_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post(
+        "/api/data/deletion",
+        json={"kind": "run_artifacts", "run_ids": ["run-1"], "confirm": "DELETE"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "blocked"
+    assert (tmp_path / "runs" / "run-1").exists()
+
+
+def test_dashboard_delete_run_artifacts_supports_multi_select_and_refreshes_latest(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run1 = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-1",
+        started_at="2026-06-20T00:00:00Z",
+        finished_at="2026-06-20T00:05:00Z",
+    )
+    run2 = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-2",
+        started_at="2026-06-20T01:00:00Z",
+        finished_at="2026-06-20T01:05:00Z",
+    )
+    run3 = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-3",
+        started_at="2026-06-20T02:00:00Z",
+        finished_at="2026-06-20T02:05:00Z",
+    )
+    write_run_index(run1, now="2026-06-20T00:05:00Z")
+    write_run_index(run2, now="2026-06-20T01:05:00Z")
+    write_run_index(run3, now="2026-06-20T02:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post(
+        "/api/data/deletion",
+        json={"kind": "run_artifacts", "run_ids": ["run-2", "run-3"], "confirm": "DELETE RUN DATA"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert {item["id"] for item in payload["deleted"]} == {"run-2", "run-3"}
+    assert (tmp_path / "runs" / "run-1").exists()
+    assert not (tmp_path / "runs" / "run-2").exists()
+    assert not (tmp_path / "runs" / "run-3").exists()
+    runs_payload = client.get("/api/runs").json()
+    assert [run["run_id"] for run in runs_payload["runs"]] == ["run-1"]
+    overview = client.get("/api/overview").json()
+    assert overview["sections"]["latest_run"]["fields"]["run_id"] == "run-1"
+    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+        assert connection.execute("SELECT COUNT(*) FROM run_artifacts").fetchone()[0] == 3
+
+
+def test_dashboard_delete_shared_data_only_removes_selected_shared_refs(tmp_path: Path) -> None:
+    config_path = _write_data_store_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    _write_dashboard_data_store_metadata(tmp_path)
+    write_json(tmp_path / "data" / "market" / "ohlcv" / "sample.json", {"rows": []})
+    write_json(tmp_path / "data" / "research" / "text_events" / "sample.json", {"events": []})
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post(
+        "/api/data/deletion",
+        json={
+            "kind": "shared_data",
+            "store_names": ["ohlcv_history", "text_event_history"],
+            "confirm": "DELETE SHARED DATA",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    deleted_refs = {item["ref"] for item in payload["deleted"]}
+    assert "data/market/metadata/ohlcv_schema.json" in deleted_refs
+    assert "data/market/metadata/ohlcv_sync_state.json" in deleted_refs
+    assert "data/market/ohlcv" in deleted_refs
+    assert "data/research/metadata/text_event_history_state.json" in deleted_refs
+    assert "data/research/text_events" in deleted_refs
+    assert (tmp_path / "runs" / "run-1").exists()
+    assert (tmp_path / "data" / "research" / "index.sqlite").exists()
+    assert not (tmp_path / "data" / "market" / "ohlcv").exists()
+    assert not (tmp_path / "data" / "research" / "text_events").exists()
+    assert str(tmp_path) not in response.text
+
+
 def test_dashboard_strategies_endpoint_reports_missing_strategy_artifacts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -1395,8 +1601,15 @@ codex:
     return path
 
 
-def _write_run(tmp_path: Path, config_path: Path) -> RunContext:
-    run_dir = tmp_path / "runs" / "run-1"
+def _write_run(
+    tmp_path: Path,
+    config_path: Path,
+    *,
+    run_id: str = "run-1",
+    started_at: str = "2026-06-20T00:00:00Z",
+    finished_at: str = "2026-06-20T00:05:00Z",
+) -> RunContext:
+    run_dir = tmp_path / "runs" / run_id
     raw_dir = run_dir / "raw"
     analysis_dir = run_dir / "analysis"
     codex_context_dir = run_dir / "codex_context"
@@ -1405,10 +1618,10 @@ def _write_run(tmp_path: Path, config_path: Path) -> RunContext:
         path.mkdir(parents=True, exist_ok=True)
     manifest = {
         "schema_version": 1,
-        "run_id": "run-1",
+        "run_id": run_id,
         "status": "succeeded",
-        "started_at": "2026-06-20T00:00:00Z",
-        "finished_at": "2026-06-20T00:05:00Z",
+        "started_at": started_at,
+        "finished_at": finished_at,
         "config_path": "config.yaml",
         "stage_order": ["collect_market_data", "run_codex_report"],
         "stages": [
@@ -1437,7 +1650,7 @@ def _write_run(tmp_path: Path, config_path: Path) -> RunContext:
         "errors": [],
     }
     run = RunContext(
-        run_id="run-1",
+        run_id=run_id,
         run_dir=run_dir,
         raw_dir=raw_dir,
         analysis_dir=analysis_dir,
