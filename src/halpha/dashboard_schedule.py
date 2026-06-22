@@ -15,7 +15,8 @@ DASHBOARD_SCHEDULES_DIR = "runs/dashboard/schedules"
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
 DAILY_REPORT_SCHEDULE_ARTIFACT = f"{DASHBOARD_SCHEDULES_DIR}/{DAILY_REPORT_SCHEDULE_FILENAME}"
 MAX_LINKED_JOB_IDS = 20
-SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run_no_codex", "run"}
+SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run", "run_no_codex"}
+DEFAULT_DAILY_REPORT_JOB_INTENT = "run"
 DEFAULT_DASHBOARD_TIMEZONE = "Asia/Shanghai"
 
 
@@ -97,7 +98,11 @@ class DashboardScheduleManager:
                 "errors": list(current.get("errors") or []),
             }
         payload = request if isinstance(request, dict) else {}
-        intent = str(payload.get("job_intent") or (current.get("settings") or {}).get("job_intent") or "run_no_codex")
+        intent = str(
+            payload.get("job_intent")
+            or (current.get("settings") or {}).get("job_intent")
+            or DEFAULT_DAILY_REPORT_JOB_INTENT
+        )
         if intent not in SUPPORTED_DAILY_REPORT_JOB_INTENTS:
             supported = ", ".join(sorted(SUPPORTED_DAILY_REPORT_JOB_INTENTS))
             return self._blocked_trigger_response(current, f"job_intent must be one of: {supported}.")
@@ -134,8 +139,9 @@ class DashboardScheduleManager:
             "settings": {
                 "time_of_day": "08:00",
                 "timezone": _configured_timezone(self.config),
-                "job_intent": "run_no_codex",
+                "job_intent": DEFAULT_DAILY_REPORT_JOB_INTENT,
             },
+            "report_generation": _report_generation_state({"job_intent": DEFAULT_DAILY_REPORT_JOB_INTENT}),
             "next_run_at": None,
             "last_run_at": None,
             "last_job_id": None,
@@ -177,6 +183,7 @@ class DashboardScheduleManager:
                 "enabled": enabled,
                 "persisted": True,
                 "settings": settings,
+                "report_generation": _report_generation_state(settings),
                 "next_run_at": next_run_at if enabled else None,
                 "last_run_at": data.get("last_run_at"),
                 "last_job_id": data.get("last_job_id"),
@@ -203,6 +210,7 @@ class DashboardScheduleManager:
             {
                 "enabled": enabled,
                 "settings": settings,
+                "report_generation": _report_generation_state(settings),
                 "next_run_at": _next_run_at(settings["time_of_day"], settings["timezone"]) if enabled else None,
                 "last_run_at": current.get("last_run_at"),
                 "last_job_id": current.get("last_job_id"),
@@ -234,6 +242,7 @@ class DashboardScheduleManager:
             {
                 "enabled": enabled,
                 "settings": settings,
+                "report_generation": _report_generation_state(settings),
                 "next_run_at": _next_run_at(settings["time_of_day"], settings["timezone"]) if enabled else None,
                 "last_run_at": now,
                 "last_job_id": job.get("job_id"),
@@ -329,6 +338,25 @@ def _configured_timezone(config: dict[str, Any]) -> str:
     run = config.get("run") if isinstance(config.get("run"), dict) else {}
     value = run.get("timezone")
     return value if isinstance(value, str) and value.strip() else DEFAULT_DASHBOARD_TIMEZONE
+
+
+def _report_generation_state(settings: dict[str, Any]) -> dict[str, Any]:
+    intent = settings.get("job_intent")
+    if intent == "run":
+        return {
+            "generates_report": True,
+            "job_intent": "run",
+            "codex_capable": True,
+            "requires_codex_confirmation": True,
+            "description": "Runs the full report path and may invoke Codex when triggered.",
+        }
+    return {
+        "generates_report": False,
+        "job_intent": "run_no_codex",
+        "codex_capable": False,
+        "requires_codex_confirmation": False,
+        "description": "Runs the local pipeline with Codex skipped; no report artifact is expected.",
+    }
 
 
 def _config_base(config_path: Path) -> Path:
