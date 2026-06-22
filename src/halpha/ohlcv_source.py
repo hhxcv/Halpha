@@ -103,7 +103,7 @@ class CCXTOHLCVSource:
             )
 
 
-def fetch_configured_ohlcv(
+def _fetch_configured_ohlcv(
     market: dict[str, Any],
     *,
     now: datetime | str | None = None,

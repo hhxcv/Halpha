@@ -7,7 +7,7 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.onchain_flow_history import sync_onchain_flow_history
-from halpha.onchain_flow_views import build_onchain_flow_views, load_onchain_flow_view_records
+from halpha.onchain_flow_views import _load_onchain_flow_view_records, build_onchain_flow_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 
@@ -49,7 +49,7 @@ def test_onchain_flow_history_and_views_use_bounded_current_windows(tmp_path: Pa
     stored_records = _stored_records(tmp_path, data_class="stablecoin_supply", asset="ALL_STABLECOINS", chain="all")
     views = _views(result)
     view = views["views"][0]
-    loaded_window = load_onchain_flow_view_records(view, config_path=config_path)
+    loaded_window = _load_onchain_flow_view_records(view, config_path=config_path)
     manifest = _manifest(result)
     catalog = _catalog(tmp_path)
     catalog_store = next(store for store in catalog["stores"] if store["name"] == "onchain_flow_history")
