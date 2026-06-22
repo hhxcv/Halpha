@@ -9,82 +9,18 @@ from typing import Any, Callable
 
 from .exception_diagnostics import bounded_exception_diagnostic
 from .logging_utils import redact_private_text
+from .pipeline_stages import (
+    DECISION_INTELLIGENCE_STAGES,
+    STAGE_ORDER,
+    StageSelectionError,
+    stages_after as _stages_after,
+    validate_optional_stage as _validate_optional_stage,
+    validate_stage as _validate_stage,
+)
 from .storage import ensure_directory, write_json
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-STAGE_ORDER = (
-    "collect_market_data",
-    "collect_derivatives_market_data",
-    "sync_derivatives_market_history",
-    "build_derivatives_market_views",
-    "build_derivatives_market_context",
-    "collect_macro_calendar_data",
-    "sync_macro_calendar_history",
-    "build_macro_calendar_views",
-    "build_macro_calendar_context",
-    "build_macro_calendar_material",
-    "collect_onchain_flow_data",
-    "sync_onchain_flow_history",
-    "build_onchain_flow_views",
-    "build_onchain_flow_context",
-    "build_onchain_flow_material",
-    "collect_text_events",
-    "build_text_event_records",
-    "build_text_entity_evidence",
-    "build_text_event_classification_evidence",
-    "build_text_event_topics",
-    "build_text_event_signals",
-    "sync_ohlcv",
-    "build_market_data_views",
-    "build_strategy_benchmark_suite",
-    "evaluate_quant_strategies",
-    "evaluate_strategy_evaluation",
-    "build_strategy_experiment_material",
-    "evaluate_market_strategy_signals",
-    "build_market_signals",
-    "build_market_signal_material",
-    "build_market_regime_assessment",
-    "build_risk_assessment",
-    "build_decision_recommendations",
-    "build_watch_triggers",
-    "build_event_market_confluence",
-    "build_event_intelligence_assessment",
-    "build_alert_decisions",
-    "build_alert_decision_material",
-    "build_event_intelligence_material",
-    "build_decision_intelligence_delta",
-    "build_decision_intelligence_material",
-    "build_data_quality_summary",
-    "build_outcome_targets",
-    "evaluate_outcomes",
-    "build_strategy_lifecycle_state",
-    "build_strategy_lifecycle_material",
-    "build_feature_snapshots",
-    "build_factor_states",
-    "build_multi_source_signals",
-    "build_intelligence_fusion",
-    "integrate_intelligence_fusion",
-    "build_user_state_context",
-    "build_personalized_risk_constraints",
-    "integrate_personalized_risk_constraints",
-    "build_personalized_risk_material",
-    "build_analysis_materials",
-    "build_research_context",
-    "build_codex_context",
-    "run_codex_report",
-    "validate_product_contracts",
-)
-DECISION_INTELLIGENCE_STAGES = {
-    "build_market_regime_assessment",
-    "build_risk_assessment",
-    "build_decision_recommendations",
-    "build_watch_triggers",
-    "build_decision_intelligence_delta",
-    "build_decision_intelligence_material",
-}
 
 StageHandler = Callable[[dict[str, Any], "RunContext"], list[str] | None]
 
@@ -109,11 +45,6 @@ class PipelineError(Exception):
 class StageNotImplementedError(PipelineError):
     def __init__(self, stage: str) -> None:
         super().__init__(f"stage {stage} is not implemented", stage=stage, exit_code=3)
-
-
-class StageSelectionError(Exception):
-    """Raised when a requested validation stage is not known."""
-
 
 @dataclass(frozen=True)
 class RunContext:
@@ -555,22 +486,6 @@ def _record_not_run_stages(run: RunContext, stages: list[str], *, reason: str) -
             run.manifest["codex"]["exit_code"] = None
             run.manifest["codex"]["skip_reason"] = reason
 
-
-def _stages_after(stage: str) -> list[str]:
-    index = STAGE_ORDER.index(stage)
-    return list(STAGE_ORDER[index + 1 :])
-
-
-def _validate_optional_stage(stage: str | None, *, option_name: str) -> None:
-    if stage is None:
-        return
-    _validate_stage(stage, option_name=option_name)
-
-
-def _validate_stage(stage: str, *, option_name: str) -> None:
-    if stage not in STAGE_ORDER:
-        supported = ", ".join(STAGE_ORDER)
-        raise StageSelectionError(f"{option_name} must be one of: {supported}.")
 
 
 def _record_validation_mode(run: RunContext, *, until_stage: str | None, skip_codex: bool) -> None:

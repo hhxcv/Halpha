@@ -5,9 +5,12 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from halpha.cli import main
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline, run_pipeline_stage
+from halpha.pipeline_stages import StageSelectionError, stages_after, validate_optional_stage, validate_stage
 
 
 def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) -> None:
@@ -52,6 +55,20 @@ def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) ->
     assert manifest["stages"][0]["error"] == expected_error
     assert manifest["errors"] == [expected_error]
     _assert_manifest_timeline(manifest)
+
+
+def test_pipeline_stage_registry_selection_helpers_match_stage_order() -> None:
+    assert stages_after("build_research_context") == [
+        "build_codex_context",
+        "run_codex_report",
+        "validate_product_contracts",
+    ]
+
+    validate_optional_stage(None, option_name="--until")
+    validate_stage("collect_market_data", option_name="stage")
+
+    with pytest.raises(StageSelectionError, match="--until must be one of:"):
+        validate_optional_stage("missing_stage", option_name="--until")
 
 
 def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_path: Path) -> None:
