@@ -5,8 +5,9 @@ durable implementation contract, not a milestone plan.
 
 ## Purpose
 
-The delivery workbench gives the user one local entry point for current
-intelligence without changing the research pipeline:
+The dashboard is Halpha's primary local user entry point. The delivery
+workbench is a local delivery snapshot and CLI inspection or recovery fallback
+for current intelligence without changing the research pipeline:
 
 - summarize existing deterministic artifacts;
 - link to reports, source artifacts, monitor state, alerts, outcomes, and
@@ -15,11 +16,13 @@ intelligence without changing the research pipeline:
   explicitly;
 - avoid raw record dumps and duplicated full artifacts;
 - remain local-first and inspectable;
+- avoid replacing dashboard views;
 - never become the source of decision, strategy, alert, risk, forecast, or
   trading logic.
 
 Workbench outputs are delivery artifacts. They are not upstream evidence,
-analysis inputs, Codex context, or product state authority.
+analysis inputs, Codex context, product state authority, primary UI, or
+dashboard replacements.
 
 ## Output Layers
 
@@ -27,9 +30,9 @@ The workbench layer has three implemented output types:
 
 | Output | Purpose | Consumer |
 | --- | --- | --- |
-| Workbench summary JSON | Machine-readable bounded summary of existing local artifacts. | CLI inspection, local index rendering, human audit. |
-| Workbench Markdown index | Human-readable local index for reports and current state. | User and AI-agent local inspection. |
-| Workbench static HTML index | Browser-readable local index generated from the same summary. | User local inspection. |
+| Workbench summary JSON | Machine-readable bounded summary of existing local artifacts. | CLI inspection, recovery checks, local index rendering, human audit. |
+| Workbench Markdown index | Human-readable local index for reports and current state. | User and AI-agent local inspection fallback. |
+| Workbench static HTML index | Browser-readable local index generated from the same summary. | User local inspection fallback. |
 
 All workbench outputs must be reproducible from existing artifacts. They must
 not trigger network collection, analysis stages, monitor cycles, Codex CLI, or
@@ -140,7 +143,8 @@ or error.
 
 ## Codex Boundary
 
-Workbench artifacts are not Codex input by default.
+Workbench artifacts are delivery snapshots. They are not upstream evidence,
+analysis inputs, dashboard replacements, or Codex input by default.
 
 Codex may use bounded report-facing material such as decision, alert, strategy,
 event, data-quality, and outcome material according to
@@ -170,7 +174,9 @@ Workbench validation should prove:
 - inspect commands are read-only;
 - generated indexes are deterministic from the summary;
 - output does not expose raw private user-state values;
-- workbench artifacts are not admitted into Codex context by default.
+- workbench artifacts are not admitted into Codex context by default;
+- workbench artifacts remain delivery snapshots and CLI fallbacks, not the
+  primary UI.
 
 Current command validation:
 

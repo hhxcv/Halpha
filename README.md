@@ -43,10 +43,12 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Validates local monitor configuration without starting hidden background execution.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
-- Builds local workbench summary, Markdown index, and static HTML index files from existing artifacts.
-- Runs a local web dashboard service for overview, report review, strategy
-  research, monitor control, intelligence review, settings, bounded artifact
-  previews, dashboard jobs, storage cleanup, and daily report schedule state.
+- Runs a local web dashboard service as the primary local user entry point for
+  overview, report review, strategy research, monitor control, intelligence
+  review, settings, bounded artifact previews, dashboard jobs, storage cleanup,
+  and daily report schedule state.
+- Builds local workbench delivery snapshots, Markdown indexes, and static HTML
+  index files from existing artifacts as CLI inspection and recovery aids.
 
 Halpha does not implement account access, exchange trading, order placement,
 portfolio automation, real-time alert delivery, hosted dashboards, or hosted
@@ -108,10 +110,11 @@ python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 ```
 
-The dashboard is local-only by default. Open the printed local URL in a browser
-to inspect overview state, run history, report previews, local data store
-metadata, strategy outputs, monitor health, recent monitor cycles, alert
-samples, and dashboard-triggered job history.
+The dashboard is the primary local user entry point and is local-only by
+default. Open the printed local URL in a browser to inspect overview state, run
+history, report previews, local data store metadata, strategy outputs, monitor
+health, recent monitor cycles, alert samples, and dashboard-triggered job
+history.
 
 Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
 roots. Private values such as proxy URLs, credentials, tokens, private notes,
@@ -185,24 +188,25 @@ python -m halpha outcomes inspect --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
 ```
 
-Build local workbench delivery outputs from existing artifacts:
+Build local workbench delivery snapshot outputs from existing artifacts:
 
 ```bash
 python -m halpha workbench build --config config.example.yaml
 python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
 ```
 
-Inspect the latest workbench summary without running collection, pipeline
-stages, monitor cycles, or Codex:
+Inspect the latest workbench summary as a CLI inspection and recovery fallback
+without running collection, pipeline stages, monitor cycles, or Codex:
 
 ```bash
 python -m halpha workbench inspect --config config.example.yaml
 ```
 
-Workbench outputs are local delivery artifacts under `runs/workbench/latest/`.
-They summarize and link to existing deterministic artifacts, including bounded
-product-validation health when available. They do not become upstream decision
-inputs or Codex context by default.
+Workbench outputs are local delivery snapshot artifacts under
+`runs/workbench/latest/`. They summarize and link to existing deterministic
+artifacts, including bounded product-validation health when available. They are
+not the primary UI, not a replacement for dashboard views, and not upstream
+decision inputs or Codex context by default.
 
 Run one configured strategy backtest from shared local OHLCV history:
 
@@ -454,7 +458,7 @@ A successful configured run can write:
 - `runs/text_intelligence/<id>/analysis/event_intelligence_material.md`: standalone AI-readable event intelligence material.
 - `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
 - `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
-- `runs/workbench/latest/workbench_summary.json`: bounded local delivery summary with latest run, report, decision, alert, monitor, outcome, strategy, product-validation, data-quality, source-ref, warning, error, and Codex-boundary metadata.
+- `runs/workbench/latest/workbench_summary.json`: bounded local delivery snapshot summary with latest run, report, decision, alert, monitor, outcome, strategy, product-validation, data-quality, source-ref, warning, error, and Codex-boundary metadata.
 - `runs/workbench/latest/index.md`: local Markdown workbench index generated from the summary.
 - `runs/workbench/latest/index.html`: local static HTML workbench index generated from the summary.
 
@@ -592,8 +596,9 @@ python -m halpha outcomes inspect --config <local-config.yaml>
 python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>
 ```
 
-Build and inspect local workbench delivery outputs without collection, pipeline
-execution, monitor cycles, or Codex CLI:
+Build and inspect local workbench delivery snapshots as CLI inspection and
+recovery aids without collection, pipeline execution, monitor cycles, or Codex
+CLI:
 
 ```bash
 python -m halpha workbench build --config <local-config.yaml>
@@ -725,7 +730,7 @@ they are not proof of a real-source product run.
   - `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
   - `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
   - `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
-  - `docs/delivery-workbench-contracts.md`: local delivery and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
+  - `docs/delivery-workbench-contracts.md`: local delivery snapshot and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
   - `docs/product-stability-contracts.md`: product validation, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
   - `docs/logging-standards.md`: local JSON logging levels, event shape, privacy boundaries, context fields, and anti-noise rules.
   - `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
