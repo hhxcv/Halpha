@@ -21,8 +21,10 @@ The dashboard must remain:
   automation, position sizing, or order placement.
 
 CLI commands remain automation, validation, debugging, and recovery paths. The
-dashboard may call implemented CLI paths through controlled jobs, but it must
-not create hidden product behavior outside those contracts.
+workbench CLI remains a delivery snapshot and inspection or recovery fallback,
+not a competing primary UI. The dashboard may call implemented CLI paths through
+controlled jobs, but it must not create hidden product behavior outside those
+contracts.
 
 ## Source Of Truth
 
@@ -48,7 +50,9 @@ Primary sources:
   reusable local stores and metadata.
 - `runs/monitor/`: monitor cycles, alert archive, cooldown state, archive state,
   and monitor health state.
-- `runs/workbench/latest/`: bounded delivery summaries and local indexes.
+- `runs/workbench/latest/`: bounded delivery snapshot summaries and local
+  indexes for inspection and recovery fallback, not replacements for dashboard
+  views.
 - `runs/strategy_backtests/`, `runs/strategy_experiments/`, and
   `runs/text_intelligence/`: standalone command outputs.
 
@@ -71,7 +75,8 @@ operator UI, not a hosted service.
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
 `/assets/dashboard_dialogs.js`, `/assets/dashboard_reports.js`,
-`/assets/dashboard_strategy_chart.js`, and `/assets/dashboard.js`.
+`/assets/dashboard_strategy_chart.js`, `/assets/dashboard_monitor.js`, and
+`/assets/dashboard.js`.
 
 Dashboard timestamp display uses `dashboard.display_timezone` when configured,
 falls back to `run.timezone`, and defaults to `Asia/Shanghai`. This display

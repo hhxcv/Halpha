@@ -58,7 +58,7 @@ bounded report-facing material.
 | Research context | Combine selected material and generation constraints. | Embedded into Codex context. |
 | Codex prompt | Wrap research context with report-generation rules. | Sent to Codex CLI through stdin. |
 | Final report | Generated Simplified Chinese Markdown plus deterministic post-processing tables. | Output, not upstream input. |
-| Delivery/workbench output | Surface existing evidence and report links for local consumption. | Not embedded by default. Not upstream input. |
+| Delivery/workbench output | Surface existing evidence and report links as a local delivery snapshot and CLI fallback. | Not embedded by default. Not upstream input. |
 | Dashboard control state | Record local web UI jobs, logs, schedule state, and UI control metadata. | Not embedded by default. Not upstream evidence. |
 | Manifest | Record lifecycle, artifacts, counts, warnings, errors, and Codex input budget. | Not embedded in full. Used for audit. |
 
@@ -357,11 +357,13 @@ Workbench delivery artifacts:
 - `runs/workbench/latest/index.html`
 
 Workbench artifacts summarize and link to existing deterministic artifacts for
-local consumption, including bounded product-validation health when available.
-They are delivery outputs, not upstream analysis inputs, decision artifacts,
-alert-priority sources, strategy-gate inputs, validation authorities, or Codex
-context by default. Codex should continue to consume bounded report-facing
-material rather than full workbench summaries or generated indexes.
+local delivery and CLI inspection or recovery, including bounded
+product-validation health when available. They are delivery snapshots, not the
+primary UI, not replacements for dashboard views, not upstream analysis inputs,
+decision artifacts, alert-priority sources, strategy-gate inputs, validation
+authorities, or Codex context by default. Codex should continue to consume
+bounded report-facing material rather than full workbench summaries or
+generated indexes.
 
 ### Local Dashboard Control State
 
