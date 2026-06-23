@@ -8,8 +8,12 @@ import pandas as pd
 
 from ..backtest import bounded_backtest_diagnostic
 from ..signal_records import insufficient_strategy_signal_records, strategy_signal_records
+from ..strategy_execution import (
+    input_is_insufficient,
+    insufficient_strategy_run,
+    strategy_transition_counts,
+)
 from ..strategy_records import (
-    backtest_diagnostic,
     data_quality,
     parameter_diagnostic,
     strategy_run_record,
@@ -37,15 +41,17 @@ def run(
 ) -> dict[str, Any]:
     params = _params(strategy.get("params"))
     minimum_rows = _minimum_rows(params)
-    if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
-        return _insufficient_run(
+    if input_is_insufficient(view, rows, minimum_rows=minimum_rows):
+        return insufficient_strategy_run(
             strategy,
             view,
             rows,
+            strategy_name=NAME,
             params=params,
             engine=engine,
             created_at=created_at,
             minimum_rows=minimum_rows,
+            uncertainty="Insufficient data prevents strategy assessment.",
         )
 
     state = _signal_state(strategy, view, rows, params=params)
@@ -59,10 +65,11 @@ def run(
     realized_volatility_pct = state["realized_volatility_pct"]
     exposure = state["exposure"]
     target_volatility = state["target_volatility"]
-    entry_count = _transition_count(signal_series, from_value=False, to_value=True)
-    exit_count = _transition_count(signal_series, from_value=True, to_value=False)
-    latest_signal = bool(signal_series.iloc[-1])
-    previous_signal = bool(signal_series.iloc[-2])
+    transition_counts = strategy_transition_counts(signal_series)
+    entry_count = int(transition_counts["entry_count"])
+    exit_count = int(transition_counts["exit_count"])
+    latest_signal = bool(transition_counts["latest_signal"])
+    previous_signal = bool(transition_counts["previous_signal"])
     latest_entry = latest_signal and not previous_signal
     latest_exit = previous_signal and not latest_signal
     direction = _direction(return_window_pct)
@@ -149,7 +156,7 @@ def signal_records(
 ) -> dict[str, Any]:
     params = _params(strategy.get("params"))
     minimum_rows = _minimum_rows(params)
-    if _input_is_insufficient(view, rows, minimum_rows=minimum_rows):
+    if input_is_insufficient(view, rows, minimum_rows=minimum_rows):
         return insufficient_strategy_signal_records(
             strategy,
             view,
@@ -158,49 +165,6 @@ def signal_records(
             minimum_rows=minimum_rows,
         )
     return _signal_state(strategy, view, rows, params=params)["signal_records"]
-
-
-def _insufficient_run(
-    strategy: dict[str, Any],
-    view: dict[str, Any],
-    rows: list[dict[str, Any]],
-    *,
-    params: dict[str, Any],
-    engine: dict[str, str],
-    created_at: str,
-    minimum_rows: int,
-) -> dict[str, Any]:
-    item = warning(
-        "insufficient_ohlcv_rows",
-        (
-            f"{view.get('source')} {view.get('symbol')} {view.get('timeframe')} has "
-            f"{len(rows)} OHLCV rows; {NAME} requires at least {minimum_rows} rows."
-        ),
-        source="data_quality",
-    )
-    return strategy_run_record(
-        strategy=strategy,
-        view=view,
-        engine=engine,
-        created_at=created_at,
-        status="insufficient_data",
-        params=params,
-        data_quality=data_quality(view, rows, minimum_rows=minimum_rows, sufficient=False, warnings=[item]),
-        indicators={},
-        signals={},
-        backtest_diagnostic=backtest_diagnostic(strategy, view, rows, status="skipped"),
-        parameter_diagnostic=parameter_diagnostic(),
-        assessment={
-            "direction": "unknown",
-            "strength": "unknown",
-            "confidence": "low",
-            "summary": "Strategy result is unavailable because input data is insufficient.",
-            "evidence": [f"input view has {len(rows)} OHLCV rows."],
-            "uncertainty": ["Insufficient data prevents strategy assessment."],
-        },
-        warnings=[item],
-        error=None,
-    )
 
 
 def _params(raw: Any) -> dict[str, Any]:
@@ -330,10 +294,6 @@ def _frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
     return frame
 
 
-def _input_is_insufficient(view: dict[str, Any], rows: list[dict[str, Any]], *, minimum_rows: int) -> bool:
-    return bool(view.get("insufficient_data")) or len(rows) < minimum_rows
-
-
 def _vectorbt_momentum_return(close: pd.Series, window: int) -> pd.Series:
     indicator = _tsmom_indicator()
     result = indicator.run(close, window=window)
@@ -366,12 +326,6 @@ def _volatility_scaled_exposure(target_volatility: float, realized_volatility: f
     if realized_volatility <= 0:
         return 1.0
     return max(0.0, min(1.0, target_volatility / realized_volatility))
-
-
-def _transition_count(series: pd.Series, *, from_value: bool, to_value: bool) -> int:
-    clean = series.fillna(False).astype(bool)
-    previous = clean.shift(1, fill_value=False)
-    return int(((previous == from_value) & (clean == to_value)).sum())
 
 
 def _strategy_warnings(realized_volatility: float, target_volatility: float) -> list[dict[str, Any]]:
