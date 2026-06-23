@@ -190,7 +190,7 @@ def _canonical_url(link: str | None, warnings: list[str]) -> str | None:
 
     parsed = urlparse(link.strip())
     if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
-        warnings.append(f"link is not an http or https URL; canonical_url is unavailable.")
+        warnings.append("link is not an http or https URL; canonical_url is unavailable.")
         return None
 
     query_items = [

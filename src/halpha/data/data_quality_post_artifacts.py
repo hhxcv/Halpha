@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
+from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES  # noqa: F401
 from halpha.runtime.pipeline_contracts import RunContext
 
 

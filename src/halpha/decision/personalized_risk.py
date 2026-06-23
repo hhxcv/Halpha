@@ -134,7 +134,7 @@ class _UpstreamInputs:
             return
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, JSONDecodeError) as exc:
+        except (OSError, JSONDecodeError):
             error = {
                 "source_artifact": artifact_path,
                 "message": f"{artifact_path} could not be read as JSON.",

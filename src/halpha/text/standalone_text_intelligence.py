@@ -14,7 +14,7 @@ from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw
 from halpha.storage import display_path, ensure_directory, write_json
 from halpha.text.text_entity_evidence import build_text_entity_evidence
 from halpha.text.text_event_classification import build_text_event_classification_evidence
-from halpha.text.text_event_records import TEXT_EVENT_RECORDS_ARTIFACT, build_text_event_records
+from halpha.text.text_event_records import build_text_event_records
 from halpha.text.text_event_signals import build_text_event_signals
 from halpha.text.text_event_topics import build_text_event_topics
 
