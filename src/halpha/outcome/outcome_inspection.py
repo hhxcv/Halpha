@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from contextlib import closing
-import json
 import sqlite3
 from dataclasses import dataclass
-from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from halpha.inspection_artifacts import inspection_error_is_missing as _was_not_found
+from halpha.inspection_artifacts import inspection_overall_status as _overall_status
+from halpha.inspection_artifacts import read_inspection_json_object
 from halpha.outcome.outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
 
@@ -334,31 +335,8 @@ def _field_text(fields: dict[str, Any]) -> str:
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {}, f"{path.name} was not found."
-    except OSError as exc:
-        return {}, f"{path.name} could not be read: {exc}."
-    except JSONDecodeError as exc:
-        return {}, f"{path.name} is not valid JSON: {exc.msg}."
-    if not isinstance(loaded, dict):
-        return {}, f"{path.name} must be a JSON object."
-    return loaded, None
-
-
-def _was_not_found(error: str) -> bool:
-    return " was not found." in error
-
-
-def _overall_status(statuses: list[str]) -> str:
-    if "failed" in statuses:
-        return "failed"
-    if "degraded" in statuses:
-        return "degraded"
-    if "warning" in statuses:
-        return "warning"
-    return "ok"
+    result = read_inspection_json_object(path)
+    return result.data, result.error
 
 
 def _safe_path(path: Path, *, base: Path) -> str:
