@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from contextlib import closing
-import json
 import sqlite3
 from dataclasses import dataclass
-from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +14,10 @@ from halpha.data.data_quality_groups import (
 )
 from halpha.data.research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.inspection_artifacts import inspection_json_artifact_status as _artifact_file_status
+from halpha.inspection_artifacts import inspection_overall_status as _overall_status
+from halpha.inspection_artifacts import inspection_plain_artifact_status as _plain_artifact_status
+from halpha.inspection_artifacts import read_inspection_json_object
 from halpha.utils.value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 from halpha.workbench.workbench import (
     DEFAULT_WORKBENCH_OUTPUT_DIR,
@@ -1100,17 +1102,8 @@ def _field_text(fields: dict[str, Any]) -> str:
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {}, f"{path.name} was not found."
-    except OSError as exc:
-        return {}, f"{path.name} could not be read: {exc}."
-    except JSONDecodeError as exc:
-        return {}, f"{path.name} is not valid JSON: {exc.msg}."
-    if not isinstance(loaded, dict):
-        return {}, f"{path.name} must be a JSON object."
-    return loaded, None
+    result = read_inspection_json_object(path)
+    return result.data, result.error
 
 
 def _table_count(connection: sqlite3.Connection, table: str) -> int:
@@ -1204,24 +1197,6 @@ def _artifact_ref(artifacts: dict[str, Any], key: str, default: str) -> str:
     return value if isinstance(value, str) and value else default
 
 
-def _artifact_file_status(data: dict[str, Any], error: str | None) -> str:
-    if error:
-        return "missing" if "was not found" in error else "failed"
-    status = str(data.get("status") or "").lower()
-    if status in {"failed", "degraded", "warning", "partial", "skipped", "not_generated"}:
-        return status
-    return "ok"
-
-
-def _plain_artifact_status(path: Path, *, source_status: str) -> tuple[str, str | None]:
-    if not path.is_file():
-        return "missing", f"{path.name} was not found."
-    status = source_status.lower()
-    if status in {"failed", "degraded", "warning", "partial", "skipped", "not_generated"}:
-        return status, None
-    return "ok", None
-
-
 def _manifest_lifecycle_status_counts(counts: dict[str, Any]) -> dict[str, int]:
     return {
         "active_candidate": _int(counts.get("strategy_lifecycle_active_candidate")),
@@ -1270,16 +1245,6 @@ def _status_from_values(statuses: list[str]) -> str:
     if not statuses or set(statuses) == {"skipped"}:
         return "skipped"
     return _overall_status(statuses)
-
-
-def _overall_status(statuses: list[str]) -> str:
-    if "failed" in statuses:
-        return "failed"
-    if "degraded" in statuses:
-        return "degraded"
-    if "warning" in statuses:
-        return "warning"
-    return "ok"
 
 
 def _safe_path(path: Path, *, base: Path) -> str:
