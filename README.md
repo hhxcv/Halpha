@@ -116,6 +116,13 @@ history, report previews, local data store metadata, strategy outputs, monitor
 health, recent monitor cycles, alert samples, and dashboard-triggered job
 history.
 
+Dashboard startup records local service state under
+`runs/dashboard/service_state.json`. A repeated dashboard startup can stop a
+matching existing Halpha dashboard backend for the same local port before
+starting the new service. If the port is occupied by a non-Halpha or
+unresponsive local service, startup fails with an actionable error instead of
+killing an unrelated process.
+
 Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
 roots. Private values such as proxy URLs, credentials, tokens, private notes,
 raw user-state files, machine paths, and private endpoints are rejected or
