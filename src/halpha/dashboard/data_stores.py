@@ -5,7 +5,7 @@ from typing import Any
 
 from halpha.data.data_inspection import DataInspectionError, inspect_local_store_state
 from halpha.outcome.outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
-from halpha.storage import config_base as _config_base, read_json_object
+from halpha.storage import artifact_base as _artifact_base, read_json_object
 from halpha.utils.value_helpers import (
     as_dict as _dict,
     as_list as _list,
@@ -113,7 +113,7 @@ def _dashboard_store_section(section: dict[str, Any], *, config_path: Path) -> d
 
 
 def _outcome_history_store_section(config_path: Path) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     path = base / OUTCOME_HISTORY_STATE_ARTIFACT
     data, error = _read_json(path)
     if error:
@@ -208,7 +208,7 @@ def _data_store_drilldown(
             metadata_refs=[artifact],
             warnings=warnings,
         )
-    data, error = _read_json(_config_base(config_path) / preview_path)
+    data, error = _read_json(_artifact_base(config_path) / preview_path)
     read_warnings = [*warnings]
     if error:
         read_warnings.append(error)

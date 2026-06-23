@@ -17,7 +17,7 @@ from halpha.monitor.monitoring import (
 )
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
 from halpha.workbench.workbench_rendering import render_workbench_html, render_workbench_markdown
-from halpha.storage import display_path, ensure_directory, write_json
+from halpha.storage import artifact_base, display_path, ensure_directory, write_json
 from halpha.utils.value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 
 
@@ -64,7 +64,7 @@ def build_workbench_summary(
     run_dir: Path | None = None,
     now: datetime | None = None,
 ) -> WorkbenchSummaryResult:
-    base = _config_base(config_path)
+    base = artifact_base(config_path)
     output_dir = _workbench_output_dir(config, config_path=config_path)
     ensure_directory(output_dir)
     generated_at = _utc_timestamp(now)
@@ -159,7 +159,7 @@ def build_workbench_summary(
 
 
 def inspect_workbench_summary(config: dict[str, Any], *, config_path: Path) -> WorkbenchInspectionResult:
-    base = _config_base(config_path)
+    base = artifact_base(config_path)
     summary_path = _workbench_output_dir(config, config_path=config_path) / WORKBENCH_SUMMARY_FILENAME
     summary, error = _read_json(summary_path)
     summary_ref = _portable_path(summary_path, base=base)
@@ -835,7 +835,7 @@ def _workbench_output_dir(config: dict[str, Any], *, config_path: Path) -> Path:
     path = Path(DEFAULT_WORKBENCH_OUTPUT_DIR)
     if path.is_absolute():
         return path
-    return _config_base(config_path) / path
+    return artifact_base(config_path) / path
 
 
 def _resolve_path(path: Path, *, base: Path) -> Path:
@@ -856,13 +856,6 @@ def _project_local_path(path: Path, *, base: Path) -> Path | None:
     except (OSError, ValueError):
         return None
     return path
-
-
-def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
 
 
 def _dedupe(values: list[str]) -> list[str]:

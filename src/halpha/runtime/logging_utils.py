@@ -7,10 +7,11 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
-from halpha.storage import config_base
+from halpha.storage import resolve_artifact_path
 
 
-LOG_ARTIFACT = "logs/halpha.log"
+DEFAULT_LOG_OUTPUT_DIR = "logs"
+LOG_FILENAME = "halpha.log"
 MAX_LOG_BYTES = 1_000_000
 LOG_BACKUP_COUNT = 3
 PRIVATE_KEY_PARTS = (
@@ -38,8 +39,7 @@ def configure_local_logging(
     config: dict[str, Any] | None = None,
     level: int = logging.INFO,
 ) -> Path:
-    base = config_base(config_path)
-    log_path = base / LOG_ARTIFACT
+    log_path = _log_output_dir(config, config_path=config_path) / LOG_FILENAME
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger("halpha")
@@ -61,6 +61,12 @@ def configure_local_logging(
     handler.setFormatter(_JsonLogFormatter(_private_values(config_path=config_path, config=config)))
     logger.addHandler(handler)
     return log_path
+
+
+def _log_output_dir(config: dict[str, Any] | None, *, config_path: Path) -> Path:
+    logging_config = config.get("logging") if isinstance(config, dict) and isinstance(config.get("logging"), dict) else {}
+    output_dir = str(logging_config.get("output_dir") or DEFAULT_LOG_OUTPUT_DIR)
+    return resolve_artifact_path(output_dir, config_path=config_path)
 
 
 def redact_private_text(text: str, *, config_path: Path, config: dict[str, Any] | None = None) -> str:

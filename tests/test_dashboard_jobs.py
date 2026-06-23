@@ -5,12 +5,18 @@ from pathlib import Path
 import threading
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.dashboard.job_commands import DashboardJobCommandBuilder, DashboardJobError
 from halpha.dashboard.jobs import DashboardJobManager, MAX_JOB_LOG_CHARS
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_dashboard_job_command_builder_builds_command_preview(tmp_path: Path) -> None:
@@ -196,11 +202,13 @@ def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
     completed = _wait_for_terminal(manager, job["job_id"])
 
     assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "configs/local.yaml"]
-    assert cwd_values == [config_dir.resolve()]
+    assert cwd_values == [tmp_path.resolve()]
     assert Path(commands[0][-1]).is_file()
     assert Path(commands[0][-1]).resolve() == (tmp_path / config_path).resolve()
-    stdout_log = (config_dir / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
+    stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     assert str((tmp_path / config_path).resolve()) not in stdout_log
+    assert completed["job_dir"].startswith("runs/dashboard/jobs/")
+    assert not (config_dir / "runs").exists()
 
 
 def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, monkeypatch) -> None:

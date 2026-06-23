@@ -6,10 +6,17 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.decision.decision_delta import build_decision_intelligence_delta_artifact
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_decision_delta_artifact_builder_reports_quant_disabled_result() -> None:

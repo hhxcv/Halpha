@@ -6,9 +6,16 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import STAGE_ORDER, run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_outcome_targets_record_no_previous_run_state(tmp_path: Path) -> None:

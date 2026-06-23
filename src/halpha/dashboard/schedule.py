@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from halpha.dashboard.jobs import DashboardJobManager
 from halpha.dashboard.time import parse_utc_timestamp
-from halpha.storage import config_base as _config_base, write_json
+from halpha.storage import artifact_base as _artifact_base, write_json
 
 
 DASHBOARD_SCHEDULES_DIR = "runs/dashboard/schedules"
@@ -33,7 +33,7 @@ class DashboardScheduleManager:
     ) -> None:
         self.config = config
         self.config_path = Path(config_path)
-        self.base = _config_base(self.config_path)
+        self.base = _artifact_base(self.config_path)
         self.job_manager = job_manager
         self.daily_report_path = self.base / DAILY_REPORT_SCHEDULE_ARTIFACT
         self._dispatch_lock = threading.Lock()

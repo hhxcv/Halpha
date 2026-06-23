@@ -10,7 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from halpha.config import ConfigError, load_config
-from halpha.storage import config_base, safe_local_ref
+from halpha.storage import artifact_base, config_base, safe_local_ref
 
 
 CONFIG_BACKUP_DIR = "runs/dashboard/config_backups"
@@ -262,7 +262,7 @@ def dashboard_backup_config(*, config_path: Path) -> dict[str, Any]:
             "errors": [error],
             "omitted": {"absolute_local_paths_embedded": False},
         }
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_config_backup",
@@ -353,7 +353,7 @@ def dashboard_save_config_profile(
 
     config.clear()
     config.update(validated)
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     return _config_save_result(
         config,
         config_path=config_path,
@@ -367,10 +367,7 @@ def dashboard_config_ref(config_path: Path) -> str:
     path = Path(config_path)
     if not path.is_absolute():
         return path.as_posix()
-    try:
-        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
-    except ValueError:
-        return "<external-config>"
+    return "<external-config>"
 
 
 def _dashboard_config_temp_path(config_path: Path) -> Path:
@@ -512,12 +509,13 @@ def _serialize_config_yaml(config: dict[str, Any]) -> tuple[str, str | None]:
 
 
 def _backup_dashboard_config(config_path: Path) -> tuple[Path | None, str | None]:
-    base = config_base(config_path)
-    source = config_path if config_path.is_absolute() else base / config_path.name
+    config_dir = config_base(config_path)
+    source = config_path if config_path.is_absolute() else config_dir / config_path.name
     if not source.exists():
         return None, f"{dashboard_config_ref(config_path)} was not found."
     safe_stem = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in source.stem) or "config"
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    base = artifact_base(config_path)
     backup_dir = base / CONFIG_BACKUP_DIR
     backup_path = backup_dir / f"{safe_stem}-{stamp}.yaml.bak"
     try:

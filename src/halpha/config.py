@@ -26,6 +26,7 @@ from halpha.quant.registry import SUPPORTED_STRATEGY_NAMES
 CONFIG_SECTIONS = {
     "codex",
     "dashboard",
+    "logging",
     "macro_calendar",
     "market",
     "monitor",
@@ -36,6 +37,7 @@ CONFIG_SECTIONS = {
     "text",
     "user_state",
 }
+SUPPORTED_LOGGING_FIELDS = {"output_dir"}
 SUPPORTED_USER_STATE_FIELDS = {"enabled", "path"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
@@ -193,6 +195,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
         _validate_monitor_config(config["monitor"])
     if "dashboard" in config:
         _validate_dashboard_config(config["dashboard"])
+    if "logging" in config:
+        _validate_logging_config(config["logging"])
 
     quant = _optional_mapping(config, "quant")
     quant_enabled = False
@@ -330,6 +334,18 @@ def _validate_dashboard_config(dashboard: Any) -> None:
             raise ConfigError(
                 f"dashboard.display_timezone is not an available IANA timezone: {timezone_name}."
             ) from exc
+
+
+def _validate_logging_config(logging_config: Any) -> None:
+    if not isinstance(logging_config, dict):
+        raise ConfigError("logging must be a mapping.")
+    _reject_unsupported_fields(
+        logging_config,
+        path="logging",
+        supported_fields=SUPPORTED_LOGGING_FIELDS,
+    )
+    if "output_dir" in logging_config:
+        _require_non_empty_string(logging_config, "output_dir", "logging.output_dir")
 
 
 def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:

@@ -9,7 +9,7 @@ from typing import Any
 
 from halpha.outcome.outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
-from halpha.storage import config_base, safe_local_ref
+from halpha.storage import artifact_base, safe_local_ref
 from halpha.utils.value_helpers import (
     as_dict as _dict,
     as_list as _list,
@@ -66,7 +66,7 @@ def dashboard_data_deletion_plan(
     runs_payload: dict[str, Any],
     stores_payload: dict[str, Any],
 ) -> dict[str, Any]:
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     run_section = _run_artifact_deletion_section(config, runs_payload=runs_payload, base=base)
     shared_section = _shared_data_deletion_section(config, stores_payload=stores_payload, base=base)
     cleanup_candidates = _cleanup_candidate_section(_list(run_section.get("cleanup_candidates")))
@@ -392,7 +392,7 @@ def _delete_run_artifacts(
             errors=["run_ids must contain at least one run id."],
         )
 
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     plan = dashboard_data_deletion_plan(
         config,
         config_path=config_path,
@@ -469,7 +469,7 @@ def _delete_shared_data(
             errors=["store_names must contain at least one shared data store name."],
         )
 
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     plan = dashboard_data_deletion_plan(
         config,
         config_path=config_path,

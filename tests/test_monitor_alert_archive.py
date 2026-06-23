@@ -6,8 +6,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.monitor.monitoring import run_monitor_cycle
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_monitor_cycle_emits_first_alert_and_persists_cooldown_state(tmp_path: Path) -> None:

@@ -33,6 +33,9 @@ The optional `monitor` config section supports these fields:
 | `target_stage` | `build_personalized_risk_material` | Pipeline stage boundary for default monitor reassessment. |
 | `no_codex` | `true` | Default monitor runs stop before Codex report generation. |
 
+Relative `output_dir` values resolve from the current working directory, not
+from the config file location.
+
 Current implemented validation command:
 
 ```bash

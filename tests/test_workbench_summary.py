@@ -5,11 +5,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.pipeline import RunContext
 from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
 from halpha.workbench.workbench import build_workbench_summary, render_workbench_html
 from halpha.workbench.workbench_rendering import render_workbench_markdown
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:

@@ -4,12 +4,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.dashboard.jobs import DashboardJobManager
 from halpha.dashboard.schedule import DashboardScheduleManager
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_dashboard_daily_report_schedule_reports_missing_state(tmp_path: Path) -> None:

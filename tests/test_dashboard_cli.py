@@ -14,6 +14,14 @@ from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_dashboard_help_mentions_local_server(capsys) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["dashboard", "--help"])
@@ -27,7 +35,7 @@ def test_dashboard_help_mentions_local_server(capsys) -> None:
 
 
 def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
-    config_path = Path("config.example.yaml")
+    config_path = REPO_ROOT / "config.example.yaml"
     config = load_config(config_path)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -42,7 +50,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["local_only"] is True
     assert payload["host"] == "127.0.0.1"
     assert payload["port"] == 8765
-    assert payload["config"] == {"loaded": True, "ref": "config.example.yaml"}
+    assert payload["config"] == {"loaded": True, "ref": "<external-config>"}
     assert payload["features"]["overview_api"] == "available"
     assert payload["features"]["run_history_api"] == "available"
     assert payload["features"]["artifact_preview_api"] == "available"
@@ -1511,7 +1519,7 @@ def test_dashboard_strategies_endpoint_normalizes_not_run_status(tmp_path: Path)
 
 
 def test_dashboard_strategies_endpoint_reports_configured_command_options() -> None:
-    config_path = Path("config.example.yaml")
+    config_path = REPO_ROOT / "config.example.yaml"
     config = load_config(config_path)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 

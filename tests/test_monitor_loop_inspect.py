@@ -13,6 +13,11 @@ from halpha.config import load_config
 from halpha.monitor.monitoring import run_monitor_loop
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_monitor_loop_runs_finite_count_and_writes_health_state(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)

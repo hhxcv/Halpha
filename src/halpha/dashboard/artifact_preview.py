@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.storage import config_base
+from halpha.storage import artifact_base
 
 
 MAX_PREVIEW_CHARS = 20_000
@@ -13,7 +13,7 @@ MAX_PREVIEW_ROWS = 100
 
 
 def dashboard_artifact_preview(config: dict[str, Any], *, config_path: Path, artifact_path: str) -> dict[str, Any]:
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     resolved = _resolve_preview_path(artifact_path, base=base)
     if isinstance(resolved, dict):
         return resolved
@@ -125,7 +125,7 @@ class _DashboardPreviewRedactor:
 
 def _dashboard_private_values(config: dict[str, Any], *, config_path: Path) -> list[str]:
     values = set()
-    base = config_base(config_path)
+    base = artifact_base(config_path)
     if base.is_absolute():
         values.update({str(base), base.as_posix()})
     if config_path.is_absolute():

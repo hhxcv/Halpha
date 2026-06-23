@@ -29,6 +29,7 @@ def test_config_example_loads_successfully() -> None:
     config = load_config(Path("config.example.yaml"))
 
     assert config["run"]["output_dir"] == "runs"
+    assert config["logging"] == {"output_dir": "logs"}
     assert config["market"]["source"] == "binance"
     assert config["market"]["proxy"] == {"enabled": False}
     assert config["market"]["symbols"] == ["BTCUSDT", "ETHUSDT"]
@@ -117,11 +118,12 @@ def test_load_config_rejects_non_mapping_root(tmp_path: Path) -> None:
         load_config(config_path)
 
 
-@pytest.mark.parametrize("section", ["run", "market", "monitor", "quant", "text", "report", "codex"])
+@pytest.mark.parametrize("section", ["run", "logging", "market", "monitor", "quant", "text", "report", "codex"])
 def test_load_config_rejects_non_mapping_sections(tmp_path: Path, section: str) -> None:
     config_path = _write_valid_config(tmp_path)
     section_blocks = {
         "run": "run:\n  output_dir: runs",
+        "logging": "logging:\n  output_dir: logs",
         "market": (
             "market:\n"
             "  enabled: true\n"
@@ -237,6 +239,14 @@ def test_load_config_accepts_dashboard_display_timezone(tmp_path: Path) -> None:
     assert config["dashboard"] == {"display_timezone": "UTC"}
 
 
+def test_load_config_accepts_logging_output_dir(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+
+    config = load_config(config_path)
+
+    assert config["logging"] == {"output_dir": "logs"}
+
+
 @pytest.mark.parametrize(
     ("block", "expected"),
     [
@@ -257,6 +267,29 @@ def test_load_config_rejects_invalid_dashboard_config(
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace("quant:\n", f"{block}\n\nquant:\n"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("block", "expected"),
+    [
+        ("logging: invalid", "logging must be a mapping"),
+        ("logging:\n  output_dir: ''", "logging.output_dir"),
+        ("logging:\n  unsupported: true", "unsupported logging field"),
+    ],
+)
+def test_load_config_rejects_invalid_logging_config(
+    tmp_path: Path,
+    block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace("logging:\n  output_dir: logs", block),
         encoding="utf-8",
     )
 
@@ -1372,6 +1405,8 @@ def _write_valid_config(tmp_path: Path) -> Path:
         """
 run:
   output_dir: runs
+logging:
+  output_dir: logs
 market:
   enabled: true
   source: binance

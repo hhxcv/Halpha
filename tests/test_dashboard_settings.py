@@ -46,6 +46,7 @@ NON_EDITABLE_CONFIG_PATTERNS = (
     "codex.args",
     "codex.command",
     "codex.timeout_seconds",
+    "logging.output_dir",
     "market.ohlcv.storage_dir",
     "monitor.enabled",
     "monitor.output_dir",

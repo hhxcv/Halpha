@@ -5,9 +5,11 @@ daily validation, bug reproduction, and local issue investigation. They do not
 replace run manifests, dashboard job records, monitor artifacts, product
 validation, or source artifacts.
 
-Default runtime logs are written to `logs/halpha.log` beside the active config
-base. Log rotation keeps bounded local files. Logs are local artifacts and are
-not telemetry.
+Default runtime logs are written to `logs/halpha.log` under the current working
+directory. `logging.output_dir` may choose a different local log directory; a
+relative value still resolves from the current working directory, not from the
+config file location. Log rotation keeps bounded local files. Logs are local
+artifacts and are not telemetry.
 
 ## Privacy Boundary
 

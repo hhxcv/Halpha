@@ -12,6 +12,11 @@ from halpha.pipeline import run_pipeline
 from halpha.quant.registry import get_strategy_definition
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     definition = get_strategy_definition("tsmom_vol_scaled")
     breakout = get_strategy_definition("breakout_atr_trend")

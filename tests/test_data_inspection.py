@@ -12,6 +12,11 @@ from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_data_inspect_reports_missing_optional_stores_without_private_config_values(
     tmp_path: Path,
     capsys,

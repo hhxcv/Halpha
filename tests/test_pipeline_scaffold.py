@@ -13,6 +13,11 @@ from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline, run_pipeli
 from halpha.pipeline_stages import StageSelectionError, stages_after, validate_optional_stage, validate_stage
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -296,6 +301,45 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
     assert manifest["stages"][0]["finished_at"] == "2026-06-05T00:30:00Z"
     assert manifest["finished_at"] == "2026-06-05T00:30:00Z"
     _assert_manifest_timeline(manifest)
+
+
+def test_pipeline_uses_cwd_artifact_root_for_subdirectory_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    config_path = Path("configs/local.yaml")
+    (tmp_path / config_path).write_text(
+        """
+run:
+  output_dir: runs
+market:
+  enabled: false
+text:
+  enabled: false
+  sources: []
+report:
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_market_data",
+        now=datetime(2026, 6, 20, tzinfo=timezone.utc),
+        stage_handlers={"collect_market_data": lambda config, run: []},
+    )
+
+    assert result.succeeded is True
+    assert result.run.run_dir.parent == tmp_path / "runs"
+    assert not (config_dir / "runs").exists()
 
 
 def test_cli_run_reports_report_manifest_and_zero_exit(tmp_path: Path, capsys, monkeypatch) -> None:

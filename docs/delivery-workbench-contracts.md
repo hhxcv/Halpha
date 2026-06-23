@@ -54,6 +54,10 @@ runs/workbench/latest/index.md
 runs/workbench/latest/index.html
 ```
 
+The default workbench directory is a runtime artifact directory. Relative
+workbench output paths resolve from the current working directory, not from the
+config file location.
+
 `workbench inspect` is read-only and prints a bounded summary of the latest
 workbench state.
 

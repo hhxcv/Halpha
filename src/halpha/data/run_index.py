@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from halpha.storage import display_path
+from halpha.storage import artifact_base, display_path
 
 if TYPE_CHECKING:
     from halpha.runtime.pipeline_contracts import RunContext
@@ -43,7 +43,7 @@ def write_run_index(run: RunContext, *, now: datetime | str | None = None) -> di
 
 
 def run_index_path(config_path: Path) -> Path:
-    return config_path.parent / RUN_INDEX_ARTIFACT
+    return artifact_base(config_path) / RUN_INDEX_ARTIFACT
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:
@@ -115,8 +115,8 @@ def _replace_run(connection: sqlite3.Connection, run: RunContext) -> None:
         """,
         (
             run.run_id,
-            display_path(run.run_dir, base=run.config_path.parent),
-            display_path(run.config_path, base=run.config_path.parent),
+            display_path(run.run_dir, base=artifact_base(run.config_path)),
+            display_path(run.config_path, base=artifact_base(run.config_path)),
             _optional_string(manifest.get("started_at")),
             _optional_string(manifest.get("finished_at")),
             str(manifest.get("status") or "unknown"),
@@ -126,7 +126,7 @@ def _replace_run(connection: sqlite3.Connection, run: RunContext) -> None:
             else None,
             _warning_count(manifest),
             _error_count(manifest),
-            display_path(run.manifest_path, base=run.config_path.parent),
+            display_path(run.manifest_path, base=artifact_base(run.config_path)),
         ),
     )
 
