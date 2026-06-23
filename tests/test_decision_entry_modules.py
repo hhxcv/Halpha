@@ -22,6 +22,17 @@ def test_decision_entry_modules_do_not_import_private_monolith_builders() -> Non
         assert "_build_" not in source
 
 
+def test_market_regime_builder_is_owned_by_entry_module() -> None:
+    adapter_source = Path("src/halpha/decision/decision_artifact_builders.py").read_text(encoding="utf-8")
+    monolith_source = Path("src/halpha/decision/decision_intelligence.py").read_text(encoding="utf-8")
+
+    assert "_build_market_regime_assessment_artifact" not in adapter_source
+    assert "def _build_market_regime_assessment_artifact" not in monolith_source
+    assert "def build_market_regime_assessment(" in Path(
+        "src/halpha/decision/market_regime_assessment.py"
+    ).read_text(encoding="utf-8")
+
+
 def test_decision_entry_modules_preserve_quant_disabled_outputs(tmp_path: Path) -> None:
     cases: list[tuple[Callable[..., list[str]], str]] = [
         (build_market_regime_assessment, "market_regime_records"),
