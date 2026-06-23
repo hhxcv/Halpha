@@ -7,10 +7,11 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from halpha.data.public_capabilities import SUPPORTED_DERIVATIVES_MARKET_SOURCES
+from halpha.runtime.public_http import urlopen_from_public_proxy
 
 BINANCE_USDM_BASE_URL = "https://fapi.binance.com"
 MARKET_TYPE = "usd_m_futures"
@@ -119,7 +120,13 @@ class PublicDerivativesSource:
         urlopen_func: Callable[..., Any] | None = None,
     ) -> None:
         self.source = _require_supported_source(source)
-        self._urlopen = urlopen_func or _urlopen_from_proxy(proxy_url)
+        self._urlopen = urlopen_func or urlopen_from_public_proxy(
+            proxy_url,
+            error_factory=DerivativesSourceError,
+            default_urlopen=urlopen,
+            proxy_handler_factory=ProxyHandler,
+            opener_factory=build_opener,
+        )
 
     def fetch_records(
         self,
@@ -490,28 +497,6 @@ def _require_supported_source(source: str) -> str:
         supported = ", ".join(sorted(SUPPORTED_DERIVATIVES_MARKET_SOURCES))
         raise DerivativesSourceError(f"unsupported derivatives source: {source}. Supported sources: {supported}.")
     return source
-
-
-def _urlopen_from_proxy(proxy_url: str | None):
-    proxy_url = _normalize_proxy_url(proxy_url)
-    if proxy_url is None:
-        return urlopen
-    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
-    return opener.open
-
-
-def _normalize_proxy_url(value: str | None) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value.strip():
-        raise DerivativesSourceError("market.proxy.url must be a non-empty string.")
-    proxy_url = value.strip()
-    parsed = urlparse(proxy_url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise DerivativesSourceError("market.proxy.url must be an http or https URL.")
-    if parsed.username or parsed.password:
-        raise DerivativesSourceError("market.proxy.url must not include credentials.")
-    return proxy_url
 
 
 def _require_request_spec(request_class: str) -> _RequestSpec:

@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from halpha.data.public_capabilities import (
@@ -14,6 +14,7 @@ from halpha.data.public_capabilities import (
 )
 from halpha.data.raw_artifacts import RawArtifactError, validate_onchain_flow_raw_artifact
 from halpha.runtime.pipeline_contracts import RunContext
+from halpha.runtime.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
 from halpha.storage import write_json
 
 
@@ -45,7 +46,7 @@ def collect_onchain_flow_data(config: dict[str, Any], run: RunContext) -> list[s
 
     raw = collect_onchain_flow_raw(
         onchain_flow,
-        proxy_url=_proxy_url_from_market_config(config),
+        proxy_url=market_proxy_url_from_config(config, error_factory=OnchainFlowCollectionError),
     )
     artifact_path = run.raw_dir / "onchain_flow.json"
     write_json(artifact_path, raw)
@@ -279,7 +280,13 @@ def _collect_blockchain_chart(
 
 def _request_json(source_url: str, *, proxy_url: str | None) -> Any:
     request = Request(source_url, headers={"User-Agent": "Halpha/0.0.0"})
-    urlopen_func = _urlopen_from_proxy(proxy_url)
+    urlopen_func = urlopen_from_public_proxy(
+        proxy_url,
+        error_factory=OnchainFlowCollectionError,
+        default_urlopen=urlopen,
+        proxy_handler_factory=ProxyHandler,
+        opener_factory=build_opener,
+    )
     try:
         with urlopen_func(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read()
@@ -564,41 +571,6 @@ def _parse_error(
 def _onchain_flow_config(config: dict[str, Any]) -> dict[str, Any]:
     onchain_flow = config.get("onchain_flow")
     return onchain_flow if isinstance(onchain_flow, dict) else {}
-
-
-def _proxy_url_from_market_config(config: dict[str, Any]) -> str | None:
-    market = config.get("market")
-    if not isinstance(market, dict):
-        return None
-    proxy = market.get("proxy")
-    if not isinstance(proxy, dict) or proxy.get("enabled") is not True:
-        return None
-    value = proxy.get("url")
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    return None
-
-
-def _urlopen_from_proxy(proxy_url: str | None):
-    proxy_url = _normalize_proxy_url(proxy_url)
-    if proxy_url is None:
-        return urlopen
-    opener = build_opener(ProxyHandler({"http": proxy_url, "https": proxy_url}))
-    return opener.open
-
-
-def _normalize_proxy_url(value: str | None) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value.strip():
-        raise OnchainFlowCollectionError("market.proxy.url must be a non-empty string.")
-    proxy_url = value.strip()
-    parsed = urlparse(proxy_url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise OnchainFlowCollectionError("market.proxy.url must be an http or https URL.")
-    if parsed.username or parsed.password:
-        raise OnchainFlowCollectionError("market.proxy.url must not include credentials.")
-    return proxy_url
 
 
 def _string_list(value: Any) -> list[str]:

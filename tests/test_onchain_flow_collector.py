@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import URLError
 
+from halpha.collectors.onchain_flow import collect_onchain_flow_raw
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 
@@ -169,6 +170,59 @@ def test_onchain_flow_records_exchange_flow_unavailable_without_request(tmp_path
             ),
         }
     ]
+
+
+def test_onchain_flow_uses_configured_public_proxy(monkeypatch) -> None:
+    proxy_handlers: list[dict[str, str]] = []
+    requested_urls: list[str] = []
+
+    def fake_proxy_handler(proxies: dict[str, str]) -> dict[str, str]:
+        proxy_handlers.append(proxies)
+        return proxies
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            requested_urls.append(request.full_url)
+            return _FakeResponse(_stablecoin_payload())
+
+    def fake_build_opener(handler):
+        assert handler == {"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}
+        return FakeOpener()
+
+    monkeypatch.setattr("halpha.collectors.onchain_flow.ProxyHandler", fake_proxy_handler)
+    monkeypatch.setattr("halpha.collectors.onchain_flow.build_opener", fake_build_opener)
+
+    raw = collect_onchain_flow_raw(
+        {
+            "source": "public_aggregate",
+            "data_classes": ["stablecoin_supply"],
+            "lookback_days": 7,
+        },
+        proxy_url=" http://proxy.example:8080 ",
+        now=datetime(2026, 6, 19, tzinfo=timezone.utc),
+    )
+
+    assert raw["errors"] == []
+    assert requested_urls == ["https://stablecoins.llama.fi/stablecoincharts/all"]
+    assert proxy_handlers == [{"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}]
+
+
+def test_onchain_flow_records_proxy_credentials_error_without_echoing_secret() -> None:
+    raw = collect_onchain_flow_raw(
+        {
+            "source": "public_aggregate",
+            "data_classes": ["stablecoin_supply"],
+        },
+        proxy_url="http://user:password@proxy.example:8080",
+        now=datetime(2026, 6, 19, tzinfo=timezone.utc),
+    )
+
+    message = raw["errors"][0]["message"]
+    assert message == "market.proxy.url must not include credentials."
+    assert raw["availability"][0]["status"] == "failed"
+    assert "user" not in message
+    assert "password" not in message
+    assert "proxy.example" not in message
 
 
 def _write_config(
