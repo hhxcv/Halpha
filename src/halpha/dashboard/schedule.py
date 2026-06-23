@@ -85,6 +85,14 @@ class DashboardScheduleManager:
 
     def enable_daily_report_schedule(self, request: dict[str, Any]) -> dict[str, Any]:
         update = dict(request if isinstance(request, dict) else {})
+        if "job_intent" not in update:
+            current = self.read_daily_report_schedule()
+            if current["status"] == "failed":
+                return current
+            return self._blocked_daily_report_state(
+                current,
+                "job_intent must be selected before enabling the daily report schedule.",
+            )
         update["enabled"] = True
         return self.update_daily_report_schedule(update)
 
