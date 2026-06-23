@@ -9,13 +9,13 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from halpha.dashboard.jobs import DashboardJobManager
+from halpha.dashboard.paths import dashboard_control_path, dashboard_control_ref
 from halpha.dashboard.time import parse_utc_timestamp
-from halpha.storage import artifact_base as _artifact_base, write_json
+from halpha.storage import write_json
 
 
-DASHBOARD_SCHEDULES_DIR = "runs/dashboard/schedules"
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
-DAILY_REPORT_SCHEDULE_ARTIFACT = f"{DASHBOARD_SCHEDULES_DIR}/{DAILY_REPORT_SCHEDULE_FILENAME}"
+DAILY_REPORT_SCHEDULE_ARTIFACT = dashboard_control_ref("schedules", DAILY_REPORT_SCHEDULE_FILENAME)
 MAX_LINKED_JOB_IDS = 20
 DAILY_REPORT_DISPATCH_INTERVAL_SECONDS = 30
 SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run", "run_no_codex"}
@@ -33,9 +33,8 @@ class DashboardScheduleManager:
     ) -> None:
         self.config = config
         self.config_path = Path(config_path)
-        self.base = _artifact_base(self.config_path)
         self.job_manager = job_manager
-        self.daily_report_path = self.base / DAILY_REPORT_SCHEDULE_ARTIFACT
+        self.daily_report_path = dashboard_control_path("schedules", DAILY_REPORT_SCHEDULE_FILENAME)
         self._dispatch_lock = threading.Lock()
         self._dispatcher_stop = threading.Event()
         self._dispatcher_thread: threading.Thread | None = None

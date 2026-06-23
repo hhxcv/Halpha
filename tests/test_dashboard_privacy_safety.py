@@ -116,7 +116,8 @@ def test_dashboard_job_api_redacts_private_values_from_response_and_logs(
     detail_response = client.get(f"/api/jobs/{job_id}")
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     stderr_log = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
-    job_json = (tmp_path / "runs" / "dashboard" / "jobs" / job_id / "job.json").read_text(encoding="utf-8")
+    job_json = (tmp_path / ".halpha" / "dashboard" / "jobs" / job_id / "job.json").read_text(encoding="utf-8")
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
     assert completed["status"] == "succeeded"
     assert completed["logs"]["stdout_truncated"] is True

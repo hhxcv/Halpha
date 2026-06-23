@@ -25,7 +25,7 @@ def test_run_dashboard_service_records_and_clears_service_state(
 ) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    state_path = tmp_path / "runs" / "dashboard" / "service_state.json"
+    state_path = tmp_path / ".halpha" / "dashboard" / "service_state.json"
     fake_uvicorn = _FakeUvicorn(
         on_run=lambda _app, **_kwargs: _assert_running_state(
             state_path,
@@ -41,6 +41,7 @@ def test_run_dashboard_service_records_and_clears_service_state(
 
     assert fake_uvicorn.calls == [{"host": "127.0.0.1", "port": 8765}]
     assert not state_path.exists()
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_run_dashboard_service_restarts_matching_existing_dashboard(
@@ -49,7 +50,7 @@ def test_run_dashboard_service_restarts_matching_existing_dashboard(
 ) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    state_path = tmp_path / "runs" / "dashboard" / "service_state.json"
+    state_path = tmp_path / ".halpha" / "dashboard" / "service_state.json"
     write_json(
         state_path,
         {
@@ -81,6 +82,7 @@ def test_run_dashboard_service_restarts_matching_existing_dashboard(
     assert terminated == [4321]
     assert fake_uvicorn.calls == [{"host": "127.0.0.1", "port": 8765}]
     assert not state_path.exists()
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_run_dashboard_service_rejects_non_halpha_occupied_port(
@@ -105,7 +107,8 @@ def test_run_dashboard_service_rejects_non_halpha_occupied_port(
 
     assert "already in use by a non-Halpha or unresponsive local service" in str(exc.value)
     assert fake_uvicorn.calls == []
-    assert not (tmp_path / "runs" / "dashboard" / "service_state.json").exists()
+    assert not (tmp_path / ".halpha" / "dashboard" / "service_state.json").exists()
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_dashboard_process_is_alive_treats_missing_tasklist_stdout_as_not_alive(
