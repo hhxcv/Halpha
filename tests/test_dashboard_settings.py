@@ -19,8 +19,27 @@ from halpha.dashboard.settings import (
 EXPECTED_EDITABLE_CONFIG_PATHS = {
     "codex.enabled",
     "dashboard.display_timezone",
+    "macro_calendar.data_classes",
     "macro_calendar.enabled",
+    "macro_calendar.lookahead_days",
+    "macro_calendar.lookback_days",
+    "macro_calendar.regions",
+    "macro_calendar.source",
+    "market.derivatives.data_classes",
     "market.derivatives.enabled",
+    "market.derivatives.lookback.12h",
+    "market.derivatives.lookback.15m",
+    "market.derivatives.lookback.1d",
+    "market.derivatives.lookback.1h",
+    "market.derivatives.lookback.2h",
+    "market.derivatives.lookback.30m",
+    "market.derivatives.lookback.4h",
+    "market.derivatives.lookback.5m",
+    "market.derivatives.lookback.6h",
+    "market.derivatives.lookback.8h",
+    "market.derivatives.periods",
+    "market.derivatives.source",
+    "market.derivatives.symbols",
     "market.enabled",
     "market.ohlcv.lookback.1d",
     "market.ohlcv.lookback.1h",
@@ -32,7 +51,12 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "monitor.interval_seconds",
     "monitor.max_cycles",
     "monitor.no_codex",
+    "onchain_flow.assets",
+    "onchain_flow.chains",
+    "onchain_flow.data_classes",
     "onchain_flow.enabled",
+    "onchain_flow.lookback_days",
+    "onchain_flow.source",
     "quant.enabled",
     "report.language",
     "report.title",
@@ -40,6 +64,25 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "text.enabled",
     "text.intelligence.allow_model_download",
     "text.intelligence.enabled",
+    "text.intelligence.model_cache_dir",
+    "text.intelligence.models.classifier.name",
+    "text.intelligence.models.classifier.provider",
+    "text.intelligence.models.classifier.revision",
+    "text.intelligence.models.embedding.name",
+    "text.intelligence.models.embedding.provider",
+    "text.intelligence.models.embedding.revision",
+    "text.intelligence.models.ner.name",
+    "text.intelligence.models.ner.provider",
+    "text.intelligence.models.ner.revision",
+    "text.intelligence.models.sentiment.name",
+    "text.intelligence.models.sentiment.provider",
+    "text.intelligence.models.sentiment.revision",
+    "text.intelligence.thresholds.classifier_accept_score",
+    "text.intelligence.thresholds.classifier_top_margin",
+    "text.intelligence.thresholds.duplicate_similarity",
+    "text.intelligence.thresholds.entity_accept_score",
+    "text.intelligence.thresholds.max_topic_window_hours",
+    "text.intelligence.thresholds.same_topic_similarity",
     "text.max_items",
 }
 NON_EDITABLE_CONFIG_PATTERNS = (
@@ -47,18 +90,20 @@ NON_EDITABLE_CONFIG_PATTERNS = (
     "codex.command",
     "codex.timeout_seconds",
     "logging.output_dir",
+    "macro_calendar.source_url",
     "market.ohlcv.storage_dir",
+    "market.proxy.url",
     "monitor.enabled",
     "monitor.output_dir",
     "monitor.target_stage",
+    "onchain_flow.chain_activity_source_url",
+    "onchain_flow.network_congestion_source_url",
+    "onchain_flow.stablecoin_source_url",
     "quant.effectiveness_gates.**",
     "quant.engine",
     "quant.parameter_diagnostics.**",
     "quant.strategies[].**",
     "run.output_dir",
-    "text.intelligence.model_cache_dir",
-    "text.intelligence.models.**",
-    "text.intelligence.thresholds.**",
     "text.sources[].**",
     "user_state.**",
 )
@@ -88,7 +133,7 @@ def test_dashboard_settings_field_contract_is_explicit() -> None:
     for field in CONFIG_PROFILE_FIELDS:
         assert field["section"] in CONFIG_PROFILE_SECTIONS
         assert field["control"] in {"multi_select", "number", "select", "tags", "text", "toggle"}
-        assert field["value_type"] in {"bool", "positive_int", "string", "string_list"}
+        assert field["value_type"] in {"bool", "positive_int", "string", "string_list", "unit_interval_number"}
         if field["control"] in {"multi_select", "select"}:
             assert field.get("options")
         assert str(field["description"]).strip()
@@ -99,7 +144,6 @@ def test_dashboard_settings_config_example_paths_are_classified() -> None:
     leaf_paths = set(_config_leaf_paths(config))
     classified_paths = {path for path in leaf_paths if path in EXPECTED_EDITABLE_CONFIG_PATHS or _is_non_editable_path(path)}
 
-    assert EXPECTED_EDITABLE_CONFIG_PATHS <= leaf_paths
     assert classified_paths == leaf_paths
 
 
@@ -112,9 +156,12 @@ def test_dashboard_settings_profile_does_not_expose_local_private_config_values(
         "codex.args",
         "codex.command",
         "codex.timeout_seconds",
+        "macro_calendar.source_url",
         "market.proxy.url",
         "monitor.enabled",
-        "text.intelligence.model_cache_dir",
+        "onchain_flow.chain_activity_source_url",
+        "onchain_flow.network_congestion_source_url",
+        "onchain_flow.stablecoin_source_url",
         "text.sources[].url",
         "user_state.path",
     ]:
@@ -197,6 +244,163 @@ def test_dashboard_settings_save_validation_failure_preserves_config_and_cleans_
     assert str(tmp_path) not in str(result)
 
 
+def test_dashboard_settings_enabling_capabilities_materializes_editable_defaults(tmp_path: Path) -> None:
+    config_path = _write_market_enabled_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "macro_calendar.enabled": True,
+                "onchain_flow.enabled": True,
+                "market.derivatives.enabled": True,
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    assert result["changed_paths"] == [
+        "macro_calendar.enabled",
+        "market.derivatives.enabled",
+        "onchain_flow.enabled",
+    ]
+    saved = load_config(config_path)
+    assert saved["market"]["derivatives"] == {
+        "enabled": True,
+        "source": "binance_usdm",
+        "symbols": ["BTCUSDT", "ETHUSDT"],
+        "data_classes": ["funding_rate", "open_interest", "premium_index"],
+        "periods": ["1h", "4h", "1d"],
+        "lookback": {"1h": 720, "4h": 180, "1d": 90},
+    }
+    assert saved["macro_calendar"] == {
+        "enabled": True,
+        "source": "federal_reserve_fomc",
+        "data_classes": ["central_bank_event"],
+        "regions": ["US"],
+        "lookback_days": 7,
+        "lookahead_days": 45,
+    }
+    assert saved["onchain_flow"] == {
+        "enabled": True,
+        "source": "public_aggregate",
+        "data_classes": [
+            "stablecoin_supply",
+            "chain_activity",
+            "network_congestion",
+            "exchange_flow_availability",
+        ],
+        "assets": ["ALL_STABLECOINS", "BTC"],
+        "chains": ["all", "bitcoin"],
+        "lookback_days": 7,
+    }
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_derivatives_periods_materialize_matching_lookback(tmp_path: Path) -> None:
+    config_path = _write_market_enabled_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "market.derivatives.enabled": True,
+                "market.derivatives.periods": ["8h"],
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    saved = load_config(config_path)
+    assert saved["market"]["derivatives"]["periods"] == ["8h"]
+    assert saved["market"]["derivatives"]["lookback"] == {"8h": 90}
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_enabling_text_intelligence_materializes_model_defaults(tmp_path: Path) -> None:
+    config_path = _write_text_enabled_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "text.intelligence.enabled": True,
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    assert result["changed_paths"] == ["text.intelligence.enabled"]
+    saved = load_config(config_path)
+    assert saved["text"]["intelligence"] == {
+        "enabled": True,
+        "model_cache_dir": "data/models/text",
+        "allow_model_download": False,
+        "models": {
+            "embedding": {
+                "provider": "sentence_transformers",
+                "name": "sentence-transformers/all-MiniLM-L6-v2",
+                "revision": "pinned",
+            },
+            "classifier": {
+                "provider": "transformers_zero_shot",
+                "name": "facebook/bart-large-mnli",
+                "revision": "pinned",
+            },
+            "sentiment": {
+                "provider": "transformers_text_classification",
+                "name": "ProsusAI/finbert",
+                "revision": "pinned",
+            },
+            "ner": {
+                "provider": "gliner",
+                "name": "urchade/gliner_medium-v2.1",
+                "revision": "pinned",
+            },
+        },
+        "thresholds": {
+            "duplicate_similarity": 0.92,
+            "same_topic_similarity": 0.82,
+            "classifier_accept_score": 0.65,
+            "classifier_top_margin": 0.1,
+            "entity_accept_score": 0.5,
+            "max_topic_window_hours": 48,
+        },
+    }
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_accepts_text_intelligence_threshold_changes(tmp_path: Path) -> None:
+    config_path = _write_text_enabled_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "text.intelligence.enabled": True,
+                "text.intelligence.thresholds.duplicate_similarity": 0.9,
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    saved = load_config(config_path)
+    assert saved["text"]["intelligence"]["thresholds"]["duplicate_similarity"] == 0.9
+    assert str(tmp_path) not in str(result)
+
+
 def _write_config(tmp_path: Path) -> Path:
     path = tmp_path / "config.local.yaml"
     path.write_text(
@@ -218,6 +422,40 @@ dashboard:
         encoding="utf-8",
     )
     return path
+
+
+def _write_market_enabled_config(tmp_path: Path) -> Path:
+    config_path = _write_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "market:\n  enabled: false",
+            "market:\n  enabled: true\n  source: binance\n  symbols:\n    - BTCUSDT\n    - ETHUSDT",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_text_enabled_config(tmp_path: Path) -> Path:
+    config_path = _write_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "text:\n  enabled: false\n  sources: []",
+            """
+text:
+  enabled: true
+  max_items: 30
+  sources:
+    - name: coindesk
+      type: rss
+      url: https://www.coindesk.com/arc/outboundfeeds/rss/
+""".strip(),
+            1,
+        ),
+        encoding="utf-8",
+    )
+    return config_path
 
 
 def _config_leaf_paths(value: Any, prefix: str = "") -> list[str]:

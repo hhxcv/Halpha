@@ -10,10 +10,82 @@ from typing import Any
 from uuid import uuid4
 
 from halpha.config import ConfigError, load_config
+from halpha.data.public_capabilities import (
+    SUPPORTED_DERIVATIVES_DATA_CLASSES,
+    SUPPORTED_DERIVATIVES_MARKET_SOURCES,
+    SUPPORTED_DERIVATIVES_PERIODS,
+    SUPPORTED_MACRO_CALENDAR_DATA_CLASSES,
+    SUPPORTED_MACRO_CALENDAR_REGIONS,
+    SUPPORTED_MACRO_CALENDAR_SOURCES,
+    SUPPORTED_ONCHAIN_FLOW_ASSETS,
+    SUPPORTED_ONCHAIN_FLOW_CHAINS,
+    SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
+    SUPPORTED_ONCHAIN_FLOW_SOURCES,
+)
 from halpha.storage import artifact_base, config_base, safe_local_ref
 
 
 CONFIG_BACKUP_DIR = "runs/dashboard/config_backups"
+DERIVATIVES_PERIOD_OPTIONS = tuple(
+    period
+    for period in ("5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d")
+    if period in SUPPORTED_DERIVATIVES_PERIODS
+)
+DERIVATIVES_LOOKBACK_DEFAULTS = {
+    "5m": 720,
+    "15m": 720,
+    "30m": 720,
+    "1h": 720,
+    "2h": 360,
+    "4h": 180,
+    "6h": 120,
+    "8h": 90,
+    "12h": 90,
+    "1d": 90,
+}
+DERIVATIVES_DATA_CLASS_OPTIONS = tuple(
+    data_class
+    for data_class in ("funding_rate", "open_interest", "premium_index", "basis", "spread_depth", "liquidation_summary")
+    if data_class in SUPPORTED_DERIVATIVES_DATA_CLASSES
+)
+MACRO_CALENDAR_DATA_CLASS_OPTIONS = tuple(sorted(SUPPORTED_MACRO_CALENDAR_DATA_CLASSES))
+ONCHAIN_FLOW_DATA_CLASS_OPTIONS = tuple(
+    data_class
+    for data_class in ("stablecoin_supply", "chain_activity", "network_congestion", "exchange_flow_availability")
+    if data_class in SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES
+)
+ONCHAIN_FLOW_ASSET_OPTIONS = tuple(asset for asset in ("ALL_STABLECOINS", "BTC") if asset in SUPPORTED_ONCHAIN_FLOW_ASSETS)
+ONCHAIN_FLOW_CHAIN_OPTIONS = tuple(chain for chain in ("all", "bitcoin") if chain in SUPPORTED_ONCHAIN_FLOW_CHAINS)
+TEXT_INTELLIGENCE_MODEL_DEFAULTS = {
+    "embedding": {
+        "provider": "sentence_transformers",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "revision": "pinned",
+    },
+    "classifier": {
+        "provider": "transformers_zero_shot",
+        "name": "facebook/bart-large-mnli",
+        "revision": "pinned",
+    },
+    "sentiment": {
+        "provider": "transformers_text_classification",
+        "name": "ProsusAI/finbert",
+        "revision": "pinned",
+    },
+    "ner": {
+        "provider": "gliner",
+        "name": "urchade/gliner_medium-v2.1",
+        "revision": "pinned",
+    },
+}
+TEXT_INTELLIGENCE_THRESHOLD_DEFAULTS = {
+    "duplicate_similarity": 0.92,
+    "same_topic_similarity": 0.82,
+    "classifier_accept_score": 0.65,
+    "classifier_top_margin": 0.10,
+    "entity_accept_score": 0.50,
+    "max_topic_window_hours": 48,
+}
 CONFIG_PROFILE_SECTIONS = (
     "General",
     "Market data",
@@ -107,8 +179,58 @@ CONFIG_PROFILE_FIELDS = (
         "path": "market.derivatives.enabled",
         "control": "toggle",
         "value_type": "bool",
-        "description": "Collect public derivatives market evidence when the derivatives source is configured.",
+        "description": "Collect public derivatives market evidence.",
     },
+    {
+        "section": "Market data",
+        "label": "Derivatives source",
+        "path": "market.derivatives.source",
+        "control": "select",
+        "value_type": "string",
+        "options": tuple(sorted(SUPPORTED_DERIVATIVES_MARKET_SOURCES)),
+        "description": "Public derivatives market data source.",
+    },
+    {
+        "section": "Market data",
+        "label": "Derivatives symbols",
+        "path": "market.derivatives.symbols",
+        "control": "tags",
+        "value_type": "string_list",
+        "default_from": "market.symbols",
+        "description": "Comma-separated symbols used for derivatives evidence.",
+    },
+    {
+        "section": "Market data",
+        "label": "Derivatives data classes",
+        "path": "market.derivatives.data_classes",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": DERIVATIVES_DATA_CLASS_OPTIONS,
+        "default": ("funding_rate", "open_interest", "premium_index"),
+        "description": "Derivatives evidence classes to collect and summarize.",
+    },
+    {
+        "section": "Market data",
+        "label": "Derivatives periods",
+        "path": "market.derivatives.periods",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": DERIVATIVES_PERIOD_OPTIONS,
+        "default": ("1h", "4h", "1d"),
+        "description": "Aggregation periods for derivatives history windows.",
+    },
+    *(
+        {
+            "section": "Market data",
+            "label": f"Derivatives lookback {period}",
+            "path": f"market.derivatives.lookback.{period}",
+            "control": "number",
+            "value_type": "positive_int",
+            "default": DERIVATIVES_LOOKBACK_DEFAULTS[period],
+            "description": f"History rows to retain for the {period} derivatives period.",
+        }
+        for period in DERIVATIVES_PERIOD_OPTIONS
+    ),
     {
         "section": "Strategy",
         "label": "Enable quant research",
@@ -208,6 +330,101 @@ CONFIG_PROFILE_FIELDS = (
     },
     {
         "section": "Intelligence sources",
+        "label": "Model cache directory",
+        "path": "text.intelligence.model_cache_dir",
+        "control": "text",
+        "value_type": "string",
+        "default": "data/models/text",
+        "description": "Relative directory for local text intelligence model files.",
+    },
+    *(
+        {
+            "section": "Intelligence sources",
+            "label": f"{role.title()} model provider",
+            "path": f"text.intelligence.models.{role}.provider",
+            "control": "select",
+            "value_type": "string",
+            "options": (model["provider"],),
+            "default": model["provider"],
+            "description": f"Provider used for the {role} text intelligence model.",
+        }
+        for role, model in TEXT_INTELLIGENCE_MODEL_DEFAULTS.items()
+    ),
+    *(
+        {
+            "section": "Intelligence sources",
+            "label": f"{role.title()} model name",
+            "path": f"text.intelligence.models.{role}.name",
+            "control": "text",
+            "value_type": "string",
+            "default": model["name"],
+            "description": f"Model identifier used for the {role} text intelligence model.",
+        }
+        for role, model in TEXT_INTELLIGENCE_MODEL_DEFAULTS.items()
+    ),
+    *(
+        {
+            "section": "Intelligence sources",
+            "label": f"{role.title()} model revision",
+            "path": f"text.intelligence.models.{role}.revision",
+            "control": "text",
+            "value_type": "string",
+            "default": model["revision"],
+            "description": f"Revision pin used for the {role} text intelligence model.",
+        }
+        for role, model in TEXT_INTELLIGENCE_MODEL_DEFAULTS.items()
+    ),
+    *(
+        {
+            "section": "Intelligence sources",
+            "label": label,
+            "path": f"text.intelligence.thresholds.{path}",
+            "control": "number",
+            "value_type": value_type,
+            "default": TEXT_INTELLIGENCE_THRESHOLD_DEFAULTS[path],
+            "description": description,
+        }
+        for path, label, value_type, description in (
+            (
+                "duplicate_similarity",
+                "Duplicate similarity",
+                "unit_interval_number",
+                "Similarity threshold used to mark duplicate text events.",
+            ),
+            (
+                "same_topic_similarity",
+                "Same-topic similarity",
+                "unit_interval_number",
+                "Similarity threshold used to group related text events.",
+            ),
+            (
+                "classifier_accept_score",
+                "Classifier accept score",
+                "unit_interval_number",
+                "Minimum zero-shot classifier score accepted as evidence.",
+            ),
+            (
+                "classifier_top_margin",
+                "Classifier top margin",
+                "unit_interval_number",
+                "Minimum margin between the top classifier label and runner-up.",
+            ),
+            (
+                "entity_accept_score",
+                "Entity accept score",
+                "unit_interval_number",
+                "Minimum entity extraction confidence accepted as evidence.",
+            ),
+            (
+                "max_topic_window_hours",
+                "Max topic window hours",
+                "positive_int",
+                "Maximum time window for text events to be grouped as one topic.",
+            ),
+        )
+    ),
+    {
+        "section": "Intelligence sources",
         "label": "Enable macro calendar",
         "path": "macro_calendar.enabled",
         "control": "toggle",
@@ -216,11 +433,106 @@ CONFIG_PROFILE_FIELDS = (
     },
     {
         "section": "Intelligence sources",
+        "label": "Macro calendar source",
+        "path": "macro_calendar.source",
+        "control": "select",
+        "value_type": "string",
+        "options": tuple(sorted(SUPPORTED_MACRO_CALENDAR_SOURCES)),
+        "description": "Public scheduled-event source.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Macro calendar data classes",
+        "path": "macro_calendar.data_classes",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": MACRO_CALENDAR_DATA_CLASS_OPTIONS,
+        "default": MACRO_CALENDAR_DATA_CLASS_OPTIONS,
+        "description": "Scheduled-event evidence classes to collect.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Macro calendar regions",
+        "path": "macro_calendar.regions",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": tuple(sorted(SUPPORTED_MACRO_CALENDAR_REGIONS)),
+        "default": ("US",),
+        "description": "Regions included in scheduled-event evidence.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Macro lookback days",
+        "path": "macro_calendar.lookback_days",
+        "control": "number",
+        "value_type": "positive_int",
+        "default": 7,
+        "description": "Past scheduled-event window in days.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "Macro lookahead days",
+        "path": "macro_calendar.lookahead_days",
+        "control": "number",
+        "value_type": "positive_int",
+        "default": 45,
+        "description": "Future scheduled-event window in days.",
+    },
+    {
+        "section": "Intelligence sources",
         "label": "Enable on-chain flow",
         "path": "onchain_flow.enabled",
         "control": "toggle",
         "value_type": "bool",
         "description": "Collect configured public on-chain and exchange-flow evidence.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "On-chain source",
+        "path": "onchain_flow.source",
+        "control": "select",
+        "value_type": "string",
+        "options": tuple(sorted(SUPPORTED_ONCHAIN_FLOW_SOURCES)),
+        "description": "Public aggregate on-chain evidence source.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "On-chain data classes",
+        "path": "onchain_flow.data_classes",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": ONCHAIN_FLOW_DATA_CLASS_OPTIONS,
+        "default": ONCHAIN_FLOW_DATA_CLASS_OPTIONS,
+        "description": "On-chain and exchange-flow evidence classes to collect.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "On-chain assets",
+        "path": "onchain_flow.assets",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": ONCHAIN_FLOW_ASSET_OPTIONS,
+        "default": ONCHAIN_FLOW_ASSET_OPTIONS,
+        "description": "Assets included in on-chain evidence.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "On-chain chains",
+        "path": "onchain_flow.chains",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": ONCHAIN_FLOW_CHAIN_OPTIONS,
+        "default": ONCHAIN_FLOW_CHAIN_OPTIONS,
+        "description": "Chains included in on-chain evidence.",
+    },
+    {
+        "section": "Intelligence sources",
+        "label": "On-chain lookback days",
+        "path": "onchain_flow.lookback_days",
+        "control": "number",
+        "value_type": "positive_int",
+        "default": 7,
+        "description": "Past on-chain evidence window in days.",
     },
 )
 
@@ -317,6 +629,7 @@ def dashboard_save_config_profile(
         changed_paths.append(path)
     if errors:
         return _config_save_result(config, config_path=config_path, status="failed", errors=errors)
+    _materialize_enabled_capability_defaults(next_config)
 
     serialized, error = _serialize_config_yaml(next_config)
     if error:
@@ -402,7 +715,7 @@ def _config_profile_field(config: dict[str, Any], field: dict[str, Any]) -> dict
     path = str(field["path"])
     value = _get_config_value(config, path)
     if value is None:
-        value = _config_profile_default(field)
+        value = _config_profile_default(config, field)
     result = {
         "section": field["section"],
         "label": field["label"],
@@ -425,7 +738,17 @@ def _config_profile_field_definition(path: str) -> dict[str, Any] | None:
     return None
 
 
-def _config_profile_default(field: dict[str, Any]) -> Any:
+def _config_profile_default(config: dict[str, Any], field: dict[str, Any]) -> Any:
+    default_from = field.get("default_from")
+    if isinstance(default_from, str):
+        value = _get_config_value(config, default_from)
+        if value is not None:
+            return deepcopy(value)
+    if "default" in field:
+        value = deepcopy(field["default"])
+        if field.get("value_type") == "string_list" and isinstance(value, tuple):
+            return list(value)
+        return value
     value_type = field.get("value_type")
     if value_type == "bool":
         return False
@@ -438,6 +761,35 @@ def _config_profile_default(field: dict[str, Any]) -> Any:
     if isinstance(options, tuple) and options:
         return options[0]
     return ""
+
+
+def _materialize_enabled_capability_defaults(config: dict[str, Any]) -> None:
+    for prefix in ("market.derivatives", "text.intelligence", "macro_calendar", "onchain_flow"):
+        if _get_config_value(config, f"{prefix}.enabled") is not True:
+            continue
+        for field in CONFIG_PROFILE_FIELDS:
+            path = str(field.get("path") or "")
+            if not path.startswith(f"{prefix}.") or path == f"{prefix}.enabled":
+                continue
+            if _get_config_value(config, path) is None:
+                _set_config_value(config, path, _config_profile_default(config, field))
+    _normalize_derivatives_lookback(config)
+
+
+def _normalize_derivatives_lookback(config: dict[str, Any]) -> None:
+    derivatives = _get_config_value(config, "market.derivatives")
+    if not isinstance(derivatives, dict) or derivatives.get("enabled") is not True:
+        return
+    periods = derivatives.get("periods")
+    if not isinstance(periods, list):
+        return
+    lookback = derivatives.get("lookback")
+    if not isinstance(lookback, dict):
+        lookback = {}
+    normalized = {}
+    for period in [str(item) for item in periods]:
+        normalized[period] = lookback.get(period, DERIVATIVES_LOOKBACK_DEFAULTS.get(period, 1))
+    derivatives["lookback"] = normalized
 
 
 def _get_config_value(config: dict[str, Any], path: str) -> Any:
@@ -477,6 +829,16 @@ def _coerce_config_profile_value(raw_value: Any, field: dict[str, Any]) -> tuple
             return None, "value must be a positive integer."
         if value <= 0:
             return None, "value must be a positive integer."
+        return value, None
+    if value_type == "unit_interval_number":
+        if isinstance(raw_value, bool):
+            return None, "value must be a number between 0 and 1."
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            return None, "value must be a number between 0 and 1."
+        if value < 0 or value > 1:
+            return None, "value must be a number between 0 and 1."
         return value, None
     if value_type == "string_list":
         if not isinstance(raw_value, list):

@@ -250,7 +250,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Topic volume over time" in response.text
     assert "Settings" in response.text
     assert "Config file" in response.text
-    assert "Storage maintenance" in response.text
+    assert "Storage maintenance" in script.text
     assert "DELETE RUN DATA" in script.text
     assert "empty-state" in response.text
     assert "No monitor cycles yet" in monitor_script.text

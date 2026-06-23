@@ -670,7 +670,7 @@ def _dashboard_process_is_alive(pid: int) -> bool:
             )
         except (OSError, subprocess.TimeoutExpired):
             return False
-        stdout = result.stdout.strip()
+        stdout = (result.stdout or "").strip()
         return result.returncode == 0 and str(pid) in stdout and "No tasks" not in stdout
     try:
         os.kill(pid, 0)

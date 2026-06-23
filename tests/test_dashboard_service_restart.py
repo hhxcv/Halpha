@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import sys
 from typing import Any
 
@@ -105,6 +106,19 @@ def test_run_dashboard_service_rejects_non_halpha_occupied_port(
     assert "already in use by a non-Halpha or unresponsive local service" in str(exc.value)
     assert fake_uvicorn.calls == []
     assert not (tmp_path / "runs" / "dashboard" / "service_state.json").exists()
+
+
+def test_dashboard_process_is_alive_treats_missing_tasklist_stdout_as_not_alive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(dashboard_app.sys, "platform", "win32")
+    monkeypatch.setattr(
+        dashboard_app.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=None),
+    )
+
+    assert dashboard_app._dashboard_process_is_alive(4321) is False
 
 
 def _assert_running_state(state_path: Path, *, host: str, port: int) -> None:
