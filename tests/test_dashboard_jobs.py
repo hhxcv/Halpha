@@ -9,7 +9,34 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
+from halpha.dashboard.job_commands import DashboardJobCommandBuilder, DashboardJobError
 from halpha.dashboard.jobs import DashboardJobManager, MAX_JOB_LOG_CHARS
+
+
+def test_dashboard_job_command_builder_builds_command_preview(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    builder = DashboardJobCommandBuilder(config, config_path=config_path, base=tmp_path)
+
+    command = builder.build("validate", {})
+
+    assert command.spec.intent == "validate"
+    assert command.preview == ["python", "-m", "halpha", "validate", "--config", "<external-config>"]
+    assert command.command[1:] == ["-m", "halpha", "validate", "--config", str(config_path.resolve())]
+
+
+def test_dashboard_job_command_builder_rejects_unsupported_intent(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    builder = DashboardJobCommandBuilder(config, config_path=config_path, base=tmp_path)
+
+    try:
+        builder.build("shell", {"command": "echo no"})
+    except DashboardJobError as exc:
+        assert exc.status == "unsupported"
+        assert str(exc) == "unsupported dashboard job intent: shell"
+    else:
+        raise AssertionError("unsupported intent must be rejected by command builder")
 
 
 def test_dashboard_job_api_rejects_unsupported_intent_before_process(
