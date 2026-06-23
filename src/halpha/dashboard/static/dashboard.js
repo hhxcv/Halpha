@@ -1678,10 +1678,10 @@
 
     async function enableDailyReport() {
       try {
-        const result = await postJson(`${endpoints.schedule}/enable`, {});
+        const result = await postJson(`${endpoints.schedule}/enable`, {job_intent: "run_no_codex"});
         state.schedule = result;
         renderMonitor();
-        showToast(`Daily report schedule ${result.status || "updated"}.`);
+        showToast(`No-Codex daily run schedule ${result.status || "updated"}.`);
       } catch (error) {
         showToast(`Schedule update failed: ${error.message}`);
       }

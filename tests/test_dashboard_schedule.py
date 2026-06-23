@@ -60,7 +60,7 @@ def test_dashboard_daily_report_schedule_enable_disable_and_persistence(
 
     enable_response = client.post(
         "/api/schedule/daily-report/enable",
-        json={"time_of_day": "08:30", "timezone": "UTC"},
+        json={"time_of_day": "08:30", "timezone": "UTC", "job_intent": "run_no_codex"},
     )
     read_response = TestClient(create_dashboard_app(config, config_path=config_path)).get("/api/schedule/daily-report")
     disable_response = client.post("/api/schedule/daily-report/disable")
@@ -72,8 +72,9 @@ def test_dashboard_daily_report_schedule_enable_disable_and_persistence(
     assert enabled["persisted"] is True
     assert enabled["settings"]["time_of_day"] == "08:30"
     assert enabled["settings"]["timezone"] == "UTC"
-    assert enabled["settings"]["job_intent"] == "run"
-    assert enabled["report_generation"]["generates_report"] is True
+    assert enabled["settings"]["job_intent"] == "run_no_codex"
+    assert enabled["report_generation"]["generates_report"] is False
+    assert enabled["report_generation"]["requires_codex_confirmation"] is False
     assert enabled["next_run_at"] == "2026-06-20T08:30:00Z"
     assert (tmp_path / "runs" / "dashboard" / "schedules" / "daily_report_schedule.json").is_file()
 
@@ -105,6 +106,21 @@ def test_dashboard_daily_report_schedule_rejects_invalid_input_before_persistenc
         assert payload["status"] == "blocked"
         assert payload["errors"] == [error]
 
+    assert not (tmp_path / "runs" / "dashboard" / "schedules" / "daily_report_schedule.json").exists()
+
+
+def test_dashboard_daily_report_schedule_enable_requires_explicit_mode(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post("/api/schedule/daily-report/enable", json={})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "blocked"
+    assert payload["enabled"] is False
+    assert payload["errors"] == ["job_intent must be selected before enabling the daily report schedule."]
     assert not (tmp_path / "runs" / "dashboard" / "schedules" / "daily_report_schedule.json").exists()
 
 
@@ -186,7 +202,7 @@ def test_dashboard_daily_report_schedule_codex_trigger_requires_confirmation(
     assert payload["errors"] == ["confirm_codex must be true to trigger a Codex-capable daily report job."]
 
 
-def test_dashboard_daily_report_schedule_confirmed_default_trigger_creates_report_job(
+def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_job(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -212,7 +228,10 @@ def test_dashboard_daily_report_schedule_confirmed_default_trigger_creates_repor
     monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
-    client.post("/api/schedule/daily-report/enable", json={"time_of_day": "08:30", "timezone": "UTC"})
+    client.post(
+        "/api/schedule/daily-report/enable",
+        json={"time_of_day": "08:30", "timezone": "UTC", "job_intent": "run"},
+    )
     trigger_response = client.post("/api/schedule/daily-report/trigger", json={"confirm_codex": True})
     trigger_payload = trigger_response.json()
     job_id = trigger_payload["job"]["job_id"]
@@ -226,6 +245,38 @@ def test_dashboard_daily_report_schedule_confirmed_default_trigger_creates_repor
     assert completed["intent"] == "run"
     assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>"]
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path)]]
+
+
+def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    current = {"value": datetime(2026, 6, 20, 0, 0, tzinfo=timezone.utc)}
+    monkeypatch.setattr("halpha.dashboard.schedule._utc_now_datetime", lambda: current["value"])
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    commands: list[list[str]] = []
+
+    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        commands.append(command)
+        return _FakeProcess(stdout="Halpha run succeeded.\nrun_id: run-auto", stderr="", returncode=0)
+
+    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
+    job_manager = DashboardJobManager(config, config_path=config_path)
+    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
+    enabled = schedule_manager.enable_daily_report_schedule(
+        {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run_no_codex"}
+    )
+    current["value"] = datetime(2026, 6, 20, 0, 2, tzinfo=timezone.utc)
+
+    result = schedule_manager.dispatch_due_daily_report()
+
+    assert enabled["settings"]["job_intent"] == "run_no_codex"
+    assert enabled["report_generation"]["generates_report"] is False
+    assert result["status"] == "available"
+    assert result["job"]["intent"] == "run_no_codex"
+    assert result["errors"] == []
+    assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path.resolve()), "--no-codex"]]
 
 
 def test_dashboard_daily_report_dispatcher_creates_due_no_codex_job(
