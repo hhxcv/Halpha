@@ -21,8 +21,13 @@ from halpha.text.text_event_topics import build_text_event_topics
 
 TEXT_INTELLIGENCE_MANIFEST = "manifest.json"
 TEXT_INTELLIGENCE_DEFAULT_DIR = "text_intelligence"
-SKIPPED_PROCESSORS = (
-    "build_event_market_confluence",
+OMITTED_CAPABILITIES = (
+    {
+        "name": "build_event_market_confluence",
+        "status": "omitted",
+        "reason": "not_available_in_standalone_text_intelligence",
+        "artifacts": [],
+    },
 )
 
 
@@ -86,7 +91,7 @@ def run_standalone_text_intelligence(
         _run_text_event_topics(config, run)
         _run_text_event_signals(config, run)
         _run_event_intelligence_material(config, run)
-        _record_skipped_processors(run)
+        _record_omitted_capabilities(run)
         _finish_manifest(run, status="succeeded")
         return StandaloneTextIntelligenceResult(
             succeeded=True,
@@ -98,7 +103,7 @@ def run_standalone_text_intelligence(
         )
     except StandaloneTextIntelligenceError as exc:
         _record_error(run, stage=exc.stage, message=str(exc))
-        _record_skipped_processors(run)
+        _record_omitted_capabilities(run)
         _finish_manifest(run, status="failed")
         return StandaloneTextIntelligenceResult(
             succeeded=False,
@@ -111,7 +116,7 @@ def run_standalone_text_intelligence(
     except PipelineError as exc:
         stage = exc.stage or "text_intelligence"
         _record_error(run, stage=stage, message=str(exc))
-        _record_skipped_processors(run)
+        _record_omitted_capabilities(run)
         _finish_manifest(run, status="failed")
         return StandaloneTextIntelligenceResult(
             succeeded=False,
@@ -299,19 +304,14 @@ def _run_event_intelligence_material(config: dict[str, Any], run: RunContext) ->
     )
 
 
-def _record_skipped_processors(run: RunContext) -> None:
-    existing = {str(processor.get("name")) for processor in run.manifest["processors"]}
-    for name in SKIPPED_PROCESSORS:
+def _record_omitted_capabilities(run: RunContext) -> None:
+    omitted = run.manifest.setdefault("omitted_capabilities", [])
+    existing = {str(capability.get("name")) for capability in omitted if isinstance(capability, dict)}
+    for capability in OMITTED_CAPABILITIES:
+        name = str(capability["name"])
         if name in existing:
             continue
-        run.manifest["processors"].append(
-            {
-                "name": name,
-                "status": "skipped",
-                "reason": "not_implemented",
-                "artifacts": [],
-            }
-        )
+        omitted.append(dict(capability))
 
 
 def _finish_manifest(run: RunContext, *, status: str) -> None:
@@ -324,6 +324,7 @@ def _finish_manifest(run: RunContext, *, status: str) -> None:
     run.manifest["counts"]["processors_skipped"] = sum(
         1 for processor in run.manifest["processors"] if processor.get("status") == "skipped"
     )
+    run.manifest["counts"]["omitted_capabilities"] = len(run.manifest.get("omitted_capabilities") or [])
     run.manifest["warnings"] = _unique_warnings(run.manifest["processors"])
     run.manifest.setdefault("errors", [])
     write_json(run.manifest_path, run.manifest)
@@ -359,6 +360,7 @@ def _initial_manifest(
         "counts": {},
         "model_states": [],
         "processors": [],
+        "omitted_capabilities": [],
         "warnings": [],
         "errors": [],
         "manifest_path": display_path(manifest_path, base=manifest_path.parent),
