@@ -19,6 +19,7 @@ STAGE_NAME = "run_codex_report"
 CODEX_PROMPT_ARTIFACT = "codex_context/prompt.md"
 REPORT_ARTIFACT = "report/report.md"
 STDERR_SUMMARY_LIMIT = 1000
+RISK_SECTION_HEADING_RE = re.compile(r"^##\s+风险提示\s*$", re.MULTILINE)
 
 
 def run_codex_report(config: dict[str, Any], run: RunContext) -> list[str]:
@@ -159,8 +160,8 @@ def _report_validation_error(report: str) -> str | None:
         return "Codex stdout was empty; report/report.md was not written."
     if not report.lstrip().startswith("#"):
         return "Codex stdout did not start with a Markdown heading; report/report.md was not written."
-    if "风险" not in report:
-        return "Codex stdout did not include a risk section; report/report.md was not written."
+    if RISK_SECTION_HEADING_RE.search(report) is None:
+        return "Codex stdout did not include a Markdown risk section heading; report/report.md was not written."
     return None
 
 
