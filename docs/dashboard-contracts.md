@@ -72,6 +72,18 @@ python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 
 The dashboard service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
+Dashboard startup writes local service state:
+
+```text
+runs/dashboard/service_state.json
+```
+
+Before binding, dashboard startup checks the requested local endpoint. If a
+matching Halpha dashboard backend is already running and has matching local
+service state, startup stops that process and then starts the new service. If
+the port is occupied by a non-Halpha or unresponsive local service, startup
+must fail with an actionable error and must not kill the unrelated process.
+
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
 `/assets/dashboard_dialogs.js`, `/assets/dashboard_reports.js`,
@@ -398,7 +410,7 @@ Codex must not generate:
 The dashboard must preserve the existing rule that Codex receives bounded
 report-facing material, not full raw artifacts, reusable histories, private
 user-state files, full workbench summaries, full dashboard job histories, or
-full dashboard schedule state by default.
+full dashboard service or schedule state by default.
 
 ## Validation
 

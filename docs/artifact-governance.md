@@ -368,14 +368,15 @@ generated indexes.
 ### Local Dashboard Control State
 
 Dashboard contracts are defined in `docs/dashboard-contracts.md`. Dashboard
-state records local web UI control metadata such as dashboard-triggered jobs,
-bounded logs, schedule state, and linked source refs.
+state records local web UI control metadata such as dashboard service state,
+dashboard-triggered jobs, bounded logs, schedule state, and linked source refs.
 It is control and delivery state, not upstream research evidence, validation
 authority, decision input, alert-priority source, strategy-gate input, or Codex
 context by default.
 
 Implemented dashboard control artifacts include:
 
+- `runs/dashboard/service_state.json`
 - `runs/dashboard/jobs/index.json`
 - `runs/dashboard/jobs/<job_id>/job.json`
 - `runs/dashboard/jobs/<job_id>/stdout.log`
@@ -445,7 +446,8 @@ Codex input policy:
 - Do not embed full reusable outcome history.
 - Do not embed full strategy lifecycle JSON or local lifecycle policy input.
 - Do not embed full workbench summaries or generated workbench indexes.
-- Do not embed full dashboard job histories, logs, or schedule state by default.
+- Do not embed full dashboard service state, job histories, logs, or schedule
+  state by default.
 - Do not embed full product contract validation artifacts by default.
 - Do not embed full reusable on-chain flow history.
 - Do not embed full feature snapshots, factor states, or multi-source signal
