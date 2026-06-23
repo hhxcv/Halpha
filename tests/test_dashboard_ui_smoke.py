@@ -11,6 +11,7 @@ from halpha.dashboard import create_dashboard_app
 from dashboard_asset_helpers import (
     dashboard_css,
     dashboard_dialogs_script,
+    dashboard_monitor_script,
     dashboard_reports_script,
     dashboard_script,
     dashboard_shell_html,
@@ -43,6 +44,7 @@ def test_dashboard_ui_source_sections_are_static_assets() -> None:
     assert '<script src="/assets/dashboard_dialogs.js" defer></script>' in shell
     assert '<script src="/assets/dashboard_reports.js" defer></script>' in shell
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in shell
+    assert '<script src="/assets/dashboard_monitor.js" defer></script>' in shell
     assert '<script src="/assets/dashboard.js" defer></script>' in shell
     assert "<style>" not in shell
     assert "\n  <script>\n" not in shell
@@ -57,6 +59,7 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     dialogs_script = client.get("/assets/dashboard_dialogs.js")
     reports_script = client.get("/assets/dashboard_reports.js")
     strategy_chart_script = client.get("/assets/dashboard_strategy_chart.js")
+    monitor_script = client.get("/assets/dashboard_monitor.js")
     script = client.get("/assets/dashboard.js")
     missing = client.get("/assets/missing.js")
 
@@ -66,11 +69,13 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     assert '<script src="/assets/dashboard_dialogs.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard_reports.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in html.text
+    assert '<script src="/assets/dashboard_monitor.js" defer></script>' in html.text
     assert '<script src="/assets/dashboard.js" defer></script>' in html.text
     assert html.text.index("/assets/dashboard_shared.js") < html.text.index("/assets/dashboard_dialogs.js")
     assert html.text.index("/assets/dashboard_dialogs.js") < html.text.index("/assets/dashboard_reports.js")
     assert html.text.index("/assets/dashboard_reports.js") < html.text.index("/assets/dashboard_strategy_chart.js")
-    assert html.text.index("/assets/dashboard_strategy_chart.js") < html.text.index("/assets/dashboard.js")
+    assert html.text.index("/assets/dashboard_strategy_chart.js") < html.text.index("/assets/dashboard_monitor.js")
+    assert html.text.index("/assets/dashboard_monitor.js") < html.text.index("/assets/dashboard.js")
     assert css.status_code == 200
     assert css.headers["content-type"].startswith("text/css")
     assert ".reports-layout" in css.text
@@ -86,6 +91,9 @@ def test_dashboard_static_assets_are_served(tmp_path: Path) -> None:
     assert strategy_chart_script.status_code == 200
     assert strategy_chart_script.headers["content-type"].startswith("application/javascript")
     assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
+    assert monitor_script.status_code == 200
+    assert monitor_script.headers["content-type"].startswith("application/javascript")
+    assert "window.HalphaDashboardMonitor" in monitor_script.text
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
     assert "function renderReportLibrary" in script.text
@@ -303,11 +311,15 @@ def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path)
     assert "state.generatedReportRunId" in script
     assert "postJob(intent, params = {})" in script
     assert "renderValidationJob(job)" in script
-    assert "startMonitorJob(intent)" in script
-    assert "enableDailyReport" in script
-    assert "renderMonitor()" in script
-    assert "renderMonitorAlertsTable" in script
-    assert "renderMonitorJobsTable" in script
+    assert "window.HalphaDashboardMonitor" in dashboard_monitor_script()
+    assert "createMonitorWorkflow" in dashboard_monitor_script()
+    assert "const monitorWorkflowModule = window.HalphaDashboardMonitor;" in script
+    assert "monitorWorkflow.wire();" in script
+    assert "startMonitorJob(intent)" in dashboard_monitor_script()
+    assert "enableDailyReport" in dashboard_monitor_script()
+    assert "renderMonitor()" in dashboard_monitor_script()
+    assert "renderMonitorAlertsTable" in dashboard_monitor_script()
+    assert "renderMonitorJobsTable" in dashboard_monitor_script()
 
 
 def test_dashboard_strategy_backtest_chart_shell_contracts_are_present(tmp_path: Path) -> None:

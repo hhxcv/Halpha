@@ -32,6 +32,10 @@
     if (!reportsWorkflow) {
       throw new Error("Halpha dashboard report helpers did not load.");
     }
+    const monitorWorkflowModule = window.HalphaDashboardMonitor;
+    if (!monitorWorkflowModule) {
+      throw new Error("Halpha dashboard monitor helpers did not load.");
+    }
     const {
       escapeHtml,
       text,
@@ -74,6 +78,24 @@
       selectedSharedStores: [],
       validationJob: null,
     };
+    const monitorWorkflow = monitorWorkflowModule.createMonitorWorkflow({
+      state,
+      endpoints,
+      loadMonitorPayload,
+      postJson,
+      postJob,
+      showToast,
+      escapeHtml,
+      text,
+      statusClass,
+      formatTimestamp,
+      label,
+      metricCell,
+      detailRow,
+      table,
+      durationBetween,
+      terminalJobStatus,
+    });
 
     function label(value) {
       return text(value, "unknown").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -204,7 +226,7 @@
       if (state.view === "overview") return refreshOverview();
       if (state.view === "reports") return refreshReports();
       if (state.view === "strategies") return refreshStrategies();
-      if (state.view === "monitor") return refreshMonitor();
+      if (state.view === "monitor") return monitorWorkflow.refreshMonitor();
       if (state.view === "intelligence") return refreshIntelligence();
       if (state.view === "settings") return refreshSettings();
     }
@@ -361,7 +383,7 @@
         detailRow("Trigger count", health.cycle_count ?? state.monitorCycles.length),
         detailRow("Last trigger time", formatTimestamp(latest.finished_at || latest.started_at)),
         detailRow("Next scheduled report", scheduleLabel),
-        detailRow("Recent alerts", alertCount(state.monitorAlerts)),
+        detailRow("Recent alerts", monitorWorkflow.alertCount(state.monitorAlerts)),
       ].join("");
     }
 
@@ -895,70 +917,6 @@
         return `"${textValue.replace(/"/g, '""')}"`;
       }
       return textValue;
-    }
-
-    async function refreshMonitor() {
-      await loadMonitorPayload();
-      renderMonitor();
-    }
-
-    function renderMonitor() {
-      const health = state.monitor?.health?.fields || {};
-      const monitorSettings = state.monitor?.settings || {};
-      const latest = state.monitor?.latest_cycle || {};
-      const alerts = alertCount(state.monitorAlerts);
-      const schedule = state.schedule || {};
-      const scheduleSettings = schedule.settings || {};
-      const reportGeneration = schedule.report_generation || {};
-      document.querySelector("#monitor-hero").innerHTML = [
-        metricCell("Monitor", latest.status === "running" ? "Running" : label(latest.status || health.latest_cycle_status || "Idle"), "current state"),
-        metricCell("Last cycle", formatTimestamp(latest.finished_at || latest.started_at), latest.status || "n/a"),
-        metricCell("Next report", schedule.enabled ? formatTimestamp(schedule.next_run_at) : "Disabled", schedule.status || "schedule"),
-        metricCell("Alerts today", alerts, "recent archive"),
-        metricCell("Error state", health.error_count ? `${health.error_count} errors` : "None", "active errors"),
-      ].join("");
-      document.querySelector("#monitor-timeline").innerHTML = state.monitorCycles.slice(0, 8).map((cycle) => {
-        const status = statusClass(cycle.status);
-        return `<li class="timeline-row"><div class="timeline-time">${escapeHtml(formatTimestamp(cycle.finished_at || cycle.started_at).split(",")[1] || formatTimestamp(cycle.finished_at || cycle.started_at))}</div><div class="timeline-node ${status}">${status === "failed" ? "x" : status === "warning" ? "!" : "ok"}</div><div class="timeline-body"><strong>${escapeHtml(label(cycle.status || "Cycle"))}</strong><span>Checks: ${escapeHtml(text(cycle.product_run?.stage_count, "n/a"))} Warnings: ${escapeHtml(text(cycle.warning_count, "0"))} Errors: ${escapeHtml(text(cycle.error_count, "0"))}</span></div><span class="status-pill ${status}">${escapeHtml(cycle.status || "unknown")}</span></li>`;
-      }).join("") || `<li class="empty-state">No monitor cycles yet.</li>`;
-      document.querySelector("#monitor-config").innerHTML = [
-        detailRow("Monitor interval", text(monitorSettings.interval_seconds, "n/a")),
-        detailRow("Max cycles before restart", text(monitorSettings.max_cycles, "n/a")),
-        detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
-        detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
-        detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
-        detailRow("Daily report mode", reportGeneration.generates_report ? "Codex report" : "No-Codex run"),
-        detailRow("Daily report status", schedule.enabled ? "enabled" : "disabled"),
-        detailRow("Watched assets", "configured in Settings"),
-        detailRow("Notification channels", "Local only"),
-      ].join("");
-      renderMonitorAlertsTable();
-      renderMonitorJobsTable();
-    }
-
-    function alertCount(payload) {
-      const counts = payload?.alert_archive?.fields?.counts || payload?.alert_archive?.counts || {};
-      return Number(counts.records || counts.emitted || 0);
-    }
-
-    function renderMonitorAlertsTable() {
-      const records = state.monitorAlerts?.alert_archive?.fields?.sample_records || [];
-      document.querySelector("#monitor-alert-table").innerHTML = records.length ? table(["Time", "Severity", "Alert", "Status"], records.slice(0, 5).map((record) => [
-        formatTimestamp(record.created_at || record.timestamp),
-        record.severity || record.status || "warning",
-        record.title || record.message || record.alert_key || "Monitor alert",
-        record.status || "new",
-      ])) : `<div class="message">No recent alerts.</div>`;
-    }
-
-    function renderMonitorJobsTable() {
-      const jobs = state.jobs.filter((job) => String(job.kind || "").includes("monitor") || String(job.intent || "").includes("monitor")).slice(0, 5);
-      document.querySelector("#monitor-job-table").innerHTML = jobs.length ? table(["Time", "Job", "Status", "Duration"], jobs.map((job) => [
-        formatTimestamp(job.created_at),
-        job.intent || job.kind,
-        job.status,
-        durationBetween(job.started_at, job.finished_at),
-      ])) : `<div class="message">No monitor jobs yet.</div>`;
     }
 
     async function refreshIntelligence() {
@@ -1634,67 +1592,6 @@
         </div>`;
     }
 
-    async function cancelRunningMonitorJobs() {
-      try {
-        await loadMonitorPayload();
-        const jobs = state.jobs.filter((job) => {
-          const kind = String(job.kind || job.intent || "");
-          return kind.includes("monitor") && job.cancellable !== false && !terminalJobStatus(job.status);
-        });
-        if (!jobs.length) {
-          document.querySelector("#monitor-control-result").innerHTML = `<div class="message">No running monitor job is attached to this dashboard runtime.</div>`;
-          return;
-        }
-        const results = [];
-        for (const job of jobs) {
-          results.push(await postJson(`${endpoints.jobs}/${encodeURIComponent(job.job_id)}/cancel`, {}));
-        }
-        await loadMonitorPayload();
-        renderMonitorJobsTable();
-        document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Cancel requested for ${results.length} monitor job(s).</div>`;
-        showToast(`Monitor stop requested for ${results.length} job(s).`);
-      } catch (error) {
-        document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      }
-    }
-
-    async function startMonitorJob(intent) {
-      await loadMonitorPayload();
-      const settings = state.monitor?.settings || {};
-      const maxCycles = Number(settings.max_cycles);
-      const intervalSeconds = Number(settings.interval_seconds);
-      const params = intent === "monitor_loop" ? {max_cycles: maxCycles, interval_seconds: intervalSeconds} : {};
-      if (intent === "monitor_loop" && (!Number.isInteger(maxCycles) || maxCycles <= 0 || !Number.isInteger(intervalSeconds) || intervalSeconds <= 0)) {
-        document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">Monitor loop settings are missing or invalid. Check Settings before starting the monitor.</div>`;
-        return;
-      }
-      try {
-        const job = await postJob(intent, params);
-        document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Job ${escapeHtml(job.job_id || "")}: ${escapeHtml(job.status || "created")}</div>`;
-      } catch (error) {
-        document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-      }
-    }
-
-    async function enableDailyReport() {
-      try {
-        const result = await postJson(`${endpoints.schedule}/enable`, {job_intent: "run_no_codex"});
-        state.schedule = result;
-        renderMonitor();
-        showToast(`No-Codex daily run schedule ${result.status || "updated"}.`);
-      } catch (error) {
-        showToast(`Schedule update failed: ${error.message}`);
-      }
-    }
-
-    function showMonitorSchedule() {
-      const schedule = state.schedule || {};
-      const settings = schedule.settings || {};
-      const reportGeneration = schedule.report_generation || {};
-      document.querySelector("#monitor-config").scrollIntoView({behavior: "smooth", block: "center"});
-      document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Daily report schedule: ${escapeHtml(schedule.enabled ? "enabled" : "disabled")}. Mode: ${escapeHtml(reportGeneration.generates_report ? "Codex report" : "No-Codex run")}. Time: ${escapeHtml(settings.time_of_day || "n/a")} ${escapeHtml(settings.timezone || "")}.</div>`;
-    }
-
     async function cleanup(kind) {
       await loadDeletionPlan();
       if (kind === "runs") {
@@ -1812,10 +1709,7 @@
       document.querySelector("#download-ohlcv-button").addEventListener("click", downloadSelectedOhlcv);
       document.querySelectorAll("[data-strategy-window]").forEach((button) => button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow)));
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
-      document.querySelectorAll("[data-monitor-job]").forEach((button) => button.addEventListener("click", () => startMonitorJob(button.dataset.monitorJob)));
-      document.querySelector("#stop-monitor-button").addEventListener("click", cancelRunningMonitorJobs);
-      document.querySelector("#enable-daily-report").addEventListener("click", enableDailyReport);
-      document.querySelector("#schedule-monitor-button").addEventListener("click", showMonitorSchedule);
+      monitorWorkflow.wire();
       document.querySelectorAll("[data-report-job]").forEach((button) => button.addEventListener("click", startReportJob));
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {

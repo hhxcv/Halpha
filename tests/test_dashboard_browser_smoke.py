@@ -40,15 +40,18 @@ def test_dashboard_browser_smoke_static_navigation_contract(tmp_path: Path) -> N
     assert '<script src="/assets/dashboard_dialogs.js" defer></script>' in html
     assert '<script src="/assets/dashboard_reports.js" defer></script>' in html
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in html
+    assert '<script src="/assets/dashboard_monitor.js" defer></script>' in html
     assert '<script src="/assets/dashboard.js" defer></script>' in html
     assert html.index("/assets/dashboard_shared.js") < html.index("/assets/dashboard_dialogs.js")
     assert html.index("/assets/dashboard_dialogs.js") < html.index("/assets/dashboard_reports.js")
     assert html.index("/assets/dashboard_reports.js") < html.index("/assets/dashboard_strategy_chart.js")
-    assert html.index("/assets/dashboard_strategy_chart.js") < html.index("/assets/dashboard.js")
+    assert html.index("/assets/dashboard_strategy_chart.js") < html.index("/assets/dashboard_monitor.js")
+    assert html.index("/assets/dashboard_monitor.js") < html.index("/assets/dashboard.js")
     assert "window.HalphaDashboardShared" in script
     assert "window.HalphaDashboardDialogs" in script
     assert "window.HalphaDashboardReports" in script
     assert "window.HalphaDashboardStrategyChart" in script
+    assert "window.HalphaDashboardMonitor" in script
     assert 'document.querySelectorAll("[data-view-target]")' in script
     assert "setHashView(node.dataset.viewTarget)" in script
     assert "view is stuck loading" in _PLAYWRIGHT_SMOKE_SPEC
