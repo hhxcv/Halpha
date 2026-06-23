@@ -11,6 +11,7 @@ from halpha.cli import main
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, dashboard_health
 from halpha.dashboard.app import write_dashboard_selected_config_state
+from halpha.dashboard.runs import dashboard_runs
 from halpha.pipeline import RunContext
 from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
@@ -855,6 +856,37 @@ def test_dashboard_latest_state_distinguishes_latest_failed_from_successful(tmp_
     assert runs["runs"][1]["latest_state"] == {"is_latest_run": False, "is_latest_successful_run": True}
     assert str(tmp_path) not in str(overview)
     assert str(tmp_path) not in str(runs)
+
+
+def test_dashboard_runs_includes_report_runs_outside_latest_window(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    report_run = _write_run(
+        tmp_path,
+        config_path,
+        run_id="run-report",
+        started_at="2026-06-20T00:00:00Z",
+        finished_at="2026-06-20T00:05:00Z",
+    )
+    _write_dashboard_source_artifacts(tmp_path, report_run)
+    write_run_index(report_run, now="2026-06-20T00:05:00Z")
+    for index in range(3):
+        run = _write_run(
+            tmp_path,
+            config_path,
+            run_id=f"run-latest-{index}",
+            started_at=f"2026-06-20T0{index + 1}:00:00Z",
+            finished_at=f"2026-06-20T0{index + 1}:05:00Z",
+        )
+        run.manifest["artifacts"].pop("report")
+        write_json(run.manifest_path, run.manifest)
+        write_run_index(run, now=f"2026-06-20T0{index + 1}:05:00Z")
+
+    payload = dashboard_runs(config_path, limit=2, report_limit=1)
+
+    assert [run["run_id"] for run in payload["runs"]] == ["run-latest-2", "run-latest-1", "run-report"]
+    report = next(run for run in payload["runs"] if run["run_id"] == "run-report")
+    assert report["report"] == "report/report.md"
+    assert report["report_state"] == {"status": "available", "artifact": "report/report.md"}
 
 
 def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> None:

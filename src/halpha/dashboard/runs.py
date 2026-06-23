@@ -19,9 +19,10 @@ from halpha.utils.value_helpers import (
 
 
 MAX_STAGE_ARTIFACT_REFS = 20
+DEFAULT_REPORT_RUN_LIMIT = 100
 
 
-def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
+def dashboard_runs(config_path: Path, *, limit: int = 100, report_limit: int = DEFAULT_REPORT_RUN_LIMIT) -> dict[str, Any]:
     base = _artifact_base(config_path)
     index_path = run_index_path(config_path)
     empty_latest = {"latest_run_id": None, "latest_successful_run_id": None}
@@ -38,25 +39,7 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
         }
     try:
         with closing(sqlite3.connect(index_path)) as connection:
-            rows = connection.execute(
-                """
-                SELECT
-                  run_id,
-                  run_dir,
-                  started_at,
-                  finished_at,
-                  status,
-                  failed_stage,
-                  codex_status,
-                  warning_count,
-                  error_count,
-                  manifest_path
-                FROM runs
-                ORDER BY COALESCE(started_at, '') DESC, run_id DESC
-                LIMIT ?
-                """,
-                (limit,),
-            ).fetchall()
+            rows = _dashboard_run_rows(connection, limit=limit, report_limit=report_limit)
             artifacts = _run_artifact_index(connection)
             latest = _run_latest_refs(connection)
     except sqlite3.Error as exc:
@@ -108,6 +91,11 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
         "source_artifacts": [RUN_INDEX_ARTIFACT],
         "latest": latest,
         "runs": runs,
+        "counts": {
+            "runs": len(runs),
+            "latest_run_limit": limit,
+            "report_run_limit": report_limit,
+        },
         "index_diagnostics": index_diagnostics,
         "report_diagnostics": report_diagnostics,
         "warnings": warnings,
@@ -327,6 +315,65 @@ def _run_latest_refs(connection: sqlite3.Connection) -> dict[str, str | None]:
         elif key == "latest_successful_run":
             refs["latest_successful_run_id"] = run_id
     return refs
+
+
+def _dashboard_run_rows(connection: sqlite3.Connection, *, limit: int, report_limit: int) -> list[Any]:
+    latest_rows = connection.execute(
+        """
+        SELECT
+          run_id,
+          run_dir,
+          started_at,
+          finished_at,
+          status,
+          failed_stage,
+          codex_status,
+          warning_count,
+          error_count,
+          manifest_path
+        FROM runs
+        ORDER BY COALESCE(started_at, '') DESC, run_id DESC
+        LIMIT ?
+        """,
+        (max(0, limit),),
+    ).fetchall()
+    report_rows: list[Any] = []
+    if report_limit > 0:
+        report_rows = connection.execute(
+            """
+            SELECT
+              r.run_id,
+              r.run_dir,
+              r.started_at,
+              r.finished_at,
+              r.status,
+              r.failed_stage,
+              r.codex_status,
+              r.warning_count,
+              r.error_count,
+              r.manifest_path
+            FROM runs r
+            WHERE EXISTS (
+              SELECT 1
+              FROM run_artifacts a
+              WHERE a.run_id = r.run_id
+                AND a.artifact_key = 'report'
+            )
+            ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC
+            LIMIT ?
+            """,
+            (report_limit,),
+        ).fetchall()
+    rows_by_id: dict[str, Any] = {}
+    for row in [*latest_rows, *report_rows]:
+        run_id = str(row[0])
+        if run_id not in rows_by_id:
+            rows_by_id[run_id] = row
+    return sorted(rows_by_id.values(), key=_run_row_sort_key, reverse=True)
+
+
+def _run_row_sort_key(row: Any) -> tuple[str, str]:
+    return (str(row[2] or ""), str(row[0] or ""))
 
 
 def _latest_selection_label(selection_key: str) -> str:

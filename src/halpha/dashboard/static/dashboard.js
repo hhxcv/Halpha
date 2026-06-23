@@ -1472,7 +1472,10 @@
 
     function latestReportJob() {
       const jobs = Array.isArray(state.jobs) ? state.jobs : [];
-      return jobs.find((job) => job.intent === "run") || null;
+      const reportJobs = jobs.filter((job) => job.intent === "run");
+      const active = reportJobs.find((job) => ["created", "queued", "running"].includes(String(job.status || "").toLowerCase()));
+      if (active) return active;
+      return reportJobs.find((job) => reportJobRefs(job).report) || null;
     }
 
     function reportJobRefs(job) {
