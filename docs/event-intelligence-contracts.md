@@ -985,6 +985,8 @@ Rules:
 - The command must not run the full report pipeline or Codex CLI.
 - The command must not write fake downstream artifacts for unimplemented
   processors.
+- Planned capabilities that are not available in the standalone command should
+  be recorded as omitted capabilities, not as executed processors.
 - Standalone artifacts should live under a local text-intelligence output
   directory.
 
@@ -1003,8 +1005,12 @@ runs/text_intelligence/<id>/analysis/event_intelligence_material.md
 Manifest rules:
 
 - Record command inputs, source artifact paths, produced artifact paths, model
-  states, thresholds, counts, warnings, errors, skipped processors, and degraded
-  processors.
+  states, thresholds, counts, warnings, errors, omitted capabilities, skipped
+  executed processors, and degraded processors.
+- The `processors` list records processors that actually ran or were attempted
+  by the standalone command.
+- The `omitted_capabilities` list records supported product-pipeline
+  capabilities that are intentionally unavailable in standalone mode.
 - Do not record local model cache paths or local privacy values.
 
 ## Pipeline Integration

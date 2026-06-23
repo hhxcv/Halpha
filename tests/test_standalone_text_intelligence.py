@@ -64,7 +64,16 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
     assert manifest["counts"]["text_event_signals"] == 1
     assert manifest["counts"]["event_intelligence_material_records"] == 1
     assert manifest["counts"]["processors_succeeded"] == 7
-    assert manifest["counts"]["processors_skipped"] == 1
+    assert manifest["counts"]["processors_skipped"] == 0
+    assert manifest["counts"]["omitted_capabilities"] == 1
+    assert manifest["omitted_capabilities"] == [
+        {
+            "name": "build_event_market_confluence",
+            "status": "omitted",
+            "reason": "not_available_in_standalone_text_intelligence",
+            "artifacts": [],
+        }
+    ]
     assert manifest["model_states"] == []
     assert _processor_statuses(manifest) == {
         "load_raw_text_events": "succeeded",
@@ -74,7 +83,6 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
         "build_text_event_topics": "succeeded",
         "build_text_event_signals": "succeeded",
         "build_event_intelligence_material": "succeeded",
-        "build_event_market_confluence": "skipped",
     }
 
 
@@ -149,7 +157,10 @@ def test_text_intel_rejects_invalid_input_without_fake_downstream_artifacts(
     assert manifest["status"] == "failed"
     assert manifest["errors"][0]["stage"] == "load_raw_text_events"
     assert manifest["counts"]["processors_succeeded"] == 0
-    assert manifest["counts"]["processors_skipped"] == 1
+    assert manifest["counts"]["processors_skipped"] == 0
+    assert manifest["counts"]["omitted_capabilities"] == 1
+    assert manifest["omitted_capabilities"][0]["name"] == "build_event_market_confluence"
+    assert manifest["omitted_capabilities"][0]["status"] == "omitted"
     assert "text_event_records" not in manifest["artifacts"]
     assert not (run_dir / "analysis" / "text_event_records.json").exists()
 
