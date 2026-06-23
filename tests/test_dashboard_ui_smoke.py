@@ -139,6 +139,10 @@ def test_dashboard_css_contracts_cover_redesigned_desktop_and_small_viewports(tm
 
     assert ".app-shell" in css
     assert "grid-template-columns: 224px minmax(0, 1fr);" in css
+    assert "height: 100vh;" in css
+    assert "overflow: hidden;" in css
+    assert ".main-shell" in css
+    assert "overflow-y: auto;" in css
     assert ".reports-layout" in css
     assert ".strategy-layout" in css
     assert ".monitor-layout" in css
@@ -153,6 +157,7 @@ def test_dashboard_css_contracts_cover_redesigned_desktop_and_small_viewports(tm
 
 def test_dashboard_pages_match_design_reference_roles(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
+    script = _script_block(html)
 
     assert "System status, reports, monitor, and data health" in html
     assert "All reports" in html
@@ -161,7 +166,8 @@ def test_dashboard_pages_match_design_reference_roles(tmp_path: Path) -> None:
     assert "Monitor timeline" in html
     assert "Topic volume over time" in html
     assert "Config file" in html
-    assert "Storage maintenance" in html
+    assert "Storage maintenance" in script
+    assert 'class="storage-maintenance settings-storage-page"' in script
     assert "Artifacts" not in _nav_block(html)
 
 
@@ -226,7 +232,11 @@ def test_dashboard_interaction_hooks_cover_redesigned_workflows(tmp_path: Path) 
     assert "saveSettings" in script
     assert "backupSettings" in script
     assert "renderStorageMaintenance" in script
+    assert "settingFieldIsVisible" in script
+    assert "pruneHiddenSettingChanges" in script
     assert "data-setting-path" in script
+    assert "unit_interval_number" in script
+    assert 'min="0" max="1" step="0.01"' in script
     assert "selectedRunArtifacts" in script
     assert "selectedSharedStores" in script
 
@@ -288,6 +298,7 @@ def test_dashboard_shell_does_not_emit_nul_or_non_ascii_control_characters(tmp_p
 
 def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
+    css = _style_block(html)
     script = _script_block(html)
 
     assert "renderReportPreview(preview, run)" in script
@@ -305,9 +316,13 @@ def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path)
     assert 'data-job-intent="run_no_codex"' not in html
     assert 'id="overview-report-job-status"' in html
     assert 'id="reports-report-job-status"' in html
+    assert ".hidden" in css
+    assert "display: none !important;" in css
     assert "startReportJob" in script
     assert 'postJob("run", {confirm_codex: true})' in script
     assert "pollReportJob" in script
+    assert "reportJobShouldRender" in script
+    assert "Report artifact recorded" not in script
     assert "state.generatedReportRunId" in script
     assert "postJob(intent, params = {})" in script
     assert "renderValidationJob(job)" in script

@@ -1180,10 +1180,10 @@
       if (state.settingsProfile?.status === "unconfigured") {
         return `<div class="empty-state">No config is active. Load a config file to show editable settings.</div>`;
       }
-      const fields = settingsFields().filter((field) => field.section === section);
       if (section === "Storage") {
-        return `<div class="message">Use Storage maintenance below to delete single-run artifacts or shared stores. Shared data requires exact store selection and typed confirmation.</div>`;
+        return storageMaintenanceMarkup();
       }
+      const fields = settingsFields().filter((field) => field.section === section && settingFieldIsVisible(field));
       if (!fields.length) {
         return `<div class="message">No editable controls are available for this section yet.</div>`;
       }
@@ -1203,6 +1203,67 @@
         return state.settingsChanges[field.path];
       }
       return field.value;
+    }
+
+    function settingPathValue(path) {
+      if (Object.prototype.hasOwnProperty.call(state.settingsChanges, path)) {
+        return state.settingsChanges[path];
+      }
+      const field = settingField(path);
+      return field ? field.value : undefined;
+    }
+
+    function settingPathEnabled(path) {
+      return settingPathValue(path) === true;
+    }
+
+    function settingFieldIsVisible(field) {
+      const path = String(field?.path || "");
+      if (path === "market.enabled" || path === "text.enabled" || path === "macro_calendar.enabled" || path === "onchain_flow.enabled") {
+        return true;
+      }
+      if (path.startsWith("market.derivatives.")) {
+        return settingPathEnabled("market.enabled") && (path === "market.derivatives.enabled" || settingPathEnabled("market.derivatives.enabled"));
+      }
+      if (path.startsWith("market.")) {
+        return settingPathEnabled("market.enabled");
+      }
+      if (path === "text.intelligence.enabled") {
+        return settingPathEnabled("text.enabled");
+      }
+      if (path.startsWith("text.intelligence.")) {
+        return settingPathEnabled("text.enabled") && settingPathEnabled("text.intelligence.enabled");
+      }
+      if (path.startsWith("text.")) {
+        return settingPathEnabled("text.enabled");
+      }
+      if (path.startsWith("macro_calendar.")) {
+        return path === "macro_calendar.enabled" || settingPathEnabled("macro_calendar.enabled");
+      }
+      if (path.startsWith("onchain_flow.")) {
+        return path === "onchain_flow.enabled" || settingPathEnabled("onchain_flow.enabled");
+      }
+      return true;
+    }
+
+    function settingVisibilityChanges(path) {
+      return [
+        "market.enabled",
+        "market.derivatives.enabled",
+        "text.enabled",
+        "text.intelligence.enabled",
+        "macro_calendar.enabled",
+        "onchain_flow.enabled",
+      ].includes(path);
+    }
+
+    function pruneHiddenSettingChanges() {
+      Object.keys(state.settingsChanges).forEach((path) => {
+        const field = settingField(path);
+        if (field && !settingFieldIsVisible(field)) {
+          delete state.settingsChanges[path];
+        }
+      });
     }
 
     function settingRow(field) {
@@ -1228,7 +1289,9 @@
         return `<select class="select-input" data-setting-path="${path}" data-setting-type="string">${options.map((option) => `<option value="${escapeHtml(option)}" ${String(option) === String(value) ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
       }
       if (field.control === "number") {
-        return `<input class="text-input" type="number" min="1" step="1" value="${escapeHtml(value)}" data-setting-path="${path}" data-setting-type="positive_int">`;
+        const numberType = field.value_type === "unit_interval_number" ? "unit_interval_number" : "positive_int";
+        const attrs = numberType === "unit_interval_number" ? 'min="0" max="1" step="0.01"' : 'min="1" step="1"';
+        return `<input class="text-input" type="number" ${attrs} value="${escapeHtml(value)}" data-setting-path="${path}" data-setting-type="${numberType}">`;
       }
       if (field.control === "multi_select") {
         const values = Array.isArray(value) ? value.map(String) : [];
@@ -1250,6 +1313,10 @@
             node.classList.toggle("on", next);
             node.setAttribute("aria-checked", next ? "true" : "false");
             recordSettingChange(node.dataset.settingPath, next);
+            if (settingVisibilityChanges(node.dataset.settingPath)) {
+              pruneHiddenSettingChanges();
+              renderSettings();
+            }
           });
           return;
         }
@@ -1258,6 +1325,8 @@
           if (node.dataset.settingType === "multi_select") {
             recordSettingChange(path, multiSelectValues(path));
           } else if (node.dataset.settingType === "positive_int") {
+            recordSettingChange(path, Number(node.value));
+          } else if (node.dataset.settingType === "unit_interval_number") {
             recordSettingChange(path, Number(node.value));
           } else if (node.dataset.settingType === "string_list") {
             recordSettingChange(path, node.value.split(",").map((item) => item.trim()).filter(Boolean));
@@ -1320,6 +1389,32 @@
       renderSharedCleanupList();
     }
 
+    function storageMaintenanceMarkup() {
+      return `
+        <section class="storage-maintenance settings-storage-page">
+          <div class="storage-maintenance-header">
+            <h2 class="panel-title" style="margin-bottom: 4px;">Storage maintenance</h2>
+            <div class="muted">Run artifacts affect one run. Shared stores may be reused by reports and future runs.</div>
+          </div>
+          <div class="cleanup-grid">
+            <section class="cleanup-panel">
+              <div class="cleanup-panel-head">
+                <strong>Single-run artifacts</strong>
+                <button class="danger-button" type="button" id="cleanup-run-artifacts">Delete selected</button>
+              </div>
+              <div id="run-cleanup-list" class="cleanup-list"></div>
+            </section>
+            <section class="cleanup-panel">
+              <div class="cleanup-panel-head">
+                <strong>Shared data stores</strong>
+                <button class="danger-button" type="button" id="cleanup-shared-data">Delete selected</button>
+              </div>
+              <div id="shared-cleanup-list" class="cleanup-list"></div>
+            </section>
+          </div>
+        </section>`;
+    }
+
     function renderRunCleanupList() {
       const items = state.deletionPlan?.run_artifacts?.items || [];
       state.selectedRunArtifacts = state.selectedRunArtifacts.filter((id) => items.some((item) => item.run_id === id && item.deletable));
@@ -1364,6 +1459,14 @@
     }
 
     function wireCleanupControls() {
+      const runCleanupButton = document.querySelector("#cleanup-run-artifacts");
+      if (runCleanupButton) {
+        runCleanupButton.addEventListener("click", () => cleanup("runs"));
+      }
+      const sharedCleanupButton = document.querySelector("#cleanup-shared-data");
+      if (sharedCleanupButton) {
+        sharedCleanupButton.addEventListener("click", () => cleanup("shared"));
+      }
       document.querySelectorAll("[data-run-cleanup]").forEach((node) => {
         node.addEventListener("change", () => {
           state.selectedRunArtifacts = selectedValues("[data-run-cleanup]", "runCleanup");
@@ -1473,13 +1576,24 @@
     function latestReportJob() {
       const jobs = Array.isArray(state.jobs) ? state.jobs : [];
       const reportJobs = jobs.filter((job) => job.intent === "run");
-      const active = reportJobs.find((job) => ["created", "queued", "running"].includes(String(job.status || "").toLowerCase()));
-      if (active) return active;
-      return reportJobs.find((job) => reportJobRefs(job).report) || null;
+      return reportJobs.find((job) => reportJobIsActive(job)) || null;
     }
 
     function reportJobRefs(job) {
       return job?.result_refs && typeof job.result_refs === "object" ? job.result_refs : {};
+    }
+
+    function reportJobIsActive(job) {
+      return ["created", "creating", "queued", "running"].includes(String(job?.status || "").toLowerCase());
+    }
+
+    function reportJobShouldRender(job) {
+      if (!job) return false;
+      const status = String(job.status || "").toLowerCase();
+      const refs = reportJobRefs(job);
+      if (reportJobIsActive(job)) return true;
+      if (status === "succeeded" && refs.report) return false;
+      return terminalJobStatus(status);
     }
 
     function renderReportJob(job) {
@@ -1490,7 +1604,7 @@
       if (!nodes.length) {
         return;
       }
-      if (!job) {
+      if (!reportJobShouldRender(job)) {
         nodes.forEach((node) => {
           node.classList.add("hidden");
           node.innerHTML = "";
@@ -1513,11 +1627,9 @@
         runId ? `Run: ${runId}` : "",
         reportRef ? `Report: ${reportRef}` : manifestRef ? `Manifest: ${manifestRef}` : "",
       ].filter(Boolean).join(" | ");
-      const hint = reportRef
-        ? "Report artifact recorded. Open the Reports view to read it."
-        : terminalJobStatus(status)
-          ? "No report artifact is recorded for this job yet."
-          : "The job is still running; the report list will refresh after completion.";
+      const hint = terminalJobStatus(status)
+        ? "No report artifact is recorded for this job yet."
+        : "The job is still running; the report list will refresh after completion.";
       nodes.forEach((node) => {
         node.className = `message job-status ${errors.length || statusClass(status) === "failed" ? "error" : warnings.length ? "warning" : ""}`.trim();
         node.innerHTML = `
@@ -1778,8 +1890,6 @@
       document.querySelector("#settings-save").addEventListener("click", saveSettings);
       document.querySelector("#settings-backup").addEventListener("click", backupSettings);
       document.querySelector("#settings-load-config").addEventListener("click", loadSelectedConfig);
-      document.querySelector("#cleanup-run-artifacts").addEventListener("click", () => cleanup("runs"));
-      document.querySelector("#cleanup-shared-data").addEventListener("click", () => cleanup("shared"));
       window.addEventListener("hashchange", () => setView(viewFromHash()));
       wireShortcutButtons();
     }

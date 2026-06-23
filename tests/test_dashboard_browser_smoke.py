@@ -138,6 +138,24 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
       await page.goto(url, {waitUntil: "domcontentloaded"});
       await page.waitForSelector('[data-view-target="overview"]', {timeout: 10000});
+      const shell = await page.evaluate(() => {
+        const sidebar = document.querySelector(".sidebar");
+        const main = document.querySelector(".main-shell");
+        const bottom = document.querySelector(".sidebar-bottom");
+        const sidebarBox = sidebar.getBoundingClientRect();
+        const bottomBox = bottom.getBoundingClientRect();
+        return {
+          bodyOverflowY: getComputedStyle(document.body).overflowY,
+          mainOverflowY: getComputedStyle(main).overflowY,
+          sidebarHeight: Math.round(sidebarBox.height),
+          viewportHeight: window.innerHeight,
+          sidebarBottom: Math.round(bottomBox.bottom),
+        };
+      });
+      if (shell.bodyOverflowY !== "hidden") throw new Error("body should not scroll the desktop app shell");
+      if (shell.mainOverflowY !== "auto") throw new Error("main shell should own desktop vertical scrolling");
+      if (Math.abs(shell.sidebarHeight - shell.viewportHeight) > 1) throw new Error("sidebar height should match the viewport");
+      if (shell.sidebarBottom > shell.viewportHeight + 1) throw new Error("sidebar bottom content should stay in the viewport");
       await page.click('[data-report-job="generate"]');
       await page.waitForSelector('#dashboard-dialog-backdrop:not(.hidden)', {timeout: 5000});
       const dialogTitle = await page.locator("#dashboard-dialog-title").innerText();
@@ -156,6 +174,75 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
         if (state.width < 200 || state.height < 120) throw new Error(`${view} view did not render usable dimensions`);
         if (state.text.toLowerCase().includes("loading dashboard")) throw new Error(`${view} view is stuck loading`);
       }
+
+      await page.click('[data-view-target="settings"]');
+      await page.click('[data-settings-section="Intelligence sources"]');
+      for (const path of ["text.enabled", "macro_calendar.enabled", "onchain_flow.enabled"]) {
+        await page.locator(`[data-setting-path="${path}"]`).first().waitFor({state: "visible", timeout: 5000});
+      }
+      await expect(page.locator('[data-setting-path="text.intelligence.enabled"]')).toHaveCount(0);
+      await expect(page.locator('[data-setting-path="macro_calendar.source"]')).toHaveCount(0);
+      await expect(page.locator('[data-setting-path="onchain_flow.source"]')).toHaveCount(0);
+
+      await page.click('[data-setting-path="text.enabled"]');
+      await page.locator('[data-setting-path="text.intelligence.enabled"]').first().waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator('[data-setting-path="text.intelligence.model_cache_dir"]')).toHaveCount(0);
+      await page.click('[data-setting-path="text.intelligence.enabled"]');
+      for (const path of [
+        "text.intelligence.model_cache_dir",
+        "text.intelligence.models.embedding.name",
+        "text.intelligence.models.classifier.name",
+        "text.intelligence.models.sentiment.name",
+        "text.intelligence.models.ner.name",
+        "text.intelligence.thresholds.duplicate_similarity",
+        "text.intelligence.thresholds.max_topic_window_hours",
+      ]) {
+        await page.locator(`[data-setting-path="${path}"]`).first().waitFor({state: "visible", timeout: 5000});
+      }
+      await page.click('[data-setting-path="macro_calendar.enabled"]');
+      for (const path of [
+        "macro_calendar.enabled",
+        "macro_calendar.source",
+        "macro_calendar.data_classes",
+        "macro_calendar.regions",
+        "macro_calendar.lookback_days",
+        "macro_calendar.lookahead_days",
+      ]) {
+        await page.locator(`[data-setting-path="${path}"]`).first().waitFor({state: "visible", timeout: 5000});
+      }
+      await page.click('[data-setting-path="onchain_flow.enabled"]');
+      for (const path of [
+        "onchain_flow.enabled",
+        "onchain_flow.source",
+        "onchain_flow.data_classes",
+        "onchain_flow.assets",
+        "onchain_flow.chains",
+        "onchain_flow.lookback_days",
+      ]) {
+        await page.locator(`[data-setting-path="${path}"]`).first().waitFor({state: "visible", timeout: 5000});
+      }
+      await expect(page.locator("#change-summary")).toContainText("macro_calendar.enabled");
+      await page.click('[data-settings-section="Market data"]');
+      await page.locator('[data-setting-path="market.enabled"]').first().waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator('[data-setting-path="market.source"]')).toHaveCount(0);
+      await expect(page.locator('[data-setting-path="market.derivatives.enabled"]')).toHaveCount(0);
+      await page.click('[data-setting-path="market.enabled"]');
+      await page.locator('[data-setting-path="market.derivatives.enabled"]').first().waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator('[data-setting-path="market.derivatives.source"]')).toHaveCount(0);
+      await page.click('[data-setting-path="market.derivatives.enabled"]');
+      for (const path of [
+        "market.derivatives.enabled",
+        "market.derivatives.source",
+        "market.derivatives.symbols",
+        "market.derivatives.data_classes",
+        "market.derivatives.periods",
+        "market.derivatives.lookback.8h",
+      ]) {
+        await page.locator(`[data-setting-path="${path}"]`).first().waitFor({state: "visible", timeout: 5000});
+      }
+      await page.click('[data-settings-section="Storage"]');
+      await page.locator("#cleanup-run-artifacts").waitFor({state: "visible", timeout: 5000});
+      await page.locator("#cleanup-shared-data").waitFor({state: "visible", timeout: 5000});
 
       await page.click('[data-view-target="strategies"]');
       await page.click('[data-strategy-tab="equity"]');
