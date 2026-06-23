@@ -9,6 +9,7 @@ dist/
 .env
 .venv/
 venv/
+.halpha/
 config.local.yaml
 config.local.yml
 config.*.local.yaml

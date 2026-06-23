@@ -68,7 +68,8 @@ def test_dashboard_job_api_rejects_unsupported_intent_before_process(
     assert payload["pid"] is None
     assert payload["exit_code"] is None
     assert "unsupported dashboard job intent" in payload["errors"][0]
-    assert (tmp_path / "runs" / "dashboard" / "jobs" / payload["job_id"] / "job.json").is_file()
+    assert (tmp_path / ".halpha" / "dashboard" / "jobs" / payload["job_id"] / "job.json").is_file()
+    assert not (tmp_path / "runs" / "dashboard").exists()
     assert str(tmp_path) not in response.text
 
 
@@ -95,7 +96,7 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "<external-config>"]
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     stderr_log = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
-    job_json = (tmp_path / "runs" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
+    job_json = (tmp_path / ".halpha" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
         encoding="utf-8"
     )
     assert len(stdout_log) == MAX_JOB_LOG_CHARS
@@ -139,7 +140,7 @@ def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, 
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
-    job_text = (tmp_path / "runs" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
+    job_text = (tmp_path / ".halpha" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
         encoding="utf-8"
     )
 
@@ -207,7 +208,7 @@ def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
     assert Path(commands[0][-1]).resolve() == (tmp_path / config_path).resolve()
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     assert str((tmp_path / config_path).resolve()) not in stdout_log
-    assert completed["job_dir"].startswith("runs/dashboard/jobs/")
+    assert completed["job_dir"].startswith(".halpha/dashboard/jobs/")
     assert not (config_dir / "runs").exists()
 
 
@@ -983,7 +984,7 @@ def test_dashboard_job_manager_marks_stale_running_job_blocked(tmp_path: Path) -
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     job_id = "20260622T000000Z_deadbeef"
-    job_dir = tmp_path / "runs" / "dashboard" / "jobs" / job_id
+    job_dir = tmp_path / ".halpha" / "dashboard" / "jobs" / job_id
     job_dir.mkdir(parents=True)
     (job_dir / "job.json").write_text(
         json.dumps(
@@ -1007,7 +1008,7 @@ def test_dashboard_job_manager_marks_stale_running_job_blocked(tmp_path: Path) -
 
     detail = manager.get_job(job_id)
     listed = manager.list_jobs()["jobs"][0]
-    index = json.loads((tmp_path / "runs" / "dashboard" / "jobs" / "index.json").read_text(encoding="utf-8"))
+    index = json.loads((tmp_path / ".halpha" / "dashboard" / "jobs" / "index.json").read_text(encoding="utf-8"))
 
     assert detail is not None
     assert detail["status"] == "blocked"
@@ -1045,7 +1046,7 @@ def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> 
 def test_dashboard_job_api_rejects_path_shaped_job_ids(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    outside = tmp_path / "runs" / "dashboard" / "outside_jobs"
+    outside = tmp_path / ".halpha" / "dashboard" / "outside_jobs"
     outside.mkdir(parents=True)
     (outside / "job.json").write_text(
         json.dumps({"schema_version": 1, "artifact_type": "dashboard_job", "job_id": "outside", "status": "leaked"}),

@@ -51,10 +51,11 @@ bounded report-facing material.
 
 Runtime artifact directories are product output locations, not config-file
 siblings. Relative output paths such as `runs/`, `logs/`,
-`runs/dashboard/jobs/`, `runs/dashboard/schedules/`, `runs/monitor/`, and
-`runs/workbench/latest/` resolve from the current working directory unless a
-config field supplies an absolute path. Config-file-relative path resolution is
-reserved for config file operations, such as reading or backing up that config.
+`runs/monitor/`, and `runs/workbench/latest/` resolve from the current working
+directory unless a config field supplies an absolute path. Dashboard control
+state is local runtime state under `.halpha/dashboard/`, not product run output.
+Config-file-relative path resolution is reserved for config file operations,
+such as reading or backing up that config.
 
 | Layer | Purpose | Codex input status |
 | --- | --- | --- |
@@ -383,12 +384,14 @@ context by default.
 
 Implemented dashboard control artifacts include:
 
-- `runs/dashboard/service_state.json`
-- `runs/dashboard/jobs/index.json`
-- `runs/dashboard/jobs/<job_id>/job.json`
-- `runs/dashboard/jobs/<job_id>/stdout.log`
-- `runs/dashboard/jobs/<job_id>/stderr.log`
-- `runs/dashboard/schedules/daily_report_schedule.json`
+- `.halpha/dashboard/service_state.json`
+- `.halpha/dashboard/selected_config.json`
+- `.halpha/dashboard/jobs/index.json`
+- `.halpha/dashboard/jobs/<job_id>/job.json`
+- `.halpha/dashboard/jobs/<job_id>/stdout.log`
+- `.halpha/dashboard/jobs/<job_id>/stderr.log`
+- `.halpha/dashboard/schedules/daily_report_schedule.json`
+- `.halpha/dashboard/config_backups/<config-stem>-<timestamp>.yaml.bak`
 
 ### Report-Facing Material
 

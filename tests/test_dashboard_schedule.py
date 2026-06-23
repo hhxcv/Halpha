@@ -35,7 +35,7 @@ def test_dashboard_daily_report_schedule_reports_missing_state(tmp_path: Path) -
     assert payload["report_generation"]["generates_report"] is True
     assert payload["report_generation"]["requires_codex_confirmation"] is True
     assert payload["next_run_at"] is None
-    assert payload["source_artifacts"] == ["runs/dashboard/schedules/daily_report_schedule.json"]
+    assert payload["source_artifacts"] == [".halpha/dashboard/schedules/daily_report_schedule.json"]
     assert payload["runtime_boundary"]["hidden_service"] is False
     assert payload["runtime_boundary"]["hosted_scheduler"] is False
     assert str(tmp_path) not in response.text
@@ -82,7 +82,8 @@ def test_dashboard_daily_report_schedule_enable_disable_and_persistence(
     assert enabled["report_generation"]["generates_report"] is False
     assert enabled["report_generation"]["requires_codex_confirmation"] is False
     assert enabled["next_run_at"] == "2026-06-20T08:30:00Z"
-    assert (tmp_path / "runs" / "dashboard" / "schedules" / "daily_report_schedule.json").is_file()
+    assert (tmp_path / ".halpha" / "dashboard" / "schedules" / "daily_report_schedule.json").is_file()
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
     persisted = read_response.json()
     assert persisted["enabled"] is True
@@ -112,7 +113,8 @@ def test_dashboard_daily_report_schedule_rejects_invalid_input_before_persistenc
         assert payload["status"] == "blocked"
         assert payload["errors"] == [error]
 
-    assert not (tmp_path / "runs" / "dashboard" / "schedules" / "daily_report_schedule.json").exists()
+    assert not (tmp_path / ".halpha" / "dashboard" / "schedules" / "daily_report_schedule.json").exists()
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_dashboard_daily_report_schedule_enable_requires_explicit_mode(tmp_path: Path) -> None:
@@ -127,7 +129,8 @@ def test_dashboard_daily_report_schedule_enable_requires_explicit_mode(tmp_path:
     assert payload["status"] == "blocked"
     assert payload["enabled"] is False
     assert payload["errors"] == ["job_intent must be selected before enabling the daily report schedule."]
-    assert not (tmp_path / "runs" / "dashboard" / "schedules" / "daily_report_schedule.json").exists()
+    assert not (tmp_path / ".halpha" / "dashboard" / "schedules" / "daily_report_schedule.json").exists()
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(

@@ -17,14 +17,14 @@ from halpha.dashboard.job_commands import CommandSpec
 from halpha.dashboard.job_commands import DashboardJobCommandBuilder
 from halpha.dashboard.job_commands import DashboardJobError
 from halpha.dashboard.job_commands import dashboard_config_ref
+from halpha.dashboard.paths import dashboard_control_path, dashboard_control_ref
 from halpha.dashboard.time import parse_utc_timestamp, utc_now_timestamp
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
 from halpha.storage import artifact_base as _artifact_base, write_json
 
 
-DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
-DASHBOARD_JOB_INDEX = "runs/dashboard/jobs/index.json"
+DASHBOARD_JOB_INDEX = dashboard_control_ref("jobs", "index.json")
 MAX_JOB_LOG_CHARS = 20_000
 STALE_RUNNING_JOB_GRACE_SECONDS = 30
 EXTERNAL_ARTIFACT_REF = "<external-artifact>"
@@ -73,7 +73,8 @@ class DashboardJobManager:
         self.config_path = Path(config_path)
         self.resolved_config_path = self.config_path.resolve()
         self.base = _artifact_base(self.config_path)
-        self.jobs_root = self.base / DASHBOARD_JOBS_DIR
+        self.control_base = Path.cwd()
+        self.jobs_root = dashboard_control_path("jobs")
         with suppress(OSError):
             configure_local_logging(config_path=self.config_path, config=config)
         self._command_builder = DashboardJobCommandBuilder(config, config_path=self.config_path, base=self.base)
@@ -357,10 +358,10 @@ class DashboardJobManager:
             "exit_code": None,
             "cancellable": False,
             "command": [],
-            "job_dir": _safe_ref(job_dir, base=self.base),
+            "job_dir": _safe_ref(job_dir, base=self.control_base),
             "logs": {
-                "stdout_ref": _safe_ref(job_dir / "stdout.log", base=self.base),
-                "stderr_ref": _safe_ref(job_dir / "stderr.log", base=self.base),
+                "stdout_ref": _safe_ref(job_dir / "stdout.log", base=self.control_base),
+                "stderr_ref": _safe_ref(job_dir / "stderr.log", base=self.control_base),
                 "stdout_truncated": False,
                 "stderr_truncated": False,
                 "max_chars": MAX_JOB_LOG_CHARS,
@@ -381,7 +382,7 @@ class DashboardJobManager:
             reverse=True,
         )
         write_json(
-            self.base / DASHBOARD_JOB_INDEX,
+            dashboard_control_path("jobs", "index.json"),
             {
                 "schema_version": 1,
                 "artifact_type": "dashboard_job_index",
@@ -397,7 +398,7 @@ class DashboardJobManager:
                         "created_at": job.get("created_at"),
                         "updated_at": job.get("updated_at"),
                         "result_refs": job.get("result_refs") or {},
-                        "job_ref": _safe_ref(self._job_path(str(job.get("job_id"))), base=self.base),
+                        "job_ref": _safe_ref(self._job_path(str(job.get("job_id"))), base=self.control_base),
                     }
                     for job in jobs[:100]
                 ],
@@ -421,7 +422,7 @@ class DashboardJobManager:
         bounded = safe[:MAX_JOB_LOG_CHARS]
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(bounded, encoding="utf-8")
-        return _safe_ref(path, base=self.base), len(safe) > MAX_JOB_LOG_CHARS
+        return _safe_ref(path, base=self.control_base), len(safe) > MAX_JOB_LOG_CHARS
 
     def _job_result_refs(self, stdout: str | None, *, spec: CommandSpec) -> dict[str, str]:
         refs: dict[str, str] = {}

@@ -30,6 +30,7 @@ from halpha.dashboard.jobs import DashboardJobManager
 from halpha.dashboard.intelligence import dashboard_text_intelligence
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
+from halpha.dashboard.paths import dashboard_control_path
 from halpha.dashboard.runs import dashboard_run_detail, dashboard_runs
 from halpha.dashboard.schedule import DashboardScheduleManager
 from halpha.dashboard.settings import (
@@ -42,14 +43,12 @@ from halpha.dashboard.settings import (
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.time import utc_now_timestamp
 from halpha.dashboard.ui import dashboard_index_html
-from halpha.storage import artifact_base, read_json_object, write_json
+from halpha.storage import read_json_object, write_json
 
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
-DASHBOARD_SERVICE_STATE = "runs/dashboard/service_state.json"
-DASHBOARD_SELECTED_CONFIG_STATE = "runs/dashboard/selected_config.json"
 DASHBOARD_SERVICE_NAME = "halpha_dashboard"
 DASHBOARD_SERVICE_SCHEMA_VERSION = 1
 DASHBOARD_HEALTH_TIMEOUT_SECONDS = 0.75
@@ -165,7 +164,7 @@ def write_dashboard_selected_config_state(config_path: Path) -> None:
 
 
 def _dashboard_selected_config_state_path() -> Path:
-    return artifact_base(None) / DASHBOARD_SELECTED_CONFIG_STATE
+    return dashboard_control_path("selected_config.json")
 
 
 def _select_dashboard_config(context: DashboardConfigContext, *, request: dict[str, Any]) -> dict[str, Any]:
@@ -590,7 +589,7 @@ def _dashboard_health_url(host: str, port: int) -> str:
 
 
 def _dashboard_service_state_path(config_path: Path | None) -> Path:
-    return artifact_base(config_path) / DASHBOARD_SERVICE_STATE
+    return dashboard_control_path("service_state.json")
 
 
 def _write_dashboard_service_state(*, config_path: Path | None, host: str, port: int) -> None:

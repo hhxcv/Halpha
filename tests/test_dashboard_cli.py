@@ -92,11 +92,12 @@ def test_dashboard_command_explicit_config_persists_selection(
 
     exit_code = main(["dashboard", "--config", str(config_path)])
 
-    state = json.loads((tmp_path / "runs" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
+    state = json.loads((tmp_path / ".halpha" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
     assert exit_code == 0
     assert calls[0]["config_path"] == config_path
     assert state["artifact_type"] == "dashboard_selected_config_state"
     assert state["config_path"] == str(config_path)
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
@@ -160,7 +161,7 @@ def test_dashboard_settings_can_select_active_config(tmp_path: Path) -> None:
     runs_response = client.get("/api/runs")
 
     selected = select_response.json()
-    persisted = json.loads((tmp_path / "runs" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
+    persisted = json.loads((tmp_path / ".halpha" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
     assert select_response.status_code == 200
     assert selected["status"] == "succeeded"
     assert selected["profile"]["status"] == "available"
@@ -168,6 +169,7 @@ def test_dashboard_settings_can_select_active_config(tmp_path: Path) -> None:
     assert profile_response.json()["status"] == "available"
     assert runs_response.json()["status"] != "unconfigured"
     assert persisted["config_path"] == str(config_path)
+    assert not (tmp_path / "runs" / "dashboard").exists()
 
 
 def test_dashboard_health_omits_external_absolute_config_path(tmp_path: Path) -> None:
@@ -338,8 +340,9 @@ def test_dashboard_config_backup_endpoint_creates_bounded_backup_ref(tmp_path: P
     payload = response.json()
     assert payload["artifact_type"] == "dashboard_config_backup"
     assert payload["status"] == "succeeded"
-    assert payload["backup_ref"].startswith("runs/dashboard/config_backups/config-")
+    assert payload["backup_ref"].startswith(".halpha/dashboard/config_backups/config-")
     assert (tmp_path / payload["backup_ref"]).exists()
+    assert not (tmp_path / "runs" / "dashboard").exists()
     assert str(tmp_path) not in response.text
 
 
@@ -368,12 +371,13 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
         "monitor.interval_seconds",
         "text.max_items",
     ]
-    assert payload["backup_ref"].startswith("runs/dashboard/config_backups/config-")
+    assert payload["backup_ref"].startswith(".halpha/dashboard/config_backups/config-")
     saved = load_config(config_path)
     assert saved["dashboard"]["display_timezone"] == "UTC"
     assert saved["monitor"]["interval_seconds"] == 600
     assert saved["text"]["max_items"] == 12
     assert dashboard_display_timezone(config) == "UTC"
+    assert not (tmp_path / "runs" / "dashboard").exists()
     assert str(tmp_path) not in response.text
 
 

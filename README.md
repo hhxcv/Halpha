@@ -124,7 +124,7 @@ the last selected config under local dashboard state and later dashboard
 startups reuse it when it still validates.
 
 Dashboard startup records local service state under
-`runs/dashboard/service_state.json`. A repeated dashboard startup can stop a
+`.halpha/dashboard/service_state.json`. A repeated dashboard startup can stop a
 matching existing Halpha dashboard backend for the same local port before
 starting the new service. If the port is occupied by a non-Halpha or
 unresponsive local service, startup fails with an actionable error instead of
@@ -143,7 +143,7 @@ report jobs require explicit confirmation before they can start. The dashboard
 does not expose arbitrary shell execution.
 
 Daily report schedule state is explicit local dashboard control state under
-`runs/dashboard/schedules/`. The implemented schedule API can inspect, enable,
+`.halpha/dashboard/schedules/`. The implemented schedule API can inspect, enable,
 disable, update, and manually trigger daily report jobs through dashboard jobs.
 It does not install an OS scheduler, hosted scheduler, startup task, cron job,
 workflow engine, or hidden daemon.

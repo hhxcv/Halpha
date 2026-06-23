@@ -85,8 +85,8 @@ last selected config locally.
 Dashboard startup writes local service state:
 
 ```text
-runs/dashboard/service_state.json
-runs/dashboard/selected_config.json
+.halpha/dashboard/service_state.json
+.halpha/dashboard/selected_config.json
 ```
 
 Before binding, dashboard startup checks the requested local endpoint. If a
@@ -308,11 +308,12 @@ Codex-capable full report jobs require explicit user confirmation before the
 dashboard invokes Codex CLI. No monitor job or read-only inspection job should
 invoke Codex unless its command contract explicitly says so.
 
-Job records are written under `runs/dashboard/jobs/` below the current working
-directory by default. Relative dashboard runtime paths resolve from the current
-working directory, not from the config file location. The job index records
-bounded metadata and result refs. Full job logs are local runtime artifacts and
-must not be copied into Codex context by default.
+Job records are written under `.halpha/dashboard/jobs/` below the current
+working directory by default. Relative dashboard control-state paths resolve
+from the current working directory, not from the config file location or
+product run output root. The job index records bounded metadata and result
+refs. Full job logs are local runtime artifacts and must not be copied into
+Codex context by default.
 
 ## Schedule Contract
 
@@ -332,7 +333,7 @@ Schedule state should record:
 Implemented daily report schedule state lives at:
 
 ```text
-runs/dashboard/schedules/daily_report_schedule.json
+.halpha/dashboard/schedules/daily_report_schedule.json
 ```
 
 The schedule API supports:

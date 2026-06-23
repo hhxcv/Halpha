@@ -22,10 +22,10 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
-from halpha.storage import artifact_base, config_base, safe_local_ref
+from halpha.dashboard.paths import dashboard_control_path
+from halpha.storage import config_base, safe_local_ref
 
 
-CONFIG_BACKUP_DIR = "runs/dashboard/config_backups"
 DERIVATIVES_PERIOD_OPTIONS = tuple(
     period
     for period in ("5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d")
@@ -574,7 +574,7 @@ def dashboard_backup_config(*, config_path: Path) -> dict[str, Any]:
             "errors": [error],
             "omitted": {"absolute_local_paths_embedded": False},
         }
-    base = artifact_base(config_path)
+    base = Path.cwd()
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_config_backup",
@@ -666,7 +666,7 @@ def dashboard_save_config_profile(
 
     config.clear()
     config.update(validated)
-    base = artifact_base(config_path)
+    base = Path.cwd()
     return _config_save_result(
         config,
         config_path=config_path,
@@ -877,8 +877,7 @@ def _backup_dashboard_config(config_path: Path) -> tuple[Path | None, str | None
         return None, f"{dashboard_config_ref(config_path)} was not found."
     safe_stem = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in source.stem) or "config"
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    base = artifact_base(config_path)
-    backup_dir = base / CONFIG_BACKUP_DIR
+    backup_dir = dashboard_control_path("config_backups")
     backup_path = backup_dir / f"{safe_stem}-{stamp}.yaml.bak"
     try:
         backup_dir.mkdir(parents=True, exist_ok=True)
