@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -8,12 +9,14 @@ import signal
 import socket
 import subprocess
 import sys
+from threading import RLock
 import time
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from halpha.config import ConfigError, load_config
 from halpha.dashboard.artifact_preview import dashboard_artifact_preview
 from halpha.dashboard.assets import dashboard_asset_media_type, dashboard_asset_text
 from halpha.dashboard.constants import DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
@@ -34,6 +37,7 @@ from halpha.dashboard.settings import (
     dashboard_config_profile,
     dashboard_config_ref,
     dashboard_save_config_profile,
+    sanitize_dashboard_message,
 )
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.time import utc_now_timestamp
@@ -45,6 +49,7 @@ DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
 DASHBOARD_SERVICE_STATE = "runs/dashboard/service_state.json"
+DASHBOARD_SELECTED_CONFIG_STATE = "runs/dashboard/selected_config.json"
 DASHBOARD_SERVICE_NAME = "halpha_dashboard"
 DASHBOARD_SERVICE_SCHEMA_VERSION = 1
 DASHBOARD_HEALTH_TIMEOUT_SECONDS = 0.75
@@ -63,10 +68,174 @@ class DashboardError(Exception):
         self.exit_code = exit_code
 
 
+@dataclass(frozen=True)
+class DashboardStartupConfig:
+    config: dict[str, Any] | None
+    config_path: Path | None
+    source: str
+    warnings: list[str]
+
+
+class DashboardConfigContext:
+    def __init__(self, config: dict[str, Any] | None, *, config_path: Path | None) -> None:
+        self._lock = RLock()
+        self._dispatcher_started = False
+        self.config: dict[str, Any] | None = None
+        self.config_path: Path | None = None
+        self.job_manager: DashboardJobManager | None = None
+        self.schedule_manager: DashboardScheduleManager | None = None
+        if config is not None and config_path is not None:
+            self.set_active_config(config, config_path=config_path, persist=False)
+
+    def set_active_config(self, config: dict[str, Any], *, config_path: Path, persist: bool = True) -> None:
+        with self._lock:
+            if self.schedule_manager is not None and self._dispatcher_started:
+                self.schedule_manager.stop_daily_report_dispatcher()
+            self.config = config
+            self.config_path = config_path
+            self.job_manager = DashboardJobManager(config, config_path=config_path)
+            self.schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=self.job_manager)
+            if persist:
+                write_dashboard_selected_config_state(config_path)
+            if self._dispatcher_started:
+                self.schedule_manager.start_daily_report_dispatcher()
+
+    def start_dispatcher(self) -> None:
+        with self._lock:
+            self._dispatcher_started = True
+            if self.schedule_manager is not None:
+                self.schedule_manager.start_daily_report_dispatcher()
+
+    def stop_dispatcher(self) -> None:
+        with self._lock:
+            if self.schedule_manager is not None:
+                self.schedule_manager.stop_daily_report_dispatcher()
+            self._dispatcher_started = False
+
+    def active(self) -> tuple[dict[str, Any], Path] | None:
+        with self._lock:
+            if self.config is None or self.config_path is None:
+                return None
+            return self.config, self.config_path
+
+
+def load_dashboard_startup_config(config_arg: str | None) -> DashboardStartupConfig:
+    if config_arg:
+        config_path = Path(config_arg)
+        config = load_config(config_path)
+        write_dashboard_selected_config_state(config_path)
+        return DashboardStartupConfig(config=config, config_path=config_path, source="explicit", warnings=[])
+
+    state, error = read_json_object(_dashboard_selected_config_state_path())
+    if error:
+        return DashboardStartupConfig(config=None, config_path=None, source="none", warnings=[])
+    raw_path = state.get("config_path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return DashboardStartupConfig(
+            config=None,
+            config_path=None,
+            source="invalid_persisted",
+            warnings=["last selected dashboard config is missing a path."],
+        )
+    config_path = Path(raw_path.strip())
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        return DashboardStartupConfig(
+            config=None,
+            config_path=None,
+            source="invalid_persisted",
+            warnings=[f"last selected dashboard config could not be loaded: {sanitize_dashboard_message(str(exc), config_path=config_path)}"],
+        )
+    return DashboardStartupConfig(config=config, config_path=config_path, source="persisted", warnings=[])
+
+
+def write_dashboard_selected_config_state(config_path: Path) -> None:
+    write_json(
+        _dashboard_selected_config_state_path(),
+        {
+            "schema_version": 1,
+            "artifact_type": "dashboard_selected_config_state",
+            "status": "selected",
+            "config_path": str(config_path),
+            "config": _dashboard_config_status(config_path),
+            "updated_at": utc_now_timestamp(),
+        },
+    )
+
+
+def _dashboard_selected_config_state_path() -> Path:
+    return artifact_base(None) / DASHBOARD_SELECTED_CONFIG_STATE
+
+
+def _select_dashboard_config(context: DashboardConfigContext, *, request: dict[str, Any]) -> dict[str, Any]:
+    raw_path = request.get("config_path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return _unconfigured_payload(
+            "dashboard_config_selection",
+            status="failed",
+            errors=["config_path must be a non-empty string."],
+        )
+    config_path = Path(raw_path.strip())
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_config_selection",
+            "status": "failed",
+            "config": _dashboard_config_status(config_path),
+            "profile": None,
+            "warnings": [],
+            "errors": [sanitize_dashboard_message(str(exc), config_path=config_path)],
+        }
+    context.set_active_config(config, config_path=config_path)
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_config_selection",
+        "status": "succeeded",
+        "config": _dashboard_config_status(config_path),
+        "profile": dashboard_config_profile(config, config_path=config_path),
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _unconfigured_config_profile() -> dict[str, Any]:
+    payload = _unconfigured_payload("dashboard_config_profile", fields=[], sections=[])
+    payload["config"] = {"loaded": False, "ref": None, "editable": False, "requires_confirmation": False}
+    payload["omitted"] = {
+        "absolute_local_paths_embedded": False,
+        "proxy_urls_embedded": False,
+        "credentials_embedded": False,
+        "raw_config_text_embedded": True,
+    }
+    return payload
+
+
+def _unconfigured_payload(artifact_type: str, *, status: str = "unconfigured", **extra: Any) -> dict[str, Any]:
+    payload = {
+        "schema_version": 1,
+        "artifact_type": artifact_type,
+        "status": status,
+        "config": {"loaded": False, "ref": None},
+        "warnings": ["No dashboard config is active. Open Settings and load a config file."],
+        "errors": [],
+    }
+    payload.update(extra)
+    return payload
+
+
+def _dashboard_config_status(config_path: Path | None) -> dict[str, Any]:
+    if config_path is None:
+        return {"loaded": False, "ref": None}
+    return {"loaded": True, "ref": dashboard_config_ref(config_path)}
+
+
 def create_dashboard_app(
-    config: dict[str, Any],
+    config: dict[str, Any] | None = None,
     *,
-    config_path: Path,
+    config_path: Path | None = None,
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
 ) -> Any:
@@ -78,17 +247,15 @@ def create_dashboard_app(
 
     validate_dashboard_host(host)
     validate_dashboard_port(port)
-    health = dashboard_health(config, config_path=config_path, host=host, port=port)
-    job_manager = DashboardJobManager(config, config_path=config_path)
-    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
+    context = DashboardConfigContext(config, config_path=config_path)
 
     @asynccontextmanager
     async def dashboard_lifespan(_app: Any) -> Any:
-        schedule_manager.start_daily_report_dispatcher()
+        context.start_dispatcher()
         try:
             yield
         finally:
-            schedule_manager.stop_daily_report_dispatcher()
+            context.stop_dispatcher()
 
     app = FastAPI(title="Halpha Dashboard", version="0.0.0", lifespan=dashboard_lifespan)
 
@@ -101,8 +268,10 @@ def create_dashboard_app(
 
     @app.get("/", response_class=HTMLResponse)
     def root() -> HTMLResponse:
+        active = context.active()
+        active_config = active[0] if active else {}
         return HTMLResponse(
-            dashboard_index_html(display_timezone=dashboard_display_timezone(config)),
+            dashboard_index_html(display_timezone=dashboard_display_timezone(active_config)),
             headers=NO_STORE_HEADERS,
         )
 
@@ -119,79 +288,153 @@ def create_dashboard_app(
 
     @app.get("/api/health")
     def health_endpoint() -> dict[str, Any]:
-        return health
+        active = context.active()
+        if active is None:
+            return dashboard_health(None, config_path=None, host=host, port=port)
+        active_config, active_config_path = active
+        return dashboard_health(active_config, config_path=active_config_path, host=host, port=port)
 
     @app.get("/api/config/profile")
     def config_profile_endpoint() -> dict[str, Any]:
-        return dashboard_config_profile(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_config_profile()
+        active_config, active_config_path = active
+        return dashboard_config_profile(active_config, config_path=active_config_path)
+
+    @app.post("/api/config/select")
+    def config_select_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        return _select_dashboard_config(context, request=request)
 
     @app.post("/api/config/profile")
     def config_profile_save_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
-        return dashboard_save_config_profile(config, config_path=config_path, request=request)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_config_save_result", config={"loaded": False})
+        active_config, active_config_path = active
+        return dashboard_save_config_profile(active_config, config_path=active_config_path, request=request)
 
     @app.post("/api/config/profile/backup")
     def config_profile_backup_endpoint() -> dict[str, Any]:
-        return dashboard_backup_config(config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_config_backup", backup_ref=None, config={"loaded": False})
+        _, active_config_path = active
+        return dashboard_backup_config(config_path=active_config_path)
 
     @app.get("/api/overview")
     def overview_endpoint() -> dict[str, Any]:
-        return dashboard_overview(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_overview", sections={})
+        active_config, active_config_path = active
+        return dashboard_overview(active_config, config_path=active_config_path)
 
     @app.get("/api/text-intelligence")
     def text_intelligence_endpoint(run_id: str | None = None) -> dict[str, Any]:
-        return dashboard_text_intelligence(config_path=config_path, run_id=run_id)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_text_intelligence", artifacts=[])
+        _, active_config_path = active
+        return dashboard_text_intelligence(config_path=active_config_path, run_id=run_id)
 
     @app.get("/api/runs")
     def runs_endpoint() -> dict[str, Any]:
-        return dashboard_runs(config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_runs", runs=[], latest_successful_run=None, latest_run=None)
+        _, active_config_path = active
+        return dashboard_runs(config_path=active_config_path)
 
     @app.get("/api/runs/{run_id}")
     def run_detail_endpoint(run_id: str) -> dict[str, Any]:
-        return dashboard_run_detail(config_path=config_path, run_id=run_id)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_run_detail", run_id=run_id)
+        _, active_config_path = active
+        return dashboard_run_detail(config_path=active_config_path, run_id=run_id)
 
     @app.get("/api/artifacts/preview")
     def artifact_preview_endpoint(path: str) -> dict[str, Any]:
-        return dashboard_artifact_preview(config, config_path=config_path, artifact_path=path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_artifact_preview", path=path, preview=None)
+        active_config, active_config_path = active
+        return dashboard_artifact_preview(active_config, config_path=active_config_path, artifact_path=path)
 
     @app.get("/api/data/stores")
     def data_stores_endpoint() -> dict[str, Any]:
-        return dashboard_data_stores(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_stores", stores=[])
+        active_config, active_config_path = active
+        return dashboard_data_stores(active_config, config_path=active_config_path)
 
     @app.get("/api/data/deletion")
     def data_deletion_plan_endpoint() -> dict[str, Any]:
-        return dashboard_data_deletion_plan(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_deletion_plan", candidates=[], plan=[])
+        active_config, active_config_path = active
+        return dashboard_data_deletion_plan(active_config, config_path=active_config_path)
 
     @app.post("/api/data/deletion")
     def data_deletion_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
-        return dashboard_delete_data(config, config_path=config_path, request=request)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_deletion_result", deleted=[], skipped=[])
+        active_config, active_config_path = active
+        return dashboard_delete_data(active_config, config_path=active_config_path, request=request)
 
     @app.get("/api/strategies")
     def strategies_endpoint(run_id: str | None = None) -> dict[str, Any]:
-        return dashboard_strategy_research(config, config_path=config_path, run_id=run_id)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_strategy_research", pipeline={"artifacts": []}, standalone={"artifacts": []})
+        active_config, active_config_path = active
+        return dashboard_strategy_research(active_config, config_path=active_config_path, run_id=run_id)
 
     @app.get("/api/monitor")
     def monitor_endpoint() -> dict[str, Any]:
-        return dashboard_monitor_summary(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_monitor")
+        active_config, active_config_path = active
+        return dashboard_monitor_summary(active_config, config_path=active_config_path)
 
     @app.get("/api/monitor/cycles")
     def monitor_cycles_endpoint() -> dict[str, Any]:
-        return dashboard_monitor_cycles(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_monitor_cycles", cycles=[])
+        active_config, active_config_path = active
+        return dashboard_monitor_cycles(active_config, config_path=active_config_path)
 
     @app.get("/api/monitor/alerts")
     def monitor_alerts_endpoint() -> dict[str, Any]:
-        return dashboard_monitor_alerts(config, config_path=config_path)
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_monitor_alerts", alerts=[])
+        active_config, active_config_path = active
+        return dashboard_monitor_alerts(active_config, config_path=active_config_path)
 
     @app.get("/api/jobs")
     def jobs_endpoint() -> dict[str, Any]:
-        return job_manager.list_jobs()
+        if context.job_manager is None:
+            return _unconfigured_payload("dashboard_jobs", jobs=[])
+        return context.job_manager.list_jobs()
 
     @app.post("/api/jobs")
     def create_job_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
-        return job_manager.create_job(request)
+        if context.job_manager is None:
+            return _unconfigured_payload("dashboard_job", status="blocked", job_id=None)
+        return context.job_manager.create_job(request)
 
     @app.get("/api/jobs/{job_id}")
     def job_detail_endpoint(job_id: str) -> dict[str, Any]:
-        job = job_manager.get_job(job_id)
+        if context.job_manager is None:
+            return _unconfigured_payload("dashboard_job", status="blocked", job_id=job_id)
+        job = context.job_manager.get_job(job_id)
         if job is None:
             return {
                 "schema_version": 1,
@@ -205,41 +448,53 @@ def create_dashboard_app(
 
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job_endpoint(job_id: str) -> dict[str, Any]:
-        return job_manager.cancel_job(job_id)
+        if context.job_manager is None:
+            return _unconfigured_payload("dashboard_job", status="blocked", job_id=job_id)
+        return context.job_manager.cancel_job(job_id)
 
     @app.get("/api/schedule/daily-report")
     def daily_report_schedule_endpoint() -> dict[str, Any]:
-        return schedule_manager.read_daily_report_schedule()
+        if context.schedule_manager is None:
+            return _unconfigured_payload("dashboard_daily_report_schedule", enabled=False, persisted=False)
+        return context.schedule_manager.read_daily_report_schedule()
 
     @app.post("/api/schedule/daily-report")
     def update_daily_report_schedule_endpoint(
         request: dict[str, Any] | None = Body(default=None),
     ) -> dict[str, Any]:
-        return schedule_manager.update_daily_report_schedule(request or {})
+        if context.schedule_manager is None:
+            return _unconfigured_payload("dashboard_daily_report_schedule", enabled=False, persisted=False)
+        return context.schedule_manager.update_daily_report_schedule(request or {})
 
     @app.post("/api/schedule/daily-report/enable")
     def enable_daily_report_schedule_endpoint(
         request: dict[str, Any] | None = Body(default=None),
     ) -> dict[str, Any]:
-        return schedule_manager.enable_daily_report_schedule(request or {})
+        if context.schedule_manager is None:
+            return _unconfigured_payload("dashboard_daily_report_schedule", enabled=False, persisted=False)
+        return context.schedule_manager.enable_daily_report_schedule(request or {})
 
     @app.post("/api/schedule/daily-report/disable")
     def disable_daily_report_schedule_endpoint() -> dict[str, Any]:
-        return schedule_manager.disable_daily_report_schedule()
+        if context.schedule_manager is None:
+            return _unconfigured_payload("dashboard_daily_report_schedule", enabled=False, persisted=False)
+        return context.schedule_manager.disable_daily_report_schedule()
 
     @app.post("/api/schedule/daily-report/trigger")
     def trigger_daily_report_schedule_endpoint(
         request: dict[str, Any] | None = Body(default=None),
     ) -> dict[str, Any]:
-        return schedule_manager.trigger_daily_report_schedule(request or {})
+        if context.schedule_manager is None:
+            return _unconfigured_payload("dashboard_daily_report_schedule_trigger", job=None)
+        return context.schedule_manager.trigger_daily_report_schedule(request or {})
 
     return app
 
 
 def run_dashboard_service(
-    config: dict[str, Any],
+    config: dict[str, Any] | None = None,
     *,
-    config_path: Path,
+    config_path: Path | None = None,
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
 ) -> None:
@@ -257,7 +512,7 @@ def run_dashboard_service(
         _clear_dashboard_service_state(config_path=config_path, host=host, port=port, pid=os.getpid())
 
 
-def _prepare_dashboard_service_endpoint(*, config_path: Path, host: str, port: int) -> None:
+def _prepare_dashboard_service_endpoint(*, config_path: Path | None, host: str, port: int) -> None:
     if _dashboard_endpoint_can_bind(host, port):
         _discard_stale_dashboard_service_state(config_path=config_path, host=host, port=port)
         return
@@ -334,11 +589,11 @@ def _dashboard_health_url(host: str, port: int) -> str:
     return f"http://{url_host}:{port}/api/health"
 
 
-def _dashboard_service_state_path(config_path: Path) -> Path:
+def _dashboard_service_state_path(config_path: Path | None) -> Path:
     return artifact_base(config_path) / DASHBOARD_SERVICE_STATE
 
 
-def _write_dashboard_service_state(*, config_path: Path, host: str, port: int) -> None:
+def _write_dashboard_service_state(*, config_path: Path | None, host: str, port: int) -> None:
     now = utc_now_timestamp()
     write_json(
         _dashboard_service_state_path(config_path),
@@ -352,13 +607,13 @@ def _write_dashboard_service_state(*, config_path: Path, host: str, port: int) -
             "port": port,
             "started_at": now,
             "updated_at": now,
-            "config": {"ref": dashboard_config_ref(config_path)},
+            "config": _dashboard_config_status(config_path),
             "health_endpoint": _dashboard_health_url(host, port),
         },
     )
 
 
-def _clear_dashboard_service_state(*, config_path: Path, host: str, port: int, pid: int) -> None:
+def _clear_dashboard_service_state(*, config_path: Path | None, host: str, port: int, pid: int) -> None:
     state_path = _dashboard_service_state_path(config_path)
     state, error = read_json_object(state_path)
     if error:
@@ -371,7 +626,7 @@ def _clear_dashboard_service_state(*, config_path: Path, host: str, port: int, p
         state_path.unlink()
 
 
-def _discard_stale_dashboard_service_state(*, config_path: Path, host: str, port: int) -> None:
+def _discard_stale_dashboard_service_state(*, config_path: Path | None, host: str, port: int) -> None:
     state_path = _dashboard_service_state_path(config_path)
     state, error = read_json_object(state_path)
     if error or not _dashboard_service_state_matches_endpoint(state, host=host, port=port):
@@ -456,9 +711,9 @@ def _wait_for_dashboard_endpoint_release(host: str, port: int) -> bool:
 
 
 def dashboard_health(
-    config: dict[str, Any],
+    config: dict[str, Any] | None,
     *,
-    config_path: Path,
+    config_path: Path | None,
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
 ) -> dict[str, Any]:
@@ -467,14 +722,11 @@ def dashboard_health(
     return {
         "artifact_type": "dashboard_health",
         "service": "halpha_dashboard",
-        "status": "ok",
+        "status": "ok" if config is not None and config_path is not None else "unconfigured",
         "local_only": True,
         "host": host,
         "port": port,
-        "config": {
-            "loaded": True,
-            "ref": dashboard_config_ref(config_path),
-        },
+        "config": _dashboard_config_status(config_path),
         "features": {
             "overview_api": "available",
             "run_history_api": "available",

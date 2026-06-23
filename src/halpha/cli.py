@@ -11,6 +11,7 @@ from halpha.dashboard import (
     DEFAULT_DASHBOARD_PORT,
     DashboardError,
     dashboard_config_ref,
+    load_dashboard_startup_config,
     run_dashboard_service,
     sanitize_dashboard_message,
     validate_dashboard_host,
@@ -71,7 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run the local web dashboard.",
         description="Run the local web dashboard.",
     )
-    dashboard_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    dashboard_parser.add_argument("--config", help="Optional path to a Halpha YAML config file.")
     dashboard_parser.add_argument(
         "--host",
         default=DEFAULT_DASHBOARD_HOST,
@@ -438,16 +439,16 @@ def _validate(config_arg: str, *, run_dir: str | None) -> int:
     return result.exit_code
 
 
-def _dashboard(config_arg: str, *, host: str, port: int) -> int:
-    config_path = Path(config_arg)
-    _configure_logging(config_path=config_path)
+def _dashboard(config_arg: str | None, *, host: str, port: int) -> int:
+    log_config_path = Path(config_arg) if config_arg else Path("dashboard")
+    _configure_logging(config_path=log_config_path)
     LOGGER.info(
         "Halpha command started.",
         extra={"event": "cli.command.start", "command": "dashboard", "host": host, "port": port},
     )
 
     try:
-        config = load_config(config_path)
+        startup = load_dashboard_startup_config(config_arg)
     except ConfigError as exc:
         LOGGER.warning(
             "Halpha command failed.",
@@ -455,16 +456,22 @@ def _dashboard(config_arg: str, *, host: str, port: int) -> int:
         )
         print("Halpha dashboard failed.")
         print("stage: config")
-        print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path)}")
+        print(f"reason: {sanitize_dashboard_message(str(exc), config_path=log_config_path)}")
         return 2
 
-    _configure_logging(config_path=config_path, config=config)
+    config = startup.config
+    config_path = startup.config_path
+    _configure_logging(config_path=config_path or log_config_path, config=config)
     try:
         validate_dashboard_host(host)
         validate_dashboard_port(port)
         print("Halpha dashboard starting.")
         print(f"url: {_dashboard_url(host, port)}")
-        print(f"config: {dashboard_config_ref(config_path)}")
+        if config_path is None:
+            print("config: not configured")
+            print("settings: open the dashboard Settings view to load a config file.")
+        else:
+            print(f"config: {dashboard_config_ref(config_path)}")
         LOGGER.info(
             "Halpha dashboard service starting.",
             extra={"event": "dashboard.service.start", "host": host, "port": port},
@@ -477,7 +484,7 @@ def _dashboard(config_arg: str, *, host: str, port: int) -> int:
         )
         print("Halpha dashboard failed.")
         print("stage: dashboard")
-        print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path)}")
+        print(f"reason: {sanitize_dashboard_message(str(exc), config_path=config_path or log_config_path)}")
         return exc.exit_code
     except KeyboardInterrupt:
         LOGGER.info(

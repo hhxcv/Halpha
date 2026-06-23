@@ -115,7 +115,7 @@ def _assert_running_state(state_path: Path, *, host: str, port: int) -> None:
     assert state["pid"] > 0
     assert state["host"] == host
     assert state["port"] == port
-    assert state["config"] == {"ref": "<external-config>"}
+    assert state["config"] == {"loaded": True, "ref": "<external-config>"}
 
 
 def _write_config(tmp_path: Path) -> Path:

@@ -106,6 +106,7 @@ python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
 Run the local web dashboard:
 
 ```bash
+python -m halpha dashboard
 python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 ```
@@ -115,6 +116,12 @@ default. Open the printed local URL in a browser to inspect overview state, run
 history, report previews, local data store metadata, strategy outputs, monitor
 health, recent monitor cycles, alert samples, and dashboard-triggered job
 history.
+
+The dashboard can start without a config. On first startup with no selected
+config it serves the shell in an unconfigured state and opens the Settings flow
+so a config can be loaded. A valid `--config` argument or Settings load records
+the last selected config under local dashboard state and later dashboard
+startups reuse it when it still validates.
 
 Dashboard startup records local service state under
 `runs/dashboard/service_state.json`. A repeated dashboard startup can stop a
