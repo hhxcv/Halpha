@@ -60,6 +60,89 @@ def dashboard_overall_status(statuses: list[str]) -> str:
     return "partial"
 
 
+def dashboard_section(
+    name: str,
+    status: str,
+    *,
+    fields: dict[str, Any] | None = None,
+    source_artifacts: list[str] | None = None,
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "status": status,
+        "fields": fields or {},
+        "source_artifacts": source_artifacts or [],
+        "warnings": warnings or [],
+        "errors": errors or [],
+    }
+
+
+def dashboard_manifest_artifact_ref(manifest: dict[str, Any], key: str, default: str) -> str | None:
+    artifacts = manifest.get("artifacts")
+    if isinstance(artifacts, dict):
+        value = artifacts.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return default if manifest else None
+
+
+def dashboard_strict_overall_status(statuses: list[str]) -> str:
+    if any(status == "failed" for status in statuses):
+        return "failed"
+    if any(status == "degraded" for status in statuses):
+        return "degraded"
+    if any(
+        status
+        in {
+            "disabled",
+            "insufficient_data",
+            "missing",
+            "not_generated",
+            "not_run",
+            "partial",
+            "skipped",
+            "unknown",
+        }
+        for status in statuses
+    ):
+        return "partial"
+    if any(status == "warning" for status in statuses):
+        return "warning"
+    return "available"
+
+
+def dashboard_normalize_section_status(status: str) -> str:
+    normalized = status.lower()
+    if normalized in {"ok", "available", "succeeded", "success"}:
+        return "available"
+    if normalized in {
+        "warning",
+        "degraded",
+        "disabled",
+        "failed",
+        "partial",
+        "missing",
+        "insufficient_data",
+        "not_generated",
+        "not_run",
+        "skipped",
+    }:
+        return normalized
+    return "unknown"
+
+
+def dashboard_bounded_mapping(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    bounded: dict[str, Any] = {}
+    for key, item in sorted(value.items()):
+        if isinstance(item, (str, int, float, bool)) or item is None:
+            bounded[str(key)] = item
+    return bounded
+
+
 def _normalize_status(status: str) -> str:
     lowered = status.lower()
     if lowered in {"ok", "available", "succeeded", "success", "completed"}:
