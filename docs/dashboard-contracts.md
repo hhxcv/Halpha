@@ -108,7 +108,11 @@ remain explicit allowlisted jobs.
 
 Implemented schedule controls are API-backed local state for the daily report
 schedule. The schedule API can inspect, enable, disable, update, and manually
-trigger daily report jobs. It does not run a hidden scheduler loop.
+trigger daily report jobs. The dashboard also starts a local dispatcher while
+the dashboard process is active. That dispatcher checks the persisted daily
+report schedule and creates visible allowlisted dashboard jobs for due
+non-Codex runs. It is not a hosted scheduler, OS scheduler, startup task, cron
+integration, external workflow engine, or hidden daemon.
 
 ## View Contract
 
@@ -310,12 +314,19 @@ The schedule API supports:
 - `POST /api/schedule/daily-report/trigger`.
 
 Manual schedule triggers create visible dashboard jobs. The default trigger is
-`run_no_codex`. Codex-capable `run` triggers require `confirm_codex: true`.
+the explicit request `job_intent`, then the persisted schedule mode, then the
+Codex-capable `run` fallback. Codex-capable `run` triggers require
+`confirm_codex: true`.
 
-The schedule must not assume a hosted scheduler, OS service, startup task,
-cron integration, workflow engine, or hidden daemon. The current implementation
-does not include automatic dispatch; it records schedule state and supports
-manual trigger APIs only.
+Enabling a schedule requires an explicit `job_intent`. The dashboard enable
+control records `run_no_codex`, which the automatic dispatcher can execute
+without Codex. If an enabled schedule is due with Codex-capable `run`, automatic
+dispatch records a blocked state and does not create a job because Codex
+execution requires explicit user confirmation at the trigger point.
+
+Automatic dispatch runs only while the dashboard process is active. It must not
+be treated as a hosted scheduler, OS service, startup task, cron integration,
+workflow engine, or hidden daemon.
 
 ## Monitor Boundary
 
