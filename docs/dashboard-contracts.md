@@ -65,6 +65,7 @@ product artifacts as research evidence.
 Start the dashboard with:
 
 ```bash
+python -m halpha dashboard
 python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 ```
@@ -72,10 +73,20 @@ python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 
 The dashboard service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
+`--config` is optional for dashboard startup. If omitted, startup loads the
+last selected dashboard config from local dashboard state when that config is
+available and valid. If no config is selected or the persisted selection no
+longer validates, the dashboard starts in an explicit `unconfigured` state.
+Unconfigured data APIs must return no-data payloads instead of guessing a
+runtime directory. The Settings view can load or switch the active config; a
+successful selection updates the in-process dashboard config and records the
+last selected config locally.
+
 Dashboard startup writes local service state:
 
 ```text
 runs/dashboard/service_state.json
+runs/dashboard/selected_config.json
 ```
 
 Before binding, dashboard startup checks the requested local endpoint. If a
@@ -152,8 +163,8 @@ Dashboard pages should expose the current product shape through bounded views:
 - Intelligence: source-aware non-OHLCV intelligence summaries, including text,
   derivatives, on-chain, macro, outcomes, and data-quality tabs where the
   corresponding artifacts exist.
-- Settings: current config controls, validation, backup, and storage
-  maintenance for single-run artifacts and shared stores.
+- Settings: config loading and switching, current config controls, validation,
+  backup, and storage maintenance for single-run artifacts and shared stores.
 
 Artifact preview remains an internal bounded API capability used by these
 views. It must not reintroduce a top-level Artifacts page. Command controls

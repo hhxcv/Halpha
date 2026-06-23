@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sqlite3
 
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 from halpha.cli import main
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, dashboard_health
+from halpha.dashboard.app import write_dashboard_selected_config_state
 from halpha.pipeline import RunContext
 from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
@@ -32,6 +34,68 @@ def test_dashboard_help_mentions_local_server(capsys) -> None:
     assert "--config" in output
     assert "--host" in output
     assert "--port" in output
+
+
+def test_dashboard_command_starts_without_config(
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict] = []
+
+    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
+        calls.append({"config": config, "config_path": config_path, "host": host, "port": port})
+
+    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+
+    exit_code = main(["dashboard", "--port", "8765"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert calls == [{"config": None, "config_path": None, "host": "127.0.0.1", "port": 8765}]
+    assert "config: not configured" in output
+    assert "Settings view" in output
+
+
+def test_dashboard_command_loads_persisted_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    write_dashboard_selected_config_state(config_path)
+    calls: list[dict] = []
+
+    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
+        calls.append({"config": config, "config_path": config_path, "host": host, "port": port})
+
+    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+
+    exit_code = main(["dashboard"])
+
+    assert exit_code == 0
+    assert calls[0]["config"]["run"]["output_dir"] == "runs"
+    assert calls[0]["config_path"] == config_path
+
+
+def test_dashboard_command_explicit_config_persists_selection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    calls: list[dict] = []
+
+    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
+        calls.append({"config": config, "config_path": config_path, "host": host, "port": port})
+
+    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+
+    exit_code = main(["dashboard", "--config", str(config_path)])
+
+    state = json.loads((tmp_path / "runs" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert calls[0]["config_path"] == config_path
+    assert state["artifact_type"] == "dashboard_selected_config_state"
+    assert state["config_path"] == str(config_path)
 
 
 def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
@@ -63,6 +127,46 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert payload["features"]["schedule_api"] == "available"
     assert payload["features"]["frontend_ui"] == "available"
     assert payload["features"]["job_runner"] == "available"
+
+
+def test_dashboard_no_config_api_states_are_explicit() -> None:
+    client = TestClient(create_dashboard_app())
+
+    health = client.get("/api/health").json()
+    profile = client.get("/api/config/profile").json()
+    overview = client.get("/api/overview").json()
+    runs = client.get("/api/runs").json()
+    job = client.post("/api/jobs", json={"intent": "validate", "params": {}}).json()
+
+    assert health["status"] == "unconfigured"
+    assert health["config"] == {"loaded": False, "ref": None}
+    assert profile["status"] == "unconfigured"
+    assert profile["config"]["loaded"] is False
+    assert overview["status"] == "unconfigured"
+    assert runs["status"] == "unconfigured"
+    assert runs["runs"] == []
+    assert job["status"] == "blocked"
+    assert job["config"] == {"loaded": False, "ref": None}
+
+
+def test_dashboard_settings_can_select_active_config(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    client = TestClient(create_dashboard_app())
+
+    select_response = client.post("/api/config/select", json={"config_path": str(config_path)})
+    health_response = client.get("/api/health")
+    profile_response = client.get("/api/config/profile")
+    runs_response = client.get("/api/runs")
+
+    selected = select_response.json()
+    persisted = json.loads((tmp_path / "runs" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
+    assert select_response.status_code == 200
+    assert selected["status"] == "succeeded"
+    assert selected["profile"]["status"] == "available"
+    assert health_response.json()["config"] == {"loaded": True, "ref": "<external-config>"}
+    assert profile_response.json()["status"] == "available"
+    assert runs_response.json()["status"] != "unconfigured"
+    assert persisted["config_path"] == str(config_path)
 
 
 def test_dashboard_health_omits_external_absolute_config_path(tmp_path: Path) -> None:

@@ -14,6 +14,7 @@
       jobs: app.dataset.jobsEndpoint,
       schedule: app.dataset.scheduleEndpoint,
       settings: app.dataset.settingsEndpoint,
+      configSelect: app.dataset.configSelectEndpoint,
       textIntel: app.dataset.textIntelligenceEndpoint,
     };
     const shared = window.HalphaDashboardShared;
@@ -234,9 +235,15 @@
     async function loadHealth() {
       try {
         state.health = await fetchJson(endpoints.health);
-        const ref = state.health?.config?.ref || "Current config";
+        const loaded = state.health?.config?.loaded !== false;
+        const ref = loaded ? (state.health?.config?.ref || "Current config") : "not configured";
         document.querySelector("#config-ref").textContent = ref;
-        document.querySelector("#sidebar-health-text").textContent = state.health?.status === "ok" ? "All local systems operational." : "Dashboard status needs attention.";
+        document.querySelector("#sidebar-health-text").textContent = loaded
+          ? (state.health?.status === "ok" ? "All local systems operational." : "Dashboard status needs attention.")
+          : "Open Settings and load a config file.";
+        if (!loaded && state.view !== "settings") {
+          setHashView("settings");
+        }
       } catch (error) {
         document.querySelector("#config-ref").textContent = "unavailable";
         document.querySelector("#sidebar-health-text").textContent = error.message;
@@ -1155,9 +1162,13 @@
       const profileStatus = state.settingsProfile?.status || "loading";
       setPill("#settings-valid-pill", profileStatus, profileStatus === "available" ? "Loaded" : profileStatus);
       document.querySelector("#settings-last-validated").textContent = state.validationJob ? `Last validation job: ${state.validationJob.status || "created"}` : "Last validated: not run";
-      document.querySelector("#config-profile").textContent = state.settingsProfile?.config?.ref || state.health?.config?.ref || "Current config";
+      const loaded = state.settingsProfile?.config?.loaded !== false && state.settingsProfile?.status !== "unconfigured";
+      document.querySelector("#config-profile").textContent = loaded ? (state.settingsProfile?.config?.ref || state.health?.config?.ref || "Current config") : "not configured";
       document.querySelector("#settings-section-title").textContent = state.settingsSection;
       document.querySelector("#settings-form").innerHTML = settingsForm(state.settingsSection);
+      const backupButton = document.querySelector("#settings-backup");
+      if (backupButton) backupButton.disabled = !loaded;
+      document.querySelectorAll("[data-job-intent='validate']").forEach((button) => { button.disabled = !loaded; });
       renderChangeSummary();
       renderValidationResults();
       renderStorageMaintenance();
@@ -1166,6 +1177,9 @@
     }
 
     function settingsForm(section) {
+      if (state.settingsProfile?.status === "unconfigured") {
+        return `<div class="empty-state">No config is active. Load a config file to show editable settings.</div>`;
+      }
       const fields = settingsFields().filter((field) => field.section === section);
       if (section === "Storage") {
         return `<div class="message">Use Storage maintenance below to delete single-run artifacts or shared stores. Shared data requires exact store selection and typed confirmation.</div>`;
@@ -1282,7 +1296,7 @@
       setPill("#change-count", paths.length ? "warning" : "available", `${paths.length} changes`);
       const saveButton = document.querySelector("#settings-save");
       if (saveButton) {
-        saveButton.disabled = !paths.length;
+        saveButton.disabled = !paths.length || state.settingsProfile?.status === "unconfigured";
       }
       document.querySelector("#change-summary").innerHTML = paths.length
         ? paths.map((path) => {
@@ -1370,6 +1384,10 @@
     }
 
     async function saveSettings() {
+      if (state.settingsProfile?.status === "unconfigured") {
+        showToast("Load a config file first.");
+        return;
+      }
       const paths = Object.keys(state.settingsChanges);
       if (!paths.length) {
         showToast("No settings changes to save.");
@@ -1400,10 +1418,39 @@
     }
 
     async function backupSettings() {
+      if (state.settingsProfile?.status === "unconfigured") {
+        showToast("Load a config file first.");
+        return;
+      }
       try {
         const result = await postJson(`${endpoints.settings}/backup`, {});
         document.querySelector("#validation-results").innerHTML = `<div class="message ${result.status === "succeeded" ? "" : "error"}"><strong>Config backup ${escapeHtml(result.status)}</strong>${result.backup_ref ? `<br>${escapeHtml(result.backup_ref)}` : ""}${Array.isArray(result.errors) && result.errors.length ? `<br>${escapeHtml(result.errors.join("; "))}` : ""}</div>`;
         showToast(`Config backup ${result.status}.`);
+      } catch (error) {
+        document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function loadSelectedConfig() {
+      const input = document.querySelector("#config-path-input");
+      const configPath = input ? input.value.trim() : "";
+      if (!configPath) {
+        showToast("Enter a config file path.");
+        return;
+      }
+      try {
+        const result = await postJson(endpoints.configSelect, {config_path: configPath});
+        if (result.status === "succeeded") {
+          state.settingsProfile = result.profile;
+          state.settingsChanges = {};
+          await loadHealth();
+          document.querySelector("#validation-results").innerHTML = `<div class="message"><strong>Config loaded</strong><br>${escapeHtml(result.config?.ref || configPath)}</div>`;
+          renderSettings();
+        } else {
+          const errors = Array.isArray(result.errors) ? result.errors : [];
+          document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(errors.join("; ") || "Config load failed.")}</div>`;
+        }
+        showToast(`Config load ${result.status}.`);
       } catch (error) {
         document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
       }
@@ -1727,6 +1774,7 @@
       document.querySelector("#intel-reset").addEventListener("click", resetIntelFilters);
       document.querySelector("#settings-save").addEventListener("click", saveSettings);
       document.querySelector("#settings-backup").addEventListener("click", backupSettings);
+      document.querySelector("#settings-load-config").addEventListener("click", loadSelectedConfig);
       document.querySelector("#cleanup-run-artifacts").addEventListener("click", () => cleanup("runs"));
       document.querySelector("#cleanup-shared-data").addEventListener("click", () => cleanup("shared"));
       window.addEventListener("hashchange", () => setView(viewFromHash()));

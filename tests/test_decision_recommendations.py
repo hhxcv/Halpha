@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
@@ -20,6 +22,11 @@ ACTION_TAXONOMY = [
     "NO_ACTION",
 ]
 ACTIONABLE_LEVELS = {"STRONG_DO", "DO", "TRY_SMALL", "AVOID", "EXIT_OR_REDUCE", "HEDGE_OR_PROTECT"}
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_decision_recommendations_apply_taxonomy_and_policy_gates(tmp_path: Path) -> None:

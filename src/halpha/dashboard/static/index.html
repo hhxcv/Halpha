@@ -23,6 +23,7 @@
     data-jobs-endpoint="/api/jobs"
     data-schedule-endpoint="/api/schedule/daily-report"
     data-settings-endpoint="/api/config/profile"
+    data-config-select-endpoint="/api/config/select"
     data-text-intelligence-endpoint="/api/text-intelligence"
     data-display-timezone="__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__"
   >
@@ -333,6 +334,8 @@
         <div class="settings-layout">
           <section class="panel settings-top">
             <div class="field"><label>Config file</label><div id="config-profile" class="readonly-value">Current config</div></div>
+            <div class="field"><label>Load config</label><input class="text-input" id="config-path-input" type="text" placeholder="config.local.yaml"></div>
+            <button class="ghost-button" type="button" id="settings-load-config">Load</button>
             <span id="settings-valid-pill" class="status-pill pending">loading</span>
             <span class="muted" id="settings-last-validated">Last validated: not run</span>
             <button class="primary-button" type="button" id="settings-save">Save changes</button>

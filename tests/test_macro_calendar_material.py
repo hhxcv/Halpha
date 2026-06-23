@@ -32,6 +32,11 @@ REPORT_STDOUT = "\n".join(
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_macro_calendar_material_summarizes_context_without_full_stores(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
     _write_context(run, records=_many_context_records())
