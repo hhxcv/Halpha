@@ -13,11 +13,13 @@ import threading
 from typing import Any
 from uuid import uuid4
 
+from halpha.dashboard.common import dashboard_read_json
+from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.dashboard.time import parse_utc_timestamp, utc_now_timestamp
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
 from halpha.pipeline_stages import STAGE_ORDER
-from halpha.storage import config_base as _config_base, read_json_object, safe_local_ref, write_json
+from halpha.storage import config_base as _config_base, write_json
 
 
 DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
@@ -900,7 +902,7 @@ class DashboardJobManager:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    data, error = read_json_object(path)
+    data, error = dashboard_read_json(path)
     if error:
         raise DashboardJobError(error)
     return data
@@ -962,10 +964,6 @@ def _config_ref(config_path: Path) -> str:
         return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
     except ValueError:
         return "<external-config>"
-
-
-def _safe_ref(path: Path, *, base: Path) -> str:
-    return safe_local_ref(path, base=base, external_ref=EXTERNAL_ARTIFACT_REF)
 
 
 def _is_dashboard_job_id(value: str) -> bool:

@@ -5,6 +5,11 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from halpha.dashboard.common import (
+    dashboard_overall_status as _overall_status,
+    dashboard_read_json_state as _read_json_object,
+    dashboard_safe_ref as _safe_ref,
+)
 from halpha.monitor.monitoring import (
     ALERT_ARCHIVE_FILENAME,
     ALERT_ARCHIVE_STATE_FILENAME,
@@ -12,17 +17,12 @@ from halpha.monitor.monitoring import (
     MONITOR_HEALTH_STATE_FILENAME,
     load_monitor_config,
 )
-from halpha.storage import (
-    config_base as _config_base,
-    read_json_object as _read_json_object_payload,
-    safe_local_ref,
-)
+from halpha.storage import config_base as _config_base
 
 
 MAX_CYCLE_SUMMARIES = 20
 MAX_ALERT_SAMPLE_RECORDS = 20
 MAX_SOURCE_ARTIFACTS = 40
-EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 ALERT_COUNT_KEYS = (
     "records",
     "emitted",
@@ -412,42 +412,10 @@ def _component(
     }
 
 
-def _read_json_object(path: Path) -> tuple[dict[str, Any], str, str | None]:
-    data, error = _read_json_object_payload(path)
-    if error is None:
-        return data, "available", None
-    status = "missing" if error == f"{path.name} was not found." else "failed"
-    return {}, status, error
-
-
 def _monitor_output_dir(config: dict[str, Any], *, base: Path) -> Path:
     settings = load_monitor_config(config)
     output_dir = Path(settings.output_dir)
     return output_dir if output_dir.is_absolute() else base / output_dir
-
-
-def _overall_status(statuses: list[str]) -> str:
-    normalized = [_normalize_status(status) for status in statuses if status and status != "unknown"]
-    if not normalized:
-        return "unknown"
-    if all(status == "missing" for status in normalized):
-        return "missing"
-    if any(status == "failed" for status in normalized):
-        return "partial" if any(status == "available" for status in normalized) else "failed"
-    if any(status == "missing" for status in normalized):
-        return "partial" if any(status == "available" for status in normalized) else "missing"
-    if all(status == "available" for status in normalized):
-        return "available"
-    return "partial"
-
-
-def _normalize_status(status: str) -> str:
-    lowered = status.lower()
-    if lowered in {"ok", "available", "succeeded", "success", "completed"}:
-        return "available"
-    if lowered in {"disabled", "insufficient_data", "not_generated", "not_run", "pending", "skipped"}:
-        return "partial"
-    return lowered
 
 
 def _alert_counts(value: Any) -> dict[str, int]:
@@ -501,10 +469,6 @@ def _safe_artifact_ref(value: Any, *, base: Path) -> str | None:
     path = Path(value)
     target = path if path.is_absolute() else base / path
     return _safe_ref(target, base=base)
-
-
-def _safe_ref(path: Path, *, base: Path) -> str:
-    return safe_local_ref(path, base=base, external_ref=EXTERNAL_ARTIFACT_REF)
 
 
 def _string_list(value: Any) -> list[str]:

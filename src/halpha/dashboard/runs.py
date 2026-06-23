@@ -5,14 +5,12 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from halpha.dashboard.common import dashboard_read_json as _read_json
+from halpha.dashboard.common import dashboard_resolve_ref as _resolve_ref
+from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.dashboard.run_aggregation import manifest_report_state, run_list_record as _run_list_record
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
-from halpha.storage import (
-    config_base as _config_base,
-    read_json_object,
-    resolve_local_ref,
-    safe_local_ref,
-)
+from halpha.storage import config_base as _config_base
 from halpha.utils.value_helpers import (
     as_dict as _dict,
     as_list as _list,
@@ -20,8 +18,6 @@ from halpha.utils.value_helpers import (
 )
 
 
-EXTERNAL_ARTIFACT_REF = "<external-artifact>"
-REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 MAX_STAGE_ARTIFACT_REFS = 20
 
 
@@ -407,23 +403,6 @@ def _section(
         "warnings": warnings or [],
         "errors": errors or [],
     }
-
-
-def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
-    return read_json_object(path, external_ref_name=REJECTED_EXTERNAL_REF_NAME)
-
-
-def _resolve_ref(value: str, *, base: Path) -> Path:
-    return resolve_local_ref(value, base=base, rejected_name=REJECTED_EXTERNAL_REF_NAME)
-
-
-def _safe_ref(path: Path, *, base: Path) -> str:
-    return safe_local_ref(
-        path,
-        base=base,
-        external_ref=EXTERNAL_ARTIFACT_REF,
-        rejected_name=REJECTED_EXTERNAL_REF_NAME,
-    )
 
 
 def _report_state(run_dir: Path, manifest: dict[str, Any]) -> dict[str, Any]:
