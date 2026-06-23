@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from json import JSONDecodeError
-from pathlib import Path
 from typing import Any
 
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext

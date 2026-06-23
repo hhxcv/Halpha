@@ -458,7 +458,7 @@ def _write_decision_recommendations(
             "source_artifacts": ["analysis/risk_assessment.json"],
             "records": [
                 {
-                    "record_id": f"decision_recommendation:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+                    "record_id": "decision_recommendation:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
                     "source": "binance",
                     "symbol": "BTCUSDT",
                     "timeframe": "1d",

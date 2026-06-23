@@ -18,7 +18,6 @@ from halpha.pipeline_stage_handlers import default_stage_handlers
 from halpha.pipeline_stages import (
     DECISION_INTELLIGENCE_STAGES,
     STAGE_ORDER,
-    StageSelectionError,
     stages_after as _stages_after,
     validate_optional_stage as _validate_optional_stage,
     validate_stage as _validate_stage,

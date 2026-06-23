@@ -916,7 +916,7 @@ def _decision(
         "risk_conditions": [f"risk_level={risk_level}; status=succeeded."],
         "invalidation_conditions": invalidation_conditions,
         "evidence": [
-            f"direction_counts: bullish=1.",
+            "direction_counts: bullish=1.",
             f"risk_level={risk_level}; status=succeeded.",
             f"{symbol} decision evidence.",
         ],

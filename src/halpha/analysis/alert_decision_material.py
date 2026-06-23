@@ -37,7 +37,6 @@ def build_alert_decision_material(config: dict[str, Any], run: RunContext) -> li
         previous_stage="build_event_intelligence_assessment",
     )
     records = _records(alert_artifact, "records")
-    assessments = _records(assessment_artifact, "records")
     warnings = _material_warnings(records, alert_artifact, assessment_artifact)
     errors: list[dict[str, Any]] = []
     material = render_alert_decision_material(

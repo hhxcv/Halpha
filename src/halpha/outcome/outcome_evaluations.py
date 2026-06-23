@@ -302,7 +302,6 @@ def _follow_through_record(
     *,
     follow_context: dict[str, Any],
 ) -> dict[str, Any]:
-    target_kind = str(target.get("target_kind") or "unknown")
     current_records = _matching_follow_records(target, follow_context)
     text_history_records = int(follow_context.get("text_event_history_records") or 0)
     if not current_records and text_history_records <= 0:
