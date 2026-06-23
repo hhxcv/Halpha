@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from halpha.decision.decision_artifact_builders import build_decision_recommendations_artifact
+from halpha.decision.decision_intelligence import build_decision_recommendations_artifact
 from halpha.runtime.pipeline_contracts import RunContext
 
 

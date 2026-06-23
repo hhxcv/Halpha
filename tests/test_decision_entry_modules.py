@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 from typing import Callable
 
@@ -22,12 +23,27 @@ def test_decision_entry_modules_do_not_import_private_monolith_builders() -> Non
         assert "_build_" not in source
 
 
+def test_decision_entry_modules_do_not_import_private_monolith_helpers() -> None:
+    for path in (
+        Path("src/halpha/decision/decision_artifact_builders.py"),
+        Path("src/halpha/decision/market_regime_assessment.py"),
+        Path("src/halpha/decision/risk_assessment.py"),
+        Path("src/halpha/decision/decision_recommendations.py"),
+        Path("src/halpha/decision/watch_triggers.py"),
+    ):
+        for name in _imported_decision_intelligence_names(path):
+            assert not name.startswith("_"), f"{path} imports private decision_intelligence helper {name}"
+
+
 def test_market_regime_builder_is_owned_by_entry_module() -> None:
     adapter_source = Path("src/halpha/decision/decision_artifact_builders.py").read_text(encoding="utf-8")
     monolith_source = Path("src/halpha/decision/decision_intelligence.py").read_text(encoding="utf-8")
 
     assert "_build_market_regime_assessment_artifact" not in adapter_source
     assert "def _build_market_regime_assessment_artifact" not in monolith_source
+    assert "halpha.decision.decision_artifact_helpers" in Path(
+        "src/halpha/decision/market_regime_assessment.py"
+    ).read_text(encoding="utf-8")
     assert "def build_market_regime_assessment(" in Path(
         "src/halpha/decision/market_regime_assessment.py"
     ).read_text(encoding="utf-8")
@@ -69,3 +85,15 @@ def _run_context(base: Path) -> RunContext:
         config_path=base / "config.yaml",
         manifest={"artifacts": {}, "counts": {}},
     )
+
+
+def _imported_decision_intelligence_names(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    names: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module != "halpha.decision.decision_intelligence":
+            continue
+        names.extend(alias.name for alias in node.names)
+    return names
