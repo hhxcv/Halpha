@@ -14,7 +14,7 @@ from halpha.dashboard.runs import dashboard_latest_run_section
 from halpha.dashboard.settings import dashboard_config_ref
 from halpha.data.run_index import RUN_INDEX_ARTIFACT
 from halpha.monitor.monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
-from halpha.storage import config_base as _config_base
+from halpha.storage import artifact_base as _artifact_base
 from halpha.utils.value_helpers import (
     as_dict as _dict,
     as_list as _list,
@@ -34,7 +34,7 @@ WORKBENCH_SUMMARY_ARTIFACT = f"{DEFAULT_WORKBENCH_OUTPUT_DIR}/{WORKBENCH_SUMMARY
 
 
 def dashboard_overview(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     latest_run, run_dir, manifest = dashboard_latest_run_section(config_path, base=base)
     monitor = _monitor_section(config, config_path=config_path, base=base)
     sections = {

@@ -12,6 +12,11 @@ from halpha.config import load_config
 from halpha.monitor.monitoring import run_monitor_cycle
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_monitor_help_mentions_run_and_inspect(capsys) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["monitor", "--help"])

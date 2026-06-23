@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 
 from halpha.config import load_config
@@ -15,6 +16,11 @@ PRIVATE_PROXY = "http://private-proxy.example:7890"
 PRIVATE_USER_STATE = "user_state.local.yaml"
 PRIVATE_NOTE = "do not expose this private note"
 PRIVATE_TOKEN = "secret-token-123"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_dashboard_artifact_preview_redacts_private_json_and_text_values(tmp_path: Path) -> None:

@@ -7,7 +7,7 @@ from typing import Any
 
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
 from halpha.storage import (
-    config_base as _config_base,
+    artifact_base as _artifact_base,
     read_json_object,
     resolve_local_ref,
     safe_local_ref,
@@ -45,7 +45,7 @@ def dashboard_strategy_research(
     config_path: Path,
     run_id: str | None = None,
 ) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     selected_run = _selected_run(config_path, base=base, run_id=run_id)
     pipeline = _pipeline_strategy_section(selected_run, base=base)
     standalone = _standalone_strategy_section(config, config_path=config_path, base=base)
@@ -829,7 +829,7 @@ def _artifact_ref(manifest: dict[str, Any], key: str, default: str) -> str | Non
 def _run_output_root(config: dict[str, Any], *, config_path: Path) -> Path:
     run_config = config.get("run") if isinstance(config.get("run"), dict) else {}
     output_dir = Path(str(run_config.get("output_dir") or "runs"))
-    return output_dir if output_dir.is_absolute() else config_path.parent / output_dir
+    return output_dir if output_dir.is_absolute() else _artifact_base(config_path) / output_dir
 
 
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:

@@ -22,7 +22,7 @@ from halpha.pipeline_stages import (
     validate_optional_stage as _validate_optional_stage,
     validate_stage as _validate_stage,
 )
-from halpha.storage import config_base, display_path, ensure_directory, write_json
+from halpha.storage import artifact_base, config_base, display_path, ensure_directory, write_json
 
 
 LOGGER = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ def run_pipeline_stage(
 def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datetime | None) -> RunContext:
     output_dir = Path(config["run"]["output_dir"])
     if not output_dir.is_absolute():
-        output_dir = config_path.parent / output_dir
+        output_dir = artifact_base(config_path) / output_dir
 
     run_id = _run_id(now)
     run_dir = _unique_run_dir(output_dir, run_id)

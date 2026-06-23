@@ -5,11 +5,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.market.ohlcv_source import OHLCVSourceError
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.market.ohlcv_sync import sync_ohlcv_history
 from halpha.pipeline import run_pipeline
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_sync_ohlcv_history_skips_when_ohlcv_is_not_configured(tmp_path: Path) -> None:

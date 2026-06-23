@@ -13,7 +13,7 @@ from halpha.dashboard.common import dashboard_section as _section
 from halpha.dashboard.common import dashboard_strict_overall_status as _overall_status
 from halpha.dashboard.runs import dashboard_latest_run_section, dashboard_run_detail
 from halpha.data.run_index import RUN_INDEX_ARTIFACT
-from halpha.storage import config_base as _config_base
+from halpha.storage import artifact_base as _artifact_base
 from halpha.utils.value_helpers import (
     as_dict as _dict,
     as_list as _list,
@@ -59,7 +59,7 @@ def dashboard_text_intelligence(*, config_path: Path, run_id: str | None = None)
                 "llm_generated_event_states": False,
             },
         }
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     run_dir = _resolve_ref(str(selected["fields"]["run_dir"]), base=base)
     manifest_path = _resolve_ref(str(selected["fields"]["manifest"]), base=base)
     manifest, error = _read_json(manifest_path)
@@ -128,7 +128,7 @@ def dashboard_text_intelligence(*, config_path: Path, run_id: str | None = None)
 
 
 def _dashboard_selected_run(config_path: Path, *, run_id: str | None) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     if run_id:
         detail = dashboard_run_detail(config_path, run_id=run_id)
         if detail["status"] != "available":

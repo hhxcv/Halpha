@@ -165,7 +165,8 @@ SUPPORTED_COMMANDS = {
 class DashboardJobCommandBuilder:
     def __init__(self, config: dict[str, Any], *, config_path: Path, base: Path) -> None:
         self.config = config
-        self.config_path = Path(config_path).resolve()
+        self.config_path = Path(config_path)
+        self.resolved_config_path = self.config_path.resolve()
         self.base = base
 
     def build(self, intent: str, params: dict[str, Any]) -> DashboardJobCommand:
@@ -191,7 +192,7 @@ class DashboardJobCommandBuilder:
         cli_parts = list(spec.cli_parts)
         if spec.stage_param == "positional" and stage_name:
             cli_parts.append(stage_name)
-        command = [sys.executable, "-m", "halpha", *cli_parts, "--config", str(self.config_path)]
+        command = [sys.executable, "-m", "halpha", *cli_parts, "--config", str(self.resolved_config_path)]
         preview = ["python", "-m", "halpha", *cli_parts, "--config", dashboard_config_ref(self.config_path)]
         if spec.stage_param == "until" and stage_name:
             command.extend(["--until", stage_name])
@@ -389,7 +390,4 @@ def dashboard_config_ref(config_path: Path) -> str:
     path = Path(config_path)
     if not path.is_absolute():
         return path.as_posix()
-    try:
-        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
-    except ValueError:
-        return "<external-config>"
+    return "<external-config>"

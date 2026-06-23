@@ -6,10 +6,17 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
 from halpha.product.product_validation_inspection import inspect_product_validation
 from halpha.data.run_index import write_run_index
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:

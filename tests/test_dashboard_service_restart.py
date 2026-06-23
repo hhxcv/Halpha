@@ -13,6 +13,11 @@ from halpha.dashboard import DashboardError
 from halpha.storage import write_json
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_run_dashboard_service_records_and_clears_service_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -17,7 +17,7 @@ from halpha.monitor.monitoring import (
     MONITOR_HEALTH_STATE_FILENAME,
     load_monitor_config,
 )
-from halpha.storage import config_base as _config_base
+from halpha.storage import artifact_base as _artifact_base
 
 
 MAX_CYCLE_SUMMARIES = 20
@@ -35,7 +35,7 @@ FAILED_MONITOR_STATUSES = {"failed", "error"}
 
 
 def dashboard_monitor_summary(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     settings = load_monitor_config(config)
     output_dir = _monitor_output_dir(config, base=base)
     health = _health_summary(output_dir, base=base)
@@ -78,13 +78,13 @@ def dashboard_monitor_summary(config: dict[str, Any], *, config_path: Path) -> d
 
 
 def dashboard_monitor_cycles(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     output_dir = _monitor_output_dir(config, base=base)
     return _cycle_list(output_dir, base=base, limit=MAX_CYCLE_SUMMARIES)
 
 
 def dashboard_monitor_alerts(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     output_dir = _monitor_output_dir(config, base=base)
     alerts = _alert_summary(output_dir, base=base)
     cooldown = _cooldown_summary(output_dir, base=base)

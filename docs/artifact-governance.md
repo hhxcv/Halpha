@@ -49,6 +49,13 @@ milestone plan.
 Halpha keeps complete evidence artifacts inspectable, but Codex input must use
 bounded report-facing material.
 
+Runtime artifact directories are product output locations, not config-file
+siblings. Relative output paths such as `runs/`, `logs/`,
+`runs/dashboard/jobs/`, `runs/dashboard/schedules/`, `runs/monitor/`, and
+`runs/workbench/latest/` resolve from the current working directory unless a
+config field supplies an absolute path. Config-file-relative path resolution is
+reserved for config file operations, such as reading or backing up that config.
+
 | Layer | Purpose | Codex input status |
 | --- | --- | --- |
 | Raw collection | Preserve public source observations exactly enough for audit. | Not embedded by default. Referenced by path and summarized through material. |

@@ -18,6 +18,7 @@ from halpha.inspection_artifacts import inspection_json_artifact_status as _arti
 from halpha.inspection_artifacts import inspection_overall_status as _overall_status
 from halpha.inspection_artifacts import inspection_plain_artifact_status as _plain_artifact_status
 from halpha.inspection_artifacts import read_inspection_json_object
+from halpha.storage import artifact_base
 from halpha.utils.value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 from halpha.workbench.workbench import (
     DEFAULT_WORKBENCH_OUTPUT_DIR,
@@ -94,7 +95,7 @@ def inspect_local_data_state(
     config_path: Path,
     run_dir: Path | None = None,
 ) -> dict[str, Any]:
-    base = config_path.parent
+    base = artifact_base(config_path)
     sections = [
         *_local_store_sections(config, config_path=config_path, run_dir=run_dir, base=base),
         _feature_factor_artifacts_section(config_path, run_dir=run_dir, base=base),
@@ -115,7 +116,7 @@ def inspect_local_store_state(
     config_path: Path,
     run_dir: Path | None = None,
 ) -> dict[str, Any]:
-    base = config_path.parent
+    base = artifact_base(config_path)
     sections = _local_store_sections(config, config_path=config_path, run_dir=run_dir, base=base)
     status = _overall_status([section["status"] for section in sections])
     return {"status": status, "sections": sections}
@@ -1041,8 +1042,8 @@ def _latest_run_from_index(config_path: Path) -> Path | None:
         return None
     run_dir = Path(row[0])
     if not run_dir.is_absolute():
-        run_dir = config_path.parent / run_dir
-    return _project_local_path(run_dir, base=config_path.parent)
+        run_dir = artifact_base(config_path) / run_dir
+    return _project_local_path(run_dir, base=artifact_base(config_path))
 
 
 def _resolve_run_dir(run_dir: Path, *, base: Path) -> Path:

@@ -297,7 +297,9 @@ Codex-capable full report jobs require explicit user confirmation before the
 dashboard invokes Codex CLI. No monitor job or read-only inspection job should
 invoke Codex unless its command contract explicitly says so.
 
-Job records are written under `runs/dashboard/jobs/`. The job index records
+Job records are written under `runs/dashboard/jobs/` below the current working
+directory by default. Relative dashboard runtime paths resolve from the current
+working directory, not from the config file location. The job index records
 bounded metadata and result refs. Full job logs are local runtime artifacts and
 must not be copied into Codex context by default.
 

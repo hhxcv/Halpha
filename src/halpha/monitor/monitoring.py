@@ -12,7 +12,7 @@ from typing import Any, Callable
 from halpha.runtime.pipeline_contracts import RunResult
 from halpha.pipeline_stages import StageSelectionError
 from halpha.pipeline import run_pipeline
-from halpha.storage import write_json
+from halpha.storage import artifact_base, write_json
 
 
 LOGGER = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ def run_monitor_cycle(
     cycle_dir = _unique_cycle_dir(output_dir / "cycles", cycle_id)
     cycle_id = cycle_dir.name
     manifest_path = cycle_dir / "monitor_cycle_manifest.json"
-    base = _config_base(config_path)
+    base = artifact_base(config_path)
 
     manifest: dict[str, Any] = {
         "schema_version": 1,
@@ -295,7 +295,7 @@ def run_monitor_loop(
         raise ValueError("interval_seconds must be a positive integer.")
 
     output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
-    base = _config_base(config_path)
+    base = artifact_base(config_path)
     started_at = _coerce_utc(now or datetime.now(timezone.utc))
     loop_id = f"loop-{started_at.strftime('%Y%m%dT%H%M%S%fZ')}"
     cycle_results: list[MonitorCycleResult] = []
@@ -378,7 +378,7 @@ def run_monitor_loop(
 def inspect_monitor_health(config: dict[str, Any], *, config_path: Path) -> MonitorInspectionResult:
     settings = load_monitor_config(config)
     output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
-    base = _config_base(config_path)
+    base = artifact_base(config_path)
     health_state = _monitor_health_state(output_dir, config_base=base)
     lines = [
         "Halpha monitor inspection succeeded.",
@@ -429,7 +429,7 @@ def monitor_config_lines(settings: MonitorConfig) -> list[str]:
 def _resolve_output_dir(output_dir: Path, *, config_path: Path) -> Path:
     if output_dir.is_absolute():
         return output_dir
-    return _config_base(config_path) / output_dir
+    return artifact_base(config_path) / output_dir
 
 
 def _unique_cycle_dir(parent: Path, cycle_id: str) -> Path:
@@ -453,13 +453,6 @@ def _coerce_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
-
-
-def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
 
 
 def _portable_path(path: Path, *, base: Path) -> str:

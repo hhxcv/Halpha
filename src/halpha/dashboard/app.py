@@ -38,7 +38,7 @@ from halpha.dashboard.settings import (
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.time import utc_now_timestamp
 from halpha.dashboard.ui import dashboard_index_html
-from halpha.storage import config_base, read_json_object, write_json
+from halpha.storage import artifact_base, read_json_object, write_json
 
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
@@ -335,7 +335,7 @@ def _dashboard_health_url(host: str, port: int) -> str:
 
 
 def _dashboard_service_state_path(config_path: Path) -> Path:
-    return config_base(config_path) / DASHBOARD_SERVICE_STATE
+    return artifact_base(config_path) / DASHBOARD_SERVICE_STATE
 
 
 def _write_dashboard_service_state(*, config_path: Path, host: str, port: int) -> None:

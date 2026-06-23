@@ -5,10 +5,17 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from halpha.cli import main
 from halpha.config import load_config
 from halpha.runtime.logging_utils import configure_local_logging
 from halpha.pipeline import run_pipeline
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_local_logging_writes_json_lines_and_redacts_private_values(tmp_path: Path) -> None:
@@ -32,6 +39,22 @@ def test_local_logging_writes_json_lines_and_redacts_private_values(tmp_path: Pa
     assert "<redacted>" in content
     assert secret not in content
     assert str(tmp_path) not in content
+
+
+def test_local_logging_uses_cwd_artifact_root_for_subdirectory_config(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    config_path = config_dir / "local.yaml"
+    config_path.write_text("run:\n  output_dir: runs\n", encoding="utf-8")
+
+    log_path = configure_local_logging(config_path=config_path, config={"run": {"output_dir": "runs"}})
+
+    assert log_path == tmp_path / "logs" / "halpha.log"
+    assert not (config_dir / "logs").exists()
 
 
 def test_pipeline_logging_records_stage_lifecycle_without_info_noise(tmp_path: Path) -> None:

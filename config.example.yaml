@@ -2,6 +2,9 @@ run:
   output_dir: runs
   timezone: Asia/Shanghai
 
+logging:
+  output_dir: logs
+
 dashboard:
   display_timezone: Asia/Shanghai
 

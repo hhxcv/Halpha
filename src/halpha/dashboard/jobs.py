@@ -20,7 +20,7 @@ from halpha.dashboard.job_commands import dashboard_config_ref
 from halpha.dashboard.time import parse_utc_timestamp, utc_now_timestamp
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
-from halpha.storage import config_base as _config_base, write_json
+from halpha.storage import artifact_base as _artifact_base, write_json
 
 
 DASHBOARD_JOBS_DIR = "runs/dashboard/jobs"
@@ -70,8 +70,9 @@ PRIVATE_KEY_PARTS = (
 class DashboardJobManager:
     def __init__(self, config: dict[str, Any], *, config_path: Path) -> None:
         self.config = config
-        self.config_path = Path(config_path).resolve()
-        self.base = _config_base(self.config_path)
+        self.config_path = Path(config_path)
+        self.resolved_config_path = self.config_path.resolve()
+        self.base = _artifact_base(self.config_path)
         self.jobs_root = self.base / DASHBOARD_JOBS_DIR
         with suppress(OSError):
             configure_local_logging(config_path=self.config_path, config=config)
@@ -535,7 +536,7 @@ class DashboardJobManager:
             values.update({str(self.base), self.base.as_posix()})
         if self.config_path.is_absolute():
             values.update({str(self.config_path), self.config_path.as_posix()})
-        values.update({str(self.config_path.resolve()), self.config_path.resolve().as_posix()})
+        values.update({str(self.resolved_config_path), self.resolved_config_path.as_posix()})
         values.update(_config_private_values(self.config))
         return sorted(values, key=len, reverse=True)
 

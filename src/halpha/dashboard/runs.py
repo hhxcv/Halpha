@@ -10,7 +10,7 @@ from halpha.dashboard.common import dashboard_resolve_ref as _resolve_ref
 from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.dashboard.run_aggregation import manifest_report_state, run_list_record as _run_list_record
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
-from halpha.storage import config_base as _config_base
+from halpha.storage import artifact_base as _artifact_base
 from halpha.utils.value_helpers import (
     as_dict as _dict,
     as_list as _list,
@@ -22,7 +22,7 @@ MAX_STAGE_ARTIFACT_REFS = 20
 
 
 def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     index_path = run_index_path(config_path)
     empty_latest = {"latest_run_id": None, "latest_successful_run_id": None}
     if not index_path.exists():
@@ -116,7 +116,7 @@ def dashboard_runs(config_path: Path, *, limit: int = 100) -> dict[str, Any]:
 
 
 def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
-    base = _config_base(config_path)
+    base = _artifact_base(config_path)
     index_path = run_index_path(config_path)
     if not index_path.exists():
         return _run_detail_missing(run_id, warning="local run index was not found.")

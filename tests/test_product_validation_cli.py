@@ -11,6 +11,11 @@ from halpha.data.run_index import write_run_index
 from halpha.storage import write_json
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_validate_uses_latest_run_without_running_pipeline(
     tmp_path: Path,
     capsys,
