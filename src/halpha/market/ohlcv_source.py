@@ -4,9 +4,10 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from math import isfinite
 from typing import Any
-from urllib.parse import urlparse
 
 import ccxt
+
+from halpha.runtime.public_http import market_proxy_url_from_market, normalize_public_proxy_url
 
 
 SUPPORTED_OHLCV_SOURCES = {"binance"}
@@ -30,7 +31,7 @@ class CCXTOHLCVSource:
         exchange_factory: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self.source = _require_supported_source(source)
-        proxy_url = _normalize_proxy_url(proxy_url)
+        proxy_url = normalize_public_proxy_url(proxy_url, error_factory=OHLCVSourceError)
         factory = exchange_factory or _ccxt_exchange_factory(self.source)
         self.exchange = factory(_exchange_options(self.source, proxy_url=proxy_url))
         self._require_ohlcv_support()
@@ -170,26 +171,12 @@ def _proxy_url_from_market_config(market: dict[str, Any]) -> str | None:
         raise OHLCVSourceError("market.proxy.enabled must be a boolean.")
     if not enabled:
         return None
-    url = proxy.get("url")
-    if not isinstance(url, str) or not url.strip():
-        raise OHLCVSourceError(
-            "market.proxy.url must be a non-empty string when market.proxy.enabled is true."
-        )
-    return _normalize_proxy_url(url)
-
-
-def _normalize_proxy_url(value: str | None) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value.strip():
-        raise OHLCVSourceError("market.proxy.url must be a non-empty string.")
-    proxy_url = value.strip()
-    parsed = urlparse(proxy_url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise OHLCVSourceError("market.proxy.url must be an http or https URL.")
-    if parsed.username or parsed.password:
-        raise OHLCVSourceError("market.proxy.url must not include credentials.")
-    return proxy_url
+    return market_proxy_url_from_market(
+        market,
+        error_factory=OHLCVSourceError,
+        require_url_when_enabled=True,
+        missing_url_message="market.proxy.url must be a non-empty string when market.proxy.enabled is true.",
+    )
 
 
 def _normalize_row(
