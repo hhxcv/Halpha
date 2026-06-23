@@ -23,6 +23,10 @@ def dashboard_strategy_chart_script() -> str:
     return dashboard_asset_text("dashboard_strategy_chart.js")
 
 
+def dashboard_monitor_script() -> str:
+    return dashboard_asset_text("dashboard_monitor.js")
+
+
 def dashboard_script() -> str:
     return "\n".join(
         [
@@ -30,6 +34,7 @@ def dashboard_script() -> str:
             dashboard_dialogs_script(),
             dashboard_reports_script(),
             dashboard_strategy_chart_script(),
+            dashboard_monitor_script(),
             dashboard_asset_text("dashboard.js"),
         ]
     )
@@ -48,6 +53,7 @@ def dashboard_shell_html(*, css: str, script: str) -> str:
             '  <script src="/assets/dashboard_dialogs.js" defer></script>\n'
             '  <script src="/assets/dashboard_reports.js" defer></script>\n'
             '  <script src="/assets/dashboard_strategy_chart.js" defer></script>\n'
+            '  <script src="/assets/dashboard_monitor.js" defer></script>\n'
             '  <script src="/assets/dashboard.js" defer></script>'
         )
         html = html.replace(
