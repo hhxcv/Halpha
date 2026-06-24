@@ -141,7 +141,7 @@ class _RuntimeStateTransaction:
         self._connection = connection
 
     def __enter__(self) -> sqlite3.Connection:
-        self._connection.execute("BEGIN")
+        self._connection.execute("BEGIN IMMEDIATE")
         return self._connection
 
     def __exit__(self, exc_type, exc, traceback) -> bool:

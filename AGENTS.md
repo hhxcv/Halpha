@@ -185,8 +185,10 @@ Current bias:
 * `.halpha/state.sqlite-wal` and `.halpha/state.sqlite-shm` are SQLite side files; back them up with `state.sqlite` when present.
 * `.halpha/state.sqlite` records current run, stage, artifact, and derived latest-run index metadata; it stores references, not artifact contents.
 * `.halpha/state.sqlite` records current dashboard command-job lifecycle metadata, bounded parameter/result refs, and transition events; it stores references, not stdout or stderr contents.
+* `.halpha/state.sqlite` records current daily report schedule configuration, due dispatch claims, dispatch history refs, and bounded diagnostics.
 * `.halpha/dashboard/job_logs/` stores bounded dashboard command-job stdout and stderr logs.
 * `.halpha/dashboard/jobs/index.json` and `.halpha/dashboard/jobs/<job_id>/job.json` are legacy dashboard job storage; do not write them for new jobs outside explicit legacy migration or cleanup work.
+* `.halpha/dashboard/schedules/daily_report_schedule.json` is legacy dashboard schedule storage; do not write new schedule state there outside explicit legacy migration or cleanup work.
 * `data/research/index.sqlite` is legacy run-index storage; do not write it outside explicit legacy migration or cleanup work.
 * Latest selections are derived or rebuildable views, not parallel authorities.
 * `data/research/metadata/text_event_history_state.json` records shared text-event history state, counts, duplicates, conflicts, warnings, and source refs.

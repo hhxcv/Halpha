@@ -144,17 +144,17 @@ monitor, and schedule trigger actions run through dashboard jobs. Codex-capable
 report jobs require explicit confirmation before they can start. The dashboard
 does not expose arbitrary shell execution.
 
-Daily report schedule state is explicit local dashboard control state under
-`.halpha/dashboard/schedules/`. The implemented schedule API can inspect, enable,
-disable, update, and manually trigger daily report jobs through dashboard jobs.
-It does not install an OS scheduler, hosted scheduler, startup task, cron job,
-workflow engine, or hidden daemon.
+Daily report schedule configuration and dispatch history are explicit local
+runtime state in `.halpha/state.sqlite`. The implemented schedule API can
+inspect, enable, disable, update, and manually trigger daily report jobs
+through dashboard jobs. It does not install an OS scheduler, hosted scheduler,
+startup task, cron job, workflow engine, or hidden daemon.
 
 The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
-runtime state keeps the run index and dashboard command-job lifecycle in
-`.halpha/state.sqlite`; daily report schedule, selected dashboard config, and
-monitor state remain in local JSON until their domain migrations are
+runtime state keeps the run index, dashboard command-job lifecycle, and daily
+report schedule dispatch state in `.halpha/state.sqlite`; selected dashboard
+config and monitor state remain in local JSON until their domain migrations are
 implemented. Dashboard read models, health summaries, workbench outputs, and
 latest selections are derived views, not parallel authorities.
 
@@ -423,7 +423,7 @@ A successful configured run can write:
 - `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
 - `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, dashboard command-job lifecycle metadata, and future migrated operational state.
+- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, dashboard command-job lifecycle metadata, daily report schedule dispatch metadata, and future migrated operational state.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
 - `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.
