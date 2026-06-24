@@ -15,9 +15,9 @@ It must remain observable, bounded, and local-first:
 - no private user-state values in public artifacts, logs, issues, PRs, or docs.
 
 The current command surface validates monitor configuration, runs one bounded
-local monitor cycle or finite local loop, writes local alert archive and
-cooldown state from generated alert decisions, and exposes read-only monitor
-health inspection.
+local monitor cycle or finite local loop, writes immutable cycle manifests,
+persists alert archive and cooldown state in `.halpha/state.sqlite`, and
+exposes read-only monitor health inspection.
 
 The target resident Monitor service is planned but not implemented yet. It is
 one of exactly three supported resident Halpha process roles: `dashboard`,
@@ -78,8 +78,9 @@ python -m halpha monitor run --config config.example.yaml --once
 This command runs exactly one bounded cycle through the configured product
 pipeline target stage and writes one monitor cycle manifest. The default
 `no_codex: true` setting keeps the monitor path before Codex report generation.
-When generated `analysis/alert_decisions.json` exists, the cycle also appends
-local alert archive records and updates cooldown state.
+When generated `analysis/alert_decisions.json` exists, the cycle commits alert
+archive records, suppression results, cooldown updates, and the monitor cycle
+index to `.halpha/state.sqlite`.
 
 Current implemented finite-loop command:
 
@@ -100,9 +101,10 @@ Current implemented read-only health command:
 python -m halpha monitor inspect --config config.example.yaml
 ```
 
-This command reads local monitor artifacts only. It must not collect network
-data, run processors, run pipeline stages, invoke Codex CLI, repair archives,
-export raw alert records, deliver notifications, trade, or access accounts.
+This command reads local monitor state from `.halpha/state.sqlite` and cycle
+manifest refs only. It must not collect network data, run processors, run
+pipeline stages, invoke Codex CLI, repair archives, export raw alert records,
+deliver notifications, trade, or access accounts.
 
 ## Cycle Manifest
 
@@ -137,7 +139,13 @@ private local values.
 ## Alert Archive
 
 The local alert archive records emitted and suppressed alert decisions. The
-local state paths are:
+authoritative mutable state path is:
+
+```text
+.halpha/state.sqlite
+```
+
+Legacy no-new-write state files are:
 
 ```text
 runs/monitor/alert_archive.jsonl
@@ -167,6 +175,11 @@ Duplicate keys must be deterministic and source-aware. Repeated equivalent
 alerts during cooldown are archived as suppressed records instead of emitted
 again.
 
+Cycle index, alert records, suppression status, and cooldown updates must be
+committed transactionally for one terminal monitor cycle. Retrying persistence
+for the same cycle id must not duplicate alert records or extend an existing
+cooldown merely because the write was retried.
+
 The archive must not store raw user-state files, private notes, account
 identifiers, holdings, balances, allocations, position sizes, private endpoints,
 or personalized evidence text.
@@ -180,7 +193,7 @@ information:
 - recent failure count;
 - emitted, suppressed, duplicate, and cooldown counts;
 - latest warning and error summaries;
-- archive path refs.
+- state-store and evidence refs.
 
 Inspection is read-only. It must not collect network data, run processors, run
 pipeline stages, invoke Codex CLI, repair archives, or dump raw alert records.
@@ -188,20 +201,19 @@ pipeline stages, invoke Codex CLI, repair archives, or dump raw alert records.
 The local health state path is:
 
 ```text
-runs/monitor/monitor_health_state.json
+.halpha/state.sqlite
 ```
 
-It records aggregate cycle, alert archive, cooldown, warning, error, and latest
-finite-loop metadata. It must not store raw alert records, raw user-state files,
-private notes, account identifiers, holdings, balances, allocations, position
-sizes, or private endpoints.
+It records monitor-cycle indexes, bounded alert archive records, cooldown
+records, warning and error counts, and latest finite-loop metadata. It must not
+store raw user-state files, private notes, account identifiers, holdings,
+balances, allocations, position sizes, private endpoints, or unbounded evidence
+text.
 
-Current monitor state files are local operational artifacts. The unified
-runtime state store foundation is implemented, but monitor-domain migration is
-not. After that migration, mutable monitor-cycle indexes, alert archive
-indexes, cooldown state, suppression state, and service health belong to
-`.halpha/state.sqlite`. Cycle manifests and alert archive records remain
-inspectable local artifacts referenced by that state store.
+Missing cycle manifests or linked run artifacts referenced by the state store
+must be surfaced as stale or degraded diagnostics. The monitor read model must
+not silently delete the database record or report the missing evidence as
+healthy.
 
 ## Codex Boundary
 
@@ -225,9 +237,9 @@ python -m halpha monitor inspect --config config.example.yaml
 ```
 
 `--dry-run` validates configuration only. `--once` validates one bounded cycle,
-cycle manifest, alert archive, cooldown state, and health state. `--max-cycles`
-validates finite loop behavior. `monitor inspect` validates read-only aggregate
-health output.
+cycle manifest, state-store alert archive records, cooldown state, and health
+state. `--max-cycles` validates finite loop behavior. `monitor inspect`
+validates read-only aggregate health output.
 
 Full product validation with Codex is required only when a monitor change alters
 Codex context, report generation, or final report content. The implemented

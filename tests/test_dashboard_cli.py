@@ -14,6 +14,7 @@ from halpha.dashboard.app import write_dashboard_selected_config_state
 from halpha.dashboard.runs import dashboard_runs
 from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
+from halpha.monitor.state_store import MonitorArchivePersistence, MonitorStateRepository
 from halpha.storage import write_json
 
 
@@ -461,7 +462,7 @@ def test_dashboard_overview_endpoint_reads_artifact_backed_state(tmp_path: Path)
 
     monitor = sections["monitor"]
     assert monitor["status"] == "available"
-    assert monitor["fields"]["cycle_count"] == 2
+    assert monitor["fields"]["cycle_count"] == 1
     assert monitor["fields"]["alert_counts"]["emitted"] == 1
 
     workbench = sections["workbench"]
@@ -502,21 +503,13 @@ def test_dashboard_overview_marks_stale_workbench_summary(tmp_path: Path) -> Non
             "errors": [],
         },
     )
-    write_json(
-        tmp_path / "runs" / "monitor" / "monitor_health_state.json",
-        {
-            "artifact_type": "monitor_health_state",
-            "cycle_count": 3,
-            "failed_cycle_count": 0,
-            "latest_cycle_id": "cycle-2",
-            "latest_cycle_status": "succeeded",
-            "latest_run_id": "run-2",
-            "alert_archive_status": "ok",
-            "alert_counts": {"records": 1, "emitted": 1},
-            "cooldown_records": 0,
-            "warning_count": 0,
-            "error_count": 0,
-        },
+    _write_monitor_cycle_state(
+        config_path,
+        tmp_path,
+        cycle_id="cycle-2",
+        run_id="run-2",
+        started_at="2026-06-20T01:10:00Z",
+        finished_at="2026-06-20T01:15:00Z",
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -530,12 +523,11 @@ def test_dashboard_overview_marks_stale_workbench_summary(tmp_path: Path) -> Non
     assert workbench["source_artifacts"] == [
         "runs/workbench/latest/workbench_summary.json",
         ".halpha/state.sqlite",
-        "runs/monitor/monitor_health_state.json",
     ]
     assert workbench["warnings"] == [
         "workbench summary references run run-1, but latest run is run-2. Source: .halpha/state.sqlite.",
         "workbench summary references monitor cycle cycle-1, but latest monitor cycle is cycle-2. "
-        "Source: runs/monitor/monitor_health_state.json.",
+        "Source: .halpha/state.sqlite.",
     ]
     assert str(tmp_path) not in response.text
 
@@ -2469,22 +2461,7 @@ def _write_dashboard_source_artifacts(tmp_path: Path, run: RunContext) -> None:
             "errors": [],
         },
     )
-    write_json(
-        tmp_path / "runs" / "monitor" / "monitor_health_state.json",
-        {
-            "artifact_type": "monitor_health_state",
-            "cycle_count": 2,
-            "failed_cycle_count": 0,
-            "latest_cycle_id": "cycle-1",
-            "latest_cycle_status": "succeeded",
-            "latest_run_id": "run-1",
-            "alert_archive_status": "ok",
-            "alert_counts": {"records": 1, "emitted": 1},
-            "cooldown_records": 0,
-            "warning_count": 0,
-            "error_count": 0,
-        },
-    )
+    _write_monitor_cycle_state(run.config_path, tmp_path, cycle_id="cycle-1", run_id="run-1")
     write_json(
         tmp_path / "runs" / "workbench" / "latest" / "workbench_summary.json",
         {
@@ -2495,4 +2472,89 @@ def _write_dashboard_source_artifacts(tmp_path: Path, run: RunContext) -> None:
             "warnings": [],
             "errors": [],
         },
+    )
+
+
+def _write_monitor_cycle_state(
+    config_path: Path,
+    tmp_path: Path,
+    *,
+    cycle_id: str,
+    run_id: str,
+    started_at: str = "2026-06-20T00:10:00Z",
+    finished_at: str = "2026-06-20T00:15:00Z",
+) -> None:
+    run_manifest_path = tmp_path / "runs" / run_id / "run_manifest.json"
+    if not run_manifest_path.exists():
+        write_json(run_manifest_path, {"run_id": run_id, "status": "succeeded"})
+    write_json(
+        tmp_path / "runs" / "monitor" / "cycles" / cycle_id / "monitor_cycle_manifest.json",
+        {"artifact_type": "monitor_cycle_manifest", "cycle_id": cycle_id, "status": "succeeded"},
+    )
+    record = {
+        "record_id": f"record-{cycle_id}",
+        "cycle_id": cycle_id,
+        "created_at": finished_at,
+        "status": "emitted",
+        "alert_key": f"alert-{cycle_id}",
+        "decision_id": f"decision-{cycle_id}",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "priority": "P1",
+        "attention_decision": "review_soon",
+        "requires_user_attention": True,
+        "suppression_reasons": [],
+        "cooldown_until": "2026-06-20T02:00:00Z",
+        "source_artifacts": ["analysis/alert_decisions.json"],
+        "personalized_context": {"present": False},
+        "source_run": {"run_id": run_id, "run_manifest": f"runs/{run_id}/run_manifest.json"},
+    }
+    summary = {
+        "status": "succeeded",
+        "state_store": ".halpha/state.sqlite",
+        "archive": ".halpha/state.sqlite",
+        "cooldown_state": ".halpha/state.sqlite",
+        "archive_state": ".halpha/state.sqlite",
+        "counts": {
+            "records": 1,
+            "emitted": 1,
+            "suppressed_duplicate": 0,
+            "suppressed_cooldown": 0,
+            "suppressed_no_alert": 0,
+            "skipped": 0,
+        },
+        "warnings": [],
+        "errors": [],
+    }
+    MonitorStateRepository(config_path=config_path).persist_cycle_with_archive_builder(
+        {
+            "cycle_id": cycle_id,
+            "monitor_output_dir": "runs/monitor",
+            "cycle_manifest": f"runs/monitor/cycles/{cycle_id}/monitor_cycle_manifest.json",
+            "cycle_mode": "once",
+            "loop_id": None,
+            "cycle_sequence": None,
+            "trigger_source": "cli",
+            "status": "succeeded",
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "config_ref": "config.yaml",
+            "target_stage": "build_personalized_risk_material",
+            "no_codex": True,
+            "exit_code": 0,
+            "run_id": run_id,
+            "run_dir": f"runs/{run_id}",
+            "run_manifest": f"runs/{run_id}/run_manifest.json",
+            "product_run": {"run_id": run_id, "status": "succeeded"},
+            "source_artifacts": {"alert_decisions": "analysis/alert_decisions.json"},
+            "alert_archive": summary,
+            "warnings": [],
+            "errors": [],
+        },
+        build_archive=lambda _cooldown: MonitorArchivePersistence(
+            summary=summary,
+            records=[record],
+            cooldown_records={},
+        ),
+        updated_at=finished_at,
     )
