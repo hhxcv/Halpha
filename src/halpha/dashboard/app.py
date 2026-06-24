@@ -25,7 +25,6 @@ from halpha.dashboard.data_cleanup import (
     dashboard_delete_data as execute_dashboard_delete_data,
 )
 from halpha.dashboard.data_stores import dashboard_data_stores
-from halpha.dashboard.jobs import DashboardJobManager
 from halpha.dashboard.intelligence import dashboard_text_intelligence
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
@@ -41,6 +40,7 @@ from halpha.dashboard.settings import (
 from halpha.dashboard.state import read_dashboard_selected_config_state, write_dashboard_selected_config_state
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.ui import dashboard_index_html
+from halpha.runtime.command_jobs import CommandJobManager
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
 from halpha.storage import artifact_base
 
@@ -82,7 +82,7 @@ class DashboardConfigContext:
         self._dispatcher_started = False
         self.config: dict[str, Any] | None = None
         self.config_path: Path | None = None
-        self.job_manager: DashboardJobManager | None = None
+        self.job_manager: CommandJobManager | None = None
         self.schedule_manager: DashboardScheduleManager | None = None
         if config is not None and config_path is not None:
             self.set_active_config(config, config_path=config_path, persist=False)
@@ -93,7 +93,12 @@ class DashboardConfigContext:
                 self.schedule_manager.stop_daily_report_dispatcher()
             self.config = config
             self.config_path = config_path
-            self.job_manager = DashboardJobManager(config, config_path=config_path)
+            self.job_manager = CommandJobManager(
+                config,
+                config_path=config_path,
+                requested_by="Dashboard",
+                requester={"source": "dashboard_api"},
+            )
             self.schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=self.job_manager)
             if persist:
                 write_dashboard_selected_config_state(config_path)
@@ -405,27 +410,27 @@ def create_dashboard_app(
     @app.get("/api/jobs")
     def jobs_endpoint() -> dict[str, Any]:
         if context.job_manager is None:
-            return _unconfigured_payload("dashboard_jobs", jobs=[])
+            return _unconfigured_payload("command_job_list", jobs=[])
         return context.job_manager.list_jobs()
 
     @app.post("/api/jobs")
     def create_job_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
         if context.job_manager is None:
-            return _unconfigured_payload("dashboard_job", status="blocked", job_id=None)
+            return _unconfigured_payload("command_job", status="blocked", job_id=None)
         return context.job_manager.create_job(request)
 
     @app.get("/api/jobs/{job_id}")
     def job_detail_endpoint(job_id: str) -> dict[str, Any]:
         if context.job_manager is None:
-            return _unconfigured_payload("dashboard_job", status="blocked", job_id=job_id)
+            return _unconfigured_payload("command_job", status="blocked", job_id=job_id)
         job = context.job_manager.get_job(job_id)
         if job is None:
             return {
                 "schema_version": 1,
-                "artifact_type": "dashboard_job",
+                "artifact_type": "command_job",
                 "job_id": job_id,
                 "status": "missing",
-                "warnings": ["dashboard job was not found."],
+                "warnings": ["command job was not found."],
                 "errors": [],
             }
         return job
@@ -433,7 +438,7 @@ def create_dashboard_app(
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job_endpoint(job_id: str) -> dict[str, Any]:
         if context.job_manager is None:
-            return _unconfigured_payload("dashboard_job", status="blocked", job_id=job_id)
+            return _unconfigured_payload("command_job", status="blocked", job_id=job_id)
         return context.job_manager.cancel_job(job_id)
 
     @app.get("/api/schedule/daily-report")

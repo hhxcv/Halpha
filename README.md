@@ -45,7 +45,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Archives emitted and suppressed monitor alert decisions in local plain files.
 - Runs a local web dashboard service as the primary local user entry point for
   overview, report review, strategy research, monitor control, intelligence
-  review, settings, bounded artifact previews, dashboard jobs, storage cleanup,
+  review, settings, bounded artifact previews, command jobs, storage cleanup,
   and daily report schedule state.
 - Builds local workbench delivery snapshots, Markdown indexes, and static HTML
   index files from existing artifacts as CLI inspection and recovery aids.
@@ -122,8 +122,7 @@ python -m halpha dashboard restart
 The dashboard is the primary local user entry point and is local-only by
 default. Open the printed local URL in a browser to inspect overview state, run
 history, report previews, local data store metadata, strategy outputs, monitor
-health, recent monitor cycles, alert samples, and dashboard-triggered job
-history.
+health, recent monitor cycles, alert samples, and command job history.
 
 The dashboard can start without a config. On first startup with no selected
 config it serves the shell in an unconfigured state and opens the Settings flow
@@ -145,21 +144,21 @@ raw user-state files, machine paths, and private endpoints are rejected or
 redacted from dashboard responses and job logs where the dashboard can identify
 them.
 
-Dashboard command execution is explicit and allowlisted. Product run, stage,
+Local command execution is explicit and allowlisted. Product run, stage,
 validation, data inspection, outcome inspection, workbench, strategy, text,
-monitor, and schedule trigger actions run through dashboard jobs. Codex-capable
+monitor, and schedule trigger actions run through shared command jobs. Codex-capable
 report jobs require explicit confirmation before they can start. The dashboard
 does not expose arbitrary shell execution.
 
 Daily report schedule configuration and dispatch history are explicit local
 runtime state in `.halpha/state.sqlite`. The implemented schedule API can
 inspect, enable, disable, update, and manually trigger daily report jobs
-through dashboard jobs. It does not install an OS scheduler, hosted scheduler,
+through shared command jobs. It does not install an OS scheduler, hosted scheduler,
 startup task, cron job, workflow engine, or hidden daemon.
 
 The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
-runtime state keeps the run index, dashboard command-job lifecycle, and daily
+runtime state keeps the run index, local command-job lifecycle, and daily
 report schedule dispatch state, monitor cycle indexes, alert archive records,
 cooldown state, monitor health query state, and shared resident-service
 lifecycle state in `.halpha/state.sqlite`; selected dashboard config preference
@@ -389,7 +388,7 @@ A successful configured run can write:
 - `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
 - `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, dashboard command-job lifecycle metadata, daily report schedule dispatch metadata, dashboard UI preferences, resident-service lifecycle state, and future migrated operational state.
+- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, local command-job lifecycle metadata, daily report schedule dispatch metadata, dashboard UI preferences, resident-service lifecycle state, and future migrated operational state.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
 - `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.

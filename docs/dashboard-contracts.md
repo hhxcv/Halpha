@@ -35,7 +35,7 @@ forecast, validation, or report truth.
 Primary sources:
 
 - `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
-  foundation, current run-index projection, and dashboard command-job
+  foundation, current run-index projection, and local command-job
   lifecycle plus daily report schedule configuration, dispatch history,
   Dashboard service lifecycle, and Dashboard UI preferences. Monitor consumers
   are not migrated to their own state domain yet.
@@ -52,7 +52,7 @@ Primary sources:
 - `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/`:
   reusable local stores and metadata.
 - `runs/monitor/`: immutable monitor cycle manifests.
-- `.halpha/state.sqlite`: run index, dashboard jobs, daily report schedule
+- `.halpha/state.sqlite`: run index, local command jobs, daily report schedule
   dispatches, monitor cycle indexes, alert archive records, cooldown state,
   monitor health query state, Dashboard service lifecycle, and Dashboard UI
   preference state.
@@ -132,7 +132,8 @@ Implemented dashboard views expose:
 - monitor health, recent cycles, alert counts, cooldown state, alert samples,
   and monitor job history from the shared runtime state store.
 
-Implemented dashboard command controls are backed by allowlisted job intents.
+Implemented dashboard command controls submit to the shared allowlisted
+command-job runner.
 The current job runner supports:
 
 - read-only or inspection jobs: `validate`, `data_inspect`,
@@ -152,7 +153,7 @@ schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
 disable, update, and manually trigger daily report jobs. The dashboard also
 starts a local dispatcher while the dashboard process is active. That
 dispatcher checks the persisted daily report schedule, claims due occurrences,
-and creates visible allowlisted dashboard jobs for due non-Codex runs. It is
+and creates visible allowlisted command jobs for due non-Codex runs. It is
 not a hosted scheduler, OS scheduler, startup task, cron integration, external
 workflow engine, or hidden daemon. This dashboard-lifespan dispatcher is
 current legacy behavior. The target Schedule service is independent of
@@ -246,7 +247,7 @@ Dashboard pages should expose the current product shape through bounded views:
 
 Artifact preview remains an internal bounded API capability used by these
 views. It must not reintroduce a top-level Artifacts page. Command controls
-must be page-local actions backed by allowlisted dashboard jobs, not a top-level
+must be page-local actions backed by allowlisted command jobs, not a top-level
 Command center.
 
 Every view must distinguish available, partial, missing, stale, degraded,
@@ -394,7 +395,7 @@ errors, and transition events. New jobs must not write
 legacy storage until explicit import or cleanup work.
 
 Bounded stdout and stderr logs are written under
-`.halpha/dashboard/job_logs/<job_id>/` below the current working directory by
+`.halpha/command_jobs/job_logs/<job_id>/` below the current working directory by
 default. Relative dashboard control-state paths resolve from the current
 working directory, not from the config file location or product run output
 root. Full job logs are local runtime artifacts and must not be copied into
@@ -436,7 +437,7 @@ The schedule API supports:
 - `POST /api/schedule/daily-report/disable`;
 - `POST /api/schedule/daily-report/trigger`.
 
-Manual schedule triggers create visible dashboard jobs and persisted dispatch
+Manual schedule triggers create visible command jobs and persisted dispatch
 records. The default trigger is the explicit request `job_intent`, then the
 persisted schedule mode, then the Codex-capable `run` fallback. Codex-capable
 `run` triggers require `confirm_codex: true`.
@@ -526,7 +527,7 @@ Codex must not generate:
 
 The dashboard must preserve the existing rule that Codex receives bounded
 report-facing material, not full raw artifacts, reusable histories, private
-user-state files, full workbench summaries, full dashboard job histories, or
+user-state files, full workbench summaries, full command job histories, or
 full dashboard service or schedule state by default.
 
 ## Validation

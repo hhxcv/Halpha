@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.dashboard.jobs import DashboardJobManager
+from halpha.runtime.command_jobs import CommandJobManager
 from halpha.dashboard.schedule import DashboardScheduleManager
 from halpha.runtime.state_store import runtime_state_path
 
@@ -163,7 +163,7 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
             returncode=0,
         )
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     client.post(
@@ -186,6 +186,11 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
     assert completed["requested_by"] == "Schedule"
+    assert completed["requester"] == {
+        "dispatch_kind": "manual",
+        "schedule_id": "daily_report",
+        "source": "daily_report_schedule",
+    }
     assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>", "--no-codex"]
     assert schedule_response.json()["last_job_id"] == job_id
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path), "--no-codex"]]
@@ -203,7 +208,7 @@ def test_dashboard_daily_report_schedule_codex_trigger_requires_confirmation(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("Codex-capable scheduled trigger must require confirmation before process start")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.post("/api/schedule/daily-report/trigger", json={})
@@ -238,7 +243,7 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
             returncode=0,
         )
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     client.post(
@@ -257,6 +262,11 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run"
     assert completed["requested_by"] == "Schedule"
+    assert completed["requester"] == {
+        "dispatch_kind": "manual",
+        "schedule_id": "daily_report",
+        "source": "daily_report_schedule",
+    }
     assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>"]
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path)]]
 
@@ -275,8 +285,8 @@ def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(
         commands.append(command)
         return _FakeProcess(stdout="Halpha run succeeded.\nrun_id: run-auto", stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    job_manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    job_manager = CommandJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
     enabled = schedule_manager.enable_daily_report_schedule(
         {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run_no_codex"}
@@ -291,6 +301,11 @@ def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(
     assert result["status"] == "available"
     assert result["job"]["intent"] == "run_no_codex"
     assert completed["requested_by"] == "Schedule"
+    assert completed["requester"] == {
+        "dispatch_kind": "automatic",
+        "schedule_id": "daily_report",
+        "source": "daily_report_schedule",
+    }
     assert completed["status"] == "succeeded"
     assert result["errors"] == []
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path.resolve()), "--no-codex"]]
@@ -428,8 +443,8 @@ def test_dashboard_daily_report_dispatcher_creates_due_no_codex_job(
         commands.append(command)
         return _FakeProcess(stdout="Halpha run succeeded.\nrun_id: run-auto", stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    job_manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    job_manager = CommandJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
     schedule_manager.enable_daily_report_schedule(
         {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run_no_codex"}
@@ -455,7 +470,7 @@ def test_dashboard_daily_report_dispatcher_creates_due_no_codex_job(
 def test_dashboard_daily_report_dispatch_skips_disabled_and_not_due(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    job_manager = DashboardJobManager(config, config_path=config_path)
+    job_manager = CommandJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
 
     disabled = schedule_manager.dispatch_due_daily_report()
@@ -484,8 +499,8 @@ def test_dashboard_daily_report_dispatch_blocks_codex_capable_automatic_run(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("automatic dispatch must not start Codex-capable run jobs")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    job_manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    job_manager = CommandJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
     schedule_manager.enable_daily_report_schedule({"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run"})
     current["value"] = datetime(2026, 6, 20, 0, 2, tzinfo=timezone.utc)
@@ -526,10 +541,11 @@ class _RecordingJobManager:
         job_id = f"job-{len(self.created_intents)}"
         job = {
             "schema_version": 1,
-            "artifact_type": "dashboard_job",
+            "artifact_type": "command_job",
             "job_id": job_id,
             "intent": request.get("intent"),
             "requested_by": request.get("requested_by"),
+            "requester": request.get("requester"),
             "status": self.initial_status,
             "result_refs": {},
             "warnings": [],
@@ -567,7 +583,7 @@ def _wait_for_api_terminal(client: TestClient, job_id: str) -> dict:
     raise AssertionError(f"job did not finish: {job_id}")
 
 
-def _wait_for_manager_terminal(manager: DashboardJobManager, job_id: str) -> dict:
+def _wait_for_manager_terminal(manager: CommandJobManager, job_id: str) -> dict:
     for _ in range(50):
         payload = manager.get_job(job_id)
         if payload and payload["status"] in {"succeeded", "failed", "cancelled", "unsupported", "blocked"}:

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from contextlib import closing
 import multiprocessing
@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from halpha.dashboard.job_store import apply_dashboard_job_migrations
+from halpha.runtime.command_job_store import apply_command_job_migrations
 from halpha.data.run_index import apply_run_index_migrations
 from halpha.runtime.service_lifecycle import (
     SERVICE_ROLES,
@@ -309,7 +309,7 @@ def test_service_lifecycle_redacts_private_error_values(tmp_path: Path) -> None:
 
 def test_service_lifecycle_migration_uses_distinct_runtime_version(tmp_path: Path) -> None:
     with closing(open_runtime_state_connection(runtime_root=tmp_path)) as connection:
-        apply_dashboard_job_migrations(connection, now="2026-06-05T00:00:00Z")
+        apply_command_job_migrations(connection, now="2026-06-05T00:00:00Z")
         apply_run_index_migrations(connection, now="2026-06-05T00:01:00Z")
         apply_service_lifecycle_migrations(connection, now="2026-06-05T00:02:00Z")
         versions = [
@@ -323,7 +323,7 @@ def test_service_lifecycle_migration_uses_distinct_runtime_version(tmp_path: Pat
             ).fetchall()
         }
 
-    assert versions == [1, 2, 3, 6, 7]
+    assert versions == [1, 2, 6, 7, 9]
     assert tables == {"resident_services", "resident_service_events"}
 
 
