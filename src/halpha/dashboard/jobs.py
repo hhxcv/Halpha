@@ -154,7 +154,7 @@ class DashboardJobManager:
             daemon=True,
         )
         thread.start()
-        return self.get_job(str(job["job_id"])) or job
+        return job
 
     def list_jobs(self, *, limit: int = 100) -> dict[str, Any]:
         jobs = sorted(

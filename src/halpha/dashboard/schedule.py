@@ -1,21 +1,27 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from datetime import datetime, timedelta, timezone
-import json
-from json import JSONDecodeError
 import threading
+import time
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from halpha.dashboard.jobs import DashboardJobManager
-from halpha.dashboard.paths import dashboard_control_path, dashboard_control_ref
+from halpha.dashboard.schedule_store import (
+    DAILY_REPORT_SCHEDULE_ID,
+    DASHBOARD_SCHEDULE_HISTORY_LIMIT,
+    DASHBOARD_SCHEDULE_STORE_ARTIFACT,
+    DashboardScheduleRepository,
+    DashboardScheduleStoreError,
+)
 from halpha.dashboard.time import parse_utc_timestamp
-from halpha.storage import write_json
 
 
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
-DAILY_REPORT_SCHEDULE_ARTIFACT = dashboard_control_ref("schedules", DAILY_REPORT_SCHEDULE_FILENAME)
+DAILY_REPORT_SCHEDULE_ARTIFACT = DASHBOARD_SCHEDULE_STORE_ARTIFACT
+LEGACY_DAILY_REPORT_SCHEDULE_ARTIFACT = f".halpha/dashboard/schedules/{DAILY_REPORT_SCHEDULE_FILENAME}"
 MAX_LINKED_JOB_IDS = 20
 DAILY_REPORT_DISPATCH_INTERVAL_SECONDS = 30
 SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run", "run_no_codex"}
@@ -34,29 +40,17 @@ class DashboardScheduleManager:
         self.config = config
         self.config_path = Path(config_path)
         self.job_manager = job_manager
-        self.daily_report_path = dashboard_control_path("schedules", DAILY_REPORT_SCHEDULE_FILENAME)
+        self._repository = DashboardScheduleRepository(config_path=self.config_path)
         self._dispatch_lock = threading.Lock()
         self._dispatcher_stop = threading.Event()
         self._dispatcher_thread: threading.Thread | None = None
 
     def read_daily_report_schedule(self) -> dict[str, Any]:
-        if not self.daily_report_path.exists():
+        self._reconcile_dispatch_jobs()
+        data = self._repository.get_schedule()
+        if data is None:
             state = self._default_daily_report_state(status="missing", persisted=False)
-            state["warnings"] = [f"{DAILY_REPORT_SCHEDULE_FILENAME} was not found."]
-            return state
-        try:
-            data = json.loads(self.daily_report_path.read_text(encoding="utf-8"))
-        except JSONDecodeError as exc:
-            state = self._default_daily_report_state(status="failed", persisted=True)
-            state["errors"] = [f"{DAILY_REPORT_SCHEDULE_FILENAME} is not valid JSON: {exc.msg}."]
-            return state
-        except OSError as exc:
-            state = self._default_daily_report_state(status="failed", persisted=True)
-            state["errors"] = [f"{DAILY_REPORT_SCHEDULE_FILENAME} could not be read: {exc}"]
-            return state
-        if not isinstance(data, dict):
-            state = self._default_daily_report_state(status="failed", persisted=True)
-            state["errors"] = [f"{DAILY_REPORT_SCHEDULE_FILENAME} must be a JSON object."]
+            state["warnings"] = ["daily report schedule state was not found in the runtime state store."]
             return state
         return self._normalized_daily_report_state(data)
 
@@ -127,8 +121,44 @@ class DashboardScheduleManager:
                     "confirm_codex must be true to trigger a Codex-capable daily report job.",
                 )
             params["confirm_codex"] = True
-        job = self.job_manager.create_job({"intent": intent, "params": params, "requested_by": "Schedule"})
-        updated = self._record_triggered_job(current, job)
+        if current.get("persisted") is not True:
+            current = self._write_daily_report_state(
+                current,
+                enabled=False,
+                settings=dict(current.get("settings") or {}),
+            )
+        scheduled_for = _utc_now()
+        next_run_at = _next_run_at_for_current_state(current)
+        claim = self._repository.claim_dispatch(
+            schedule_id=DAILY_REPORT_SCHEDULE_ID,
+            scheduled_for=scheduled_for,
+            claimed_at=scheduled_for,
+            next_run_at=next_run_at or "",
+            dispatch_kind="manual",
+        )
+        if claim.status == "duplicate":
+            return self._blocked_trigger_response(current, "daily report schedule occurrence was already claimed.")
+        try:
+            job = self.job_manager.create_job({"intent": intent, "params": params, "requested_by": "Schedule"})
+        except Exception:
+            error = "daily report job could not be created."
+            self._repository.record_dispatch_error(
+                schedule_id=DAILY_REPORT_SCHEDULE_ID,
+                scheduled_for=scheduled_for,
+                error=error,
+                updated_at=_utc_now(),
+            )
+            return {
+                "schema_version": 1,
+                "artifact_type": "dashboard_daily_report_schedule_trigger",
+                "status": "failed",
+                "schedule": self.read_daily_report_schedule(),
+                "job": None,
+                "warnings": [],
+                "errors": [error],
+            }
+        self._record_dispatch_job(scheduled_for=scheduled_for, job=job)
+        updated = self.read_daily_report_schedule()
         return {
             "schema_version": 1,
             "artifact_type": "dashboard_daily_report_schedule_trigger",
@@ -153,7 +183,10 @@ class DashboardScheduleManager:
                 )
             next_run_at = parse_utc_timestamp(current.get("next_run_at"))
             if next_run_at is None:
-                blocked = self._record_dispatch_blocked(current, "daily report schedule next_run_at is missing.")
+                blocked = self._blocked_daily_report_state(current, "daily report schedule next_run_at is missing.")
+                if blocked.get("persisted") is True:
+                    blocked = self._repository.save_schedule(blocked)
+                    blocked = self._normalized_daily_report_state(blocked)
                 return _dispatch_response("blocked", blocked, job=None, errors=list(blocked.get("errors") or []))
             if next_run_at > _utc_now_datetime():
                 return _dispatch_response(
@@ -164,12 +197,46 @@ class DashboardScheduleManager:
                 )
             settings = current.get("settings") if isinstance(current.get("settings"), dict) else {}
             intent = str(settings.get("job_intent") or DEFAULT_DAILY_REPORT_JOB_INTENT)
+            following_run_at = _next_run_at(settings["time_of_day"], settings["timezone"])
             if intent == "run":
                 error = "automatic Codex-capable daily report dispatch requires manual confirmation."
-                blocked = self._record_dispatch_blocked(current, error)
+                claim = self._repository.claim_dispatch(
+                    schedule_id=DAILY_REPORT_SCHEDULE_ID,
+                    scheduled_for=_format_utc(next_run_at),
+                    claimed_at=_utc_now(),
+                    next_run_at=following_run_at,
+                    dispatch_kind="automatic",
+                    blocked_error=error,
+                )
+                blocked = self.read_daily_report_schedule() if claim.schedule is not None else current
                 return _dispatch_response("blocked", blocked, job=None, errors=[error])
-            job = self.job_manager.create_job({"intent": intent, "params": {}, "requested_by": "Schedule"})
-            updated = self._record_triggered_job(current, job)
+            claim = self._repository.claim_dispatch(
+                schedule_id=DAILY_REPORT_SCHEDULE_ID,
+                scheduled_for=_format_utc(next_run_at),
+                claimed_at=_utc_now(),
+                next_run_at=following_run_at,
+                dispatch_kind="automatic",
+            )
+            if claim.status == "duplicate":
+                return _dispatch_response(
+                    "skipped",
+                    self.read_daily_report_schedule(),
+                    job=None,
+                    warnings=claim.warnings,
+                )
+            try:
+                job = self.job_manager.create_job({"intent": intent, "params": {}, "requested_by": "Schedule"})
+            except Exception:
+                error = "daily report job could not be created."
+                self._repository.record_dispatch_error(
+                    schedule_id=DAILY_REPORT_SCHEDULE_ID,
+                    scheduled_for=_format_utc(next_run_at),
+                    error=error,
+                    updated_at=_utc_now(),
+                )
+                return _dispatch_response("failed", self.read_daily_report_schedule(), job=None, errors=[error])
+            self._record_dispatch_job(scheduled_for=_format_utc(next_run_at), job=job)
+            updated = self.read_daily_report_schedule()
             return _dispatch_response("available", updated, job=job)
 
     def start_daily_report_dispatcher(
@@ -206,7 +273,7 @@ class DashboardScheduleManager:
         return {
             "schema_version": 1,
             "artifact_type": "dashboard_daily_report_schedule",
-            "schedule_id": "daily_report",
+            "schedule_id": DAILY_REPORT_SCHEDULE_ID,
             "status": status,
             "enabled": False,
             "persisted": persisted,
@@ -222,6 +289,8 @@ class DashboardScheduleManager:
             "last_job_id": None,
             "linked_job_ids": [],
             "linked_report_refs": [],
+            "dispatches": [],
+            "revision": 0,
             "runtime_boundary": {
                 "runs_only_while_dashboard_active": True,
                 "hidden_service": False,
@@ -230,6 +299,7 @@ class DashboardScheduleManager:
                 "automatic_dispatch": "dashboard_active_dispatcher",
             },
             "source_artifacts": [DAILY_REPORT_SCHEDULE_ARTIFACT],
+            "legacy_artifacts": [LEGACY_DAILY_REPORT_SCHEDULE_ARTIFACT],
             "created_at": now,
             "updated_at": now,
             "warnings": [],
@@ -255,6 +325,7 @@ class DashboardScheduleManager:
         status = str(data.get("status") or "available")
         if status not in {"available", "blocked"}:
             status = "available"
+        dispatches = self._recent_dispatches()
         default.update(
             {
                 "status": status,
@@ -264,9 +335,11 @@ class DashboardScheduleManager:
                 "report_generation": _report_generation_state(settings),
                 "next_run_at": next_run_at if enabled else None,
                 "last_run_at": data.get("last_run_at"),
-                "last_job_id": data.get("last_job_id"),
-                "linked_job_ids": _bounded_string_list(data.get("linked_job_ids"), limit=MAX_LINKED_JOB_IDS),
-                "linked_report_refs": _bounded_string_list(data.get("linked_report_refs"), limit=MAX_LINKED_JOB_IDS),
+                "last_job_id": data.get("last_job_id") or _latest_dispatch_value(dispatches, "job_id"),
+                "linked_job_ids": _dispatch_values(dispatches, "job_id", limit=MAX_LINKED_JOB_IDS),
+                "linked_report_refs": _dispatch_values(dispatches, "report_ref", limit=MAX_LINKED_JOB_IDS),
+                "dispatches": dispatches,
+                "revision": data.get("revision") or 0,
                 "created_at": data.get("created_at") or default["created_at"],
                 "updated_at": data.get("updated_at") or default["updated_at"],
                 "warnings": _bounded_string_list(data.get("warnings"), limit=20),
@@ -286,76 +359,66 @@ class DashboardScheduleManager:
         state = self._default_daily_report_state(status="available", persisted=True)
         state.update(
             {
+                "schedule_id": DAILY_REPORT_SCHEDULE_ID,
                 "enabled": enabled,
                 "settings": settings,
                 "report_generation": _report_generation_state(settings),
                 "next_run_at": _next_run_at(settings["time_of_day"], settings["timezone"]) if enabled else None,
                 "last_run_at": current.get("last_run_at"),
                 "last_job_id": current.get("last_job_id"),
-                "linked_job_ids": _bounded_string_list(current.get("linked_job_ids"), limit=MAX_LINKED_JOB_IDS),
-                "linked_report_refs": _bounded_string_list(current.get("linked_report_refs"), limit=MAX_LINKED_JOB_IDS),
                 "created_at": current.get("created_at") or now,
                 "updated_at": now,
+                "warnings": [],
+                "errors": [],
             }
         )
-        write_json(self.daily_report_path, state)
-        return state
+        saved = self._repository.save_schedule(state)
+        return self._normalized_daily_report_state(saved)
 
-    def _record_triggered_job(self, current: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
-        default_settings = self._default_daily_report_state(status="available", persisted=True)["settings"]
-        settings = dict(current.get("settings") or default_settings)
-        now = _utc_now()
-        linked_job_ids = [
-            str(job.get("job_id") or ""),
-            *_bounded_string_list(current.get("linked_job_ids"), limit=MAX_LINKED_JOB_IDS),
+    def _reconcile_dispatch_jobs(self) -> None:
+        for dispatch in self._repository.list_dispatches(limit=DASHBOARD_SCHEDULE_HISTORY_LIMIT):
+            job_id = dispatch.get("job_id")
+            if not isinstance(job_id, str) or not job_id:
+                continue
+            if dispatch.get("terminal_status"):
+                continue
+            job = self.job_manager.get_job(job_id)
+            if not job:
+                continue
+            self._record_dispatch_job(scheduled_for=str(dispatch.get("scheduled_for") or ""), job=job, attempts=1)
+
+    def _record_dispatch_job(self, *, scheduled_for: str, job: dict[str, Any], attempts: int = 10) -> bool:
+        for attempt in range(max(1, attempts)):
+            with suppress(DashboardScheduleStoreError):
+                self._repository.record_dispatch_job(
+                    schedule_id=DAILY_REPORT_SCHEDULE_ID,
+                    scheduled_for=scheduled_for,
+                    job=job,
+                    updated_at=_utc_now(),
+                )
+                return True
+            if attempt + 1 < attempts:
+                time.sleep(0.02)
+        return False
+
+    def _recent_dispatches(self) -> list[dict[str, Any]]:
+        dispatches = self._repository.list_dispatches(limit=DASHBOARD_SCHEDULE_HISTORY_LIMIT)
+        return [
+            {
+                "scheduled_for": dispatch.get("scheduled_for"),
+                "dispatch_kind": dispatch.get("dispatch_kind"),
+                "status": dispatch.get("status"),
+                "claimed_at": dispatch.get("claimed_at"),
+                "completed_at": dispatch.get("completed_at"),
+                "job_id": dispatch.get("job_id"),
+                "run_ref": dispatch.get("run_ref"),
+                "report_ref": dispatch.get("report_ref"),
+                "terminal_status": dispatch.get("terminal_status"),
+                "warnings": _bounded_string_list(dispatch.get("warnings"), limit=20),
+                "errors": _bounded_string_list(dispatch.get("errors"), limit=20),
+            }
+            for dispatch in dispatches
         ]
-        linked_job_ids = _unique(linked_job_ids)[:MAX_LINKED_JOB_IDS]
-        linked_report_refs = _bounded_string_list(current.get("linked_report_refs"), limit=MAX_LINKED_JOB_IDS)
-        report_ref = (job.get("result_refs") or {}).get("report") if isinstance(job.get("result_refs"), dict) else None
-        if isinstance(report_ref, str) and report_ref:
-            linked_report_refs = _unique([report_ref, *linked_report_refs])[:MAX_LINKED_JOB_IDS]
-        state = self._default_daily_report_state(status="available", persisted=True)
-        enabled = current.get("enabled") is True
-        state.update(
-            {
-                "enabled": enabled,
-                "settings": settings,
-                "report_generation": _report_generation_state(settings),
-                "next_run_at": _next_run_at(settings["time_of_day"], settings["timezone"]) if enabled else None,
-                "last_run_at": now,
-                "last_job_id": job.get("job_id"),
-                "linked_job_ids": linked_job_ids,
-                "linked_report_refs": linked_report_refs,
-                "created_at": current.get("created_at") or now,
-                "updated_at": now,
-            }
-        )
-        write_json(self.daily_report_path, state)
-        return state
-
-    def _record_dispatch_blocked(self, current: dict[str, Any], error: str) -> dict[str, Any]:
-        default_settings = self._default_daily_report_state(status="available", persisted=True)["settings"]
-        settings = dict(current.get("settings") or default_settings)
-        now = _utc_now()
-        state = self._default_daily_report_state(status="blocked", persisted=True)
-        state.update(
-            {
-                "enabled": current.get("enabled") is True,
-                "settings": settings,
-                "report_generation": _report_generation_state(settings),
-                "next_run_at": _next_run_at(settings["time_of_day"], settings["timezone"]),
-                "last_run_at": current.get("last_run_at"),
-                "last_job_id": current.get("last_job_id"),
-                "linked_job_ids": _bounded_string_list(current.get("linked_job_ids"), limit=MAX_LINKED_JOB_IDS),
-                "linked_report_refs": _bounded_string_list(current.get("linked_report_refs"), limit=MAX_LINKED_JOB_IDS),
-                "created_at": current.get("created_at") or now,
-                "updated_at": now,
-                "warnings": _bounded_string_list(current.get("warnings"), limit=20),
-                "errors": _unique([error, *_bounded_string_list(current.get("errors"), limit=20)])[:20],
-            }
-        )
-        write_json(self.daily_report_path, state)
-        return state
 
     def _blocked_daily_report_state(self, current: dict[str, Any], error: str) -> dict[str, Any]:
         state = dict(current)
@@ -431,6 +494,17 @@ def _stored_or_next_run_at(value: Any, settings: dict[str, Any]) -> str:
     return _next_run_at(settings["time_of_day"], settings["timezone"])
 
 
+def _next_run_at_for_current_state(current: dict[str, Any]) -> str | None:
+    if current.get("enabled") is not True:
+        return None
+    settings = current.get("settings") if isinstance(current.get("settings"), dict) else {}
+    time_of_day = settings.get("time_of_day")
+    timezone_name = settings.get("timezone")
+    if not isinstance(time_of_day, str) or not isinstance(timezone_name, str):
+        return None
+    return _next_run_at(time_of_day, timezone_name)
+
+
 def _dispatch_response(
     status: str,
     schedule: dict[str, Any],
@@ -500,9 +574,17 @@ def _bounded_string_list(value: Any, *, limit: int) -> list[str]:
     return output
 
 
-def _unique(values: list[str]) -> list[str]:
+def _dispatch_values(dispatches: list[dict[str, Any]], key: str, *, limit: int) -> list[str]:
     output: list[str] = []
-    for value in values:
-        if value and value not in output:
+    for dispatch in dispatches:
+        value = dispatch.get(key)
+        if isinstance(value, str) and value and value not in output:
             output.append(value)
+            if len(output) >= limit:
+                break
     return output
+
+
+def _latest_dispatch_value(dispatches: list[dict[str, Any]], key: str) -> str | None:
+    values = _dispatch_values(dispatches, key, limit=1)
+    return values[0] if values else None

@@ -36,8 +36,8 @@ Primary sources:
 
 - `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
   foundation, current run-index projection, and dashboard command-job
-  lifecycle. Monitor and schedule consumers are not migrated to their own state
-  domains yet.
+  lifecycle plus daily report schedule configuration and dispatch history.
+  Monitor consumers are not migrated to their own state domain yet.
 - `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
   Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run
@@ -144,15 +144,16 @@ The dashboard UI currently exposes monitor job controls directly in the Monitor
 view. Other command actions are available through the dashboard jobs API and
 remain explicit allowlisted jobs.
 
-Implemented schedule controls are API-backed local state for the daily report
-schedule. The schedule API can inspect, enable, disable, update, and manually
-trigger daily report jobs. The dashboard also starts a local dispatcher while
-the dashboard process is active. That dispatcher checks the persisted daily
-report schedule and creates visible allowlisted dashboard jobs for due
-non-Codex runs. It is not a hosted scheduler, OS scheduler, startup task, cron
-integration, external workflow engine, or hidden daemon. This dashboard-lifespan
-dispatcher is current legacy behavior. The target Schedule service is
-independent of Dashboard.
+Implemented schedule controls are API-backed runtime state for the daily report
+schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
+disable, update, and manually trigger daily report jobs. The dashboard also
+starts a local dispatcher while the dashboard process is active. That
+dispatcher checks the persisted daily report schedule, claims due occurrences,
+and creates visible allowlisted dashboard jobs for due non-Codex runs. It is
+not a hosted scheduler, OS scheduler, startup task, cron integration, external
+workflow engine, or hidden daemon. This dashboard-lifespan dispatcher is
+current legacy behavior. The target Schedule service is independent of
+Dashboard.
 
 ## Target Service Lifecycle
 
@@ -391,11 +392,10 @@ Codex context by default.
 
 ## Schedule Contract
 
-Daily report scheduling is current dashboard control state and target shared
-runtime state. The target owner is the independent `schedule` resident service
-using the unified runtime state store. Dashboard schedule APIs should become
-control and read-model surfaces for that service, not a dashboard-owned
-dispatcher.
+Daily report scheduling is current shared runtime state. The target owner is
+the independent `schedule` resident service using the unified runtime state
+store. Dashboard schedule APIs should become control and read-model surfaces
+for that service, not a dashboard-owned dispatcher.
 
 Schedule state should record:
 
@@ -408,15 +408,15 @@ Schedule state should record:
 - linked report refs when available;
 - warnings and errors.
 
-Implemented daily report schedule state lives at:
+Implemented daily report schedule state lives in:
 
 ```text
-.halpha/dashboard/schedules/daily_report_schedule.json
+.halpha/state.sqlite
 ```
 
-This path is current implemented storage. It is legacy after the unified
-runtime state store owns schedule configuration, due claims, dispatch history,
-and job linkage.
+The legacy `.halpha/dashboard/schedules/daily_report_schedule.json` path is no
+longer written for new schedule state. It remains legacy storage until explicit
+import or cleanup work.
 
 The schedule API supports:
 
@@ -426,10 +426,10 @@ The schedule API supports:
 - `POST /api/schedule/daily-report/disable`;
 - `POST /api/schedule/daily-report/trigger`.
 
-Manual schedule triggers create visible dashboard jobs. The default trigger is
-the explicit request `job_intent`, then the persisted schedule mode, then the
-Codex-capable `run` fallback. Codex-capable `run` triggers require
-`confirm_codex: true`.
+Manual schedule triggers create visible dashboard jobs and persisted dispatch
+records. The default trigger is the explicit request `job_intent`, then the
+persisted schedule mode, then the Codex-capable `run` fallback. Codex-capable
+`run` triggers require `confirm_codex: true`.
 
 Enabling a schedule requires an explicit `job_intent`. The dashboard enable
 control records `run_no_codex`, which the automatic dispatcher can execute
@@ -437,12 +437,14 @@ without Codex. If an enabled schedule is due with Codex-capable `run`, automatic
 dispatch records a blocked state and does not create a job because Codex
 execution requires explicit user confirmation at the trigger point.
 
-Automatic dispatch runs only while the dashboard process is active. It must not
-be treated as a hosted scheduler, OS service, startup task, cron integration,
-workflow engine, or hidden daemon. This is current legacy behavior. Target
-automatic dispatch belongs to the independent Schedule service and must keep
-running when Dashboard is stopped. Schedule remains active when Dashboard is
-stopped.
+Automatic dispatch claims a due occurrence transactionally before creating a
+job, so repeated due checks for the same scheduled time create at most one
+dispatch record and one linked job. Automatic dispatch runs only while the
+dashboard process is active. It must not be treated as a hosted scheduler, OS
+service, startup task, cron integration, workflow engine, or hidden daemon.
+This is current legacy behavior. Target automatic dispatch belongs to the
+independent Schedule service and must keep running when Dashboard is stopped.
+Schedule remains active when Dashboard is stopped.
 
 ## Monitor Boundary
 
