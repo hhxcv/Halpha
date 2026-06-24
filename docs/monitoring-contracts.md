@@ -17,7 +17,7 @@ It must remain observable, bounded, and local-first:
 The current command surface validates monitor configuration, runs one bounded
 local monitor cycle or finite diagnostic loop, starts one resident Monitor
 service, writes immutable cycle manifests, persists alert archive, cooldown,
-cycle, and service-health state in `.halpha/state.sqlite`, and exposes
+cycle, service-health, and source-cadence state in `.halpha/state.sqlite`, and exposes
 read-only monitor health inspection.
 
 The resident Monitor service is one of exactly three supported resident Halpha
@@ -32,10 +32,9 @@ Target Monitor responsibility:
 - keep running through ordinary source, network, and collection failures by
   recording warnings or errors and retrying on the next cadence;
 - avoid Codex and report generation during resident cycles;
-- temporarily run whole monitor cycles through the configured target stage until
-  the source-cadence fast path replaces that bridge;
-- update source groups by configured cadence and pass changed scope to
-  downstream work after that planned behavior is implemented;
+- update source groups by configured cadence and publish changed source scope;
+- avoid full material, experiment, product-validation, report, and Codex paths
+  when source refresh has no changed evidence;
 - never trade, access accounts, access wallets, place orders, or compute
   position sizing.
 
@@ -54,6 +53,7 @@ The optional `monitor` config section supports these fields:
 | `failure_backoff_max_seconds` | `3600` | Positive integer cap for resident Monitor retry backoff after recoverable cycle failures. |
 | `cooldown_seconds` | `3600` | Positive integer duplicate-alert cooldown window. |
 | `output_dir` | `runs/monitor` | Local monitor artifact directory. |
+| `source_cadence_seconds` | source-specific defaults | Optional mapping of `market`, `derivatives`, `text`, `macro_calendar`, and `onchain_flow` to positive integer refresh cadences. Fast source defaults use `interval_seconds`; macro/calendar and on-chain default to at least `3600`. |
 | `target_stage` | `build_materials` | Pipeline stage boundary for default monitor reassessment. |
 | `no_codex` | `true` | Default monitor runs stop before Codex report generation. |
 
@@ -93,10 +93,10 @@ python -m halpha monitor restart --config config.example.yaml
 ```
 
 The resident Monitor service is unique per runtime root through the shared
-service lifecycle controller. It runs no-Codex monitor cycles continuously
-until explicit stop, records heartbeat and terminal lifecycle state, persists
-current service health in `.halpha/state.sqlite`, and retries recoverable cycle
-failures with bounded exponential backoff.
+service lifecycle controller. It runs no-Codex source-cadence refresh cycles
+continuously until explicit stop, records heartbeat and terminal lifecycle
+state, persists current service health in `.halpha/state.sqlite`, and isolates
+recoverable source failures with per-source bounded exponential backoff.
 
 Current implemented diagnostic finite-loop command:
 
@@ -144,6 +144,10 @@ Required manifest fields:
 - `product_run`: bounded linked product-run summary.
 - `source_artifacts`: linked product-run artifact refs when available.
 - `warnings`, `errors`: bounded actionable strings.
+
+Resident source-cadence manifests also include `source_cadence` with due
+sources, changed sources, failed sources, per-source results, and the broad
+material/report/Codex tasks excluded from the fast path.
 
 The cycle manifest stores references and counts. It must not embed full raw
 streams, full reusable stores, full Codex context, raw user-state files, or
@@ -204,6 +208,8 @@ information:
 
 - latest cycle id, status, and linked run refs;
 - recent failure count;
+- per-source enabled state, cadence, next attempt, consecutive failures, latest
+  published revision, changed scope, and linked run refs;
 - emitted, suppressed, duplicate, and cooldown counts;
 - latest warning and error summaries;
 - state-store and evidence refs.
@@ -218,10 +224,10 @@ The local health state path is:
 ```
 
 It records monitor-cycle indexes, bounded alert archive records, cooldown
-records, warning and error counts, and latest finite-loop metadata. It must not
-store raw user-state files, private notes, account identifiers, holdings,
-balances, allocations, position sizes, private endpoints, or unbounded evidence
-text.
+records, source-cadence states, warning and error counts, and latest finite-loop
+metadata. It must not store raw user-state files, private notes, account
+identifiers, holdings, balances, allocations, position sizes, private endpoints,
+or unbounded evidence text.
 
 Missing cycle manifests or linked run artifacts referenced by the state store
 must be surfaced as stale or degraded diagnostics. The monitor read model must

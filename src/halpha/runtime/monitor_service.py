@@ -13,7 +13,7 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.dashboard.settings import dashboard_config_ref, sanitize_dashboard_message
-from halpha.monitor.monitoring import PipelineRunner, Sleeper, load_monitor_config, run_monitor_cycle
+from halpha.monitor.monitoring import PipelineRunner, Sleeper, load_monitor_config, run_monitor_source_cycle
 from halpha.monitor.state_store import MonitorStateRepository
 from halpha.pipeline import run_pipeline
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
@@ -112,11 +112,10 @@ def run_monitor_service(
                 latest_run_manifest=latest_run_manifest,
                 consecutive_failures=consecutive_failures,
             )
-            result_cycle = run_monitor_cycle(
+            result_cycle = run_monitor_source_cycle(
                 service_config,
                 config_path=config_path,
                 pipeline_runner=pipeline_runner,
-                cycle_mode="service",
                 loop_id=instance_id,
                 cycle_sequence=cycle_sequence,
                 cycle_id=cycle_id,
@@ -124,8 +123,10 @@ def run_monitor_service(
             )
             completed_cycles += 1
             latest_cycle_id = result_cycle.cycle_id
-            latest_run_id = result_cycle.run_id
-            latest_run_manifest = _monitor_run_manifest_ref(result_cycle.run_manifest_path, config_path=config_path)
+            if result_cycle.run_id is not None:
+                latest_run_id = result_cycle.run_id
+            if result_cycle.run_manifest_path is not None:
+                latest_run_manifest = _monitor_run_manifest_ref(result_cycle.run_manifest_path, config_path=config_path)
             wait_seconds = settings.interval_seconds
             next_retry_at = None
             last_error: dict[str, Any] = {}

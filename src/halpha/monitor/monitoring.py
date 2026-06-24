@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -32,7 +33,18 @@ DEFAULT_MONITOR_COOLDOWN_SECONDS = 3600
 DEFAULT_MONITOR_OUTPUT_DIR = "runs/monitor"
 DEFAULT_MONITOR_TARGET_STAGE = "build_materials"
 DEFAULT_MONITOR_NO_CODEX = True
+DEFAULT_MONITOR_SLOW_SOURCE_CADENCE_SECONDS = 3600
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
+MONITOR_SOURCE_KEYS = ("derivatives", "macro_calendar", "market", "onchain_flow", "text")
+SLOW_MONITOR_SOURCE_KEYS = {"macro_calendar", "onchain_flow"}
+SOURCE_CADENCE_EXCLUDED_TASKS = (
+    "build_source_evidence",
+    "run_strategy_research",
+    "synthesize_intelligence",
+    "build_materials",
+    "generate_report",
+    "finalize_run",
+)
 SUPPORTED_MONITOR_FIELDS = {
     "cooldown_seconds",
     "enabled",
@@ -41,6 +53,7 @@ SUPPORTED_MONITOR_FIELDS = {
     "max_cycles",
     "no_codex",
     "output_dir",
+    "source_cadence_seconds",
     "target_stage",
 }
 
@@ -55,6 +68,7 @@ class MonitorConfig:
     output_dir: Path
     target_stage: str
     no_codex: bool
+    source_cadence_seconds: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -97,6 +111,13 @@ PipelineRunner = Callable[..., RunResult]
 Sleeper = Callable[[float], None]
 
 
+@dataclass(frozen=True)
+class MonitorSourceGroup:
+    source_key: str
+    enabled: bool
+    cadence_seconds: int
+
+
 def load_monitor_config(config: dict[str, Any]) -> MonitorConfig:
     section = config.get("monitor", {})
     if not isinstance(section, dict):
@@ -114,6 +135,7 @@ def load_monitor_config(config: dict[str, Any]) -> MonitorConfig:
         output_dir=Path(str(section.get("output_dir", DEFAULT_MONITOR_OUTPUT_DIR))),
         target_stage=section.get("target_stage", DEFAULT_MONITOR_TARGET_STAGE),
         no_codex=section.get("no_codex", DEFAULT_MONITOR_NO_CODEX),
+        source_cadence_seconds=_source_cadence_config(section.get("source_cadence_seconds")),
     )
 
 
@@ -283,6 +305,235 @@ def run_monitor_cycle(
     )
 
 
+def run_monitor_source_cycle(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    now: datetime | None = None,
+    pipeline_runner: PipelineRunner = run_pipeline,
+    cycle_id: str | None = None,
+    loop_id: str | None = None,
+    cycle_sequence: int | None = None,
+    trigger_source: str = "monitor_service",
+) -> MonitorCycleResult:
+    settings = load_monitor_config(config)
+    fixed_time = now is not None
+    started_at = _coerce_utc(now or datetime.now(timezone.utc))
+    cycle_id = cycle_id or _cycle_id(started_at)
+    output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
+    cycle_dir = _unique_cycle_dir(output_dir / "cycles", cycle_id)
+    cycle_id = cycle_dir.name
+    manifest_path = cycle_dir / "monitor_cycle_manifest.json"
+    base = artifact_base(config_path)
+    output_ref = _portable_path(output_dir, base=base)
+    repository = MonitorStateRepository(config_path=config_path)
+    source_groups = _monitor_source_groups(config, settings)
+    previous_states = {state["source_key"]: state for state in repository.source_states(monitor_output_dir=output_ref)}
+    due_groups = [
+        group
+        for group in source_groups
+        if group.enabled and _source_due(previous_states.get(group.source_key, {}), at=started_at)
+    ]
+    latest_run_id: str | None = None
+    latest_run_dir: Path | None = None
+    latest_run_manifest_path: Path | None = None
+    latest_run_manifest_ref: str | None = None
+    latest_product_run: dict[str, Any] | None = None
+    source_artifacts: dict[str, Any] = {}
+    source_results: list[dict[str, Any]] = []
+    states_by_key: dict[str, dict[str, Any]] = {}
+    warnings: list[str] = []
+    errors: list[dict[str, str]] = []
+
+    manifest: dict[str, Any] = {
+        "schema_version": 1,
+        "artifact_type": "monitor_cycle_manifest",
+        "cycle_id": cycle_id,
+        "cycle_mode": "source_cadence",
+        "loop_id": loop_id,
+        "cycle_sequence": cycle_sequence,
+        "trigger_source": trigger_source,
+        "status": "running",
+        "started_at": _utc_timestamp(started_at),
+        "finished_at": None,
+        "config_ref": _portable_path(config_path, base=base),
+        "monitor_output_dir": output_ref,
+        "target_stage": "refresh_data",
+        "no_codex": True,
+        "exit_code": None,
+        "run_id": None,
+        "run_dir": None,
+        "run_manifest": None,
+        "product_run": None,
+        "source_artifacts": {},
+        "source_cadence": {
+            "source_groups": [_source_group_manifest(group, previous_states.get(group.source_key, {})) for group in source_groups],
+            "due_sources": [group.source_key for group in due_groups],
+            "changed_sources": [],
+            "failed_sources": [],
+            "source_results": [],
+            "slow_tasks_excluded": list(SOURCE_CADENCE_EXCLUDED_TASKS),
+        },
+        "alert_archive": _monitor_alert_archive_summary(status="not_run"),
+        "warnings": [],
+        "errors": [],
+    }
+    write_json(manifest_path, manifest)
+    LOGGER.info(
+        "Monitor source cycle started.",
+        extra={
+            "event": "monitor.source_cycle.start",
+            "cycle_id": cycle_id,
+            "loop_id": loop_id,
+            "cycle_sequence": cycle_sequence,
+            "due_source_count": len(due_groups),
+        },
+    )
+
+    for group in source_groups:
+        previous = previous_states.get(group.source_key, {})
+        if not group.enabled:
+            states_by_key[group.source_key] = _disabled_source_state(group, previous)
+            continue
+        if group not in due_groups:
+            states_by_key[group.source_key] = _waiting_source_state(group, previous)
+            continue
+
+        source_config = _source_scoped_config(config, group.source_key)
+        try:
+            pipeline_result = pipeline_runner(
+                source_config,
+                config_path=config_path,
+                until_stage="refresh_data",
+                skip_codex=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            failure = _source_exception_result(group, previous, started_at=started_at, settings=settings, exc=exc)
+            states_by_key[group.source_key] = failure["state"]
+            source_results.append(failure["result"])
+            errors.append({"stage": group.source_key, "message": failure["result"]["reason"]})
+            continue
+
+        latest_run_id = pipeline_result.run.run_id
+        latest_run_dir = pipeline_result.run.run_dir
+        latest_run_manifest_path = pipeline_result.run.manifest_path
+        latest_run_manifest_ref = _portable_path(pipeline_result.run.manifest_path, base=base)
+        latest_product_run = _product_run_summary(pipeline_result, base=base)
+        source_artifacts.update({f"{group.source_key}:{key}": value for key, value in _artifact_refs(pipeline_result.run.manifest).items()})
+
+        if not pipeline_result.succeeded:
+            failure = _failed_source_state(
+                group,
+                previous,
+                result=pipeline_result,
+                started_at=started_at,
+                settings=settings,
+                base=base,
+            )
+            states_by_key[group.source_key] = failure["state"]
+            source_results.append(failure["result"])
+            errors.append(
+                {
+                    "stage": pipeline_result.failed_stage or group.source_key,
+                    "message": str(failure["result"]["reason"] or "source refresh failed"),
+                }
+            )
+            continue
+
+        revision = _source_revision(pipeline_result, source_key=group.source_key)
+        changed = revision != previous.get("latest_published_data_revision")
+        status = "changed" if changed else "no_change"
+        state = _successful_source_state(
+            group,
+            previous,
+            status=status,
+            revision=revision,
+            changed_scope=_source_changed_scope(config, group.source_key) if changed else {},
+            result=pipeline_result,
+            started_at=started_at,
+            base=base,
+        )
+        states_by_key[group.source_key] = state
+        source_results.append(
+            {
+                "source_key": group.source_key,
+                "status": status,
+                "changed": changed,
+                "run_id": pipeline_result.run.run_id,
+                "run_manifest": _portable_path(pipeline_result.run.manifest_path, base=base),
+                "latest_published_data_revision": revision,
+                "changed_scope": state["changed_scope"],
+                "reason": None,
+            }
+        )
+
+    if not due_groups:
+        status = "no_due_sources"
+    elif any(result.get("status") == "failed" for result in source_results):
+        status = "partial"
+    elif any(result.get("status") == "changed" for result in source_results):
+        status = "changed"
+    else:
+        status = "no_change"
+
+    finished_at = started_at if fixed_time else datetime.now(timezone.utc)
+    updated_at = _utc_timestamp(finished_at)
+    repository.save_source_states(
+        [states_by_key[group.source_key] for group in source_groups],
+        monitor_output_dir=output_ref,
+        updated_at=updated_at,
+    )
+    changed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "changed"]
+    failed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "failed"]
+    manifest.update(
+        {
+            "status": status,
+            "finished_at": updated_at,
+            "exit_code": 0,
+            "run_id": latest_run_id,
+            "run_dir": _portable_path(latest_run_dir, base=base) if latest_run_dir is not None else None,
+            "run_manifest": latest_run_manifest_ref,
+            "product_run": latest_product_run,
+            "source_artifacts": source_artifacts,
+            "warnings": sorted(set(warnings)),
+            "errors": errors,
+        }
+    )
+    manifest["source_cadence"].update(
+        {
+            "changed_sources": changed_sources,
+            "failed_sources": failed_sources,
+            "source_results": source_results,
+        }
+    )
+    write_json(manifest_path, manifest)
+    _persist_monitor_cycle(config_path=config_path, manifest=manifest, manifest_path=manifest_path, output_dir=output_dir, base=base)
+    LOGGER.info(
+        "Monitor source cycle finished.",
+        extra={
+            "event": "monitor.source_cycle.finished",
+            "cycle_id": cycle_id,
+            "status": status,
+            "changed_source_count": len(changed_sources),
+            "failed_source_count": len(failed_sources),
+        },
+    )
+
+    return MonitorCycleResult(
+        succeeded=True,
+        exit_code=0,
+        cycle_id=cycle_id,
+        status=status,
+        target_stage="refresh_data",
+        no_codex=True,
+        manifest_path=manifest_path,
+        run_id=latest_run_id,
+        run_dir=latest_run_dir,
+        run_manifest_path=latest_run_manifest_path,
+        reason=None if status != "partial" else "one or more monitor source groups failed",
+    )
+
+
 def run_monitor_loop(
     config: dict[str, Any],
     *,
@@ -427,6 +678,24 @@ def inspect_monitor_health(config: dict[str, Any], *, config_path: Path) -> Moni
                 f"latest_loop_stop_reason: {loop.get('stop_reason', 'unknown')}",
             ]
         )
+    source_states = health_state.get("source_states")
+    if isinstance(source_states, list) and source_states:
+        lines.append(f"source_state_count: {len(source_states)}")
+        for state in source_states:
+            if not isinstance(state, dict):
+                continue
+            source_key = _clean_text(state.get("source_key"))
+            lines.extend(
+                [
+                    f"source_{source_key}_enabled: {str(state.get('enabled') is True).lower()}",
+                    f"source_{source_key}_status: {state.get('status') or 'unknown'}",
+                    f"source_{source_key}_cadence_seconds: {_positive_int(state.get('cadence_seconds'))}",
+                    f"source_{source_key}_next_attempt_at: {state.get('next_attempt_at') or 'none'}",
+                    f"source_{source_key}_consecutive_failures: {_positive_int(state.get('consecutive_failures'))}",
+                    f"source_{source_key}_latest_revision: {state.get('latest_published_data_revision') or 'none'}",
+                    f"source_{source_key}_latest_run_manifest: {state.get('latest_run_manifest') or 'none'}",
+                ]
+            )
     return MonitorInspectionResult(True, 0, lines)
 
 
@@ -440,7 +709,396 @@ def monitor_config_lines(settings: MonitorConfig) -> list[str]:
         f"output_dir: {settings.output_dir.as_posix()}",
         f"target_stage: {settings.target_stage}",
         f"no_codex: {str(settings.no_codex).lower()}",
+        f"source_cadence_seconds: {_format_source_cadences(settings)}",
     ]
+
+
+def _source_cadence_config(value: Any) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key): int(item)
+        for key, item in value.items()
+        if isinstance(key, str) and key in MONITOR_SOURCE_KEYS and isinstance(item, int) and not isinstance(item, bool) and item > 0
+    }
+
+
+def _format_source_cadences(settings: MonitorConfig) -> str:
+    groups = _monitor_source_groups({}, settings)
+    return ", ".join(f"{group.source_key}={group.cadence_seconds}" for group in groups)
+
+
+def _monitor_source_groups(config: dict[str, Any], settings: MonitorConfig) -> list[MonitorSourceGroup]:
+    return [
+        MonitorSourceGroup(
+            source_key=source_key,
+            enabled=_source_enabled(config, source_key),
+            cadence_seconds=_source_cadence_seconds(settings, source_key),
+        )
+        for source_key in MONITOR_SOURCE_KEYS
+    ]
+
+
+def _source_cadence_seconds(settings: MonitorConfig, source_key: str) -> int:
+    if source_key in settings.source_cadence_seconds:
+        return settings.source_cadence_seconds[source_key]
+    if source_key in SLOW_MONITOR_SOURCE_KEYS:
+        return max(settings.interval_seconds, DEFAULT_MONITOR_SLOW_SOURCE_CADENCE_SECONDS)
+    return settings.interval_seconds
+
+
+def _source_enabled(config: dict[str, Any], source_key: str) -> bool:
+    market = _dict(config.get("market"))
+    if source_key == "derivatives":
+        derivatives = _dict(market.get("derivatives"))
+        return derivatives.get("enabled") is True
+    if source_key == "market":
+        return market.get("enabled") is True
+    if source_key == "macro_calendar":
+        return _dict(config.get("macro_calendar")).get("enabled") is True
+    if source_key == "onchain_flow":
+        return _dict(config.get("onchain_flow")).get("enabled") is True
+    if source_key == "text":
+        return _dict(config.get("text")).get("enabled") is True
+    return False
+
+
+def _source_due(state: dict[str, Any], *, at: datetime) -> bool:
+    next_attempt = _parse_utc_timestamp(state.get("next_attempt_at"))
+    return next_attempt is None or at >= next_attempt
+
+
+def _source_group_manifest(group: MonitorSourceGroup, previous: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source_key": group.source_key,
+        "enabled": group.enabled,
+        "cadence_seconds": group.cadence_seconds,
+        "status": previous.get("status") if isinstance(previous.get("status"), str) else None,
+        "next_attempt_at": previous.get("next_attempt_at") if isinstance(previous.get("next_attempt_at"), str) else None,
+        "latest_published_data_revision": previous.get("latest_published_data_revision")
+        if isinstance(previous.get("latest_published_data_revision"), str)
+        else None,
+    }
+
+
+def _source_scoped_config(config: dict[str, Any], source_key: str) -> dict[str, Any]:
+    scoped = deepcopy(config if isinstance(config, dict) else {})
+    monitor = _dict(scoped.get("monitor"))
+    if monitor is not scoped.get("monitor"):
+        scoped["monitor"] = monitor
+    monitor["target_stage"] = "refresh_data"
+    monitor["no_codex"] = True
+
+    market = _dict(scoped.get("market"))
+    if market is not scoped.get("market"):
+        scoped["market"] = market
+    derivatives = _dict(market.get("derivatives"))
+    if derivatives is not market.get("derivatives"):
+        market["derivatives"] = derivatives
+
+    if source_key != "market":
+        market["enabled"] = False
+    if source_key != "derivatives":
+        derivatives["enabled"] = False
+
+    macro_calendar = _dict(scoped.get("macro_calendar"))
+    if macro_calendar or source_key == "macro_calendar":
+        scoped["macro_calendar"] = macro_calendar
+        macro_calendar["enabled"] = source_key == "macro_calendar"
+
+    onchain_flow = _dict(scoped.get("onchain_flow"))
+    if onchain_flow or source_key == "onchain_flow":
+        scoped["onchain_flow"] = onchain_flow
+        onchain_flow["enabled"] = source_key == "onchain_flow"
+
+    text = _dict(scoped.get("text"))
+    if text is not scoped.get("text"):
+        scoped["text"] = text
+    text["enabled"] = source_key == "text"
+
+    codex = _dict(scoped.get("codex"))
+    if codex is not scoped.get("codex"):
+        scoped["codex"] = codex
+    codex["enabled"] = False
+    return scoped
+
+
+def _waiting_source_state(group: MonitorSourceGroup, previous: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source_key": group.source_key,
+        "enabled": True,
+        "cadence_seconds": group.cadence_seconds,
+        "status": str(previous.get("status") or "waiting"),
+        "last_attempt_at": previous.get("last_attempt_at") if isinstance(previous.get("last_attempt_at"), str) else None,
+        "last_success_at": previous.get("last_success_at") if isinstance(previous.get("last_success_at"), str) else None,
+        "next_attempt_at": previous.get("next_attempt_at") if isinstance(previous.get("next_attempt_at"), str) else None,
+        "consecutive_failures": _positive_int(previous.get("consecutive_failures")),
+        "backoff_seconds": _positive_int(previous.get("backoff_seconds")),
+        "last_error": _dict(previous.get("last_error")),
+        "latest_published_data_revision": previous.get("latest_published_data_revision")
+        if isinstance(previous.get("latest_published_data_revision"), str)
+        else None,
+        "changed_scope": _dict(previous.get("changed_scope")),
+        "latest_run_id": previous.get("latest_run_id") if isinstance(previous.get("latest_run_id"), str) else None,
+        "latest_run_manifest": previous.get("latest_run_manifest") if isinstance(previous.get("latest_run_manifest"), str) else None,
+    }
+
+
+def _disabled_source_state(group: MonitorSourceGroup, previous: dict[str, Any]) -> dict[str, Any]:
+    state = _waiting_source_state(group, previous)
+    state.update(
+        {
+            "enabled": False,
+            "status": "disabled",
+            "next_attempt_at": None,
+            "consecutive_failures": 0,
+            "backoff_seconds": 0,
+            "last_error": {},
+        }
+    )
+    return state
+
+
+def _successful_source_state(
+    group: MonitorSourceGroup,
+    previous: dict[str, Any],
+    *,
+    status: str,
+    revision: str,
+    changed_scope: dict[str, Any],
+    result: RunResult,
+    started_at: datetime,
+    base: Path,
+) -> dict[str, Any]:
+    return {
+        "source_key": group.source_key,
+        "enabled": True,
+        "cadence_seconds": group.cadence_seconds,
+        "status": status,
+        "last_attempt_at": _utc_timestamp(started_at),
+        "last_success_at": _utc_timestamp(started_at),
+        "next_attempt_at": _utc_timestamp(started_at + timedelta(seconds=group.cadence_seconds)),
+        "consecutive_failures": 0,
+        "backoff_seconds": 0,
+        "last_error": {},
+        "latest_published_data_revision": revision,
+        "changed_scope": changed_scope,
+        "latest_run_id": result.run.run_id,
+        "latest_run_manifest": _portable_path(result.run.manifest_path, base=base),
+    }
+
+
+def _failed_source_state(
+    group: MonitorSourceGroup,
+    previous: dict[str, Any],
+    *,
+    result: RunResult,
+    started_at: datetime,
+    settings: MonitorConfig,
+    base: Path,
+) -> dict[str, Any]:
+    consecutive_failures = _positive_int(previous.get("consecutive_failures")) + 1
+    backoff_seconds = _source_backoff_seconds(group.cadence_seconds, settings.failure_backoff_max_seconds, consecutive_failures)
+    reason = _source_error_message(result.reason or "source refresh failed")
+    state = {
+        "source_key": group.source_key,
+        "enabled": True,
+        "cadence_seconds": group.cadence_seconds,
+        "status": "failed",
+        "last_attempt_at": _utc_timestamp(started_at),
+        "last_success_at": previous.get("last_success_at") if isinstance(previous.get("last_success_at"), str) else None,
+        "next_attempt_at": _utc_timestamp(started_at + timedelta(seconds=backoff_seconds)),
+        "consecutive_failures": consecutive_failures,
+        "backoff_seconds": backoff_seconds,
+        "last_error": {
+            "stage": result.failed_stage or "refresh_data",
+            "message": reason,
+            "private_values_embedded": False,
+        },
+        "latest_published_data_revision": previous.get("latest_published_data_revision")
+        if isinstance(previous.get("latest_published_data_revision"), str)
+        else None,
+        "changed_scope": {},
+        "latest_run_id": result.run.run_id,
+        "latest_run_manifest": _portable_path(result.run.manifest_path, base=base),
+    }
+    return {
+        "state": state,
+        "result": {
+            "source_key": group.source_key,
+            "status": "failed",
+            "changed": False,
+            "run_id": result.run.run_id,
+            "run_manifest": _portable_path(result.run.manifest_path, base=base),
+            "latest_published_data_revision": state["latest_published_data_revision"],
+            "changed_scope": {},
+            "reason": reason,
+        },
+    }
+
+
+def _source_exception_result(
+    group: MonitorSourceGroup,
+    previous: dict[str, Any],
+    *,
+    started_at: datetime,
+    settings: MonitorConfig,
+    exc: Exception,
+) -> dict[str, Any]:
+    consecutive_failures = _positive_int(previous.get("consecutive_failures")) + 1
+    backoff_seconds = _source_backoff_seconds(group.cadence_seconds, settings.failure_backoff_max_seconds, consecutive_failures)
+    reason = _source_error_message(str(exc) or "source refresh failed")
+    state = {
+        "source_key": group.source_key,
+        "enabled": True,
+        "cadence_seconds": group.cadence_seconds,
+        "status": "failed",
+        "last_attempt_at": _utc_timestamp(started_at),
+        "last_success_at": previous.get("last_success_at") if isinstance(previous.get("last_success_at"), str) else None,
+        "next_attempt_at": _utc_timestamp(started_at + timedelta(seconds=backoff_seconds)),
+        "consecutive_failures": consecutive_failures,
+        "backoff_seconds": backoff_seconds,
+        "last_error": {
+            "stage": "refresh_data",
+            "message": reason,
+            "private_values_embedded": False,
+        },
+        "latest_published_data_revision": previous.get("latest_published_data_revision")
+        if isinstance(previous.get("latest_published_data_revision"), str)
+        else None,
+        "changed_scope": {},
+        "latest_run_id": previous.get("latest_run_id") if isinstance(previous.get("latest_run_id"), str) else None,
+        "latest_run_manifest": previous.get("latest_run_manifest") if isinstance(previous.get("latest_run_manifest"), str) else None,
+    }
+    return {
+        "state": state,
+        "result": {
+            "source_key": group.source_key,
+            "status": "failed",
+            "changed": False,
+            "run_id": None,
+            "run_manifest": None,
+            "latest_published_data_revision": state["latest_published_data_revision"],
+            "changed_scope": {},
+            "reason": reason,
+        },
+    }
+
+
+def _source_backoff_seconds(cadence_seconds: int, max_seconds: int, consecutive_failures: int) -> int:
+    exponent = max(0, consecutive_failures - 1)
+    return max(1, min(max_seconds, cadence_seconds * (2**exponent)))
+
+
+def _source_revision(result: RunResult, *, source_key: str) -> str:
+    manifest = result.run.manifest
+    explicit = manifest.get("monitor_source_revision")
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    artifacts = manifest.get("artifacts") if isinstance(manifest.get("artifacts"), dict) else {}
+    artifact_refs = sorted(set(_artifact_ref_values(artifacts)))
+    payload = {
+        "source_key": source_key,
+        "artifacts": artifacts,
+        "counts": manifest.get("counts") if isinstance(manifest.get("counts"), dict) else {},
+        "artifact_digests": {
+            ref: _artifact_file_digest(result.run.run_dir, ref)
+            for ref in artifact_refs
+        },
+    }
+    return _stable_hash(payload)
+
+
+def _artifact_ref_values(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        refs: list[str] = []
+        for item in value:
+            refs.extend(_artifact_ref_values(item))
+        return refs
+    if isinstance(value, dict):
+        refs: list[str] = []
+        for item in value.values():
+            refs.extend(_artifact_ref_values(item))
+        return refs
+    return []
+
+
+def _artifact_file_digest(run_dir: Path, ref: str) -> str:
+    path = Path(ref)
+    if path.is_absolute() or any(part == ".." for part in path.parts):
+        return "outside-run"
+    artifact_path = run_dir / path
+    if not artifact_path.is_file():
+        return "missing"
+    digest = hashlib.sha256()
+    with artifact_path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_changed_scope(config: dict[str, Any], source_key: str) -> dict[str, Any]:
+    market = _dict(config.get("market"))
+    if source_key == "market":
+        ohlcv = _dict(market.get("ohlcv"))
+        return {
+            "symbols": _string_list(market.get("symbols")),
+            "timeframes": _string_list(ohlcv.get("timeframes")),
+        }
+    if source_key == "derivatives":
+        derivatives = _dict(market.get("derivatives"))
+        return {
+            "symbols": _string_list(derivatives.get("symbols")),
+            "data_classes": _string_list(derivatives.get("data_classes")),
+            "periods": _string_list(derivatives.get("periods")),
+        }
+    if source_key == "text":
+        raw_sources = _dict(config.get("text")).get("sources")
+        sources = raw_sources if isinstance(raw_sources, list) else []
+        return {
+            "sources": sorted(
+                str(source.get("name")).strip()
+                for source in sources
+                if isinstance(source, dict) and isinstance(source.get("name"), str) and str(source.get("name")).strip()
+            )
+        }
+    if source_key == "macro_calendar":
+        macro_calendar = _dict(config.get("macro_calendar"))
+        return {
+            "regions": _string_list(macro_calendar.get("regions")),
+            "data_classes": _string_list(macro_calendar.get("data_classes")),
+        }
+    if source_key == "onchain_flow":
+        onchain_flow = _dict(config.get("onchain_flow"))
+        return {
+            "assets": _string_list(onchain_flow.get("assets")),
+            "chains": _string_list(onchain_flow.get("chains")),
+            "data_classes": _string_list(onchain_flow.get("data_classes")),
+        }
+    return {}
+
+
+def _source_error_message(message: str) -> str:
+    text = str(message or "source refresh failed").strip()
+    if not text:
+        return "source refresh failed"
+    lowered = text.lower()
+    private_markers = ("\\", "/", "://", "token", "secret", "cookie", "proxy", "password")
+    if any(marker in lowered for marker in private_markers):
+        return "monitor source refresh error redacted; inspect local logs."
+    return text[:500]
+
+
+def _positive_int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, number)
 
 
 def _resolve_output_dir(output_dir: Path, *, config_path: Path) -> Path:

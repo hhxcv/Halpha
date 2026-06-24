@@ -23,8 +23,10 @@ MONITOR_STATE_STORE_ARTIFACT = STATE_STORE_REF
 MONITOR_STATE_SCHEMA_VERSION = 1
 MONITOR_STATE_MIGRATION_VERSION = 5
 MONITOR_SERVICE_HEALTH_MIGRATION_VERSION = 11
+MONITOR_SOURCE_STATE_MIGRATION_VERSION = 12
 MONITOR_ALERT_SAMPLE_LIMIT = 20
 MONITOR_CYCLE_HISTORY_LIMIT = 20
+MONITOR_SOURCE_KEYS = ("derivatives", "macro_calendar", "market", "onchain_flow", "text")
 ALERT_COUNT_KEYS = (
     "records",
     "emitted",
@@ -168,6 +170,34 @@ MONITOR_STATE_MIGRATIONS = (
               updated_at TEXT NOT NULL
             )
             """,
+        ),
+    ),
+    StateStoreMigration(
+        version=MONITOR_SOURCE_STATE_MIGRATION_VERSION,
+        name="monitor_source_states",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS monitor_source_states (
+              monitor_output_dir TEXT NOT NULL,
+              source_key TEXT NOT NULL,
+              enabled INTEGER NOT NULL,
+              cadence_seconds INTEGER NOT NULL,
+              status TEXT NOT NULL,
+              last_attempt_at TEXT,
+              last_success_at TEXT,
+              next_attempt_at TEXT,
+              consecutive_failures INTEGER NOT NULL,
+              backoff_seconds INTEGER NOT NULL,
+              last_error_json TEXT NOT NULL,
+              latest_published_data_revision TEXT,
+              changed_scope_json TEXT NOT NULL,
+              latest_run_id TEXT,
+              latest_run_manifest TEXT,
+              updated_at TEXT NOT NULL,
+              PRIMARY KEY (monitor_output_dir, source_key)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_monitor_source_states_output_next ON monitor_source_states(monitor_output_dir, next_attempt_at, source_key)",
         ),
     ),
 )
@@ -324,6 +354,74 @@ class MonitorStateRepository:
                 errors=["monitor service health could not be read."],
             )
 
+    def save_source_states(
+        self,
+        states: list[dict[str, Any]],
+        *,
+        monitor_output_dir: str,
+        updated_at: str,
+    ) -> list[dict[str, Any]]:
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_monitor_state_migrations(connection, now=updated_at)
+                with runtime_state_transaction(connection):
+                    for state in states:
+                        source_key = _required_str(state.get("source_key"), "monitor source_key is required.")
+                        connection.execute(
+                            """
+                            INSERT OR REPLACE INTO monitor_source_states (
+                              monitor_output_dir,
+                              source_key,
+                              enabled,
+                              cadence_seconds,
+                              status,
+                              last_attempt_at,
+                              last_success_at,
+                              next_attempt_at,
+                              consecutive_failures,
+                              backoff_seconds,
+                              last_error_json,
+                              latest_published_data_revision,
+                              changed_scope_json,
+                              latest_run_id,
+                              latest_run_manifest,
+                              updated_at
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                monitor_output_dir,
+                                source_key,
+                                1 if state.get("enabled") is True else 0,
+                                _int(state.get("cadence_seconds")),
+                                str(state.get("status") or "unknown"),
+                                _optional_str(state.get("last_attempt_at")),
+                                _optional_str(state.get("last_success_at")),
+                                _optional_str(state.get("next_attempt_at")),
+                                _int(state.get("consecutive_failures")),
+                                _int(state.get("backoff_seconds")),
+                                _dumps_mapping(state.get("last_error")),
+                                _optional_str(state.get("latest_published_data_revision")),
+                                _dumps_mapping(state.get("changed_scope")),
+                                _optional_str(state.get("latest_run_id")),
+                                _optional_str(state.get("latest_run_manifest")),
+                                updated_at,
+                            ),
+                        )
+        except sqlite3.Error as exc:
+            raise MonitorStateStoreError("monitor state store could not persist source states.") from exc
+        return self.source_states(monitor_output_dir=monitor_output_dir)
+
+    def source_states(self, *, monitor_output_dir: str) -> list[dict[str, Any]]:
+        if not self.database_path.exists():
+            return []
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_monitor_state_migrations(connection)
+                return _source_states(connection, monitor_output_dir)
+        except sqlite3.Error:
+            return []
+
     def get_cycle(self, cycle_id: str, *, base: Path | None = None) -> dict[str, Any] | None:
         if not self.database_path.exists():
             return None
@@ -365,6 +463,7 @@ class MonitorStateRepository:
                 "error_count": 0,
                 "latest_loop": {},
                 "service": _empty_service_health(),
+                "source_states": [],
                 "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
                 "warnings": ["monitor state store was not found."],
                 "errors": [],
@@ -381,6 +480,7 @@ class MonitorStateRepository:
                 warning_count, error_count = _health_issue_counts(connection, monitor_output_dir, base=base)
                 latest_loop = _latest_loop(connection, monitor_output_dir)
                 service = _service_health(connection, monitor_output_dir)
+                source_states = _source_states(connection, monitor_output_dir)
         except sqlite3.Error:
             return {
                 "schema_version": MONITOR_STATE_SCHEMA_VERSION,
@@ -405,6 +505,7 @@ class MonitorStateRepository:
                     status="failed",
                     errors=["monitor service health could not be read."],
                 ),
+                "source_states": [],
                 "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
                 "warnings": [],
                 "errors": ["monitor state store could not be read."],
@@ -431,6 +532,7 @@ class MonitorStateRepository:
                 "error_count": 0,
                 "latest_loop": latest_loop,
                 "service": service,
+                "source_states": source_states,
                 "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
                 "warnings": ["monitor cycle records were not found."],
                 "errors": [],
@@ -464,6 +566,7 @@ class MonitorStateRepository:
             "error_count": error_count,
             "latest_loop": latest_loop,
             "service": service,
+            "source_states": source_states,
             "source_artifacts": _unique_strings(
                 [
                     MONITOR_STATE_STORE_ARTIFACT,
@@ -1137,6 +1240,55 @@ def _service_health(connection: sqlite3.Connection, monitor_output_dir: str) -> 
         "errors": _loads_list(row[12]),
         "updated_at": row[13],
     }
+
+
+def _source_states(connection: sqlite3.Connection, monitor_output_dir: str) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        """
+        SELECT
+          source_key,
+          enabled,
+          cadence_seconds,
+          status,
+          last_attempt_at,
+          last_success_at,
+          next_attempt_at,
+          consecutive_failures,
+          backoff_seconds,
+          last_error_json,
+          latest_published_data_revision,
+          changed_scope_json,
+          latest_run_id,
+          latest_run_manifest,
+          updated_at
+        FROM monitor_source_states
+        WHERE monitor_output_dir = ?
+        ORDER BY source_key
+        """,
+        (monitor_output_dir,),
+    ).fetchall()
+    states = []
+    for row in rows:
+        states.append(
+            {
+                "source_key": row[0],
+                "enabled": bool(row[1]),
+                "cadence_seconds": _int(row[2]),
+                "status": row[3],
+                "last_attempt_at": row[4],
+                "last_success_at": row[5],
+                "next_attempt_at": row[6],
+                "consecutive_failures": _int(row[7]),
+                "backoff_seconds": _int(row[8]),
+                "last_error": _loads_mapping(row[9]),
+                "latest_published_data_revision": row[10],
+                "changed_scope": _loads_mapping(row[11]),
+                "latest_run_id": row[12],
+                "latest_run_manifest": row[13],
+                "updated_at": row[14],
+            }
+        )
+    return states
 
 
 def _evidence_diagnostics(row: Any, *, base: Path | None) -> tuple[list[str], list[str]]:

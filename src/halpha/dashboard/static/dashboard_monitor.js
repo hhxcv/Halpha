@@ -25,6 +25,7 @@
           const health = state.monitor?.health?.fields || {};
           const monitorSettings = state.monitor?.settings || {};
           const service = health.service || {};
+          const sourceStates = Array.isArray(health.source_states) ? health.source_states : [];
           const latest = state.monitor?.latest_cycle || {};
           const alerts = alertCount(state.monitorAlerts);
           const schedule = state.schedule || {};
@@ -41,12 +42,17 @@
             const status = statusClass(cycle.status);
             return `<li class="timeline-row"><div class="timeline-time">${escapeHtml(formatTimestamp(cycle.finished_at || cycle.started_at).split(",")[1] || formatTimestamp(cycle.finished_at || cycle.started_at))}</div><div class="timeline-node ${status}">${status === "failed" ? "x" : status === "warning" ? "!" : "ok"}</div><div class="timeline-body"><strong>${escapeHtml(label(cycle.status || "Cycle"))}</strong><span>Checks: ${escapeHtml(text(cycle.product_run?.stage_count, "n/a"))} Warnings: ${escapeHtml(text(cycle.warning_count, "0"))} Errors: ${escapeHtml(text(cycle.error_count, "0"))}</span></div><span class="status-pill ${status}">${escapeHtml(cycle.status || "unknown")}</span></li>`;
           }).join("") || `<li class="empty-state">No monitor cycles yet.</li>`;
+          const sourceRows = sourceStates.map((source) => detailRow(
+            `Source ${source.source_key || "unknown"}`,
+            `${label(source.status || "unknown")} / next ${formatTimestamp(source.next_attempt_at)}`,
+          ));
           document.querySelector("#monitor-config").innerHTML = [
             detailRow("Monitor interval", text(monitorSettings.interval_seconds, "n/a")),
             detailRow("Retry backoff cap", text(monitorSettings.failure_backoff_max_seconds, "n/a")),
             detailRow("Service status", label(service.status || "missing")),
             detailRow("Consecutive failures", text(service.consecutive_failures, "0")),
             detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
+            ...sourceRows,
             detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
             detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
             detailRow("Daily report mode", reportGeneration.generates_report ? "Codex report" : "No-Codex run"),

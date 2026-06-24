@@ -37,6 +37,8 @@ def test_dashboard_monitor_api_summarizes_complete_state_without_dumping_alerts(
     assert summary["settings"]["output_dir"] == "runs/monitor"
     assert summary["health"]["fields"]["cycle_count"] == 1
     assert summary["health"]["fields"]["service"]["status"] == "missing"
+    assert summary["health"]["fields"]["source_states"][0]["source_key"] == "text"
+    assert summary["health"]["fields"]["source_states"][0]["status"] == "changed"
     assert summary["latest_cycle"]["cycle_id"] == "cycle-1"
     assert summary["alert_archive"]["fields"]["counts"]["records"] == 25
     assert summary["cooldown"]["fields"]["record_count"] == 2
@@ -282,6 +284,27 @@ def _write_monitor_cycle_state(
             records=records,
             cooldown_records=cooldown_records,
         ),
+        updated_at="2026-06-20T00:16:00Z",
+    )
+    MonitorStateRepository(config_path=config_path).save_source_states(
+        [
+            {
+                "source_key": "text",
+                "enabled": True,
+                "cadence_seconds": 300,
+                "status": "changed",
+                "last_attempt_at": "2026-06-20T00:10:00Z",
+                "last_success_at": "2026-06-20T00:10:00Z",
+                "next_attempt_at": "2026-06-20T00:15:00Z",
+                "consecutive_failures": 0,
+                "backoff_seconds": 0,
+                "latest_published_data_revision": "text-revision",
+                "changed_scope": {"sources": ["feed"]},
+                "latest_run_id": run_id,
+                "latest_run_manifest": f"runs/{run_id}/run_manifest.json",
+            }
+        ],
+        monitor_output_dir="runs/monitor",
         updated_at="2026-06-20T00:16:00Z",
     )
 
