@@ -13,7 +13,7 @@ from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, d
 from halpha.dashboard.app import write_dashboard_selected_config_state
 from halpha.dashboard.runs import dashboard_runs
 from halpha.pipeline import RunContext
-from halpha.data.run_index import write_run_index
+from halpha.data.run_index import run_index_path, write_run_index
 from halpha.storage import write_json
 
 
@@ -529,11 +529,11 @@ def test_dashboard_overview_marks_stale_workbench_summary(tmp_path: Path) -> Non
     assert workbench["fields"]["stale_warning_count"] == 2
     assert workbench["source_artifacts"] == [
         "runs/workbench/latest/workbench_summary.json",
-        "data/research/index.sqlite",
+        ".halpha/state.sqlite",
         "runs/monitor/monitor_health_state.json",
     ]
     assert workbench["warnings"] == [
-        "workbench summary references run run-1, but latest run is run-2. Source: data/research/index.sqlite.",
+        "workbench summary references run run-1, but latest run is run-2. Source: .halpha/state.sqlite.",
         "workbench summary references monitor cycle cycle-1, but latest monitor cycle is cycle-2. "
         "Source: runs/monitor/monitor_health_state.json.",
     ]
@@ -1002,7 +1002,7 @@ def test_dashboard_rejects_run_index_refs_outside_project_root(tmp_path: Path) -
         },
     )
     write_run_index(run, now="2026-06-20T00:05:00Z")
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with sqlite3.connect(run_index_path(config_path)) as connection:
         connection.execute(
             "UPDATE runs SET run_dir = ?, manifest_path = ? WHERE run_id = ?",
             (str(outside_dir), str(outside_manifest), "run-1"),
@@ -1023,7 +1023,7 @@ def test_dashboard_rejects_run_index_refs_outside_project_root(tmp_path: Path) -
     assert detail_response.status_code == 200
     detail = detail_response.json()
     assert detail["status"] == "failed"
-    assert detail["source_artifacts"] == ["data/research/index.sqlite", "<external-artifact>"]
+    assert detail["source_artifacts"] == [".halpha/state.sqlite", "<external-artifact>"]
     assert detail["errors"] == ["external artifact reference was rejected."]
 
     assert overview_response.status_code == 200
@@ -1159,18 +1159,18 @@ def test_dashboard_artifact_preview_returns_malformed_json_error(tmp_path: Path)
 def test_dashboard_artifact_preview_rejects_unsupported_store_files(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    artifact_path = tmp_path / "data" / "research" / "index.sqlite"
+    artifact_path = run_index_path(config_path)
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
     artifact_path.write_text("not a real sqlite file", encoding="utf-8")
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
-    response = client.get("/api/artifacts/preview", params={"path": "data/research/index.sqlite"})
+    response = client.get("/api/artifacts/preview", params={"path": ".halpha/state.sqlite"})
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "unsupported"
+    assert payload["status"] == "rejected"
     assert payload["preview"] is None
-    assert "not expanded" in payload["warnings"][0]
+    assert "artifact path must start with runs/ or data/" in payload["warnings"][0]
 
 
 def test_dashboard_data_stores_endpoint_reports_missing_metadata(tmp_path: Path) -> None:
@@ -1299,7 +1299,7 @@ def test_dashboard_data_deletion_plan_separates_run_and_shared_data(tmp_path: Pa
     assert payload["cleanup_candidates"]["status"] == "empty"
     assert payload["cleanup_candidates"]["items"] == []
     shared = {item["name"]: item for item in payload["shared_data"]["items"]}
-    assert shared["run_index"]["delete_refs"][0]["ref"] == "data/research/index.sqlite"
+    assert shared["run_index"]["delete_refs"][0]["ref"] == ".halpha/state.sqlite"
     assert shared["ohlcv_history"]["deletable"] is True
     assert payload["omitted"]["absolute_local_paths_embedded"] is False
     assert str(tmp_path) not in response.text
@@ -1463,7 +1463,7 @@ def test_dashboard_delete_run_artifacts_supports_multi_select_and_refreshes_late
     assert [run["run_id"] for run in runs_payload["runs"]] == ["run-1"]
     overview = client.get("/api/overview").json()
     assert overview["sections"]["latest_run"]["fields"]["run_id"] == "run-1"
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with sqlite3.connect(run_index_path(config_path)) as connection:
         assert connection.execute("SELECT COUNT(*) FROM run_artifacts").fetchone()[0] == 3
 
 
@@ -1496,7 +1496,7 @@ def test_dashboard_delete_shared_data_only_removes_selected_shared_refs(tmp_path
     assert "data/research/metadata/text_event_history_state.json" in deleted_refs
     assert "data/research/text_events" in deleted_refs
     assert (tmp_path / "runs" / "run-1").exists()
-    assert (tmp_path / "data" / "research" / "index.sqlite").exists()
+    assert run_index_path(config_path).exists()
     assert not (tmp_path / "data" / "market" / "ohlcv").exists()
     assert not (tmp_path / "data" / "research" / "text_events").exists()
     assert str(tmp_path) not in response.text

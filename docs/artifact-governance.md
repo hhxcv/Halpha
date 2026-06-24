@@ -98,8 +98,9 @@ port, monitor output directory, or schedule file location.
 | Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
 | Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
 
-Current implemented state is still split across `data/research/index.sqlite`,
-`.halpha/dashboard/`, and `runs/monitor/`. Those paths are current or legacy
+Current implemented state is still split across `.halpha/state.sqlite`,
+`.halpha/dashboard/`, and `runs/monitor/`. The run-index projection has moved
+to `.halpha/state.sqlite`; dashboard and monitor state remain current or legacy
 storage until their domain-specific state-store migrations are implemented. New
 contracts must avoid adding another authority for the same fact.
 

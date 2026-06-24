@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.runtime.pipeline_contracts import RunContext
-from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path, select_previous_successful_run_record
 from halpha.storage import display_path, write_json
 
 
@@ -288,40 +288,30 @@ def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -
         return None, "Run index was not found; no previous successful run can be selected."
     try:
         with closing(sqlite3.connect(index_path)) as connection:
-            row = connection.execute(
-                """
-                SELECT run_id, run_dir, finished_at
-                FROM runs
-                WHERE status = 'succeeded' AND run_id <> ?
-                ORDER BY COALESCE(finished_at, started_at, run_id) DESC, run_id DESC
-                LIMIT 1
-                """,
-                (current_run_id,),
-            ).fetchone()
-            if row is None:
+            selected = select_previous_successful_run_record(
+                connection,
+                current_run_id=current_run_id,
+                artifact_keys=SOURCE_ARTIFACTS,
+            )
+            if selected is None:
                 return None, "No previous successful run found in run index."
-            artifacts = {
-                str(artifact_key): str(path)
-                for artifact_key, path in connection.execute(
-                    """
-                    SELECT artifact_key, path
-                    FROM run_artifacts
-                    WHERE run_id = ?
-                    ORDER BY artifact_key, path
-                    """,
-                    (row[0],),
-                ).fetchall()
-                if artifact_key in SOURCE_ARTIFACTS and isinstance(path, str) and path
-            }
     except sqlite3.Error as exc:
         return None, f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"
 
-    run_dir = Path(str(row[1]))
+    run_dir = Path(selected.run.run_dir)
     if not run_dir.is_absolute():
         run_dir = config_path.parent / run_dir
     if _project_local_path(run_dir, base=config_path.parent) is None:
         return None, "Previous successful run in run index points outside the configured project root."
-    return PreviousRun(run_id=str(row[0]), run_dir=run_dir, finished_at=_optional_str(row[2]), artifacts=artifacts), None
+    return (
+        PreviousRun(
+            run_id=selected.run.run_id,
+            run_dir=run_dir,
+            finished_at=_optional_str(selected.run.finished_at),
+            artifacts=selected.artifacts,
+        ),
+        None,
+    )
 
 
 def _read_previous_artifact(previous: PreviousRun, artifact_path: str) -> tuple[dict[str, Any] | None, str | None]:

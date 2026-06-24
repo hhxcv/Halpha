@@ -98,7 +98,7 @@ def test_workbench_summary_handles_missing_run_index(tmp_path: Path) -> None:
     assert result.summary_path.is_file()
     assert summary["status"] == "missing"
     assert summary["source_selection"]["status"] == "missing"
-    assert summary["source_selection"]["source_artifact"] == "data/research/index.sqlite"
+    assert summary["source_selection"]["source_artifact"] == ".halpha/state.sqlite"
     assert summary["latest_run"]["status"] == "missing"
     assert summary["product_validation_state"]["status"] == "missing"
     assert "local run index was not found." in summary["warnings"]

@@ -10,7 +10,12 @@ from typing import Any
 
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.product.product_validation import validate_product_contracts
-from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.data.run_index import (
+    RUN_INDEX_ARTIFACT,
+    run_index_path,
+    run_index_selection_label,
+    select_latest_run_record,
+)
 from halpha.storage import display_path
 
 
@@ -113,7 +118,7 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
         )
     try:
         with closing(sqlite3.connect(index_path)) as connection:
-            row = _latest_run_row(connection)
+            selected = select_latest_run_record(connection)
     except sqlite3.Error as exc:
         return _RunSelection(
             mode="latest_run_index",
@@ -123,7 +128,7 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
             source_artifact=RUN_INDEX_ARTIFACT,
             reason=f"{RUN_INDEX_ARTIFACT} is not readable: {exc}",
         )
-    if row is None:
+    if selected is None:
         return _RunSelection(
             mode="latest_run_index",
             status="missing",
@@ -132,7 +137,9 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
             source_artifact=RUN_INDEX_ARTIFACT,
             reason="local run index does not contain a latest run.",
         )
-    selection_key, selected_run_id, selected_run_dir = row
+    selection_key = selected.selection_key
+    selected_run_id = selected.run.run_id
+    selected_run_dir = selected.run.run_dir
     path = Path(selected_run_dir)
     if not path.is_absolute():
         path = base / path
@@ -145,7 +152,7 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
             source_artifact=RUN_INDEX_ARTIFACT,
             reason="local run index points outside the configured project root.",
             selection_key=selection_key,
-            selection_label=_latest_selection_label(selection_key),
+            selection_label=run_index_selection_label(selection_key),
         )
     return _RunSelection(
         mode="latest_run_index",
@@ -155,27 +162,8 @@ def _select_run(config_path: Path, *, requested_run_dir: Path | None, base: Path
         source_artifact=RUN_INDEX_ARTIFACT,
         reason=None,
         selection_key=selection_key,
-        selection_label=_latest_selection_label(selection_key),
+        selection_label=run_index_selection_label(selection_key),
     )
-
-
-def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | None:
-    for key in ("latest_successful_run", "latest_run"):
-        row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
-        if not row or not isinstance(row[0], str) or not row[0]:
-            continue
-        run = connection.execute("SELECT run_id, run_dir FROM runs WHERE run_id = ?", (row[0],)).fetchone()
-        if run and isinstance(run[0], str) and isinstance(run[1], str):
-            return key, run[0], run[1]
-    return None
-
-
-def _latest_selection_label(selection_key: str) -> str:
-    if selection_key == "latest_successful_run":
-        return "latest successful run"
-    if selection_key == "latest_run":
-        return "latest indexed run"
-    return selection_key
 
 
 def _read_manifest(path: Path) -> tuple[dict[str, Any], str | None]:

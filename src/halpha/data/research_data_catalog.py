@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from halpha.data.run_index import run_index_path
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import display_path, write_json
 
@@ -162,7 +163,7 @@ def _run_index_store_record(run: RunContext) -> dict[str, Any] | None:
     index_summary = run.manifest.get("run_index")
     if not isinstance(index_summary, dict):
         return None
-    index_path = run.config_path.parent / "data" / "research" / "index.sqlite"
+    index_path = run_index_path(run.config_path)
     if not index_path.exists() and index_summary.get("status") != "failed":
         return None
 

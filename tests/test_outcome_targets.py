@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
+from halpha.data.run_index import run_index_path
 from halpha.pipeline import STAGE_ORDER, run_pipeline
 from halpha.storage import write_json
 
@@ -60,7 +61,7 @@ def test_outcome_targets_reject_previous_run_outside_project_root(tmp_path: Path
             "signals": [{"private_note": "outside outcome target artifact was read"}],
         },
     )
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with sqlite3.connect(run_index_path(config_path)) as connection:
         connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), previous.run.run_id))
         connection.commit()
 

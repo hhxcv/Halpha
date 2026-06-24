@@ -137,7 +137,6 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "report": "report/report.md",
         "research_context": "analysis/research_context.md",
         "research_data_catalog": "data/research/metadata/research_data_catalog.json",
-        "run_index": "data/research/index.sqlite",
         "event_intelligence_assessment": "analysis/event_intelligence_assessment.json",
         "alert_decisions": "analysis/alert_decisions.json",
         "alert_decision_material": "analysis/alert_decision_material.md",

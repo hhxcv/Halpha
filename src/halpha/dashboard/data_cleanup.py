@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import datetime, timezone
 from pathlib import Path
 import shutil
 import sqlite3
@@ -597,11 +596,6 @@ def _delete_run_index_records(config_path: Path, run_ids: list[str]) -> dict[str
                         continue
                     connection.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
                     deleted.append(run_id)
-                connection.execute(
-                    "DELETE FROM run_latest WHERE run_id IN (%s)" % ",".join("?" for _ in run_ids),
-                    run_ids,
-                )
-                _refresh_run_latest_records(connection)
     except sqlite3.Error as exc:
         return {
             "status": "failed",
@@ -610,23 +604,6 @@ def _delete_run_index_records(config_path: Path, run_ids: list[str]) -> dict[str
             "errors": [f"{RUN_INDEX_ARTIFACT} could not be updated: {exc}"],
         }
     return {"status": "succeeded", "deleted_run_ids": deleted, "warnings": [], "errors": []}
-
-
-def _refresh_run_latest_records(connection: sqlite3.Connection) -> None:
-    updated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    connection.execute("DELETE FROM run_latest WHERE key IN (?, ?)", ("latest_run", "latest_successful_run"))
-    latest = _fallback_latest_run(connection, succeeded_only=False)
-    if latest:
-        connection.execute(
-            "INSERT OR REPLACE INTO run_latest (key, run_id, updated_at) VALUES (?, ?, ?)",
-            ("latest_run", latest[0], updated_at),
-        )
-    latest_successful = _fallback_latest_run(connection, succeeded_only=True)
-    if latest_successful:
-        connection.execute(
-            "INSERT OR REPLACE INTO run_latest (key, run_id, updated_at) VALUES (?, ?, ?)",
-            ("latest_successful_run", latest_successful[0], updated_at),
-        )
 
 
 def _fallback_latest_run(

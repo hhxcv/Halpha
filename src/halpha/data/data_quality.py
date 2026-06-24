@@ -9,6 +9,7 @@ from typing import Any
 from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
 from halpha.data.data_quality_post_artifacts import post_data_quality_artifact_checks
 from halpha.data.data_quality_raw import raw_data_quality_checks
+from halpha.data.run_index import RUN_INDEX_ARTIFACT
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import write_json
 
@@ -684,7 +685,7 @@ def _research_data_catalog_check(run: RunContext) -> dict[str, Any]:
 
 
 def _run_index_check(run: RunContext) -> dict[str, Any]:
-    artifact = "data/research/index.sqlite"
+    artifact = RUN_INDEX_ARTIFACT
     summary = run.manifest.get("run_index")
     if not isinstance(summary, dict):
         return _check(
