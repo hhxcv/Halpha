@@ -67,9 +67,10 @@ validation must preserve that separation:
 - reusable stores stay authoritative in their physical local stores and
   store-local metadata;
 - the runtime SQLite state store is implemented at `.halpha/state.sqlite`; the
-  run-index projection and shared resident-service lifecycle controller live
-  there, while other domain-specific mutable state and rebuildable indexes move
-  there only after their migrations;
+  run-index projection, shared resident-service lifecycle controller, Dashboard
+  service state, and Dashboard UI preferences live there, while other
+  domain-specific mutable state and rebuildable indexes move there only after
+  their migrations;
 - workbench summaries, dashboard views, health summaries, and latest selections
   are derived views.
 
@@ -292,7 +293,8 @@ Recommended backup groups:
 - `data/`: reusable local stores, run index, local history state, and research
   data metadata.
 - `.halpha/`: current dashboard control state and implemented runtime
-  state-store foundation. Back up `state.sqlite` together with its
+  state-store foundation, including Dashboard service lifecycle and UI
+  preference state. Back up `state.sqlite` together with its
   `state.sqlite-wal` and `state.sqlite-shm` side files when they exist.
   Backups should treat mutable runtime state as local operational state, not
   research evidence.

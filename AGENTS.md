@@ -364,6 +364,9 @@ python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/
 python -m halpha validate --config config.example.yaml
 python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha dashboard
+python -m halpha dashboard status
+python -m halpha dashboard stop
+python -m halpha dashboard restart
 python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 python -m halpha monitor --help
