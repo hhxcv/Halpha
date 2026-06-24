@@ -443,6 +443,11 @@ Rules:
 - use deterministic unique keys;
 - make repeated writes idempotent;
 - warn on conflicting duplicates instead of silently replacing evidence;
+- in product runs, prepare history and state candidates before product
+  validation, then publish official shared files only through the final
+  product-validation gate;
+- failed validation, blocked publication, and rolled-back publication must not
+  claim successful reusable outcome history publication in `run_manifest.json`;
 - keep full outcome history out of Codex input.
 
 ## Outcome Tracking Material

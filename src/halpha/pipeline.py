@@ -958,7 +958,10 @@ def _run_stage_handler(
     stage_record["status"] = "succeeded"
     stage_record["finished_at"] = finished_at
     stage_record["artifacts"] = artifacts or []
-    _set_codex_status(run, stage=stage, status="succeeded")
+    if stage == "run_codex_report" and not stage_record["artifacts"]:
+        _set_empty_codex_report_skipped(run)
+    else:
+        _set_codex_status(run, stage=stage, status="succeeded")
     LOGGER.debug(
         "Pipeline stage succeeded.",
         extra={
@@ -1139,6 +1142,15 @@ def _set_codex_status(run: RunContext, *, stage: str, status: str) -> None:
         if run.manifest["codex"].get("status") == "disabled" and status == "succeeded":
             return
         run.manifest["codex"]["status"] = status
+
+
+def _set_empty_codex_report_skipped(run: RunContext) -> None:
+    codex = run.manifest["codex"]
+    if codex.get("status") == "disabled":
+        return
+    codex["status"] = "skipped"
+    codex["exit_code"] = None
+    codex.setdefault("skip_reason", "run_codex_report produced no report artifact")
 
 
 def _write_manifest(run: RunContext) -> None:

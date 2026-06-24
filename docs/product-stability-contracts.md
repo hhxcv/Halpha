@@ -120,8 +120,14 @@ Completed-run and rerun rules:
 - rerunning a stage must either recompute affected downstream artifacts, mark
   them stale or not complete, or write a new run;
 - reruns must not leave stale downstream artifacts marked as successful;
-- `finalize_run` publishes terminal shared-state artifacts and
-  product-contract validation once upstream artifacts are complete;
+- `finalize_run` prepares terminal shared-state candidates, writes
+  `analysis/product_contract_validation.json`, and publishes official shared
+  files only after product validation is publishable;
+- publishable validation statuses are `ok`, `warning`, and `degraded`;
+- `failed`, `skipped`, missing, malformed, or unknown validation results block
+  shared-state publication;
+- blocked or rolled-back publication must not add official shared-state refs to
+  `run_manifest.json`;
 - the terminal `run_manifest.json` is written once after final validation
   artifacts exist;
 - `.halpha/state.sqlite` records the rebuildable run, stage, task, and artifact
@@ -240,6 +246,21 @@ Artifact checks:
   the type is known.
 - Markdown material artifacts exist when their manifest refs claim they exist.
 - Count fields are bounded aggregate metadata, not raw record dumps.
+
+Shared-state publication checks:
+
+- Product runs prepare bounded candidate payloads for
+  `data/research/outcomes/outcome_history.json`,
+  `data/research/metadata/outcome_history_state.json`, and
+  `data/research/metadata/research_data_catalog.json`.
+- Official shared files are replaced only after product validation returns
+  `ok`, `warning`, or `degraded`.
+- A replacement failure must restore the prior bytes or prior absent state for
+  all official shared files where possible.
+- A rollback failure must be visible in manifest diagnostics, including bounded
+  affected refs and error messages.
+- Failed or rolled-back runs may keep `analysis/product_contract_validation.json`
+  and failed stage state, but must not claim successful shared publication.
 
 Codex and report checks:
 

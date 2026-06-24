@@ -7,6 +7,12 @@ from typing import Any
 
 from halpha.data.run_index import run_index_path
 from halpha.runtime.pipeline_contracts import RunContext
+from halpha.shared_publication import (
+    OUTCOME_HISTORY_STATE_ARTIFACT,
+    RESEARCH_DATA_CATALOG_ARTIFACT,
+    read_staged_payload,
+    stage_shared_payloads,
+)
 from halpha.storage import display_path, write_json
 
 
@@ -23,7 +29,27 @@ def write_research_data_catalog(
     catalog_path = research_data_catalog_path(run.config_path)
     catalog = build_research_data_catalog(config, run, now=now)
     write_json(catalog_path, catalog)
+    record_research_data_catalog_manifest_summary(run, catalog)
+    return [CATALOG_ARTIFACT]
 
+
+def prepare_research_data_catalog_publication(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> list[str]:
+    outcome_state = read_staged_payload(run, OUTCOME_HISTORY_STATE_ARTIFACT)
+    catalog = build_research_data_catalog(config, run, now=now, outcome_history_state=outcome_state)
+    stage_shared_payloads(
+        run,
+        group="research_data_catalog",
+        payloads={RESEARCH_DATA_CATALOG_ARTIFACT: catalog},
+    )
+    return []
+
+
+def record_research_data_catalog_manifest_summary(run: RunContext, catalog: dict[str, Any]) -> None:
     run.manifest["artifacts"]["research_data_catalog"] = CATALOG_ARTIFACT
     run.manifest["research_data_catalog"] = {
         "status": catalog["status"],
@@ -37,7 +63,6 @@ def write_research_data_catalog(
     run.manifest["counts"]["research_data_catalog_records"] = catalog["counts"]["records"]
     run.manifest["counts"]["research_data_catalog_warnings"] = catalog["counts"]["warnings"]
     run.manifest["counts"]["research_data_catalog_errors"] = catalog["counts"]["errors"]
-    return [CATALOG_ARTIFACT]
 
 
 def build_research_data_catalog(
@@ -45,6 +70,7 @@ def build_research_data_catalog(
     run: RunContext,
     *,
     now: datetime | str | None = None,
+    outcome_history_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stores = []
     warnings = []
@@ -57,7 +83,7 @@ def build_research_data_catalog(
         _onchain_flow_history_store_record(run),
         _run_index_store_record(run),
         _text_event_history_store_record(run),
-        _outcome_history_store_record(run),
+        _outcome_history_store_record(run, candidate_state=outcome_history_state),
     ):
         if store is None:
             continue
@@ -439,11 +465,15 @@ def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
     }
 
 
-def _outcome_history_store_record(run: RunContext) -> dict[str, Any] | None:
+def _outcome_history_store_record(
+    run: RunContext,
+    *,
+    candidate_state: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     state_path = run.config_path.parent / "data" / "research" / "metadata" / "outcome_history_state.json"
     storage_path = run.config_path.parent / "data" / "research" / "outcomes"
     history_path = storage_path / "outcome_history.json"
-    state = _read_json_object(state_path)
+    state = candidate_state if isinstance(candidate_state, dict) else _read_json_object(state_path)
     summary = run.manifest.get("outcome_history")
     if state is None and not isinstance(summary, dict):
         return None

@@ -159,6 +159,8 @@ Rules:
 - preserve deterministic store ordering by `name`;
 - use relative path references;
 - summarize large stores by metadata, not row dumps;
+- in product runs, build the catalog from prepared shared-state candidates and
+  publish the official catalog only after product validation is publishable;
 - record missing optional stores as `skipped`, not fabricated data.
 
 ## Local Run Index

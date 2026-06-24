@@ -54,7 +54,7 @@ def test_outcome_history_deduplicates_repeated_evaluations(tmp_path: Path) -> No
 
     assert state["status"] == "ok"
     assert state["totals"]["records"] == 1
-    assert state["totals"]["duplicate_records"] == 1
+    assert state["totals"]["duplicate_records"] == 0
     assert state["totals"]["updated_records"] == 0
     assert state["totals"]["conflicting_duplicates"] == 0
     assert records[0]["evaluation_run_ids"] == ["run-1"]

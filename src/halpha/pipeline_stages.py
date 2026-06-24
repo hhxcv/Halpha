@@ -252,9 +252,14 @@ STAGE_OUTPUTS = {
     "build_research_context": ("analysis/research_context.md",),
     "build_codex_context": ("codex_context/context.md", "codex_context/prompt.md"),
     "run_codex_report": ("report/report.md",),
-    "write_outcome_history": ("data/research/metadata/outcome_history_state.json",),
-    "write_research_data_catalog": ("data/research/metadata/research_data_catalog.json",),
-    "validate_product_contracts": ("analysis/product_contract_validation.json",),
+    "write_outcome_history": (),
+    "write_research_data_catalog": (),
+    "validate_product_contracts": (
+        "analysis/product_contract_validation.json",
+        "data/research/outcomes/outcome_history.json",
+        "data/research/metadata/outcome_history_state.json",
+        "data/research/metadata/research_data_catalog.json",
+    ),
 }
 STAGE_ENABLED_CONDITIONS = {
     "collect_derivatives_market_data": "market.derivatives.enabled",
