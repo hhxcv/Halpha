@@ -106,6 +106,9 @@ start must return the existing matching dashboard instance. Restart must be an
 explicit action. If the port is occupied by a non-Halpha or unresponsive local
 service, startup must fail with an actionable error and must not kill the
 unrelated process.
+The shared resident-service lifecycle controller and runtime-state schema are
+implemented for `dashboard`, `monitor`, and `schedule`; this dashboard startup
+path has not adopted that controller yet.
 
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
@@ -186,6 +189,13 @@ Lifecycle state must combine:
 - process metadata such as pid, host, command, config digest, started time, and
   requested endpoint when applicable;
 - heartbeat metadata with timestamp and freshness threshold.
+
+Implemented shared controller state lives in `.halpha/state.sqlite` and records
+bounded service role, instance id, PID, config ref, config digest, status,
+heartbeat, endpoint metadata, stop request, terminal exit, and bounded error
+metadata. It recognizes only `dashboard`, `monitor`, and `schedule`. Ordinary
+start reports terminal records; explicit restart requires the previous instance
+id.
 
 A persisted `running` status alone must not prove that a process is alive.
 Lifecycle inspection must distinguish:
