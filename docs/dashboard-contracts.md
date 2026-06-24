@@ -37,8 +37,9 @@ Primary sources:
 - `data/research/index.sqlite`: current implemented compact run, stage,
   artifact, and latest-run metadata until the runtime-state migration moves
   searchable indexes into the unified state store.
-- `.halpha/state.sqlite`: planned runtime-root SQLite state store for mutable
-  operational state and rebuildable indexes. It is not implemented yet.
+- `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
+  foundation. Dashboard, monitor, schedule, job, and run-index consumers are
+  not migrated to it yet.
 - `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
   Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run

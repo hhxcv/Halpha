@@ -181,7 +181,8 @@ Current bias:
 * Runtime root is one explicit local root shared by CLI, Dashboard, Monitor, and Schedule.
 * Exactly three target resident process roles exist: `dashboard`, `monitor`, and `schedule`.
 * No hidden supervisor, broker, worker pool, or fourth resident Halpha process.
-* Planned `.halpha/state.sqlite` owns mutable operational state and rebuildable indexes after migration; it is not research evidence or Codex input.
+* `.halpha/state.sqlite` records the implemented runtime-state foundation and future migrated mutable operational state; it is not research evidence or Codex input.
+* `.halpha/state.sqlite-wal` and `.halpha/state.sqlite-shm` are SQLite side files; back them up with `state.sqlite` when present.
 * Current `data/research/index.sqlite` records run, stage, artifact, and latest-run metadata; it stores references, not artifact contents.
 * Current `data/research/index.sqlite` is current implemented index storage until explicit migration.
 * Latest selections are derived or rebuildable views, not parallel authorities.

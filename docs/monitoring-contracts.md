@@ -196,10 +196,11 @@ finite-loop metadata. It must not store raw alert records, raw user-state files,
 private notes, account identifiers, holdings, balances, allocations, position
 sizes, or private endpoints.
 
-Current monitor state files are local operational artifacts. After the unified
-runtime state store is implemented, mutable monitor-cycle indexes, alert
-archive indexes, cooldown state, suppression state, and service health belong
-to `.halpha/state.sqlite`. Cycle manifests and alert archive records remain
+Current monitor state files are local operational artifacts. The unified
+runtime state store foundation is implemented, but monitor-domain migration is
+not. After that migration, mutable monitor-cycle indexes, alert archive
+indexes, cooldown state, suppression state, and service health belong to
+`.halpha/state.sqlite`. Cycle manifests and alert archive records remain
 inspectable local artifacts referenced by that state store.
 
 ## Codex Boundary

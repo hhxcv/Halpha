@@ -182,10 +182,10 @@ Authority boundary:
 - `run_latest` is current implemented mutable selection state. The target
   runtime-state model derives latest selections from authoritative run records
   or stores them as rebuildable runtime indexes, not as a second run authority.
-- The planned unified runtime state store at `.halpha/state.sqlite` will own
-  mutable run and artifact indexes after migration. Until that migration is
-  implemented, `data/research/index.sqlite` remains the current implemented
-  index and must not be silently bypassed.
+- The unified runtime state-store foundation exists at `.halpha/state.sqlite`.
+  Mutable run and artifact indexes move there only after their migration. Until
+  that migration is implemented, `data/research/index.sqlite` remains the
+  current implemented index and must not be silently bypassed.
 
 Required tables:
 

@@ -94,14 +94,14 @@ port, monitor output directory, or schedule file location.
 | --- | --- | --- |
 | Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |
 | Reusable market and research history | Physical local store plus store-local schema and state metadata | Examples include `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/` history stores. |
-| Mutable operational state | Planned runtime SQLite store at `.halpha/state.sqlite` under the runtime root | Owns service registry, jobs, schedules, monitor-cycle indexes, alert archive indexes, cooldowns, UI preferences, and searchable run or artifact indexes after migration. |
+| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation and schema migration table are implemented. Later domain migrations own service registry, jobs, schedules, monitor-cycle indexes, alert archive indexes, cooldowns, UI preferences, and searchable run or artifact indexes. |
 | Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
 | Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
 
 Current implemented state is still split across `data/research/index.sqlite`,
 `.halpha/dashboard/`, and `runs/monitor/`. Those paths are current or legacy
-storage until the planned state-store migration is implemented. New contracts
-must avoid adding another authority for the same fact.
+storage until their domain-specific state-store migrations are implemented. New
+contracts must avoid adding another authority for the same fact.
 
 The only supported resident Halpha process roles are:
 
@@ -448,6 +448,21 @@ decision artifacts, alert-priority sources, strategy-gate inputs, validation
 authorities, or Codex context by default. Codex should continue to consume
 bounded report-facing material rather than full workbench summaries or
 generated indexes.
+
+### Local Runtime State Store
+
+Runtime state-store foundation:
+
+- `.halpha/state.sqlite`
+- `.halpha/state.sqlite-wal`
+- `.halpha/state.sqlite-shm`
+
+The SQLite file stores schema migrations and, after later domain migrations,
+mutable operational state and rebuildable indexes. WAL and SHM side files are
+SQLite runtime companions and should be backed up with the database when they
+exist. Runtime state is local operational state. It is not research evidence,
+not a report source, not an upstream analysis input, and not Codex input by
+default.
 
 ### Local Dashboard Control State
 

@@ -66,8 +66,9 @@ validation must preserve that separation:
 - run artifacts stay authoritative for research evidence;
 - reusable stores stay authoritative in their physical local stores and
   store-local metadata;
-- mutable operational state and rebuildable indexes belong to the planned
-  runtime SQLite state store after migration;
+- the runtime SQLite state-store foundation is implemented at
+  `.halpha/state.sqlite`, while domain-specific mutable state and rebuildable
+  indexes move there only after their migrations;
 - workbench summaries, dashboard views, health summaries, and latest selections
   are derived views.
 
@@ -272,7 +273,9 @@ Recommended backup groups:
   monitor state.
 - `data/`: reusable local stores, run index, local history state, and research
   data metadata.
-- `.halpha/`: current dashboard control state and planned runtime state store.
+- `.halpha/`: current dashboard control state and implemented runtime
+  state-store foundation. Back up `state.sqlite` together with its
+  `state.sqlite-wal` and `state.sqlite-shm` side files when they exist.
   Backups should treat mutable runtime state as local operational state, not
   research evidence.
 - machine-local config files: local validation config, local user-state files,
