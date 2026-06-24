@@ -398,7 +398,7 @@ def _gate_reasons(inputs: dict[str, Any], *, thresholds: dict[str, Any]) -> list
             reasons,
             "parameter_stability_not_stable",
             severity,
-            "Candidate parameter-stability evidence is not stable.",
+            "Candidate parameter performance-stability evidence is not stable.",
             parameter_status,
             "stable",
         )
@@ -407,7 +407,7 @@ def _gate_reasons(inputs: dict[str, Any], *, thresholds: dict[str, Any]) -> list
             reasons,
             "parameter_stability_not_stable",
             "downgrade",
-            "Candidate parameter-stability evidence is not stable.",
+            "Candidate parameter performance-stability evidence is not stable.",
             parameter_status,
             "stable",
         )
@@ -500,9 +500,15 @@ def _aggregate_stability(stability_values: list[str], succeeded_windows: list[in
 def _parameter_stability(candidate: dict[str, Any]) -> dict[str, Any]:
     value = candidate.get("parameter_stability")
     if isinstance(value, dict):
+        signal_state = _mapping(value.get("signal_state_stability"))
+        performance = _mapping(value.get("performance_stability"))
         return {
             "enabled": value.get("enabled") is True,
-            "status": value.get("status", "unknown"),
+            "status": _parameter_performance_gate_status(value),
+            "signal_state_status": signal_state.get("status") or value.get("signal_state_status"),
+            "performance_status": performance.get("status") or value.get("performance_status"),
+            "signal_state_stability": signal_state,
+            "performance_stability": performance,
             "tested_combinations": value.get("tested_combinations"),
             "valid_combinations": value.get("valid_combinations"),
             "warnings": _dict_list(value.get("warnings")),
@@ -512,6 +518,22 @@ def _parameter_stability(candidate: dict[str, Any]) -> dict[str, Any]:
         "status": "unavailable",
         "warnings": [],
     }
+
+
+def _parameter_performance_gate_status(value: dict[str, Any]) -> str:
+    performance_status = _parameter_performance_status(value)
+    if performance_status == "stable":
+        return "stable"
+    if performance_status in {"partially_stable", "sensitive"}:
+        return "fragile"
+    if performance_status in {"insufficient_evidence", "no_valid_combinations"}:
+        return "insufficient_data"
+    return str(value.get("status") or "unknown")
+
+
+def _parameter_performance_status(value: dict[str, Any]) -> str:
+    performance = _mapping(value.get("performance_stability"))
+    return str(performance.get("status") or value.get("performance_status") or "")
 
 
 def _overfitting_risk(
@@ -541,6 +563,7 @@ def _overfitting_risk(
     max_cost_drag = _number_or_none(cost.get("max_cost_drag_pct"))
     walk_forward_stability = str(walk_forward.get("result_stability") or "unknown")
     parameter_status = str(parameter.get("status") or "unknown")
+    parameter_performance_status = str(parameter.get("performance_status") or "unknown")
 
     if min_sample_rows and min_sample_rows < thresholds["min_min_sample_rows"] * 2:
         warnings.append(_warning("overfitting_short_sample", "Sample length is short for robust gate evidence."))
@@ -551,7 +574,7 @@ def _overfitting_risk(
     if thresholds["require_walk_forward_stable"] and walk_forward_stability == "unstable":
         warnings.append(_warning("overfitting_walk_forward_instability", "Walk-forward results are unstable."))
     if parameter_status in {"fragile", "inconsistent"}:
-        warnings.append(_warning("overfitting_parameter_instability", "Parameter stability is weak."))
+        warnings.append(_warning("overfitting_parameter_instability", "Parameter performance stability is weak."))
 
     evidence.extend(
         [
@@ -560,6 +583,7 @@ def _overfitting_risk(
             f"max_cost_drag_pct: {max_cost_drag}.",
             f"walk_forward_result_stability: {walk_forward_stability}.",
             f"parameter_stability_status: {parameter_status}.",
+            f"parameter_performance_stability_status: {parameter_performance_status}.",
         ]
     )
     unique_warnings = _unique_items(warnings)

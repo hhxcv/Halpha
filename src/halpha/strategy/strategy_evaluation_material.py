@@ -92,7 +92,8 @@ def _source_policy() -> dict[str, Any]:
             "baseline_metrics",
             "relative_metrics",
             "walk_forward_summary",
-            "parameter_stability",
+            "parameter_signal_state_stability",
+            "parameter_performance_stability",
             "overfitting_risk",
             "warnings",
             "assessment",
@@ -108,6 +109,16 @@ def _evaluation_overview(records: list[dict[str, Any]]) -> dict[str, Any]:
         "reliability_counts": _count_nested(records, "assessment", "reliability"),
         "walk_forward_status_counts": _count_nested(records, "walk_forward", "status"),
         "parameter_stability_status_counts": _count_nested(records, "parameter_stability", "status"),
+        "parameter_signal_state_stability_status_counts": _count_nested(
+            records,
+            "parameter_stability",
+            "signal_state_status",
+        ),
+        "parameter_performance_stability_status_counts": _count_nested(
+            records,
+            "parameter_stability",
+            "performance_status",
+        ),
         "overfitting_risk_status_counts": _count_nested(records, "overfitting_risk", "status"),
         "warning_codes": _warning_codes(records),
         "raw_ohlcv_history_embedded": False,
@@ -129,7 +140,7 @@ def _report_guidance() -> dict[str, Any]:
             "Keep sample limits close to any reliability statement.",
         ],
         "reliability": [
-            "Use reliability, walk-forward, parameter-stability, and overfitting-risk fields as bounded research evidence.",
+            "Use reliability, walk-forward, parameter signal-state/performance stability, and overfitting-risk fields as bounded research evidence.",
             "Do not upgrade weak, fragile, unstable, or insufficient evidence into stronger action language.",
         ],
         "forbidden": [
@@ -215,6 +226,10 @@ def _material_record(record: dict[str, Any]) -> dict[str, Any]:
             "tested_combinations": parameter.get("tested_combinations"),
             "valid_combinations": parameter.get("valid_combinations"),
             "invalid_combinations": parameter.get("invalid_combinations"),
+            "signal_state_status": parameter.get("signal_state_status"),
+            "performance_status": parameter.get("performance_status"),
+            "signal_state_stability": _mapping(parameter.get("signal_state_stability")),
+            "performance_stability": _mapping(parameter.get("performance_stability")),
             "region_counts": _mapping(parameter.get("region_counts")),
         },
         "overfitting_risk": {
@@ -241,12 +256,16 @@ def _record_report_note(record: dict[str, Any]) -> str:
     assessment = _mapping(record.get("assessment"))
     reliability = assessment.get("reliability")
     overfitting = _mapping(record.get("overfitting_risk")).get("status")
-    parameter = _mapping(record.get("parameter_stability")).get("status")
+    parameter = _mapping(record.get("parameter_stability"))
+    parameter_status = parameter.get("status")
+    performance_status = _mapping(parameter.get("performance_stability")).get("status")
     walk_forward = _mapping(record.get("walk_forward")).get("status")
     if reliability == "low" or overfitting in {"medium", "elevated"}:
         return "Use cautious language; explain reliability and overfitting limits before any synthesis."
-    if parameter in {"fragile", "inconsistent", "insufficient_data"}:
-        return "Explain parameter stability limits and avoid selecting a best parameter."
+    if parameter_status in {"fragile", "inconsistent", "insufficient_data"}:
+        return "Explain parameter performance-stability limits and avoid selecting a best parameter."
+    if performance_status not in {None, "stable"}:
+        return "Explain parameter performance-stability limits and avoid selecting a best parameter."
     if walk_forward != "succeeded":
         return "Walk-forward evidence is unavailable or insufficient; do not overstate robustness."
     return "Evaluation evidence is usable as bounded historical research context, not as a forecast."

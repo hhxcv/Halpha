@@ -14,6 +14,13 @@ BACKTEST_EXECUTION_FIELDS = (
     "position_timing",
     "lookahead_policy",
 )
+PERFORMANCE_STABILITY_MIN_VALID_COMBINATIONS = 2
+PERFORMANCE_STABILITY_METRIC_THRESHOLDS = {
+    "backtest_total_return_pct": 10.0,
+    "backtest_max_drawdown_pct": 10.0,
+    "backtest_trade_count": 3.0,
+    "backtest_exposure_pct": 25.0,
+}
 
 
 def parameter_diagnostic_config(quant: dict[str, Any]) -> dict[str, Any]:
@@ -113,14 +120,17 @@ def bounded_parameter_diagnostic(
     invalid_results = [item for item in results if item["status"] != "succeeded"]
     summary_metrics = _summary_metrics(valid_results)
     execution_model = _base_backtest_execution_fields(base_run)
+    signal_state_stability = _signal_state_stability(valid_results, invalid_results)
+    performance_stability = _performance_stability(valid_results, invalid_results)
     warnings = _sensitivity_warnings(
         strategy_name,
         valid_results=valid_results,
         invalid_results=invalid_results,
         base_run=base_run,
+        signal_state_stability=signal_state_stability,
+        performance_stability=performance_stability,
     )
     notes = _sensitivity_notes(valid_results=valid_results, invalid_results=invalid_results, base_run=base_run)
-    stability = _stability_state(valid_results, invalid_results)
     return {
         "enabled": True,
         "status": "succeeded" if valid_results else "no_valid_combinations",
@@ -136,7 +146,9 @@ def bounded_parameter_diagnostic(
         "tested_combinations": len(results),
         "valid_combinations": len(valid_results),
         "invalid_combinations": len(invalid_results),
-        "stability": stability,
+        "stability": signal_state_stability["status"],
+        "signal_state_stability": signal_state_stability,
+        "performance_stability": performance_stability,
         "summary_metrics": summary_metrics,
         "combinations": results,
         "notes": notes,
@@ -167,6 +179,8 @@ def _skipped_diagnostic(
         "valid_combinations": 0,
         "invalid_combinations": 0,
         "stability": "unknown",
+        "signal_state_stability": _unknown_signal_state_stability(),
+        "performance_stability": _unknown_performance_stability(),
         "summary_metrics": {},
         "combinations": [],
         "notes": notes or [],
@@ -270,7 +284,14 @@ def _summary_metrics(valid_results: list[dict[str, Any]]) -> dict[str, Any]:
         "direction_counts": direction_counts,
         "latest_regime_counts": regime_counts,
     }
-    for key in ("entry_count", "exit_count", "backtest_total_return_pct", "backtest_max_drawdown_pct"):
+    for key in (
+        "entry_count",
+        "exit_count",
+        "backtest_total_return_pct",
+        "backtest_max_drawdown_pct",
+        "backtest_trade_count",
+        "backtest_exposure_pct",
+    ):
         values = [
             item["metrics"][key]
             for item in valid_results
@@ -298,6 +319,8 @@ def _sensitivity_warnings(
     valid_results: list[dict[str, Any]],
     invalid_results: list[dict[str, Any]],
     base_run: dict[str, Any],
+    signal_state_stability: dict[str, Any],
+    performance_stability: dict[str, Any],
 ) -> list[dict[str, Any]]:
     items = []
     direction_counts = _value_counts(valid_results, "direction")
@@ -335,6 +358,39 @@ def _sensitivity_warnings(
                 source="parameter_diagnostic",
             )
         )
+    performance_status = performance_stability.get("status")
+    if performance_status == "sensitive":
+        items.append(
+            warning(
+                "parameter_performance_sensitivity",
+                f"{strategy_name} parameter grid produced materially divergent backtest performance metrics.",
+                source="parameter_diagnostic",
+            )
+        )
+    elif performance_status == "partially_stable":
+        items.append(
+            warning(
+                "parameter_performance_partial_evidence",
+                f"{strategy_name} parameter grid has invalid combinations that limit performance stability evidence.",
+                source="parameter_diagnostic",
+            )
+        )
+    elif performance_status in {"insufficient_evidence", "no_valid_combinations"}:
+        items.append(
+            warning(
+                "parameter_performance_insufficient_evidence",
+                f"{strategy_name} parameter grid lacks enough valid backtest metrics for performance stability.",
+                source="parameter_diagnostic",
+            )
+        )
+    if signal_state_stability.get("status") == "sensitive":
+        items.append(
+            warning(
+                "parameter_signal_state_sensitivity",
+                f"{strategy_name} parameter grid produced divergent signal-state labels.",
+                source="parameter_diagnostic",
+            )
+        )
     return items
 
 
@@ -361,16 +417,193 @@ def _sensitivity_notes(
     return notes
 
 
-def _stability_state(valid_results: list[dict[str, Any]], invalid_results: list[dict[str, Any]]) -> str:
-    if not valid_results:
-        return "no_valid_combinations"
+def _signal_state_stability(
+    valid_results: list[dict[str, Any]],
+    invalid_results: list[dict[str, Any]],
+) -> dict[str, Any]:
     direction_counts = _value_counts(valid_results, "direction")
     regime_counts = _value_counts(valid_results, "latest_regime")
-    if len(direction_counts) <= 1 and len(regime_counts) <= 1 and not invalid_results:
-        return "stable"
-    if len(direction_counts) <= 1 and invalid_results:
-        return "partially_stable_with_invalid_combinations"
-    return "sensitive"
+    reason_codes = []
+    if not valid_results:
+        status = "no_valid_combinations"
+        reason_codes.append("no_valid_combinations")
+    elif len(direction_counts) <= 1 and len(regime_counts) <= 1 and not invalid_results:
+        status = "stable"
+        reason_codes.append("direction_and_regime_agree")
+    elif len(direction_counts) <= 1 and len(regime_counts) <= 1 and invalid_results:
+        status = "partially_stable_with_invalid_combinations"
+        reason_codes.extend(["direction_and_regime_agree", "invalid_combinations_present"])
+    else:
+        status = "sensitive"
+        if len(direction_counts) > 1:
+            reason_codes.append("direction_sensitivity")
+        if len(regime_counts) > 1:
+            reason_codes.append("latest_regime_sensitivity")
+        if invalid_results:
+            reason_codes.append("invalid_combinations_present")
+    return {
+        "status": status,
+        "reason_codes": reason_codes,
+        "direction_counts": direction_counts,
+        "latest_regime_counts": regime_counts,
+        "valid_combinations": len(valid_results),
+        "invalid_combinations": len(invalid_results),
+    }
+
+
+def _performance_stability(
+    valid_results: list[dict[str, Any]],
+    invalid_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    metric_ranges = _performance_metric_ranges(valid_results)
+    reasons: list[dict[str, Any]] = []
+    if not valid_results:
+        reasons.append(_stability_reason("no_valid_combinations", "No valid parameter combinations were available."))
+        status = "no_valid_combinations"
+    elif len(valid_results) < PERFORMANCE_STABILITY_MIN_VALID_COMBINATIONS:
+        reasons.append(
+            _stability_reason(
+                "too_few_valid_combinations",
+                "Performance stability requires at least two valid combinations.",
+                value=len(valid_results),
+                threshold=PERFORMANCE_STABILITY_MIN_VALID_COMBINATIONS,
+            )
+        )
+        status = "insufficient_evidence"
+    else:
+        missing_metric_reasons = [
+            _stability_reason(
+                "missing_backtest_metric",
+                f"{metric} is missing from at least one valid combination.",
+                metric=metric,
+                value=details["observed_count"],
+                threshold=details["valid_combination_count"],
+            )
+            for metric, details in metric_ranges.items()
+            if details["missing_count"] > 0
+        ]
+        if missing_metric_reasons:
+            reasons.extend(missing_metric_reasons)
+            status = "insufficient_evidence"
+        else:
+            range_reasons = [
+                _stability_reason(
+                    "metric_range_exceeds_threshold",
+                    f"{metric} range exceeds the performance stability threshold.",
+                    metric=metric,
+                    value=details["range"],
+                    threshold=details["threshold"],
+                )
+                for metric, details in metric_ranges.items()
+                if details["range"] is not None and details["range"] > details["threshold"]
+            ]
+            if range_reasons:
+                reasons.extend(range_reasons)
+                status = "sensitive"
+            elif invalid_results:
+                reasons.append(
+                    _stability_reason(
+                        "invalid_combinations_present",
+                        "Invalid combinations limit performance stability evidence.",
+                        value=len(invalid_results),
+                    )
+                )
+                status = "partially_stable"
+            else:
+                reasons.append(
+                    _stability_reason(
+                        "metric_ranges_within_thresholds",
+                        "All bounded performance metric ranges are within configured thresholds.",
+                    )
+                )
+                status = "stable"
+    return {
+        "status": status,
+        "reason_codes": [str(item["code"]) for item in reasons],
+        "reasons": reasons,
+        "metric_ranges": metric_ranges,
+        "valid_combinations": len(valid_results),
+        "invalid_combinations": len(invalid_results),
+        "min_valid_combinations": PERFORMANCE_STABILITY_MIN_VALID_COMBINATIONS,
+    }
+
+
+def _performance_metric_ranges(valid_results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    ranges = {}
+    for metric, threshold in PERFORMANCE_STABILITY_METRIC_THRESHOLDS.items():
+        values = [
+            item["metrics"][metric]
+            for item in valid_results
+            if isinstance(item.get("metrics"), dict)
+            and isinstance(item["metrics"].get(metric), (int, float))
+            and not isinstance(item["metrics"].get(metric), bool)
+        ]
+        details: dict[str, Any] = {
+            "observed_count": len(values),
+            "valid_combination_count": len(valid_results),
+            "missing_count": len(valid_results) - len(values),
+            "threshold": threshold,
+        }
+        if values:
+            minimum = _round(min(values))
+            maximum = _round(max(values))
+            details.update(
+                {
+                    "min": minimum,
+                    "max": maximum,
+                    "range": _round(maximum - minimum),
+                }
+            )
+        else:
+            details.update({"min": None, "max": None, "range": None})
+        ranges[metric] = details
+    return ranges
+
+
+def _stability_reason(
+    code: str,
+    message: str,
+    *,
+    metric: str | None = None,
+    value: Any = None,
+    threshold: Any = None,
+) -> dict[str, Any]:
+    result = {
+        "code": code,
+        "message": message,
+    }
+    if metric is not None:
+        result["metric"] = metric
+    if value is not None:
+        result["value"] = value
+    if threshold is not None:
+        result["threshold"] = threshold
+    return result
+
+
+def _unknown_signal_state_stability() -> dict[str, Any]:
+    return {
+        "status": "unknown",
+        "reason_codes": ["diagnostic_unavailable"],
+        "direction_counts": {},
+        "latest_regime_counts": {},
+        "valid_combinations": 0,
+        "invalid_combinations": 0,
+    }
+
+
+def _unknown_performance_stability() -> dict[str, Any]:
+    return {
+        "status": "insufficient_evidence",
+        "reason_codes": ["diagnostic_unavailable"],
+        "reasons": [
+            _stability_reason("diagnostic_unavailable", "Parameter diagnostics did not run.")
+        ],
+        "metric_ranges": {},
+        "valid_combinations": 0,
+        "invalid_combinations": 0,
+        "min_valid_combinations": PERFORMANCE_STABILITY_MIN_VALID_COMBINATIONS,
+    }
 
 
 def _base_direction(base_run: dict[str, Any]) -> str | None:

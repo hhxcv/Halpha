@@ -137,6 +137,32 @@ def test_strategy_effectiveness_gate_can_require_parameter_stability() -> None:
     assert "parameter_stability_not_stable" in _reason_codes(record)
 
 
+def test_strategy_effectiveness_gate_uses_performance_stability_contract() -> None:
+    artifact = _artifact(
+        [
+            _candidate(
+                "performance_sensitive",
+                [
+                    _evaluation(net=4.0, excess=2.0, trades=4),
+                    _evaluation(net=3.0, excess=1.0, trades=4),
+                ],
+                parameter_stability=_parameter_stability(performance_status="sensitive"),
+            )
+        ]
+    )
+
+    gates = build_strategy_effectiveness_gates(
+        artifact,
+        {"quant": {"effectiveness_gates": {"require_parameter_stability": True}}},
+    )
+    record = gates["records"][0]
+
+    assert record["status"] == "watchlisted"
+    assert record["gate_inputs"]["parameter_stability"]["status"] == "fragile"
+    assert record["gate_inputs"]["parameter_stability"]["performance_status"] == "sensitive"
+    assert "parameter_stability_not_stable" in _reason_codes(record)
+
+
 def test_strategy_effectiveness_gate_can_accept_unstable_walk_forward_when_not_required() -> None:
     artifact = _artifact(
         [
@@ -184,6 +210,7 @@ def _candidate(
     evaluations: list[dict[str, Any]],
     *,
     overfitting_risk: dict[str, Any] | None = None,
+    parameter_stability: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     record = {
         "strategy_name": name,
@@ -196,6 +223,8 @@ def _candidate(
     }
     if overfitting_risk is not None:
         record["overfitting_risk"] = overfitting_risk
+    if parameter_stability is not None:
+        record["parameter_stability"] = parameter_stability
     return record
 
 
@@ -247,6 +276,34 @@ def _evaluation(
             "errors": [],
         }
     return record
+
+
+def _parameter_stability(*, performance_status: str) -> dict[str, Any]:
+    return {
+        "enabled": True,
+        "status": "stable",
+        "signal_state_status": "stable",
+        "performance_status": performance_status,
+        "signal_state_stability": {
+            "status": "stable",
+            "reason_codes": ["direction_and_regime_agree"],
+        },
+        "performance_stability": {
+            "status": performance_status,
+            "reason_codes": ["metric_range_exceeds_threshold"],
+            "metric_ranges": {
+                "backtest_total_return_pct": {
+                    "min": -4.0,
+                    "max": 12.0,
+                    "range": 16.0,
+                    "threshold": 10.0,
+                }
+            },
+        },
+        "tested_combinations": 2,
+        "valid_combinations": 2,
+        "warnings": [],
+    }
 
 
 def _reason_codes(record: dict[str, Any]) -> set[str]:

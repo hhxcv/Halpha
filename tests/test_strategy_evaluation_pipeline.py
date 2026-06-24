@@ -144,7 +144,7 @@ def test_pipeline_records_stable_parameter_stability(tmp_path: Path) -> None:
         tmp_path,
         lookback=5,
         parameter_diagnostics_enabled=True,
-        parameter_grid_return_windows=[2],
+        parameter_grid_return_windows=[2, 3],
     )
     config = load_config(config_path)
     store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
@@ -166,8 +166,10 @@ def test_pipeline_records_stable_parameter_stability(tmp_path: Path) -> None:
     assert result.succeeded is True
     assert record["parameter_stability"]["enabled"] is True
     assert record["parameter_stability"]["status"] == "stable"
-    assert record["parameter_stability"]["tested_combinations"] == 1
-    assert record["parameter_stability"]["region_counts"]["stable"] == 1
+    assert record["parameter_stability"]["performance_stability"]["status"] == "stable"
+    assert record["parameter_stability"]["signal_state_stability"]["status"] == "stable"
+    assert record["parameter_stability"]["tested_combinations"] == 2
+    assert record["parameter_stability"]["region_counts"]["stable"] == 2
     assert record["parameter_stability"]["warnings"] == []
     assert record["assessment"]["overfitting_risk"] in {"medium", "elevated"}
     assert manifest["counts"]["strategy_evaluation_parameter_stability_records"] == 1
@@ -179,7 +181,7 @@ def test_pipeline_records_fragile_parameter_stability(tmp_path: Path) -> None:
         tmp_path,
         lookback=5,
         parameter_diagnostics_enabled=True,
-        parameter_grid_return_windows=[2, 10],
+        parameter_grid_return_windows=[2, 3, 10],
     )
     config = load_config(config_path)
     store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
@@ -200,9 +202,11 @@ def test_pipeline_records_fragile_parameter_stability(tmp_path: Path) -> None:
 
     assert result.succeeded is True
     assert record["parameter_stability"]["status"] == "fragile"
-    assert record["parameter_stability"]["region_counts"]["stable"] == 1
+    assert record["parameter_stability"]["performance_stability"]["status"] == "partially_stable"
+    assert record["parameter_stability"]["region_counts"]["stable"] == 2
     assert record["parameter_stability"]["region_counts"]["insufficient_data"] == 1
     assert "parameter_stability_fragile" in warning_codes
+    assert "parameter_performance_stability_partial" in warning_codes
     assert "overfitting_unstable_parameter_ranking" in warning_codes
     assert record["overfitting_risk"]["status"] == "elevated"
 
@@ -233,6 +237,7 @@ def test_pipeline_records_insufficient_parameter_stability(tmp_path: Path) -> No
 
     assert result.succeeded is True
     assert record["parameter_stability"]["status"] == "insufficient_data"
+    assert record["parameter_stability"]["performance_stability"]["status"] == "no_valid_combinations"
     assert record["parameter_stability"]["diagnostic_status"] == "no_valid_combinations"
     assert record["parameter_stability"]["region_counts"]["insufficient_data"] == 1
     assert "parameter_stability_insufficient_data" in warning_codes
