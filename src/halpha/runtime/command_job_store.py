@@ -13,6 +13,8 @@ from halpha.runtime.state_store import (
     StateStoreMigration,
     apply_runtime_state_migrations,
     open_runtime_state_connection,
+    open_runtime_state_readonly_connection,
+    runtime_state_error_diagnostic,
     runtime_state_transaction,
     runtime_state_path,
 )
@@ -35,7 +37,9 @@ ALLOWED_JOB_TRANSITIONS = {
 
 
 class CommandJobStoreError(Exception):
-    pass
+    def __init__(self, message: str, *, diagnostic: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.diagnostic = diagnostic if isinstance(diagnostic, dict) else {}
 
 
 @dataclass(frozen=True)
@@ -149,14 +153,16 @@ class CommandJobRepository:
                     )
         except sqlite3.Error as exc:
             raise CommandJobStoreError("command job state store could not be written.") from exc
-        return self.get_job(job_id) or dict(job)
+        try:
+            return self.get_job(job_id) or dict(job)
+        except CommandJobStoreError:
+            return dict(job)
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
         if not self.database_path.exists():
             return None
         try:
-            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_command_job_migrations(connection)
+            with closing(open_runtime_state_readonly_connection(config_path=self.config_path)) as connection:
                 row = connection.execute(
                     """
                     SELECT *
@@ -166,15 +172,14 @@ class CommandJobRepository:
                     (job_id,),
                 ).fetchone()
                 return _row_to_job(row) if row else None
-        except sqlite3.Error:
-            return None
+        except sqlite3.Error as exc:
+            raise _read_store_error(exc, operation="read command job detail") from exc
 
     def list_jobs(self, *, limit: int) -> list[dict[str, Any]]:
         if not self.database_path.exists():
             return []
         try:
-            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_command_job_migrations(connection)
+            with closing(open_runtime_state_readonly_connection(config_path=self.config_path)) as connection:
                 rows = connection.execute(
                     """
                     SELECT *
@@ -184,16 +189,15 @@ class CommandJobRepository:
                     """,
                     (max(0, limit),),
                 ).fetchall()
-        except sqlite3.Error:
-            return []
+        except sqlite3.Error as exc:
+            raise _read_store_error(exc, operation="list command jobs") from exc
         return [_row_to_job(row) for row in rows]
 
     def list_transient_jobs(self) -> list[dict[str, Any]]:
         if not self.database_path.exists():
             return []
         try:
-            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_command_job_migrations(connection)
+            with closing(open_runtime_state_readonly_connection(config_path=self.config_path)) as connection:
                 rows = connection.execute(
                     """
                     SELECT *
@@ -203,16 +207,15 @@ class CommandJobRepository:
                     """,
                     tuple(sorted(JOB_TRANSIENT_STATUSES)),
                 ).fetchall()
-        except sqlite3.Error:
-            return []
+        except sqlite3.Error as exc:
+            raise _read_store_error(exc, operation="list transient command jobs") from exc
         return [_row_to_job(row) for row in rows]
 
     def job_events(self, job_id: str, *, limit: int = COMMAND_JOB_EVENT_LIMIT) -> list[dict[str, Any]]:
         if not self.database_path.exists():
             return []
         try:
-            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_command_job_migrations(connection)
+            with closing(open_runtime_state_readonly_connection(config_path=self.config_path)) as connection:
                 rows = connection.execute(
                     """
                     SELECT event_type, from_status, to_status, created_at, message, details_json
@@ -223,8 +226,8 @@ class CommandJobRepository:
                     """,
                     (job_id, max(0, limit)),
                 ).fetchall()
-        except sqlite3.Error:
-            return []
+        except sqlite3.Error as exc:
+            raise _read_store_error(exc, operation="read command job events") from exc
         events = []
         for event_type, from_status, to_status, created_at, message, details_json in rows:
             events.append(
@@ -359,6 +362,13 @@ def apply_command_job_migrations(connection: sqlite3.Connection, *, now: str | N
         connection,
         migrations=migrations,
         now=now,
+    )
+
+
+def _read_store_error(exc: sqlite3.Error, *, operation: str) -> CommandJobStoreError:
+    return CommandJobStoreError(
+        "command job state store could not be read.",
+        diagnostic=runtime_state_error_diagnostic(exc, operation=operation),
     )
 
 

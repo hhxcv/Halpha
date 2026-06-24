@@ -19,7 +19,7 @@ from halpha.dashboard.schedule_store import (
 )
 from halpha.dashboard.time import parse_utc_timestamp
 from halpha.runtime.command_jobs import CommandJobManager
-from halpha.runtime.command_job_store import JOB_TERMINAL_STATUSES, CommandJobRepository
+from halpha.runtime.command_job_store import JOB_TERMINAL_STATUSES, CommandJobRepository, CommandJobStoreError
 
 
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
@@ -482,8 +482,14 @@ class DashboardScheduleManager:
     def _job_for_dispatch_reconcile(self, job_id: str) -> dict[str, Any] | None:
         repository = getattr(self.job_manager, "_repository", None)
         if isinstance(repository, CommandJobRepository):
-            return repository.get_job(job_id)
-        return self.job_manager.get_job(job_id)
+            try:
+                return repository.get_job(job_id)
+            except CommandJobStoreError:
+                return None
+        job = self.job_manager.get_job(job_id)
+        if isinstance(job, dict) and job.get("store_read_failed") is True:
+            return None
+        return job
 
     def _record_dispatch_job(self, *, scheduled_for: str, job: dict[str, Any], attempts: int = 10) -> bool:
         for attempt in range(max(1, attempts)):
