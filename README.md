@@ -304,6 +304,9 @@ finalize_run
 `run_manifest.json` records nested task lifecycle details under these public
 stages.
 
+`build_materials` first writes the final structured data-quality summary, then
+writes report-facing material files from completed upstream evidence.
+
 ## Configuration
 
 `config.example.yaml` is a portable public-source example. It configures:
@@ -408,7 +411,7 @@ A successful configured run can write:
 - `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
 - `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
 - `analysis/decision_intelligence_material.md`: AI-readable decision material.
-- `analysis/data_quality_summary.json`: current-run market, text, derivatives, macro/calendar, on-chain flow, feature/factor, intelligence-fusion, shared-store, and Codex-boundary quality checks.
+- `analysis/data_quality_summary.json`: current-run market, text, derivatives, macro/calendar, on-chain flow, feature/factor, intelligence-fusion, personalized-risk, shared-store, and structured-evidence quality checks.
 - `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
 - `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
 - `analysis/outcome_evaluations.json`: deterministic market, strategy, event, alert, decision, and watch outcome evaluations.

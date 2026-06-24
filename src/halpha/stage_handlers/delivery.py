@@ -30,13 +30,11 @@ def build_analysis_materials(config: dict[str, Any], run: RunContext) -> list[st
     from halpha.analysis.market_material import build_market_material
     from halpha.analysis.outcome_tracking_material import build_outcome_tracking_material
     from halpha.analysis.text_material import build_text_material
-    from halpha.data.data_quality import refresh_post_data_quality_checks
 
     artifacts = []
     try:
         artifacts.extend(build_factor_signal_material(config, run))
         artifacts.extend(build_intelligence_fusion_material(config, run))
-        refresh_post_data_quality_checks(config, run)
         artifacts.extend(build_data_quality_material(config, run))
         artifacts.extend(build_derivatives_market_material(config, run))
         artifacts.extend(build_outcome_tracking_material(config, run))

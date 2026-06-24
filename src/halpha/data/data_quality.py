@@ -6,7 +6,6 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
 from halpha.data.data_quality_post_artifacts import post_data_quality_artifact_checks
 from halpha.data.data_quality_raw import raw_data_quality_checks
 from halpha.data.run_index import RUN_INDEX_ARTIFACT
@@ -26,29 +25,7 @@ def build_data_quality_summary(
     now: datetime | str | None = None,
 ) -> list[str]:
     created_at = _format_utc(now)
-    checks = _data_quality_checks(config, run, now=created_at, post_artifacts_expected=False)
-    _write_data_quality_summary(run, created_at=created_at, checks=checks)
-    return [DATA_QUALITY_SUMMARY_ARTIFACT]
-
-
-def refresh_post_data_quality_checks(
-    config: dict[str, Any],
-    run: RunContext,
-    *,
-    now: datetime | str | None = None,
-) -> list[str]:
-    """Refresh final-stage analysis artifact checks after downstream artifacts exist."""
-    created_at = _format_utc(now)
-    existing, error = _read_json(run.analysis_dir / "data_quality_summary.json")
-    if error:
-        checks = _data_quality_checks(config, run, now=created_at, post_artifacts_expected=True)
-    else:
-        checks = [
-            check
-            for check in _list(existing.get("checks"))
-            if isinstance(check, dict) and check.get("name") not in POST_DATA_QUALITY_CHECK_NAMES
-        ]
-        checks.extend(post_data_quality_artifact_checks(run, expected=True))
+    checks = _data_quality_checks(config, run, now=created_at)
     _write_data_quality_summary(run, created_at=created_at, checks=checks)
     return [DATA_QUALITY_SUMMARY_ARTIFACT]
 
@@ -58,7 +35,6 @@ def _data_quality_checks(
     run: RunContext,
     *,
     now: str,
-    post_artifacts_expected: bool,
 ) -> list[dict[str, Any]]:
     checks = [
         *raw_data_quality_checks(config, run, now=now),
@@ -68,17 +44,15 @@ def _data_quality_checks(
         _macro_calendar_history_check(config, run),
         _macro_calendar_views_check(config, run, now=now),
         _macro_calendar_context_check(config, run),
-        _macro_calendar_material_check(config, run),
         _onchain_flow_history_check(config, run),
         _onchain_flow_views_check(config, run, now=now),
         _onchain_flow_context_check(config, run),
-        _onchain_flow_material_check(config, run),
         _text_event_records_check(config, run, now=now),
         _text_event_history_check(run),
         _research_data_catalog_check(run),
         _run_index_check(run),
         _partial_collection_check(run),
-        *post_data_quality_artifact_checks(run, expected=post_artifacts_expected),
+        *post_data_quality_artifact_checks(run, expected=True),
     ]
     return checks
 
@@ -498,101 +472,6 @@ def _onchain_flow_context_check(config: dict[str, Any], run: RunContext) -> dict
             "degraded": _status_count(records, "degraded"),
         },
     )
-
-
-def _macro_calendar_material_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
-    macro_calendar = _macro_calendar_config(config)
-    if not macro_calendar.get("enabled"):
-        return _check("macro_calendar_material", "analysis", "skipped", "macro_calendar.enabled is false.", [])
-    artifact = "analysis/macro_calendar_material.md"
-    path = run.analysis_dir / "macro_calendar_material.md"
-    if not path.exists():
-        return _check("macro_calendar_material", "analysis", "failed", f"{artifact} was not found.", [artifact], errors=[f"{artifact} was not found."])
-    material = path.read_text(encoding="utf-8")
-    warnings = []
-    errors = []
-    required_boundaries = [
-        "codex_may_generate_macro_events: false",
-        "codex_may_generate_risk_levels: false",
-        "full_raw_macro_calendar_artifacts_embedded: false",
-        "full_reusable_macro_calendar_history_embedded: false",
-        "full_macro_calendar_context_json_embedded: false",
-    ]
-    for boundary in required_boundaries:
-        if boundary not in material:
-            errors.append(f"macro calendar material missing boundary: {boundary}")
-    summary = run.manifest.get("macro_calendar_material")
-    summary_mapping = summary if isinstance(summary, dict) else {}
-    status = "failed" if errors else "warning" if warnings else "ok"
-    return _check(
-        "macro_calendar_material",
-        "analysis",
-        status,
-        "macro calendar material is present with Codex boundary metadata.",
-        [artifact],
-        warnings=warnings,
-        errors=errors,
-        details={
-            "selected_records": _int(summary_mapping.get("selected_records")),
-            "omitted_records": _int(summary_mapping.get("omitted_records")),
-            "context_records": _int(summary_mapping.get("context_records")),
-            "chars": len(material),
-            "codex_boundaries_present": not errors,
-        },
-    )
-
-
-def _onchain_flow_material_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
-    onchain_flow = _onchain_flow_config(config)
-    if not onchain_flow.get("enabled"):
-        return _check("onchain_flow_material", "analysis", "skipped", "onchain_flow.enabled is false.", [])
-    artifact = "analysis/onchain_flow_material.md"
-    path = run.analysis_dir / "onchain_flow_material.md"
-    if not path.exists():
-        return _check(
-            "onchain_flow_material",
-            "analysis",
-            "failed",
-            f"{artifact} was not found.",
-            [artifact],
-            errors=[f"{artifact} was not found."],
-        )
-    material = path.read_text(encoding="utf-8")
-    warnings = []
-    errors = []
-    required_boundaries = [
-        "codex_may_generate_onchain_records: false",
-        "codex_may_generate_flow_states: false",
-        "codex_may_generate_address_labels: false",
-        "codex_may_generate_risk_levels: false",
-        "full_raw_onchain_flow_artifacts_embedded: false",
-        "full_reusable_onchain_flow_history_embedded: false",
-        "full_onchain_flow_context_json_embedded: false",
-    ]
-    for boundary in required_boundaries:
-        if boundary not in material:
-            errors.append(f"on-chain flow material missing boundary: {boundary}")
-    summary = run.manifest.get("onchain_flow_material")
-    summary_mapping = summary if isinstance(summary, dict) else {}
-    status = "failed" if errors else "warning" if warnings else "ok"
-    return _check(
-        "onchain_flow_material",
-        "analysis",
-        status,
-        "on-chain flow material is present with Codex boundary metadata.",
-        [artifact],
-        warnings=warnings,
-        errors=errors,
-        details={
-            "selected_records": _int(summary_mapping.get("selected_records")),
-            "omitted_records": _int(summary_mapping.get("omitted_records")),
-            "context_records": _int(summary_mapping.get("context_records")),
-            "chars": len(material),
-            "codex_boundaries_present": not errors,
-        },
-    )
-
-
 
 
 def _text_event_records_check(config: dict[str, Any], run: RunContext, *, now: str) -> dict[str, Any]:

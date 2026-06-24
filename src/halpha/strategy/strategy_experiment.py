@@ -25,7 +25,8 @@ from halpha.strategy.strategy_benchmark_suite import create_strategy_benchmark_s
 from halpha.storage import display_path, ensure_directory, write_json
 
 
-PIPELINE_STAGE_NAME = "build_strategy_experiment_material"
+PIPELINE_STAGE_NAME = "build_strategy_experiment"
+PIPELINE_MATERIAL_STAGE_NAME = "build_strategy_experiment_material"
 STRATEGY_EXPERIMENT_ARTIFACT = "strategy_experiment.json"
 STRATEGY_EXPERIMENT_MANIFEST_ARTIFACT = "manifest.json"
 STRATEGY_EXPERIMENT_BENCHMARK_ARTIFACT = "strategy_benchmark_suite.json"
@@ -51,7 +52,7 @@ class StrategyExperimentResult:
     manifest_path: Path
 
 
-def build_strategy_experiment_material(
+def build_strategy_experiment(
     config: dict[str, Any],
     run: RunContext,
     *,
@@ -119,22 +120,35 @@ def build_strategy_experiment_material(
         created_at=_format_utc(clock_value),
         source_artifacts=[PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT],
     )
-    material = render_strategy_experiment_material(artifact, gates)
 
     write_json(run.analysis_dir / "strategy_experiment.json", artifact)
     write_json(run.analysis_dir / "strategy_effectiveness_gates.json", gates)
-    (run.analysis_dir / "strategy_experiment_material.md").write_text(material, encoding="utf-8")
     run.manifest["artifacts"]["strategy_experiment"] = PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT
     run.manifest["artifacts"]["strategy_effectiveness_gates"] = (
         PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT
     )
-    run.manifest["artifacts"]["strategy_experiment_material"] = STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT
     _record_pipeline_summary(run, artifact=artifact, gates=gates)
     return [
         PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT,
         PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
-        STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
     ]
+
+
+def build_strategy_experiment_material(
+    _config: dict[str, Any],
+    run: RunContext,
+) -> list[str]:
+    artifact = _read_pipeline_strategy_experiment(run)
+    gates = _read_pipeline_strategy_effectiveness_gates(run)
+    if artifact is None or gates is None:
+        _record_pipeline_material_skipped(run)
+        return []
+
+    material = render_strategy_experiment_material(artifact, gates)
+    (run.analysis_dir / "strategy_experiment_material.md").write_text(material, encoding="utf-8")
+    run.manifest["artifacts"]["strategy_experiment_material"] = STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT
+    _record_pipeline_material_summary(run, gates=gates)
+    return [STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT]
 
 
 def run_strategy_experiment(
@@ -285,6 +299,64 @@ def _read_pipeline_benchmark_suite(run: RunContext) -> dict[str, Any] | None:
     return artifact
 
 
+def _read_pipeline_strategy_experiment(run: RunContext) -> dict[str, Any] | None:
+    return _read_pipeline_analysis_json(
+        run,
+        filename="strategy_experiment.json",
+        artifact=PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT,
+        expected_type="strategy_experiment",
+    )
+
+
+def _read_pipeline_strategy_effectiveness_gates(run: RunContext) -> dict[str, Any] | None:
+    return _read_pipeline_analysis_json(
+        run,
+        filename="strategy_effectiveness_gates.json",
+        artifact=PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
+        expected_type="strategy_effectiveness_gates",
+    )
+
+
+def _read_pipeline_analysis_json(
+    run: RunContext,
+    *,
+    filename: str,
+    artifact: str,
+    expected_type: str,
+) -> dict[str, Any] | None:
+    path = run.analysis_dir / filename
+    if not path.exists():
+        summary = run.manifest.get("strategy_experiment")
+        if isinstance(summary, dict) and summary.get("status") == "skipped":
+            return None
+        raise PipelineError(
+            f"{artifact} was not found; build_strategy_experiment must run first.",
+            stage=PIPELINE_MATERIAL_STAGE_NAME,
+            exit_code=3,
+        )
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise PipelineError(
+            f"{artifact} is not valid JSON: {exc.msg}.",
+            stage=PIPELINE_MATERIAL_STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(loaded, dict):
+        raise PipelineError(
+            f"{artifact} must be a mapping.",
+            stage=PIPELINE_MATERIAL_STAGE_NAME,
+            exit_code=3,
+        )
+    if loaded.get("artifact_type") != expected_type:
+        raise PipelineError(
+            f"{artifact} artifact_type must be {expected_type}.",
+            stage=PIPELINE_MATERIAL_STAGE_NAME,
+            exit_code=3,
+        )
+    return loaded
+
+
 def _record_pipeline_skipped(run: RunContext, *, reason: str) -> None:
     run.manifest["counts"]["strategy_experiment_candidates"] = 0
     run.manifest["counts"]["strategy_experiment_evaluations"] = 0
@@ -296,7 +368,6 @@ def _record_pipeline_skipped(run: RunContext, *, reason: str) -> None:
     run.manifest["counts"]["strategy_gate_watchlisted"] = 0
     run.manifest["counts"]["strategy_gate_rejected"] = 0
     run.manifest["counts"]["strategy_gate_insufficient_evidence"] = 0
-    run.manifest["counts"]["strategy_experiment_material_records"] = 0
     run.manifest["strategy_experiment"] = {
         "enabled": False,
         "status": "skipped",
@@ -305,6 +376,24 @@ def _record_pipeline_skipped(run: RunContext, *, reason: str) -> None:
         "counts": {},
         "warnings": [],
         "errors": [],
+    }
+
+
+def _record_pipeline_material_skipped(run: RunContext) -> None:
+    run.manifest["counts"]["strategy_experiment_material_records"] = 0
+
+
+def _record_pipeline_material_summary(run: RunContext, *, gates: dict[str, Any]) -> None:
+    run.manifest["counts"]["strategy_experiment_material_records"] = len(
+        _dict_list(gates.get("records"))
+    )
+    summary = run.manifest.get("strategy_experiment")
+    if not isinstance(summary, dict):
+        return
+    artifacts = summary.get("artifacts") if isinstance(summary.get("artifacts"), dict) else {}
+    summary["artifacts"] = {
+        **artifacts,
+        "strategy_experiment_material": STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
     }
 
 
@@ -340,16 +429,12 @@ def _record_pipeline_summary(
     run.manifest["counts"]["strategy_gate_insufficient_evidence"] = int(
         gate_coverage.get("insufficient_evidence") or 0
     )
-    run.manifest["counts"]["strategy_experiment_material_records"] = len(
-        _dict_list(gates.get("records"))
-    )
     run.manifest["strategy_experiment"] = {
         "enabled": True,
         "status": "succeeded",
         "artifacts": {
             "strategy_experiment": PIPELINE_STRATEGY_EXPERIMENT_ARTIFACT,
             "strategy_effectiveness_gates": PIPELINE_STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
-            "strategy_experiment_material": STRATEGY_EXPERIMENT_MATERIAL_ARTIFACT,
         },
         "counts": {
             "strategy_candidates": run.manifest["counts"]["strategy_experiment_candidates"],

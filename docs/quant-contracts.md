@@ -2268,16 +2268,21 @@ build_market_data_views
 build_strategy_benchmark_suite
 evaluate_quant_strategies
 evaluate_strategy_evaluation
-build_strategy_experiment_material
+build_strategy_experiment
 build_market_signals
+
+build_data_quality_summary
+build_strategy_experiment_material
 build_market_signal_material
 ```
 
 The implemented benchmark suite stage is `build_strategy_benchmark_suite`. It sits after `build_market_data_views` and before `evaluate_quant_strategies`.
 
-The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before current-run strategy experiment material.
+The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before current-run strategy experiment JSON.
 
-The implemented strategy experiment material stage is `build_strategy_experiment_material`. It sits after `evaluate_strategy_evaluation` and before downstream market signal material.
+The implemented strategy experiment JSON stage is `build_strategy_experiment`. It sits after `evaluate_strategy_evaluation` and before downstream market signals.
+
+The implemented strategy experiment material stage is `build_strategy_experiment_material`. It runs in `build_materials`, after final data quality summary publication, and reads `analysis/strategy_experiment.json` plus `analysis/strategy_effectiveness_gates.json`.
 
 Failure rules:
 

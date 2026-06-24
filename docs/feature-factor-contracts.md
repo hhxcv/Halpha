@@ -419,12 +419,11 @@ Data-quality and inspection should cover:
 - `analysis/factor_states.json` status, score bounds, missing inputs,
   conflicts, warnings, and errors;
 - `analysis/multi_source_signals.json` agreement, conflict, insufficient
-  evidence, degraded, warning, and error states;
-- `analysis/factor_signal_material.md` Codex boundaries and budget state.
+  evidence, degraded, warning, and error states.
 
 `python -m halpha data inspect --config config.example.yaml` should summarize
-feature/factor artifact status without dumping feature, factor, or signal
-records.
+feature/factor artifact status and material budget state without dumping
+feature, factor, or signal records.
 
 ## Codex And Report Boundary
 

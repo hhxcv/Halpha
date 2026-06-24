@@ -565,14 +565,13 @@ Data quality should cover:
 - duplicate or conflicting records;
 - reusable history status;
 - current-run view coverage;
-- unavailable exchange-flow source states;
-- Codex input boundaries for on-chain flow material.
+- unavailable exchange-flow source states.
 
 `analysis/data_quality_summary.json` should expose separate checks for raw
 on-chain flow, reusable on-chain flow history, current-run views, deterministic
-context, and bounded material. `analysis/data_quality_material.md` may summarize
-those checks for Codex, but must not embed full reusable on-chain history, full
-raw records, or full context JSON.
+context, and structured evidence status. `analysis/data_quality_material.md`
+may summarize those checks for Codex, but must not embed full reusable on-chain
+history, full raw records, or full context JSON.
 
 `python -m halpha data inspect --config config.example.yaml` should report
 on-chain flow state metadata and current-run view counts when the feature is

@@ -671,13 +671,12 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     feature_factor_quality_checks = {
         check["name"]: check
         for check in data_quality_summary["checks"]
-        if check["name"] in {"feature_snapshots", "factor_states", "multi_source_signals", "factor_signal_material"}
+        if check["name"] in {"feature_snapshots", "factor_states", "multi_source_signals"}
     }
     assert set(feature_factor_quality_checks) == {
         "feature_snapshots",
         "factor_states",
         "multi_source_signals",
-        "factor_signal_material",
     }
     assert all(check["status"] != "skipped" for check in feature_factor_quality_checks.values())
     assert all(check["details"].get("stage_time_skip_is_expected") is not True for check in feature_factor_quality_checks.values())

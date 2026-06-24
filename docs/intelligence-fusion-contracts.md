@@ -309,11 +309,11 @@ Data quality and inspection should cover:
 
 - `analysis/intelligence_fusion.json` presence, shape, status, counts,
   warnings, errors, source coverage, and degraded states;
-- `analysis/intelligence_fusion_material.md` Codex boundaries and budget state;
 - decision and alert fusion linked and adjusted counts.
 
 `python -m halpha data inspect --config config.example.yaml` should summarize
-fusion status without dumping fusion records or full upstream records.
+fusion status and material budget state without dumping fusion records or full
+upstream records.
 
 ## Codex And Report Boundary
 

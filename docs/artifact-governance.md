@@ -147,7 +147,9 @@ Fine-grained implementation work may remain inspectable as tasks, but it should
 not be exposed as a long list of top-level product stages. Completed runs are
 immutable product records. Final decision, watch, alert, data-quality, and
 report-facing material artifacts should be written once in their terminal
-stage. A stage rerun against an existing run must be non-destructive: downstream
+stage. The `build_materials` stage writes `analysis/data_quality_summary.json`
+first from finalized structured evidence, then writes report-facing material
+files as deterministic readers. A stage rerun against an existing run must be non-destructive: downstream
 artifacts are either recomputed, explicitly marked stale or not complete, or the
 work is done in a new run. A rerun must not leave stale downstream artifacts
 marked as successful.
@@ -409,8 +411,9 @@ Current-run quality artifact:
 
 `analysis/data_quality_summary.json` records deterministic schema, timestamp,
 duplicate, shared-store, derivatives, macro/calendar, on-chain flow,
-feature/factor, intelligence-fusion, partial-collection, degraded, skipped,
-warning, and failed states.
+feature/factor, intelligence-fusion, personalized-risk, partial-collection,
+degraded, skipped, warning, and failed states from finalized structured
+evidence.
 `analysis/data_quality_material.md` is the bounded Codex-facing summary derived
 from that JSON. Codex may explain Halpha-generated quality
 status, but must not create quality checks, invent validation results, inspect

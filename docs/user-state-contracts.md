@@ -421,8 +421,7 @@ Data quality should cover:
 - presence and shape of `analysis/user_state_context.json`;
 - privacy boundary checks for user-state context;
 - presence and shape of `analysis/personalized_risk_constraints.json`;
-- state counts, action counts, warning counts, and error counts;
-- material boundary metadata and Codex budget state.
+- state counts, action counts, warning counts, and error counts.
 
 `python -m halpha data inspect --config config.example.yaml` should summarize
 user-state and personalized-risk status, counts, state counts, linked/adjusted
