@@ -369,6 +369,10 @@ python -m halpha dashboard stop
 python -m halpha dashboard restart
 python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
+python -m halpha schedule --config config.example.yaml
+python -m halpha schedule status --config config.example.yaml
+python -m halpha schedule stop --config config.example.yaml
+python -m halpha schedule restart --config config.example.yaml
 python -m halpha monitor --help
 python -m halpha monitor run --config config.example.yaml --dry-run
 python -m halpha monitor run --config config.example.yaml --once
@@ -469,6 +473,9 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha stage <stage_name> --config <local-config.yaml> --run-dir runs/<run_id>` for dependency-aware stage reruns; completed parent runs create derived runs, while failed runs may resume in place only from the recorded failed stage.
 * Use `python -m halpha validate --config <local-config.yaml>` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
 * Use `python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
+* Use `python -m halpha schedule status --config <local-config.yaml>` to inspect the independent Schedule service without starting Dashboard, Monitor, collection, pipeline stages, or Codex CLI.
+* Use `python -m halpha schedule --config <local-config.yaml>` to start the independent Schedule service for configured daily report dispatch.
+* Use `python -m halpha schedule stop --config <local-config.yaml>` and `python -m halpha schedule restart --config <local-config.yaml>` for explicit Schedule lifecycle control.
 * Use `python -m halpha monitor run --config <local-config.yaml> --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
 * Use `python -m halpha monitor run --config <local-config.yaml> --once` to validate one bounded monitor cycle, monitor cycle manifest, and state-store alert/cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
 * Use `python -m halpha monitor run --config <local-config.yaml> --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.

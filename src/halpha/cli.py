@@ -23,6 +23,16 @@ from halpha.dashboard import (
 )
 from halpha.data.data_inspection import DataInspectionError, inspect_local_data
 from halpha.runtime.logging_utils import configure_local_logging
+from halpha.runtime.schedule_service import (
+    ScheduleServiceError,
+    load_schedule_startup_config,
+    restart_schedule_service,
+    run_schedule_service,
+    schedule_service_error_message,
+    schedule_service_status,
+    start_schedule_service,
+    stop_schedule_service,
+)
 from halpha.monitor.monitoring import (
     inspect_monitor_health,
     load_monitor_config,
@@ -96,6 +106,24 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Local dashboard port. Defaults to {DEFAULT_DASHBOARD_PORT}.",
     )
     dashboard_parser.add_argument(
+        "--restart-from-instance-id",
+        help=argparse.SUPPRESS,
+    )
+
+    schedule_parser = subparsers.add_parser(
+        "schedule",
+        help="Manage the local Schedule resident service.",
+        description="Manage the local Schedule resident service.",
+    )
+    schedule_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    schedule_parser.add_argument(
+        "schedule_action",
+        nargs="?",
+        choices=("start", "status", "stop", "restart", "service"),
+        default="start",
+        help="Schedule lifecycle action. Defaults to start.",
+    )
+    schedule_parser.add_argument(
         "--restart-from-instance-id",
         help=argparse.SUPPRESS,
     )
@@ -232,6 +260,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             action=args.dashboard_action,
             host=args.host,
             port=args.port,
+            restart_from_instance_id=args.restart_from_instance_id,
+        )
+
+    if args.command == "schedule":
+        return _schedule(
+            args.config,
+            action=args.schedule_action,
             restart_from_instance_id=args.restart_from_instance_id,
         )
 
@@ -570,6 +605,99 @@ def _print_dashboard_service_result(title: str, result: dict) -> None:
     health = result.get("health")
     if isinstance(health, str):
         print(f"health: {health}")
+    for warning in result.get("warnings") or []:
+        print(f"warning: {warning}")
+
+
+def _schedule(
+    config_arg: str,
+    *,
+    action: str,
+    restart_from_instance_id: str | None = None,
+) -> int:
+    config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    LOGGER.info(
+        "Halpha command started.",
+        extra={"event": "cli.command.start", "command": "schedule", "schedule_action": action},
+    )
+
+    startup = None
+    if action in {"start", "restart", "service"}:
+        try:
+            startup = load_schedule_startup_config(config_arg)
+        except ConfigError as exc:
+            LOGGER.warning(
+                "Halpha command failed.",
+                extra={"event": "cli.command.failed", "command": "schedule", "stage": "config", "reason": str(exc)},
+            )
+            print("Halpha schedule failed.")
+            print("stage: config")
+            print(f"reason: {schedule_service_error_message(str(exc), config_path=config_path)}")
+            return 2
+        _configure_logging(config_path=startup.config_path, config=startup.config)
+
+    try:
+        if action == "service":
+            assert startup is not None
+            LOGGER.info(
+                "Halpha schedule service foreground starting.",
+                extra={"event": "schedule.service.foreground.start"},
+            )
+            run_schedule_service(
+                startup.config,
+                config_path=startup.config_path,
+                restart_from_instance_id=restart_from_instance_id,
+            )
+            LOGGER.info(
+                "Halpha schedule service foreground stopped.",
+                extra={"event": "schedule.service.foreground.stopped"},
+            )
+            return 0
+        if action == "start":
+            assert startup is not None
+            result = start_schedule_service(config_arg)
+            _print_schedule_service_result("Halpha schedule started.", result)
+            return 0
+        if action == "status":
+            result = schedule_service_status(config_arg)
+            _print_schedule_service_result("Halpha schedule status.", result)
+            return 0
+        if action == "stop":
+            result = stop_schedule_service(config_arg)
+            _print_schedule_service_result("Halpha schedule stop requested.", result)
+            return 0
+        if action == "restart":
+            assert startup is not None
+            result = restart_schedule_service(config_arg)
+            _print_schedule_service_result("Halpha schedule restarted.", result)
+            return 0
+        raise ScheduleServiceError(f"unsupported schedule action: {action}.")
+    except ScheduleServiceError as exc:
+        LOGGER.error(
+            "Halpha schedule service failed.",
+            extra={"event": "schedule.service.failed", "schedule_action": action, "reason": str(exc)},
+        )
+        print("Halpha schedule failed.")
+        print("stage: schedule")
+        print(f"reason: {schedule_service_error_message(str(exc), config_path=startup.config_path if startup else config_path)}")
+        return exc.exit_code
+    except KeyboardInterrupt:
+        LOGGER.info("Halpha schedule service stopped.", extra={"event": "schedule.service.stopped"})
+        print("Halpha schedule stopped.")
+        return 0
+    return 0
+
+
+def _print_schedule_service_result(title: str, result: dict) -> None:
+    print(title)
+    print(f"status: {result.get('status')}")
+    instance_id = result.get("instance_id")
+    if isinstance(instance_id, str) and instance_id:
+        print(f"instance_id: {instance_id}")
+    pid = result.get("pid")
+    if isinstance(pid, int):
+        print(f"pid: {pid}")
     for warning in result.get("warnings") or []:
         print(f"warning: {warning}")
 

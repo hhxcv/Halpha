@@ -11,7 +11,10 @@ from fastapi.testclient import TestClient
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.runtime.command_jobs import CommandJobManager
+from halpha.runtime.command_job_store import CommandJobRepository
 from halpha.dashboard.schedule import DashboardScheduleManager
+from halpha.runtime.schedule_service import run_schedule_service
+from halpha.runtime.service_lifecycle import ServiceLifecycleRepository
 from halpha.runtime.state_store import runtime_state_path
 
 
@@ -38,6 +41,9 @@ def test_dashboard_daily_report_schedule_reports_missing_state(tmp_path: Path) -
     assert payload["report_generation"]["requires_codex_confirmation"] is True
     assert payload["next_run_at"] is None
     assert payload["source_artifacts"] == [".halpha/state.sqlite"]
+    assert payload["codex_authorization"]["valid"] is False
+    assert payload["runtime_boundary"]["runs_only_while_dashboard_active"] is False
+    assert payload["runtime_boundary"]["automatic_dispatch"] == "schedule_service"
     assert payload["runtime_boundary"]["hidden_service"] is False
     assert payload["runtime_boundary"]["hosted_scheduler"] is False
     assert str(tmp_path) not in response.text
@@ -248,7 +254,7 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
 
     client.post(
         "/api/schedule/daily-report/enable",
-        json={"time_of_day": "08:30", "timezone": "UTC", "job_intent": "run"},
+        json={"time_of_day": "08:30", "timezone": "UTC", "job_intent": "run", "confirm_codex": True},
     )
     trigger_response = client.post("/api/schedule/daily-report/trigger", json={"confirm_codex": True})
     trigger_payload = trigger_response.json()
@@ -258,6 +264,7 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
     assert trigger_response.status_code == 200
     assert trigger_payload["status"] == "available"
     assert trigger_payload["schedule"]["settings"]["job_intent"] == "run"
+    assert trigger_payload["schedule"]["codex_authorization"]["valid"] is True
     assert trigger_payload["schedule"]["report_generation"]["generates_report"] is True
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run"
@@ -309,6 +316,33 @@ def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(
     assert completed["status"] == "succeeded"
     assert result["errors"] == []
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path.resolve()), "--no-codex"]]
+
+
+def test_dashboard_daily_report_authorized_codex_dispatch_creates_report_job(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    current = {"value": datetime(2026, 6, 20, 0, 0, tzinfo=timezone.utc)}
+    monkeypatch.setattr("halpha.dashboard.schedule._utc_now_datetime", lambda: current["value"])
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    job_manager = _RecordingJobManager()
+    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)  # type: ignore[arg-type]
+    enabled = schedule_manager.enable_daily_report_schedule(
+        {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run", "confirm_codex": True}
+    )
+    current["value"] = datetime(2026, 6, 20, 0, 2, tzinfo=timezone.utc)
+
+    result = schedule_manager.dispatch_due_daily_report()
+    schedule = schedule_manager.read_daily_report_schedule()
+
+    assert enabled["codex_authorization"]["valid"] is True
+    assert result["status"] == "available"
+    assert result["job"]["intent"] == "run"
+    assert job_manager.created_intents == ["run"]
+    assert job_manager.created_requests[0]["params"] == {"confirm_codex": True}
+    assert schedule["dispatches"][0]["status"] == "job_succeeded"
+    assert schedule["dispatches"][0]["report_ref"] is None
 
 
 def test_dashboard_daily_report_repeated_due_dispatch_claims_once(
@@ -379,6 +413,40 @@ def test_dashboard_daily_report_concurrent_due_dispatch_claims_one_job(
     assert [dispatch["scheduled_for"] for dispatch in schedule["dispatches"]] == ["2026-06-20T00:01:00Z"]
 
 
+def test_dashboard_daily_report_catch_up_marks_older_due_occurrences_missed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    current = {"value": datetime(2026, 6, 20, 0, 0, tzinfo=timezone.utc)}
+    monkeypatch.setattr("halpha.dashboard.schedule._utc_now_datetime", lambda: current["value"])
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    job_manager = _RecordingJobManager()
+    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)  # type: ignore[arg-type]
+    schedule_manager.enable_daily_report_schedule(
+        {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run_no_codex"}
+    )
+    current["value"] = datetime(2026, 6, 23, 0, 2, tzinfo=timezone.utc)
+
+    result = schedule_manager.dispatch_due_daily_report()
+    schedule = schedule_manager.read_daily_report_schedule()
+
+    assert result["status"] == "available"
+    assert job_manager.created_intents == ["run_no_codex"]
+    assert [dispatch["scheduled_for"] for dispatch in schedule["dispatches"]] == [
+        "2026-06-23T00:01:00Z",
+        "2026-06-22T00:01:00Z",
+        "2026-06-21T00:01:00Z",
+        "2026-06-20T00:01:00Z",
+    ]
+    assert [dispatch["status"] for dispatch in schedule["dispatches"]] == [
+        "job_succeeded",
+        "missed",
+        "missed",
+        "missed",
+    ]
+
+
 def test_dashboard_daily_report_dispatch_records_job_creation_failure(
     tmp_path: Path,
     monkeypatch,
@@ -429,7 +497,7 @@ def test_dashboard_daily_report_read_reconciles_completed_report_link(
     assert schedule["dispatches"][0]["report_ref"] == "runs/run-1/report/report.md"
 
 
-def test_dashboard_daily_report_dispatcher_creates_due_no_codex_job(
+def test_schedule_service_foreground_cycle_creates_due_no_codex_job(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -444,26 +512,26 @@ def test_dashboard_daily_report_dispatcher_creates_due_no_codex_job(
         return _FakeProcess(stdout="Halpha run succeeded.\nrun_id: run-auto", stderr="", returncode=0)
 
     monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
-    job_manager = CommandJobManager(config, config_path=config_path)
-    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
+    setup_job_manager = CommandJobManager(config, config_path=config_path)
+    schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=setup_job_manager)
     schedule_manager.enable_daily_report_schedule(
         {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run_no_codex"}
     )
     current["value"] = datetime(2026, 6, 20, 0, 2, tzinfo=timezone.utc)
 
-    try:
-        schedule_manager.start_daily_report_dispatcher(interval_seconds=0.01)
-        schedule = _wait_for_dispatched_schedule(schedule_manager)
-    finally:
-        schedule_manager.stop_daily_report_dispatcher()
+    run_schedule_service(config, config_path=config_path, max_cycles=1)
 
+    reader = DashboardScheduleManager(config, config_path=config_path, job_manager=_RepositoryJobReader(config_path))  # type: ignore[arg-type]
+    schedule = _wait_for_schedule_terminal_dispatch(reader)
     job_id = schedule["last_job_id"]
-    completed = _wait_for_manager_terminal(job_manager, job_id)
+    completed = _wait_for_repository_terminal(CommandJobRepository(config_path=config_path), job_id)
+    lifecycle = ServiceLifecycleRepository(runtime_root=tmp_path).inspect("schedule")
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
     assert schedule["last_run_at"] == "2026-06-20T00:02:00Z"
     assert schedule["linked_job_ids"] == [job_id]
     assert schedule["next_run_at"] == "2026-06-21T00:01:00Z"
+    assert lifecycle.status == "stopped"
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path.resolve()), "--no-codex"]]
 
 
@@ -487,7 +555,7 @@ def test_dashboard_daily_report_dispatch_skips_disabled_and_not_due(tmp_path: Pa
     assert not_due["warnings"] == ["daily report schedule is not due."]
 
 
-def test_dashboard_daily_report_dispatch_blocks_codex_capable_automatic_run(
+def test_dashboard_daily_report_dispatch_blocks_codex_when_authorization_is_invalidated(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -502,15 +570,21 @@ def test_dashboard_daily_report_dispatch_blocks_codex_capable_automatic_run(
     monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
     job_manager = CommandJobManager(config, config_path=config_path)
     schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=job_manager)
-    schedule_manager.enable_daily_report_schedule({"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run"})
+    enabled = schedule_manager.enable_daily_report_schedule(
+        {"time_of_day": "00:01", "timezone": "UTC", "job_intent": "run", "confirm_codex": True}
+    )
+    changed_config = {**config, "codex": {"enabled": True}}
+    changed_manager = DashboardScheduleManager(changed_config, config_path=config_path, job_manager=job_manager)
     current["value"] = datetime(2026, 6, 20, 0, 2, tzinfo=timezone.utc)
 
-    result = schedule_manager.dispatch_due_daily_report()
-    persisted = schedule_manager.read_daily_report_schedule()
+    result = changed_manager.dispatch_due_daily_report()
+    persisted = changed_manager.read_daily_report_schedule()
 
+    assert enabled["codex_authorization"]["valid"] is True
+    assert persisted["codex_authorization"]["valid"] is False
     assert result["status"] == "blocked"
     assert result["job"] is None
-    assert result["errors"] == ["automatic Codex-capable daily report dispatch requires manual confirmation."]
+    assert result["errors"] == ["unattended Codex-capable daily report dispatch requires valid persisted authorization."]
     assert persisted["status"] == "blocked"
     assert persisted["errors"] == result["errors"]
     assert persisted["next_run_at"] == "2026-06-21T00:01:00Z"
@@ -534,10 +608,12 @@ class _RecordingJobManager:
     def __init__(self, *, initial_status: str = "succeeded") -> None:
         self.initial_status = initial_status
         self.created_intents: list[str] = []
+        self.created_requests: list[dict] = []
         self.jobs: dict[str, dict] = {}
 
     def create_job(self, request: dict) -> dict:
         self.created_intents.append(str(request.get("intent") or ""))
+        self.created_requests.append(request)
         job_id = f"job-{len(self.created_intents)}"
         job = {
             "schema_version": 1,
@@ -573,6 +649,14 @@ class _FailingJobManager:
         return None
 
 
+class _RepositoryJobReader:
+    def __init__(self, config_path: Path) -> None:
+        self._repository = CommandJobRepository(config_path=config_path)
+
+    def get_job(self, job_id: str) -> dict | None:
+        return self._repository.get_job(job_id)
+
+
 def _wait_for_api_terminal(client: TestClient, job_id: str) -> dict:
     for _ in range(50):
         response = client.get(f"/api/jobs/{job_id}")
@@ -583,6 +667,25 @@ def _wait_for_api_terminal(client: TestClient, job_id: str) -> dict:
     raise AssertionError(f"job did not finish: {job_id}")
 
 
+def _wait_for_repository_terminal(repository: CommandJobRepository, job_id: str) -> dict:
+    for _ in range(50):
+        payload = repository.get_job(job_id)
+        if payload and payload["status"] in {"succeeded", "failed", "cancelled", "unsupported", "blocked"}:
+            return payload
+        time.sleep(0.05)
+    raise AssertionError(f"job did not finish: {job_id}")
+
+
+def _wait_for_schedule_terminal_dispatch(manager: DashboardScheduleManager) -> dict:
+    for _ in range(50):
+        schedule = manager.read_daily_report_schedule()
+        dispatches = schedule.get("dispatches") if isinstance(schedule.get("dispatches"), list) else []
+        if dispatches and dispatches[0].get("terminal_status"):
+            return schedule
+        time.sleep(0.05)
+    raise AssertionError("daily report schedule dispatch did not reach a terminal job state")
+
+
 def _wait_for_manager_terminal(manager: CommandJobManager, job_id: str) -> dict:
     for _ in range(50):
         payload = manager.get_job(job_id)
@@ -590,15 +693,6 @@ def _wait_for_manager_terminal(manager: CommandJobManager, job_id: str) -> dict:
             return payload
         time.sleep(0.05)
     raise AssertionError(f"job did not finish: {job_id}")
-
-
-def _wait_for_dispatched_schedule(manager: DashboardScheduleManager) -> dict:
-    for _ in range(100):
-        schedule = manager.read_daily_report_schedule()
-        if schedule.get("last_job_id"):
-            return schedule
-        time.sleep(0.02)
-    raise AssertionError("daily report dispatcher did not create a job")
 
 
 def _write_config(tmp_path: Path) -> Path:

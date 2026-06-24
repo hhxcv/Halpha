@@ -153,8 +153,23 @@ does not expose arbitrary shell execution.
 Daily report schedule configuration and dispatch history are explicit local
 runtime state in `.halpha/state.sqlite`. The implemented schedule API can
 inspect, enable, disable, update, and manually trigger daily report jobs
-through shared command jobs. It does not install an OS scheduler, hosted scheduler,
-startup task, cron job, workflow engine, or hidden daemon.
+through shared command jobs. Automatic due dispatch belongs to the independent
+`schedule` resident service, not the Dashboard process. It does not install an
+OS scheduler, hosted scheduler, startup task, cron job, workflow engine, or
+fourth resident process.
+
+Manage the local Schedule service through the shared lifecycle controller:
+
+```bash
+python -m halpha schedule --config config.example.yaml
+python -m halpha schedule status --config config.example.yaml
+python -m halpha schedule stop --config config.example.yaml
+python -m halpha schedule restart --config config.example.yaml
+```
+
+Codex-capable unattended schedules require persisted confirmation tied to the
+current schedule revision, selected config ref, and config digest. No-Codex
+scheduled runs are labeled as no-report runs.
 
 The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
