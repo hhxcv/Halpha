@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import logging
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -17,15 +19,20 @@ from halpha.runtime.pipeline_contracts import (
 from halpha.pipeline_stage_handlers import default_stage_handlers
 from halpha.pipeline_stages import (
     DECISION_INTELLIGENCE_STAGES,
+    STAGE_OPERATION_MAP,
     STAGE_ORDER,
+    downstream_closure as _downstream_closure,
     stages_after as _stages_after,
+    stages_before as _stages_before,
     validate_optional_stage as _validate_optional_stage,
     validate_stage as _validate_stage,
+    validate_stage_graph as _validate_stage_graph,
 )
 from halpha.storage import artifact_base, config_base, display_path, ensure_directory, write_json
 
 
 LOGGER = logging.getLogger(__name__)
+RUN_LOCAL_ARTIFACT_PREFIXES = ("raw/", "analysis/", "codex_context/", "report/")
 
 
 def run_pipeline(
@@ -38,6 +45,7 @@ def run_pipeline(
     skip_codex: bool = False,
 ) -> RunResult:
     _validate_optional_stage(until_stage, option_name="--until")
+    _validate_stage_graph()
     clock = _clock(now)
     run = _create_run_context(config, config_path=config_path, now=clock())
     _record_validation_mode(run, until_stage=until_stage, skip_codex=skip_codex)
@@ -116,50 +124,151 @@ def run_pipeline_stage(
     now: datetime | None = None,
 ) -> RunResult:
     _validate_stage(stage, option_name="stage")
+    _validate_stage_graph()
     clock = _clock(now)
-    run = _load_run_context(config, config_path=config_path, run_dir=run_dir)
+    source_run = _load_run_context(config, config_path=config_path, run_dir=run_dir)
     LOGGER.info(
-        "Pipeline single stage started.",
-        extra={"event": "pipeline.single_stage.start", "run_id": run.run_id, "stage": stage},
+        "Pipeline stage rerun started.",
+        extra={"event": "pipeline.stage_rerun.start", "run_id": source_run.run_id, "stage": stage},
     )
-    run.manifest["status"] = "running"
-    run.manifest["single_stage_validation"] = {
-        "stage": stage,
-        "requested_at": _utc_timestamp(clock()),
-    }
-    _write_manifest(run)
-
-    stage_record: dict[str, Any] = {
-        "name": stage,
-        "status": "running",
-        "started_at": _utc_timestamp(clock()),
-        "finished_at": None,
-        "artifacts": [],
-        "mode": "single_stage",
-    }
-    run.manifest["stages"].append(stage_record)
-    _set_codex_status(run, stage=stage, status="running")
-    _write_manifest(run)
-
     handlers = default_stage_handlers(stage_handlers)
-    failure = _run_stage_handler(
+    if source_run.manifest.get("status") == "succeeded":
+        return _run_derived_stage_rerun(
+            config,
+            source_run,
+            config_path=config_path,
+            stage=stage,
+            handlers=handlers,
+            clock=clock,
+        )
+    return _resume_pipeline_stage(
+        config,
+        source_run,
+        stage=stage,
+        handlers=handlers,
+        clock=clock,
+    )
+
+
+def _run_derived_stage_rerun(
+    config: dict[str, Any],
+    parent: RunContext,
+    *,
+    config_path: Path,
+    stage: str,
+    handlers: dict[str, StageHandler],
+    clock: Callable[[], datetime],
+) -> RunResult:
+    terminal_stage = _rerun_terminal_stage(parent, stage=stage)
+    closure = _downstream_closure(stage, through_stage=terminal_stage)
+    reusable_stages = _stages_before(stage)
+    reusable_records = _validated_reusable_stage_records(parent, reusable_stages)
+    reusable_refs = _stage_artifact_refs(reusable_records)
+    _validate_reusable_artifacts(parent, reusable_records)
+
+    run = _create_run_context(config, config_path=config_path, now=clock())
+    skip_codex = _inherits_no_codex(parent)
+    _prepare_derived_manifest(
+        run,
+        parent,
+        stage=stage,
+        terminal_stage=terminal_stage,
+        closure=closure,
+        reusable_records=reusable_records,
+        reusable_refs=reusable_refs,
+        skip_codex=skip_codex,
+        requested_at=_utc_timestamp(clock()),
+    )
+    _copy_reusable_artifacts(parent, run, reusable_refs)
+    _write_manifest(run)
+
+    failure = _run_stage_sequence(
         config,
         run,
-        handlers[stage],
-        stage=stage,
-        stage_record=stage_record,
+        closure,
+        handlers=handlers,
         clock=clock,
+        mode="recomputed",
+        skip_codex=skip_codex,
     )
     if failure:
         return failure
+
+    if terminal_stage != STAGE_ORDER[-1]:
+        _record_not_run_stages(
+            run,
+            _stages_after(terminal_stage),
+            reason=f"stage rerun validation ended at {terminal_stage}",
+        )
 
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
     _record_terminal_local_data_state(config, run, clock=clock)
     LOGGER.info(
-        "Pipeline single stage succeeded.",
-        extra={"event": "pipeline.single_stage.succeeded", "run_id": run.run_id, "stage": stage},
+        "Pipeline stage rerun succeeded.",
+        extra={
+            "event": "pipeline.stage_rerun.succeeded",
+            "run_id": run.run_id,
+            "parent_run_id": parent.run_id,
+            "stage": stage,
+        },
+    )
+    return RunResult(True, run, 0, None, None)
+
+
+def _resume_pipeline_stage(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    stage: str,
+    handlers: dict[str, StageHandler],
+    clock: Callable[[], datetime],
+) -> RunResult:
+    terminal_stage = _resume_terminal_stage(run, stage=stage)
+    closure = _downstream_closure(stage, through_stage=terminal_stage)
+    _validate_resume_request(run, stage=stage)
+    _validate_reusable_artifacts(run, _validated_reusable_stage_records(run, _stages_before(stage)))
+    skip_codex = _inherits_no_codex(run)
+
+    run.manifest["status"] = "running"
+    run.manifest["finished_at"] = None
+    run.manifest["stage_rerun"] = {
+        "mode": "resume_in_place",
+        "requested_operation_id": stage,
+        "terminal_operation_id": terminal_stage,
+        "downstream_closure": list(closure),
+        "requested_at": _utc_timestamp(clock()),
+    }
+    _truncate_manifest_for_resume(run, stage=stage)
+    _write_manifest(run)
+
+    failure = _run_stage_sequence(
+        config,
+        run,
+        closure,
+        handlers=handlers,
+        clock=clock,
+        mode="resume",
+        skip_codex=skip_codex,
+    )
+    if failure:
+        return failure
+
+    if terminal_stage != STAGE_ORDER[-1]:
+        _record_not_run_stages(
+            run,
+            _stages_after(terminal_stage),
+            reason=f"stage resume validation ended at {terminal_stage}",
+        )
+
+    run.manifest["status"] = "succeeded"
+    run.manifest["finished_at"] = _utc_timestamp(clock())
+    _write_manifest(run)
+    _record_terminal_local_data_state(config, run, clock=clock)
+    LOGGER.info(
+        "Pipeline stage resume succeeded.",
+        extra={"event": "pipeline.stage_resume.succeeded", "run_id": run.run_id, "stage": stage},
     )
     return RunResult(True, run, 0, None, None)
 
@@ -261,6 +370,408 @@ def _load_run_context(config: dict[str, Any], *, config_path: Path, run_dir: Pat
         config_path=config_path,
         manifest=manifest,
     )
+
+
+def _run_stage_sequence(
+    config: dict[str, Any],
+    run: RunContext,
+    stages: list[str],
+    *,
+    handlers: dict[str, StageHandler],
+    clock: Callable[[], datetime],
+    mode: str,
+    skip_codex: bool,
+) -> RunResult | None:
+    for stage in stages:
+        stage_record: dict[str, Any] = {
+            "name": stage,
+            "status": "running",
+            "started_at": _utc_timestamp(clock()),
+            "finished_at": None,
+            "artifacts": [],
+            "mode": mode,
+        }
+        run.manifest["stages"].append(stage_record)
+        _set_codex_status(run, stage=stage, status="running")
+        _write_manifest(run)
+
+        if skip_codex and stage == "run_codex_report":
+            _skip_stage(
+                run,
+                stage_record,
+                stage=stage,
+                reason="--no-codex requested",
+                finished_at=_utc_timestamp(clock()),
+            )
+        else:
+            failure = _run_stage_handler(
+                config,
+                run,
+                handlers[stage],
+                stage=stage,
+                stage_record=stage_record,
+                clock=clock,
+            )
+            if failure:
+                return failure
+        _write_manifest(run)
+    return None
+
+
+def _prepare_derived_manifest(
+    run: RunContext,
+    parent: RunContext,
+    *,
+    stage: str,
+    terminal_stage: str,
+    closure: list[str],
+    reusable_records: list[dict[str, Any]],
+    reusable_refs: list[str],
+    skip_codex: bool,
+    requested_at: str,
+) -> None:
+    run.manifest["artifacts"] = _reused_manifest_artifacts(parent.manifest, reusable_refs)
+    run.manifest["counts"] = deepcopy(parent.manifest.get("counts")) if isinstance(parent.manifest.get("counts"), dict) else {}
+    run.manifest["stages"] = [_reused_stage_record(parent.run_id, record) for record in reusable_records]
+    run.manifest["parent_run_id"] = parent.run_id
+    run.manifest["lineage"] = {
+        "parent_run_id": parent.run_id,
+        "parent_run_dir": display_path(parent.run_dir, base=artifact_base(parent.config_path)),
+        "parent_manifest": display_path(parent.manifest_path, base=artifact_base(parent.config_path)),
+    }
+    run.manifest["stage_rerun"] = {
+        "mode": "derived_run",
+        "parent_run_id": parent.run_id,
+        "requested_operation_id": stage,
+        "terminal_operation_id": terminal_stage,
+        "downstream_closure": list(closure),
+        "reused_operation_ids": [str(record.get("name")) for record in reusable_records],
+        "reused_artifacts": list(reusable_refs),
+        "requested_at": requested_at,
+    }
+    run.manifest["validation"] = {
+        "mode": "stage_rerun",
+        "until_stage": None if terminal_stage == STAGE_ORDER[-1] else terminal_stage,
+        "skip_codex": skip_codex,
+    }
+    if any(record.get("name") == "run_codex_report" for record in reusable_records) and isinstance(
+        parent.manifest.get("codex"), dict
+    ):
+        run.manifest["codex"] = deepcopy(parent.manifest["codex"])
+
+
+def _rerun_terminal_stage(parent: RunContext, *, stage: str) -> str:
+    until_stage = _manifest_until_stage(parent)
+    if until_stage is None:
+        return STAGE_ORDER[-1]
+
+    requested_index = STAGE_ORDER.index(stage)
+    until_index = STAGE_ORDER.index(until_stage)
+    if requested_index <= until_index:
+        return until_stage
+    if requested_index == until_index + 1:
+        return stage
+    missing = STAGE_ORDER[until_index + 1]
+    raise PipelineError(
+        f"requested stage {stage} depends on parent operation {missing}, which was not run.",
+        stage="stage",
+        exit_code=3,
+    )
+
+
+def _resume_terminal_stage(run: RunContext, *, stage: str) -> str:
+    return _rerun_terminal_stage(run, stage=stage)
+
+
+def _manifest_until_stage(run: RunContext) -> str | None:
+    validation = run.manifest.get("validation")
+    if not isinstance(validation, dict):
+        return None
+    until_stage = validation.get("until_stage")
+    if until_stage is None:
+        return None
+    if not isinstance(until_stage, str) or until_stage not in STAGE_ORDER:
+        raise PipelineError(
+            "parent run validation metadata references an unknown until_stage.",
+            stage="stage",
+            exit_code=3,
+        )
+    return until_stage
+
+
+def _validated_reusable_stage_records(run: RunContext, stages: list[str]) -> list[dict[str, Any]]:
+    records_by_stage = _latest_stage_records(run.manifest)
+    records: list[dict[str, Any]] = []
+    for stage in stages:
+        record = records_by_stage.get(stage)
+        if record is None:
+            raise PipelineError(
+                f"parent run is missing upstream operation {stage}.",
+                stage="stage",
+                exit_code=3,
+            )
+        status = str(record.get("status") or "")
+        if status not in {"succeeded", "skipped", "disabled"}:
+            raise PipelineError(
+                f"upstream operation {stage} cannot be reused because its status is {status or 'unknown'}.",
+                stage="stage",
+                exit_code=3,
+            )
+        records.append(record)
+    return records
+
+
+def _latest_stage_records(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    records: dict[str, dict[str, Any]] = {}
+    stages = manifest.get("stages")
+    if not isinstance(stages, list):
+        return records
+    for record in stages:
+        if not isinstance(record, dict):
+            continue
+        stage = record.get("name")
+        if isinstance(stage, str) and stage in STAGE_ORDER:
+            records[stage] = record
+    return records
+
+
+def _stage_artifact_refs(records: list[dict[str, Any]]) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for record in records:
+        for ref in _artifact_ref_strings(record.get("artifacts")):
+            if ref not in seen:
+                refs.append(ref)
+                seen.add(ref)
+    return refs
+
+
+def _artifact_ref_strings(value: Any) -> list[str]:
+    if isinstance(value, str) and value:
+        return [value]
+    if isinstance(value, list):
+        refs: list[str] = []
+        for item in value:
+            refs.extend(_artifact_ref_strings(item))
+        return refs
+    if isinstance(value, dict):
+        refs: list[str] = []
+        for item in value.values():
+            refs.extend(_artifact_ref_strings(item))
+        return refs
+    return []
+
+
+def _validate_reusable_artifacts(run: RunContext, records: list[dict[str, Any]]) -> None:
+    for record in records:
+        stage = str(record.get("name") or "stage")
+        for ref in _artifact_ref_strings(record.get("artifacts")):
+            path = _run_artifact_path(run, ref, stage=stage)
+            if not path.exists():
+                raise PipelineError(
+                    f"reusable upstream artifact {ref} from operation {stage} was not found.",
+                    stage="stage",
+                    exit_code=3,
+                )
+
+
+def _copy_reusable_artifacts(parent: RunContext, run: RunContext, refs: list[str]) -> None:
+    for ref in refs:
+        if not _is_run_local_artifact_ref(ref):
+            continue
+        source = _run_artifact_path(parent, ref, stage="stage")
+        target = _run_artifact_path(run, ref, stage="stage")
+        ensure_directory(target.parent)
+        if source.is_dir():
+            shutil.copytree(source, target, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source, target)
+
+
+def _run_artifact_path(run: RunContext, ref: str, *, stage: str) -> Path:
+    artifact_ref = Path(ref)
+    if artifact_ref.is_absolute() or any(part == ".." for part in artifact_ref.parts):
+        raise PipelineError(
+            f"artifact ref {ref} from operation {stage} must stay inside the run directory.",
+            stage="stage",
+            exit_code=3,
+        )
+    base = run.run_dir if _is_run_local_artifact_ref(ref) else artifact_base(run.config_path)
+    return base / artifact_ref
+
+
+def _is_run_local_artifact_ref(ref: str) -> bool:
+    normalized = ref.replace("\\", "/")
+    return normalized.startswith(RUN_LOCAL_ARTIFACT_PREFIXES)
+
+
+def _reused_manifest_artifacts(manifest: dict[str, Any], reusable_refs: list[str]) -> dict[str, Any]:
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return {}
+    reusable = set(reusable_refs)
+    reused: dict[str, Any] = {}
+    for key, value in artifacts.items():
+        filtered = _filter_artifact_value(value, reusable)
+        if filtered is not None:
+            reused[str(key)] = filtered
+    return reused
+
+
+def _filter_artifact_value(value: Any, reusable_refs: set[str]) -> Any:
+    if isinstance(value, str):
+        return value if value in reusable_refs else None
+    if isinstance(value, list):
+        filtered = [_filter_artifact_value(item, reusable_refs) for item in value]
+        return [item for item in filtered if item is not None] or None
+    if isinstance(value, dict):
+        filtered = {str(key): _filter_artifact_value(item, reusable_refs) for key, item in value.items()}
+        filtered = {key: item for key, item in filtered.items() if item is not None}
+        return filtered or None
+    return None
+
+
+def _reused_stage_record(parent_run_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    reused = deepcopy(record)
+    reused["mode"] = "reused"
+    reused["source_run_id"] = parent_run_id
+    return reused
+
+
+def _inherits_no_codex(run: RunContext) -> bool:
+    validation = run.manifest.get("validation")
+    if isinstance(validation, dict) and validation.get("skip_codex") is True:
+        return True
+    codex = run.manifest.get("codex")
+    if not isinstance(codex, dict):
+        return False
+    return codex.get("status") == "skipped" and codex.get("skip_reason") == "--no-codex requested"
+
+
+def _validate_resume_request(run: RunContext, *, stage: str) -> None:
+    status = str(run.manifest.get("status") or "")
+    if status == "succeeded":
+        raise PipelineError(
+            "completed successful runs are immutable; rerun created a derived run instead of resuming in place.",
+            stage="stage",
+            exit_code=3,
+        )
+    if status == "failed":
+        failed_stage = _first_failed_stage(run.manifest)
+        if failed_stage is None:
+            raise PipelineError(
+                "failed run cannot be resumed because no failed operation is recorded.",
+                stage="stage",
+                exit_code=3,
+            )
+        if failed_stage != stage:
+            raise PipelineError(
+                f"failed run can only resume from failed operation {failed_stage}.",
+                stage="stage",
+                exit_code=3,
+            )
+        return
+    if status != "running":
+        raise PipelineError(
+            f"run status {status or 'unknown'} cannot be resumed in place.",
+            stage="stage",
+            exit_code=3,
+        )
+
+
+def _first_failed_stage(manifest: dict[str, Any]) -> str | None:
+    stages = manifest.get("stages")
+    if not isinstance(stages, list):
+        return None
+    for record in stages:
+        if not isinstance(record, dict):
+            continue
+        stage = record.get("name")
+        if record.get("status") == "failed" and isinstance(stage, str):
+            return stage
+    return None
+
+
+def _truncate_manifest_for_resume(run: RunContext, *, stage: str) -> None:
+    start_index = STAGE_ORDER.index(stage)
+    stages = run.manifest.get("stages")
+    if not isinstance(stages, list):
+        run.manifest["stages"] = []
+        return
+
+    kept: list[dict[str, Any]] = []
+    removed_refs: list[str] = []
+    removed_stages: list[str] = []
+    for record in stages:
+        if not isinstance(record, dict):
+            continue
+        name = record.get("name")
+        if not isinstance(name, str) or name not in STAGE_ORDER:
+            continue
+        if STAGE_ORDER.index(name) < start_index:
+            kept.append(record)
+        else:
+            removed_stages.append(name)
+            removed_refs.extend(_artifact_ref_strings(record.get("artifacts")))
+    removed_refs.extend(_operation_output_refs(removed_stages))
+    run.manifest["stages"] = kept
+    _drop_manifest_artifacts(run, removed_refs)
+    _delete_artifact_refs(run, removed_refs)
+    _drop_stage_errors(run, start_index=start_index)
+
+
+def _operation_output_refs(stages: list[str]) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for stage in stages:
+        operation = STAGE_OPERATION_MAP.get(stage)
+        if operation is None:
+            continue
+        for ref in operation.outputs:
+            if ref not in seen:
+                refs.append(ref)
+                seen.add(ref)
+    return refs
+
+
+def _drop_manifest_artifacts(run: RunContext, refs: list[str]) -> None:
+    artifacts = run.manifest.get("artifacts")
+    if not isinstance(artifacts, dict) or not refs:
+        return
+    stale_refs = set(refs)
+    filtered: dict[str, Any] = {}
+    for key, value in artifacts.items():
+        kept = _filter_artifact_value(value, set(_artifact_ref_strings(value)) - stale_refs)
+        if kept is not None:
+            filtered[str(key)] = kept
+    run.manifest["artifacts"] = filtered
+
+
+def _delete_artifact_refs(run: RunContext, refs: list[str]) -> None:
+    for ref in sorted(set(refs)):
+        if not _is_run_local_artifact_ref(ref):
+            continue
+        path = _run_artifact_path(run, ref, stage="stage")
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.exists():
+            path.unlink()
+
+
+def _drop_stage_errors(run: RunContext, *, start_index: int) -> None:
+    errors = run.manifest.get("errors")
+    if not isinstance(errors, list):
+        run.manifest["errors"] = []
+        return
+    kept: list[Any] = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        stage = error.get("stage")
+        if isinstance(stage, str) and stage in STAGE_ORDER and STAGE_ORDER.index(stage) >= start_index:
+            continue
+        kept.append(error)
+    run.manifest["errors"] = kept
 
 
 def _run_stage_handler(

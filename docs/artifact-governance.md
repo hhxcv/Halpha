@@ -152,6 +152,19 @@ artifacts are either recomputed, explicitly marked stale or not complete, or the
 work is done in a new run. A rerun must not leave stale downstream artifacts
 marked as successful.
 
+Implemented `python -m halpha stage` behavior:
+
+- completed successful parent runs are immutable and produce a new derived run;
+- the derived run manifest records `parent_run_id`, bounded lineage, the
+  requested operation, reused upstream operations, reused artifact refs, and
+  the recomputed downstream closure;
+- upstream run-local artifacts outside the closure are copied after validation,
+  while shared local store refs are validated and reused by reference;
+- partial parent runs preserve their validation boundary and mark later stages
+  as `not_run`;
+- failed parent runs may resume in place only from the recorded failed
+  operation.
+
 ## Flow And Artifacts
 
 ### Raw Collection

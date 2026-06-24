@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from halpha.pipeline_stage_handlers import default_stage_handlers
-from halpha.pipeline_stages import STAGE_ORDER
+from halpha.pipeline_stages import STAGE_ORDER, downstream_closure, operation_metadata, validate_stage_graph
 from halpha.stage_handlers import DOMAIN_STAGE_HANDLER_FACTORIES, domain_stage_handlers
 
 
@@ -10,6 +10,32 @@ def test_default_stage_handlers_cover_stage_order_without_fallbacks() -> None:
 
     assert list(handlers) == list(STAGE_ORDER)
     assert all("_unimplemented_handler" not in handler.__qualname__ for handler in handlers.values())
+
+
+def test_pipeline_operation_graph_covers_stage_order_and_is_acyclic() -> None:
+    validate_stage_graph()
+
+    metadata = operation_metadata()
+    assert [operation["operation_id"] for operation in metadata] == list(STAGE_ORDER)
+    assert metadata[0]["dependencies"] == []
+    assert metadata[0]["outputs"] == ["raw/market.json"]
+    assert metadata[1]["dependencies"] == [STAGE_ORDER[0]]
+    assert next(operation for operation in metadata if operation["operation_id"] == "run_codex_report")[
+        "enabled_condition"
+    ] == "codex.enabled and not --no-codex"
+
+
+def test_downstream_closure_uses_canonical_order_and_terminal_boundary() -> None:
+    assert downstream_closure("build_research_context") == [
+        "build_research_context",
+        "build_codex_context",
+        "run_codex_report",
+        "validate_product_contracts",
+    ]
+    assert downstream_closure("build_research_context", through_stage="build_codex_context") == [
+        "build_research_context",
+        "build_codex_context",
+    ]
 
 
 def test_domain_stage_handler_registries_are_disjoint_and_complete() -> None:

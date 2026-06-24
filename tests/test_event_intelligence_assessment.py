@@ -56,7 +56,7 @@ def test_event_intelligence_assessment_records_supported_event(tmp_path: Path) -
     assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
 
-def test_event_intelligence_assessment_single_stage_rerun(tmp_path: Path) -> None:
+def test_event_intelligence_assessment_stage_rerun(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     initial = _run_assessment_pipeline(config, config_path)
@@ -70,9 +70,9 @@ def test_event_intelligence_assessment_single_stage_rerun(tmp_path: Path) -> Non
 
     assert result.succeeded is True
     manifest = _manifest(result)
-    assert manifest["stages"][-1]["name"] == "build_event_intelligence_assessment"
-    assert manifest["stages"][-1]["mode"] == "single_stage"
-    assert manifest["stages"][-1]["artifacts"] == ["analysis/event_intelligence_assessment.json"]
+    rerun_stage = _stage(manifest, "build_event_intelligence_assessment")
+    assert rerun_stage["mode"] == "recomputed"
+    assert rerun_stage["artifacts"] == ["analysis/event_intelligence_assessment.json"]
     assert _assessment(result)["records"]
 
 

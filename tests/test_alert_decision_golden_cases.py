@@ -114,9 +114,9 @@ def test_alert_decision_golden_cases_cover_priority_downgrade_and_material_bound
     )
     rerun_manifest = _manifest(rerun)
     assert rerun.succeeded is True
-    assert rerun_manifest["stages"][-1]["name"] == "build_alert_decision_material"
-    assert rerun_manifest["stages"][-1]["mode"] == "single_stage"
-    assert rerun_manifest["stages"][-1]["artifacts"] == ["analysis/alert_decision_material.md"]
+    rerun_stage = _stage(rerun_manifest, "build_alert_decision_material")
+    assert rerun_stage["mode"] == "recomputed"
+    assert rerun_stage["artifacts"] == ["analysis/alert_decision_material.md"]
     assert rerun_manifest["counts"]["alert_decision_material_records"] == 6
 
 
