@@ -242,7 +242,7 @@ def test_pipeline_unexpected_exception_diagnostic_redacts_private_values(tmp_pat
     assert str(tmp_path) not in manifest_text
 
 
-def test_single_stage_records_finished_at_after_handler_returns(tmp_path: Path, monkeypatch) -> None:
+def test_stage_rerun_records_finished_at_after_handler_returns(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     initial = run_pipeline(
@@ -252,12 +252,13 @@ def test_single_stage_records_finished_at_after_handler_returns(tmp_path: Path, 
         stage_handlers={"collect_market_data": lambda config, run: []},
         now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
     )
+    parent_manifest = initial.run.manifest_path.read_text(encoding="utf-8")
     current = [datetime(2026, 6, 5, 1, 0, tzinfo=timezone.utc)]
 
     def fake_clock(now):
         return lambda: current[0]
 
-    def collect_text_events(config, run) -> list[str]:
+    def collect_market_data(config, run) -> list[str]:
         current[0] = current[0] + timedelta(minutes=7)
         return []
 
@@ -267,18 +268,185 @@ def test_single_stage_records_finished_at_after_handler_returns(tmp_path: Path, 
         config,
         config_path=config_path,
         run_dir=initial.run.run_dir,
-        stage="collect_text_events",
-        stage_handlers={"collect_text_events": collect_text_events},
+        stage="collect_market_data",
+        stage_handlers={"collect_market_data": collect_market_data},
     )
 
     assert result.succeeded is True
+    assert result.run.run_dir != initial.run.run_dir
+    assert initial.run.manifest_path.read_text(encoding="utf-8") == parent_manifest
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    single_stage = manifest["stages"][-1]
-    assert single_stage["name"] == "collect_text_events"
-    assert single_stage["mode"] == "single_stage"
-    assert single_stage["started_at"] == "2026-06-05T01:00:00Z"
-    assert single_stage["finished_at"] == "2026-06-05T01:07:00Z"
+    rerun_stage = manifest["stages"][0]
+    assert rerun_stage["name"] == "collect_market_data"
+    assert rerun_stage["mode"] == "recomputed"
+    assert rerun_stage["started_at"] == "2026-06-05T01:00:00Z"
+    assert rerun_stage["finished_at"] == "2026-06-05T01:07:00Z"
+    assert manifest["parent_run_id"] == initial.run.run_id
+    assert manifest["stage_rerun"]["downstream_closure"] == ["collect_market_data"]
     assert manifest["finished_at"] == "2026-06-05T01:07:00Z"
+
+
+def test_stage_rerun_creates_derived_run_and_reuses_only_upstream_artifacts(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    parent_handlers = _noop_handlers(
+        {
+            "collect_market_data": _write_raw_artifact("market.json", "parent market", "market"),
+            "collect_text_events": _write_raw_artifact("text_events.json", "parent text", "text_events"),
+        }
+    )
+    parent = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_text_events",
+        stage_handlers=parent_handlers,
+        now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
+    )
+    parent_manifest = parent.run.manifest_path.read_text(encoding="utf-8")
+
+    child = run_pipeline_stage(
+        config,
+        config_path=config_path,
+        run_dir=parent.run.run_dir,
+        stage="collect_text_events",
+        stage_handlers=_noop_handlers(
+            {"collect_text_events": _write_raw_artifact("text_events.json", "child text", "text_events")}
+        ),
+        now=datetime(2026, 6, 5, 1, 0, tzinfo=timezone.utc),
+    )
+
+    assert child.succeeded is True
+    assert child.run.run_dir != parent.run.run_dir
+    assert parent.run.manifest_path.read_text(encoding="utf-8") == parent_manifest
+    assert (parent.run.raw_dir / "text_events.json").read_text(encoding="utf-8") == "parent text"
+    assert (child.run.raw_dir / "market.json").read_text(encoding="utf-8") == "parent market"
+    assert (child.run.raw_dir / "text_events.json").read_text(encoding="utf-8") == "child text"
+
+    manifest = _manifest(child.run.run_dir)
+    assert manifest["parent_run_id"] == parent.run.run_id
+    assert manifest["lineage"]["parent_run_id"] == parent.run.run_id
+    assert manifest["stage_rerun"]["requested_operation_id"] == "collect_text_events"
+    assert manifest["stage_rerun"]["downstream_closure"] == ["collect_text_events"]
+    assert manifest["stage_rerun"]["reused_artifacts"] == ["raw/market.json"]
+    assert _stage(manifest, "collect_market_data")["mode"] == "reused"
+    assert _stage(manifest, "collect_text_events")["mode"] == "recomputed"
+
+
+def test_stage_rerun_preserves_no_codex_parent_skip(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    parent = run_pipeline(
+        config,
+        config_path=config_path,
+        skip_codex=True,
+        stage_handlers=_noop_handlers(),
+    )
+
+    def fail_if_codex_runs(config, run):
+        raise AssertionError("Codex should remain skipped for a no-Codex parent rerun.")
+
+    result = run_pipeline_stage(
+        config,
+        config_path=config_path,
+        run_dir=parent.run.run_dir,
+        stage="build_codex_context",
+        stage_handlers=_noop_handlers({"run_codex_report": fail_if_codex_runs}),
+    )
+
+    assert result.succeeded is True
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["validation"] == {
+        "mode": "stage_rerun",
+        "until_stage": None,
+        "skip_codex": True,
+    }
+    assert _stage(manifest, "run_codex_report")["status"] == "skipped"
+    assert manifest["codex"]["status"] == "skipped"
+    assert manifest["codex"]["skip_reason"] == "--no-codex requested"
+
+
+def test_failed_run_resumes_in_place_from_failed_operation(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    failed = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers({"collect_text_events": _failed_text_stage}),
+    )
+
+    result = run_pipeline_stage(
+        config,
+        config_path=config_path,
+        run_dir=failed.run.run_dir,
+        stage="collect_text_events",
+        stage_handlers=_noop_handlers(
+            {"collect_text_events": _write_raw_artifact("text_events.json", "ok", "text_events")}
+        ),
+    )
+
+    assert result.succeeded is True
+    assert result.run.run_dir == failed.run.run_dir
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["errors"] == []
+    assert _stage(manifest, "collect_text_events")["mode"] == "resume"
+    assert _stage(manifest, "collect_text_events")["status"] == "succeeded"
+    assert all(stage["status"] != "failed" for stage in manifest["stages"])
+
+
+def test_failed_run_resume_drops_partial_failed_stage_outputs(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_after_partial_text_artifact(config, run) -> None:
+        artifact = run.raw_dir / "text_events.json"
+        artifact.write_text("stale", encoding="utf-8")
+        run.manifest["artifacts"]["raw_text_events"] = "raw/text_events.json"
+        raise PipelineError("text stage failed", stage="collect_text_events", exit_code=3)
+
+    failed = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers({"collect_text_events": fail_after_partial_text_artifact}),
+    )
+
+    result = run_pipeline_stage(
+        config,
+        config_path=config_path,
+        run_dir=failed.run.run_dir,
+        stage="collect_text_events",
+        stage_handlers=_noop_handlers({"collect_text_events": _noop_stage}),
+    )
+
+    assert result.succeeded is True
+    manifest = _manifest(result.run.run_dir)
+    assert "raw_text_events" not in manifest["artifacts"]
+    assert not (result.run.raw_dir / "text_events.json").exists()
+
+
+def test_stage_rerun_rejects_missing_upstream_artifact(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    parent = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="collect_text_events",
+        stage_handlers=_noop_handlers(
+            {
+                "collect_market_data": _write_raw_artifact("market.json", "parent market", "market"),
+                "collect_text_events": _write_raw_artifact("text_events.json", "parent text", "text_events"),
+            }
+        ),
+    )
+    (parent.run.raw_dir / "market.json").unlink()
+
+    with pytest.raises(PipelineError, match="reusable upstream artifact raw/market.json"):
+        run_pipeline_stage(
+            config,
+            config_path=config_path,
+            run_dir=parent.run.run_dir,
+            stage="collect_text_events",
+            stage_handlers=_noop_handlers(),
+        )
 
 
 def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_path: Path) -> None:
@@ -457,14 +625,15 @@ def test_cli_run_until_marks_later_stages_not_run(tmp_path: Path, capsys, monkey
     assert not (run_dir / "report" / "report.md").exists()
 
 
-def test_cli_stage_runs_single_stage_against_existing_run_dir(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_cli_stage_creates_derived_run_from_existing_run_dir(tmp_path: Path, capsys, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
     monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
 
     assert main(["run", "--config", str(config_path), "--until", "build_analysis_materials"]) == 0
-    run_dir = _single_run_dir(tmp_path)
-    assert not (run_dir / "analysis" / "research_context.md").exists()
+    parent_run_dir = _single_run_dir(tmp_path)
+    assert not (parent_run_dir / "analysis" / "research_context.md").exists()
+    parent_manifest = (parent_run_dir / "run_manifest.json").read_text(encoding="utf-8")
 
     exit_code = main(
         [
@@ -473,7 +642,7 @@ def test_cli_stage_runs_single_stage_against_existing_run_dir(tmp_path: Path, ca
             "--config",
             str(config_path),
             "--run-dir",
-            str(run_dir),
+            str(parent_run_dir),
         ]
     )
 
@@ -481,16 +650,22 @@ def test_cli_stage_runs_single_stage_against_existing_run_dir(tmp_path: Path, ca
     assert exit_code == 0
     assert "Halpha stage succeeded." in captured.out
     assert "stage: build_research_context" in captured.out
-    assert (run_dir / "analysis" / "research_context.md").is_file()
+    assert (parent_run_dir / "run_manifest.json").read_text(encoding="utf-8") == parent_manifest
+    assert not (parent_run_dir / "analysis" / "research_context.md").exists()
 
-    manifest = _manifest(run_dir)
+    run_dirs = sorted((tmp_path / "runs").iterdir())
+    assert len(run_dirs) == 2
+    derived_run_dir = next(path for path in run_dirs if path != parent_run_dir)
+    assert (derived_run_dir / "analysis" / "research_context.md").is_file()
+
+    manifest = _manifest(derived_run_dir)
+    assert manifest["parent_run_id"] == parent_run_dir.name
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
-    assert manifest["single_stage_validation"]["stage"] == "build_research_context"
-    single_stage = manifest["stages"][-1]
-    assert single_stage["name"] == "build_research_context"
-    assert single_stage["mode"] == "single_stage"
-    assert single_stage["status"] == "succeeded"
-    assert single_stage["artifacts"] == ["analysis/research_context.md"]
+    assert manifest["stage_rerun"]["requested_operation_id"] == "build_research_context"
+    rerun_stage = _stage(manifest, "build_research_context")
+    assert rerun_stage["mode"] == "recomputed"
+    assert rerun_stage["status"] == "succeeded"
+    assert rerun_stage["artifacts"] == ["analysis/research_context.md"]
 
 
 def test_cli_validation_stage_names_are_actionable_and_do_not_create_runs(
@@ -576,6 +751,28 @@ def _manifest(run_dir: Path) -> dict:
 
 def _stage(manifest: dict, name: str) -> dict:
     return next(stage for stage in manifest["stages"] if stage["name"] == name)
+
+
+def _noop_handlers(overrides: dict[str, object] | None = None) -> dict[str, object]:
+    handlers: dict[str, object] = {stage: _noop_stage for stage in STAGE_ORDER}
+    if overrides:
+        handlers.update(overrides)
+    return handlers
+
+
+def _noop_stage(config, run) -> list[str]:
+    return []
+
+
+def _write_raw_artifact(name: str, content: str, artifact_key: str):
+    def handler(config, run) -> list[str]:
+        artifact = run.raw_dir / name
+        artifact.write_text(content, encoding="utf-8")
+        ref = f"raw/{name}"
+        run.manifest["artifacts"][artifact_key] = ref
+        return [ref]
+
+    return handler
 
 
 def _assert_manifest_timeline(manifest: dict) -> None:

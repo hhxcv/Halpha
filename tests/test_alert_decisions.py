@@ -437,7 +437,7 @@ def test_alert_decisions_skip_when_event_assessment_is_missing(tmp_path: Path) -
     assert _stage(manifest, "build_alert_decisions")["artifacts"] == []
 
 
-def test_alert_decisions_single_stage_rerun(tmp_path: Path) -> None:
+def test_alert_decisions_stage_rerun(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     initial = _run_alert_pipeline(config, config_path, records=[_assessment_record("p2")])
@@ -451,9 +451,9 @@ def test_alert_decisions_single_stage_rerun(tmp_path: Path) -> None:
 
     manifest = _manifest(result)
     assert result.succeeded is True
-    assert manifest["stages"][-1]["name"] == "build_alert_decisions"
-    assert manifest["stages"][-1]["mode"] == "single_stage"
-    assert manifest["stages"][-1]["artifacts"] == ["analysis/alert_decisions.json"]
+    rerun_stage = _stage(manifest, "build_alert_decisions")
+    assert rerun_stage["mode"] == "recomputed"
+    assert rerun_stage["artifacts"] == ["analysis/alert_decisions.json"]
     assert _alert_decisions(result)["records"][0]["priority"] == "P2"
 
 

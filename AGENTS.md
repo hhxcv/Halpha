@@ -464,7 +464,7 @@ Do not claim success without running the relevant command.
 * Never print or commit local config paths when they reveal machine-local details, proxy values, credentials, user-state paths, private policy files, or other local privacy values.
 * Use `python -m halpha run --config <local-config.yaml> --no-codex` for real-source product acceptance when Codex CLI use is not needed.
 * Use `python -m halpha run --config <local-config.yaml> --until <stage_name>` for bounded stage-through acceptance.
-* Use `python -m halpha stage <stage_name> --config <local-config.yaml> --run-dir runs/<run_id>` to rerun one stage against existing artifacts.
+* Use `python -m halpha stage <stage_name> --config <local-config.yaml> --run-dir runs/<run_id>` for dependency-aware stage reruns; completed parent runs create derived runs, while failed runs may resume in place only from the recorded failed stage.
 * Use `python -m halpha validate --config <local-config.yaml>` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
 * Use `python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
 * Use `python -m halpha monitor run --config <local-config.yaml> --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
@@ -487,7 +487,7 @@ Do not claim success without running the relevant command.
 * For alert-decision acceptance, use `python -m halpha run --config config.example.yaml --until build_alert_decision_material` when final Codex output is not needed.
 * For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.
 * Alert priority, event severity, decision impact, downgrade reasons, and no-alert states must come from generated artifacts, not Codex wording.
-* Use `python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>` to rerun only report-facing alert material against existing upstream artifacts.
+* Use `python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>` to recompute report-facing alert material through the dependency-aware stage rerun path.
 * For Codex input acceptance, inspect `run_manifest.json` `codex_input`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`.
 * For Codex input acceptance, verify full intermediate JSON, raw streams, shared OHLCV history, and full run manifests are referenced by path, not embedded wholesale.
 * For on-chain flow acceptance, inspect `raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`, `raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, `analysis/onchain_flow_material.md`, `analysis/data_quality_summary.json`, and `python -m halpha data inspect --config config.example.yaml`.

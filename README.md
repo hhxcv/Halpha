@@ -89,11 +89,16 @@ Run through a named pipeline stage and mark later stages as not run:
 python -m halpha run --config config.example.yaml --until build_research_context
 ```
 
-Run one stage against an existing run directory:
+Run a dependency-aware stage rerun from an existing run directory:
 
 ```bash
 python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
 ```
+
+For a completed successful parent run, this creates a new derived run directory
+and records `parent_run_id`, lineage, reused upstream artifacts, and the
+recomputed downstream closure in the child `run_manifest.json`. Failed runs may
+resume in place only from the recorded failed stage.
 
 Inspect product contract health for the latest indexed run or one selected run
 without collection, pipeline stages, report generation, or Codex:
@@ -726,12 +731,15 @@ Strategy lifecycle review should include `analysis/strategy_lifecycle_state.json
 as deterministic evidence and `analysis/strategy_lifecycle_material.md` as the
 bounded Codex-facing summary.
 
-To rerun only the report-facing alert material after inspecting or regenerating
+To recompute the report-facing alert material after inspecting or regenerating
 upstream artifacts:
 
 ```bash
 python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>
 ```
+
+When the selected run is complete, this writes a derived run rather than
+mutating the original run.
 
 Run full report acceptance when Codex CLI use is intended:
 

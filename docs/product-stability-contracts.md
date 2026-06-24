@@ -108,6 +108,20 @@ Completed-run and rerun rules:
 - `finalize_run` should only publish terminal manifest/state transactions and
   product-contract validation once upstream artifacts are complete.
 
+Implemented stage rerun behavior:
+
+- a stage request against a completed successful run creates a derived run
+  instead of mutating the parent;
+- the child manifest records `parent_run_id`, lineage refs, the requested
+  operation id, reused upstream operations, reused artifact refs, and the
+  downstream closure;
+- run-local upstream artifacts are copied only after they exist and validate;
+- shared reusable store refs stay outside the child run and are reused by
+  reference after existence validation;
+- a parent created with `--until` keeps that validation boundary in the child,
+  unless the requested operation is the next operation after the boundary;
+- failed runs resume in place only from the recorded failed operation.
+
 ## analysis/product_contract_validation.json
 
 Implemented artifact path:

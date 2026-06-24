@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
-from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
+from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline, run_pipeline_stage
 from halpha.product.product_validation_inspection import inspect_product_validation
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.data.run_index import (
@@ -103,14 +103,19 @@ def test_run_index_records_failed_runs(tmp_path: Path) -> None:
     assert "latest_successful_run" not in latest
 
 
-def test_run_index_reindexes_single_stage_rerun_without_duplicate_rows(tmp_path: Path) -> None:
+def test_run_index_records_derived_stage_rerun_without_duplicate_rows(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     initial = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
-        stage_handlers={"collect_market_data": _market_stage},
+        until_stage="collect_text_events",
+        stage_handlers=_noop_handlers(
+            {
+                "collect_market_data": _market_stage,
+                "collect_text_events": _text_stage,
+            }
+        ),
     )
 
     result = run_pipeline_stage(
@@ -118,12 +123,14 @@ def test_run_index_reindexes_single_stage_rerun_without_duplicate_rows(tmp_path:
         config_path=config_path,
         run_dir=initial.run.run_dir,
         stage="collect_text_events",
-        stage_handlers={"collect_text_events": _text_stage},
+        stage_handlers=_noop_handlers({"collect_text_events": _text_stage}),
     )
 
     assert result.succeeded is True
+    assert result.run.run_id != initial.run.run_id
     manifest = _manifest(result.run.manifest_path)
     with closing(sqlite3.connect(run_index_path(config_path))) as connection:
+        run_count = connection.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
         stage_count = connection.execute(
             "SELECT COUNT(*) FROM run_stages WHERE run_id = ?",
             (result.run.run_id,),
@@ -136,11 +143,13 @@ def test_run_index_reindexes_single_stage_rerun_without_duplicate_rows(tmp_path:
             (result.run.run_id, "text_events", "raw/text_events.json"),
         ).fetchone()
 
+    assert run_count == 2
     assert stage_count == len(manifest["stages"])
     assert text_artifact == ("raw",)
 
     write_run_index(result.run, now="2026-06-05T00:00:00Z")
     with closing(sqlite3.connect(run_index_path(config_path))) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 2
         assert (
             connection.execute(
                 "SELECT COUNT(*) FROM run_stages WHERE run_id = ?",
@@ -327,6 +336,17 @@ def _text_stage(config, run) -> list[str]:
     artifact.write_text("{}", encoding="utf-8")
     run.manifest["artifacts"]["text_events"] = "raw/text_events.json"
     return ["raw/text_events.json"]
+
+
+def _noop_handlers(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+    handlers = {stage: _noop_stage for stage in STAGE_ORDER}
+    if overrides:
+        handlers.update(overrides)
+    return handlers
+
+
+def _noop_stage(config, run) -> list[str]:
+    return []
 
 
 def _failed_stage(config, run) -> None:
