@@ -576,7 +576,11 @@ def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsy
     assert codex_task["artifacts"] == []
     assert manifest["stages"][-1]["name"] == "finalize_run"
     assert manifest["stages"][-1]["status"] == "succeeded"
-    assert manifest["stages"][-1]["artifacts"] == ["analysis/product_contract_validation.json"]
+    assert manifest["stages"][-1]["artifacts"] == [
+        "data/research/metadata/outcome_history_state.json",
+        "data/research/metadata/research_data_catalog.json",
+        "analysis/product_contract_validation.json",
+    ]
     assert (run_dir / "codex_context" / "prompt.md").is_file()
     assert (run_dir / "analysis" / "product_contract_validation.json").is_file()
     assert not (run_dir / "report" / "report.md").exists()

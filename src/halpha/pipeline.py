@@ -101,7 +101,7 @@ def run_pipeline(
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
-    _record_terminal_local_data_state(config, run, clock=clock)
+    _commit_terminal_run_projection(config, run, clock=clock)
     LOGGER.info(
         "Pipeline run succeeded.",
         extra={"event": "pipeline.run.succeeded", "run_id": run.run_id},
@@ -199,7 +199,7 @@ def _run_derived_stage_rerun(
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
-    _record_terminal_local_data_state(config, run, clock=clock)
+    _commit_terminal_run_projection(config, run, clock=clock)
     LOGGER.info(
         "Pipeline stage rerun succeeded.",
         extra={
@@ -260,7 +260,7 @@ def _resume_pipeline_stage(
     run.manifest["status"] = "succeeded"
     run.manifest["finished_at"] = _utc_timestamp(clock())
     _write_manifest(run)
-    _record_terminal_local_data_state(config, run, clock=clock)
+    _commit_terminal_run_projection(config, run, clock=clock)
     LOGGER.info(
         "Pipeline stage resume succeeded.",
         extra={"event": "pipeline.stage_resume.succeeded", "run_id": run.run_id, "stage": stage},
@@ -1082,72 +1082,41 @@ def _finish_manifest(
     run.manifest["finished_at"] = finished_at
     run.manifest["errors"].append(error)
     _write_manifest(run)
-    _record_terminal_local_data_state(config, run, clock=clock)
+    _commit_terminal_run_projection(config, run, clock=clock)
 
 
-def _record_terminal_local_data_state(
+def _commit_terminal_run_projection(
     config: dict[str, Any],
     run: RunContext,
     *,
     clock: Callable[[], datetime],
 ) -> None:
-    _record_run_index(run, clock=clock)
-    _record_outcome_history(config, run, clock=clock)
-    _record_research_data_catalog(config, run, clock=clock)
-    _write_manifest(run)
-
-
-def _record_run_index(run: RunContext, *, clock: Callable[[], datetime]) -> None:
     from halpha.data.run_index import RUN_INDEX_ARTIFACT, write_run_index
 
     try:
         summary = write_run_index(run, now=clock())
     except Exception as exc:
-        summary = {
-            "schema_version": 1,
-            "status": "failed",
-            "artifact": RUN_INDEX_ARTIFACT,
-            "error": str(exc),
-        }
-    run.manifest["run_index"] = summary
-    run.manifest.setdefault("counts", {})["run_index_errors"] = 1 if summary["status"] == "failed" else 0
-
-
-def _record_outcome_history(
-    config: dict[str, Any],
-    run: RunContext,
-    *,
-    clock: Callable[[], datetime],
-) -> None:
-    from halpha.outcome.outcome_history import OUTCOME_HISTORY_STATE_ARTIFACT, write_outcome_history
-
-    try:
-        write_outcome_history(config, run, now=clock())
-    except Exception as exc:
-        run.manifest["outcome_history"] = {
-            "status": "failed",
-            "artifact": OUTCOME_HISTORY_STATE_ARTIFACT,
-            "error": str(exc),
-        }
-        run.manifest.setdefault("counts", {})["outcome_history_errors"] = 1
-
-
-def _record_research_data_catalog(
-    config: dict[str, Any],
-    run: RunContext,
-    *,
-    clock: Callable[[], datetime],
-) -> None:
-    from halpha.data.research_data_catalog import write_research_data_catalog
-
-    try:
-        write_research_data_catalog(config, run, now=clock())
-    except Exception as exc:
-        run.manifest["research_data_catalog"] = {
-            "status": "failed",
-            "artifact": "data/research/metadata/research_data_catalog.json",
-            "error": str(exc),
-        }
+        reason = redact_private_text(str(exc), config_path=run.config_path, config=config)
+        LOGGER.error(
+            "Terminal run state projection failed.",
+            extra={
+                "event": "pipeline.terminal_projection.failed",
+                "run_id": run.run_id,
+                "artifact": RUN_INDEX_ARTIFACT,
+                "reason": reason,
+                "diagnostic": bounded_exception_diagnostic(exc),
+            },
+        )
+        return
+    LOGGER.info(
+        "Terminal run state projection committed.",
+        extra={
+            "event": "pipeline.terminal_projection.committed",
+            "run_id": run.run_id,
+            "artifact": summary.get("artifact"),
+            "status": summary.get("status"),
+        },
+    )
 
 
 def _error_summary(

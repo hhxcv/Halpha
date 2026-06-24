@@ -91,10 +91,8 @@ The stable product stages are:
 - `generate_report`
 - `finalize_run`
 
-The current implementation still exposes finer-grained pipeline stage names.
-That is current behavior until the seven-stage product workflow is implemented.
-Future implementation should keep fine-grained work inspectable as tasks, not
-as a long list of top-level product stages.
+Fine-grained implementation work remains inspectable as nested tasks, not as a
+long list of top-level product stages.
 
 Completed-run and rerun rules:
 
@@ -105,8 +103,13 @@ Completed-run and rerun rules:
 - rerunning a stage must either recompute affected downstream artifacts, mark
   them stale or not complete, or write a new run;
 - reruns must not leave stale downstream artifacts marked as successful;
-- `finalize_run` should only publish terminal manifest/state transactions and
-  product-contract validation once upstream artifacts are complete.
+- `finalize_run` publishes terminal shared-state artifacts and
+  product-contract validation once upstream artifacts are complete;
+- the terminal `run_manifest.json` is written once after final validation
+  artifacts exist;
+- `.halpha/state.sqlite` records the rebuildable run, stage, task, and artifact
+  projection after the terminal manifest is durable, and projection failures
+  must not mutate the completed run archive.
 
 Implemented stage rerun behavior:
 

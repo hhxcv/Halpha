@@ -212,14 +212,14 @@ def _run_index_lifecycle(summary: dict[str, Any]) -> dict[str, Any]:
             continue
         details = _dict(check.get("details"))
         return {
-            "terminal_artifact": bool(details.get("terminal_artifact")),
-            "written_after_data_quality_stage": bool(details.get("written_after_data_quality_stage")),
+            "terminal_state_projection": bool(details.get("terminal_state_projection")),
+            "committed_after_final_manifest": bool(details.get("committed_after_final_manifest")),
             "stage_time_skip_is_expected": bool(details.get("stage_time_skip_is_expected")),
             "report_stage_time_skip_as_final_missing": bool(details.get("report_as_final_missing")),
         }
     return {
-        "terminal_artifact": False,
-        "written_after_data_quality_stage": False,
+        "terminal_state_projection": False,
+        "committed_after_final_manifest": False,
         "stage_time_skip_is_expected": False,
         "report_stage_time_skip_as_final_missing": False,
     }

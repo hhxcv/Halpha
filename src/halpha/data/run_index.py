@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from halpha.runtime.pipeline_contracts import RunContext
 
 
-RUN_INDEX_SCHEMA_VERSION = 2
+RUN_INDEX_SCHEMA_VERSION = 3
 RUN_INDEX_ARTIFACT = STATE_STORE_REF
 LEGACY_RUN_INDEX_ARTIFACT = "data/research/index.sqlite"
 LATEST_RUN_KEY = "latest_run"
@@ -129,6 +129,30 @@ RUN_INDEX_MIGRATIONS = (
             "CREATE INDEX IF NOT EXISTS idx_run_artifacts_lookup ON run_artifacts(run_id, artifact_key)",
         ),
     ),
+    StateStoreMigration(
+        version=6,
+        name="run_index_tasks",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS run_tasks (
+              run_id TEXT NOT NULL,
+              stage_index INTEGER NOT NULL,
+              task_index INTEGER NOT NULL,
+              stage_name TEXT NOT NULL,
+              task_name TEXT NOT NULL,
+              status TEXT,
+              started_at TEXT,
+              finished_at TEXT,
+              warning_count INTEGER NOT NULL,
+              error_count INTEGER NOT NULL,
+              artifact_count INTEGER NOT NULL,
+              PRIMARY KEY (run_id, stage_index, task_index),
+              FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_run_tasks_lookup ON run_tasks(run_id, task_name)",
+        ),
+    ),
 )
 
 
@@ -202,6 +226,7 @@ def write_run_index(run: RunContext, *, now: datetime | str | None = None) -> di
         with runtime_state_transaction(connection):
             _replace_run(connection, run)
             _replace_run_stages(connection, run)
+            _replace_run_tasks(connection, run)
             _replace_run_artifacts(connection, run)
         counts = _table_counts(connection)
         latest_successful = _latest_run_id(connection, succeeded_only=True)
@@ -534,6 +559,54 @@ def _replace_run_stages(connection: sqlite3.Connection, run: RunContext) -> None
         )
 
 
+def _replace_run_tasks(connection: sqlite3.Connection, run: RunContext) -> None:
+    connection.execute("DELETE FROM run_tasks WHERE run_id = ?", (run.run_id,))
+    stages = run.manifest.get("stages")
+    if not isinstance(stages, list):
+        return
+    for stage_index, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            continue
+        stage_name = str(stage.get("name") or "")
+        tasks = stage.get("tasks")
+        if not isinstance(tasks, list):
+            continue
+        for task_index, task in enumerate(tasks):
+            if not isinstance(task, dict):
+                continue
+            connection.execute(
+                """
+                INSERT INTO run_tasks (
+                  run_id,
+                  stage_index,
+                  task_index,
+                  stage_name,
+                  task_name,
+                  status,
+                  started_at,
+                  finished_at,
+                  warning_count,
+                  error_count,
+                  artifact_count
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run.run_id,
+                    stage_index,
+                    task_index,
+                    stage_name,
+                    str(task.get("name") or ""),
+                    _optional_string(task.get("status")),
+                    _optional_string(task.get("started_at")),
+                    _optional_string(task.get("finished_at")),
+                    _warning_count(task),
+                    _task_error_count(task),
+                    len(_artifact_paths(task.get("artifacts"))),
+                ),
+            )
+
+
 def _replace_run_artifacts(connection: sqlite3.Connection, run: RunContext) -> None:
     connection.execute("DELETE FROM run_artifacts WHERE run_id = ?", (run.run_id,))
     artifacts = run.manifest.get("artifacts")
@@ -559,6 +632,7 @@ def _table_counts(connection: sqlite3.Connection) -> dict[str, int]:
     return {
         "runs": _count_rows(connection, "runs"),
         "run_stages": _count_rows(connection, "run_stages"),
+        "run_tasks": _count_rows(connection, "run_tasks"),
         "run_artifacts": _count_rows(connection, "run_artifacts"),
         "run_latest": _count_rows(connection, "run_latest"),
     }
@@ -647,6 +721,13 @@ def _warning_count(value: Any) -> int:
 def _error_count(manifest: dict[str, Any]) -> int:
     errors = manifest.get("errors")
     return len(errors) if isinstance(errors, list) else 0
+
+
+def _task_error_count(task: dict[str, Any]) -> int:
+    errors = task.get("errors")
+    if isinstance(errors, list):
+        return len(errors)
+    return 1 if isinstance(task.get("error"), dict) else 0
 
 
 def _artifact_paths(value: Any) -> list[str]:
