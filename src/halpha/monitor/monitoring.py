@@ -15,6 +15,7 @@ from halpha.monitor.state_store import (
     MonitorArchivePersistence,
     MonitorStateRepository,
 )
+from halpha.runtime.mutation_lease import mutation_lease
 from halpha.runtime.pipeline_contracts import RunResult
 from halpha.runtime.state_store import runtime_state_path
 from halpha.pipeline_stages import StageSelectionError
@@ -140,6 +141,32 @@ def load_monitor_config(config: dict[str, Any]) -> MonitorConfig:
 
 
 def run_monitor_cycle(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    now: datetime | None = None,
+    pipeline_runner: PipelineRunner = run_pipeline,
+    cycle_mode: str = "once",
+    loop_id: str | None = None,
+    cycle_sequence: int | None = None,
+    cycle_id: str | None = None,
+    trigger_source: str = "cli",
+) -> MonitorCycleResult:
+    with mutation_lease(config_path=config_path, owner_kind="monitor", workflow="monitor_cycle", requested_by="Monitor"):
+        return _run_monitor_cycle_unlocked(
+            config,
+            config_path=config_path,
+            now=now,
+            pipeline_runner=pipeline_runner,
+            cycle_mode=cycle_mode,
+            loop_id=loop_id,
+            cycle_sequence=cycle_sequence,
+            cycle_id=cycle_id,
+            trigger_source=trigger_source,
+        )
+
+
+def _run_monitor_cycle_unlocked(
     config: dict[str, Any],
     *,
     config_path: Path,
@@ -306,6 +333,30 @@ def run_monitor_cycle(
 
 
 def run_monitor_source_cycle(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    now: datetime | None = None,
+    pipeline_runner: PipelineRunner = run_pipeline,
+    cycle_id: str | None = None,
+    loop_id: str | None = None,
+    cycle_sequence: int | None = None,
+    trigger_source: str = "monitor_service",
+) -> MonitorCycleResult:
+    with mutation_lease(config_path=config_path, owner_kind="monitor", workflow="monitor_cycle", requested_by="Monitor"):
+        return _run_monitor_source_cycle_unlocked(
+            config,
+            config_path=config_path,
+            now=now,
+            pipeline_runner=pipeline_runner,
+            cycle_id=cycle_id,
+            loop_id=loop_id,
+            cycle_sequence=cycle_sequence,
+            trigger_source=trigger_source,
+        )
+
+
+def _run_monitor_source_cycle_unlocked(
     config: dict[str, Any],
     *,
     config_path: Path,
@@ -535,6 +586,28 @@ def run_monitor_source_cycle(
 
 
 def run_monitor_loop(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    max_cycles: int,
+    interval_seconds: int,
+    now: datetime | None = None,
+    pipeline_runner: PipelineRunner = run_pipeline,
+    sleeper: Sleeper = time.sleep,
+) -> MonitorLoopResult:
+    with mutation_lease(config_path=config_path, owner_kind="monitor", workflow="monitor_cycle", requested_by="Monitor"):
+        return _run_monitor_loop_unlocked(
+            config,
+            config_path=config_path,
+            max_cycles=max_cycles,
+            interval_seconds=interval_seconds,
+            now=now,
+            pipeline_runner=pipeline_runner,
+            sleeper=sleeper,
+        )
+
+
+def _run_monitor_loop_unlocked(
     config: dict[str, Any],
     *,
     config_path: Path,

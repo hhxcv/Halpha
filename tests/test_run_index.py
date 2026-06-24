@@ -332,7 +332,7 @@ def test_run_index_task_migration_uses_distinct_runtime_version(tmp_path: Path) 
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'run_tasks'"
         ).fetchone()
 
-    assert versions == [1, 2, 6, 9]
+    assert versions == [1, 2, 6, 9, 14]
     assert run_tasks == ("run_tasks",)
 
 

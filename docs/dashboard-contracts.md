@@ -149,6 +149,13 @@ Monitor view. It must not create a resident Monitor loop as a command job.
 Other command actions are available through the dashboard jobs API and remain
 explicit allowlisted jobs.
 
+Mutating product command jobs contend for the runtime-root mutation lease in
+`.halpha/state.sqlite` before starting a subprocess. The protected job kinds
+are `product_run`, `stage_rerun`, and `monitor_cycle`. If another live owner
+holds the lease, the command job is persisted as `blocked` with an actionable
+diagnostic and no product subprocess is started. Read-only and inspection jobs
+remain available while the mutation lease is held.
+
 The dashboard services API exposes one bounded read model for exactly
 `dashboard`, `monitor`, and `schedule`. Monitor and Schedule service controls
 delegate start, stop, restart, and status actions to the same shared lifecycle

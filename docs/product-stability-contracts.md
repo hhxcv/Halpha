@@ -113,6 +113,11 @@ Nested task metadata uses an explicit direct-dependency graph:
 
 Completed-run and rerun rules:
 
+- direct mutating product workflows acquire a runtime-root mutation lease in
+  `.halpha/state.sqlite` before creating run directories, mutating existing
+  run manifests, or publishing shared state;
+- competing mutating workflows fail or block with a privacy-safe
+  `runtime_mutation_lease` diagnostic; read-only inspection remains available;
 - a completed run is an immutable product record;
 - final decision, watch, alert, data-quality, and report-facing material
   artifacts are written once in their terminal stage;

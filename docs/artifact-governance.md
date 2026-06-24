@@ -94,17 +94,17 @@ port, monitor output directory, or schedule file location.
 | --- | --- | --- |
 | Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |
 | Reusable market and research history | Physical local store plus store-local schema and state metadata | Examples include `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/` history stores. |
-| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, current run-index projection, local command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, monitor service health query state, shared resident-service lifecycle controller state, Dashboard service adoption, and Dashboard UI preferences are implemented. Later domain migrations own searchable run or artifact indexes. |
+| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, runtime-root mutation lease, current run-index projection, local command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, monitor service health query state, shared resident-service lifecycle controller state, Dashboard service adoption, and Dashboard UI preferences are implemented. Later domain migrations own searchable run or artifact indexes. |
 | Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
 | Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
 
 Current implemented mutable operational state is centered on
-`.halpha/state.sqlite`. The run-index projection, local command-job
-lifecycle, daily report schedule dispatch state, monitor cycle index, alert
-archive records, cooldown state, monitor service health query state, shared
-resident-service lifecycle state, Dashboard service state, and Dashboard UI
-preference state live in `.halpha/state.sqlite`. New contracts must avoid
-adding another authority for the same fact.
+`.halpha/state.sqlite`. The runtime-root mutation lease, run-index projection,
+local command-job lifecycle, daily report schedule dispatch state, monitor
+cycle index, alert archive records, cooldown state, monitor service health
+query state, shared resident-service lifecycle state, Dashboard service state,
+and Dashboard UI preference state live in `.halpha/state.sqlite`. New contracts
+must avoid adding another authority for the same fact.
 
 The only supported resident Halpha process roles are:
 

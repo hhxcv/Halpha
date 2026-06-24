@@ -323,7 +323,7 @@ def test_service_lifecycle_migration_uses_distinct_runtime_version(tmp_path: Pat
             ).fetchall()
         }
 
-    assert versions == [1, 2, 6, 7, 9]
+    assert versions == [1, 2, 6, 7, 9, 14]
     assert tables == {"resident_services", "resident_service_events"}
 
 

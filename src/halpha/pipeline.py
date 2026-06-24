@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import redact_private_text
+from halpha.runtime.mutation_lease import mutation_lease
 from halpha.runtime.pipeline_contracts import (
     PipelineError,
     RunContext,
@@ -39,6 +40,26 @@ RUN_LOCAL_ARTIFACT_PREFIXES = ("raw/", "analysis/", "codex_context/", "report/")
 
 
 def run_pipeline(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    stage_handlers: dict[str, StageHandler] | None = None,
+    now: datetime | None = None,
+    until_stage: str | None = None,
+    skip_codex: bool = False,
+) -> RunResult:
+    with mutation_lease(config_path=config_path, owner_kind="pipeline", workflow="product_run", requested_by="CLI"):
+        return _run_pipeline_unlocked(
+            config,
+            config_path=config_path,
+            stage_handlers=stage_handlers,
+            now=now,
+            until_stage=until_stage,
+            skip_codex=skip_codex,
+        )
+
+
+def _run_pipeline_unlocked(
     config: dict[str, Any],
     *,
     config_path: Path,
@@ -110,6 +131,26 @@ def run_pipeline(
 
 
 def run_pipeline_stage(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_dir: Path,
+    stage: str,
+    stage_handlers: dict[str, StageHandler] | None = None,
+    now: datetime | None = None,
+) -> RunResult:
+    with mutation_lease(config_path=config_path, owner_kind="pipeline", workflow="stage_rerun", requested_by="CLI"):
+        return _run_pipeline_stage_unlocked(
+            config,
+            config_path=config_path,
+            run_dir=run_dir,
+            stage=stage,
+            stage_handlers=stage_handlers,
+            now=now,
+        )
+
+
+def _run_pipeline_stage_unlocked(
     config: dict[str, Any],
     *,
     config_path: Path,

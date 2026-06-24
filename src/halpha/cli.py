@@ -429,6 +429,21 @@ def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = N
         print("stage: cli")
         print(f"reason: {exc}")
         return 2
+    except PipelineError as exc:
+        LOGGER.warning(
+            "Halpha command failed.",
+            extra={
+                "event": "cli.command.failed",
+                "command": "run",
+                "stage": exc.stage or "pipeline",
+                "exit_code": exc.exit_code,
+                "reason": str(exc),
+            },
+        )
+        print("Halpha run failed.")
+        print(f"stage: {exc.stage or 'pipeline'}")
+        print(f"reason: {exc}")
+        return exc.exit_code
     manifest = display_path(result.run.manifest_path)
 
     if result.succeeded:
@@ -1283,12 +1298,27 @@ def _monitor_run(
             return 3
         if max_cycles is not None:
             settings = load_monitor_config(config)
-            result = run_monitor_loop(
-                config,
-                config_path=config_path,
-                max_cycles=max_cycles,
-                interval_seconds=interval_seconds or settings.interval_seconds,
-            )
+            try:
+                result = run_monitor_loop(
+                    config,
+                    config_path=config_path,
+                    max_cycles=max_cycles,
+                    interval_seconds=interval_seconds or settings.interval_seconds,
+                )
+            except PipelineError as exc:
+                LOGGER.warning(
+                    "Halpha monitor loop failed.",
+                    extra={
+                        "event": "monitor.loop.failed",
+                        "stage": exc.stage or "monitor",
+                        "exit_code": exc.exit_code,
+                        "reason": str(exc),
+                    },
+                )
+                print("Halpha monitor run failed.")
+                print(f"stage: {exc.stage or 'monitor'}")
+                print(f"reason: {exc}")
+                return exc.exit_code
             health = _safe_local_display_path(result.health_state_path)
             if result.succeeded:
                 print("Halpha monitor loop succeeded.")
@@ -1333,7 +1363,22 @@ def _monitor_run(
             print("stage: monitor")
             print("reason: choose --dry-run, --once, or --max-cycles.")
             return 3
-        result = run_monitor_cycle(config, config_path=config_path)
+        try:
+            result = run_monitor_cycle(config, config_path=config_path)
+        except PipelineError as exc:
+            LOGGER.warning(
+                "Halpha monitor cycle failed.",
+                extra={
+                    "event": "monitor.cycle.failed",
+                    "stage": exc.stage or "monitor",
+                    "exit_code": exc.exit_code,
+                    "reason": str(exc),
+                },
+            )
+            print("Halpha monitor run failed.")
+            print(f"stage: {exc.stage or 'monitor'}")
+            print(f"reason: {exc}")
+            return exc.exit_code
         manifest = _safe_local_display_path(result.manifest_path)
         if result.succeeded:
             print("Halpha monitor cycle succeeded.")

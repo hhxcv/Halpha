@@ -14,6 +14,7 @@ from halpha.dashboard import create_dashboard_app
 from halpha.runtime.command_job_commands import CommandJobBuilder, CommandJobError
 from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError
 from halpha.runtime.command_jobs import CommandJobManager, MAX_JOB_LOG_CHARS
+from halpha.runtime.mutation_lease import acquire_mutation_lease
 from halpha.runtime.state_store import runtime_state_path
 
 
@@ -75,6 +76,44 @@ def test_command_job_api_rejects_unsupported_intent_before_process(
     assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / payload["job_id"] / "job.json").exists()
     assert not (tmp_path / "runs" / "dashboard").exists()
     assert str(tmp_path) not in response.text
+
+
+def test_command_job_manager_blocks_mutating_job_without_starting_process_when_runtime_lease_is_busy(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    lease = acquire_mutation_lease(
+        config_path=config_path,
+        owner_kind="test",
+        workflow="product_run",
+        requested_by="CLI",
+        owner_id="external-owner",
+        owner_pid=os.getpid(),
+    )
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("blocked command job must not start a process")
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path, requested_by="Dashboard")
+
+    try:
+        job = manager.create_job({"intent": "run_no_codex", "params": {}})
+        completed = _wait_for_terminal(manager, job["job_id"])
+    finally:
+        lease.release()
+
+    assert completed["status"] == "blocked"
+    assert completed["pid"] is None
+    assert completed["exit_code"] is None
+    assert completed["cancellable"] is False
+    assert "another mutating Halpha workflow" in completed["errors"][0]
+    assert completed["diagnostic"]["database_ref"] == ".halpha/state.sqlite"
+    assert completed["diagnostic"]["private_values_embedded"] is False
+    assert not (tmp_path / "runs").exists()
+    assert str(tmp_path) not in str(completed)
 
 
 def test_command_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
