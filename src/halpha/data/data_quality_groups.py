@@ -9,16 +9,13 @@ FEATURE_FACTOR_CHECK_NAMES = {
     "feature_snapshots",
     "factor_states",
     "multi_source_signals",
-    "factor_signal_material",
 }
 FUSION_CHECK_NAMES = {
     "intelligence_fusion",
-    "intelligence_fusion_material",
 }
 PERSONALIZED_RISK_CHECK_NAMES = {
     "user_state_context",
     "personalized_risk_constraints",
-    "personalized_risk_material",
 }
 POST_DATA_QUALITY_CHECK_NAMES = {
     *FEATURE_FACTOR_CHECK_NAMES,

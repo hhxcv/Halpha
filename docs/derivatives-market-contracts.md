@@ -544,8 +544,7 @@ Data quality should cover:
 - duplicate or conflicting records;
 - reusable history status;
 - current-run view coverage;
-- unavailable liquidation, spread, or depth source states;
-- Codex input boundaries for derivatives material.
+- unavailable liquidation, spread, or depth source states.
 
 Rules:
 

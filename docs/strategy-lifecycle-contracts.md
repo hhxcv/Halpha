@@ -45,8 +45,9 @@ strategy runs
 + available market-state or regime evidence
 + explicit lifecycle policy records
 -> analysis/strategy_lifecycle_state.json
+-> gates, fusion, decisions, data inspection, workbench
 -> analysis/strategy_lifecycle_material.md
--> gates, fusion, decisions, Codex context, reports, data inspection, workbench
+-> Codex context and reports
 ```
 
 The layer is research material. It is not trading execution, investment

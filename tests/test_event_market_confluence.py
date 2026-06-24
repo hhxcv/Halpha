@@ -117,6 +117,7 @@ def _run_confluence_pipeline(
             "build_strategy_benchmark_suite": _noop_stage,
             "evaluate_quant_strategies": _noop_stage,
             "evaluate_strategy_evaluation": _noop_stage,
+            "build_strategy_experiment": _noop_stage,
             "build_strategy_experiment_material": _noop_stage,
             "build_market_signals": lambda config, run: _write_market_signals(
                 config,

@@ -275,7 +275,7 @@ def test_data_inspect_reports_feature_factor_artifacts_and_codex_budget(
     assert "signal_conflicting=1" in output
     assert "material_records=5" in output
     assert "material_omitted_records=3" in output
-    assert "feature_factor_quality_ok=3" in output
+    assert "feature_factor_quality_ok=2" in output
     assert "feature_factor_quality_warning=1" in output
     assert "codex_budget_status=included" in output
     assert "codex_budget_chars=2048" in output
@@ -318,7 +318,7 @@ def test_data_inspect_reports_intelligence_fusion_artifacts_and_codex_budget(
     assert "alert_adjusted_records=1" in output
     assert "material_records=3" in output
     assert "material_omitted_records=2" in output
-    assert "fusion_quality_ok=1" in output
+    assert "fusion_quality_ok=0" in output
     assert "fusion_quality_warning=1" in output
     assert "codex_budget_status=included" in output
     assert "codex_budget_chars=3072" in output
@@ -399,7 +399,7 @@ def test_data_inspect_reports_personalized_risk_artifacts_and_codex_budget(
     assert "alert_adjusted_records=1" in output
     assert "material_records=3" in output
     assert "material_omitted_records=1" in output
-    assert "personalized_risk_quality_ok=2" in output
+    assert "personalized_risk_quality_ok=1" in output
     assert "personalized_risk_quality_warning=1" in output
     assert "codex_budget_status=included" in output
     assert "codex_budget_chars=1536" in output
@@ -824,11 +824,10 @@ def _write_feature_factor_inspection_artifacts(run: RunContext) -> None:
         _quality_check("feature_snapshots", "ok"),
         _quality_check("factor_states", "ok"),
         _quality_check("multi_source_signals", "warning"),
-        _quality_check("factor_signal_material", "ok"),
     ]
     quality["counts"] = {
-        "checks": 4,
-        "ok": 3,
+        "checks": 3,
+        "ok": 2,
         "warning": 1,
         "degraded": 0,
         "skipped": 0,
@@ -900,11 +899,10 @@ def _write_fusion_inspection_artifacts(run: RunContext) -> None:
     quality = json.loads(quality_path.read_text(encoding="utf-8"))
     quality["checks"] = [
         _quality_check("intelligence_fusion", "warning"),
-        _quality_check("intelligence_fusion_material", "ok"),
     ]
     quality["counts"] = {
-        "checks": 2,
-        "ok": 1,
+        "checks": 1,
+        "ok": 0,
         "warning": 1,
         "degraded": 0,
         "skipped": 0,
@@ -1070,11 +1068,10 @@ def _write_personalized_risk_inspection_artifacts(run: RunContext) -> None:
     quality["checks"] = [
         _quality_check("user_state_context", "ok"),
         _quality_check("personalized_risk_constraints", "warning"),
-        _quality_check("personalized_risk_material", "ok"),
     ]
     quality["counts"] = {
-        "checks": 3,
-        "ok": 2,
+        "checks": 2,
+        "ok": 1,
         "warning": 1,
         "degraded": 0,
         "skipped": 0,

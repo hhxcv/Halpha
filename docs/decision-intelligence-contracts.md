@@ -913,7 +913,6 @@ build_risk_assessment
 build_event_market_confluence
 build_event_intelligence_assessment
 build_strategy_lifecycle_state
-build_strategy_lifecycle_material
 build_feature_snapshots
 build_factor_states
 build_multi_source_signals
@@ -940,8 +939,9 @@ Rules:
   risk, decision, watch-trigger, fusion, and personalized constraint context
   exists.
 - `build_decision_intelligence_delta` runs after current regime, risk, decision, and watch artifacts exist.
-- `build_alert_decision_material` and `build_decision_intelligence_material`
-  run inside the later `build_materials` public stage.
+- `build_strategy_lifecycle_material`, `build_alert_decision_material`, and
+  `build_decision_intelligence_material` run inside the later
+  `build_materials` public stage.
 - Fusion and personalization must not be separate downstream tasks that rewrite
   final decision, watch, or alert JSON files.
 - Failure handling should preserve artifacts from completed stages and record actionable errors.

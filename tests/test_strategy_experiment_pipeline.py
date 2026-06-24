@@ -6,6 +6,7 @@ from pathlib import Path
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 
 
 def test_pipeline_writes_strategy_experiment_gate_material(tmp_path: Path) -> None:
@@ -25,12 +26,8 @@ def test_pipeline_writes_strategy_experiment_gate_material(tmp_path: Path) -> No
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="run_strategy_research",
-        stage_handlers={
-            "collect_market_data": _noop_stage,
-            "collect_text_events": _noop_stage,
-            "sync_ohlcv": _noop_stage,
-        },
+        until_stage="build_materials",
+        stage_handlers=_stage_handlers_for_strategy_experiment_material(),
     )
 
     experiment = json.loads((result.run.analysis_dir / "strategy_experiment.json").read_text(encoding="utf-8"))
@@ -74,9 +71,11 @@ def test_pipeline_writes_strategy_experiment_gate_material(tmp_path: Path) -> No
     assert manifest["counts"]["strategy_experiment_material_records"] == 1
     assert manifest["strategy_experiment"]["status"] == "succeeded"
     assert _stage(manifest, "build_strategy_experiment_material")["artifacts"] == [
+        "analysis/strategy_experiment_material.md",
+    ]
+    assert _stage(manifest, "build_strategy_experiment")["artifacts"] == [
         "analysis/strategy_experiment.json",
         "analysis/strategy_effectiveness_gates.json",
-        "analysis/strategy_experiment_material.md",
     ]
 
 
@@ -151,6 +150,23 @@ def _record(
 
 def _noop_stage(config, run) -> list[str]:
     return []
+
+
+def _stage_handlers_for_strategy_experiment_material() -> dict[str, object]:
+    real_tasks = {
+        "build_strategy_benchmark_suite",
+        "evaluate_quant_strategies",
+        "evaluate_strategy_evaluation",
+        "build_strategy_experiment",
+        "build_market_data_views",
+        "build_market_signals",
+        "build_strategy_experiment_material",
+    }
+    return {
+        operation: _noop_stage
+        for operation in OPERATION_ORDER
+        if operation not in real_tasks
+    }
 
 
 def _stage(manifest: dict, name: str) -> dict:

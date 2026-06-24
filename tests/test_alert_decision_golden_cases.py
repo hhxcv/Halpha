@@ -202,6 +202,7 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_strategy_benchmark_suite": _noop_stage,
         "evaluate_quant_strategies": _noop_stage,
         "evaluate_strategy_evaluation": _noop_stage,
+        "build_strategy_experiment": _noop_stage,
         "build_strategy_experiment_material": _noop_stage,
         "build_market_signals": _noop_stage,
         "build_market_signal_material": _noop_stage,

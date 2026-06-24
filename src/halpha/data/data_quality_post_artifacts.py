@@ -5,30 +5,25 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES  # noqa: F401
 from halpha.runtime.pipeline_contracts import RunContext
 
 
 FEATURE_SNAPSHOTS_ARTIFACT = "analysis/feature_snapshots.json"
 FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
 MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
-FACTOR_SIGNAL_MATERIAL_ARTIFACT = "analysis/factor_signal_material.md"
 INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
-INTELLIGENCE_FUSION_MATERIAL_ARTIFACT = "analysis/intelligence_fusion_material.md"
 USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
-PERSONALIZED_RISK_MATERIAL_ARTIFACT = "analysis/personalized_risk_material.md"
+
+
 def post_data_quality_artifact_checks(run: RunContext, *, expected: bool) -> list[dict[str, Any]]:
     return [
         _feature_snapshots_check(run, expected=expected),
         _factor_states_check(run, expected=expected),
         _multi_source_signals_check(run, expected=expected),
-        _factor_signal_material_check(run, expected=expected),
         _intelligence_fusion_check(run, expected=expected),
-        _intelligence_fusion_material_check(run, expected=expected),
         _user_state_context_check(run, expected=expected),
         _personalized_risk_constraints_check(run, expected=expected),
-        _personalized_risk_material_check(run, expected=expected),
     ]
 
 
@@ -165,56 +160,6 @@ def _multi_source_signals_check(run: RunContext, *, expected: bool) -> dict[str,
     )
 
 
-def _factor_signal_material_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
-    artifact = FACTOR_SIGNAL_MATERIAL_ARTIFACT
-    if not expected:
-        return _post_data_quality_stage_check(
-            "factor_signal_material",
-            artifact,
-            producer_stage="build_analysis_materials",
-        )
-    path = run.analysis_dir / "factor_signal_material.md"
-    if not path.exists():
-        return _missing_post_data_quality_check("factor_signal_material", artifact, f"{path.name} was not found.")
-    material = path.read_text(encoding="utf-8")
-    errors = []
-    required_boundaries = [
-        "artifact_type: analysis_factor_signal_material",
-        "codex_may_generate_feature_records: false",
-        "codex_may_generate_factor_scores: false",
-        "codex_may_generate_signal_states: false",
-        "full_feature_snapshots_json_embedded: false",
-        "full_factor_states_json_embedded: false",
-        "full_multi_source_signals_json_embedded: false",
-        "selected_records_only: true",
-    ]
-    for boundary in required_boundaries:
-        if boundary not in material:
-            errors.append(f"factor signal material missing boundary: {boundary}")
-    material_summary = _dict(run.manifest.get("factor_signal_material"))
-    budget = _factor_signal_material_budget(run)
-    status = "failed" if errors else _analysis_artifact_status(str(material_summary.get("status") or "ok"), [], [])
-    return _check(
-        "factor_signal_material",
-        "analysis",
-        status,
-        "factor signal material is present with Codex boundary metadata.",
-        [artifact, FEATURE_SNAPSHOTS_ARTIFACT, FACTOR_STATES_ARTIFACT, MULTI_SOURCE_SIGNALS_ARTIFACT],
-        errors=errors,
-        details={
-            "chars": len(material),
-            "selected_records": _int(run.manifest.get("counts", {}).get("factor_signal_material_records")),
-            "omitted_records": _int(run.manifest.get("counts", {}).get("factor_signal_material_omitted_records")),
-            "codex_boundaries_present": not errors,
-            "codex_budget_checked": bool(budget),
-            "codex_budget_status": budget.get("status") if budget else "not_available_before_codex_context",
-            "codex_budget_chars": _int(budget.get("chars")) if budget else 0,
-            "codex_budget_over_budget": bool(budget.get("over_budget")) if budget else False,
-            "codex_budget_warnings": len(_list(budget.get("warnings"))) if budget else 0,
-        },
-    )
-
-
 def _intelligence_fusion_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
     artifact = INTELLIGENCE_FUSION_ARTIFACT
     if not expected:
@@ -283,57 +228,6 @@ def _intelligence_fusion_check(run: RunContext, *, expected: bool) -> dict[str, 
             "decision_adjusted_records": _int(manifest_counts.get("intelligence_fusion_decision_adjusted_records")),
             "alert_linked_records": _int(manifest_counts.get("intelligence_fusion_alert_linked_records")),
             "alert_adjusted_records": _int(manifest_counts.get("intelligence_fusion_alert_adjusted_records")),
-        },
-    )
-
-
-def _intelligence_fusion_material_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
-    artifact = INTELLIGENCE_FUSION_MATERIAL_ARTIFACT
-    if not expected:
-        return _post_data_quality_stage_check(
-            "intelligence_fusion_material",
-            artifact,
-            producer_stage="build_analysis_materials",
-        )
-    path = run.analysis_dir / "intelligence_fusion_material.md"
-    if not path.exists():
-        return _missing_post_data_quality_check("intelligence_fusion_material", artifact, f"{path.name} was not found.")
-    material = path.read_text(encoding="utf-8")
-    errors = []
-    required_boundaries = [
-        "artifact_type: analysis_intelligence_fusion_material",
-        "full_intelligence_fusion_json_embedded: false",
-        "full_upstream_json_embedded: false",
-        "codex_may_generate_fusion_states: false",
-        "codex_may_generate_risk_overrides: false",
-        "codex_may_generate_event_overrides: false",
-        "codex_may_generate_alert_priorities: false",
-        "codex_may_generate_action_levels: false",
-    ]
-    for boundary in required_boundaries:
-        if boundary not in material:
-            errors.append(f"intelligence fusion material missing boundary: {boundary}")
-    material_summary = _dict(run.manifest.get("intelligence_fusion_material"))
-    manifest_counts = _dict(run.manifest.get("counts"))
-    budget = _material_budget(run, INTELLIGENCE_FUSION_MATERIAL_ARTIFACT)
-    status = "failed" if errors else _analysis_artifact_status(str(material_summary.get("status") or "ok"), [], [])
-    return _check(
-        "intelligence_fusion_material",
-        "analysis",
-        status,
-        "intelligence fusion material is present with Codex boundary metadata.",
-        [artifact, INTELLIGENCE_FUSION_ARTIFACT],
-        errors=errors,
-        details={
-            "chars": len(material),
-            "selected_records": _int(manifest_counts.get("intelligence_fusion_material_records")),
-            "omitted_records": _int(manifest_counts.get("intelligence_fusion_material_omitted_records")),
-            "codex_boundaries_present": not errors,
-            "codex_budget_checked": bool(budget),
-            "codex_budget_status": budget.get("status") if budget else "not_available_before_codex_context",
-            "codex_budget_chars": _int(budget.get("chars")) if budget else 0,
-            "codex_budget_over_budget": bool(budget.get("over_budget")) if budget else False,
-            "codex_budget_warnings": len(_list(budget.get("warnings"))) if budget else 0,
         },
     )
 
@@ -461,64 +355,6 @@ def _personalized_risk_constraints_check(run: RunContext, *, expected: bool) -> 
             "watch_adjusted_records": _int(manifest_counts.get("personalized_risk_watch_adjusted_records")),
             "alert_linked_records": _int(manifest_counts.get("personalized_risk_alert_linked_records")),
             "alert_adjusted_records": _int(manifest_counts.get("personalized_risk_alert_adjusted_records")),
-        },
-    )
-
-
-def _personalized_risk_material_check(run: RunContext, *, expected: bool) -> dict[str, Any]:
-    artifact = PERSONALIZED_RISK_MATERIAL_ARTIFACT
-    if not expected:
-        return _post_data_quality_stage_check(
-            "personalized_risk_material",
-            artifact,
-            producer_stage="build_personalized_risk_material",
-        )
-    path = run.analysis_dir / "personalized_risk_material.md"
-    if not path.exists():
-        return _missing_post_data_quality_check("personalized_risk_material", artifact, f"{path.name} was not found.")
-    material = path.read_text(encoding="utf-8")
-    errors = []
-    required_boundaries = [
-        "artifact_type: analysis_personalized_risk_material",
-        "full_user_state_file_embedded: false",
-        "private_notes_embedded: false",
-        "machine_paths_embedded: false",
-        "account_identifiers_embedded: false",
-        "holdings_values_embedded: false",
-        "full_user_state_context_json_embedded: false",
-        "full_personalized_risk_constraints_json_embedded: false",
-        "codex_may_generate_user_state: false",
-        "codex_may_generate_allocations: false",
-        "codex_may_size_positions: false",
-        "codex_may_generate_action_levels: false",
-        "codex_may_create_trading_instructions: false",
-    ]
-    for boundary in required_boundaries:
-        if boundary not in material:
-            errors.append(f"personalized risk material missing boundary: {boundary}")
-    material_summary = _dict(run.manifest.get("personalized_risk_material"))
-    manifest_counts = _dict(run.manifest.get("counts"))
-    budget = _material_budget(run, PERSONALIZED_RISK_MATERIAL_ARTIFACT)
-    if not budget:
-        budget = _dict(material_summary.get("codex_input_budget"))
-    status = "failed" if errors else _analysis_artifact_status(str(material_summary.get("status") or "ok"), [], [])
-    return _check(
-        "personalized_risk_material",
-        "analysis",
-        status,
-        "personalized risk material is present with privacy and Codex boundary metadata.",
-        [artifact, USER_STATE_CONTEXT_ARTIFACT, PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT],
-        errors=errors,
-        details={
-            "chars": len(material),
-            "selected_records": _int(manifest_counts.get("personalized_risk_material_records")),
-            "omitted_records": _int(manifest_counts.get("personalized_risk_material_omitted_records")),
-            "codex_boundaries_present": not errors,
-            "codex_budget_checked": bool(budget),
-            "codex_budget_status": budget.get("status") if budget else "not_available_before_codex_context",
-            "codex_budget_chars": _int(budget.get("chars")) if budget else 0,
-            "codex_budget_over_budget": bool(budget.get("over_budget")) if budget else False,
-            "codex_budget_warnings": len(_list(budget.get("warnings"))) if budget else 0,
         },
     )
 
@@ -670,24 +506,6 @@ def _nested_count_mapping(value: Any, records: list[Any], field: str) -> dict[st
         if isinstance(nested_state, str) and nested_state:
             fallback[nested_state] = fallback.get(nested_state, 0) + 1
     return dict(sorted(fallback.items()))
-
-
-def _factor_signal_material_budget(run: RunContext) -> dict[str, Any]:
-    return _material_budget(run, FACTOR_SIGNAL_MATERIAL_ARTIFACT)
-
-
-def _material_budget(run: RunContext, artifact: str) -> dict[str, Any]:
-    codex_input = _dict(run.manifest.get("codex_input"))
-    materials = codex_input.get("materials")
-    if isinstance(materials, dict):
-        budget = materials.get(artifact)
-        return budget if isinstance(budget, dict) else {}
-    if isinstance(materials, list):
-        for item in materials:
-            record = _dict(item)
-            if record.get("artifact") == artifact:
-                return record
-    return {}
 
 
 def _check(

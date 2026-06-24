@@ -534,8 +534,8 @@ Pipeline stage:
 build_macro_calendar_material
 ```
 
-The stage runs after `build_macro_calendar_context` and before text-event
-processing. It consumes `analysis/macro_calendar_context.json` only.
+The stage runs inside `build_materials`, after final data-quality summary
+publication. It consumes `analysis/macro_calendar_context.json` only.
 
 Required sections:
 
@@ -637,8 +637,7 @@ Data quality should cover:
 - missing event names, regions, data classes, or source refs;
 - reusable state status;
 - current-run view coverage;
-- no-event windows and unavailable source states;
-- Codex input boundaries for macro/calendar material.
+- no-event windows and unavailable source states.
 
 Rules:
 

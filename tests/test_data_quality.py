@@ -5,11 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from halpha.config import load_config
-from halpha.data.data_quality import build_data_quality_summary, refresh_post_data_quality_checks
-from halpha.data.data_quality_post_artifacts import (
-    POST_DATA_QUALITY_CHECK_NAMES,
-    post_data_quality_artifact_checks,
-)
+from halpha.data.data_quality import build_data_quality_summary
+from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
+from halpha.data.data_quality_post_artifacts import post_data_quality_artifact_checks
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
@@ -31,7 +29,7 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
 
     assert summary["artifact_type"] == "data_quality_summary"
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 30
+    assert summary["counts"]["checks"] == 25
     assert summary["counts"]["failed"] == 0
     assert summary["counts"]["degraded"] == 0
     assert manifest["artifacts"]["data_quality_summary"] == "analysis/data_quality_summary.json"
@@ -46,26 +44,20 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "macro_calendar_history")["status"] == "skipped"
     assert _check(summary, "macro_calendar_views")["status"] == "skipped"
     assert _check(summary, "macro_calendar_context")["status"] == "skipped"
-    assert _check(summary, "macro_calendar_material")["status"] == "skipped"
     assert _check(summary, "raw_onchain_flow")["status"] == "skipped"
     assert _check(summary, "onchain_flow_history")["status"] == "skipped"
     assert _check(summary, "onchain_flow_views")["status"] == "skipped"
     assert _check(summary, "onchain_flow_context")["status"] == "skipped"
-    assert _check(summary, "onchain_flow_material")["status"] == "skipped"
     for name in (
         "feature_snapshots",
         "factor_states",
         "multi_source_signals",
-        "factor_signal_material",
         "intelligence_fusion",
-        "intelligence_fusion_material",
         "user_state_context",
         "personalized_risk_constraints",
-        "personalized_risk_material",
     ):
         post_artifact_check = _check(summary, name)
-        assert post_artifact_check["status"] == "skipped"
-        assert post_artifact_check["details"]["stage_time_skip_is_expected"] is True
+        assert post_artifact_check["status"] == "ok"
     assert _check(summary, "text_event_history")["status"] == "ok"
     run_index = _check(summary, "run_index")
     assert run_index["status"] == "skipped"
@@ -81,7 +73,7 @@ def test_post_data_quality_artifact_checks_report_stage_time_skips(tmp_path: Pat
     checks = post_data_quality_artifact_checks(run, expected=False)
 
     assert {check["name"] for check in checks} == POST_DATA_QUALITY_CHECK_NAMES
-    assert len(checks) == 9
+    assert len(checks) == 6
     for check in checks:
         assert check["status"] == "skipped"
         assert check["scope"] == "analysis"
@@ -154,6 +146,7 @@ def test_data_quality_summary_records_partial_collection_and_optional_skips(tmp_
         },
     )
     run.manifest["artifacts"]["raw_market"] = "raw/market.json"
+    _write_final_structured_artifacts(run)
 
     build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
@@ -164,34 +157,27 @@ def test_data_quality_summary_records_partial_collection_and_optional_skips(tmp_
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
-def test_data_quality_summary_refreshes_post_artifact_checks_ok(tmp_path: Path) -> None:
+def test_data_quality_summary_includes_final_structured_artifact_checks_ok(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
     _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run)
     _write_personalized_risk_artifacts(run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "ok"
-    assert summary["counts"]["checks"] == 9
+    assert summary["counts"]["checks"] == 25
     assert _check(summary, "feature_snapshots")["status"] == "ok"
     assert _check(summary, "factor_states")["status"] == "ok"
     assert _check(summary, "multi_source_signals")["status"] == "ok"
-    material = _check(summary, "factor_signal_material")
-    assert material["status"] == "ok"
-    assert material["details"]["codex_boundaries_present"] is True
-    assert material["details"]["codex_budget_status"] == "not_available_before_codex_context"
     fusion = _check(summary, "intelligence_fusion")
     assert fusion["status"] == "ok"
     assert fusion["details"]["records"] == 2
     assert fusion["details"]["state_counts"]["supportive"] == 2
-    fusion_material = _check(summary, "intelligence_fusion_material")
-    assert fusion_material["status"] == "ok"
-    assert fusion_material["details"]["codex_boundaries_present"] is True
-    assert fusion_material["details"]["codex_budget_status"] == "not_available_before_codex_context"
     user_state = _check(summary, "user_state_context")
     assert user_state["status"] == "ok"
     assert user_state["details"]["mode"] == "personalized"
@@ -201,22 +187,19 @@ def test_data_quality_summary_refreshes_post_artifact_checks_ok(tmp_path: Path) 
     assert personalized["details"]["state_counts"]["watchlist_relevant"] == 1
     assert personalized["details"]["action_counts"]["annotate"] == 1
     assert personalized["details"]["decision_linked_records"] == 1
-    risk_material = _check(summary, "personalized_risk_material")
-    assert risk_material["status"] == "ok"
-    assert risk_material["details"]["codex_boundaries_present"] is True
-    assert risk_material["details"]["codex_budget_status"] == "pending_research_context_inclusion"
-    assert run.manifest["counts"]["data_quality_checks"] == 9
+    assert run.manifest["counts"]["data_quality_checks"] == 25
 
 
-def test_data_quality_summary_refreshes_post_artifact_checks_warning(tmp_path: Path) -> None:
+def test_data_quality_summary_includes_final_structured_artifact_checks_warning(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
     _write_feature_factor_artifacts(run, feature_status="warning", feature_warnings=["one source was partial."])
     _write_fusion_artifacts(run)
     _write_personalized_risk_artifacts(run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "warning"
@@ -225,30 +208,32 @@ def test_data_quality_summary_refreshes_post_artifact_checks_warning(tmp_path: P
     assert feature["warning_count"] == 1
 
 
-def test_data_quality_summary_refreshes_post_artifact_checks_degraded(tmp_path: Path) -> None:
+def test_data_quality_summary_includes_final_structured_artifact_checks_degraded(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
     _write_feature_factor_artifacts(run, factor_status="degraded")
     _write_fusion_artifacts(run)
     _write_personalized_risk_artifacts(run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "degraded"
     assert _check(summary, "factor_states")["status"] == "degraded"
 
 
-def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_and_failed(tmp_path: Path) -> None:
+def test_data_quality_summary_includes_fusion_artifact_checks_warning_degraded_and_failed(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
     _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run, status="warning", state="conflicting", conflict_state="severe")
     _write_personalized_risk_artifacts(run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     fusion = _check(summary, "intelligence_fusion")
@@ -259,11 +244,12 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
 
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
     _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run, status="warning", state="degraded")
     _write_personalized_risk_artifacts(run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     fusion = _check(summary, "intelligence_fusion")
@@ -273,11 +259,12 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
 
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
     _write_feature_factor_artifacts(run)
     _write_fusion_artifacts(run, status="failed", state="failed", errors=["fusion failed"])
     _write_personalized_risk_artifacts(run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     fusion = _check(summary, "intelligence_fusion")
@@ -287,19 +274,20 @@ def test_data_quality_summary_refreshes_fusion_artifact_checks_warning_degraded_
     assert fusion["details"]["failed_records"] == 2
 
 
-def test_data_quality_summary_refreshes_post_artifact_checks_missing_as_failed(tmp_path: Path) -> None:
+def test_data_quality_summary_reports_missing_final_structured_artifacts_as_failed(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)
     _write_initial_quality_summary(run)
+    _write_market_raw({}, run)
 
-    refresh_post_data_quality_checks(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
+    build_data_quality_summary(_config(include_ohlcv=False, text_enabled=False), run, now="2026-06-05T00:00:00Z")
 
     summary = _summary(run.analysis_dir)
     assert summary["status"] == "failed"
-    assert summary["counts"]["failed"] == 9
+    assert summary["counts"]["failed"] == 6
     assert _check(summary, "feature_snapshots")["details"]["report_as_final_missing"] is True
     assert _check(summary, "intelligence_fusion")["details"]["report_as_final_missing"] is True
-    assert _check(summary, "personalized_risk_material")["details"]["report_as_final_missing"] is True
+    assert _check(summary, "personalized_risk_constraints")["details"]["report_as_final_missing"] is True
 
 
 def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path) -> None:
@@ -309,6 +297,7 @@ def test_data_quality_summary_reports_derivatives_quality_states(tmp_path: Path)
     _write_derivatives_raw(run)
     _write_derivatives_state(tmp_path)
     _write_derivatives_views(run)
+    _write_final_structured_artifacts(run)
     run.manifest["derivatives_market_history"] = {
         "status": "warning",
         "artifact": "data/market/metadata/derivatives_market_state.json",
@@ -366,7 +355,7 @@ def test_data_quality_summary_reports_macro_calendar_quality_states(tmp_path: Pa
     _write_macro_state(tmp_path)
     _write_macro_views(run)
     _write_macro_context(run)
-    _write_macro_material(run)
+    _write_final_structured_artifacts(run)
     run.manifest["macro_calendar_history"] = {
         "status": "warning",
         "artifact": "data/macro/metadata/macro_calendar_state.json",
@@ -383,7 +372,6 @@ def test_data_quality_summary_reports_macro_calendar_quality_states(tmp_path: Pa
     history = _check(summary, "macro_calendar_history")
     views = _check(summary, "macro_calendar_views")
     context = _check(summary, "macro_calendar_context")
-    material = _check(summary, "macro_calendar_material")
 
     assert summary["status"] == "degraded"
     assert raw["status"] == "degraded"
@@ -422,10 +410,6 @@ def test_data_quality_summary_reports_macro_calendar_quality_states(tmp_path: Pa
     assert context["details"]["source_availability"] == 1
     assert context["details"]["stale"] == 1
 
-    assert material["status"] == "ok"
-    assert material["details"]["selected_records"] == 2
-    assert material["details"]["omitted_records"] == 0
-    assert material["details"]["codex_boundaries_present"] is True
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
@@ -437,7 +421,7 @@ def test_data_quality_summary_reports_onchain_flow_quality_states(tmp_path: Path
     _write_onchain_flow_state(tmp_path)
     _write_onchain_flow_views(run)
     _write_onchain_flow_context(run)
-    _write_onchain_flow_material(run)
+    _write_final_structured_artifacts(run)
     run.manifest["onchain_flow_history"] = {
         "status": "warning",
         "artifact": "data/onchain/metadata/onchain_flow_state.json",
@@ -454,7 +438,6 @@ def test_data_quality_summary_reports_onchain_flow_quality_states(tmp_path: Path
     history = _check(summary, "onchain_flow_history")
     views = _check(summary, "onchain_flow_views")
     context = _check(summary, "onchain_flow_context")
-    material = _check(summary, "onchain_flow_material")
 
     assert summary["status"] == "degraded"
     assert raw["status"] == "degraded"
@@ -493,10 +476,6 @@ def test_data_quality_summary_reports_onchain_flow_quality_states(tmp_path: Path
     assert context["details"]["exchange_flow_source_availability"] == 1
     assert context["details"]["stale"] == 1
 
-    assert material["status"] == "ok"
-    assert material["details"]["selected_records"] == 2
-    assert material["details"]["omitted_records"] == 0
-    assert material["details"]["codex_boundaries_present"] is True
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
@@ -549,9 +528,37 @@ def _handlers_for_data_quality() -> dict[str, Any]:
         {
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_text_raw,
+            "build_feature_snapshots": _write_feature_factor_stage,
+            "build_intelligence_fusion": _write_fusion_stage,
+            "build_personalized_risk_constraints": _write_personalized_risk_stage,
         }
     )
     return handlers
+
+
+def _write_feature_factor_stage(config, run) -> list[str]:
+    _write_feature_factor_artifacts(run)
+    return [
+        "analysis/feature_snapshots.json",
+        "analysis/factor_states.json",
+        "analysis/multi_source_signals.json",
+    ]
+
+
+def _write_fusion_stage(config, run) -> list[str]:
+    _write_fusion_artifacts(run)
+    return ["analysis/intelligence_fusion.json"]
+
+
+def _write_personalized_risk_stage(config, run) -> list[str]:
+    _write_personalized_risk_artifacts(run)
+    return ["analysis/user_state_context.json", "analysis/personalized_risk_constraints.json"]
+
+
+def _write_final_structured_artifacts(run: RunContext) -> None:
+    _write_feature_factor_artifacts(run)
+    _write_fusion_artifacts(run)
+    _write_personalized_risk_artifacts(run)
 
 
 def _config(
@@ -756,32 +763,6 @@ def _write_feature_factor_artifacts(
     run.manifest["counts"]["multi_source_signal_warnings"] = 0
     run.manifest["counts"]["multi_source_signal_errors"] = 0
 
-    material = "\n".join(
-        [
-            "---",
-            "artifact_type: analysis_factor_signal_material",
-            "schema_version: 1",
-            "---",
-            "",
-            "codex_may_generate_feature_records: false",
-            "codex_may_generate_factor_scores: false",
-            "codex_may_generate_signal_states: false",
-            "full_feature_snapshots_json_embedded: false",
-            "full_factor_states_json_embedded: false",
-            "full_multi_source_signals_json_embedded: false",
-            "selected_records_only: true",
-            "",
-        ]
-    )
-    (run.analysis_dir / "factor_signal_material.md").write_text(material, encoding="utf-8")
-    run.manifest["artifacts"]["factor_signal_material"] = "analysis/factor_signal_material.md"
-    run.manifest["factor_signal_material"] = {
-        "status": "ok",
-        "artifact": "analysis/factor_signal_material.md",
-    }
-    run.manifest["counts"]["factor_signal_material_records"] = 3
-    run.manifest["counts"]["factor_signal_material_omitted_records"] = 0
-
 
 def _write_fusion_artifacts(
     run: RunContext,
@@ -872,32 +853,6 @@ def _write_fusion_artifacts(
     run.manifest["counts"]["intelligence_fusion_decision_adjusted_records"] = 0
     run.manifest["counts"]["intelligence_fusion_alert_linked_records"] = 1
     run.manifest["counts"]["intelligence_fusion_alert_adjusted_records"] = 0
-
-    material = "\n".join(
-        [
-            "---",
-            "artifact_type: analysis_intelligence_fusion_material",
-            "schema_version: 1",
-            "---",
-            "",
-            "full_intelligence_fusion_json_embedded: false",
-            "full_upstream_json_embedded: false",
-            "codex_may_generate_fusion_states: false",
-            "codex_may_generate_risk_overrides: false",
-            "codex_may_generate_event_overrides: false",
-            "codex_may_generate_alert_priorities: false",
-            "codex_may_generate_action_levels: false",
-            "",
-        ]
-    )
-    (run.analysis_dir / "intelligence_fusion_material.md").write_text(material, encoding="utf-8")
-    run.manifest["artifacts"]["intelligence_fusion_material"] = "analysis/intelligence_fusion_material.md"
-    run.manifest["intelligence_fusion_material"] = {
-        "status": status,
-        "artifact": "analysis/intelligence_fusion_material.md",
-    }
-    run.manifest["counts"]["intelligence_fusion_material_records"] = 2
-    run.manifest["counts"]["intelligence_fusion_material_omitted_records"] = 0
 
 
 def _write_personalized_risk_artifacts(run: RunContext) -> None:
@@ -1038,48 +993,6 @@ def _write_personalized_risk_artifacts(run: RunContext) -> None:
     run.manifest["counts"]["personalized_risk_watch_adjusted_records"] = 0
     run.manifest["counts"]["personalized_risk_alert_linked_records"] = 1
     run.manifest["counts"]["personalized_risk_alert_adjusted_records"] = 0
-    material = "\n".join(
-        [
-            "---",
-            "artifact_type: analysis_personalized_risk_material",
-            "schema_version: 1",
-            "---",
-            "",
-            "full_user_state_file_embedded: false",
-            "private_notes_embedded: false",
-            "machine_paths_embedded: false",
-            "account_identifiers_embedded: false",
-            "holdings_values_embedded: false",
-            "full_user_state_context_json_embedded: false",
-            "full_personalized_risk_constraints_json_embedded: false",
-            "codex_may_generate_user_state: false",
-            "codex_may_generate_allocations: false",
-            "codex_may_size_positions: false",
-            "codex_may_generate_action_levels: false",
-            "codex_may_create_trading_instructions: false",
-            "",
-        ]
-    )
-    (run.analysis_dir / "personalized_risk_material.md").write_text(material, encoding="utf-8")
-    run.manifest["artifacts"]["personalized_risk_material"] = "analysis/personalized_risk_material.md"
-    run.manifest["personalized_risk_material"] = {
-        "status": "ok",
-        "artifact": "analysis/personalized_risk_material.md",
-        "selected_records": 1,
-        "omitted_records": 0,
-        "warnings": 0,
-        "errors": 0,
-        "codex_input_budget": {
-            "artifact": "analysis/personalized_risk_material.md",
-            "status": "pending_research_context_inclusion",
-            "chars": len(material),
-            "over_budget": False,
-            "warnings": [],
-        },
-    }
-    run.manifest["counts"]["personalized_risk_material_records"] = 1
-    run.manifest["counts"]["personalized_risk_material_omitted_records"] = 0
-
 
 def _write_market_raw(config, run) -> list[str]:
     write_json(
@@ -1518,35 +1431,6 @@ def _write_macro_context(run: RunContext) -> None:
     run.manifest["artifacts"]["macro_calendar_context"] = "analysis/macro_calendar_context.json"
 
 
-def _write_macro_material(run: RunContext) -> None:
-    material = "\n".join(
-        [
-            "---",
-            "artifact_type: analysis_macro_calendar_material",
-            "schema_version: 1",
-            "---",
-            "",
-            "# macro_calendar_material",
-            "",
-            "codex_may_generate_macro_events: false",
-            "codex_may_generate_risk_levels: false",
-            "full_raw_macro_calendar_artifacts_embedded: false",
-            "full_reusable_macro_calendar_history_embedded: false",
-            "full_macro_calendar_context_json_embedded: false",
-            "",
-        ]
-    )
-    run.analysis_dir.joinpath("macro_calendar_material.md").write_text(material, encoding="utf-8")
-    run.manifest["artifacts"]["macro_calendar_material"] = "analysis/macro_calendar_material.md"
-    run.manifest["macro_calendar_material"] = {
-        "status": "warning",
-        "artifact": "analysis/macro_calendar_material.md",
-        "context_records": 2,
-        "selected_records": 2,
-        "omitted_records": 0,
-    }
-
-
 def _write_onchain_flow_raw(run: RunContext) -> None:
     write_json(
         run.raw_dir / "onchain_flow.json",
@@ -1815,37 +1699,6 @@ def _write_onchain_flow_context(run: RunContext) -> None:
         },
     )
     run.manifest["artifacts"]["onchain_flow_context"] = "analysis/onchain_flow_context.json"
-
-
-def _write_onchain_flow_material(run: RunContext) -> None:
-    material = "\n".join(
-        [
-            "---",
-            "artifact_type: analysis_onchain_flow_material",
-            "schema_version: 1",
-            "---",
-            "",
-            "# onchain_flow_material",
-            "",
-            "codex_may_generate_onchain_records: false",
-            "codex_may_generate_flow_states: false",
-            "codex_may_generate_address_labels: false",
-            "codex_may_generate_risk_levels: false",
-            "full_raw_onchain_flow_artifacts_embedded: false",
-            "full_reusable_onchain_flow_history_embedded: false",
-            "full_onchain_flow_context_json_embedded: false",
-            "",
-        ]
-    )
-    run.analysis_dir.joinpath("onchain_flow_material.md").write_text(material, encoding="utf-8")
-    run.manifest["artifacts"]["onchain_flow_material"] = "analysis/onchain_flow_material.md"
-    run.manifest["onchain_flow_material"] = {
-        "status": "warning",
-        "artifact": "analysis/onchain_flow_material.md",
-        "context_records": 2,
-        "selected_records": 2,
-        "omitted_records": 0,
-    }
 
 
 def _event_record(raw_id: str, *, canonical_url: str, text: str) -> dict[str, Any]:

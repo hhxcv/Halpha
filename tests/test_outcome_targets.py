@@ -138,8 +138,8 @@ def test_outcome_targets_expand_unscoped_strategy_gates_from_benchmark_evaluatio
         config_path=config_path,
         until_stage="run_strategy_research",
         stage_handlers=_handlers_for_until(
-            "build_strategy_experiment_material",
-            {"build_strategy_experiment_material": _write_unscoped_strategy_gate_with_experiment},
+            "build_strategy_experiment",
+            {"build_strategy_experiment": _write_unscoped_strategy_gate_with_experiment},
         ),
         now=datetime(2026, 6, 5, 0, 0, tzinfo=UTC),
     )
@@ -225,7 +225,7 @@ def _run_previous_source_pipeline(config: dict[str, Any], config_path: Path):
         stage_handlers=_handlers_for_until(
             "build_alert_decisions",
             {
-                "build_strategy_experiment_material": _write_strategy_effectiveness_gates,
+                "build_strategy_experiment": _write_strategy_effectiveness_gates,
                 "build_market_signals": _write_market_signals,
                 "build_decision_recommendations": _write_decision_recommendations,
                 "build_watch_triggers": _write_watch_triggers,
