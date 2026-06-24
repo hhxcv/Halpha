@@ -154,6 +154,8 @@ Initial adoption rules:
   skipped model states without downloading model files.
 - With `allow_model_download: true`, the command may use `huggingface_hub` to
   download configured model snapshots into the configured local cache.
+- Relative `model_cache_dir` values resolve from the runtime root, not from the
+  config file location. Absolute paths remain explicit local overrides.
 - Preparation manifests must not record local model cache paths or resolved
   download paths.
 

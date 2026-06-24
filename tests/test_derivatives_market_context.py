@@ -14,6 +14,11 @@ from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_derivatives_context_builds_extreme_funding_and_oi_expansion(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, data_classes=["funding_rate", "open_interest"], lookback=3)
     config = load_config(config_path)
@@ -223,14 +228,19 @@ def test_derivatives_context_builds_normal_spread_depth_state(tmp_path: Path) ->
     assert _manifest(result)["derivatives_market_context"]["liquidity_depth_state"] == 1
 
 
-def test_derivatives_context_flags_wide_spread_and_depth_imbalance(tmp_path: Path) -> None:
+def test_derivatives_context_flags_wide_spread_and_depth_imbalance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     wide_config_path = _write_config(tmp_path / "wide", data_classes=["spread_depth"], lookback=1)
     wide_config = load_config(wide_config_path)
+    monkeypatch.chdir(wide_config_path.parent)
     wide_result = _run_until_context(wide_config, wide_config_path, _write_wide_spread_depth_raw_stage)
     wide = _context_record(_context(wide_result), context_type="liquidity_depth_state", period="snapshot")
 
     imbalance_config_path = _write_config(tmp_path / "imbalance", data_classes=["spread_depth"], lookback=1)
     imbalance_config = load_config(imbalance_config_path)
+    monkeypatch.chdir(imbalance_config_path.parent)
     imbalance_result = _run_until_context(
         imbalance_config,
         imbalance_config_path,
@@ -244,9 +254,13 @@ def test_derivatives_context_flags_wide_spread_and_depth_imbalance(tmp_path: Pat
     assert imbalance["severity"] == "medium"
 
 
-def test_derivatives_context_flags_stale_and_unavailable_spread_depth(tmp_path: Path) -> None:
+def test_derivatives_context_flags_stale_and_unavailable_spread_depth(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     stale_config_path = _write_config(tmp_path / "stale", data_classes=["spread_depth"], lookback=1)
     stale_config = load_config(stale_config_path)
+    monkeypatch.chdir(stale_config_path.parent)
     stale_result = _run_until_context(
         stale_config,
         stale_config_path,
@@ -257,6 +271,7 @@ def test_derivatives_context_flags_stale_and_unavailable_spread_depth(tmp_path: 
 
     missing_config_path = _write_config(tmp_path / "missing", data_classes=["spread_depth"], lookback=1)
     missing_config = load_config(missing_config_path)
+    monkeypatch.chdir(missing_config_path.parent)
     missing_result = _run_until_context(missing_config, missing_config_path, _noop_stage)
     missing = _context_record(_context(missing_result), context_type="liquidity_depth_state", period="snapshot")
 

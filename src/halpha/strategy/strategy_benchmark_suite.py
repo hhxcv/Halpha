@@ -6,7 +6,7 @@ from typing import Any
 
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 STAGE_NAME = "build_strategy_benchmark_suite"
@@ -68,6 +68,7 @@ def create_strategy_benchmark_suite_artifact(
     store = OHLCVParquetStore(storage_dir, run_output_dir=run_output_dir)
 
     records = []
+    base = runtime_root(config_path)
     try:
         for symbol in _configured_symbols(market):
             for timeframe in _configured_timeframes(ohlcv):
@@ -76,7 +77,7 @@ def create_strategy_benchmark_suite_artifact(
                         _benchmark_record(
                             store=store,
                             storage_dir=storage_dir,
-                            config_base=config_path.parent,
+                            config_base=base,
                             source=source,
                             symbol=symbol,
                             timeframe=timeframe,
@@ -404,9 +405,7 @@ def _configured_lookback(ohlcv: dict[str, Any], timeframe: str) -> int:
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:
     storage_dir = Path(str(ohlcv["storage_dir"]))
-    if storage_dir.is_absolute():
-        return storage_dir
-    return config_path.parent / storage_dir
+    return resolve_runtime_path(storage_dir, config_path=config_path)
 
 
 def _storage_ref(
@@ -429,7 +428,7 @@ def _sync_state_artifact(
     artifact = manifest_artifacts.get("ohlcv_sync_state") if isinstance(manifest_artifacts, dict) else None
     if isinstance(artifact, str) and artifact:
         return artifact
-    return display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=config_path.parent)
+    return display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=runtime_root(config_path))
 
 
 def _benchmark_id(

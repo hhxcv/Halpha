@@ -61,13 +61,21 @@ def config_base(config_path: Path) -> Path:
     return parent
 
 
-def artifact_base(config_path: Path | None = None) -> Path:
+def runtime_root(config_path: Path | None = None) -> Path:
     return Path.cwd()
 
 
-def resolve_artifact_path(path: Path | str, *, config_path: Path | None = None) -> Path:
+def artifact_base(config_path: Path | None = None) -> Path:
+    return runtime_root(config_path)
+
+
+def resolve_runtime_path(path: Path | str, *, config_path: Path | None = None) -> Path:
     candidate = Path(path)
-    return candidate if candidate.is_absolute() else artifact_base(config_path) / candidate
+    return candidate if candidate.is_absolute() else runtime_root(config_path) / candidate
+
+
+def resolve_artifact_path(path: Path | str, *, config_path: Path | None = None) -> Path:
+    return resolve_runtime_path(path, config_path=config_path)
 
 
 def read_json_object(path: Path, *, external_ref_name: str | None = None) -> tuple[dict[str, Any], str | None]:

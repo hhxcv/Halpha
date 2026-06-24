@@ -8,7 +8,7 @@ from typing import Any
 
 from halpha.collectors.derivatives_market import DERIVATIVES_MARKET_ARTIFACT
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 STAGE_NAME = "sync_derivatives_market_history"
@@ -48,14 +48,15 @@ def sync_derivatives_market_history(
 
     _rewrite_history(storage_root, merged_records)
     _write_schema(schema_path, run)
+    base = runtime_root(run.config_path)
     state = {
         "schema_version": DERIVATIVES_HISTORY_SCHEMA_VERSION,
         "artifact_type": "derivatives_market_state",
         "updated_at": _format_utc(now),
         "status": _status(record_count=len(merged_records), warnings=warnings, errors=errors),
-        "storage_path": display_path(storage_root, base=run.config_path.parent),
-        "schema_path": display_path(schema_path, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_root, base=base),
+        "schema_path": display_path(schema_path, base=base),
+        "state_path": display_path(state_path, base=base),
         "totals": {
             "records": len(merged_records),
             "incoming_records": len(incoming_records),
@@ -66,7 +67,7 @@ def sync_derivatives_market_history(
             "warning_count": len(warnings),
             "error_count": len(errors),
         },
-        "groups": _group_summaries(merged_records, run.config_path.parent),
+        "groups": _group_summaries(merged_records, base),
         "ranges": _ranges(merged_records),
         "warnings": warnings,
         "errors": errors,
@@ -78,15 +79,15 @@ def sync_derivatives_market_history(
 
 
 def derivatives_market_storage_path(config_path: Path) -> Path:
-    return config_path.parent / DERIVATIVES_HISTORY_STORAGE_ARTIFACT
+    return resolve_runtime_path(DERIVATIVES_HISTORY_STORAGE_ARTIFACT, config_path=config_path)
 
 
 def derivatives_market_schema_path(config_path: Path) -> Path:
-    return config_path.parent / DERIVATIVES_HISTORY_SCHEMA_ARTIFACT
+    return resolve_runtime_path(DERIVATIVES_HISTORY_SCHEMA_ARTIFACT, config_path=config_path)
 
 
 def derivatives_market_state_path(config_path: Path) -> Path:
-    return config_path.parent / DERIVATIVES_HISTORY_STATE_ARTIFACT
+    return resolve_runtime_path(DERIVATIVES_HISTORY_STATE_ARTIFACT, config_path=config_path)
 
 
 def derivatives_market_group_path(
@@ -176,7 +177,7 @@ def _history_record(item: dict[str, Any], run: RunContext, *, observed_at: str) 
         "status": "warning" if warnings or errors else "active",
         "warnings": warnings,
         "errors": errors,
-        "source_artifacts": [display_path(run.raw_dir / "derivatives_market.json", base=run.config_path.parent)],
+        "source_artifacts": [display_path(run.raw_dir / "derivatives_market.json", base=runtime_root(run.config_path))],
     }
 
 
@@ -271,7 +272,10 @@ def _write_schema(schema_path: Path, run: RunContext) -> None:
         "schema_version": DERIVATIVES_HISTORY_SCHEMA_VERSION,
         "artifact_type": "derivatives_market_schema",
         "updated_at": _format_utc(None),
-        "storage_path": display_path(derivatives_market_storage_path(run.config_path), base=run.config_path.parent),
+        "storage_path": display_path(
+            derivatives_market_storage_path(run.config_path),
+            base=runtime_root(run.config_path),
+        ),
         "identity": ["source", "market_type", "data_class", "symbol", "period", "as_of"],
         "grouping": ["source", "data_class", "symbol", "period"],
         "record_fields": [
@@ -385,9 +389,12 @@ def _skipped_state(run: RunContext, *, reason: str, now: datetime | str | None) 
         "artifact_type": "derivatives_market_state",
         "updated_at": _format_utc(now),
         "status": "skipped",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
-        "schema_path": display_path(derivatives_market_schema_path(run.config_path), base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
+        "schema_path": display_path(
+            derivatives_market_schema_path(run.config_path),
+            base=runtime_root(run.config_path),
+        ),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "totals": {
             "records": 0,
             "incoming_records": 0,

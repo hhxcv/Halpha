@@ -99,6 +99,37 @@ def test_sync_ohlcv_history_initial_backfill_stores_latest_lookback(tmp_path: Pa
     assert (tmp_path / "data" / "research" / "metadata" / "research_data_catalog.json").is_file()
 
 
+def test_sync_ohlcv_history_uses_runtime_root_for_external_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    config_dir = tmp_path / "external-config"
+    runtime_root.mkdir()
+    config_dir.mkdir()
+    monkeypatch.chdir(runtime_root)
+    config_path = _write_config(config_dir, lookback=2)
+    config = load_config(config_path)
+    source = _FakeSource(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=101),
+            _record(open_time="2026-06-02T00:00:00Z", close=102),
+        ]
+    )
+
+    result = _run_pipeline_with_sync(config, config_path, source)
+
+    store = OHLCVParquetStore(runtime_root / "data" / "market" / "ohlcv")
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert store.read_records(source="binance", symbol="BTCUSDT", timeframe="1d")
+    assert result.run.run_dir.parent == runtime_root / "runs"
+    assert manifest["artifacts"]["ohlcv_sync_state"] == "data/market/metadata/ohlcv_sync_state.json"
+    assert not (config_dir / "data").exists()
+    assert not (config_dir / "runs").exists()
+
+
 def test_sync_ohlcv_history_incremental_fetches_from_next_missing_candle(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, lookback=2)
     config = load_config(config_path)

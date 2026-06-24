@@ -9,7 +9,7 @@ from typing import Any
 
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.shared_publication import stage_shared_payloads
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 OUTCOME_HISTORY_SCHEMA_VERSION = 1
@@ -27,7 +27,7 @@ def write_outcome_history(
 ) -> list[str]:
     candidate = build_outcome_history_publication(config, run, now=now)
     for ref, payload in candidate["payloads"].items():
-        write_json(run.config_path.parent / ref, payload)
+        write_json(resolve_runtime_path(ref, config_path=run.config_path), payload)
     record_outcome_history_manifest_summary(run, candidate["state"])
     return [OUTCOME_HISTORY_STATE_ARTIFACT]
 
@@ -67,7 +67,7 @@ def build_outcome_history_publication(
         "schema_version": OUTCOME_HISTORY_SCHEMA_VERSION,
         "artifact_type": "outcome_history",
         "updated_at": _format_utc(now),
-        "storage_path": display_path(outcome_history_storage_path(run.config_path), base=run.config_path.parent),
+        "storage_path": display_path(outcome_history_storage_path(run.config_path), base=runtime_root(run.config_path)),
         "record_count": len(merged_records),
         "records": sorted(merged_records, key=lambda item: item["stable_outcome_key"]),
     }
@@ -76,9 +76,9 @@ def build_outcome_history_publication(
         "artifact_type": "outcome_history_state",
         "updated_at": _format_utc(now),
         "status": status,
-        "storage_path": display_path(outcome_history_storage_path(run.config_path), base=run.config_path.parent),
-        "history_path": display_path(outcome_history_path(run.config_path), base=run.config_path.parent),
-        "state_path": display_path(outcome_history_state_path(run.config_path), base=run.config_path.parent),
+        "storage_path": display_path(outcome_history_storage_path(run.config_path), base=runtime_root(run.config_path)),
+        "history_path": display_path(outcome_history_path(run.config_path), base=runtime_root(run.config_path)),
+        "state_path": display_path(outcome_history_state_path(run.config_path), base=runtime_root(run.config_path)),
         "totals": {
             "records": len(merged_records),
             "incoming_records": len(incoming_records),
@@ -96,7 +96,7 @@ def build_outcome_history_publication(
         "warnings": warnings,
         "errors": errors,
         "source_artifacts": (
-            [display_path(run.analysis_dir / "outcome_evaluations.json", base=run.config_path.parent)]
+            [display_path(run.analysis_dir / "outcome_evaluations.json", base=runtime_root(run.config_path))]
             if evaluations_artifact is not None
             else []
         ),
@@ -113,15 +113,15 @@ def build_outcome_history_publication(
 
 
 def outcome_history_storage_path(config_path: Path) -> Path:
-    return config_path.parent / OUTCOME_HISTORY_STORAGE_ARTIFACT
+    return resolve_runtime_path(OUTCOME_HISTORY_STORAGE_ARTIFACT, config_path=config_path)
 
 
 def outcome_history_path(config_path: Path) -> Path:
-    return config_path.parent / OUTCOME_HISTORY_ARTIFACT
+    return resolve_runtime_path(OUTCOME_HISTORY_ARTIFACT, config_path=config_path)
 
 
 def outcome_history_state_path(config_path: Path) -> Path:
-    return config_path.parent / OUTCOME_HISTORY_STATE_ARTIFACT
+    return resolve_runtime_path(OUTCOME_HISTORY_STATE_ARTIFACT, config_path=config_path)
 
 
 def _read_outcome_evaluations(run: RunContext) -> dict[str, Any] | None:
@@ -367,14 +367,14 @@ def _value_summaries(records: list[dict[str, Any]], field: str) -> list[dict[str
 
 
 def _source_artifacts(evaluation: dict[str, Any], run: RunContext) -> list[str]:
-    artifacts = [display_path(run.analysis_dir / "outcome_evaluations.json", base=run.config_path.parent)]
+    artifacts = [display_path(run.analysis_dir / "outcome_evaluations.json", base=runtime_root(run.config_path))]
     for artifact in _string_list(evaluation.get("source_artifacts")):
         if artifact.startswith("data/") or artifact.startswith("runs/"):
             artifacts.append(artifact)
         elif Path(artifact).is_absolute():
-            artifacts.append(display_path(Path(artifact), base=run.config_path.parent))
+            artifacts.append(display_path(Path(artifact), base=runtime_root(run.config_path)))
         else:
-            artifacts.append(display_path(run.run_dir / artifact, base=run.config_path.parent))
+            artifacts.append(display_path(run.run_dir / artifact, base=runtime_root(run.config_path)))
     return _unique_sorted(artifacts)
 
 

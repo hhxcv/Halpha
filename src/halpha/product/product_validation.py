@@ -18,7 +18,7 @@ from halpha.shared_publication import (
     mark_shared_publication_not_published,
     publish_prepared_shared_state,
 )
-from halpha.storage import write_json
+from halpha.storage import runtime_root, write_json
 
 
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
@@ -586,10 +586,7 @@ def _artifact_path(run_dir: Path, config_base: Path, ref: str) -> Path:
 
 
 def _config_base(config_path: Path) -> Path:
-    parent = config_path.parent
-    if str(parent) in {"", "."}:
-        return Path.cwd()
-    return parent
+    return runtime_root(config_path)
 
 
 def _counts(checks: list[dict[str, Any]]) -> dict[str, int]:

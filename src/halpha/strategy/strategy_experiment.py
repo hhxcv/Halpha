@@ -22,7 +22,7 @@ from halpha.strategy.strategy_experiment_material import (
     render_strategy_experiment_material,
 )
 from halpha.strategy.strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
-from halpha.storage import display_path, ensure_directory, write_json
+from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
 
 
 PIPELINE_STAGE_NAME = "build_strategy_experiment"
@@ -892,19 +892,15 @@ def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:
     storage_dir = Path(str(ohlcv["storage_dir"]))
-    if storage_dir.is_absolute():
-        return storage_dir
-    return config_path.parent / storage_dir
+    return resolve_runtime_path(storage_dir, config_path=config_path)
 
 
 def _base_output_dir(config: dict[str, Any], *, config_path: Path, output_dir: Path | None) -> Path:
     if output_dir is not None:
-        return output_dir
+        return resolve_runtime_path(output_dir, config_path=config_path)
     run = config.get("run") if isinstance(config.get("run"), dict) else {}
     root = Path(str(run.get("output_dir") or "runs"))
-    if not root.is_absolute():
-        root = config_path.parent / root
-    return root / "strategy_experiments"
+    return resolve_runtime_path(root, config_path=config_path) / "strategy_experiments"
 
 
 def _unique_output_dir(output_dir: Path, experiment_id: str) -> Path:

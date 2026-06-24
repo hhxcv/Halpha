@@ -8,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import write_json
+from halpha.storage import resolve_runtime_path, write_json
 
 
 OUTCOME_HISTORY_ARTIFACT = "data/research/outcomes/outcome_history.json"
@@ -67,7 +67,7 @@ def prepared_shared_payloads(run: RunContext) -> dict[str, dict[str, Any]]:
 
 def publish_prepared_shared_state(run: RunContext) -> dict[str, dict[str, Any]]:
     payloads = prepared_shared_payloads(run)
-    targets = {ref: run.config_path.parent / ref for ref in PUBLICATION_ARTIFACTS}
+    targets = {ref: resolve_runtime_path(ref, config_path=run.config_path) for ref in PUBLICATION_ARTIFACTS}
     snapshots = {ref: _snapshot(path) for ref, path in targets.items()}
     written: list[str] = []
     try:

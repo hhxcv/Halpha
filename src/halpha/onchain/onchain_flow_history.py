@@ -9,7 +9,7 @@ from typing import Any
 from halpha.collectors.onchain_flow import ONCHAIN_FLOW_ARTIFACT
 from halpha.data.history_merge import merge_history_records
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 STAGE_NAME = "sync_onchain_flow_history"
@@ -48,14 +48,15 @@ def sync_onchain_flow_history(
 
     _rewrite_history(storage_root, merged_records)
     _write_schema(schema_path, run)
+    base = runtime_root(run.config_path)
     state = {
         "schema_version": ONCHAIN_FLOW_HISTORY_SCHEMA_VERSION,
         "artifact_type": "onchain_flow_state",
         "updated_at": _format_utc(now),
         "status": _status(record_count=len(merged_records), warnings=warnings, errors=errors),
-        "storage_path": display_path(storage_root, base=run.config_path.parent),
-        "schema_path": display_path(schema_path, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_root, base=base),
+        "schema_path": display_path(schema_path, base=base),
+        "state_path": display_path(state_path, base=base),
         "totals": {
             "records": len(merged_records),
             "incoming_records": len(incoming_records),
@@ -66,7 +67,7 @@ def sync_onchain_flow_history(
             "warning_count": len(warnings),
             "error_count": len(errors),
         },
-        "groups": _group_summaries(merged_records, run.config_path.parent),
+        "groups": _group_summaries(merged_records, base),
         "ranges": _ranges(merged_records),
         "availability": _availability_summaries(raw),
         "warnings": warnings,
@@ -79,15 +80,15 @@ def sync_onchain_flow_history(
 
 
 def onchain_flow_storage_path(config_path: Path) -> Path:
-    return config_path.parent / ONCHAIN_FLOW_HISTORY_STORAGE_ARTIFACT
+    return resolve_runtime_path(ONCHAIN_FLOW_HISTORY_STORAGE_ARTIFACT, config_path=config_path)
 
 
 def onchain_flow_schema_path(config_path: Path) -> Path:
-    return config_path.parent / ONCHAIN_FLOW_HISTORY_SCHEMA_ARTIFACT
+    return resolve_runtime_path(ONCHAIN_FLOW_HISTORY_SCHEMA_ARTIFACT, config_path=config_path)
 
 
 def onchain_flow_state_path(config_path: Path) -> Path:
-    return config_path.parent / ONCHAIN_FLOW_HISTORY_STATE_ARTIFACT
+    return resolve_runtime_path(ONCHAIN_FLOW_HISTORY_STATE_ARTIFACT, config_path=config_path)
 
 
 def onchain_flow_group_path(
@@ -173,7 +174,7 @@ def _history_record(item: dict[str, Any], run: RunContext, *, observed_at: str) 
         "status": "warning" if warnings or errors else "active",
         "warnings": warnings,
         "errors": errors,
-        "source_artifacts": [display_path(run.raw_dir / "onchain_flow.json", base=run.config_path.parent)],
+        "source_artifacts": [display_path(run.raw_dir / "onchain_flow.json", base=runtime_root(run.config_path))],
     }
 
 
@@ -229,7 +230,7 @@ def _write_schema(schema_path: Path, run: RunContext) -> None:
         "schema_version": ONCHAIN_FLOW_HISTORY_SCHEMA_VERSION,
         "artifact_type": "onchain_flow_schema",
         "updated_at": _format_utc(None),
-        "storage_path": display_path(onchain_flow_storage_path(run.config_path), base=run.config_path.parent),
+        "storage_path": display_path(onchain_flow_storage_path(run.config_path), base=runtime_root(run.config_path)),
         "identity": ["source", "data_class", "asset", "chain", "as_of"],
         "grouping": ["source", "data_class", "asset", "chain"],
         "record_fields": [
@@ -361,9 +362,9 @@ def _skipped_state(run: RunContext, *, reason: str, now: datetime | str | None) 
         "artifact_type": "onchain_flow_state",
         "updated_at": _format_utc(now),
         "status": "skipped",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
-        "schema_path": display_path(onchain_flow_schema_path(run.config_path), base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
+        "schema_path": display_path(onchain_flow_schema_path(run.config_path), base=runtime_root(run.config_path)),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "totals": {
             "records": 0,
             "incoming_records": 0,

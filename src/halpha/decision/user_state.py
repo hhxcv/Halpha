@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from json import JSONDecodeError
-from pathlib import Path
 from typing import Any
 
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import write_json
+from halpha.storage import resolve_runtime_path, write_json
 
 
 STAGE_NAME = "build_user_state_context"
@@ -166,9 +165,7 @@ def _load_user_state_file(config: dict[str, Any], run: RunContext) -> dict[str, 
     path_value = config.get("path")
     if not isinstance(path_value, str) or not path_value.strip():
         raise _UserStateValidationError(["user_state.path must be configured when user_state.enabled is true."])
-    path = Path(path_value)
-    if not path.is_absolute():
-        path = run.config_path.parent / path
+    path = resolve_runtime_path(path_value, config_path=run.config_path)
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:

@@ -12,7 +12,7 @@ from halpha.onchain.onchain_flow_history import (
     read_onchain_flow_history_records,
 )
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, runtime_root, write_json
 
 
 STAGE_NAME = "build_onchain_flow_views"
@@ -53,7 +53,7 @@ def build_onchain_flow_views(
                     window_start=window_start,
                     window_end=window_end,
                     availability_status=availability.get((scope["source"], data_class)),
-                    config_base=run.config_path.parent,
+                    config_base=runtime_root(run.config_path),
                 )
             )
             continue
@@ -64,7 +64,7 @@ def build_onchain_flow_views(
                 window_start=window_start,
                 window_end=window_end,
                 availability_status=availability.get((scope["source"], data_class)),
-                config_base=run.config_path.parent,
+                config_base=runtime_root(run.config_path),
             )
         )
 

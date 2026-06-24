@@ -11,6 +11,7 @@ from halpha.inspection_artifacts import inspection_overall_status as _overall_st
 from halpha.inspection_artifacts import read_inspection_json_object
 from halpha.outcome.outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path, select_latest_run_record
+from halpha.storage import resolve_runtime_path, runtime_root
 
 
 OUTCOME_TARGETS_ARTIFACT = "analysis/outcome_targets.json"
@@ -37,7 +38,7 @@ def inspect_local_outcomes(
     run_dir: Path | None = None,
 ) -> OutcomeInspectionResult:
     del config
-    base = config_path.parent
+    base = runtime_root(config_path)
     selected_run = _selected_run_section(config_path, run_dir=run_dir, base=base)
     selected_run_dir = selected_run["extra"].get("run_dir")
     manifest = selected_run["extra"].get("manifest")
@@ -267,8 +268,8 @@ def _latest_run_from_index(config_path: Path) -> Path | None:
         raise OutcomeInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
     run_dir = Path(selected.run.run_dir)
     if not run_dir.is_absolute():
-        run_dir = config_path.parent / run_dir
-    return _project_local_path(run_dir, base=config_path.parent)
+        run_dir = resolve_runtime_path(run_dir, config_path=config_path)
+    return _project_local_path(run_dir, base=runtime_root(config_path))
 
 
 def _resolve_run_dir(run_dir: Path, *, base: Path) -> Path:

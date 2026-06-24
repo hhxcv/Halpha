@@ -11,7 +11,7 @@ from halpha.collectors.text import TEXT_ARTIFACT, collect_text_events_raw
 from halpha.analysis.event_intelligence_material import build_event_intelligence_material
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
-from halpha.storage import display_path, ensure_directory, write_json
+from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
 from halpha.text.text_entity_evidence import build_text_entity_evidence
 from halpha.text.text_event_classification import build_text_event_classification_evidence
 from halpha.text.text_event_records import build_text_event_records
@@ -387,12 +387,10 @@ def _collector_failure_message(errors: list[dict[str, Any]]) -> str:
 
 def _base_output_dir(config: dict[str, Any], *, config_path: Path, output_dir: Path | None) -> Path:
     if output_dir is not None:
-        return output_dir
+        return resolve_runtime_path(output_dir, config_path=config_path)
     run = config.get("run") if isinstance(config.get("run"), dict) else {}
     root = Path(str(run.get("output_dir") or "runs"))
-    if not root.is_absolute():
-        root = config_path.parent / root
-    return root / TEXT_INTELLIGENCE_DEFAULT_DIR
+    return resolve_runtime_path(root, config_path=config_path) / TEXT_INTELLIGENCE_DEFAULT_DIR
 
 
 def _unique_output_dir(output_dir: Path, run_id: str) -> Path:

@@ -4,11 +4,18 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.macro.macro_calendar_history import sync_macro_calendar_history
 from halpha.macro.macro_calendar_views import _load_macro_calendar_view_records, build_macro_calendar_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_macro_calendar_history_and_views_use_bounded_current_windows(tmp_path: Path) -> None:

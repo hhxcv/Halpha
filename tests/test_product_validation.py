@@ -15,6 +15,11 @@ import halpha.shared_publication as shared_publication
 from halpha.storage import write_json
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_product_contract_validation_accepts_no_codex_without_report(tmp_path: Path) -> None:
     run = _run(tmp_path, codex_status="skipped")
     _write_analysis_artifact(run, "risk_assessment", {"status": "ok"})

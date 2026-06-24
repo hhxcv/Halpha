@@ -4,11 +4,18 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.market.derivatives_history import sync_derivatives_market_history
 from halpha.market.derivatives_market_views import build_derivatives_market_views, load_derivatives_market_view_records
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_derivatives_history_and_views_use_bounded_current_windows(tmp_path: Path) -> None:

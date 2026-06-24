@@ -15,7 +15,7 @@ from halpha.macro.macro_calendar_history import (
     read_macro_calendar_history_records,
 )
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, runtime_root, write_json
 
 
 STAGE_NAME = "build_macro_calendar_views"
@@ -81,7 +81,7 @@ def build_macro_calendar_views(
                     window_start=window_start,
                     window_end=window_end,
                     availability_status=availability.get((source, data_class)),
-                    config_base=run.config_path.parent,
+                    config_base=runtime_root(run.config_path),
                 )
             )
 

@@ -9,7 +9,7 @@ from typing import Any
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
-from halpha.storage import display_path, ensure_directory, write_json
+from halpha.storage import display_path, ensure_directory, resolve_runtime_path, runtime_root, write_json
 
 
 STRATEGY_BACKTEST_ARTIFACT = "strategy_backtest.json"
@@ -233,7 +233,7 @@ def _view_record(
         "row_count": row_count,
         "storage_ref": display_path(
             storage_dir / f"source={source}" / f"symbol={symbol}" / f"timeframe={timeframe}",
-            base=config_path.parent,
+            base=runtime_root(config_path),
         ),
         "included_columns": ["open_time", "open", "high", "low", "close", "volume"],
         "insufficient_data": row_count < lookback,
@@ -468,7 +468,7 @@ def _manifest(
             "symbol": symbol,
             "timeframe": timeframe,
             "params": strategy.get("params") if isinstance(strategy.get("params"), dict) else {},
-            "storage_dir": display_path(storage_dir, base=config_path.parent),
+            "storage_dir": display_path(storage_dir, base=runtime_root(config_path)),
             "input_view_id": view.get("view_id"),
         },
         "artifacts": {
@@ -496,19 +496,15 @@ def _failure_reason(evaluation: dict[str, Any]) -> str:
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:
     storage_dir = Path(str(ohlcv["storage_dir"]))
-    if storage_dir.is_absolute():
-        return storage_dir
-    return config_path.parent / storage_dir
+    return resolve_runtime_path(storage_dir, config_path=config_path)
 
 
 def _base_output_dir(config: dict[str, Any], *, config_path: Path, output_dir: Path | None) -> Path:
     if output_dir is not None:
-        return output_dir
+        return resolve_runtime_path(output_dir, config_path=config_path)
     run = config.get("run") if isinstance(config.get("run"), dict) else {}
     root = Path(str(run.get("output_dir") or "runs"))
-    if not root.is_absolute():
-        root = config_path.parent / root
-    return root / "strategy_backtests"
+    return resolve_runtime_path(root, config_path=config_path) / "strategy_backtests"
 
 
 def _unique_output_dir(output_dir: Path, backtest_id: str) -> Path:

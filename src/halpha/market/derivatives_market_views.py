@@ -14,7 +14,7 @@ from halpha.market.derivatives_history import (
     read_derivatives_history_records,
 )
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, runtime_root, write_json
 
 
 STAGE_NAME = "build_derivatives_market_views"
@@ -62,7 +62,7 @@ def build_derivatives_market_views(
                         symbol=symbol,
                         period=period,
                         lookback=_view_lookback(data_class, period, lookback),
-                        config_base=run.config_path.parent,
+                        config_base=runtime_root(run.config_path),
                     )
                 )
 

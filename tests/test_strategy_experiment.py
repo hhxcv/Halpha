@@ -9,6 +9,11 @@ from halpha.cli import main
 from halpha.market.ohlcv_store import OHLCVParquetStore
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_cli_experiment_runs_candidates_against_benchmark_suite(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

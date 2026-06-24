@@ -298,7 +298,10 @@ Validation contract:
 - `market.symbols` must be a non-empty list when `market.enabled` is true.
 - `market.ohlcv` may be omitted when quant is not configured.
 - `market.ohlcv.storage_dir` is required when `market.ohlcv` exists or `quant.enabled` is true.
-- `market.ohlcv.storage_dir` must be outside `run.output_dir`.
+- `market.ohlcv.storage_dir` must be outside the runtime-resolved
+  `run.output_dir`.
+- Relative `market.ohlcv.storage_dir` and `run.output_dir` values resolve from
+  the runtime root. Absolute paths remain explicit local overrides.
 - `market.ohlcv.timeframes` must be a non-empty list when `market.ohlcv` exists or `quant.enabled` is true.
 - `market.ohlcv.lookback` must define a positive integer for each configured timeframe when `market.ohlcv` exists or `quant.enabled` is true.
 - `quant` may be omitted when the report path does not use quant strategies.

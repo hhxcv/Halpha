@@ -16,7 +16,7 @@ from halpha.data.run_index import (
     run_index_selection_label,
     select_latest_run_record,
 )
-from halpha.storage import display_path
+from halpha.storage import display_path, runtime_root
 
 
 FAILED_EXIT_CODE = 3
@@ -358,8 +358,7 @@ def _project_local_path(path: Path, *, base: Path) -> Path | None:
 
 
 def _base_path(config_path: Path) -> Path:
-    parent = config_path.parent
-    return parent if str(parent) not in {"", "."} else Path.cwd()
+    return runtime_root(config_path)
 
 
 def _dict(value: Any) -> dict[str, Any]:

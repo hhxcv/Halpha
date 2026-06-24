@@ -4,9 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_strategy_benchmark_suite_expands_configured_history_with_stable_order(tmp_path: Path) -> None:
