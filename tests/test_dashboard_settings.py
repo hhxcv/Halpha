@@ -48,6 +48,7 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "market.source",
     "market.symbols",
     "monitor.cooldown_seconds",
+    "monitor.failure_backoff_max_seconds",
     "monitor.interval_seconds",
     "monitor.max_cycles",
     "monitor.no_codex",

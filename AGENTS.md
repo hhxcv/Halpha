@@ -261,7 +261,7 @@ Current bias:
 * `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
 * `analysis/outcome_tracking_material.md` records bounded AI-readable outcome accountability material from targets, evaluations, and outcome history summaries.
 * `runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json` records one local monitor cycle status, target stage, no-Codex state, linked product run refs, source artifact refs, warnings, and errors; it is local operational state, not Codex input by default.
-* `.halpha/state.sqlite` records monitor cycle indexes, alert archive records, deterministic cooldown state, latest finite-loop status, and monitor health query state.
+* `.halpha/state.sqlite` records monitor cycle indexes, alert archive records, deterministic cooldown state, latest finite-loop status, and monitor service health query state.
 * `runs/monitor/alert_archive.jsonl`, `runs/monitor/alert_cooldown_state.json`, `runs/monitor/alert_archive_state.json`, and `runs/monitor/monitor_health_state.json` are legacy monitor state files; new monitor cycles do not write them.
 * `runs/workbench/latest/workbench_summary.json` records bounded local delivery state, source artifact refs, latest report refs, decision/risk/watch summaries, alert archive status, monitor health, outcome state, strategy state, product-validation state, data-quality state, warnings, errors, and Codex-boundary metadata; it is delivery output, not upstream decision input or Codex input by default.
 * `runs/workbench/latest/index.md` records the human-readable local Markdown workbench index generated from `workbench_summary.json`.
@@ -374,6 +374,10 @@ python -m halpha schedule status --config config.example.yaml
 python -m halpha schedule stop --config config.example.yaml
 python -m halpha schedule restart --config config.example.yaml
 python -m halpha monitor --help
+python -m halpha monitor start --config config.example.yaml
+python -m halpha monitor status --config config.example.yaml
+python -m halpha monitor stop --config config.example.yaml
+python -m halpha monitor restart --config config.example.yaml
 python -m halpha monitor run --config config.example.yaml --dry-run
 python -m halpha monitor run --config config.example.yaml --once
 python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>
@@ -410,6 +414,10 @@ They must not fabricate skipped artifacts.
 
 `monitor --help` exposes the local monitor command family.
 
+`monitor start`, `monitor status`, `monitor stop`, and `monitor restart` control one independent Monitor resident service through the shared local service lifecycle state.
+
+The resident Monitor service is unique per runtime root. It runs no-Codex monitor cycles continuously until explicit stop, persists service health in `.halpha/state.sqlite`, and retries recoverable cycle failures with bounded backoff.
+
 `monitor run --dry-run` validates effective monitor configuration and prints `cycle_execution: not_run`.
 
 `monitor run --dry-run` does not collect network data, run processors, run pipeline stages, run Codex CLI, write monitor artifacts, or start a background process.
@@ -422,7 +430,7 @@ They must not fabricate skipped artifacts.
 
 `monitor run --max-cycles <n> --interval-seconds <seconds>` runs a finite local monitor loop and stops after the configured cycle count or the first failed cycle.
 
-`monitor inspect` is read-only. It summarizes latest cycle status, linked run refs, alert archive counts, cooldown counts, warning counts, error counts, and latest loop status without collection, pipeline execution, Codex CLI, notification delivery, raw alert dumps, private user-state values, trading, or account access.
+`monitor inspect` is read-only. It summarizes resident service status, latest cycle status, linked run refs, alert archive counts, cooldown counts, warning counts, error counts, and latest diagnostic loop status without collection, pipeline execution, Codex CLI, notification delivery, raw alert dumps, private user-state values, trading, or account access.
 
 `backtest` runs one configured strategy against shared local OHLCV history.
 
@@ -476,6 +484,9 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha schedule status --config <local-config.yaml>` to inspect the independent Schedule service without starting Dashboard, Monitor, collection, pipeline stages, or Codex CLI.
 * Use `python -m halpha schedule --config <local-config.yaml>` to start the independent Schedule service for configured daily report dispatch.
 * Use `python -m halpha schedule stop --config <local-config.yaml>` and `python -m halpha schedule restart --config <local-config.yaml>` for explicit Schedule lifecycle control.
+* Use `python -m halpha monitor status --config <local-config.yaml>` to inspect the independent Monitor service without starting Dashboard, Schedule, collection, pipeline stages, or Codex CLI.
+* Use `python -m halpha monitor start --config <local-config.yaml>` to start the independent Monitor service for continuous no-Codex reassessment.
+* Use `python -m halpha monitor stop --config <local-config.yaml>` and `python -m halpha monitor restart --config <local-config.yaml>` for explicit Monitor lifecycle control.
 * Use `python -m halpha monitor run --config <local-config.yaml> --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
 * Use `python -m halpha monitor run --config <local-config.yaml> --once` to validate one bounded monitor cycle, monitor cycle manifest, and state-store alert/cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
 * Use `python -m halpha monitor run --config <local-config.yaml> --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.

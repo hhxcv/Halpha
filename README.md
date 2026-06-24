@@ -175,7 +175,7 @@ The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
 runtime state keeps the run index, local command-job lifecycle, and daily
 report schedule dispatch state, monitor cycle indexes, alert archive records,
-cooldown state, monitor health query state, and shared resident-service
+cooldown state, monitor service health query state, and shared resident-service
 lifecycle state in `.halpha/state.sqlite`; selected dashboard config preference
 also lives in the runtime state store. Dashboard read models, health summaries,
 workbench outputs, and latest selections are derived views, not parallel
@@ -189,13 +189,22 @@ python -m halpha monitor --help
 python -m halpha monitor run --config config.example.yaml --dry-run
 ```
 
+Start, inspect, stop, or restart the independent Monitor resident service:
+
+```bash
+python -m halpha monitor start --config config.example.yaml
+python -m halpha monitor status --config config.example.yaml
+python -m halpha monitor stop --config config.example.yaml
+python -m halpha monitor restart --config config.example.yaml
+```
+
 Run exactly one bounded local monitor cycle:
 
 ```bash
 python -m halpha monitor run --config config.example.yaml --once
 ```
 
-Run a finite local monitor loop:
+Run a finite diagnostic local monitor loop:
 
 ```bash
 python -m halpha monitor run --config config.example.yaml --max-cycles 3 --interval-seconds 300
@@ -207,13 +216,18 @@ Inspect local monitor health without collection, pipeline execution, or Codex:
 python -m halpha monitor inspect --config config.example.yaml
 ```
 
+The resident Monitor service owns the continuous path. It is unique per runtime
+root, runs no-Codex cycles until explicit stop, persists service health in
+`.halpha/state.sqlite`, and retries recoverable cycle failures with bounded
+backoff. The one-cycle and finite-loop commands are local validation paths, not
+Dashboard-owned resident workers.
+
 The default monitor cycle reuses the configured product pipeline through the
 configured monitor target stage and stops before Codex report generation unless
-monitor config explicitly changes that boundary. The cycle also updates
-state-store alert archive records and cooldown state from generated alert
-decisions. Monitor notification delivery and daemon/service behavior are not
-implemented by the current monitor command. Dashboard service behavior is
-provided by the separate `dashboard` command.
+monitor config explicitly changes that boundary. Resident Monitor cycles always
+force the no-Codex boundary. Cycles also update state-store alert archive
+records and cooldown state from generated alert decisions. Dashboard service
+behavior is provided by the separate `dashboard` command.
 
 Inspect local research data and data-quality state without collection or Codex:
 
@@ -620,6 +634,9 @@ Inspect local monitor health without collection, pipeline execution, or Codex
 CLI:
 
 ```bash
+python -m halpha monitor status --config <local-config.yaml>
+python -m halpha monitor start --config <local-config.yaml>
+python -m halpha monitor stop --config <local-config.yaml>
 python -m halpha monitor inspect --config <local-config.yaml>
 ```
 

@@ -54,7 +54,7 @@ Primary sources:
 - `runs/monitor/`: immutable monitor cycle manifests.
 - `.halpha/state.sqlite`: run index, local command jobs, daily report schedule
   dispatches, monitor cycle indexes, alert archive records, cooldown state,
-  monitor health query state, Dashboard service lifecycle, and Dashboard UI
+  monitor service health query state, Dashboard service lifecycle, and Dashboard UI
   preference state.
 - `runs/workbench/latest/`: bounded delivery snapshot summaries and local
   indexes for inspection and recovery fallback, not replacements for dashboard
@@ -142,11 +142,12 @@ The current job runner supports:
 - workbench build: `workbench_build`;
 - strategy and text jobs: `backtest`, `experiment`,
   `text_models_prepare`, and `text_intel`;
-- monitor jobs: `monitor_dry_run`, `monitor_once`, and `monitor_loop`.
+- monitor jobs: `monitor_dry_run`, `monitor_once`, and `monitor_inspect`.
 
-The dashboard UI currently exposes monitor job controls directly in the Monitor
-view. Other command actions are available through the dashboard jobs API and
-remain explicit allowlisted jobs.
+The dashboard UI may expose short monitor validation jobs directly in the
+Monitor view. It must not create a resident Monitor loop as a command job.
+Other command actions are available through the dashboard jobs API and remain
+explicit allowlisted jobs.
 
 Implemented schedule controls are API-backed runtime state for the daily report
 schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
@@ -469,14 +470,12 @@ Dashboard monitor controls must preserve `docs/monitoring-contracts.md`:
 - no trading execution or account operations;
 - no Codex execution by default.
 
-Finite monitor loops started from the dashboard must remain visible as jobs and
-must expose stop, cancel, completion, failure, and bounded log state.
-
-Finite dashboard monitor jobs are current implemented behavior. The target
-Monitor service is an independent resident role addressed through the shared
-lifecycle contract. Dashboard controls must start, stop, inspect, or restart
-that shared instance. They must not create duplicate Monitor processes, and
-they must not run the monitor loop inside the Dashboard process.
+The Monitor service is an independent resident role addressed through the
+shared lifecycle contract. Current Dashboard monitor controls are limited to
+short validation jobs and read-only monitor state. Future Dashboard service
+controls must start, stop, inspect, or restart the shared Monitor instance.
+They must not create duplicate Monitor processes, and they must not run the
+monitor loop inside the Dashboard process.
 
 ## Privacy Boundary
 

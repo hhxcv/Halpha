@@ -45,6 +45,7 @@ def test_config_example_loads_successfully() -> None:
         "enabled": False,
         "interval_seconds": 300,
         "max_cycles": 1,
+        "failure_backoff_max_seconds": 3600,
         "cooldown_seconds": 3600,
         "output_dir": "runs/monitor",
         "target_stage": "build_materials",
@@ -326,6 +327,7 @@ def test_load_config_rejects_invalid_user_state_config(
     [
         ("  enabled: \"yes\"", r"monitor\.enabled must be a boolean"),
         ("  interval_seconds: 0", r"monitor\.interval_seconds must be a positive integer"),
+        ("  failure_backoff_max_seconds: 0", r"monitor\.failure_backoff_max_seconds must be a positive integer"),
         ("  max_cycles: false", r"monitor\.max_cycles must be a positive integer"),
         ("  cooldown_seconds: -1", r"monitor\.cooldown_seconds must be a positive integer"),
         ("  output_dir: ''", r"monitor\.output_dir must be a non-empty string"),

@@ -40,6 +40,16 @@ from halpha.monitor.monitoring import (
     run_monitor_cycle,
     run_monitor_loop,
 )
+from halpha.runtime.monitor_service import (
+    MonitorServiceError,
+    load_monitor_startup_config,
+    monitor_service_error_message,
+    monitor_service_status,
+    restart_monitor_service,
+    run_monitor_service,
+    start_monitor_service,
+    stop_monitor_service,
+)
 from halpha.outcome.outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
 from halpha.runtime.pipeline_contracts import PipelineError
 from halpha.pipeline_stages import StageSelectionError
@@ -184,6 +194,18 @@ def build_parser() -> argparse.ArgumentParser:
         description="Manage local monitoring runs.",
     )
     monitor_subparsers = monitor_parser.add_subparsers(dest="monitor_command", required=True)
+    for monitor_action in ("start", "status", "stop", "restart", "service"):
+        monitor_action_parser = monitor_subparsers.add_parser(
+            monitor_action,
+            help=f"{monitor_action.capitalize()} the local Monitor resident service.",
+            description=f"{monitor_action.capitalize()} the local Monitor resident service.",
+        )
+        monitor_action_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+        if monitor_action == "service":
+            monitor_action_parser.add_argument(
+                "--restart-from-instance-id",
+                help=argparse.SUPPRESS,
+            )
     monitor_run_parser = monitor_subparsers.add_parser(
         "run",
         help="Run or validate local monitor cycles without hidden background execution.",
@@ -309,6 +331,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "monitor" and args.monitor_command == "inspect":
         return _monitor_inspect(args.config)
+
+    if args.command == "monitor" and args.monitor_command in {"start", "status", "stop", "restart", "service"}:
+        return _monitor_service(
+            args.config,
+            action=args.monitor_command,
+            restart_from_instance_id=getattr(args, "restart_from_instance_id", None),
+        )
 
     if args.command == "workbench" and args.workbench_command == "build":
         return _workbench_build(args.config, run_dir=args.run_dir)
@@ -1177,6 +1206,99 @@ def _monitor_run(
         extra={"event": "monitor.dry_run.finished", "status": "succeeded"},
     )
     return 0
+
+
+def _monitor_service(
+    config_arg: str,
+    *,
+    action: str,
+    restart_from_instance_id: str | None = None,
+) -> int:
+    config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    LOGGER.info(
+        "Halpha command started.",
+        extra={"event": "cli.command.start", "command": "monitor", "monitor_action": action},
+    )
+
+    startup = None
+    if action in {"start", "restart", "service"}:
+        try:
+            startup = load_monitor_startup_config(config_arg)
+        except ConfigError as exc:
+            LOGGER.warning(
+                "Halpha command failed.",
+                extra={"event": "cli.command.failed", "command": "monitor", "stage": "config", "reason": str(exc)},
+            )
+            print("Halpha monitor failed.")
+            print("stage: config")
+            print(f"reason: {monitor_service_error_message(str(exc), config_path=config_path)}")
+            return 2
+        _configure_logging(config_path=startup.config_path, config=startup.config)
+
+    try:
+        if action == "service":
+            assert startup is not None
+            LOGGER.info(
+                "Halpha monitor service foreground starting.",
+                extra={"event": "monitor.service.foreground.start"},
+            )
+            run_monitor_service(
+                startup.config,
+                config_path=startup.config_path,
+                restart_from_instance_id=restart_from_instance_id,
+            )
+            LOGGER.info(
+                "Halpha monitor service foreground stopped.",
+                extra={"event": "monitor.service.foreground.stopped"},
+            )
+            return 0
+        if action == "start":
+            assert startup is not None
+            result = start_monitor_service(config_arg)
+            _print_monitor_service_result("Halpha monitor started.", result)
+            return 0
+        if action == "status":
+            result = monitor_service_status(config_arg)
+            _print_monitor_service_result("Halpha monitor status.", result)
+            return 0
+        if action == "stop":
+            result = stop_monitor_service(config_arg)
+            _print_monitor_service_result("Halpha monitor stop requested.", result)
+            return 0
+        if action == "restart":
+            assert startup is not None
+            result = restart_monitor_service(config_arg)
+            _print_monitor_service_result("Halpha monitor restarted.", result)
+            return 0
+        raise MonitorServiceError(f"unsupported monitor action: {action}.")
+    except MonitorServiceError as exc:
+        LOGGER.error(
+            "Halpha monitor service failed.",
+            extra={"event": "monitor.service.failed", "monitor_action": action, "reason": str(exc)},
+        )
+        print("Halpha monitor failed.")
+        print("stage: monitor")
+        print(f"reason: {monitor_service_error_message(str(exc), config_path=startup.config_path if startup else config_path)}")
+        return exc.exit_code
+    except KeyboardInterrupt:
+        LOGGER.info("Halpha monitor service stopped.", extra={"event": "monitor.service.stopped"})
+        print("Halpha monitor stopped.")
+        return 0
+    return 0
+
+
+def _print_monitor_service_result(title: str, result: dict) -> None:
+    print(title)
+    print(f"status: {result.get('status')}")
+    instance_id = result.get("instance_id")
+    if isinstance(instance_id, str) and instance_id:
+        print(f"instance_id: {instance_id}")
+    pid = result.get("pid")
+    if isinstance(pid, int):
+        print(f"pid: {pid}")
+    for warning in result.get("warnings") or []:
+        print(f"warning: {warning}")
 
 
 def _monitor_inspect(config_arg: str) -> int:

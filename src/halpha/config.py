@@ -302,6 +302,12 @@ def _validate_monitor_config(monitor: dict[str, Any]) -> None:
         _require_bool(monitor, "enabled", "monitor.enabled")
     if "interval_seconds" in monitor:
         _require_positive_int(monitor, "interval_seconds", "monitor.interval_seconds")
+    if "failure_backoff_max_seconds" in monitor:
+        _require_positive_int(
+            monitor,
+            "failure_backoff_max_seconds",
+            "monitor.failure_backoff_max_seconds",
+        )
     if "max_cycles" in monitor:
         _require_positive_int(monitor, "max_cycles", "monitor.max_cycles")
     if "cooldown_seconds" in monitor:

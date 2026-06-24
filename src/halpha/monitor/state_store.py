@@ -22,6 +22,7 @@ from halpha.runtime.state_store import (
 MONITOR_STATE_STORE_ARTIFACT = STATE_STORE_REF
 MONITOR_STATE_SCHEMA_VERSION = 1
 MONITOR_STATE_MIGRATION_VERSION = 5
+MONITOR_SERVICE_HEALTH_MIGRATION_VERSION = 11
 MONITOR_ALERT_SAMPLE_LIMIT = 20
 MONITOR_CYCLE_HISTORY_LIMIT = 20
 ALERT_COUNT_KEYS = (
@@ -144,6 +145,31 @@ MONITOR_STATE_MIGRATIONS = (
             "CREATE INDEX IF NOT EXISTS idx_monitor_loops_output_time ON monitor_loops(monitor_output_dir, finished_at, started_at, loop_id)",
         ),
     ),
+    StateStoreMigration(
+        version=MONITOR_SERVICE_HEALTH_MIGRATION_VERSION,
+        name="monitor_service_health",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS monitor_service_health (
+              monitor_output_dir TEXT PRIMARY KEY,
+              service_instance_id TEXT,
+              status TEXT NOT NULL,
+              current_cycle_id TEXT,
+              latest_cycle_id TEXT,
+              latest_run_id TEXT,
+              latest_run_manifest TEXT,
+              consecutive_failures INTEGER NOT NULL,
+              next_retry_at TEXT,
+              last_error_json TEXT NOT NULL,
+              warning_count INTEGER NOT NULL,
+              error_count INTEGER NOT NULL,
+              warnings_json TEXT NOT NULL,
+              errors_json TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+            """,
+        ),
+    ),
 )
 
 
@@ -236,6 +262,68 @@ class MonitorStateRepository:
         except sqlite3.Error as exc:
             raise MonitorStateStoreError("monitor state store could not persist loop state.") from exc
 
+    def save_service_health(self, health: dict[str, Any], *, monitor_output_dir: str, updated_at: str) -> dict[str, Any]:
+        status = _required_str(health.get("status"), "monitor service health status is required.")
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_monitor_state_migrations(connection, now=updated_at)
+                with runtime_state_transaction(connection):
+                    connection.execute(
+                        """
+                        INSERT OR REPLACE INTO monitor_service_health (
+                          monitor_output_dir,
+                          service_instance_id,
+                          status,
+                          current_cycle_id,
+                          latest_cycle_id,
+                          latest_run_id,
+                          latest_run_manifest,
+                          consecutive_failures,
+                          next_retry_at,
+                          last_error_json,
+                          warning_count,
+                          error_count,
+                          warnings_json,
+                          errors_json,
+                          updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            monitor_output_dir,
+                            _optional_str(health.get("service_instance_id")),
+                            status,
+                            _optional_str(health.get("current_cycle_id")),
+                            _optional_str(health.get("latest_cycle_id")),
+                            _optional_str(health.get("latest_run_id")),
+                            _optional_str(health.get("latest_run_manifest")),
+                            _int(health.get("consecutive_failures")),
+                            _optional_str(health.get("next_retry_at")),
+                            _dumps_mapping(health.get("last_error")),
+                            _int(health.get("warning_count")),
+                            _int(health.get("error_count")),
+                            _dumps_list(health.get("warnings")),
+                            _dumps_list(health.get("errors")),
+                            updated_at,
+                        ),
+                    )
+        except sqlite3.Error as exc:
+            raise MonitorStateStoreError("monitor state store could not persist service health.") from exc
+        return self.service_health(monitor_output_dir=monitor_output_dir)
+
+    def service_health(self, *, monitor_output_dir: str) -> dict[str, Any]:
+        if not self.database_path.exists():
+            return _empty_service_health()
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_monitor_state_migrations(connection)
+                return _service_health(connection, monitor_output_dir)
+        except sqlite3.Error:
+            return _empty_service_health(
+                status="failed",
+                errors=["monitor service health could not be read."],
+            )
+
     def get_cycle(self, cycle_id: str, *, base: Path | None = None) -> dict[str, Any] | None:
         if not self.database_path.exists():
             return None
@@ -276,6 +364,7 @@ class MonitorStateRepository:
                 "warning_count": 0,
                 "error_count": 0,
                 "latest_loop": {},
+                "service": _empty_service_health(),
                 "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
                 "warnings": ["monitor state store was not found."],
                 "errors": [],
@@ -291,6 +380,7 @@ class MonitorStateRepository:
                 cooldown_count = _cooldown_count(connection, monitor_output_dir)
                 warning_count, error_count = _health_issue_counts(connection, monitor_output_dir, base=base)
                 latest_loop = _latest_loop(connection, monitor_output_dir)
+                service = _service_health(connection, monitor_output_dir)
         except sqlite3.Error:
             return {
                 "schema_version": MONITOR_STATE_SCHEMA_VERSION,
@@ -311,6 +401,10 @@ class MonitorStateRepository:
                 "warning_count": 0,
                 "error_count": 1,
                 "latest_loop": {},
+                "service": _empty_service_health(
+                    status="failed",
+                    errors=["monitor service health could not be read."],
+                ),
                 "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
                 "warnings": [],
                 "errors": ["monitor state store could not be read."],
@@ -336,6 +430,7 @@ class MonitorStateRepository:
                 "warning_count": 0,
                 "error_count": 0,
                 "latest_loop": latest_loop,
+                "service": service,
                 "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
                 "warnings": ["monitor cycle records were not found."],
                 "errors": [],
@@ -347,6 +442,7 @@ class MonitorStateRepository:
             warning_count=warning_count,
             error_count=error_count,
             failed_cycle_count=failed_cycle_count,
+            service_status=str(service.get("status") or "missing"),
         )
         return {
             "schema_version": MONITOR_STATE_SCHEMA_VERSION,
@@ -367,6 +463,7 @@ class MonitorStateRepository:
             "warning_count": warning_count,
             "error_count": error_count,
             "latest_loop": latest_loop,
+            "service": service,
             "source_artifacts": _unique_strings(
                 [
                     MONITOR_STATE_STORE_ARTIFACT,
@@ -999,6 +1096,49 @@ def _latest_loop(connection: sqlite3.Connection, monitor_output_dir: str) -> dic
     }
 
 
+def _service_health(connection: sqlite3.Connection, monitor_output_dir: str) -> dict[str, Any]:
+    row = connection.execute(
+        """
+        SELECT
+          service_instance_id,
+          status,
+          current_cycle_id,
+          latest_cycle_id,
+          latest_run_id,
+          latest_run_manifest,
+          consecutive_failures,
+          next_retry_at,
+          last_error_json,
+          warning_count,
+          error_count,
+          warnings_json,
+          errors_json,
+          updated_at
+        FROM monitor_service_health
+        WHERE monitor_output_dir = ?
+        """,
+        (monitor_output_dir,),
+    ).fetchone()
+    if not row:
+        return _empty_service_health()
+    return {
+        "service_instance_id": row[0],
+        "status": row[1],
+        "current_cycle_id": row[2],
+        "latest_cycle_id": row[3],
+        "latest_run_id": row[4],
+        "latest_run_manifest": row[5],
+        "consecutive_failures": _int(row[6]),
+        "next_retry_at": row[7],
+        "last_error": _loads_mapping(row[8]),
+        "warning_count": _int(row[9]),
+        "error_count": _int(row[10]),
+        "warnings": _loads_list(row[11]),
+        "errors": _loads_list(row[12]),
+        "updated_at": row[13],
+    }
+
+
 def _evidence_diagnostics(row: Any, *, base: Path | None) -> tuple[list[str], list[str]]:
     if base is None:
         return [], []
@@ -1040,7 +1180,10 @@ def _health_status(
     warning_count: int,
     error_count: int,
     failed_cycle_count: int,
+    service_status: str = "missing",
 ) -> str:
+    if service_status.lower() in {"failed", "crashed", "unresponsive"}:
+        return "failed"
     if latest_cycle_status.lower() in FAILED_MONITOR_STATUSES:
         return "failed"
     if latest_loop_status.lower() in FAILED_MONITOR_STATUSES:
@@ -1083,6 +1226,30 @@ def _overall_status(statuses: list[str]) -> str:
 
 def _empty_alert_counts() -> dict[str, int]:
     return {key: 0 for key in ALERT_COUNT_KEYS}
+
+
+def _empty_service_health(
+    *,
+    status: str = "missing",
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "service_instance_id": None,
+        "status": status,
+        "current_cycle_id": None,
+        "latest_cycle_id": None,
+        "latest_run_id": None,
+        "latest_run_manifest": None,
+        "consecutive_failures": 0,
+        "next_retry_at": None,
+        "last_error": {},
+        "warning_count": len(warnings or []),
+        "error_count": len(errors or []),
+        "warnings": warnings or [],
+        "errors": errors or [],
+        "updated_at": None,
+    }
 
 
 def _alert_counts_mapping(value: Any) -> dict[str, int]:
