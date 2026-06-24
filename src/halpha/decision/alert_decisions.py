@@ -15,6 +15,8 @@ EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment
 RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
 WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
+INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
+PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
 MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 ONCHAIN_FLOW_CONTEXT_ARTIFACT = "analysis/onchain_flow_context.json"
@@ -56,30 +58,84 @@ def build_alert_decisions(
     *,
     now: datetime | str | None = None,
 ) -> list[str]:
+    result = alert_decision_candidate_result(config, run, now=now)
+    if result is None:
+        _record_manifest_summary(run, records=[], warnings=[], errors=[], status="skipped")
+        return []
+
+    artifact = _finalize_alert_decision_artifact(run, result["artifact"])
+    records = _records(artifact, "records")
+    warnings = _string_list(artifact.get("warnings"))
+    errors = _error_list(artifact.get("errors"))
+    write_json(run.analysis_dir / "alert_decisions.json", artifact)
+    run.manifest["artifacts"]["alert_decisions"] = ALERT_DECISIONS_ARTIFACT
+    _record_manifest_summary(
+        run,
+        records=records,
+        warnings=warnings,
+        errors=errors,
+        status="succeeded",
+        macro_context_records=len(result["macro_records"]),
+        onchain_context_records=len(result["onchain_records"]),
+    )
+    _record_final_adjustment_counts(run, records)
+    return [ALERT_DECISIONS_ARTIFACT]
+
+
+def alert_decision_candidate_artifact(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    decision_artifact: dict[str, Any] | None = None,
+    watch_artifact: dict[str, Any] | None = None,
+    now: datetime | str | None = None,
+) -> dict[str, Any] | None:
+    result = alert_decision_candidate_result(
+        config,
+        run,
+        decision_artifact=decision_artifact,
+        watch_artifact=watch_artifact,
+        now=now,
+    )
+    if result is None:
+        return None
+    return result["artifact"]
+
+
+def alert_decision_candidate_result(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    decision_artifact: dict[str, Any] | None = None,
+    watch_artifact: dict[str, Any] | None = None,
+    now: datetime | str | None = None,
+) -> dict[str, Any] | None:
+    del config
     assessment_artifact = _read_optional_artifact(
         run.analysis_dir / "event_intelligence_assessment.json",
         EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT,
         records_key="records",
     )
     if assessment_artifact is None:
-        _record_manifest_summary(run, records=[], warnings=[], errors=[], status="skipped")
-        return []
+        return None
 
     risk_artifact = _read_optional_artifact(
         run.analysis_dir / "risk_assessment.json",
         RISK_ASSESSMENT_ARTIFACT,
         records_key="records",
     )
-    decision_artifact = _read_optional_artifact(
-        run.analysis_dir / "decision_recommendations.json",
-        DECISION_RECOMMENDATIONS_ARTIFACT,
-        records_key="records",
-    )
-    watch_artifact = _read_optional_artifact(
-        run.analysis_dir / "watch_triggers.json",
-        WATCH_TRIGGERS_ARTIFACT,
-        records_key="records",
-    )
+    if decision_artifact is None:
+        decision_artifact = _read_optional_artifact(
+            run.analysis_dir / "decision_recommendations.json",
+            DECISION_RECOMMENDATIONS_ARTIFACT,
+            records_key="records",
+        )
+    if watch_artifact is None:
+        watch_artifact = _read_optional_artifact(
+            run.analysis_dir / "watch_triggers.json",
+            WATCH_TRIGGERS_ARTIFACT,
+            records_key="records",
+        )
     derivatives_artifact = _read_optional_artifact(
         run.analysis_dir / "derivatives_market_context.json",
         DERIVATIVES_MARKET_CONTEXT_ARTIFACT,
@@ -140,18 +196,88 @@ def build_alert_decisions(
         "warnings": warnings,
         "errors": errors,
     }
-    write_json(run.analysis_dir / "alert_decisions.json", artifact)
-    run.manifest["artifacts"]["alert_decisions"] = ALERT_DECISIONS_ARTIFACT
-    _record_manifest_summary(
+    return {
+        "artifact": artifact,
+        "macro_records": macro_records,
+        "onchain_records": onchain_records,
+    }
+
+
+def _finalize_alert_decision_artifact(run: RunContext, artifact: dict[str, Any]) -> dict[str, Any]:
+    records = [dict(record) for record in _records(artifact, "records")]
+    for record in records:
+        _attach_baseline_alert_trace(record)
+
+    fusion_artifact = _read_optional_final_adjustment_artifact(
         run,
-        records=records,
-        warnings=warnings,
-        errors=errors,
-        status="succeeded",
-        macro_context_records=len(macro_records),
-        onchain_context_records=len(onchain_records),
+        "intelligence_fusion.json",
+        INTELLIGENCE_FUSION_ARTIFACT,
     )
-    return [ALERT_DECISIONS_ARTIFACT]
+    from halpha.decision.fusion_integration import apply_fusion_to_alert_records
+
+    fusion_result = apply_fusion_to_alert_records(records, fusion_artifact)
+    records = fusion_result["records"]
+
+    personalized_artifact = _read_optional_final_adjustment_artifact(
+        run,
+        "personalized_risk_constraints.json",
+        PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT,
+    )
+    from halpha.decision.personalized_integration import apply_personalized_constraints_to_alert_records
+
+    personalized_result = apply_personalized_constraints_to_alert_records(records, personalized_artifact)
+    records = personalized_result["records"]
+    for record in records:
+        _attach_final_alert_trace(record)
+
+    artifact["records"] = records
+    artifact["source_artifacts"] = _unique(
+        [
+            *_string_list(artifact.get("source_artifacts")),
+            *fusion_result["source_artifacts"],
+            *personalized_result["source_artifacts"],
+        ]
+    )
+    artifact["warnings"] = _unique(
+        [
+            *_string_list(artifact.get("warnings")),
+            *fusion_result["warnings"],
+            *personalized_result["warnings"],
+        ]
+    )
+    artifact["coverage"] = _coverage(records)
+    return artifact
+
+
+def _attach_baseline_alert_trace(record: dict[str, Any]) -> None:
+    record["baseline_policy_result"] = {
+        "priority": _clean_text(record.get("priority"), fallback="unknown"),
+        "attention_decision": _clean_text(record.get("attention_decision"), fallback="unknown"),
+        "requires_user_attention": record.get("requires_user_attention") is True,
+        "requires_reassessment": record.get("requires_reassessment") is True,
+        "status": _clean_text(record.get("status"), fallback="unknown"),
+    }
+
+
+def _attach_final_alert_trace(record: dict[str, Any]) -> None:
+    record["final_priority"] = _clean_text(record.get("priority"), fallback="unknown")
+    record["final_attention_decision"] = _clean_text(record.get("attention_decision"), fallback="unknown")
+    record["final_status"] = _clean_text(record.get("status"), fallback="unknown")
+
+
+def _record_final_adjustment_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
+    fusion_linked = sum(1 for record in records if record.get("fusion_record_id"))
+    fusion_adjusted = sum(1 for record in records if record.get("pre_fusion_priority"))
+    personalized_linked = sum(1 for record in records if record.get("personalized_constraint_id"))
+    personalized_adjusted = sum(1 for record in records if record.get("pre_personalized_priority"))
+    run.manifest["counts"]["alert_decision_fusion_linked_records"] = fusion_linked
+    run.manifest["counts"]["alert_decision_fusion_adjusted_records"] = fusion_adjusted
+    run.manifest["counts"]["intelligence_fusion_alert_linked_records"] = fusion_linked
+    run.manifest["counts"]["intelligence_fusion_alert_adjusted_records"] = fusion_adjusted
+    run.manifest["counts"]["alert_decision_personalized_linked_records"] = personalized_linked
+    run.manifest["counts"]["alert_decision_personalized_adjusted_records"] = personalized_adjusted
+    run.manifest["counts"]["personalized_risk_alert_linked_records"] = personalized_linked
+    run.manifest["counts"]["personalized_risk_alert_adjusted_records"] = personalized_adjusted
 
 
 def _alert_decision_record(
@@ -253,10 +379,38 @@ def _read_optional_artifact(path: Path, artifact_name: str, *, records_key: str)
     return artifact
 
 
+def _read_optional_final_adjustment_artifact(
+    run: RunContext,
+    filename: str,
+    artifact_name: str,
+) -> dict[str, Any] | None:
+    try:
+        artifact = json.loads((run.analysis_dir / filename).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except JSONDecodeError as exc:
+        raise PipelineError(
+            f"{artifact_name} is not valid JSON: {exc.msg}.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
+    if not isinstance(artifact, dict):
+        raise PipelineError(f"{artifact_name} must be a JSON object.", stage=STAGE_NAME, exit_code=3)
+    if not isinstance(artifact.get("records"), list):
+        raise PipelineError(f"{artifact_name} is invalid: records must be a list.", stage=STAGE_NAME, exit_code=3)
+    return artifact
+
+
 def _records(artifact: dict[str, Any] | None, key: str) -> list[dict[str, Any]]:
     if artifact is None:
         return []
     return [record for record in artifact.get(key) or [] if isinstance(record, dict)]
+
+
+def _error_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
 
 
 def _priority(assessment: dict[str, Any], *, evidence_strength: str, suppression_reasons: list[str]) -> str:

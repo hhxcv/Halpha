@@ -123,7 +123,7 @@ def test_personalized_risk_constraints_degrades_when_upstream_missing(tmp_path: 
     assert artifact["status"] == "degraded"
     assert record["state"] == "insufficient_user_state"
     assert record["action"] == "skip"
-    assert artifact["counts"]["warnings"] == 5
+    assert artifact["counts"]["warnings"] == 2
     assert run.manifest["counts"]["personalized_risk_constraint_state_insufficient_user_state"] == 1
 
 
@@ -141,8 +141,8 @@ def test_personalized_risk_constraints_degrades_with_degraded_upstream(tmp_path:
 
     artifact = _read_constraints(run)
     assert artifact["status"] == "degraded"
-    assert artifact["coverage"][1]["source_artifact"] == "analysis/decision_recommendations.json"
-    assert artifact["coverage"][1]["status"] == "degraded"
+    assert artifact["coverage"][0]["source_artifact"] == "analysis/intelligence_fusion.json"
+    assert artifact["coverage"][0]["status"] == "degraded"
     assert artifact["records"][0]["state"] == "watchlist_relevant"
     assert artifact["records"][0]["warnings"] == ["At least one optional upstream artifact is missing, degraded, or failed."]
 
@@ -212,22 +212,34 @@ def _write_upstreams(
     decision_status: str = "ok",
     decision_warnings: list[str] | None = None,
 ) -> None:
+    fusion_records = fusion
+    if fusion_records is None:
+        fusion_records = [_fusion_from_decision(decision) for decision in decisions or []]
     _write_json_artifact(
         run.analysis_dir / "intelligence_fusion.json",
         "intelligence_fusion",
         "records",
-        fusion or [],
-    )
-    _write_json_artifact(
-        run.analysis_dir / "decision_recommendations.json",
-        "decision_recommendations",
-        "records",
-        decisions or [],
+        fusion_records,
         status=decision_status,
         warnings=decision_warnings or [],
     )
-    _write_json_artifact(run.analysis_dir / "watch_triggers.json", "watch_triggers", "records", watches or [])
-    _write_json_artifact(run.analysis_dir / "alert_decisions.json", "alert_decisions", "records", alerts or [])
+    if watches:
+        _write_json_artifact(run.analysis_dir / "watch_triggers.json", "watch_triggers", "records", watches)
+    if alerts:
+        _write_json_artifact(run.analysis_dir / "alert_decisions.json", "alert_decisions", "records", alerts)
+
+
+def _fusion_from_decision(decision: dict) -> dict:
+    return {
+        "fusion_record_id": f"fusion:{decision['symbol']}:{decision['timeframe']}",
+        "scope": {"symbol": decision["symbol"], "timeframe": decision["timeframe"]},
+        "state": "supportive",
+        "status": decision.get("status", "ok"),
+        "evidence": decision.get("evidence", []),
+        "warnings": decision.get("warnings", []),
+        "errors": [],
+        "source_artifacts": ["analysis/intelligence_fusion.json"],
+    }
 
 
 def _write_json_artifact(

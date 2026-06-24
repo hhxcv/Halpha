@@ -1,22 +1,9 @@
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
-from json import JSONDecodeError
-from pathlib import Path
 from typing import Any
 
-from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import write_json
 
-
-STAGE_NAME = "integrate_personalized_risk_constraints"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
-DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
-WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
-ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
-DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
-ALERT_DECISION_MATERIAL_ARTIFACT = "analysis/alert_decision_material.md"
 
 ACTIONABLE_ACTION_LEVELS = {
     "STRONG_DO",
@@ -36,130 +23,86 @@ ATTENTION_DECISIONS = {
 }
 
 
-def integrate_personalized_risk_constraints(config: dict[str, Any], run: RunContext) -> list[str]:
-    constraints_artifact = _read_optional_artifact(
-        run.analysis_dir / "personalized_risk_constraints.json",
-        PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT,
-        records_key="records",
-    )
+def apply_personalized_constraints_to_decision_records(
+    records: list[dict[str, Any]],
+    constraints_artifact: dict[str, Any] | None,
+) -> dict[str, Any]:
     if constraints_artifact is None:
-        _record_manifest(
-            run,
-            status="skipped",
-            decision_records=[],
-            watch_records=[],
-            alert_records=[],
-            warnings=[],
-            errors=[],
-        )
-        return []
-
+        return _application_result("skipped", records, warnings=[], errors=[])
     constraint_index = _ConstraintIndex(_dict_list(constraints_artifact.get("records")))
-    decision_artifact = _read_optional_artifact(
-        run.analysis_dir / "decision_recommendations.json",
-        DECISION_RECOMMENDATIONS_ARTIFACT,
-        records_key="records",
-    )
-    watch_artifact = _read_optional_artifact(
-        run.analysis_dir / "watch_triggers.json",
-        WATCH_TRIGGERS_ARTIFACT,
-        records_key="records",
-    )
-    alert_artifact = _read_optional_artifact(
-        run.analysis_dir / "alert_decisions.json",
-        ALERT_DECISIONS_ARTIFACT,
-        records_key="records",
+    result = _integrate_decision_records({"records": records}, constraint_index)
+    return _application_result(
+        "succeeded",
+        result["records"],
+        warnings=result["warnings"],
+        errors=[],
+        source_artifacts=_unique_strings(
+            [PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT, *_string_list(constraints_artifact.get("source_artifacts"))]
+        ),
     )
 
-    artifacts: list[str] = []
-    warnings: list[str] = []
-    errors: list[dict[str, Any]] = []
-    decision_records: list[dict[str, Any]] = []
-    watch_records: list[dict[str, Any]] = []
-    alert_records: list[dict[str, Any]] = []
 
-    if decision_artifact is not None:
-        decision_result = _integrate_decision_records(decision_artifact, constraint_index)
-        decision_records = decision_result["records"]
-        warnings.extend(decision_result["warnings"])
-        decision_artifact["records"] = decision_records
-        decision_artifact["source_artifacts"] = _unique_strings(
-            [
-                DECISION_RECOMMENDATIONS_ARTIFACT,
-                PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT,
-                *_string_list(decision_artifact.get("source_artifacts")),
-                *_string_list(constraints_artifact.get("source_artifacts")),
-            ]
-        )
-        decision_artifact["warnings"] = _unique_strings(
-            [*_string_list(decision_artifact.get("warnings")), *decision_result["warnings"]]
-        )
-        decision_artifact["created_at"] = _created_at(constraints_artifact)
-        write_json(run.analysis_dir / "decision_recommendations.json", decision_artifact)
-        artifacts.append(DECISION_RECOMMENDATIONS_ARTIFACT)
-        _refresh_decision_counts(run, decision_records)
-
-    if watch_artifact is not None:
-        watch_result = _integrate_watch_records(watch_artifact, constraint_index)
-        watch_records = watch_result["records"]
-        warnings.extend(watch_result["warnings"])
-        watch_artifact["records"] = watch_records
-        watch_artifact["source_artifacts"] = _unique_strings(
-            [
-                WATCH_TRIGGERS_ARTIFACT,
-                PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT,
-                *_string_list(watch_artifact.get("source_artifacts")),
-                *_string_list(constraints_artifact.get("source_artifacts")),
-            ]
-        )
-        watch_artifact["warnings"] = _unique_strings(
-            [*_string_list(watch_artifact.get("warnings")), *watch_result["warnings"]]
-        )
-        watch_artifact["created_at"] = _created_at(constraints_artifact)
-        write_json(run.analysis_dir / "watch_triggers.json", watch_artifact)
-        artifacts.append(WATCH_TRIGGERS_ARTIFACT)
-        _refresh_watch_counts(run, watch_records)
-
-    if alert_artifact is not None:
-        alert_result = _integrate_alert_records(alert_artifact, constraint_index)
-        alert_records = alert_result["records"]
-        warnings.extend(alert_result["warnings"])
-        alert_artifact["records"] = alert_records
-        alert_artifact["source_artifacts"] = _unique_strings(
-            [
-                ALERT_DECISIONS_ARTIFACT,
-                PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT,
-                *_string_list(alert_artifact.get("source_artifacts")),
-                *_string_list(constraints_artifact.get("source_artifacts")),
-            ]
-        )
-        alert_artifact["warnings"] = _unique_strings(
-            [*_string_list(alert_artifact.get("warnings")), *alert_result["warnings"]]
-        )
-        alert_artifact["coverage"] = _alert_coverage(alert_records)
-        alert_artifact["created_at"] = _created_at(constraints_artifact)
-        write_json(run.analysis_dir / "alert_decisions.json", alert_artifact)
-        artifacts.append(ALERT_DECISIONS_ARTIFACT)
-        _refresh_alert_counts(run, alert_records)
-
-    artifacts.extend(
-        _refresh_materials(
-            config,
-            run,
-            decision_changed=bool(decision_records or watch_records),
-            alert_changed=bool(alert_records),
-        )
+def apply_personalized_constraints_to_watch_records(
+    records: list[dict[str, Any]],
+    constraints_artifact: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if constraints_artifact is None:
+        return _application_result("skipped", records, warnings=[], errors=[])
+    constraint_index = _ConstraintIndex(_dict_list(constraints_artifact.get("records")))
+    result = _integrate_watch_records({"records": records}, constraint_index)
+    return _application_result(
+        "succeeded",
+        result["records"],
+        warnings=result["warnings"],
+        errors=[],
+        source_artifacts=_unique_strings(
+            [PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT, *_string_list(constraints_artifact.get("source_artifacts"))]
+        ),
     )
-    _record_manifest(
-        run,
-        status="succeeded",
-        decision_records=decision_records,
-        watch_records=watch_records,
-        alert_records=alert_records,
-        warnings=warnings,
-        errors=errors,
+
+
+def apply_personalized_constraints_to_alert_records(
+    records: list[dict[str, Any]],
+    constraints_artifact: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if constraints_artifact is None:
+        return _application_result("skipped", records, warnings=[], errors=[])
+    constraint_index = _ConstraintIndex(_dict_list(constraints_artifact.get("records")))
+    result = _integrate_alert_records({"records": records}, constraint_index)
+    return _application_result(
+        "succeeded",
+        result["records"],
+        warnings=result["warnings"],
+        errors=[],
+        source_artifacts=_unique_strings(
+            [PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT, *_string_list(constraints_artifact.get("source_artifacts"))]
+        ),
     )
-    return _unique_strings(artifacts)
+
+
+def _application_result(
+    status: str,
+    records: list[dict[str, Any]],
+    *,
+    warnings: list[str],
+    errors: list[dict[str, Any]],
+    source_artifacts: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "records": records,
+        "warnings": _unique_strings(warnings),
+        "errors": errors,
+        "source_artifacts": _unique_strings(source_artifacts or []),
+        "decision_linked_records": sum(1 for record in records if record.get("personalized_constraint_id")),
+        "decision_adjusted_records": sum(1 for record in records if record.get("pre_personalized_action_level")),
+        "watch_linked_records": sum(1 for record in records if record.get("personalized_constraint_id")),
+        "watch_adjusted_records": sum(
+            1 for record in records if record.get("pre_personalized_expected_decision_impact")
+        ),
+        "alert_linked_records": sum(1 for record in records if record.get("personalized_constraint_id")),
+        "alert_adjusted_records": sum(1 for record in records if record.get("pre_personalized_priority")),
+    }
 
 
 class _ConstraintIndex:
@@ -257,71 +200,75 @@ def _apply_personalized_fields(record: dict[str, Any], context: dict[str, Any]) 
 
 
 def _apply_decision_adjustments(record: dict[str, Any], context: dict[str, Any]) -> list[str]:
-    reasons = _personalized_reasons(context)
+    effective_context = _effective_context_for_decision(record, context)
+    reasons = _personalized_reasons(effective_context)
     warnings: list[str] = []
+    record["personalized_effective_action"] = effective_context["action"]
     record["personalized_adjustment_reasons"] = _unique_strings(
         [*_string_list(record.get("personalized_adjustment_reasons")), *reasons]
     )
     record["risk_conditions"] = _unique_strings(
         [
             *_string_list(record.get("risk_conditions")),
-            f"personalized_state={context['state']}; personalized_action={context['action']}.",
+            f"personalized_state={context['state']}; personalized_action={effective_context['action']}.",
         ]
     )
     record["warnings"] = _unique_strings(
         [
             *_string_list(record.get("warnings")),
-            *_personalized_warnings(context),
+            *_personalized_warnings(effective_context),
         ]
     )
     record["do_not_do"] = _unique_strings(
         [
             *_string_list(record.get("do_not_do")),
-            *_personalized_do_not_do(context),
+            *_personalized_do_not_do(effective_context),
         ]
     )
 
     original_action = _text(record.get("action_level"), fallback="NO_ACTION")
-    new_action = _decision_action_after_personalization(original_action, context)
+    new_action = _decision_action_after_personalization(original_action, effective_context)
     if new_action != original_action:
         record["pre_personalized_action_level"] = original_action
         record["pre_personalized_decision_bias"] = record.get("decision_bias")
         record["pre_personalized_recommended_actions"] = _string_list(record.get("recommended_actions"))
         record["pre_personalized_invalidation_conditions"] = _string_list(record.get("invalidation_conditions"))
         record["action_level"] = new_action
-        record["decision_bias"] = _decision_bias_after_personalization(new_action, context)
+        record["decision_bias"] = _decision_bias_after_personalization(new_action, effective_context)
         record["confidence"] = "low" if new_action in {"NO_ACTION", "WATCH"} else record.get("confidence", "unknown")
-        record["status"] = _decision_status_after_personalization(new_action, context)
-        record["recommended_actions"] = _recommended_actions_after_personalization(new_action, record, context)
+        record["status"] = _decision_status_after_personalization(new_action, effective_context)
+        record["recommended_actions"] = _recommended_actions_after_personalization(new_action, record, effective_context)
         record["invalidation_conditions"] = (
             [] if new_action == "NO_ACTION" else _string_list(record.get("invalidation_conditions"))
         )
         record["downgrade_reasons"] = _unique_strings([*_string_list(record.get("downgrade_reasons")), *reasons])
         warnings.append("personalized_adjusted_decision_recommendation")
-    elif context["action"] in {"block", "downgrade"}:
+    elif effective_context["action"] in {"block", "downgrade"}:
         record["downgrade_reasons"] = _unique_strings([*_string_list(record.get("downgrade_reasons")), *reasons])
     return warnings
 
 
 def _apply_watch_adjustments(record: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    effective_context = _effective_context_for_watch(record, context)
     warnings: list[str] = []
+    record["personalized_effective_action"] = effective_context["action"]
     record["personalized_adjustment_reasons"] = _unique_strings(
-        [*_string_list(record.get("personalized_adjustment_reasons")), *_personalized_reasons(context)]
+        [*_string_list(record.get("personalized_adjustment_reasons")), *_personalized_reasons(effective_context)]
     )
-    record["evidence"] = _unique_strings([*_string_list(record.get("evidence")), *context["evidence"]])
-    record["warnings"] = _unique_strings([*_string_list(record.get("warnings")), *_personalized_warnings(context)])
-    if context["action"] not in {"block", "downgrade"}:
+    record["evidence"] = _unique_strings([*_string_list(record.get("evidence")), *effective_context["evidence"]])
+    record["warnings"] = _unique_strings([*_string_list(record.get("warnings")), *_personalized_warnings(effective_context)])
+    if effective_context["action"] not in {"block", "downgrade"}:
         return warnings
 
     original_priority = _text(record.get("priority"), fallback="unknown")
-    new_priority = "low" if context["action"] == "block" else _downgrade_watch_priority(original_priority)
+    new_priority = "low" if effective_context["action"] == "block" else _downgrade_watch_priority(original_priority)
     if new_priority != original_priority:
         record["pre_personalized_priority"] = original_priority
         record["priority"] = new_priority
     record["pre_personalized_expected_decision_impact"] = record.get("expected_decision_impact")
     record["expected_decision_impact"] = (
         "personalized_constraint_blocks_stronger_action"
-        if context["action"] == "block"
+        if effective_context["action"] == "block"
         else "personalized_constraint_requires_more_conservative_review"
     )
     warnings.append("personalized_adjusted_watch_trigger")
@@ -329,17 +276,19 @@ def _apply_watch_adjustments(record: dict[str, Any], context: dict[str, Any]) ->
 
 
 def _apply_alert_adjustments(record: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    effective_context = _effective_context_for_alert(record, context)
     warnings: list[str] = []
+    record["personalized_effective_action"] = effective_context["action"]
     record["personalized_adjustment_reasons"] = _unique_strings(
-        [*_string_list(record.get("personalized_adjustment_reasons")), *_personalized_reasons(context)]
+        [*_string_list(record.get("personalized_adjustment_reasons")), *_personalized_reasons(effective_context)]
     )
-    record["uncertainty"] = _unique_strings([*_string_list(record.get("uncertainty")), *context["uncertainty"]])
-    record["warnings"] = _unique_strings([*_string_list(record.get("warnings")), *_personalized_warnings(context)])
-    if context["action"] not in {"block", "downgrade"}:
+    record["uncertainty"] = _unique_strings([*_string_list(record.get("uncertainty")), *effective_context["uncertainty"]])
+    record["warnings"] = _unique_strings([*_string_list(record.get("warnings")), *_personalized_warnings(effective_context)])
+    if effective_context["action"] not in {"block", "downgrade"}:
         return warnings
 
     original_priority = _text(record.get("priority"), fallback="unknown")
-    new_priority = "no_alert" if context["action"] == "block" else _downgrade_alert_priority(original_priority)
+    new_priority = "no_alert" if effective_context["action"] == "block" else _downgrade_alert_priority(original_priority)
     if new_priority != original_priority:
         record["pre_personalized_priority"] = original_priority
         record["pre_personalized_attention_decision"] = record.get("attention_decision")
@@ -352,19 +301,19 @@ def _apply_alert_adjustments(record: dict[str, Any], context: dict[str, Any]) ->
         record["status"] = "suppressed" if new_priority == "no_alert" else "degraded"
         record["reason"] = _append_reason(
             record.get("reason"),
-            f"personalized constraint {context['constraint_id']} set priority={new_priority}.",
+            f"personalized constraint {effective_context['constraint_id']} set priority={new_priority}.",
         )
-        if context["action"] == "block":
+        if effective_context["action"] == "block":
             record["suppression_reasons"] = _unique_strings(
-                [*_string_list(record.get("suppression_reasons")), *_personalized_reasons(context)]
+                [*_string_list(record.get("suppression_reasons")), *_personalized_reasons(effective_context)]
             )
         record["downgrade_reasons"] = _unique_strings(
-            [*_string_list(record.get("downgrade_reasons")), *_personalized_reasons(context)]
+            [*_string_list(record.get("downgrade_reasons")), *_personalized_reasons(effective_context)]
         )
         warnings.append("personalized_adjusted_alert_decision")
-    elif context["action"] == "downgrade":
+    elif effective_context["action"] == "downgrade":
         record["downgrade_reasons"] = _unique_strings(
-            [*_string_list(record.get("downgrade_reasons")), *_personalized_reasons(context)]
+            [*_string_list(record.get("downgrade_reasons")), *_personalized_reasons(effective_context)]
         )
     return warnings
 
@@ -377,6 +326,7 @@ def _constraint_context(record: dict[str, Any]) -> dict[str, Any]:
         "severity": _text(record.get("severity"), fallback="unknown"),
         "confidence": _text(record.get("confidence"), fallback="unknown"),
         "reason_codes": _string_list(record.get("reason_codes")),
+        "policy": _dict(record.get("constraint_policy")),
         "evidence": _string_list(record.get("evidence"))[:8],
         "uncertainty": _string_list(record.get("uncertainty"))[:8],
         "warnings": _string_list(record.get("warnings"))[:8],
@@ -384,6 +334,125 @@ def _constraint_context(record: dict[str, Any]) -> dict[str, Any]:
             [PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT, *_string_list(record.get("source_artifacts"))]
         ),
     }
+
+
+def _effective_context_for_decision(record: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    reason_codes = _applicable_decision_reason_codes(record, context)
+    return _context_with_effective_action(context, reason_codes)
+
+
+def _effective_context_for_watch(record: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    reason_codes = _applicable_watch_reason_codes(record, context)
+    return _context_with_effective_action(context, reason_codes)
+
+
+def _effective_context_for_alert(record: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    reason_codes = _applicable_alert_reason_codes(record, context)
+    return _context_with_effective_action(context, reason_codes)
+
+
+def _context_with_effective_action(context: dict[str, Any], reason_codes: list[str]) -> dict[str, Any]:
+    effective = dict(context)
+    action = context["action"]
+    if action in {"block", "downgrade"} and not reason_codes:
+        action = "annotate"
+    effective["action"] = action
+    effective["reason_codes"] = reason_codes
+    return effective
+
+
+def _applicable_decision_reason_codes(record: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    action_level = _text(record.get("action_level"), fallback="NO_ACTION")
+    risk_level = _risk_level_from_decision(record)
+    return [
+        code
+        for code in context["reason_codes"]
+        if _reason_code_applies(
+            code,
+            context,
+            action_level=action_level,
+            risk_level=risk_level,
+            priority=None,
+        )
+    ]
+
+
+def _applicable_watch_reason_codes(record: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    priority = _text(record.get("priority"), fallback="unknown")
+    return [
+        code
+        for code in context["reason_codes"]
+        if _reason_code_applies(
+            code,
+            context,
+            action_level=None,
+            risk_level=None,
+            priority=priority,
+        )
+    ]
+
+
+def _applicable_alert_reason_codes(record: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    priority = _text(record.get("priority"), fallback="unknown")
+    return [
+        code
+        for code in context["reason_codes"]
+        if _reason_code_applies(
+            code,
+            context,
+            action_level=None,
+            risk_level=None,
+            priority=priority,
+        )
+    ]
+
+
+def _reason_code_applies(
+    code: str,
+    context: dict[str, Any],
+    *,
+    action_level: str | None,
+    risk_level: str | None,
+    priority: str | None,
+) -> bool:
+    risk_policy = _dict(_dict(context.get("policy")).get("risk"))
+    if code == "risk_action_cap":
+        max_action = _text(risk_policy.get("max_action_level"), fallback="")
+        if action_level is not None:
+            max_rank = ACTIONABLE_RANK.get(max_action)
+            action_rank = ACTIONABLE_RANK.get(action_level)
+            return max_rank is None or (action_rank is not None and action_rank > max_rank)
+        return priority in {"P0", "P1", "P2", "high", "medium"}
+    if code == "new_exposure_not_allowed":
+        if action_level is not None:
+            return action_level in {"TRY_SMALL", "DO", "STRONG_DO"}
+        return priority in {"P0", "P1", "P2", "high", "medium"}
+    if code == "risk_state_cap":
+        max_risk = _text(risk_policy.get("max_risk_state"), fallback="")
+        max_rank = RISK_RANK.get(max_risk)
+        risk_rank = RISK_RANK.get(risk_level or "")
+        return max_rank is None or (risk_rank is not None and risk_rank > max_rank)
+    return True
+
+
+ACTIONABLE_RANK = {
+    "NO_ACTION": 0,
+    "WATCH": 1,
+    "TRY_SMALL": 2,
+    "DO": 3,
+    "STRONG_DO": 4,
+    "AVOID": 2,
+    "EXIT_OR_REDUCE": 2,
+    "HEDGE_OR_PROTECT": 2,
+}
+RISK_RANK = {"low": 0, "medium": 1, "high": 2, "extreme": 3}
+
+
+def _risk_level_from_decision(record: dict[str, Any]) -> str:
+    for condition in _string_list(record.get("risk_conditions")):
+        if condition.startswith("risk_level="):
+            return condition.split("=", 1)[1].split(";", 1)[0].strip()
+    return ""
 
 
 def _decision_action_after_personalization(action_level: str, context: dict[str, Any]) -> str:
@@ -464,148 +533,6 @@ def _personalized_do_not_do(context: dict[str, Any]) -> list[str]:
     return []
 
 
-def _refresh_materials(
-    config: dict[str, Any],
-    run: RunContext,
-    *,
-    decision_changed: bool,
-    alert_changed: bool,
-) -> list[str]:
-    artifacts: list[str] = []
-    if decision_changed and (run.analysis_dir / "decision_intelligence_material.md").is_file():
-        from halpha.decision.decision_intelligence import build_decision_intelligence_material
-
-        artifacts.extend(build_decision_intelligence_material(config, run))
-    if alert_changed and (run.analysis_dir / "alert_decision_material.md").is_file():
-        from halpha.analysis.alert_decision_material import build_alert_decision_material
-
-        artifacts.extend(build_alert_decision_material(config, run))
-    return artifacts
-
-
-def _refresh_decision_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
-    run.manifest["counts"]["decision_recommendation_records"] = len(records)
-    run.manifest["counts"]["decision_recommendation_actionable_records"] = sum(
-        1 for record in records if record.get("action_level") in ACTIONABLE_ACTION_LEVELS
-    )
-    run.manifest["counts"]["decision_recommendation_non_actionable_records"] = sum(
-        1 for record in records if record.get("action_level") not in ACTIONABLE_ACTION_LEVELS
-    )
-    run.manifest["counts"]["decision_recommendation_personalized_linked_records"] = sum(
-        1 for record in records if record.get("personalized_constraint_id")
-    )
-    run.manifest["counts"]["decision_recommendation_personalized_adjusted_records"] = sum(
-        1 for record in records if record.get("pre_personalized_action_level")
-    )
-
-
-def _refresh_watch_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
-    run.manifest["counts"]["watch_trigger_records"] = len(records)
-    run.manifest["counts"]["watch_trigger_linked_records"] = sum(
-        1 for record in records if record.get("linked_decision_record_id")
-    )
-    run.manifest["counts"]["watch_trigger_personalized_linked_records"] = sum(
-        1 for record in records if record.get("personalized_constraint_id")
-    )
-    run.manifest["counts"]["watch_trigger_personalized_adjusted_records"] = sum(
-        1 for record in records if record.get("pre_personalized_expected_decision_impact")
-    )
-
-
-def _refresh_alert_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
-    priority = _count_by(records, "priority")
-    run.manifest["counts"]["alert_decision_records"] = len(records)
-    run.manifest["counts"]["alert_decision_p0_records"] = priority.get("P0", 0)
-    run.manifest["counts"]["alert_decision_p1_records"] = priority.get("P1", 0)
-    run.manifest["counts"]["alert_decision_p2_records"] = priority.get("P2", 0)
-    run.manifest["counts"]["alert_decision_p3_records"] = priority.get("P3", 0)
-    run.manifest["counts"]["alert_decision_no_alert_records"] = priority.get("no_alert", 0)
-    run.manifest["counts"]["alert_decision_personalized_linked_records"] = sum(
-        1 for record in records if record.get("personalized_constraint_id")
-    )
-    run.manifest["counts"]["alert_decision_personalized_adjusted_records"] = sum(
-        1 for record in records if record.get("pre_personalized_priority")
-    )
-
-
-def _record_manifest(
-    run: RunContext,
-    *,
-    status: str,
-    decision_records: list[dict[str, Any]],
-    watch_records: list[dict[str, Any]],
-    alert_records: list[dict[str, Any]],
-    warnings: list[str],
-    errors: list[dict[str, Any]],
-) -> None:
-    decision_linked = sum(1 for record in decision_records if record.get("personalized_constraint_id"))
-    watch_linked = sum(1 for record in watch_records if record.get("personalized_constraint_id"))
-    alert_linked = sum(1 for record in alert_records if record.get("personalized_constraint_id"))
-    decision_adjusted = sum(1 for record in decision_records if record.get("pre_personalized_action_level"))
-    watch_adjusted = sum(1 for record in watch_records if record.get("pre_personalized_expected_decision_impact"))
-    alert_adjusted = sum(1 for record in alert_records if record.get("pre_personalized_priority"))
-    run.manifest["counts"]["personalized_risk_decision_linked_records"] = decision_linked
-    run.manifest["counts"]["personalized_risk_watch_linked_records"] = watch_linked
-    run.manifest["counts"]["personalized_risk_alert_linked_records"] = alert_linked
-    run.manifest["counts"]["personalized_risk_decision_adjusted_records"] = decision_adjusted
-    run.manifest["counts"]["personalized_risk_watch_adjusted_records"] = watch_adjusted
-    run.manifest["counts"]["personalized_risk_alert_adjusted_records"] = alert_adjusted
-    run.manifest["counts"]["personalized_risk_integration_warnings"] = len(warnings)
-    run.manifest["counts"]["personalized_risk_integration_errors"] = len(errors)
-    run.manifest["personalized_risk_integration"] = {
-        "status": status,
-        "source_artifact": PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT if status == "succeeded" else None,
-        "decision_records": len(decision_records),
-        "decision_linked_records": decision_linked,
-        "decision_adjusted_records": decision_adjusted,
-        "watch_records": len(watch_records),
-        "watch_linked_records": watch_linked,
-        "watch_adjusted_records": watch_adjusted,
-        "alert_records": len(alert_records),
-        "alert_linked_records": alert_linked,
-        "alert_adjusted_records": alert_adjusted,
-        "warnings": len(warnings),
-        "errors": len(errors),
-    }
-
-
-def _alert_coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
-    priority = _count_by(records, "priority")
-    return {
-        "records": len(records),
-        "priority": priority,
-        "no_alert_records": priority.get("no_alert", 0),
-        "user_attention_records": sum(1 for record in records if record.get("requires_user_attention") is True),
-        "downgraded_records": sum(1 for record in records if _string_list(record.get("downgrade_reasons"))),
-        "suppressed_records": sum(1 for record in records if _string_list(record.get("suppression_reasons"))),
-        "warning_records": sum(1 for record in records if _string_list(record.get("warnings"))),
-        "personalized_linked_records": sum(1 for record in records if record.get("personalized_constraint_id")),
-        "personalized_adjusted_records": sum(1 for record in records if record.get("pre_personalized_priority")),
-        "p0_p1_records": priority.get("P0", 0) + priority.get("P1", 0),
-    }
-
-
-def _read_optional_artifact(path: Path, artifact_name: str, *, records_key: str) -> dict[str, Any] | None:
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return None
-    except JSONDecodeError as exc:
-        raise PipelineError(f"{artifact_name} is not valid JSON: {exc.msg}.", stage=STAGE_NAME, exit_code=3) from exc
-    if not isinstance(loaded, dict):
-        raise PipelineError(f"{artifact_name} must be a JSON object.", stage=STAGE_NAME, exit_code=3)
-    if not isinstance(loaded.get(records_key), list):
-        raise PipelineError(f"{artifact_name} is invalid: {records_key} must be a list.", stage=STAGE_NAME, exit_code=3)
-    return loaded
-
-
-def _created_at(constraints_artifact: dict[str, Any]) -> str:
-    created_at = constraints_artifact.get("created_at")
-    if isinstance(created_at, str) and created_at:
-        return created_at
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
 def _scope_value(value: Any) -> str | None:
     if value is None:
         return None
@@ -620,14 +547,6 @@ def _append_reason(value: Any, reason: str) -> str:
     if current:
         return f"{current} {reason}"
     return reason
-
-
-def _count_by(records: list[dict[str, Any]], key: str) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for record in records:
-        value = _text(record.get(key), fallback="unknown")
-        counts[value] = counts.get(value, 0) + 1
-    return dict(sorted(counts.items()))
 
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:

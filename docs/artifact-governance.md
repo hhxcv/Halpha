@@ -346,9 +346,9 @@ These contracts are defined in `docs/intelligence-fusion-contracts.md`.
 Product runs generate `analysis/intelligence_fusion.json`. Fusion JSON remains
 intermediate evidence and should not be embedded in full Codex input. Product
 runs generate bounded Codex-facing fusion material as
-`analysis/intelligence_fusion_material.md`. Product runs also integrate bounded
-fusion fields into decision recommendations and alert decisions before research
-context is built.
+`analysis/intelligence_fusion_material.md`. Product runs apply bounded fusion
+fields in memory while publishing final decision recommendations and alert
+decisions, before research context is built.
 
 ### User State And Personalized Risk Evidence
 
@@ -370,9 +370,10 @@ notes, account identifiers, exact holdings, balances, machine paths, full
 user-state JSON, and full personalized-risk JSON must not be embedded in Codex
 input. Codex should consume bounded `analysis/personalized_risk_material.md`
 instead of full user-state or personalized-risk JSON.
-Product runs integrate constraints into decision recommendations, watch
-triggers, and alert decisions as conservative fields while preserving
-pre-personalization values when a record is downgraded or blocked.
+Product runs apply constraints in memory while publishing final decision
+recommendations, watch triggers, and alert decisions as conservative fields
+while preserving pre-personalization values when a record is downgraded or
+blocked.
 
 ### Decision And Risk Evidence
 

@@ -516,10 +516,8 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_factor_states": _noop_stage,
         "build_multi_source_signals": _noop_stage,
         "build_intelligence_fusion": _noop_stage,
-        "integrate_intelligence_fusion": _noop_stage,
         "build_user_state_context": _noop_stage,
         "build_personalized_risk_constraints": _noop_stage,
-        "integrate_personalized_risk_constraints": _noop_stage,
     }
     handlers.update(overrides)
     return handlers

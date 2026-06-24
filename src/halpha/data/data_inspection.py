@@ -595,11 +595,10 @@ def _intelligence_fusion_section(
     artifacts = _dict(manifest.get("artifacts"))
     counts = _dict(manifest.get("counts"))
     fusion_summary = _dict(manifest.get("intelligence_fusion"))
-    integration_summary = _dict(manifest.get("intelligence_fusion_integration"))
     material_summary = _dict(manifest.get("intelligence_fusion_material"))
     has_fusion_artifacts = any(
         artifacts.get(key) for key in ("intelligence_fusion", "intelligence_fusion_material")
-    ) or any((fusion_summary, integration_summary, material_summary))
+    ) or any((fusion_summary, material_summary))
 
     quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
     quality_counts = _fusion_quality_check_counts(quality)
@@ -657,13 +656,6 @@ def _intelligence_fusion_section(
         for summary in (fusion_summary, material_summary)
         if isinstance(summary.get("status"), str) and summary.get("status")
     ]
-    integration_status = integration_summary.get("status")
-    if integration_status == "failed":
-        statuses.append("failed")
-    if integration_summary.get("errors"):
-        statuses.append("failed")
-    elif integration_summary.get("warnings"):
-        statuses.append("warning")
     statuses.extend(status for status, value in quality_counts.items() for _ in range(value))
     if budget and (budget.get("over_budget") or budget.get("status") not in {None, "included"}):
         statuses.append("warning")
@@ -819,12 +811,11 @@ def _personalized_risk_section(
     counts = _dict(manifest.get("counts"))
     user_state_summary = _dict(manifest.get("user_state_context"))
     constraint_summary = _dict(manifest.get("personalized_risk_constraints"))
-    integration_summary = _dict(manifest.get("personalized_risk_integration"))
     material_summary = _dict(manifest.get("personalized_risk_material"))
     has_personalized_artifacts = any(
         artifacts.get(key)
         for key in ("user_state_context", "personalized_risk_constraints", "personalized_risk_material")
-    ) or any((user_state_summary, constraint_summary, integration_summary, material_summary))
+    ) or any((user_state_summary, constraint_summary, material_summary))
 
     quality, quality_error = _read_json(resolved_run_dir / DATA_QUALITY_SUMMARY_ARTIFACT)
     quality_counts = _personalized_risk_quality_check_counts(quality)
@@ -862,7 +853,6 @@ def _personalized_risk_section(
         "constraint_records": _int(counts.get("personalized_risk_constraint_records")),
         "constraint_state_counts": _compact_counts(_dict(constraint_summary.get("state_counts"))),
         "constraint_action_counts": _compact_counts(_dict(constraint_summary.get("action_counts"))),
-        "integration_status": integration_summary.get("status") or "unknown",
         "decision_linked_records": _int(counts.get("personalized_risk_decision_linked_records")),
         "decision_adjusted_records": _int(counts.get("personalized_risk_decision_adjusted_records")),
         "watch_linked_records": _int(counts.get("personalized_risk_watch_linked_records")),
@@ -896,12 +886,6 @@ def _personalized_risk_section(
         for summary in (user_state_summary, constraint_summary, material_summary)
         if isinstance(summary.get("status"), str) and summary.get("status")
     ]
-    if integration_summary.get("status") == "failed":
-        statuses.append("failed")
-    if integration_summary.get("errors"):
-        statuses.append("failed")
-    elif integration_summary.get("warnings"):
-        statuses.append("warning")
     statuses.extend(status for status, value in quality_counts.items() for _ in range(value))
     if budget and (budget.get("over_budget") or budget.get("status") not in {None, "included"}):
         statuses.append("warning")

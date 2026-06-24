@@ -14,16 +14,10 @@ STAGE_NAME = "build_personalized_risk_constraints"
 PERSONALIZED_RISK_CONSTRAINTS_ARTIFACT = "analysis/personalized_risk_constraints.json"
 USER_STATE_CONTEXT_ARTIFACT = "analysis/user_state_context.json"
 INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
-DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
-WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
-ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 SCHEMA_VERSION = 1
 
 UPSTREAM_INPUTS = (
     ("intelligence_fusion", INTELLIGENCE_FUSION_ARTIFACT, "records"),
-    ("decision_recommendations", DECISION_RECOMMENDATIONS_ARTIFACT, "records"),
-    ("watch_triggers", WATCH_TRIGGERS_ARTIFACT, "records"),
-    ("alert_decisions", ALERT_DECISIONS_ARTIFACT, "records"),
 )
 STATE_ORDER = (
     "disabled_asset_blocked",
@@ -221,7 +215,7 @@ def _constraint_record(
         severity = "low"
         confidence = "low"
         reason_codes = ["no_upstream_scope_evidence"]
-        uncertainty.append("User-state scope has no matching current-run intelligence, decision, watch, or alert evidence.")
+        uncertainty.append("User-state scope has no matching current-run intelligence evidence.")
     else:
         state, action, severity, confidence, reason_codes = _state_action_for_scope(
             scope_key,
@@ -243,6 +237,7 @@ def _constraint_record(
         "severity": severity,
         "confidence": confidence,
         "reason_codes": reason_codes,
+        "constraint_policy": _constraint_policy(user_state),
         "matched_user_state": matches,
         "upstream_records": upstream_refs,
         "evidence": _unique_sorted(evidence),
@@ -268,6 +263,7 @@ def _empty_constraint(user_state: dict[str, Any], inputs: _UpstreamInputs) -> di
         "severity": "info" if state == "skipped" else "low",
         "confidence": "low",
         "reason_codes": [reason],
+        "constraint_policy": _constraint_policy(user_state),
         "matched_user_state": _empty_matches(),
         "upstream_records": [],
         "evidence": [f"user_state_context status={status or 'unknown'}"],
@@ -326,19 +322,30 @@ def _risk_limit_reasons(user_state: dict[str, Any], upstream_refs: list[dict[str
     max_action_rank = ACTION_RANK.get(max_action)
     if max_action_rank is not None:
         upstream_action = _max_upstream_action(upstream_refs)
-        if upstream_action and ACTION_RANK.get(upstream_action, 0) > max_action_rank:
+        if upstream_action is None or ACTION_RANK.get(upstream_action, 0) > max_action_rank:
             reasons.append("risk_action_cap")
     if risk.get("allow_new_exposure") is False:
         upstream_action = _max_upstream_action(upstream_refs)
-        if upstream_action in {"TRY_SMALL", "DO", "STRONG_DO"}:
+        if upstream_action is None or upstream_action in {"TRY_SMALL", "DO", "STRONG_DO"}:
             reasons.append("new_exposure_not_allowed")
     max_risk_state = _text(risk.get("max_risk_state"))
     max_risk_rank = RISK_RANK.get(max_risk_state)
     if max_risk_rank is not None:
         upstream_risk = _max_upstream_risk_level(upstream_refs)
-        if upstream_risk and RISK_RANK.get(upstream_risk, 0) > max_risk_rank:
+        if upstream_risk is None or RISK_RANK.get(upstream_risk, 0) > max_risk_rank:
             reasons.append("risk_state_cap")
     return _unique_sorted(reasons)
+
+
+def _constraint_policy(user_state: dict[str, Any]) -> dict[str, Any]:
+    risk = _dict(user_state.get("risk"))
+    return {
+        "risk": {
+            key: risk[key]
+            for key in ("max_action_level", "max_risk_state", "allow_new_exposure")
+            if key in risk
+        }
+    }
 
 
 def _max_upstream_action(upstream_refs: list[dict[str, Any]]) -> str | None:
@@ -488,9 +495,6 @@ def _symbol_set(value: Any) -> set[str]:
 
 
 def _scope_for_layer(layer: str, record: dict[str, Any]) -> tuple[str | None, str | None]:
-    if layer == "alert_decisions":
-        scope = _dict(record.get("scope"))
-        return (_symbol(scope.get("symbol") or record.get("symbol")), _optional_text(scope.get("timeframe") or record.get("timeframe")))
     if layer == "intelligence_fusion":
         scope = _dict(record.get("scope"))
         return (_symbol(scope.get("symbol")), _optional_text(scope.get("timeframe")))
@@ -509,32 +513,12 @@ def _upstream_ref(layer: str, artifact_path: str, record: dict[str, Any]) -> dic
         "source_artifacts": _unique_sorted(_string_list(record.get("source_artifacts"))),
         "evidence_text": _evidence_text(record),
     }
-    if layer == "decision_recommendations":
-        ref["action_level"] = _text(record.get("action_level"))
-        ref["risk_level"] = _risk_level_from_decision(record)
-    if layer == "alert_decisions":
-        ref["priority"] = _text(record.get("priority"))
-        ref["attention_decision"] = _text(record.get("attention_decision"))
-    if layer == "watch_triggers":
-        ref["trigger_type"] = _text(record.get("type"))
     return ref
 
 
 def _record_id(layer: str, record: dict[str, Any]) -> str:
-    keys = {
-        "intelligence_fusion": "fusion_record_id",
-        "decision_recommendations": "record_id",
-        "watch_triggers": "trigger_id",
-        "alert_decisions": "alert_decision_id",
-    }
-    return _text(record.get(keys[layer]) or record.get("record_id") or record.get("id"))
-
-
-def _risk_level_from_decision(record: dict[str, Any]) -> str:
-    for condition in _string_list(record.get("risk_conditions")):
-        if condition.startswith("risk_level="):
-            return condition.split("=", 1)[1].split(";", 1)[0].strip()
-    return ""
+    key = "fusion_record_id" if layer == "intelligence_fusion" else "record_id"
+    return _text(record.get(key) or record.get("record_id") or record.get("id"))
 
 
 def _evidence_text(record: dict[str, Any]) -> str:
@@ -571,6 +555,7 @@ def _failed_artifact(run: RunContext, *, created_at: str, errors: list[dict[str,
         "severity": "high",
         "confidence": "low",
         "reason_codes": ["user_state_context_missing_or_unreadable"],
+        "constraint_policy": {},
         "matched_user_state": _empty_matches(),
         "upstream_records": [],
         "evidence": [],

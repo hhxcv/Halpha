@@ -393,7 +393,6 @@ def test_data_inspect_reports_personalized_risk_artifacts_and_codex_budget(
     assert "constraint_records=3" in output
     assert "constraint_state_counts=risk_limit_downgraded:1,watchlist_relevant:2" in output
     assert "constraint_action_counts=annotate:2,downgrade:1" in output
-    assert "integration_status=succeeded" in output
     assert "decision_linked_records=2" in output
     assert "decision_adjusted_records=1" in output
     assert "watch_linked_records=1" in output
@@ -862,18 +861,6 @@ def _write_fusion_inspection_artifacts(run: RunContext) -> None:
         "warnings": 1,
         "errors": 0,
     }
-    run.manifest["intelligence_fusion_integration"] = {
-        "status": "succeeded",
-        "source_artifact": "analysis/intelligence_fusion.json",
-        "decision_records": 2,
-        "decision_linked_records": 2,
-        "decision_adjusted_records": 1,
-        "alert_records": 2,
-        "alert_linked_records": 2,
-        "alert_adjusted_records": 1,
-        "warnings": 0,
-        "errors": 0,
-    }
     run.manifest["intelligence_fusion_material"] = {
         "status": "ok",
         "artifact": "analysis/intelligence_fusion_material.md",
@@ -1037,21 +1024,6 @@ def _write_personalized_risk_inspection_artifacts(run: RunContext) -> None:
         "state_counts": {"watchlist_relevant": 2, "risk_limit_downgraded": 1},
         "action_counts": {"annotate": 2, "downgrade": 1},
         "warnings": 1,
-        "errors": 0,
-    }
-    run.manifest["personalized_risk_integration"] = {
-        "status": "succeeded",
-        "source_artifact": "analysis/personalized_risk_constraints.json",
-        "decision_records": 2,
-        "decision_linked_records": 2,
-        "decision_adjusted_records": 1,
-        "watch_records": 1,
-        "watch_linked_records": 1,
-        "watch_adjusted_records": 0,
-        "alert_records": 2,
-        "alert_linked_records": 2,
-        "alert_adjusted_records": 1,
-        "warnings": 0,
         "errors": 0,
     }
     run.manifest["personalized_risk_material"] = {

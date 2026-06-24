@@ -23,7 +23,6 @@ RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
 MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment.json"
-ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 OUTCOME_EVALUATIONS_ARTIFACT = "analysis/outcome_evaluations.json"
 DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 
@@ -112,7 +111,6 @@ class _FusionInputs:
         self._load_factor_states()
         self._load_multi_source_signals()
         self._load_event_assessments()
-        self._load_alert_decisions()
         self._load_outcome_evaluations()
         self._load_data_quality()
 
@@ -355,31 +353,6 @@ class _FusionInputs:
                     "decision_impact": _text(record.get("decision_impact")),
                     "risk_effect": _text(record.get("risk_effect")),
                     "downgrade_reasons": _string_list(record.get("downgrade_reasons")),
-                },
-            )
-
-    def _load_alert_decisions(self) -> None:
-        artifact = self._read("alert", ALERT_DECISIONS_ARTIFACT, self.run.analysis_dir / "alert_decisions.json", "records")
-        if artifact is None:
-            return
-        for record in _dict_list(artifact.data.get("records")):
-            scope = _scope_tuple(record.get("scope"))
-            self._add(
-                scope,
-                "alert",
-                ALERT_DECISIONS_ARTIFACT,
-                _text(record.get("alert_decision_id") or record.get("decision_id")),
-                state=_text(record.get("priority")),
-                direction="cautionary" if record.get("priority") in {"P0", "P1"} else "neutral",
-                confidence=_text(record.get("evidence_strength") or record.get("confidence")),
-                evidence=[f"alert priority={_text(record.get('priority'))}"],
-                uncertainty=_string_list(record.get("uncertainty")),
-                warnings=_string_list(record.get("warnings")),
-                errors=_error_list(record.get("errors")),
-                source_artifacts=[ALERT_DECISIONS_ARTIFACT, *_string_list(record.get("source_artifacts"))],
-                extra={
-                    "priority": _text(record.get("priority")),
-                    "suppression_reasons": _string_list(record.get("suppression_reasons")),
                 },
             )
 
