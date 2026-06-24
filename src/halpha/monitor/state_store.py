@@ -681,12 +681,15 @@ class MonitorStateRepository:
         monitor_output_dir: str,
         limit: int = MONITOR_ALERT_SAMPLE_LIMIT,
     ) -> dict[str, Any]:
+        sample_limit = max(0, limit)
         if not self.database_path.exists():
             return _alert_component(
                 "missing",
                 counts=_empty_alert_counts(),
                 records=[],
+                latest_record=None,
                 truncated=False,
+                sample_limit=sample_limit,
                 warnings=["monitor state store was not found."],
             )
         try:
@@ -698,26 +701,41 @@ class MonitorStateRepository:
                     SELECT *
                     FROM monitor_alert_records
                     WHERE monitor_output_dir = ?
-                    ORDER BY created_at ASC, record_id ASC
+                    ORDER BY created_at DESC, record_id DESC
                     LIMIT ?
                     """,
-                    (monitor_output_dir, max(0, limit)),
+                    (monitor_output_dir, sample_limit),
                 ).fetchall()
+                latest_row = connection.execute(
+                    """
+                    SELECT *
+                    FROM monitor_alert_records
+                    WHERE monitor_output_dir = ?
+                    ORDER BY created_at DESC, record_id DESC
+                    LIMIT 1
+                    """,
+                    (monitor_output_dir,),
+                ).fetchone()
                 total = counts["records"]
         except sqlite3.Error:
             return _alert_component(
                 "failed",
                 counts=_empty_alert_counts(),
                 records=[],
+                latest_record=None,
                 truncated=False,
+                sample_limit=sample_limit,
                 errors=["monitor alert records could not be read."],
             )
-        records = [_row_to_alert_record(row) for row in rows]
+        records = [{**_row_to_alert_record(row), "sample_order": index} for index, row in enumerate(rows, start=1)]
+        latest_record = _row_to_alert_record(latest_row) if latest_row else None
         return _alert_component(
             "available" if total else "missing",
             counts=counts,
             records=records,
+            latest_record=latest_record,
             truncated=total > len(records),
+            sample_limit=sample_limit,
             warnings=[] if total else ["monitor alert records were not found."],
         )
 
@@ -1117,7 +1135,9 @@ def _alert_component(
     *,
     counts: dict[str, int],
     records: list[dict[str, Any]],
+    latest_record: dict[str, Any] | None,
     truncated: bool,
+    sample_limit: int,
     warnings: list[str] | None = None,
     errors: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -1128,13 +1148,14 @@ def _alert_component(
             "archive": MONITOR_STATE_STORE_ARTIFACT,
             "archive_state": MONITOR_STATE_STORE_ARTIFACT,
             "artifact_type": "monitor_alert_archive_state",
-            "updated_at": records[0]["created_at"] if records else None,
-            "last_cycle_id": records[0]["cycle_id"] if records else None,
+            "updated_at": latest_record["created_at"] if latest_record else None,
+            "last_cycle_id": latest_record["cycle_id"] if latest_record else None,
             "archive_status": status,
             "counts": counts,
             "sample_records": records,
+            "sample_order": "newest_first",
             "sample_truncated": truncated,
-            "sample_record_limit": MONITOR_ALERT_SAMPLE_LIMIT,
+            "sample_record_limit": sample_limit,
         },
         "source_artifacts": [MONITOR_STATE_STORE_ARTIFACT],
         "warnings": warnings or [],

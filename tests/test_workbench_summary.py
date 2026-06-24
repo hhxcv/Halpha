@@ -50,6 +50,11 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert summary["decision_state"]["status"] == "available"
     assert summary["decision_state"]["fields"]["decision_records"] == 2
     assert summary["alert_state"]["fields"]["archive_state"]["counts"]["records"] == 3
+    assert summary["alert_state"]["fields"]["archive_state"]["updated_at"] == "2026-06-20T00:11:00Z"
+    assert summary["alert_state"]["fields"]["archive_state"]["last_cycle_id"] == "cycle-2"
+    assert summary["alert_state"]["fields"]["archive_state"]["sample_order"] == "newest_first"
+    assert summary["alert_state"]["fields"]["archive_state"]["sample_record_limit"] == 20
+    assert summary["alert_state"]["fields"]["archive_state"]["sample_truncated"] is False
     assert summary["monitor_state"]["fields"]["cycle_count"] == 2
     assert summary["outcome_state"]["fields"]["history_records"] == 7
     assert summary["strategy_state"]["fields"]["strategy_gate_effective"] == 3

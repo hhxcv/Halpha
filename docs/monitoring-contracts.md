@@ -202,6 +202,15 @@ committed transactionally for one terminal monitor cycle. Retrying persistence
 for the same cycle id must not duplicate alert records or extend an existing
 cooldown merely because the write was retried.
 
+Alert archive summaries are bounded read models. `sample_records` must contain
+the newest bounded window ordered newest-first by `created_at` and then
+`record_id` as the deterministic tie-break. Each sampled record carries a
+1-based `sample_order` in that returned order. `updated_at` and `last_cycle_id`
+must be derived from the actual latest archived record using the same
+deterministic ordering, not from an oldest record or an implicit presentation
+guess. Aggregate counts remain totals for the full archive, while
+`sample_record_limit` and `sample_truncated` describe only the bounded sample.
+
 The archive must not store raw user-state files, private notes, account
 identifiers, holdings, balances, allocations, position sizes, private endpoints,
 or personalized evidence text.

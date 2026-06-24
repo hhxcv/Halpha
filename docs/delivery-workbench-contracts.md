@@ -76,7 +76,7 @@ Required top-level fields:
 - `decision_state`: bounded refs and short summaries from decision, risk, and
   watch-trigger artifacts.
 - `alert_state`: bounded alert archive and alert-decision refs, counts, latest
-  status, warnings, and errors.
+  status, latest alert metadata, warnings, and errors.
 - `monitor_state`: bounded monitor health and latest cycle refs when available.
 - `outcome_state`: bounded outcome target, evaluation, and history-state refs
   when available.
@@ -114,7 +114,8 @@ They may display:
 
 - latest report link and run status;
 - decision, risk, and watch-trigger summaries;
-- alert archive counts and latest alert status;
+- alert archive counts, latest alert status, latest alert timestamp, latest
+  alert cycle id, and bounded sample metadata;
 - monitor health status;
 - outcome tracking status;
 - strategy gate, experiment, and bounded strategy-lifecycle status;
