@@ -21,6 +21,7 @@ from halpha.runtime.state_store import (
 DASHBOARD_SCHEDULE_STORE_ARTIFACT = STATE_STORE_REF
 DASHBOARD_SCHEDULE_SCHEMA_VERSION = 1
 DASHBOARD_SCHEDULE_MIGRATION_VERSION = 4
+DASHBOARD_SCHEDULE_AUTH_MIGRATION_VERSION = 10
 DASHBOARD_SCHEDULE_HISTORY_LIMIT = 20
 DAILY_REPORT_SCHEDULE_ID = "daily_report"
 DAILY_REPORT_SCHEDULE_KIND = "daily_report"
@@ -85,6 +86,13 @@ DASHBOARD_SCHEDULE_MIGRATIONS = (
             """,
             "CREATE INDEX IF NOT EXISTS idx_dashboard_schedule_dispatches_updated ON dashboard_schedule_dispatches(schedule_id, updated_at, scheduled_for)",
             "CREATE INDEX IF NOT EXISTS idx_dashboard_schedule_dispatches_job ON dashboard_schedule_dispatches(job_id)",
+        ),
+    ),
+    StateStoreMigration(
+        version=DASHBOARD_SCHEDULE_AUTH_MIGRATION_VERSION,
+        name="schedule_codex_authorization",
+        statements=(
+            "ALTER TABLE dashboard_schedules ADD COLUMN codex_authorization_json TEXT NOT NULL DEFAULT '{}'",
         ),
     ),
 )
@@ -301,6 +309,57 @@ class DashboardScheduleRepository:
         except sqlite3.Error as exc:
             raise DashboardScheduleStoreError("dashboard schedule dispatch error could not be recorded.") from exc
 
+    def record_missed_dispatch(
+        self,
+        *,
+        schedule_id: str,
+        scheduled_for: str,
+        missed_at: str,
+        next_run_at: str,
+        warning: str,
+    ) -> bool:
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_dashboard_schedule_migrations(connection, now=missed_at)
+                with runtime_state_transaction(connection):
+                    schedule = self._schedule_for_update(connection, schedule_id)
+                    if schedule is None:
+                        return False
+                    existing = self._dispatch_for_update(connection, schedule_id, scheduled_for)
+                    if existing is not None:
+                        return False
+                    self._insert_dispatch(
+                        connection,
+                        {
+                            "schedule_id": schedule_id,
+                            "scheduled_for": scheduled_for,
+                            "dispatch_kind": "automatic",
+                            "status": "missed",
+                            "claimed_at": None,
+                            "completed_at": missed_at,
+                            "job_id": None,
+                            "run_ref": None,
+                            "report_ref": None,
+                            "terminal_status": "missed",
+                            "created_at": missed_at,
+                            "updated_at": missed_at,
+                            "warnings": [warning],
+                            "errors": [],
+                        },
+                    )
+                    self._replace_schedule(
+                        connection,
+                        {
+                            **schedule,
+                            "next_run_at": next_run_at,
+                            "updated_at": missed_at,
+                            "warnings": _unique([warning, *_bounded_strings(schedule.get("warnings"), limit=20)])[:20],
+                        },
+                    )
+        except sqlite3.Error as exc:
+            raise DashboardScheduleStoreError("dashboard schedule missed dispatch could not be recorded.") from exc
+        return True
+
     def _schedule_for_update(self, connection: sqlite3.Connection, schedule_id: str) -> dict[str, Any] | None:
         row = connection.execute(
             """
@@ -346,10 +405,11 @@ class DashboardScheduleRepository:
               revision,
               created_at,
               updated_at,
+              codex_authorization_json,
               warnings_json,
               errors_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(schedule_id) DO UPDATE SET
               schedule_kind = excluded.schedule_kind,
               enabled = excluded.enabled,
@@ -362,6 +422,7 @@ class DashboardScheduleRepository:
               last_job_id = excluded.last_job_id,
               revision = excluded.revision,
               updated_at = excluded.updated_at,
+              codex_authorization_json = excluded.codex_authorization_json,
               warnings_json = excluded.warnings_json,
               errors_json = excluded.errors_json
             """,
@@ -379,6 +440,7 @@ class DashboardScheduleRepository:
                 _int(schedule.get("revision")),
                 str(schedule.get("created_at") or schedule.get("updated_at") or ""),
                 str(schedule.get("updated_at") or ""),
+                _dumps_object(schedule.get("codex_authorization")),
                 _dumps_list(schedule.get("warnings")),
                 _dumps_list(schedule.get("errors")),
             ),
@@ -456,6 +518,7 @@ def _row_to_schedule(row: Any) -> dict[str, Any]:
         "updated_at": row[12],
         "warnings": _loads_list(row[13]),
         "errors": _loads_list(row[14]),
+        "codex_authorization": _loads_object(row[15]) if len(row) > 15 else {},
     }
 
 
@@ -520,6 +583,24 @@ def _loads_list(value: Any) -> list[str]:
     except json.JSONDecodeError:
         return []
     return _bounded_strings(loaded, limit=20)
+
+
+def _dumps_object(value: Any) -> str:
+    if not isinstance(value, dict):
+        return "{}"
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _loads_object(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    if not isinstance(value, str) or not value:
+        return {}
+    try:
+        loaded = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def _bounded_strings(value: Any, *, limit: int) -> list[str]:

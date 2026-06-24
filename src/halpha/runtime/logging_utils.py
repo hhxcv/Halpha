@@ -50,7 +50,7 @@ def configure_local_logging(
             logger.removeHandler(handler)
             handler.close()
 
-    handler = RotatingFileHandler(
+    handler = _PrivacySafeRotatingFileHandler(
         log_path,
         maxBytes=MAX_LOG_BYTES,
         backupCount=LOG_BACKUP_COUNT,
@@ -61,6 +61,11 @@ def configure_local_logging(
     handler.setFormatter(_JsonLogFormatter(_private_values(config_path=config_path, config=config)))
     logger.addHandler(handler)
     return log_path
+
+
+class _PrivacySafeRotatingFileHandler(RotatingFileHandler):
+    def handleError(self, record: logging.LogRecord) -> None:
+        return None
 
 
 def _log_output_dir(config: dict[str, Any] | None, *, config_path: Path) -> Path:

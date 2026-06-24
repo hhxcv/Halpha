@@ -150,14 +150,13 @@ remain explicit allowlisted jobs.
 
 Implemented schedule controls are API-backed runtime state for the daily report
 schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
-disable, update, and manually trigger daily report jobs. The dashboard also
-starts a local dispatcher while the dashboard process is active. That
-dispatcher checks the persisted daily report schedule, claims due occurrences,
-and creates visible allowlisted command jobs for due non-Codex runs. It is
-not a hosted scheduler, OS scheduler, startup task, cron integration, external
-workflow engine, or hidden daemon. This dashboard-lifespan dispatcher is
-current legacy behavior. The target Schedule service is independent of
-Dashboard.
+disable, update, and manually trigger daily report jobs. Automatic due dispatch
+is owned by the independent `schedule` resident service, not the Dashboard
+lifespan. The Schedule service checks the persisted daily report schedule,
+claims due occurrences, marks older bounded catch-up occurrences as missed, and
+creates visible allowlisted command jobs for due runs. It is not a hosted
+scheduler, OS scheduler, startup task, cron integration, external workflow
+engine, or fourth resident process.
 
 ## Target Service Lifecycle
 
@@ -417,6 +416,8 @@ Schedule state should record:
 - last run time;
 - linked job ids;
 - linked report refs when available;
+- Codex authorization metadata for unattended Codex-capable schedules;
+- missed, blocked, claimed, and job-linked dispatch records;
 - warnings and errors.
 
 Implemented daily report schedule state lives in:
@@ -443,19 +444,20 @@ persisted schedule mode, then the Codex-capable `run` fallback. Codex-capable
 `run` triggers require `confirm_codex: true`.
 
 Enabling a schedule requires an explicit `job_intent`. The dashboard enable
-control records `run_no_codex`, which the automatic dispatcher can execute
-without Codex. If an enabled schedule is due with Codex-capable `run`, automatic
-dispatch records a blocked state and does not create a job because Codex
-execution requires explicit user confirmation at the trigger point.
+control records `run_no_codex`, which the Schedule service can execute without
+Codex. Enabling or changing a Codex-capable `run` schedule requires
+`confirm_codex: true` and persists authorization with timestamp, schedule
+revision, selected config ref, and config digest. Changing the report mode,
+selected config ref, or relevant config digest invalidates unattended Codex
+authorization and automatic dispatch records a blocked state until reconfirmed.
+No-Codex schedules are labeled as no-report runs.
 
 Automatic dispatch claims a due occurrence transactionally before creating a
 job, so repeated due checks for the same scheduled time create at most one
-dispatch record and one linked job. Automatic dispatch runs only while the
-dashboard process is active. It must not be treated as a hosted scheduler, OS
-service, startup task, cron integration, workflow engine, or hidden daemon.
-This is current legacy behavior. Target automatic dispatch belongs to the
-independent Schedule service and must keep running when Dashboard is stopped.
-Schedule remains active when Dashboard is stopped.
+dispatch record and one linked job. After downtime, automatic dispatch claims
+at most one latest due occurrence and records older due occurrences as missed
+within the bounded catch-up policy. Schedule remains active when Dashboard is
+stopped.
 
 ## Monitor Boundary
 

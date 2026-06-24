@@ -119,11 +119,11 @@ existing matching instance. Config mismatch must return an explicit conflict.
 Restart must be explicit, not an implicit process replacement.
 
 Dashboard serves UI and local APIs, reads product state, submits bounded jobs,
-and sends lifecycle requests. It must not own a private monitor loop or a
-dashboard-lifespan daily report dispatcher. Monitor is the single long-running
-information-refresh and alert-reassessment service. Schedule is the single
-time-trigger service for report jobs. Halpha must not introduce a hidden
-supervisor, broker, worker pool, or fourth resident process role.
+and sends lifecycle requests. It must not own a private monitor loop or
+daily-report dispatcher. Monitor is the single long-running information-refresh
+and alert-reassessment service. Schedule is the single time-trigger service for
+report jobs. Halpha must not introduce a hidden supervisor, broker, worker
+pool, or fourth resident process role.
 
 The target workflow hierarchy is:
 

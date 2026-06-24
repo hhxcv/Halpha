@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager, suppress
+from contextlib import suppress
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -79,7 +79,6 @@ class DashboardStartupConfig:
 class DashboardConfigContext:
     def __init__(self, config: dict[str, Any] | None, *, config_path: Path | None) -> None:
         self._lock = RLock()
-        self._dispatcher_started = False
         self.config: dict[str, Any] | None = None
         self.config_path: Path | None = None
         self.job_manager: CommandJobManager | None = None
@@ -89,8 +88,6 @@ class DashboardConfigContext:
 
     def set_active_config(self, config: dict[str, Any], *, config_path: Path, persist: bool = True) -> None:
         with self._lock:
-            if self.schedule_manager is not None and self._dispatcher_started:
-                self.schedule_manager.stop_daily_report_dispatcher()
             self.config = config
             self.config_path = config_path
             self.job_manager = CommandJobManager(
@@ -102,20 +99,6 @@ class DashboardConfigContext:
             self.schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=self.job_manager)
             if persist:
                 write_dashboard_selected_config_state(config_path)
-            if self._dispatcher_started:
-                self.schedule_manager.start_daily_report_dispatcher()
-
-    def start_dispatcher(self) -> None:
-        with self._lock:
-            self._dispatcher_started = True
-            if self.schedule_manager is not None:
-                self.schedule_manager.start_daily_report_dispatcher()
-
-    def stop_dispatcher(self) -> None:
-        with self._lock:
-            if self.schedule_manager is not None:
-                self.schedule_manager.stop_daily_report_dispatcher()
-            self._dispatcher_started = False
 
     def active(self) -> tuple[dict[str, Any], Path] | None:
         with self._lock:
@@ -237,15 +220,7 @@ def create_dashboard_app(
     validate_dashboard_port(port)
     context = DashboardConfigContext(config, config_path=config_path)
 
-    @asynccontextmanager
-    async def dashboard_lifespan(_app: Any) -> Any:
-        context.start_dispatcher()
-        try:
-            yield
-        finally:
-            context.stop_dispatcher()
-
-    app = FastAPI(title="Halpha Dashboard", version="0.0.0", lifespan=dashboard_lifespan)
+    app = FastAPI(title="Halpha Dashboard", version="0.0.0")
 
     @app.middleware("http")
     async def no_store_dashboard_responses(_request: Any, call_next: Any) -> Any:
