@@ -11,6 +11,7 @@ import pytest
 from halpha.config import load_config
 from halpha.decision.decision_delta import build_decision_intelligence_delta_artifact
 from halpha.pipeline import run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
 
 
@@ -45,7 +46,7 @@ def test_decision_intelligence_delta_records_no_previous_run(tmp_path: Path) -> 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_intelligence_delta",
+        until_stage="synthesize_intelligence",
         now=datetime(2026, 6, 5, tzinfo=timezone.utc),
         stage_handlers=_stage_handlers_for_current(
             regime="trend_up",
@@ -100,7 +101,7 @@ def test_decision_intelligence_delta_records_changed_fields(tmp_path: Path) -> N
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_intelligence_delta",
+        until_stage="synthesize_intelligence",
         now=datetime(2026, 6, 5, tzinfo=timezone.utc),
         stage_handlers=_stage_handlers_for_current(
             regime="mixed",
@@ -311,7 +312,12 @@ def _stage_handlers_for_current(
     invalidation_conditions: list[str],
     watch_conditions: list[str],
 ) -> dict[str, Any]:
-    return {
+    handlers = {
+        operation: _noop_stage
+        for operation in OPERATION_ORDER
+        if operation != "build_decision_intelligence_delta"
+    }
+    handlers.update({
         "collect_market_data": _noop_stage,
         "collect_text_events": _noop_stage,
         "sync_ohlcv": _noop_stage,
@@ -331,7 +337,8 @@ def _stage_handlers_for_current(
             risk_level=risk_level,
         ),
         "build_watch_triggers": lambda config, run: _write_watch_triggers(run, conditions=watch_conditions),
-    }
+    })
+    return handlers
 
 
 def _write_previous_run(
@@ -533,7 +540,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

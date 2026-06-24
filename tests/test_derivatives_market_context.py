@@ -335,7 +335,7 @@ def _run_until_context(
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_derivatives_market_context",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_derivatives_market_data": raw_stage,

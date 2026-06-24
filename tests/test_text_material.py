@@ -347,7 +347,13 @@ def _skip_text_event_signals(config, run) -> list[str]:
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
 
 
 def _text_raw(

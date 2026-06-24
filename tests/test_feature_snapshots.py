@@ -17,7 +17,7 @@ def test_feature_snapshots_pipeline_writes_market_and_onchain_records(tmp_path: 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_feature_snapshots",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _write_raw_market,
             "collect_onchain_flow_data": _noop_stage,
@@ -40,14 +40,13 @@ def test_feature_snapshots_pipeline_writes_market_and_onchain_records(tmp_path: 
     assert artifact["artifact_type"] == "feature_snapshots"
     assert "price_trend" in feature_types
     assert "onchain_liquidity_context" in feature_types
-    assert "source_quality" in feature_types
     assert ("market", "available") in coverage
     assert ("onchain_flow", "available") in coverage
     assert ("market_signals", "skipped") in coverage
     assert manifest["artifacts"]["feature_snapshots"] == "analysis/feature_snapshots.json"
     assert manifest["counts"]["feature_snapshots"] == len(artifact["records"])
     assert manifest["feature_snapshots"]["features_by_type"]["price_trend"] == 1
-    assert manifest["feature_snapshots"]["source_status_counts"]["available"] >= 3
+    assert manifest["feature_snapshots"]["source_status_counts"]["available"] >= 2
     assert _stage(manifest, "build_feature_snapshots")["artifacts"] == [
         "analysis/feature_snapshots.json"
     ]
@@ -346,4 +345,9 @@ def _manifest(run: RunContext) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )

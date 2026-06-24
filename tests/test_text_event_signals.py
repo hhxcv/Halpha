@@ -19,7 +19,7 @@ def test_text_event_signals_accepts_source_backed_category_signal(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_signals",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_etf_raw},
     )
 
@@ -78,7 +78,7 @@ def test_text_event_signals_preserves_low_confidence_events_without_accepting_th
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_signals",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_etf_raw},
     )
 

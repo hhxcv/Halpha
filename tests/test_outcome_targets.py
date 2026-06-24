@@ -10,7 +10,8 @@ import pytest
 
 from halpha.config import load_config
 from halpha.data.run_index import run_index_path
-from halpha.pipeline import STAGE_ORDER, run_pipeline
+from halpha.pipeline import run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
 
 
@@ -26,7 +27,7 @@ def test_outcome_targets_record_no_previous_run_state(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_outcome_targets",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until("build_outcome_targets"),
         now=datetime(2026, 6, 5, 0, 0, tzinfo=UTC),
     )
@@ -68,7 +69,7 @@ def test_outcome_targets_reject_previous_run_outside_project_root(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_outcome_targets",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until("build_outcome_targets"),
         now=datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
     )
@@ -89,7 +90,7 @@ def test_outcome_targets_extract_supported_previous_run_artifacts(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_outcome_targets",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until("build_outcome_targets"),
         now=datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
     )
@@ -135,7 +136,7 @@ def test_outcome_targets_expand_unscoped_strategy_gates_from_benchmark_evaluatio
     previous = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_strategy_experiment_material",
+        until_stage="run_strategy_research",
         stage_handlers=_handlers_for_until(
             "build_strategy_experiment_material",
             {"build_strategy_experiment_material": _write_unscoped_strategy_gate_with_experiment},
@@ -147,7 +148,7 @@ def test_outcome_targets_expand_unscoped_strategy_gates_from_benchmark_evaluatio
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_outcome_targets",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until("build_outcome_targets"),
         now=datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
     )
@@ -177,7 +178,7 @@ def test_outcome_targets_skip_missing_fields_and_duplicate_targets(tmp_path: Pat
     previous = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_market_signals",
+        until_stage="run_strategy_research",
         stage_handlers=_handlers_for_until(
             "build_market_signals",
             {"build_market_signals": _write_duplicate_and_incomplete_market_signals},
@@ -189,7 +190,7 @@ def test_outcome_targets_skip_missing_fields_and_duplicate_targets(tmp_path: Pat
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_outcome_targets",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until("build_outcome_targets"),
         now=datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
     )
@@ -220,7 +221,7 @@ def _run_previous_source_pipeline(config: dict[str, Any], config_path: Path):
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decisions",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until(
             "build_alert_decisions",
             {
@@ -237,8 +238,7 @@ def _run_previous_source_pipeline(config: dict[str, Any], config_path: Path):
 
 
 def _handlers_for_until(stage: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
-    index = STAGE_ORDER.index(stage)
-    handlers = {name: _noop_stage for name in STAGE_ORDER[:index]}
+    handlers = {name: _noop_stage for name in OPERATION_ORDER if name != stage}
     if overrides:
         handlers.update(overrides)
     return handlers
@@ -597,7 +597,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

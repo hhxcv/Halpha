@@ -12,7 +12,7 @@ from halpha.storage import write_json
 
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 PRODUCT_CONTRACT_VALIDATION_TYPE = "product_contract_validation"
-CURRENT_STAGE_NAME = "validate_product_contracts"
+CURRENT_STAGE_NAME = "finalize_run"
 VALID_STATUSES = {"ok", "warning", "degraded", "failed", "skipped"}
 
 
@@ -124,13 +124,26 @@ def _check_stage_health(manifest: dict[str, Any], checks: list[dict[str, Any]]) 
         name = _text(record.get("name")) or "unknown"
         status = _text(record.get("status")) or "unknown"
         if name == CURRENT_STAGE_NAME and status == "running":
-            continue
-        if status == "failed":
+            pass
+        elif status == "failed":
             failed.append(name)
         elif status == "running":
             running.append(name)
         elif status not in {"succeeded", "skipped", "not_run", "failed", "disabled"}:
             invalid.append(f"{name}:{status}")
+        for task in _list(record.get("tasks")):
+            task_record = _dict(task)
+            task_name = _text(task_record.get("name")) or "unknown"
+            task_status = _text(task_record.get("status")) or "unknown"
+            task_ref = f"{name}/{task_name}"
+            if name == CURRENT_STAGE_NAME and task_status == "running":
+                continue
+            if task_status == "failed":
+                failed.append(task_ref)
+            elif task_status == "running":
+                running.append(task_ref)
+            elif task_status not in {"succeeded", "skipped", "not_run", "failed", "disabled"}:
+                invalid.append(f"{task_ref}:{task_status}")
     if failed:
         _add_check(
             checks,

@@ -75,9 +75,8 @@ def test_pipeline_collects_binance_market_data_and_writes_raw_artifact(tmp_path:
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_market"] == "raw/market.json"
     assert manifest["counts"]["market_items"] == 1
-    assert manifest["stages"][0]["name"] == "collect_market_data"
-    assert manifest["stages"][0]["status"] == "succeeded"
-    assert manifest["stages"][0]["artifacts"] == ["raw/market.json"]
+    assert _task(manifest, "collect_market_data")["status"] == "succeeded"
+    assert _task(manifest, "collect_market_data")["artifacts"] == ["raw/market.json"]
 
 
 def test_market_collection_failure_writes_error_artifact_without_fake_records(
@@ -211,6 +210,15 @@ codex:
 
 def _millis(value: datetime) -> int:
     return int(value.timestamp() * 1000)
+
+
+def _task(manifest: dict, name: str) -> dict:
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _failed_text_stage(config, run) -> None:

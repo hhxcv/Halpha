@@ -11,6 +11,7 @@ from halpha.data.data_quality_post_artifacts import (
     post_data_quality_artifact_checks,
 )
 from halpha.pipeline import RunContext, run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
 
 
@@ -20,13 +21,8 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_data_quality_summary",
-        stage_handlers={
-            "collect_market_data": _write_market_raw,
-            "collect_text_events": _write_text_raw,
-            "sync_ohlcv": _noop_stage,
-            "build_market_data_views": _noop_stage,
-        },
+        until_stage="build_materials",
+        stage_handlers=_handlers_for_data_quality(),
     )
 
     assert result.succeeded is True
@@ -541,6 +537,21 @@ codex:
         encoding="utf-8",
     )
     return path
+
+
+def _handlers_for_data_quality() -> dict[str, Any]:
+    handlers = {
+        operation: _noop_stage
+        for operation in OPERATION_ORDER
+        if operation not in {"build_text_event_records", "build_data_quality_summary"}
+    }
+    handlers.update(
+        {
+            "collect_market_data": _write_market_raw,
+            "collect_text_events": _write_text_raw,
+        }
+    )
+    return handlers
 
 
 def _config(

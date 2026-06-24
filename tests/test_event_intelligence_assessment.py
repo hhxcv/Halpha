@@ -53,7 +53,6 @@ def test_event_intelligence_assessment_records_supported_event(tmp_path: Path) -
     assert _stage(manifest, "build_event_intelligence_assessment")["artifacts"] == [
         "analysis/event_intelligence_assessment.json"
     ]
-    assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
 
 def test_event_intelligence_assessment_stage_rerun(tmp_path: Path) -> None:
@@ -65,7 +64,27 @@ def test_event_intelligence_assessment_stage_rerun(tmp_path: Path) -> None:
         config,
         config_path=config_path,
         run_dir=initial.run.run_dir,
-        stage="build_event_intelligence_assessment",
+        stage="synthesize_intelligence",
+        stage_handlers=_base_handlers(
+            {
+                "build_text_event_topics": lambda config, run: _write_topics(
+                    run,
+                    duplicate_topic=False,
+                    symbol="BTCUSDT",
+                ),
+                "build_text_event_signals": lambda config, run: _write_event_signals(
+                    run,
+                    status="accepted",
+                    recency="fresh",
+                    symbol="BTCUSDT",
+                ),
+                "build_market_signals": _write_market_signals,
+                "build_market_regime_assessment": _write_market_regime,
+                "build_risk_assessment": _write_risk_assessment,
+                "build_decision_recommendations": _write_decision_recommendations,
+                "build_watch_triggers": _write_watch_triggers,
+            }
+        ),
     )
 
     assert result.succeeded is True
@@ -83,7 +102,7 @@ def test_event_intelligence_assessment_skips_without_event_inputs(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_event_intelligence_assessment",
+        until_stage="synthesize_intelligence",
         stage_handlers=_base_handlers(
             {
                 "build_text_event_topics": _noop_stage,
@@ -359,7 +378,7 @@ def _run_assessment_pipeline(
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_event_intelligence_assessment",
+        until_stage="synthesize_intelligence",
         stage_handlers=_base_handlers(overrides),
     )
 
@@ -382,6 +401,20 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_strategy_experiment_material": _noop_stage,
         "evaluate_market_strategy_signals": _noop_stage,
         "build_market_signal_material": _noop_stage,
+        "build_alert_decisions": _noop_stage,
+        "build_decision_intelligence_delta": _noop_stage,
+        "build_outcome_targets": _noop_stage,
+        "evaluate_outcomes": _noop_stage,
+        "build_strategy_lifecycle_state": _noop_stage,
+        "build_strategy_lifecycle_material": _noop_stage,
+        "build_feature_snapshots": _noop_stage,
+        "build_factor_states": _noop_stage,
+        "build_multi_source_signals": _noop_stage,
+        "build_intelligence_fusion": _noop_stage,
+        "integrate_intelligence_fusion": _noop_stage,
+        "build_user_state_context": _noop_stage,
+        "build_personalized_risk_constraints": _noop_stage,
+        "integrate_personalized_risk_constraints": _noop_stage,
     }
     handlers.update(overrides)
     return handlers
@@ -908,7 +941,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

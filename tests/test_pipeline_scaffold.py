@@ -10,7 +10,7 @@ import pytest
 from halpha.cli import main
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline, run_pipeline_stage
-from halpha.pipeline_stages import StageSelectionError, stages_after, validate_optional_stage, validate_stage
+from halpha.pipeline_stages import OPERATION_ORDER, StageSelectionError, stages_after, validate_optional_stage, validate_stage
 
 
 @pytest.fixture(autouse=True)
@@ -48,32 +48,42 @@ def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) ->
         "status": "not_started",
         "exit_code": None,
     }
-    assert manifest["stages"][0]["name"] == "collect_market_data"
+    refresh_stage = manifest["stages"][0]
+    collect_task = _task(manifest, "collect_market_data")
+    assert refresh_stage["name"] == "refresh_data"
+    assert refresh_stage["status"] == "failed"
+    assert refresh_stage["started_at"].endswith("Z")
+    assert refresh_stage["finished_at"].endswith("Z")
+    assert refresh_stage["artifacts"] == []
+    assert collect_task["name"] == "collect_market_data"
+    assert collect_task["status"] == "failed"
+    assert collect_task["started_at"].endswith("Z")
+    assert collect_task["finished_at"].endswith("Z")
+    assert collect_task["artifacts"] == []
+    assert collect_task["dependencies"] == []
+    assert collect_task["warnings"] == []
     assert manifest["stages"][0]["status"] == "failed"
-    assert manifest["stages"][0]["started_at"].endswith("Z")
-    assert manifest["stages"][0]["finished_at"].endswith("Z")
-    assert manifest["stages"][0]["artifacts"] == []
     expected_error = {
         "stage": "collect_market_data",
         "message": "stage collect_market_data is not implemented",
     }
-    assert manifest["stages"][0]["error"] == expected_error
+    assert refresh_stage["error"] == expected_error
+    assert collect_task["error"] == expected_error
+    assert collect_task["errors"] == [expected_error]
     assert manifest["errors"] == [expected_error]
     _assert_manifest_timeline(manifest)
 
 
 def test_pipeline_stage_registry_selection_helpers_match_stage_order() -> None:
-    assert stages_after("build_research_context") == [
-        "build_codex_context",
-        "run_codex_report",
-        "validate_product_contracts",
-    ]
+    assert stages_after("generate_report") == ["finalize_run"]
 
     validate_optional_stage(None, option_name="--until")
-    validate_stage("collect_market_data", option_name="stage")
+    validate_stage("refresh_data", option_name="stage")
 
     with pytest.raises(StageSelectionError, match="--until must be one of:"):
         validate_optional_stage("missing_stage", option_name="--until")
+    with pytest.raises(StageSelectionError, match="stage must be one of:"):
+        validate_stage("collect_market_data", option_name="stage")
 
 
 def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_path: Path) -> None:
@@ -96,64 +106,37 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
 
     assert result.succeeded is False
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
-    assert manifest["stages"][0]["name"] == "collect_market_data"
-    assert manifest["stages"][0]["status"] == "succeeded"
-    assert manifest["stages"][0]["started_at"].endswith("Z")
-    assert manifest["stages"][0]["finished_at"].endswith("Z")
-    assert manifest["stages"][0]["artifacts"] == ["raw/market.json"]
-    assert "error" not in manifest["stages"][0]
-    assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
-    assert manifest["stages"][1]["status"] == "succeeded"
-    assert manifest["stages"][1]["artifacts"] == []
-    assert manifest["stages"][2]["name"] == "sync_derivatives_market_history"
-    assert manifest["stages"][2]["status"] == "succeeded"
-    assert manifest["stages"][2]["artifacts"] == []
-    assert manifest["stages"][3]["name"] == "build_derivatives_market_views"
-    assert manifest["stages"][3]["status"] == "succeeded"
-    assert manifest["stages"][3]["artifacts"] == []
-    assert manifest["stages"][4]["name"] == "build_derivatives_market_context"
-    assert manifest["stages"][4]["status"] == "succeeded"
-    assert manifest["stages"][4]["artifacts"] == []
-    assert manifest["stages"][5]["name"] == "collect_macro_calendar_data"
-    assert manifest["stages"][5]["status"] == "succeeded"
-    assert manifest["stages"][5]["artifacts"] == []
-    assert manifest["stages"][6]["name"] == "sync_macro_calendar_history"
-    assert manifest["stages"][6]["status"] == "succeeded"
-    assert manifest["stages"][6]["artifacts"] == []
-    assert manifest["stages"][7]["name"] == "build_macro_calendar_views"
-    assert manifest["stages"][7]["status"] == "succeeded"
-    assert manifest["stages"][7]["artifacts"] == []
-    assert manifest["stages"][8]["name"] == "build_macro_calendar_context"
-    assert manifest["stages"][8]["status"] == "succeeded"
-    assert manifest["stages"][8]["artifacts"] == []
-    assert manifest["stages"][9]["name"] == "build_macro_calendar_material"
-    assert manifest["stages"][9]["status"] == "succeeded"
-    assert manifest["stages"][9]["artifacts"] == []
-    assert manifest["stages"][10]["name"] == "collect_onchain_flow_data"
-    assert manifest["stages"][10]["status"] == "succeeded"
-    assert manifest["stages"][10]["artifacts"] == []
-    assert manifest["stages"][11]["name"] == "sync_onchain_flow_history"
-    assert manifest["stages"][11]["status"] == "succeeded"
-    assert manifest["stages"][11]["artifacts"] == []
-    assert manifest["stages"][12]["name"] == "build_onchain_flow_views"
-    assert manifest["stages"][12]["status"] == "succeeded"
-    assert manifest["stages"][12]["artifacts"] == []
-    assert manifest["stages"][13]["name"] == "build_onchain_flow_context"
-    assert manifest["stages"][13]["status"] == "succeeded"
-    assert manifest["stages"][13]["artifacts"] == []
-    assert manifest["stages"][14]["name"] == "build_onchain_flow_material"
-    assert manifest["stages"][14]["status"] == "succeeded"
-    assert manifest["stages"][14]["artifacts"] == []
-    assert manifest["stages"][15]["name"] == "collect_text_events"
-    assert manifest["stages"][15]["status"] == "failed"
-    assert manifest["stages"][15]["started_at"].endswith("Z")
-    assert manifest["stages"][15]["finished_at"].endswith("Z")
-    assert manifest["stages"][15]["artifacts"] == []
-    assert manifest["stages"][15]["error"] == {
+    refresh_stage = _stage(manifest, "refresh_data")
+    market_task = _task(manifest, "collect_market_data")
+    text_task = _task(manifest, "collect_text_events")
+    assert refresh_stage["status"] == "failed"
+    assert refresh_stage["started_at"].endswith("Z")
+    assert refresh_stage["finished_at"].endswith("Z")
+    assert refresh_stage["artifacts"] == ["raw/market.json"]
+    assert market_task["status"] == "succeeded"
+    assert market_task["artifacts"] == ["raw/market.json"]
+    assert market_task["dependencies"] == []
+    assert market_task["warnings"] == []
+    assert market_task["errors"] == []
+    assert "error" not in market_task
+    assert _task(manifest, "collect_derivatives_market_data")["status"] == "succeeded"
+    assert _task(manifest, "sync_derivatives_market_history")["status"] == "succeeded"
+    assert _task(manifest, "collect_macro_calendar_data")["status"] == "succeeded"
+    assert _task(manifest, "sync_macro_calendar_history")["status"] == "succeeded"
+    assert _task(manifest, "collect_onchain_flow_data")["status"] == "succeeded"
+    assert _task(manifest, "sync_onchain_flow_history")["status"] == "succeeded"
+    assert text_task["status"] == "failed"
+    assert text_task["started_at"].endswith("Z")
+    assert text_task["finished_at"].endswith("Z")
+    assert text_task["artifacts"] == []
+    assert text_task["dependencies"] == ["sync_onchain_flow_history"]
+    assert text_task["error"] == {
         "stage": "collect_text_events",
         "message": "stage collect_text_events is not implemented",
     }
-    assert manifest["errors"] == [manifest["stages"][15]["error"]]
+    assert text_task["errors"] == [text_task["error"]]
+    assert refresh_stage["error"] == text_task["error"]
+    assert manifest["errors"] == [text_task["error"]]
     assert not (result.run.raw_dir / "text_events.json").exists()
     assert not (result.run.report_dir / "report.md").exists()
     _assert_manifest_timeline(manifest)
@@ -176,14 +159,15 @@ def test_pipeline_records_finished_at_after_stage_handler_returns(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
-        stage_handlers={"collect_market_data": collect_market_data},
+        until_stage="refresh_data",
+        stage_handlers=_noop_handlers({"collect_market_data": collect_market_data}),
     )
 
     assert result.succeeded is True
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["stages"][0]["started_at"] == "2026-06-05T00:00:00Z"
     assert manifest["stages"][0]["finished_at"] == "2026-06-05T00:05:00Z"
+    assert _task(manifest, "collect_market_data")["finished_at"] == "2026-06-05T00:05:00Z"
     assert manifest["finished_at"] == "2026-06-05T00:05:00Z"
 
 
@@ -248,8 +232,8 @@ def test_stage_rerun_records_finished_at_after_handler_returns(tmp_path: Path, m
     initial = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
-        stage_handlers={"collect_market_data": lambda config, run: []},
+        until_stage="refresh_data",
+        stage_handlers=_noop_handlers({"collect_market_data": lambda config, run: []}),
         now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
     )
     parent_manifest = initial.run.manifest_path.read_text(encoding="utf-8")
@@ -268,8 +252,8 @@ def test_stage_rerun_records_finished_at_after_handler_returns(tmp_path: Path, m
         config,
         config_path=config_path,
         run_dir=initial.run.run_dir,
-        stage="collect_market_data",
-        stage_handlers={"collect_market_data": collect_market_data},
+        stage="refresh_data",
+        stage_handlers=_noop_handlers({"collect_market_data": collect_market_data}),
     )
 
     assert result.succeeded is True
@@ -277,12 +261,13 @@ def test_stage_rerun_records_finished_at_after_handler_returns(tmp_path: Path, m
     assert initial.run.manifest_path.read_text(encoding="utf-8") == parent_manifest
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     rerun_stage = manifest["stages"][0]
-    assert rerun_stage["name"] == "collect_market_data"
+    assert rerun_stage["name"] == "refresh_data"
     assert rerun_stage["mode"] == "recomputed"
     assert rerun_stage["started_at"] == "2026-06-05T01:00:00Z"
     assert rerun_stage["finished_at"] == "2026-06-05T01:07:00Z"
+    assert _task(manifest, "collect_market_data")["finished_at"] == "2026-06-05T01:07:00Z"
     assert manifest["parent_run_id"] == initial.run.run_id
-    assert manifest["stage_rerun"]["downstream_closure"] == ["collect_market_data"]
+    assert manifest["stage_rerun"]["downstream_closure"] == ["refresh_data"]
     assert manifest["finished_at"] == "2026-06-05T01:07:00Z"
 
 
@@ -298,7 +283,7 @@ def test_stage_rerun_creates_derived_run_and_reuses_only_upstream_artifacts(tmp_
     parent = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_text_events",
+        until_stage="build_source_evidence",
         stage_handlers=parent_handlers,
         now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
     )
@@ -308,9 +293,15 @@ def test_stage_rerun_creates_derived_run_and_reuses_only_upstream_artifacts(tmp_
         config,
         config_path=config_path,
         run_dir=parent.run.run_dir,
-        stage="collect_text_events",
+        stage="build_source_evidence",
         stage_handlers=_noop_handlers(
-            {"collect_text_events": _write_raw_artifact("text_events.json", "child text", "text_events")}
+            {
+                "build_text_event_records": _write_analysis_artifact(
+                    "text_event_records.json",
+                    "child records",
+                    "text_event_records",
+                )
+            }
         ),
         now=datetime(2026, 6, 5, 1, 0, tzinfo=timezone.utc),
     )
@@ -320,16 +311,19 @@ def test_stage_rerun_creates_derived_run_and_reuses_only_upstream_artifacts(tmp_
     assert parent.run.manifest_path.read_text(encoding="utf-8") == parent_manifest
     assert (parent.run.raw_dir / "text_events.json").read_text(encoding="utf-8") == "parent text"
     assert (child.run.raw_dir / "market.json").read_text(encoding="utf-8") == "parent market"
-    assert (child.run.raw_dir / "text_events.json").read_text(encoding="utf-8") == "child text"
+    assert (child.run.raw_dir / "text_events.json").read_text(encoding="utf-8") == "parent text"
+    assert (child.run.analysis_dir / "text_event_records.json").read_text(encoding="utf-8") == "child records"
 
     manifest = _manifest(child.run.run_dir)
     assert manifest["parent_run_id"] == parent.run.run_id
     assert manifest["lineage"]["parent_run_id"] == parent.run.run_id
-    assert manifest["stage_rerun"]["requested_operation_id"] == "collect_text_events"
-    assert manifest["stage_rerun"]["downstream_closure"] == ["collect_text_events"]
-    assert manifest["stage_rerun"]["reused_artifacts"] == ["raw/market.json"]
-    assert _stage(manifest, "collect_market_data")["mode"] == "reused"
-    assert _stage(manifest, "collect_text_events")["mode"] == "recomputed"
+    assert manifest["stage_rerun"]["requested_stage"] == "build_source_evidence"
+    assert manifest["stage_rerun"]["downstream_closure"] == ["build_source_evidence"]
+    assert manifest["stage_rerun"]["reused_artifacts"] == ["raw/market.json", "raw/text_events.json"]
+    assert _stage(manifest, "refresh_data")["mode"] == "reused"
+    assert _task(manifest, "collect_text_events")["mode"] == "reused"
+    assert _stage(manifest, "build_source_evidence")["mode"] == "recomputed"
+    assert _task(manifest, "build_text_event_records")["mode"] == "recomputed"
 
 
 def test_stage_rerun_preserves_no_codex_parent_skip(tmp_path: Path) -> None:
@@ -349,7 +343,7 @@ def test_stage_rerun_preserves_no_codex_parent_skip(tmp_path: Path) -> None:
         config,
         config_path=config_path,
         run_dir=parent.run.run_dir,
-        stage="build_codex_context",
+        stage="generate_report",
         stage_handlers=_noop_handlers({"run_codex_report": fail_if_codex_runs}),
     )
 
@@ -360,7 +354,7 @@ def test_stage_rerun_preserves_no_codex_parent_skip(tmp_path: Path) -> None:
         "until_stage": None,
         "skip_codex": True,
     }
-    assert _stage(manifest, "run_codex_report")["status"] == "skipped"
+    assert _task(manifest, "run_codex_report")["status"] == "skipped"
     assert manifest["codex"]["status"] == "skipped"
     assert manifest["codex"]["skip_reason"] == "--no-codex requested"
 
@@ -378,7 +372,7 @@ def test_failed_run_resumes_in_place_from_failed_operation(tmp_path: Path) -> No
         config,
         config_path=config_path,
         run_dir=failed.run.run_dir,
-        stage="collect_text_events",
+        stage="refresh_data",
         stage_handlers=_noop_handlers(
             {"collect_text_events": _write_raw_artifact("text_events.json", "ok", "text_events")}
         ),
@@ -388,8 +382,10 @@ def test_failed_run_resumes_in_place_from_failed_operation(tmp_path: Path) -> No
     assert result.run.run_dir == failed.run.run_dir
     manifest = _manifest(result.run.run_dir)
     assert manifest["errors"] == []
-    assert _stage(manifest, "collect_text_events")["mode"] == "resume"
-    assert _stage(manifest, "collect_text_events")["status"] == "succeeded"
+    assert _stage(manifest, "refresh_data")["mode"] == "resume"
+    assert _stage(manifest, "refresh_data")["status"] == "succeeded"
+    assert _task(manifest, "collect_text_events")["mode"] == "resume"
+    assert _task(manifest, "collect_text_events")["status"] == "succeeded"
     assert all(stage["status"] != "failed" for stage in manifest["stages"])
 
 
@@ -413,7 +409,7 @@ def test_failed_run_resume_drops_partial_failed_stage_outputs(tmp_path: Path) ->
         config,
         config_path=config_path,
         run_dir=failed.run.run_dir,
-        stage="collect_text_events",
+        stage="refresh_data",
         stage_handlers=_noop_handlers({"collect_text_events": _noop_stage}),
     )
 
@@ -429,7 +425,7 @@ def test_stage_rerun_rejects_missing_upstream_artifact(tmp_path: Path) -> None:
     parent = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_text_events",
+        until_stage="refresh_data",
         stage_handlers=_noop_handlers(
             {
                 "collect_market_data": _write_raw_artifact("market.json", "parent market", "market"),
@@ -444,7 +440,7 @@ def test_stage_rerun_rejects_missing_upstream_artifact(tmp_path: Path) -> None:
             config,
             config_path=config_path,
             run_dir=parent.run.run_dir,
-            stage="collect_text_events",
+            stage="build_source_evidence",
             stage_handlers=_noop_handlers(),
         )
 
@@ -500,9 +496,9 @@ codex:
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
+        until_stage="refresh_data",
         now=datetime(2026, 6, 20, tzinfo=timezone.utc),
-        stage_handlers={"collect_market_data": lambda config, run: []},
+        stage_handlers=_noop_handlers({"collect_market_data": lambda config, run: []}),
     )
 
     assert result.succeeded is True
@@ -575,10 +571,10 @@ def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsy
     assert manifest["codex"]["status"] == "skipped"
     assert manifest["codex"]["exit_code"] is None
     assert manifest["codex"]["skip_reason"] == "--no-codex requested"
-    codex_stage = _stage(manifest, "run_codex_report")
-    assert codex_stage["status"] == "skipped"
-    assert codex_stage["artifacts"] == []
-    assert manifest["stages"][-1]["name"] == "validate_product_contracts"
+    codex_task = _task(manifest, "run_codex_report")
+    assert codex_task["status"] == "skipped"
+    assert codex_task["artifacts"] == []
+    assert manifest["stages"][-1]["name"] == "finalize_run"
     assert manifest["stages"][-1]["status"] == "succeeded"
     assert manifest["stages"][-1]["artifacts"] == ["analysis/product_contract_validation.json"]
     assert (run_dir / "codex_context" / "prompt.md").is_file()
@@ -593,11 +589,11 @@ def test_cli_run_until_marks_later_stages_not_run(tmp_path: Path, capsys, monkey
     monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
 
     def fail_if_codex_runs(*args, **kwargs):
-        raise AssertionError("Codex should not run after --until build_research_context.")
+        raise AssertionError("Codex should not run after --until build_materials.")
 
     monkeypatch.setattr("halpha.codex.runner.subprocess.run", fail_if_codex_runs)
 
-    exit_code = main(["run", "--config", str(config_path), "--until", "build_research_context"])
+    exit_code = main(["run", "--config", str(config_path), "--until", "build_materials"])
 
     captured = capsys.readouterr()
     assert exit_code == 0
@@ -609,18 +605,18 @@ def test_cli_run_until_marks_later_stages_not_run(tmp_path: Path, capsys, monkey
     assert manifest["validation"] == {
         "mode": "run",
         "skip_codex": False,
-        "until_stage": "build_research_context",
+        "until_stage": "build_materials",
     }
-    assert _stage(manifest, "build_research_context")["status"] == "succeeded"
-    codex_context = _stage(manifest, "build_codex_context")
-    codex_report = _stage(manifest, "run_codex_report")
-    assert codex_context["status"] == "not_run"
-    assert codex_context["reason"] == "--until build_research_context requested"
-    assert codex_report["status"] == "not_run"
-    assert codex_report["reason"] == "--until build_research_context requested"
+    assert _stage(manifest, "build_materials")["status"] == "succeeded"
+    report_stage = _stage(manifest, "generate_report")
+    assert report_stage["status"] == "not_run"
+    assert report_stage["reason"] == "--until build_materials requested"
+    assert _task(manifest, "build_research_context")["status"] == "not_run"
+    assert _task(manifest, "build_codex_context")["status"] == "not_run"
+    assert _task(manifest, "run_codex_report")["status"] == "not_run"
     assert manifest["codex"]["status"] == "not_run"
-    assert manifest["codex"]["skip_reason"] == "--until build_research_context requested"
-    assert (run_dir / "analysis" / "research_context.md").is_file()
+    assert manifest["codex"]["skip_reason"] == "--until build_materials requested"
+    assert not (run_dir / "analysis" / "research_context.md").exists()
     assert not (run_dir / "codex_context" / "prompt.md").exists()
     assert not (run_dir / "report" / "report.md").exists()
 
@@ -629,8 +625,9 @@ def test_cli_stage_creates_derived_run_from_existing_run_dir(tmp_path: Path, cap
     config_path = _write_config(tmp_path)
     monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
     monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+    monkeypatch.setattr("halpha.codex.runner.subprocess.run", _fake_codex_run)
 
-    assert main(["run", "--config", str(config_path), "--until", "build_analysis_materials"]) == 0
+    assert main(["run", "--config", str(config_path), "--until", "build_materials"]) == 0
     parent_run_dir = _single_run_dir(tmp_path)
     assert not (parent_run_dir / "analysis" / "research_context.md").exists()
     parent_manifest = (parent_run_dir / "run_manifest.json").read_text(encoding="utf-8")
@@ -638,7 +635,7 @@ def test_cli_stage_creates_derived_run_from_existing_run_dir(tmp_path: Path, cap
     exit_code = main(
         [
             "stage",
-            "build_research_context",
+            "generate_report",
             "--config",
             str(config_path),
             "--run-dir",
@@ -649,7 +646,7 @@ def test_cli_stage_creates_derived_run_from_existing_run_dir(tmp_path: Path, cap
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "Halpha stage succeeded." in captured.out
-    assert "stage: build_research_context" in captured.out
+    assert "stage: generate_report" in captured.out
     assert (parent_run_dir / "run_manifest.json").read_text(encoding="utf-8") == parent_manifest
     assert not (parent_run_dir / "analysis" / "research_context.md").exists()
 
@@ -657,15 +654,17 @@ def test_cli_stage_creates_derived_run_from_existing_run_dir(tmp_path: Path, cap
     assert len(run_dirs) == 2
     derived_run_dir = next(path for path in run_dirs if path != parent_run_dir)
     assert (derived_run_dir / "analysis" / "research_context.md").is_file()
+    assert (derived_run_dir / "report" / "report.md").is_file()
 
     manifest = _manifest(derived_run_dir)
     assert manifest["parent_run_id"] == parent_run_dir.name
     assert manifest["artifacts"]["research_context"] == "analysis/research_context.md"
-    assert manifest["stage_rerun"]["requested_operation_id"] == "build_research_context"
-    rerun_stage = _stage(manifest, "build_research_context")
+    assert manifest["stage_rerun"]["requested_stage"] == "generate_report"
+    rerun_stage = _stage(manifest, "generate_report")
     assert rerun_stage["mode"] == "recomputed"
     assert rerun_stage["status"] == "succeeded"
-    assert rerun_stage["artifacts"] == ["analysis/research_context.md"]
+    assert "analysis/research_context.md" in rerun_stage["artifacts"]
+    assert "report/report.md" in rerun_stage["artifacts"]
 
 
 def test_cli_validation_stage_names_are_actionable_and_do_not_create_runs(
@@ -750,11 +749,26 @@ def _manifest(run_dir: Path) -> dict:
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
+
+
+def _task(manifest: dict, name: str) -> dict:
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_handlers(overrides: dict[str, object] | None = None) -> dict[str, object]:
-    handlers: dict[str, object] = {stage: _noop_stage for stage in STAGE_ORDER}
+    handlers: dict[str, object] = {stage: _noop_stage for stage in OPERATION_ORDER}
     if overrides:
         handlers.update(overrides)
     return handlers
@@ -775,12 +789,31 @@ def _write_raw_artifact(name: str, content: str, artifact_key: str):
     return handler
 
 
+def _write_analysis_artifact(name: str, content: str, artifact_key: str):
+    def handler(config, run) -> list[str]:
+        artifact = run.analysis_dir / name
+        artifact.write_text(content, encoding="utf-8")
+        ref = f"analysis/{name}"
+        run.manifest["artifacts"][artifact_key] = ref
+        return [ref]
+
+    return handler
+
+
 def _assert_manifest_timeline(manifest: dict) -> None:
     stages = manifest["stages"]
-    assert manifest["started_at"] <= stages[0]["started_at"]
+    running_stages = [stage for stage in stages if stage["started_at"] is not None]
+    assert manifest["started_at"] <= running_stages[0]["started_at"]
     for stage in stages:
-        assert stage["started_at"] <= stage["finished_at"]
-    assert stages[-1]["finished_at"] <= manifest["finished_at"]
+        if stage["started_at"] is not None:
+            assert stage["finished_at"] is not None
+            assert stage["started_at"] <= stage["finished_at"]
+        for task in stage.get("tasks", []):
+            if task["started_at"] is not None:
+                assert task["finished_at"] is not None
+                assert task["started_at"] <= task["finished_at"]
+    finished_stages = [stage for stage in stages if stage["finished_at"] is not None]
+    assert finished_stages[-1]["finished_at"] <= manifest["finished_at"]
 
 
 def _failed_market_stage(config, run) -> None:

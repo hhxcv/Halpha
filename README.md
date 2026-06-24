@@ -86,13 +86,13 @@ python -m halpha run --config config.example.yaml --no-codex
 Run through a named pipeline stage and mark later stages as not run:
 
 ```bash
-python -m halpha run --config config.example.yaml --until build_research_context
+python -m halpha run --config config.example.yaml --until build_materials
 ```
 
 Run a dependency-aware stage rerun from an existing run directory:
 
 ```bash
-python -m halpha stage build_research_context --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha stage build_materials --config config.example.yaml --run-dir runs/<run_id>
 ```
 
 For a completed successful parent run, this creates a new derived run directory
@@ -289,70 +289,20 @@ Use `--output-dir <dir>` to choose the standalone output root. The command
 writes implemented text-intelligence artifacts and a manifest under a unique
 local subdirectory. It does not run the full report pipeline or Codex CLI.
 
-Supported stage names:
+Supported public stage names:
 
 ```text
-collect_market_data
-collect_derivatives_market_data
-sync_derivatives_market_history
-build_derivatives_market_views
-build_derivatives_market_context
-collect_macro_calendar_data
-sync_macro_calendar_history
-build_macro_calendar_views
-build_macro_calendar_context
-build_macro_calendar_material
-collect_onchain_flow_data
-sync_onchain_flow_history
-build_onchain_flow_views
-build_onchain_flow_context
-build_onchain_flow_material
-collect_text_events
-build_text_event_records
-build_text_entity_evidence
-build_text_event_classification_evidence
-build_text_event_topics
-build_text_event_signals
-sync_ohlcv
-build_market_data_views
-build_strategy_benchmark_suite
-evaluate_quant_strategies
-evaluate_strategy_evaluation
-build_strategy_experiment_material
-evaluate_market_strategy_signals
-build_market_signals
-build_market_signal_material
-build_market_regime_assessment
-build_risk_assessment
-build_decision_recommendations
-build_watch_triggers
-build_event_market_confluence
-build_event_intelligence_assessment
-build_alert_decisions
-build_alert_decision_material
-build_event_intelligence_material
-build_decision_intelligence_delta
-build_decision_intelligence_material
-build_data_quality_summary
-build_outcome_targets
-evaluate_outcomes
-build_strategy_lifecycle_state
-build_strategy_lifecycle_material
-build_feature_snapshots
-build_factor_states
-build_multi_source_signals
-build_intelligence_fusion
-integrate_intelligence_fusion
-build_user_state_context
-build_personalized_risk_constraints
-integrate_personalized_risk_constraints
-build_personalized_risk_material
-build_analysis_materials
-build_research_context
-build_codex_context
-run_codex_report
-validate_product_contracts
+refresh_data
+build_source_evidence
+run_strategy_research
+synthesize_intelligence
+build_materials
+generate_report
+finalize_run
 ```
+
+`run_manifest.json` records nested task lifecycle details under these public
+stages.
 
 ## Configuration
 

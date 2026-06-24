@@ -75,7 +75,7 @@ def test_monitor_run_dry_run_uses_defaults_without_running_pipeline(
     assert "max_cycles: 1" in output
     assert "cooldown_seconds: 3600" in output
     assert "output_dir: runs/monitor" in output
-    assert "target_stage: build_personalized_risk_material" in output
+    assert "target_stage: build_materials" in output
     assert "no_codex: true" in output
 
 
@@ -89,7 +89,7 @@ monitor:
   max_cycles: 2
   cooldown_seconds: 900
   output_dir: local-monitor
-  target_stage: build_alert_decision_material
+  target_stage: build_materials
   no_codex: true
 """.strip(),
     )
@@ -103,7 +103,7 @@ monitor:
     assert "max_cycles: 2" in output
     assert "cooldown_seconds: 900" in output
     assert "output_dir: local-monitor" in output
-    assert "target_stage: build_alert_decision_material" in output
+    assert "target_stage: build_materials" in output
     assert "no_codex: true" in output
 
 
@@ -138,7 +138,7 @@ def test_monitor_run_once_creates_one_product_run_and_cycle_manifest(
 monitor:
   enabled: true
   output_dir: monitor
-  target_stage: collect_market_data
+  target_stage: refresh_data
   no_codex: true
 """.strip(),
     )
@@ -148,7 +148,7 @@ monitor:
     output = capsys.readouterr().out
     assert exit_code == 0
     assert "Halpha monitor cycle succeeded." in output
-    assert "target_stage: collect_market_data" in output
+    assert "target_stage: refresh_data" in output
     assert "no_codex: true" in output
     run_dirs = list((tmp_path / "runs").iterdir())
     cycle_manifests = list((tmp_path / "monitor" / "cycles").glob("*/monitor_cycle_manifest.json"))
@@ -164,7 +164,7 @@ monitor:
     assert cycle_manifest["finished_at"].endswith("Z")
     assert cycle_manifest["config_ref"] == "config.yaml"
     assert cycle_manifest["monitor_output_dir"] == "monitor"
-    assert cycle_manifest["target_stage"] == "collect_market_data"
+    assert cycle_manifest["target_stage"] == "refresh_data"
     assert cycle_manifest["no_codex"] is True
     assert cycle_manifest["exit_code"] == 0
     assert cycle_manifest["run_id"] == run_dirs[0].name
@@ -178,11 +178,16 @@ monitor:
     assert cycle_manifest["product_run"]["run_manifest"] == f"runs/{run_dirs[0].name}/run_manifest.json"
 
     product_manifest = json.loads((run_dirs[0] / "run_manifest.json").read_text(encoding="utf-8"))
-    assert product_manifest["stages"][0]["name"] == "collect_market_data"
+    assert product_manifest["stages"][0]["name"] == "refresh_data"
     assert product_manifest["stages"][0]["status"] == "succeeded"
     assert all(stage["status"] != "running" for stage in product_manifest["stages"])
-    codex_stage = next(stage for stage in product_manifest["stages"] if stage["name"] == "run_codex_report")
-    assert codex_stage["status"] == "not_run"
+    codex_task = next(
+        task
+        for stage in product_manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == "run_codex_report"
+    )
+    assert codex_task["status"] == "not_run"
 
 
 def test_monitor_cycle_uses_default_personalized_stage_and_no_codex(tmp_path: Path) -> None:
@@ -207,7 +212,7 @@ def test_monitor_cycle_uses_default_personalized_stage_and_no_codex(tmp_path: Pa
 
     cycle_manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
     assert result.succeeded is True
-    assert calls == [{"until_stage": "build_personalized_risk_material", "skip_codex": True}]
+    assert calls == [{"until_stage": "build_materials", "skip_codex": True}]
     assert cycle_manifest["cycle_id"] == "cycle-20260102T030405000000Z"
     assert cycle_manifest["source_artifacts"] == {"alert_decisions": "analysis/alert_decisions.json"}
 

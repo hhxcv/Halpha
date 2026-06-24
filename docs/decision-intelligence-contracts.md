@@ -903,33 +903,30 @@ Rules:
 - Handle partial failure without silently reporting success.
 - Do not embed full decision artifacts into the manifest.
 
-## Pipeline Stage Contract
+## Pipeline Integration Contract
 
-Intended stage order addition:
+Decision-intelligence tasks run inside the `synthesize_intelligence` public
+stage. Task order within that stage:
 
 ```text
-build_market_signal_material
 build_market_regime_assessment
 build_risk_assessment
 build_decision_recommendations
 build_watch_triggers
 build_alert_decisions
-build_alert_decision_material
 build_decision_intelligence_delta
-build_decision_intelligence_material
-build_research_context
 ```
 
 Rules:
 
-- Use one pipeline stage per decision-intelligence artifact.
-- Place decision-intelligence stages after market signal material generation and before research context generation.
+- Use one nested task per decision-intelligence artifact.
+- Place decision-intelligence tasks after `run_strategy_research` and before
+  `build_materials`.
 - `build_alert_decisions` runs after event intelligence assessment, current
   risk, decision, and watch-trigger artifacts exist.
-- `build_alert_decision_material` consumes alert decision and event assessment
-  artifacts.
 - `build_decision_intelligence_delta` runs after current regime, risk, decision, and watch artifacts exist.
-- `build_decision_intelligence_material` consumes the delta artifact.
+- `build_alert_decision_material` and `build_decision_intelligence_material`
+  run inside the later `build_materials` public stage.
 - Failure handling should preserve artifacts from completed stages and record actionable errors.
 - Do not write fake artifacts to make downstream stages appear complete.
 

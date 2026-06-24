@@ -439,6 +439,8 @@ def _stage_timeline(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             "artifact_count": len(artifact_paths),
             "artifacts": _stage_artifact_records(artifact_paths),
             "artifact_omitted_count": max(0, len(artifact_paths) - MAX_STAGE_ARTIFACT_REFS),
+            "task_count": len(_list(stage.get("tasks"))),
+            "tasks": _task_timeline(stage),
             "warning_count": _warning_count(stage),
             "error_count": 1 if error else 0,
         }
@@ -449,6 +451,35 @@ def _stage_timeline(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             record["error"] = _bounded_mapping(error)
         timeline.append(record)
     return timeline
+
+
+def _task_timeline(stage: dict[str, Any]) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    for index, task in enumerate(_list(stage.get("tasks"))):
+        if not isinstance(task, dict):
+            continue
+        error = _dict(task.get("error"))
+        artifact_paths = _artifact_paths(task.get("artifacts"))
+        record = {
+            "index": index,
+            "name": task.get("name"),
+            "status": task.get("status"),
+            "started_at": task.get("started_at"),
+            "finished_at": task.get("finished_at"),
+            "artifact_count": len(artifact_paths),
+            "artifacts": _stage_artifact_records(artifact_paths),
+            "artifact_omitted_count": max(0, len(artifact_paths) - MAX_STAGE_ARTIFACT_REFS),
+            "dependencies": _string_list(task.get("dependencies")),
+            "warning_count": _warning_count(task),
+            "error_count": 1 if error else 0,
+        }
+        reason = task.get("reason")
+        if isinstance(reason, str) and reason:
+            record["reason"] = reason
+        if error:
+            record["error"] = _bounded_mapping(error)
+        tasks.append(record)
+    return tasks
 
 
 def _stage_artifact_records(paths: list[str]) -> list[dict[str, str]]:

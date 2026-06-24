@@ -386,8 +386,9 @@ Material should prefer high-impact constraints before low-impact annotations:
 Material should record selected counts, omitted counts, omitted state counts,
 omission reasons, warnings, errors, and source artifacts.
 
-The implemented material is built by `build_personalized_risk_material` after
-decision/watch/alert integration and before general research-context assembly.
+The implemented material is built by the `build_personalized_risk_material`
+task inside the `build_materials` public stage, after decision/watch/alert
+integration and before general research-context assembly.
 It is the only personalized-risk artifact eligible for Codex embedding by
 default. `analysis/user_state_context.json` and
 `analysis/personalized_risk_constraints.json` may be referenced by path, but

@@ -53,7 +53,7 @@ The optional `monitor` config section supports these fields:
 | `max_cycles` | `1` | Positive integer cycle limit. Monitor loops must stop after this limit. |
 | `cooldown_seconds` | `3600` | Positive integer duplicate-alert cooldown window. |
 | `output_dir` | `runs/monitor` | Local monitor artifact directory. |
-| `target_stage` | `build_personalized_risk_material` | Pipeline stage boundary for default monitor reassessment. |
+| `target_stage` | `build_materials` | Pipeline stage boundary for default monitor reassessment. |
 | `no_codex` | `true` | Default monitor runs stop before Codex report generation. |
 
 Relative `output_dir` values resolve from the current working directory, not

@@ -15,8 +15,8 @@ def test_event_intelligence_material_bounds_report_facing_event_evidence(tmp_pat
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_event_intelligence_material",
-        stage_handlers={
+        until_stage="build_materials",
+        stage_handlers=_material_handlers({
             "collect_text_events": _noop_stage,
             "build_text_event_records": _write_event_records,
             "build_text_entity_evidence": _noop_stage,
@@ -24,7 +24,7 @@ def test_event_intelligence_material_bounds_report_facing_event_evidence(tmp_pat
             "build_text_event_topics": _write_topics,
             "build_text_event_signals": _write_signals,
             "build_event_market_confluence": _write_confluence,
-        },
+        }),
     )
 
     assert result.succeeded is True
@@ -72,8 +72,8 @@ def test_event_intelligence_material_retains_accepted_and_compresses_unknown_sig
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_event_intelligence_material",
-        stage_handlers={
+        until_stage="build_materials",
+        stage_handlers=_material_handlers({
             "collect_text_events": _noop_stage,
             "build_text_event_records": _write_event_records,
             "build_text_entity_evidence": _noop_stage,
@@ -81,7 +81,7 @@ def test_event_intelligence_material_retains_accepted_and_compresses_unknown_sig
             "build_text_event_topics": _write_topics,
             "build_text_event_signals": _write_many_signals,
             "build_event_market_confluence": _write_confluence,
-        },
+        }),
     )
 
     assert result.succeeded is True
@@ -126,6 +126,18 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _material_handlers(overrides: dict[str, object]) -> dict[str, object]:
+    handlers = {
+        "build_alert_decision_material": _noop_stage,
+        "build_decision_intelligence_material": _noop_stage,
+        "build_data_quality_summary": _noop_stage,
+        "build_personalized_risk_material": _noop_stage,
+        "build_analysis_materials": _noop_stage,
+    }
+    handlers.update(overrides)
+    return handlers
 
 
 def _write_event_records(config, run) -> list[str]:

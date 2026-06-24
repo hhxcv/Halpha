@@ -9,7 +9,7 @@ from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.pipeline_stages import STAGE_ORDER
 
 
-CODEX_STAGE = "run_codex_report"
+CODEX_STAGE = "generate_report"
 
 
 class DashboardJobError(Exception):

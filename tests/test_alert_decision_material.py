@@ -16,7 +16,7 @@ def test_alert_decision_material_bounds_report_facing_alert_evidence(tmp_path: P
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decision_material",
+        until_stage="build_materials",
         stage_handlers=_base_handlers(
             {
                 "build_event_intelligence_assessment": _write_assessment,
@@ -60,7 +60,6 @@ def test_alert_decision_material_bounds_report_facing_alert_evidence(tmp_path: P
     assert _stage(manifest, "build_alert_decision_material")["artifacts"] == [
         "analysis/alert_decision_material.md"
     ]
-    assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
 
 def test_alert_decision_material_retains_high_priority_and_compresses_no_alert_records(
@@ -72,7 +71,7 @@ def test_alert_decision_material_retains_high_priority_and_compresses_no_alert_r
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decision_material",
+        until_stage="build_materials",
         stage_handlers=_base_handlers(
             {
                 "build_event_intelligence_assessment": _write_many_assessments,
@@ -107,7 +106,7 @@ def test_alert_decision_material_skips_when_alert_decisions_are_missing(tmp_path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decision_material",
+        until_stage="build_materials",
         stage_handlers=_base_handlers(
             {
                 "build_event_intelligence_assessment": _write_assessment,
@@ -148,6 +147,24 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_decision_recommendations": _noop_stage,
         "build_watch_triggers": _noop_stage,
         "build_event_market_confluence": _noop_stage,
+        "build_decision_intelligence_delta": _noop_stage,
+        "build_outcome_targets": _noop_stage,
+        "evaluate_outcomes": _noop_stage,
+        "build_strategy_lifecycle_state": _noop_stage,
+        "build_strategy_lifecycle_material": _noop_stage,
+        "build_feature_snapshots": _noop_stage,
+        "build_factor_states": _noop_stage,
+        "build_multi_source_signals": _noop_stage,
+        "build_intelligence_fusion": _noop_stage,
+        "integrate_intelligence_fusion": _noop_stage,
+        "build_user_state_context": _noop_stage,
+        "build_personalized_risk_constraints": _noop_stage,
+        "integrate_personalized_risk_constraints": _noop_stage,
+        "build_event_intelligence_material": _noop_stage,
+        "build_decision_intelligence_material": _noop_stage,
+        "build_data_quality_summary": _noop_stage,
+        "build_personalized_risk_material": _noop_stage,
+        "build_analysis_materials": _noop_stage,
     }
     handlers.update(overrides)
     return handlers
@@ -423,7 +440,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

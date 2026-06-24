@@ -99,7 +99,7 @@ def _run_confluence_pipeline(
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_event_market_confluence",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -133,6 +133,21 @@ def _run_confluence_pipeline(
                 action_level=action_level,
             ),
             "build_watch_triggers": _write_watch_triggers,
+            "build_event_intelligence_assessment": _noop_stage,
+            "build_alert_decisions": _noop_stage,
+            "build_decision_intelligence_delta": _noop_stage,
+            "build_outcome_targets": _noop_stage,
+            "evaluate_outcomes": _noop_stage,
+            "build_strategy_lifecycle_state": _noop_stage,
+            "build_strategy_lifecycle_material": _noop_stage,
+            "build_feature_snapshots": _noop_stage,
+            "build_factor_states": _noop_stage,
+            "build_multi_source_signals": _noop_stage,
+            "build_intelligence_fusion": _noop_stage,
+            "integrate_intelligence_fusion": _noop_stage,
+            "build_user_state_context": _noop_stage,
+            "build_personalized_risk_constraints": _noop_stage,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 

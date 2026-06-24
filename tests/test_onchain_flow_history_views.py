@@ -27,7 +27,7 @@ def test_onchain_flow_history_and_views_use_bounded_current_windows(tmp_path: Pa
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_onchain_flow_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_onchain_flow_data": _write_current_stablecoin_raw_stage,
@@ -129,7 +129,7 @@ def test_disabled_onchain_flow_config_skips_history_and_views(tmp_path: Path) ->
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_onchain_flow_views",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -158,7 +158,7 @@ def test_onchain_flow_views_preserve_stale_and_unavailable_status(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_onchain_flow_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_onchain_flow_data": _write_stale_unavailable_raw_stage,
@@ -198,7 +198,7 @@ def test_onchain_flow_views_preserve_partial_status(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_onchain_flow_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_onchain_flow_data": _write_partial_raw_stage,

@@ -22,7 +22,7 @@ def test_alert_decision_golden_cases_cover_priority_downgrade_and_material_bound
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decision_material",
+        until_stage="build_materials",
         stage_handlers=_base_handlers(
             {
                 "build_event_intelligence_assessment": lambda config, run: _write_assessment(
@@ -88,7 +88,6 @@ def test_alert_decision_golden_cases_cover_priority_downgrade_and_material_bound
     assert _stage(manifest, "build_alert_decision_material")["artifacts"] == [
         "analysis/alert_decision_material.md"
     ]
-    assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
     assert "artifact_type: analysis_alert_decision_material" in material
     assert "analysis/event_intelligence_assessment.json" in material
@@ -110,7 +109,8 @@ def test_alert_decision_golden_cases_cover_priority_downgrade_and_material_bound
         config,
         config_path=config_path,
         run_dir=result.run.run_dir,
-        stage="build_alert_decision_material",
+        stage="build_materials",
+        stage_handlers=_base_handlers({}),
     )
     rerun_manifest = _manifest(rerun)
     assert rerun.succeeded is True
@@ -127,7 +127,7 @@ def test_alert_decision_path_skips_without_upstream_event_assessment(tmp_path: P
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decision_material",
+        until_stage="build_materials",
         stage_handlers=_base_handlers({"build_event_intelligence_assessment": _noop_stage}),
     )
 
@@ -143,7 +143,6 @@ def test_alert_decision_path_skips_without_upstream_event_assessment(tmp_path: P
     assert manifest["counts"]["alert_decision_material_records"] == 0
     assert _stage(manifest, "build_alert_decisions")["artifacts"] == []
     assert _stage(manifest, "build_alert_decision_material")["artifacts"] == []
-    assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
 
 def _load_fixture() -> dict[str, Any]:
@@ -212,6 +211,24 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_decision_recommendations": _noop_stage,
         "build_watch_triggers": _noop_stage,
         "build_event_market_confluence": _noop_stage,
+        "build_decision_intelligence_delta": _noop_stage,
+        "build_outcome_targets": _noop_stage,
+        "evaluate_outcomes": _noop_stage,
+        "build_strategy_lifecycle_state": _noop_stage,
+        "build_strategy_lifecycle_material": _noop_stage,
+        "build_feature_snapshots": _noop_stage,
+        "build_factor_states": _noop_stage,
+        "build_multi_source_signals": _noop_stage,
+        "build_intelligence_fusion": _noop_stage,
+        "integrate_intelligence_fusion": _noop_stage,
+        "build_user_state_context": _noop_stage,
+        "build_personalized_risk_constraints": _noop_stage,
+        "integrate_personalized_risk_constraints": _noop_stage,
+        "build_event_intelligence_material": _noop_stage,
+        "build_decision_intelligence_material": _noop_stage,
+        "build_data_quality_summary": _noop_stage,
+        "build_personalized_risk_material": _noop_stage,
+        "build_analysis_materials": _noop_stage,
     }
     handlers.update(overrides)
     return handlers
@@ -359,7 +376,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

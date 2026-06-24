@@ -16,7 +16,7 @@ def test_text_entity_evidence_accepts_configured_asset_alias(tmp_path: Path, mon
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_entity_evidence",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_text_raw},
     )
 
@@ -60,7 +60,7 @@ def test_text_entity_evidence_keeps_ambiguous_asset_references_unknown(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_entity_evidence",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_btc_text_raw},
     )
 
@@ -88,7 +88,7 @@ def test_text_entity_evidence_uses_available_ner_model_as_traceable_evidence(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_entity_evidence",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_text_raw},
     )
 
@@ -228,7 +228,13 @@ def _item(title: str) -> dict:
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
 
 
 def _unavailable_ner_model(config):

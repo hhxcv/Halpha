@@ -27,7 +27,7 @@ def test_pipeline_collects_derivatives_market_raw_artifact(tmp_path: Path, monke
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_derivatives_market_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -69,8 +69,7 @@ def test_pipeline_collects_derivatives_market_raw_artifact(tmp_path: Path, monke
     assert manifest["counts"]["derivatives_market_requests"] == 6
     assert manifest["counts"]["derivatives_market_availability"] == 7
     assert manifest["counts"]["derivatives_market_unavailable"] == 1
-    assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
-    assert manifest["stages"][1]["artifacts"] == ["raw/derivatives_market.json"]
+    assert _task(manifest, "collect_derivatives_market_data")["artifacts"] == ["raw/derivatives_market.json"]
 
 
 def test_pipeline_collects_partial_derivatives_failures_without_fake_records(
@@ -92,7 +91,7 @@ def test_pipeline_collects_partial_derivatives_failures_without_fake_records(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_derivatives_market_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -136,7 +135,7 @@ def test_disabled_derivatives_config_does_not_write_fake_raw_artifact(tmp_path: 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_derivatives_market_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -148,8 +147,7 @@ def test_disabled_derivatives_config_does_not_write_fake_raw_artifact(tmp_path: 
     assert manifest["counts"]["derivatives_market_items"] == 0
     assert manifest["counts"]["derivatives_market_errors"] == 0
     assert manifest["counts"]["derivatives_market_requests"] == 0
-    assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
-    assert manifest["stages"][1]["artifacts"] == []
+    assert _task(manifest, "collect_derivatives_market_data")["artifacts"] == []
 
 
 def test_derivatives_collector_passes_configured_market_proxy(tmp_path: Path, monkeypatch) -> None:
@@ -177,7 +175,7 @@ def test_derivatives_collector_passes_configured_market_proxy(tmp_path: Path, mo
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_derivatives_market_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -376,6 +374,15 @@ def _millis(value: str) -> int:
 
 def _noop_stage(config, run) -> list[str]:
     return []
+
+
+def _task(manifest: dict, name: str) -> dict:
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 class _FakeResponse:
