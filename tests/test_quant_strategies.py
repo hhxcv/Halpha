@@ -114,7 +114,11 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
         "slippage_bps": 5.0,
         "mode": "long_flat",
         "direction": "long_only",
+        "execution_model_id": "close_to_close_next_bar_v1",
         "price_source": "close",
+        "signal_timing": "signal_at_bar_close",
+        "position_timing": "next_bar",
+        "lookahead_policy": "no_same_bar_execution",
         "execution_timing": "research_close_to_close",
     }
     assert backtest["window"] == {
@@ -122,17 +126,31 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
         "end": "2026-06-05T00:00:00Z",
         "rows": 5,
     }
-    assert backtest["metrics"]["calculation_backend"] == "vectorbt.Portfolio.from_signals"
+    assert backtest["metrics"]["calculation_backend"] == "halpha.strategy_evaluation.evaluate_single_window_backtest"
+    assert backtest["metrics"]["execution_model_id"] == "close_to_close_next_bar_v1"
+    assert backtest["metrics"]["position_timing"] == "next_bar"
+    assert backtest["metrics"]["lookahead_policy"] == "no_same_bar_execution"
     assert backtest["metrics"]["trade_count"] >= 1
     assert backtest["metrics"]["exposure_pct"] > 0
     assert backtest["metrics"]["final_equity"] > 0
     assert set(backtest["metrics"]) == {
         "calculation_backend",
+        "execution_model_id",
+        "signal_timing",
+        "position_timing",
+        "lookahead_policy",
+        "return_metric_basis",
         "total_return_pct",
+        "gross_return_pct",
+        "net_return_pct",
+        "total_cost_pct",
+        "cost_drag_pct",
         "max_drawdown_pct",
         "trade_count",
+        "turnover",
         "exposure_pct",
         "final_equity",
+        "final_equity_multiplier",
     }
     assert "Historical backtest diagnostic is research material" in backtest["warnings"][0]
     assert strategy_run["parameter_diagnostic"] == {"enabled": False, "status": "disabled"}
@@ -265,9 +283,13 @@ def test_quant_strategy_runner_records_enabled_parameter_diagnostic(tmp_path: Pa
     assert diagnostic["assumptions"] == {
         "max_combinations": 3,
         "grid_source": "quant.parameter_diagnostics.grids.tsmom_vol_scaled",
-        "metric_scope": "latest_state_and_bounded_backtest_summary",
+        "metric_scope": "latest_state_and_canonical_next_bar_backtest_summary",
         "selection_policy": "diagnostic_only_no_best_parameter_selection",
         "strategy_backtest_enabled": True,
+        "execution_model_id": "close_to_close_next_bar_v1",
+        "signal_timing": "signal_at_bar_close",
+        "position_timing": "next_bar",
+        "lookahead_policy": "no_same_bar_execution",
     }
     assert diagnostic["grid"] == {
         "return_window": [1, 2, 10],

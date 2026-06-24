@@ -505,6 +505,8 @@ def _benchmark_records(value: Any) -> list[dict[str, Any]]:
 def _quant_run_records(value: Any) -> list[dict[str, Any]]:
     records = []
     for item in _dict_items(value)[:MAX_SUMMARY_ITEMS]:
+        backtest = _dict(item.get("backtest_diagnostic"))
+        parameter = _dict(item.get("parameter_diagnostic"))
         records.append(
             {
                 "strategy_run_id": item.get("strategy_run_id"),
@@ -516,9 +518,33 @@ def _quant_run_records(value: Any) -> list[dict[str, Any]]:
                 "timeframe": item.get("timeframe"),
                 "signal": _bounded_mapping(item.get("signal")),
                 "summary": _bounded_mapping(item.get("summary")),
+                "backtest_diagnostic": _quant_backtest_summary(backtest),
+                "parameter_diagnostic": _quant_parameter_summary(parameter),
             }
         )
     return records
+
+
+def _quant_backtest_summary(backtest: dict[str, Any]) -> dict[str, Any]:
+    if not backtest:
+        return {}
+    return {
+        "enabled": backtest.get("enabled"),
+        "status": backtest.get("status"),
+        "assumptions": _bounded_mapping(backtest.get("assumptions")),
+        "metrics": _bounded_mapping(backtest.get("metrics")),
+    }
+
+
+def _quant_parameter_summary(parameter: dict[str, Any]) -> dict[str, Any]:
+    if not parameter:
+        return {}
+    return {
+        "enabled": parameter.get("enabled"),
+        "status": parameter.get("status"),
+        "assumptions": _bounded_mapping(parameter.get("assumptions")),
+        "summary_metrics": _bounded_mapping(parameter.get("summary_metrics")),
+    }
 
 
 def _evaluation_records(value: Any) -> list[dict[str, Any]]:

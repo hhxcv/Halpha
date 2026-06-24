@@ -209,6 +209,9 @@ def _material_record(record: dict[str, Any]) -> dict[str, Any]:
         "parameter_stability": {
             "enabled": parameter.get("enabled"),
             "status": parameter.get("status"),
+            "execution_model_id": parameter.get("execution_model_id"),
+            "position_timing": parameter.get("position_timing"),
+            "lookahead_policy": parameter.get("lookahead_policy"),
             "tested_combinations": parameter.get("tested_combinations"),
             "valid_combinations": parameter.get("valid_combinations"),
             "invalid_combinations": parameter.get("invalid_combinations"),

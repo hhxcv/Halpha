@@ -4,11 +4,11 @@ from typing import Any
 
 import pandas as pd
 
-from .strategy_records import backtest_assumptions, backtest_diagnostic
-from .vectorbt_engine import load_vectorbt
+from .strategy_evaluation import evaluate_single_window_backtest
+from .strategy_records import CANONICAL_EXECUTION_MODEL, backtest_assumptions, backtest_diagnostic
 
 
-VECTORBT_PORTFOLIO_BACKEND = "vectorbt.Portfolio.from_signals"
+HALPHA_BACKTEST_BACKEND = "halpha.strategy_evaluation.evaluate_single_window_backtest"
 BACKTEST_RESEARCH_WARNING = "Historical backtest diagnostic is research material, not a forecast."
 
 
@@ -25,25 +25,42 @@ def bounded_backtest_diagnostic(
         return backtest_diagnostic(strategy, view, rows, status="disabled")
 
     assumptions = backtest_assumptions(strategy)
-    entries, exits = _portfolio_signals(signal_series, mode=str(assumptions["mode"]))
-    vbt = load_vectorbt()
-    portfolio = vbt.Portfolio.from_signals(
-        close,
-        entries=entries,
-        exits=exits,
-        direction="longonly",
-        init_cash=float(assumptions["initial_cash"]),
-        fees=float(assumptions["fees_bps"]) / 10000,
-        slippage=float(assumptions["slippage_bps"]) / 10000,
+    signal_records = _signal_records_from_series(
+        rows,
+        close=close,
+        signal_series=signal_series,
+        mode=str(assumptions["mode"]),
     )
-    metrics = {
-        "calculation_backend": VECTORBT_PORTFOLIO_BACKEND,
-        "total_return_pct": _round(_scalar(portfolio.total_return()) * 100),
-        "max_drawdown_pct": _round(_max_drawdown_pct(portfolio.value())),
-        "trade_count": int(_scalar(portfolio.trades.count())),
-        "exposure_pct": _round(_exposure_pct(portfolio.asset_value())),
-        "final_equity": _round(_scalar(portfolio.final_value())),
-    }
+    evaluation = evaluate_single_window_backtest(
+        strategy=strategy,
+        market_identity={
+            "source": view.get("source"),
+            "symbol": view.get("symbol"),
+            "timeframe": view.get("timeframe"),
+        },
+        ohlcv_rows=rows,
+        signal_records=signal_records,
+        cost_assumptions={
+            "fees_bps": assumptions["fees_bps"],
+            "slippage_bps": assumptions["slippage_bps"],
+        },
+        execution_model=CANONICAL_EXECUTION_MODEL,
+    )
+    if evaluation.get("status") != "succeeded":
+        return backtest_diagnostic(
+            strategy,
+            view,
+            rows,
+            status=str(evaluation.get("status") or "failed"),
+            warnings=[
+                BACKTEST_RESEARCH_WARNING,
+                "Diagnostic uses the canonical next-bar close-to-close evaluator.",
+                *_warning_messages(evaluation.get("warnings")),
+                *_error_messages(evaluation.get("errors")),
+            ],
+        )
+
+    metrics = _bounded_metrics(evaluation, initial_cash=float(assumptions["initial_cash"]))
     return backtest_diagnostic(
         strategy,
         view,
@@ -52,56 +69,87 @@ def bounded_backtest_diagnostic(
         metrics=metrics,
         warnings=[
             BACKTEST_RESEARCH_WARNING,
-            "Diagnostic uses configured close-to-close assumptions and is not future performance evidence.",
+            "Diagnostic uses the canonical next-bar close-to-close evaluator and is not future performance evidence.",
         ],
     )
 
 
-def _portfolio_signals(signal_series: pd.Series, *, mode: str) -> tuple[pd.Series, pd.Series]:
+def _signal_records_from_series(
+    rows: list[dict[str, Any]],
+    *,
+    close: pd.Series,
+    signal_series: pd.Series,
+    mode: str,
+) -> list[dict[str, Any]]:
+    if len(close) != len(signal_series) or len(rows) != len(signal_series):
+        raise ValueError("close, signal_series, and rows must have matching lengths.")
+    sorted_rows = sorted(rows, key=lambda item: str(item.get("open_time") or ""))
+    targets = _target_exposures(signal_series, mode=mode)
+    return [
+        {
+            "open_time": row.get("open_time"),
+            "close": row.get("close"),
+            "signal": {"active": bool(targets.iloc[index])},
+            "position": {
+                "target_exposure": 1.0 if bool(targets.iloc[index]) else 0.0,
+                "unit": "fractional_long_exposure",
+            },
+        }
+        for index, row in enumerate(sorted_rows)
+    ]
+
+
+def _target_exposures(signal_series: pd.Series, *, mode: str) -> pd.Series:
     active = signal_series.fillna(False).astype(bool)
-    previous = active.shift(1, fill_value=False)
-    entries = active & ~previous
     if mode == "long_only":
-        exits = pd.Series(False, index=active.index)
-    else:
-        exits = ~active & previous
-    return entries, exits
+        return active.astype(int).cummax().astype(bool)
+    return active
 
 
-def _scalar(value: Any) -> float:
-    if isinstance(value, pd.Series):
-        value = value.iloc[0] if not value.empty else 0.0
-    elif isinstance(value, pd.DataFrame):
-        value = value.iloc[0, 0] if not value.empty else 0.0
-    elif hasattr(value, "item"):
-        value = value.item()
-    return float(value)
+def _bounded_metrics(evaluation: dict[str, Any], *, initial_cash: float) -> dict[str, Any]:
+    strategy_metrics = evaluation.get("strategy_metrics") if isinstance(evaluation.get("strategy_metrics"), dict) else {}
+    trade_summary = evaluation.get("trade_summary") if isinstance(evaluation.get("trade_summary"), dict) else {}
+    model = evaluation.get("execution_model") if isinstance(evaluation.get("execution_model"), dict) else {}
+    final_multiplier = float(strategy_metrics.get("final_equity") or 0.0)
+    return {
+        "calculation_backend": HALPHA_BACKTEST_BACKEND,
+        "execution_model_id": model.get("execution_model_id"),
+        "signal_timing": model.get("signal_timing"),
+        "position_timing": model.get("position_timing"),
+        "lookahead_policy": model.get("lookahead_policy"),
+        "return_metric_basis": "net_after_costs",
+        "total_return_pct": strategy_metrics.get("net_return_pct"),
+        "gross_return_pct": strategy_metrics.get("gross_return_pct"),
+        "net_return_pct": strategy_metrics.get("net_return_pct"),
+        "total_cost_pct": strategy_metrics.get("total_cost_pct"),
+        "cost_drag_pct": strategy_metrics.get("cost_drag_pct"),
+        "max_drawdown_pct": strategy_metrics.get("max_drawdown_pct"),
+        "trade_count": trade_summary.get("trade_count"),
+        "turnover": trade_summary.get("turnover"),
+        "exposure_pct": trade_summary.get("exposure_pct"),
+        "final_equity": _round(initial_cash * final_multiplier),
+        "final_equity_multiplier": strategy_metrics.get("final_equity"),
+    }
 
 
-def _max_drawdown_pct(value: Any) -> float:
-    series = _series(value)
-    if series.empty:
-        return 0.0
-    peaks = series.cummax()
-    drawdowns = (series / peaks) - 1
-    return float(drawdowns.min()) * 100
+def _warning_messages(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [
+        str(item.get("message"))
+        for item in value
+        if isinstance(item, dict) and isinstance(item.get("message"), str)
+    ]
 
 
-def _exposure_pct(asset_value: Any) -> float:
-    series = _series(asset_value)
-    if series.empty:
-        return 0.0
-    return float((series > 0).mean()) * 100
-
-
-def _series(value: Any) -> pd.Series:
-    if isinstance(value, pd.DataFrame):
-        if value.empty:
-            return pd.Series(dtype=float)
-        return value.iloc[:, 0].astype(float)
-    if isinstance(value, pd.Series):
-        return value.astype(float)
-    return pd.Series([float(value)])
+def _error_messages(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [
+        str(item.get("message"))
+        for item in value
+        if isinstance(item, dict) and isinstance(item.get("message"), str)
+    ]
 
 
 def _round(value: float) -> float:

@@ -142,9 +142,9 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `ccxt` | Public OHLCV market data access. | Public market endpoints only. No credentials, balances, orders, or trading operations. |
 | `pandas` | In-memory OHLCV data frames for strategy inputs. | Local tabular preparation only. No hidden network or persistence role. |
 | `pyarrow` | Parquet read/write support for the shared OHLCV fact store. | File format support only. Not an AI context input. |
-| `vectorbt` | Strategy indicator, signal calculation, and bounded research diagnostic support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
+| `vectorbt` | Strategy indicator and signal calculation support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
-Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, these strategies may use vectorbt `Portfolio.from_signals` for bounded historical diagnostics. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, bounded historical diagnostics use the Halpha-owned canonical next-bar close-to-close evaluator. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
 
 ## Configuration Contract
 
@@ -720,7 +720,11 @@ Run record contract:
       "slippage_bps": 5,
       "mode": "long_flat",
       "direction": "long_only",
+      "execution_model_id": "close_to_close_next_bar_v1",
       "price_source": "close",
+      "signal_timing": "signal_at_bar_close",
+      "position_timing": "next_bar",
+      "lookahead_policy": "no_same_bar_execution",
       "execution_timing": "research_close_to_close"
     },
     "window": {
@@ -729,12 +733,23 @@ Run record contract:
       "rows": 500
     },
     "metrics": {
-      "calculation_backend": "vectorbt.Portfolio.from_signals",
-      "total_return_pct": 12.4,
+      "calculation_backend": "halpha.strategy_evaluation.evaluate_single_window_backtest",
+      "execution_model_id": "close_to_close_next_bar_v1",
+      "signal_timing": "signal_at_bar_close",
+      "position_timing": "next_bar",
+      "lookahead_policy": "no_same_bar_execution",
+      "return_metric_basis": "net_after_costs",
+      "total_return_pct": 9.8,
+      "gross_return_pct": 12.4,
+      "net_return_pct": 9.8,
+      "total_cost_pct": 2.6,
+      "cost_drag_pct": 2.6,
       "max_drawdown_pct": -18.2,
       "trade_count": 23,
+      "turnover": 24.0,
       "exposure_pct": 56.0,
-      "final_equity": 11240.0
+      "final_equity": 10980.0,
+      "final_equity_multiplier": 1.098
     },
     "warnings": [
       "Backtest diagnostic is historical research material, not a return forecast."
@@ -776,9 +791,13 @@ Enabled parameter diagnostic contract:
   "assumptions": {
     "max_combinations": 3,
     "grid_source": "quant.parameter_diagnostics.grids.tsmom_vol_scaled",
-    "metric_scope": "latest_state_and_bounded_backtest_summary",
+    "metric_scope": "latest_state_and_canonical_next_bar_backtest_summary",
     "selection_policy": "diagnostic_only_no_best_parameter_selection",
-    "strategy_backtest_enabled": true
+    "strategy_backtest_enabled": true,
+    "execution_model_id": "close_to_close_next_bar_v1",
+    "signal_timing": "signal_at_bar_close",
+    "position_timing": "next_bar",
+    "lookahead_policy": "no_same_bar_execution"
   },
   "grid": {
     "return_window": [10, 20, 30],
@@ -955,7 +974,7 @@ Warning rules:
 
 Vectorbt boundary rules:
 
-- Vectorbt may calculate indicators, signals, and bounded diagnostics.
+- Vectorbt may calculate indicators and signals.
 - Vectorbt objects are internal implementation details.
 - Halpha-owned JSON and Markdown artifacts are the stable downstream interface.
 - Do not persist vectorbt objects, repr strings, internal class names, or raw portfolio objects as artifact fields.
@@ -965,8 +984,8 @@ Bounded backtest diagnostic rules:
 
 - Backtest diagnostics are historical research material, not return forecasts.
 - Diagnostics must record assumptions before metrics.
-- Required assumptions include initial cash, fees, slippage, mode, direction, price source, execution timing, and input data window.
-- Metrics must stay narrow and reviewable. Suggested metrics are `total_return_pct`, `max_drawdown_pct`, `trade_count`, `exposure_pct`, and `final_equity`.
+- Required assumptions include initial cash, fees, slippage, mode, direction, execution model identifier, signal timing, position timing, lookahead policy, price source, execution timing, and input data window.
+- Metrics must stay narrow and reviewable. Suggested metrics are `total_return_pct`, `net_return_pct`, `gross_return_pct`, `total_cost_pct`, `cost_drag_pct`, `max_drawdown_pct`, `trade_count`, `turnover`, `exposure_pct`, `final_equity`, and `final_equity_multiplier`.
 - Diagnostics must not emit trading instructions, live orders, position sizing, account actions, or guaranteed outcomes.
 - Diagnostics may be `disabled`, `skipped`, `succeeded`, or `failed`.
 
@@ -1025,6 +1044,7 @@ Reusable core input contract:
     "slippage_bps": 5.0
   },
   "execution_model": {
+    "execution_model_id": "close_to_close_next_bar_v1",
     "price_source": "close",
     "signal_timing": "signal_at_bar_close",
     "position_timing": "next_bar",
@@ -1059,6 +1079,7 @@ Reusable core output contract:
     "rows": 500
   },
   "execution_model": {
+    "execution_model_id": "close_to_close_next_bar_v1",
     "price_source": "close",
     "signal_timing": "signal_at_bar_close",
     "position_timing": "next_bar",
@@ -1169,6 +1190,7 @@ Execution model rules:
 
 - The default research execution model is close-to-close with no same-bar execution.
 - A signal known at bar `t` may affect position from bar `t+1`.
+- `long_flat` target exposure follows each signal record; `long_only` keeps target exposure active after the first positive target and does not model exits.
 - Evaluation must record fees and slippage assumptions before net metrics.
 - Gross and net metrics must be separate.
 - Strategy metrics must include gross return, net return, total cost, cost drag, drawdown, volatility, risk-adjusted metrics, and final equity.

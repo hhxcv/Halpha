@@ -308,6 +308,17 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
     ):
         if key in metrics:
             result[f"backtest_{key}"] = metrics[key]
+    assumptions = backtest.get("assumptions") if isinstance(backtest.get("assumptions"), dict) else {}
+    for key in (
+        "execution_model_id",
+        "signal_timing",
+        "position_timing",
+        "lookahead_policy",
+    ):
+        if key in metrics:
+            result[f"backtest_{key}"] = metrics[key]
+        elif key in assumptions:
+            result[f"backtest_{key}"] = assumptions[key]
     if parameter.get("enabled") is True and "status" in parameter:
         result["parameter_diagnostic_status"] = parameter["status"]
         for key in ("tested_combinations", "valid_combinations", "invalid_combinations", "stability"):

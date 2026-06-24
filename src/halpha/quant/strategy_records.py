@@ -9,6 +9,15 @@ from halpha.market.market_data_views import MARKET_DATA_VIEWS_ARTIFACT
 STRATEGY_VERSION = 1
 DEFAULT_BACKTEST_INITIAL_CASH = 10000.0
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
+CANONICAL_EXECUTION_MODEL_ID = "close_to_close_next_bar_v1"
+CANONICAL_EXECUTION_MODEL = {
+    "execution_model_id": CANONICAL_EXECUTION_MODEL_ID,
+    "price_source": "close",
+    "signal_timing": "signal_at_bar_close",
+    "position_timing": "next_bar",
+    "lookahead_policy": "no_same_bar_execution",
+    "execution_timing": "research_close_to_close",
+}
 
 
 def strategy_run_record(
@@ -152,7 +161,7 @@ def backtest_diagnostic(
 def backtest_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
     backtest = strategy.get("backtest") if isinstance(strategy.get("backtest"), dict) else {}
     mode = backtest.get("mode", "long_flat")
-    if mode not in SUPPORTED_BACKTEST_MODES:
+    if not isinstance(mode, str) or mode not in SUPPORTED_BACKTEST_MODES:
         mode = "long_flat"
     return {
         "initial_cash": _positive_number_or_default(
@@ -163,8 +172,7 @@ def backtest_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
         "slippage_bps": _non_negative_number_or_default(backtest.get("slippage_bps"), 0.0),
         "mode": mode,
         "direction": "long_only",
-        "price_source": "close",
-        "execution_timing": "research_close_to_close",
+        **CANONICAL_EXECUTION_MODEL,
     }
 
 

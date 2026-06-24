@@ -6,8 +6,14 @@ from typing import Any
 from .strategy_records import parameter_diagnostic, warning
 
 
-PARAMETER_DIAGNOSTIC_METRIC_SCOPE = "latest_state_and_bounded_backtest_summary"
+PARAMETER_DIAGNOSTIC_METRIC_SCOPE = "latest_state_and_canonical_next_bar_backtest_summary"
 PARAMETER_DIAGNOSTIC_SELECTION_POLICY = "diagnostic_only_no_best_parameter_selection"
+BACKTEST_EXECUTION_FIELDS = (
+    "execution_model_id",
+    "signal_timing",
+    "position_timing",
+    "lookahead_policy",
+)
 
 
 def parameter_diagnostic_config(quant: dict[str, Any]) -> dict[str, Any]:
@@ -106,6 +112,7 @@ def bounded_parameter_diagnostic(
     valid_results = [item for item in results if item["status"] == "succeeded"]
     invalid_results = [item for item in results if item["status"] != "succeeded"]
     summary_metrics = _summary_metrics(valid_results)
+    execution_model = _base_backtest_execution_fields(base_run)
     warnings = _sensitivity_warnings(
         strategy_name,
         valid_results=valid_results,
@@ -123,6 +130,7 @@ def bounded_parameter_diagnostic(
             "metric_scope": PARAMETER_DIAGNOSTIC_METRIC_SCOPE,
             "selection_policy": PARAMETER_DIAGNOSTIC_SELECTION_POLICY,
             "strategy_backtest_enabled": _backtest_enabled(strategy),
+            **execution_model,
         },
         "grid": grid,
         "tested_combinations": len(results),
@@ -220,6 +228,12 @@ def _combination_metrics(run: dict[str, Any]) -> dict[str, Any]:
     for key in ("total_return_pct", "max_drawdown_pct", "trade_count", "exposure_pct"):
         if key in backtest_metrics:
             metrics[f"backtest_{key}"] = backtest_metrics[key]
+    backtest_assumptions = backtest.get("assumptions") if isinstance(backtest.get("assumptions"), dict) else {}
+    for key in BACKTEST_EXECUTION_FIELDS:
+        if key in backtest_metrics:
+            metrics[f"backtest_{key}"] = backtest_metrics[key]
+        elif key in backtest_assumptions:
+            metrics[f"backtest_{key}"] = backtest_assumptions[key]
     if "status" in backtest:
         metrics["backtest_diagnostic_status"] = backtest["status"]
     return metrics
@@ -370,6 +384,23 @@ def _base_direction(base_run: dict[str, Any]) -> str | None:
 def _backtest_enabled(strategy: dict[str, Any]) -> bool:
     backtest = strategy.get("backtest") if isinstance(strategy.get("backtest"), dict) else {}
     return backtest.get("enabled") is True
+
+
+def _base_backtest_execution_fields(base_run: dict[str, Any]) -> dict[str, Any]:
+    backtest = (
+        base_run.get("backtest_diagnostic")
+        if isinstance(base_run.get("backtest_diagnostic"), dict)
+        else {}
+    )
+    assumptions = backtest.get("assumptions") if isinstance(backtest.get("assumptions"), dict) else {}
+    metrics = backtest.get("metrics") if isinstance(backtest.get("metrics"), dict) else {}
+    result = {}
+    for key in BACKTEST_EXECUTION_FIELDS:
+        if key in metrics:
+            result[key] = metrics[key]
+        elif key in assumptions:
+            result[key] = assumptions[key]
+    return result
 
 
 def _round(value: float) -> float:
