@@ -99,7 +99,8 @@ def _source_policy() -> dict[str, Any]:
             "cost_drag",
             "sample_quality",
             "walk_forward_stability",
-            "parameter_stability",
+            "parameter_signal_state_stability",
+            "parameter_performance_stability",
             "overfitting_risk",
             "reasons",
             "warnings",
@@ -132,7 +133,7 @@ def _report_guidance() -> dict[str, Any]:
     return {
         "effective_candidates": [
             "Identify effective candidates as research candidates only, not trading approvals.",
-            "Explain benchmark coverage, cost drag, baseline comparison, walk-forward evidence, sample limits, and overfitting checks near the effectiveness statement.",
+            "Explain benchmark coverage, cost drag, baseline comparison, walk-forward evidence, parameter performance stability, sample limits, and overfitting checks near the effectiveness statement.",
         ],
         "watchlisted_candidates": [
             "Identify watchlisted candidates and explain the downgrade reason before any synthesis.",

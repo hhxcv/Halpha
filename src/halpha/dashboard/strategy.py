@@ -543,6 +543,8 @@ def _quant_parameter_summary(parameter: dict[str, Any]) -> dict[str, Any]:
         "enabled": parameter.get("enabled"),
         "status": parameter.get("status"),
         "assumptions": _bounded_mapping(parameter.get("assumptions")),
+        "signal_state_stability": _bounded_mapping(parameter.get("signal_state_stability")),
+        "performance_stability": _bounded_mapping(parameter.get("performance_stability")),
         "summary_metrics": _bounded_mapping(parameter.get("summary_metrics")),
     }
 

@@ -9,6 +9,7 @@ import pytest
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
+from halpha.quant.parameter_diagnostics import _performance_stability, _signal_state_stability
 from halpha.quant.registry import get_strategy_definition
 
 
@@ -40,6 +41,113 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert reversion.run.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
     assert reversion.signal_records.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
     assert get_strategy_definition("missing") is None
+
+
+def test_parameter_stability_separates_state_and_divergent_performance() -> None:
+    valid_results = [
+        {
+            "status": "succeeded",
+            "metrics": {
+                "direction": "bullish",
+                "latest_regime": "trend",
+                "backtest_total_return_pct": 12.0,
+                "backtest_max_drawdown_pct": -2.0,
+                "backtest_trade_count": 4,
+                "backtest_exposure_pct": 45.0,
+            },
+        },
+        {
+            "status": "succeeded",
+            "metrics": {
+                "direction": "bullish",
+                "latest_regime": "trend",
+                "backtest_total_return_pct": -4.0,
+                "backtest_max_drawdown_pct": -18.0,
+                "backtest_trade_count": 4,
+                "backtest_exposure_pct": 46.0,
+            },
+        },
+    ]
+
+    signal_state = _signal_state_stability(valid_results, [])
+    performance = _performance_stability(valid_results, [])
+
+    assert signal_state["status"] == "stable"
+    assert performance["status"] == "sensitive"
+    assert performance["metric_ranges"]["backtest_total_return_pct"]["range"] == 16.0
+    assert performance["metric_ranges"]["backtest_max_drawdown_pct"]["range"] == 16.0
+    assert performance["reason_codes"] == [
+        "metric_range_exceeds_threshold",
+        "metric_range_exceeds_threshold",
+    ]
+
+
+def test_parameter_stability_separates_performance_and_divergent_state() -> None:
+    valid_results = [
+        {
+            "status": "succeeded",
+            "metrics": {
+                "direction": "bullish",
+                "latest_regime": "trend",
+                "backtest_total_return_pct": 4.0,
+                "backtest_max_drawdown_pct": -4.0,
+                "backtest_trade_count": 4,
+                "backtest_exposure_pct": 50.0,
+            },
+        },
+        {
+            "status": "succeeded",
+            "metrics": {
+                "direction": "bearish",
+                "latest_regime": "range",
+                "backtest_total_return_pct": 5.0,
+                "backtest_max_drawdown_pct": -5.0,
+                "backtest_trade_count": 5,
+                "backtest_exposure_pct": 51.0,
+            },
+        },
+    ]
+
+    signal_state = _signal_state_stability(valid_results, [])
+    performance = _performance_stability(valid_results, [])
+
+    assert signal_state["status"] == "sensitive"
+    assert signal_state["reason_codes"] == ["direction_sensitivity", "latest_regime_sensitivity"]
+    assert performance["status"] == "stable"
+    assert performance["reason_codes"] == ["metric_ranges_within_thresholds"]
+
+
+def test_parameter_performance_stability_requires_complete_metrics() -> None:
+    valid_results = [
+        {
+            "status": "succeeded",
+            "metrics": {
+                "direction": "bullish",
+                "latest_regime": "trend",
+                "backtest_total_return_pct": 4.0,
+                "backtest_max_drawdown_pct": -4.0,
+                "backtest_trade_count": 4,
+                "backtest_exposure_pct": 50.0,
+            },
+        },
+        {
+            "status": "succeeded",
+            "metrics": {
+                "direction": "bullish",
+                "latest_regime": "trend",
+                "backtest_total_return_pct": 5.0,
+                "backtest_max_drawdown_pct": -5.0,
+                "backtest_trade_count": 5,
+            },
+        },
+    ]
+
+    performance = _performance_stability(valid_results, [])
+
+    assert performance["status"] == "insufficient_evidence"
+    assert performance["reason_codes"] == ["missing_backtest_metric"]
+    assert performance["reasons"][0]["metric"] == "backtest_exposure_pct"
+    assert performance["metric_ranges"]["backtest_exposure_pct"]["missing_count"] == 1
 
 
 def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -> None:
@@ -329,6 +437,15 @@ def test_quant_strategy_runner_records_enabled_parameter_diagnostic(tmp_path: Pa
     assert diagnostic["valid_combinations"] == 2
     assert diagnostic["invalid_combinations"] == 1
     assert diagnostic["stability"] == "sensitive"
+    assert diagnostic["signal_state_stability"]["status"] == "sensitive"
+    assert diagnostic["signal_state_stability"]["reason_codes"] == [
+        "direction_sensitivity",
+        "latest_regime_sensitivity",
+        "invalid_combinations_present",
+    ]
+    assert diagnostic["performance_stability"]["status"] == "partially_stable"
+    assert diagnostic["performance_stability"]["reason_codes"] == ["invalid_combinations_present"]
+    assert diagnostic["performance_stability"]["metric_ranges"]["backtest_total_return_pct"]["range"] > 0
     assert diagnostic["summary_metrics"]["direction_counts"] == {"bearish": 1, "bullish": 1}
     assert diagnostic["combinations"][0]["params"]["return_window"] == 1
     assert diagnostic["combinations"][0]["status"] == "succeeded"
@@ -341,6 +458,7 @@ def test_quant_strategy_runner_records_enabled_parameter_diagnostic(tmp_path: Pa
     assert diagnostic["combinations"][2]["error"]["error_type"] == "InsufficientData"
     assert diagnostic["warnings"][0]["code"] == "parameter_direction_sensitivity"
     assert any(item["code"] == "parameter_invalid_combinations" for item in diagnostic["warnings"])
+    assert any(item["code"] == "parameter_performance_partial_evidence" for item in diagnostic["warnings"])
     assert "do not choose trading parameters" in diagnostic["notes"][0]
 
     assert strategy_signal["key_values"]["parameter_diagnostic_status"] == "succeeded"
@@ -348,8 +466,14 @@ def test_quant_strategy_runner_records_enabled_parameter_diagnostic(tmp_path: Pa
     assert strategy_signal["key_values"]["parameter_valid_combinations"] == 2
     assert strategy_signal["key_values"]["parameter_invalid_combinations"] == 1
     assert strategy_signal["key_values"]["parameter_stability"] == "sensitive"
+    assert strategy_signal["key_values"]["parameter_signal_state_stability"] == "sensitive"
+    assert strategy_signal["key_values"]["parameter_performance_stability"] == "partially_stable"
+    assert strategy_signal["key_values"]["parameter_performance_stability_reason_codes"] == [
+        "invalid_combinations_present"
+    ]
     assert any("multiple assessment directions" in item for item in strategy_signal["uncertainty"])
     assert market_signal["key_values"]["parameter_stability"] == "sensitive"
+    assert market_signal["key_values"]["parameter_performance_stability"] == "partially_stable"
     assert "parameter_diagnostic_policy: bounded_sensitivity_context_only_not_optimization" in material
     assert "bounded_parameter_diagnostic_summaries" in material
     assert manifest["quant_strategies"]["parameter_diagnostics_enabled"] is True

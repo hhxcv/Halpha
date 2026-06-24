@@ -340,7 +340,8 @@ def _assessment(
         f"max_drawdown_pct {metrics.get('max_drawdown_pct')}; "
         f"walk_forward_status is {walk_status} with "
         f"{walk_summary.get('succeeded_windows')} successful windows; "
-        f"parameter_stability_status is {parameter_stability.get('status')}."
+        f"parameter_performance_stability_status is "
+        f"{_parameter_performance_status(parameter_stability)}."
     )
     return {
         "reliability": reliability,
@@ -362,6 +363,8 @@ def _assessment(
                 f"{walk_summary.get('positive_net_return_window_pct')}."
             ),
             f"parameter_stability_status: {parameter_stability.get('status')}.",
+            f"parameter_signal_state_stability_status: {_parameter_signal_state_status(parameter_stability)}.",
+            f"parameter_performance_stability_status: {_parameter_performance_status(parameter_stability)}.",
             f"parameter_tested_combinations: {parameter_stability.get('tested_combinations')}.",
             f"overfitting_risk_status: {overfitting_risk.get('status')}.",
         ],
@@ -398,11 +401,32 @@ def _parameter_stability(strategy_run: dict[str, Any]) -> dict[str, Any]:
     base_direction = _base_direction(strategy_run)
     regions = [_parameter_region(item, base_direction=base_direction) for item in combinations]
     region_counts = _region_counts(regions)
-    status = _parameter_stability_status(diagnostic, region_counts)
+    signal_state_stability = _mapping(diagnostic.get("signal_state_stability"))
+    if not signal_state_stability:
+        signal_state_stability = {
+            "status": diagnostic.get("stability", "unknown"),
+            "reason_codes": [],
+            "direction_counts": _mapping(diagnostic.get("summary_metrics")).get("direction_counts", {}),
+            "latest_regime_counts": _mapping(diagnostic.get("summary_metrics")).get("latest_regime_counts", {}),
+        }
+    performance_stability = _mapping(diagnostic.get("performance_stability"))
+    if not performance_stability:
+        performance_stability = {
+            "status": "insufficient_evidence",
+            "reason_codes": ["performance_stability_unavailable"],
+            "reasons": [],
+            "metric_ranges": {},
+        }
+    status = _parameter_stability_status(diagnostic, region_counts, performance_stability)
     warnings = _unique_warnings(
         [
             *_warning_items(diagnostic.get("warnings")),
-            *_parameter_stability_warnings(status, region_counts),
+            *_parameter_stability_warnings(
+                status,
+                region_counts,
+                signal_state_stability=signal_state_stability,
+                performance_stability=performance_stability,
+            ),
         ]
     )
     assumptions = diagnostic.get("assumptions") if isinstance(diagnostic.get("assumptions"), dict) else {}
@@ -418,6 +442,10 @@ def _parameter_stability(strategy_run: dict[str, Any]) -> dict[str, Any]:
         "valid_combinations": int(diagnostic.get("valid_combinations") or 0),
         "invalid_combinations": int(diagnostic.get("invalid_combinations") or 0),
         "stability": diagnostic.get("stability"),
+        "signal_state_status": signal_state_stability.get("status"),
+        "performance_status": performance_stability.get("status"),
+        "signal_state_stability": signal_state_stability,
+        "performance_stability": performance_stability,
         "region_counts": region_counts,
         "regions": regions,
         "summary_metrics": diagnostic.get("summary_metrics")
@@ -428,6 +456,8 @@ def _parameter_stability(strategy_run: dict[str, Any]) -> dict[str, Any]:
             f"tested_combinations: {int(diagnostic.get('tested_combinations') or 0)}.",
             f"valid_combinations: {int(diagnostic.get('valid_combinations') or 0)}.",
             f"invalid_combinations: {int(diagnostic.get('invalid_combinations') or 0)}.",
+            f"signal_state_stability_status: {signal_state_stability.get('status')}.",
+            f"performance_stability_status: {performance_stability.get('status')}.",
             (
                 "parameter_regions: "
                 f"stable={region_counts['stable']}, fragile={region_counts['fragile']}, "
@@ -489,9 +519,20 @@ def _region_counts(regions: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def _parameter_stability_status(diagnostic: dict[str, Any], region_counts: dict[str, int]) -> str:
+def _parameter_stability_status(
+    diagnostic: dict[str, Any],
+    region_counts: dict[str, int],
+    performance_stability: dict[str, Any],
+) -> str:
     diagnostic_status = diagnostic.get("status")
     if diagnostic_status in {"skipped", "no_valid_combinations"}:
+        return "insufficient_data"
+    performance_status = performance_stability.get("status")
+    if performance_status == "stable":
+        return "stable"
+    if performance_status in {"partially_stable", "sensitive"}:
+        return "fragile"
+    if performance_status in {"insufficient_evidence", "no_valid_combinations"}:
         return "insufficient_data"
     if region_counts["inconsistent"] > 0:
         return "inconsistent"
@@ -502,36 +543,88 @@ def _parameter_stability_status(diagnostic: dict[str, Any], region_counts: dict[
     return "insufficient_data"
 
 
-def _parameter_stability_warnings(status: str, region_counts: dict[str, int]) -> list[dict[str, Any]]:
+def _parameter_stability_warnings(
+    status: str,
+    region_counts: dict[str, int],
+    *,
+    signal_state_stability: dict[str, Any],
+    performance_stability: dict[str, Any],
+) -> list[dict[str, Any]]:
+    items = []
+    signal_state_status = signal_state_stability.get("status")
+    performance_status = performance_stability.get("status")
+    if signal_state_status == "sensitive":
+        items.append(
+            warning(
+                "parameter_signal_state_stability_sensitive",
+                "Parameter diagnostics produced divergent signal-state labels.",
+                source="strategy_evaluation",
+            )
+        )
+    elif signal_state_status == "partially_stable_with_invalid_combinations":
+        items.append(
+            warning(
+                "parameter_signal_state_stability_partial",
+                "Parameter signal-state stability is limited by invalid combinations.",
+                source="strategy_evaluation",
+            )
+        )
+    if performance_status == "sensitive":
+        items.append(
+            warning(
+                "parameter_performance_stability_sensitive",
+                "Parameter diagnostics produced materially divergent performance metrics.",
+                source="strategy_evaluation",
+            )
+        )
+    elif performance_status == "partially_stable":
+        items.append(
+            warning(
+                "parameter_performance_stability_partial",
+                "Parameter performance stability is limited by invalid combinations.",
+                source="strategy_evaluation",
+            )
+        )
+    elif performance_status in {"insufficient_evidence", "no_valid_combinations"}:
+        items.append(
+            warning(
+                "parameter_performance_stability_insufficient",
+                "Parameter diagnostics lack enough performance evidence for stability.",
+                source="strategy_evaluation",
+            )
+        )
     if status == "stable":
-        return []
+        return items
     if status == "inconsistent":
-        return [
+        items.append(
             warning(
                 "parameter_stability_inconsistent",
                 "Parameter diagnostics produced inconsistent regions across configured combinations.",
                 source="strategy_evaluation",
             )
-        ]
+        )
+        return items
     if status == "fragile":
-        return [
+        items.append(
             warning(
                 "parameter_stability_fragile",
                 (
-                    "Parameter diagnostics include fragile or unavailable regions "
+                    "Parameter diagnostics include fragile performance evidence or unavailable regions "
                     f"({region_counts['fragile']} fragile, "
                     f"{region_counts['insufficient_data']} insufficient-data)."
                 ),
                 source="strategy_evaluation",
             )
-        ]
-    return [
+        )
+        return items
+    items.append(
         warning(
             "parameter_stability_insufficient_data",
-            "Parameter diagnostics did not produce enough valid combinations for stability evidence.",
+            "Parameter diagnostics did not produce enough valid performance evidence.",
             source="strategy_evaluation",
         )
-    ]
+    )
+    return items
 
 
 def _overfitting_risk(
@@ -562,15 +655,17 @@ def _overfitting_risk(
             )
         )
     stability_status = str(parameter_stability.get("status") or "unknown")
-    if stability_status in {"fragile", "inconsistent"}:
+    signal_state_status = _parameter_signal_state_status(parameter_stability)
+    performance_status = _parameter_performance_status(parameter_stability)
+    if performance_status in {"partially_stable", "sensitive"} or stability_status in {"fragile", "inconsistent"}:
         warnings.append(
             warning(
                 "overfitting_unstable_parameter_ranking",
-                f"Parameter stability status is {stability_status}; do not infer a best parameter set.",
+                f"Parameter performance stability status is {performance_status}; do not infer a best parameter set.",
                 source="strategy_evaluation",
             )
         )
-    if stability_status == "insufficient_data":
+    if performance_status in {"insufficient_evidence", "no_valid_combinations"} or stability_status == "insufficient_data":
         warnings.append(
             warning(
                 "overfitting_parameter_evidence_insufficient",
@@ -623,6 +718,8 @@ def _overfitting_risk(
             f"trade_count: {trade_count}.",
             f"cost_drag_pct: {cost_drag_pct}.",
             f"parameter_stability_status: {stability_status}.",
+            f"parameter_signal_state_stability_status: {signal_state_status}.",
+            f"parameter_performance_stability_status: {performance_status}.",
             f"walk_forward_result_stability: {walk_summary.get('result_stability')}.",
         ]
     )
@@ -651,7 +748,8 @@ def _overfitting_status(
 ) -> str:
     if not warnings and parameter_stability.get("enabled") is not True:
         return "unknown"
-    if stability_status == "inconsistent" or len(warnings) >= 2:
+    performance_status = _parameter_performance_status(parameter_stability)
+    if performance_status == "sensitive" or stability_status == "inconsistent" or len(warnings) >= 2:
         return "elevated"
     if warnings:
         return "medium"
@@ -659,6 +757,12 @@ def _overfitting_status(
 
 
 def _parameter_return_range(parameter_stability: dict[str, Any]) -> float | None:
+    performance = _mapping(parameter_stability.get("performance_stability"))
+    metric_ranges = _mapping(performance.get("metric_ranges"))
+    return_range = _mapping(metric_ranges.get("backtest_total_return_pct"))
+    value = _number_or_none(return_range.get("range"))
+    if value is not None:
+        return value
     summary = parameter_stability.get("summary_metrics")
     if not isinstance(summary, dict):
         return None
@@ -675,6 +779,20 @@ def _base_direction(strategy_run: dict[str, Any]) -> str | None:
     if isinstance(direction, str) and direction.strip() and direction != "unknown":
         return direction
     return None
+
+
+def _parameter_signal_state_status(parameter_stability: dict[str, Any]) -> str:
+    signal_state = _mapping(parameter_stability.get("signal_state_stability"))
+    return str(signal_state.get("status") or parameter_stability.get("signal_state_status") or "unknown")
+
+
+def _parameter_performance_status(parameter_stability: dict[str, Any]) -> str:
+    performance = _mapping(parameter_stability.get("performance_stability"))
+    return str(performance.get("status") or parameter_stability.get("performance_status") or "unknown")
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def _number_or_none(value: Any) -> float | None:

@@ -324,6 +324,14 @@ def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
         for key in ("tested_combinations", "valid_combinations", "invalid_combinations", "stability"):
             if key in parameter:
                 result[f"parameter_{key}"] = parameter[key]
+        signal_state = parameter.get("signal_state_stability")
+        if isinstance(signal_state, dict) and "status" in signal_state:
+            result["parameter_signal_state_stability"] = signal_state["status"]
+        performance = parameter.get("performance_stability")
+        if isinstance(performance, dict) and "status" in performance:
+            result["parameter_performance_stability"] = performance["status"]
+            if isinstance(performance.get("reason_codes"), list):
+                result["parameter_performance_stability_reason_codes"] = performance["reason_codes"]
     return result
 
 
@@ -703,6 +711,9 @@ def _diagnostic_summary(signal: dict[str, Any]) -> dict[str, Any]:
         "backtest_diagnostic_status",
         "parameter_diagnostic_status",
         "parameter_stability",
+        "parameter_signal_state_stability",
+        "parameter_performance_stability",
+        "parameter_performance_stability_reason_codes",
         "parameter_tested_combinations",
         "parameter_valid_combinations",
         "parameter_invalid_combinations",

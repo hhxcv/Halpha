@@ -321,7 +321,7 @@ Validation contract:
 - The product of grid value counts for each configured strategy must be less than or equal to `quant.parameter_diagnostics.max_combinations`.
 - Parameter diagnostics may record runtime-invalid combinations, such as combinations with insufficient input data, without failing the whole strategy run.
 - `quant.effectiveness_gates` may be omitted. If present, it must be a mapping of deterministic gate threshold overrides.
-- `quant.effectiveness_gates` supports only explicit threshold fields for benchmark coverage, performance, baseline comparison, drawdown, cost drag, trade count, sample rows, walk-forward evidence, parameter-stability requirement, and overfitting-risk downgrade behavior.
+- `quant.effectiveness_gates` supports only explicit threshold fields for benchmark coverage, performance, baseline comparison, drawdown, cost drag, trade count, sample rows, walk-forward evidence, parameter performance-stability requirement, and overfitting-risk downgrade behavior.
 - Unknown `quant.effectiveness_gates` fields must fail config validation so gate threshold typos are not silently ignored.
 - Strategy-level `backtest.initial_cash` must be a positive number when present.
 - Strategy-level `backtest.fees_bps` and `backtest.slippage_bps` must be non-negative numbers when present.
@@ -847,6 +847,78 @@ Enabled parameter diagnostic contract:
   "valid_combinations": 2,
   "invalid_combinations": 1,
   "stability": "sensitive",
+  "signal_state_stability": {
+    "status": "sensitive",
+    "reason_codes": [
+      "direction_sensitivity",
+      "latest_regime_sensitivity",
+      "invalid_combinations_present"
+    ],
+    "direction_counts": {
+      "bullish": 1,
+      "bearish": 1
+    },
+    "latest_regime_counts": {
+      "risk_on_momentum": 1,
+      "risk_off_negative_momentum": 1
+    },
+    "valid_combinations": 2,
+    "invalid_combinations": 1
+  },
+  "performance_stability": {
+    "status": "partially_stable",
+    "reason_codes": [
+      "invalid_combinations_present"
+    ],
+    "reasons": [
+      {
+        "code": "invalid_combinations_present",
+        "message": "Invalid combinations limit performance stability evidence.",
+        "value": 1
+      }
+    ],
+    "metric_ranges": {
+      "backtest_total_return_pct": {
+        "min": 0.8,
+        "max": 2.8,
+        "range": 2.0,
+        "threshold": 10.0,
+        "observed_count": 2,
+        "valid_combination_count": 2,
+        "missing_count": 0
+      },
+      "backtest_max_drawdown_pct": {
+        "min": -4.6,
+        "max": -4.5,
+        "range": 0.1,
+        "threshold": 10.0,
+        "observed_count": 2,
+        "valid_combination_count": 2,
+        "missing_count": 0
+      },
+      "backtest_trade_count": {
+        "min": 1,
+        "max": 1,
+        "range": 0,
+        "threshold": 3.0,
+        "observed_count": 2,
+        "valid_combination_count": 2,
+        "missing_count": 0
+      },
+      "backtest_exposure_pct": {
+        "min": 50.0,
+        "max": 75.0,
+        "range": 25.0,
+        "threshold": 25.0,
+        "observed_count": 2,
+        "valid_combination_count": 2,
+        "missing_count": 0
+      }
+    },
+    "valid_combinations": 2,
+    "invalid_combinations": 1,
+    "min_valid_combinations": 2
+  },
   "summary_metrics": {
     "direction_counts": {
       "bullish": 1,
@@ -872,7 +944,11 @@ Enabled parameter diagnostic contract:
         "confidence": "medium",
         "latest_regime": "risk_on_momentum",
         "entry_count": 4,
-        "exit_count": 3
+        "exit_count": 3,
+        "backtest_total_return_pct": 2.8,
+        "backtest_max_drawdown_pct": -4.5,
+        "backtest_trade_count": 1,
+        "backtest_exposure_pct": 75.0
       },
       "error": null
     }
@@ -897,7 +973,14 @@ Parameter diagnostic rules:
 - Enabled diagnostics must preserve configured grid ranges and max-combination assumptions.
 - `tested_combinations`, `valid_combinations`, and `invalid_combinations` must be explicit.
 - `combinations` records must contain bounded params, status, selected summary metrics, and a bounded error summary when unavailable.
-- `summary_metrics`, `notes`, and `warnings` should describe stability or sensitivity. Do not report only a best historical result.
+- `stability` is a compatibility alias for `signal_state_stability.status`; new consumers should read the explicit signal-state and performance fields.
+- `signal_state_stability` must classify direction and latest-regime agreement separately from performance evidence.
+- `performance_stability.status` must be one of `stable`, `partially_stable`, `sensitive`, `insufficient_evidence`, or `no_valid_combinations`.
+- Stable performance requires at least two valid combinations, all required backtest metrics present, no invalid combinations, and metric ranges within thresholds.
+- Invalid combinations produce partial performance stability only when the valid performance evidence is otherwise stable; missing metrics or too few valid combinations produce insufficient evidence.
+- Sensitive performance must record which return, drawdown, trade-count, or exposure range exceeded its threshold.
+- Every performance-stability result must record `metric_ranges` and deterministic reason codes.
+- `summary_metrics`, `notes`, and `warnings` should describe signal-state and performance stability or sensitivity. Do not report only a best historical result.
 - Parameter diagnostics are sensitivity context only. They must not select trading parameters, rank strategies, or make return promises.
 
 Required run fields:
@@ -1320,6 +1403,39 @@ Record contract:
     "valid_combinations": 4,
     "invalid_combinations": 0,
     "stability": "stable",
+    "signal_state_status": "stable",
+    "performance_status": "stable",
+    "signal_state_stability": {
+      "status": "stable",
+      "reason_codes": [
+        "direction_and_regime_agree"
+      ],
+      "direction_counts": {
+        "bullish": 4
+      },
+      "latest_regime_counts": {
+        "risk_on_momentum": 4
+      },
+      "valid_combinations": 4,
+      "invalid_combinations": 0
+    },
+    "performance_stability": {
+      "status": "stable",
+      "reason_codes": [
+        "metric_ranges_within_thresholds"
+      ],
+      "metric_ranges": {
+        "backtest_total_return_pct": {
+          "min": 1.0,
+          "max": 3.0,
+          "range": 2.0,
+          "threshold": 10.0
+        }
+      },
+      "valid_combinations": 4,
+      "invalid_combinations": 0,
+      "min_valid_combinations": 2
+    },
     "region_counts": {
       "stable": 4,
       "fragile": 0,
@@ -1338,6 +1454,8 @@ Record contract:
       "trade_count: 23.",
       "cost_drag_pct: 2.6.",
       "parameter_stability_status: stable.",
+      "parameter_signal_state_stability_status: stable.",
+      "parameter_performance_stability_status: stable.",
       "walk_forward_result_stability: stable."
     ],
     "warnings": []
@@ -1359,6 +1477,8 @@ Record contract:
       "walk_forward_mean_net_return_pct: 1.2.",
       "walk_forward_positive_net_return_window_pct: 57.1.",
       "parameter_stability_status: stable.",
+      "parameter_signal_state_stability_status: stable.",
+      "parameter_performance_stability_status: stable.",
       "parameter_tested_combinations: 4.",
       "overfitting_risk_status: low."
     ],
@@ -1388,9 +1508,12 @@ Pipeline evaluation rules:
 - Walk-forward warnings include too few windows, insufficient history, short samples, unstable results, and regime-dependent outcomes.
 - Report-facing assessment must distinguish full-window single-window metrics from walk-forward evidence.
 - Parameter stability must consume existing bounded parameter diagnostics when configured.
-- Parameter stability statuses are `stable`, `fragile`, `inconsistent`, `insufficient_data`, and `disabled`.
-- Parameter regions summarize configured diagnostic combinations as stable, fragile, inconsistent, or insufficient-data evidence without ranking or selecting a best parameter set.
-- Overfitting risk warnings must be first-class record warnings when triggered by high trial count, short samples, unstable parameter regions, cost sensitivity, low trade count, or unstable walk-forward results.
+- Evaluation `parameter_stability.status` is a gate-compatible performance summary: `stable`, `fragile`, `inconsistent`, `insufficient_data`, or `disabled`.
+- Evaluation records must also preserve `signal_state_stability` and `performance_stability` separately.
+- `signal_state_stability` records direction/latest-regime agreement. It must not be used as proof of performance robustness.
+- `performance_stability` records return, drawdown, trade-count, exposure, validity, metric ranges, and deterministic reason codes.
+- Parameter regions summarize configured diagnostic combinations as stable, fragile, inconsistent, or insufficient-data signal-region evidence without ranking or selecting a best parameter set.
+- Overfitting risk warnings must be first-class record warnings when triggered by high trial count, short samples, sensitive or insufficient performance stability, cost sensitivity, low trade count, or unstable walk-forward results.
 - Overfitting risk is research context only and must not become automatic parameter selection.
 
 Standalone strategy evaluation output:
@@ -1512,12 +1635,12 @@ Gate record rules:
 
 - One gate record must exist for every evaluated strategy candidate.
 - `status` must be one of `effective`, `watchlisted`, `rejected`, or `insufficient_evidence`.
-- Gate inputs must preserve benchmark coverage, net performance, buy-and-hold comparison, cost drag, drawdown, trade count, sample quality, bounded walk-forward stability, parameter-stability availability, overfitting risk, warnings, and source artifacts.
+- Gate inputs must preserve benchmark coverage, net performance, buy-and-hold comparison, cost drag, drawdown, trade count, sample quality, bounded walk-forward stability, parameter signal-state stability, parameter performance stability, overfitting risk, warnings, and source artifacts.
 - Gate reasons must explicitly record pass, block, reject, downgrade, or informational reasons with observed values and thresholds.
 - Single-window profit alone must not produce `effective` status.
 - Insufficient samples, insufficient benchmarks, insufficient walk-forward evidence, or low trade count may produce `insufficient_evidence`.
 - Weak net performance, weak baseline comparison, or excessive drawdown may produce `rejected`.
-- Excessive cost drag, unstable walk-forward evidence, fragile parameter stability, or elevated overfitting risk may produce `watchlisted`.
+- Excessive cost drag, unstable walk-forward evidence, fragile parameter performance stability, or elevated overfitting risk may produce `watchlisted`.
 - Gate outcomes must be deterministic and derived from Halpha-owned JSON artifacts, not Codex or another LLM.
 - Gate thresholds may be configured under `quant.effectiveness_gates`; omitted fields use conservative defaults.
 
@@ -1560,7 +1683,7 @@ Pipeline strategy experiment rules:
 
 AI-readable strategy experiment material rules:
 
-- Summarize candidate gate statuses, benchmark coverage, net performance, baseline comparison, cost drag, sample quality, bounded walk-forward evidence, parameter-stability status, overfitting risk, reasons, warnings, and errors.
+- Summarize candidate gate statuses, benchmark coverage, net performance, baseline comparison, cost drag, sample quality, bounded walk-forward evidence, parameter signal-state stability, parameter performance stability, overfitting risk, reasons, warnings, and errors.
 - Identify `effective`, `watchlisted`, `rejected`, and `insufficient_evidence` statuses as Halpha-generated deterministic gate outcomes.
 - Keep rejected, watchlisted, unstable, or insufficient-evidence candidates visible and conservative.
 - Do not embed full OHLCV history, full equity curves, or raw trade-by-trade logs.
@@ -1574,7 +1697,7 @@ runs/<run_id>/analysis/strategy_evaluation_material.md
 
 Material rules:
 
-- Summarize strategy reliability, sample quality, baseline comparison, cost assumptions, drawdown, turnover, exposure, trade count, walk-forward status, parameter stability, and overfitting risk.
+- Summarize strategy reliability, sample quality, baseline comparison, cost assumptions, drawdown, turnover, exposure, trade count, walk-forward status, parameter signal-state stability, parameter performance stability, and overfitting risk.
 - Keep metrics bounded and report-facing.
 - Include source artifact references.
 - Do not embed full equity curves, full OHLCV history, or raw trade-by-trade logs in AI context.
@@ -1640,6 +1763,8 @@ walk_forward:
   status: insufficient_data
 parameter_stability:
   status: disabled
+  signal_state_status: unknown
+  performance_status: unknown
 overfitting_risk:
   status: elevated
 warnings:
@@ -1899,6 +2024,8 @@ signals:
     diagnostics:
       backtest_diagnostic_status: succeeded
       parameter_stability: stable
+      parameter_signal_state_stability: stable
+      parameter_performance_stability: stable
     insufficient_data: false
 ```
 
@@ -1987,6 +2114,10 @@ key_values:
   parameter_valid_combinations: 2
   parameter_invalid_combinations: 1
   parameter_stability: sensitive
+  parameter_signal_state_stability: sensitive
+  parameter_performance_stability: partially_stable
+  parameter_performance_stability_reason_codes:
+    - invalid_combinations_present
 evidence:
   - return_window_pct is 6.2% over the configured return window.
   - realized_volatility_pct is 31.4% against target_volatility_pct 20.0%.
