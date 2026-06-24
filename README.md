@@ -124,11 +124,13 @@ the last selected config under local dashboard state and later dashboard
 startups reuse it when it still validates.
 
 Dashboard startup records local service state under
-`.halpha/dashboard/service_state.json`. A repeated dashboard startup can stop a
-matching existing Halpha dashboard backend for the same local port before
-starting the new service. If the port is occupied by a non-Halpha or
-unresponsive local service, startup fails with an actionable error instead of
-killing an unrelated process.
+`.halpha/dashboard/service_state.json`. Current duplicate startup behavior can
+stop a matching existing Halpha dashboard backend for the same local port
+before starting the new service. The target shared lifecycle contract changes
+that behavior so duplicate start returns the existing matching instance and
+restart is explicit. If the port is occupied by a non-Halpha or unresponsive
+local service, startup fails with an actionable error instead of killing an
+unrelated process.
 
 Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
 roots. Private values such as proxy URLs, credentials, tokens, private notes,
@@ -147,6 +149,13 @@ Daily report schedule state is explicit local dashboard control state under
 disable, update, and manually trigger daily report jobs through dashboard jobs.
 It does not install an OS scheduler, hosted scheduler, startup task, cron job,
 workflow engine, or hidden daemon.
+
+The target runtime contract defines one runtime root and exactly three
+resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
+state remains split across the run index, dashboard JSON, and monitor JSON
+until the planned `.halpha/state.sqlite` migration is implemented. Dashboard
+read models, health summaries, workbench outputs, and latest selections are
+derived views, not parallel authorities.
 
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:
@@ -413,7 +422,7 @@ A successful configured run can write:
 - `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
 - `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `data/research/index.sqlite`: local run index with run, stage, artifact, and latest-run metadata.
+- `data/research/index.sqlite`: current local run index with run, stage, artifact, and latest-run metadata.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
 - `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.
@@ -740,8 +749,8 @@ they are not proof of a real-source product run.
 - `config.example.yaml`: portable public-source configuration.
 - `data/`: shared local market history area; generated contents are ignored by git.
 - `docs/`: durable project documentation and implementation contracts.
-  - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
-  - `docs/research-data-contracts.md`: shared local research data, run index, text-event history, and data-quality contracts.
+  - `docs/artifact-governance.md`: artifact map, runtime state authority, layer rules, Codex input policy, and documentation index.
+  - `docs/research-data-contracts.md`: shared local research data, current run index, text-event history, and data-quality contracts.
   - `docs/quant-contracts.md`: quantitative research contracts.
   - `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.
   - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
@@ -750,11 +759,11 @@ they are not proof of a real-source product run.
   - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
   - `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
   - `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
-  - `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
+  - `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, resident-service target, privacy, and Codex-boundary contracts.
   - `docs/delivery-workbench-contracts.md`: local delivery snapshot and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
-  - `docs/product-stability-contracts.md`: product validation, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
+  - `docs/product-stability-contracts.md`: product validation, workflow stability, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
   - `docs/logging-standards.md`: local JSON logging levels, event shape, privacy boundaries, context fields, and anti-noise rules.
-  - `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
+  - `docs/dashboard-contracts.md`: local web dashboard, shared service lifecycle, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
   - `docs/event-intelligence-contracts.md`: event intelligence contracts.
   - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
   - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.

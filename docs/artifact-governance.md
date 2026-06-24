@@ -25,18 +25,20 @@ milestone plan.
 - `docs/user-state-contracts.md`: optional local user-state,
   personalized-risk, material, privacy, and Codex-boundary contracts.
 - `docs/monitoring-contracts.md`: local monitor configuration, cycle,
-  alert archive, health, privacy, and Codex-boundary contracts.
+  alert archive, health, target resident Monitor boundary, privacy, and
+  Codex-boundary contracts.
 - `docs/delivery-workbench-contracts.md`: local delivery and workbench summary,
   index, source-ref, privacy, and Codex-boundary contracts.
-- `docs/product-stability-contracts.md`: product validation, run health,
-  backup boundary, operational acceptance, privacy, and Codex-boundary
-  contracts.
+- `docs/product-stability-contracts.md`: product validation, workflow
+  stability, run health, backup boundary, operational acceptance, privacy, and
+  Codex-boundary contracts.
 - `docs/logging-standards.md`: local JSON logging levels, event shape,
   privacy boundaries, context fields, and anti-noise rules.
-- `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule,
-  artifact preview, privacy, and Codex-boundary contracts.
-- `docs/research-data-contracts.md`: shared local research data, run index,
-  text-event history, and data-quality contracts.
+- `docs/dashboard-contracts.md`: local web dashboard, shared service
+  lifecycle, command, job, schedule, artifact preview, privacy, and
+  Codex-boundary contracts.
+- `docs/research-data-contracts.md`: shared local research data, current run
+  index, text-event history, and data-quality contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
@@ -73,6 +75,80 @@ such as reading or backing up that config.
 Shared reusable data contracts are defined in
 `docs/research-data-contracts.md`. This document owns Codex input admission
 rules for those contracts.
+
+## Runtime State Authority
+
+Halpha uses one authoritative owner for each class of fact. The target runtime
+state model is not "put every artifact in one database." Complete artifacts
+remain inspectable files. The local SQLite runtime state store owns mutable
+operational facts and rebuildable indexes only.
+
+Runtime root is one explicit local directory used by all commands and all
+resident services to resolve runtime state such as `.halpha/`, `runs/`,
+`logs/`, and relative data roots. By default it is the command working
+directory unless an implemented config field explicitly selects another root.
+It must not be inferred separately from the config-file directory, dashboard
+port, monitor output directory, or schedule file location.
+
+| Fact class | Authoritative owner | Current or derived refs |
+| --- | --- | --- |
+| Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |
+| Reusable market and research history | Physical local store plus store-local schema and state metadata | Examples include `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/` history stores. |
+| Mutable operational state | Planned runtime SQLite store at `.halpha/state.sqlite` under the runtime root | Owns service registry, jobs, schedules, monitor-cycle indexes, alert archive indexes, cooldowns, UI preferences, and searchable run or artifact indexes after migration. |
+| Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
+| Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
+
+Current implemented state is still split across `data/research/index.sqlite`,
+`.halpha/dashboard/`, and `runs/monitor/`. Those paths are current or legacy
+storage until the planned state-store migration is implemented. New contracts
+must avoid adding another authority for the same fact.
+
+The only supported resident Halpha process roles are:
+
+- `dashboard`
+- `monitor`
+- `schedule`
+
+Each role is unique within one runtime root and must be independently startable
+and stoppable through one shared lifecycle contract. CLI and Dashboard controls
+must address the same service instance. Duplicate start must return the
+existing matching instance. Config mismatch must return an explicit conflict.
+Restart must be explicit, not an implicit process replacement.
+
+Dashboard serves UI and local APIs, reads product state, submits bounded jobs,
+and sends lifecycle requests. It must not own a private monitor loop or a
+dashboard-lifespan daily report dispatcher. Monitor is the single long-running
+information-refresh and alert-reassessment service. Schedule is the single
+time-trigger service for report jobs. Halpha must not introduce a hidden
+supervisor, broker, worker pool, or fourth resident process role.
+
+The target workflow hierarchy is:
+
+```text
+product workflow
+-> stable product stage
+-> inspectable task
+-> artifact
+```
+
+The stable product stages are:
+
+- `refresh_data`
+- `build_source_evidence`
+- `run_strategy_research`
+- `synthesize_intelligence`
+- `build_materials`
+- `generate_report`
+- `finalize_run`
+
+Fine-grained implementation work may remain inspectable as tasks, but it should
+not be exposed as a long list of top-level product stages. Completed runs are
+immutable product records. Final decision, watch, alert, data-quality, and
+report-facing material artifacts should be written once in their terminal
+stage. A stage rerun against an existing run must be non-destructive: downstream
+artifacts are either recomputed, explicitly marked stale or not complete, or the
+work is done in a new run. A rerun must not leave stale downstream artifacts
+marked as successful.
 
 ## Flow And Artifacts
 

@@ -22,12 +22,14 @@ inspection, and operational acceptance. It is not a milestone plan.
 - `docs/research-data-contracts.md`: reusable local stores and run index.
 - `docs/delivery-workbench-contracts.md`: local delivery and workbench output.
 - `docs/monitoring-contracts.md`: monitor cycle and alert archive state.
+- `docs/dashboard-contracts.md`: local dashboard and shared service lifecycle
+  contracts.
 - `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state and
   downstream boundaries.
 
 ## Product-Stability Goal
 
-M19 stabilization should make the local product answer three questions quickly:
+Product stability should make the local product answer three questions quickly:
 
 - Did the run produce the implemented artifacts it claims to have produced?
 - Are missing, failed, skipped, degraded, stale, partial, over-budget, or
@@ -54,6 +56,56 @@ Validation is an audit and operational layer. It must not become an upstream
 source for strategy gates, risk assessment, intelligence fusion, decisions,
 alert priorities, personalized constraints, lifecycle state, Codex prompts, or
 trading actions.
+
+## Runtime And Workflow Stability
+
+Runtime state authority is defined in `docs/artifact-governance.md`. Product
+validation must preserve that separation:
+
+- completed run lifecycle stays authoritative in `run_manifest.json`;
+- run artifacts stay authoritative for research evidence;
+- reusable stores stay authoritative in their physical local stores and
+  store-local metadata;
+- mutable operational state and rebuildable indexes belong to the planned
+  runtime SQLite state store after migration;
+- workbench summaries, dashboard views, health summaries, and latest selections
+  are derived views.
+
+The target product workflow hierarchy is:
+
+```text
+product workflow
+-> stable product stage
+-> inspectable task
+-> artifact
+```
+
+The stable product stages are:
+
+- `refresh_data`
+- `build_source_evidence`
+- `run_strategy_research`
+- `synthesize_intelligence`
+- `build_materials`
+- `generate_report`
+- `finalize_run`
+
+The current implementation still exposes finer-grained pipeline stage names.
+That is current behavior until the seven-stage product workflow is implemented.
+Future implementation should keep fine-grained work inspectable as tasks, not
+as a long list of top-level product stages.
+
+Completed-run and rerun rules:
+
+- a completed run is an immutable product record;
+- final decision, watch, alert, data-quality, and report-facing material
+  artifacts are written once in their terminal stage;
+- downstream-complete reruns must be non-destructive;
+- rerunning a stage must either recompute affected downstream artifacts, mark
+  them stale or not complete, or write a new run;
+- reruns must not leave stale downstream artifacts marked as successful;
+- `finalize_run` should only publish terminal manifest/state transactions and
+  product-contract validation once upstream artifacts are complete.
 
 ## analysis/product_contract_validation.json
 
@@ -220,6 +272,9 @@ Recommended backup groups:
   monitor state.
 - `data/`: reusable local stores, run index, local history state, and research
   data metadata.
+- `.halpha/`: current dashboard control state and planned runtime state store.
+  Backups should treat mutable runtime state as local operational state, not
+  research evidence.
 - machine-local config files: local validation config, local user-state files,
   and private policy files. These must remain outside public commits and public
   docs.

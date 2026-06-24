@@ -163,21 +163,28 @@ Current bias:
 
 ## Artifact Expectations
 
-* Artifact map, layer rules, and Codex input policy live in `docs/artifact-governance.md`.
-* Local research data contracts live in `docs/research-data-contracts.md`.
+* Artifact map, runtime state authority, layer rules, and Codex input policy live in `docs/artifact-governance.md`.
+* Local research data contracts and current run-index boundary live in `docs/research-data-contracts.md`.
 * Outcome tracking contracts live in `docs/outcome-tracking-contracts.md`.
 * On-chain and exchange-flow contracts live in `docs/onchain-flow-contracts.md`.
 * User-state and personalized-risk contracts live in `docs/user-state-contracts.md`.
-* Local monitoring contracts live in `docs/monitoring-contracts.md`.
+* Local monitoring contracts and target resident Monitor boundary live in `docs/monitoring-contracts.md`.
 * Local delivery and workbench contracts live in `docs/delivery-workbench-contracts.md`.
-* Product stability contracts live in `docs/product-stability-contracts.md`.
+* Product stability and workflow stability contracts live in `docs/product-stability-contracts.md`.
 * Local logging standards live in `docs/logging-standards.md`.
-* Local dashboard contracts live in `docs/dashboard-contracts.md`.
+* Local dashboard and shared service lifecycle contracts live in `docs/dashboard-contracts.md`.
 * Product runs preserve raw market and text artifacts.
 * Shared OHLCV history lives outside per-run report directories.
 * Shared OHLCV history is reusable input data, not AI context.
 * `data/research/metadata/research_data_catalog.json` records implemented reusable local stores, schema refs, state refs, counts, warnings, errors, and consumers.
-* `data/research/index.sqlite` records run, stage, artifact, and latest-run metadata; it stores references, not artifact contents.
+* Runtime state authority uses one authoritative owner per fact.
+* Runtime root is one explicit local root shared by CLI, Dashboard, Monitor, and Schedule.
+* Exactly three target resident process roles exist: `dashboard`, `monitor`, and `schedule`.
+* No hidden supervisor, broker, worker pool, or fourth resident Halpha process.
+* Planned `.halpha/state.sqlite` owns mutable operational state and rebuildable indexes after migration; it is not research evidence or Codex input.
+* Current `data/research/index.sqlite` records run, stage, artifact, and latest-run metadata; it stores references, not artifact contents.
+* Current `data/research/index.sqlite` is current implemented index storage until explicit migration.
+* Latest selections are derived or rebuildable views, not parallel authorities.
 * `data/research/metadata/text_event_history_state.json` records shared text-event history state, counts, duplicates, conflicts, warnings, and source refs.
 * `data/research/text_events/` stores reusable text-event history; it is input data, not AI context.
 * `data/research/metadata/outcome_history_state.json` records shared outcome history state, counts, duplicates, conflicts, warnings, and source refs.
@@ -302,7 +309,7 @@ Current bias:
 * AGENTS.md is for AI agents.
 * `docs/` is for durable project documentation and reusable implementation contracts.
 * Documentation index:
-* `docs/artifact-governance.md`: artifact map, artifact layer rules, Codex input policy, and doc index.
+* `docs/artifact-governance.md`: artifact map, runtime state authority, artifact layer rules, Codex input policy, and doc index.
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
 * `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
@@ -310,11 +317,11 @@ Current bias:
 * `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
 * `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
 * `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
-* `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, privacy, and Codex-boundary contracts.
+* `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, target resident Monitor boundary, privacy, and Codex-boundary contracts.
 * `docs/delivery-workbench-contracts.md`: local delivery and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
-* `docs/product-stability-contracts.md`: product validation, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
+* `docs/product-stability-contracts.md`: product validation, workflow stability, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
 * `docs/logging-standards.md`: local JSON logging levels, event shape, privacy boundaries, context fields, and anti-noise rules.
-* `docs/dashboard-contracts.md`: local web dashboard, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
+* `docs/dashboard-contracts.md`: local web dashboard, shared service lifecycle, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
 * `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
 * `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
 * `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.

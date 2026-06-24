@@ -34,8 +34,11 @@ forecast, validation, or report truth.
 
 Primary sources:
 
-- `data/research/index.sqlite`: compact run, stage, artifact, and latest-run
-  metadata.
+- `data/research/index.sqlite`: current implemented compact run, stage,
+  artifact, and latest-run metadata until the runtime-state migration moves
+  searchable indexes into the unified state store.
+- `.halpha/state.sqlite`: planned runtime-root SQLite state store for mutable
+  operational state and rebuildable indexes. It is not implemented yet.
 - `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
   Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run
@@ -59,6 +62,11 @@ Primary sources:
 Dashboard runtime state may record UI-triggered job and schedule state. That
 state is control and delivery state only. It must not override or mutate
 product artifacts as research evidence.
+
+Dashboard read models, overview cards, health summaries, and latest-run
+selections are derived views. They must be rebuilt from authoritative run
+artifacts, reusable stores, and runtime state. They must not become parallel
+authorities for facts already owned elsewhere.
 
 ## Implemented Operation
 
@@ -89,11 +97,14 @@ Dashboard startup writes local service state:
 .halpha/dashboard/selected_config.json
 ```
 
-Before binding, dashboard startup checks the requested local endpoint. If a
-matching Halpha dashboard backend is already running and has matching local
-service state, startup stops that process and then starts the new service. If
-the port is occupied by a non-Halpha or unresponsive local service, startup
-must fail with an actionable error and must not kill the unrelated process.
+Before binding, current dashboard startup checks the requested local endpoint.
+Current implemented duplicate-start behavior can stop a matching Halpha
+dashboard backend for the same local port before starting a new service. This
+is current legacy behavior, not the target lifecycle contract. Target duplicate
+start must return the existing matching dashboard instance. Restart must be an
+explicit action. If the port is occupied by a non-Halpha or unresponsive local
+service, startup must fail with an actionable error and must not kill the
+unrelated process.
 
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
@@ -140,7 +151,64 @@ trigger daily report jobs. The dashboard also starts a local dispatcher while
 the dashboard process is active. That dispatcher checks the persisted daily
 report schedule and creates visible allowlisted dashboard jobs for due
 non-Codex runs. It is not a hosted scheduler, OS scheduler, startup task, cron
-integration, external workflow engine, or hidden daemon.
+integration, external workflow engine, or hidden daemon. This dashboard-lifespan
+dispatcher is current legacy behavior. The target Schedule service is
+independent of Dashboard.
+
+## Target Service Lifecycle
+
+The target lifecycle contract is scoped to one runtime root. Runtime root is the
+resolved local root used by CLI and all resident services for `.halpha/`,
+`runs/`, `logs/`, and relative data roots. It must be selected explicitly by
+the command/config contract and shared by CLI, Dashboard, Monitor, and Schedule.
+It must not be inferred independently from the config-file directory or
+dashboard port.
+
+The only supported resident Halpha process roles are:
+
+- `dashboard`
+- `monitor`
+- `schedule`
+
+Each role is unique within one runtime root and independently startable,
+stoppable, inspectable, and restartable. CLI commands and Dashboard controls
+must address the same Monitor and Schedule instances. Dashboard must not create
+a private Monitor process or a private daily-report dispatcher. CLI and
+Dashboard controls must not create duplicate Monitor or Schedule processes for
+the same runtime root.
+
+Lifecycle state must combine:
+
+- an OS-level exclusive lock scoped to the runtime root and role;
+- a persisted instance id;
+- process metadata such as pid, host, command, config digest, started time, and
+  requested endpoint when applicable;
+- heartbeat metadata with timestamp and freshness threshold.
+
+A persisted `running` status alone must not prove that a process is alive.
+Lifecycle inspection must distinguish:
+
+- `running`: lock, process metadata, and heartbeat agree.
+- `stale`: persisted state exists but heartbeat or process liveness is stale.
+- `stopped`: explicit stop completed and released the lock.
+- `crashed`: process ended without a clean stop.
+- `conflict`: another live instance or mismatched config owns the role.
+
+Start, stop, force-stop, and restart semantics:
+
+- duplicate start with matching config returns the existing matching instance;
+- duplicate start with mismatched config returns an explicit conflict and does
+  not replace the process;
+- stop requests graceful shutdown and records the terminal state;
+- force-stop is explicit and records why graceful stop was not enough;
+- restart is explicit stop plus start, not implicit replacement during ordinary
+  `start`.
+
+Dashboard only serves UI/API, reads product state, submits bounded jobs, and
+sends lifecycle requests. Monitor is the single continuous information-refresh
+and alert-reassessment service. Schedule is the single time-trigger service for
+report jobs. Halpha must not add a hidden supervisor, broker, worker pool, or
+fourth resident process role.
 
 ## View Contract
 
@@ -317,7 +385,11 @@ Codex context by default.
 
 ## Schedule Contract
 
-Daily report scheduling must be explicit dashboard state.
+Daily report scheduling is current dashboard control state and target shared
+runtime state. The target owner is the independent `schedule` resident service
+using the unified runtime state store. Dashboard schedule APIs should become
+control and read-model surfaces for that service, not a dashboard-owned
+dispatcher.
 
 Schedule state should record:
 
@@ -335,6 +407,10 @@ Implemented daily report schedule state lives at:
 ```text
 .halpha/dashboard/schedules/daily_report_schedule.json
 ```
+
+This path is current implemented storage. It is legacy after the unified
+runtime state store owns schedule configuration, due claims, dispatch history,
+and job linkage.
 
 The schedule API supports:
 
@@ -357,13 +433,16 @@ execution requires explicit user confirmation at the trigger point.
 
 Automatic dispatch runs only while the dashboard process is active. It must not
 be treated as a hosted scheduler, OS service, startup task, cron integration,
-workflow engine, or hidden daemon.
+workflow engine, or hidden daemon. This is current legacy behavior. Target
+automatic dispatch belongs to the independent Schedule service and must keep
+running when Dashboard is stopped. Schedule remains active when Dashboard is
+stopped.
 
 ## Monitor Boundary
 
 Dashboard monitor controls must preserve `docs/monitoring-contracts.md`:
 
-- no hidden background service;
+- no hidden private dashboard-owned monitor service;
 - no hosted scheduler assumption;
 - no alert delivery channel unless implemented by a separate explicit contract;
 - no trading execution or account operations;
@@ -371,6 +450,12 @@ Dashboard monitor controls must preserve `docs/monitoring-contracts.md`:
 
 Finite monitor loops started from the dashboard must remain visible as jobs and
 must expose stop, cancel, completion, failure, and bounded log state.
+
+Finite dashboard monitor jobs are current implemented behavior. The target
+Monitor service is an independent resident role addressed through the shared
+lifecycle contract. Dashboard controls must start, stop, inspect, or restart
+that shared instance. They must not create duplicate Monitor processes, and
+they must not run the monitor loop inside the Dashboard process.
 
 ## Privacy Boundary
 
