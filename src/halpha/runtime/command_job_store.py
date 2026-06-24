@@ -23,6 +23,7 @@ COMMAND_JOB_STORE_ARTIFACT = STATE_STORE_REF
 COMMAND_JOB_LOG_ROOT_REF = ".halpha/command_jobs/job_logs"
 COMMAND_JOB_SCHEMA_VERSION = 1
 COMMAND_JOB_MIGRATION_VERSION = 9
+COMMAND_JOB_PROCESS_TREE_MIGRATION_VERSION = 15
 COMMAND_JOB_EVENT_LIMIT = 200
 JOB_TRANSIENT_STATUSES = {"queued", "running", "cancel_requested"}
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
@@ -104,6 +105,14 @@ COMMAND_JOB_MIGRATIONS = (
             "CREATE INDEX IF NOT EXISTS idx_local_command_jobs_created ON local_command_jobs(created_at, job_id)",
             "CREATE INDEX IF NOT EXISTS idx_local_command_jobs_status ON local_command_jobs(status, updated_at)",
             "CREATE INDEX IF NOT EXISTS idx_local_command_job_events_job ON local_command_job_events(job_id, event_id)",
+        ),
+    ),
+    StateStoreMigration(
+        version=COMMAND_JOB_PROCESS_TREE_MIGRATION_VERSION,
+        name="command_job_process_tree_identity",
+        statements=(
+            "ALTER TABLE local_command_jobs ADD COLUMN process_identity_json TEXT NOT NULL DEFAULT '{}'",
+            "ALTER TABLE local_command_jobs ADD COLUMN process_termination_json TEXT NOT NULL DEFAULT '{}'",
         ),
     ),
 )
@@ -272,9 +281,11 @@ class CommandJobRepository:
               source_artifacts_json,
               warnings_json,
               errors_json,
-              diagnostic_json
+              diagnostic_json,
+              process_identity_json,
+              process_termination_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 _job_id(job),
@@ -308,6 +319,8 @@ class CommandJobRepository:
                 _dumps_list(job.get("warnings")),
                 _dumps_list(job.get("errors")),
                 _dumps_optional_mapping(job.get("diagnostic")),
+                _dumps_mapping(job.get("process_identity")),
+                _dumps_mapping(job.get("process_termination")),
             ),
         )
 
@@ -338,9 +351,13 @@ class CommandJobRepository:
 
 
 def apply_command_job_migrations(connection: sqlite3.Connection, *, now: str | None = None) -> None:
+    migrations = tuple(sorted(
+        RUNTIME_STATE_MIGRATIONS + COMMAND_JOB_MIGRATIONS + MUTATION_LEASE_MIGRATIONS,
+        key=lambda item: item.version,
+    ))
     apply_runtime_state_migrations(
         connection,
-        migrations=RUNTIME_STATE_MIGRATIONS + COMMAND_JOB_MIGRATIONS + MUTATION_LEASE_MIGRATIONS,
+        migrations=migrations,
         now=now,
     )
 
@@ -394,6 +411,8 @@ def _row_to_job(row: Any) -> dict[str, Any]:
         "source_artifacts": _loads_list(row[27]),
         "warnings": _loads_list(row[28]),
         "errors": _loads_list(row[29]),
+        "process_identity": _loads_mapping(row[31] if len(row) > 31 else None),
+        "process_termination": _loads_mapping(row[32] if len(row) > 32 else None),
     }
     diagnostic = _loads_optional_mapping(row[30])
     if diagnostic:

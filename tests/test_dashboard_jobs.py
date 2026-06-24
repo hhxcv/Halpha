@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import sys
 import threading
 import time
 
@@ -11,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.runtime.command_job_commands import CommandJobBuilder, CommandJobError
+from halpha.runtime.command_job_commands import CommandJobBuilder, CommandJobCommand, CommandJobError, CommandSpec
 from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError
 from halpha.runtime.command_jobs import CommandJobManager, MAX_JOB_LOG_CHARS
 from halpha.runtime.mutation_lease import acquire_mutation_lease
@@ -1027,6 +1028,80 @@ def test_command_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) ->
     assert "cancelled" in completed["warnings"][0]
 
 
+@pytest.mark.skipif(os.name != "posix", reason="process-group tree cancellation is POSIX-specific")
+def test_command_job_manager_cancels_complete_posix_process_tree(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    root_script = _write_process_tree_scripts(tmp_path, ignore_sigterm=False)
+    tree_dir = tmp_path / "process-tree"
+    _patch_job_command(monkeypatch, root_script=root_script, tree_dir=tree_dir)
+    manager = CommandJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    _wait_for_status(manager, job["job_id"], "running")
+    child_pid = _wait_for_pid_file(tree_dir / "child.pid")
+    grandchild_pid = _wait_for_pid_file(tree_dir / "grandchild.pid")
+    cancel_payload = manager.cancel_job(job["job_id"])
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert cancel_payload["status"] == "cancel_requested"
+    assert completed["status"] == "cancelled"
+    assert completed["process_identity"]["strategy"] == "posix_process_group"
+    assert completed["process_identity"]["verified"] is True
+    assert completed["process_termination"]["confirmed_exit"] is True
+    assert _wait_for_pid_exit(child_pid)
+    assert _wait_for_pid_exit(grandchild_pid)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="process-group tree cancellation is POSIX-specific")
+def test_command_job_manager_forces_posix_process_tree_after_grace_timeout(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    root_script = _write_process_tree_scripts(tmp_path, ignore_sigterm=True)
+    tree_dir = tmp_path / "process-tree-force"
+    monkeypatch.setattr("halpha.runtime.command_job_process.COMMAND_JOB_CANCEL_GRACE_SECONDS", 0.1)
+    monkeypatch.setattr("halpha.runtime.command_job_process.COMMAND_JOB_FORCE_GRACE_SECONDS", 1.0)
+    _patch_job_command(monkeypatch, root_script=root_script, tree_dir=tree_dir)
+    manager = CommandJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    _wait_for_status(manager, job["job_id"], "running")
+    child_pid = _wait_for_pid_file(tree_dir / "child.pid")
+    grandchild_pid = _wait_for_pid_file(tree_dir / "grandchild.pid")
+    manager.cancel_job(job["job_id"])
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "cancelled"
+    assert completed["process_termination"]["forced"] is True
+    assert completed["process_termination"]["confirmed_exit"] is True
+    assert _wait_for_pid_exit(child_pid)
+    assert _wait_for_pid_exit(grandchild_pid)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="process identity check is POSIX-specific")
+def test_command_job_manager_preserves_unattached_live_owned_process_after_restart(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    root_script = _write_process_tree_scripts(tmp_path, ignore_sigterm=False)
+    tree_dir = tmp_path / "process-tree-restart"
+    _patch_job_command(monkeypatch, root_script=root_script, tree_dir=tree_dir)
+    manager = CommandJobManager(config, config_path=config_path)
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    running = _wait_for_status(manager, job["job_id"], "running")
+    restarted_manager = CommandJobManager(config, config_path=config_path)
+    restarted_view = restarted_manager.get_job(job["job_id"])
+    manager.cancel_job(job["job_id"])
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert running["process_identity"]["strategy"] == "posix_process_group"
+    assert restarted_view is not None
+    assert restarted_view["status"] == "running"
+    assert restarted_view["runtime_attached"] is False
+    assert restarted_view["process_alive"] is True
+    assert completed["status"] == "cancelled"
+
+
 def test_command_job_manager_marks_stale_running_job_failed_on_restart(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -1193,6 +1268,111 @@ def _wait_for_log_event(path: Path, job_id: str, event_name: str) -> str:
                 return text
         time.sleep(0.05)
     raise AssertionError(f"log event was not written: {event_name}")
+
+
+def _patch_job_command(monkeypatch, *, root_script: Path, tree_dir: Path) -> None:
+    spec = CommandSpec(
+        intent="validate",
+        kind="product_validation",
+        cancellable=True,
+        cli_parts=("validate",),
+    )
+    command = [sys.executable, str(root_script), str(tree_dir)]
+    payload = CommandJobCommand(spec=spec, command=command, preview=["python", "process-tree-root.py"])
+    monkeypatch.setattr(CommandJobBuilder, "build", lambda self, intent, params: payload)
+
+
+def _write_process_tree_scripts(tmp_path: Path, *, ignore_sigterm: bool) -> Path:
+    script_dir = tmp_path / "process_tree_scripts"
+    script_dir.mkdir()
+    signal_setup = "signal.signal(signal.SIGTERM, signal.SIG_IGN)" if ignore_sigterm else (
+        "signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(0))"
+    )
+    (script_dir / "grandchild.py").write_text(
+        f"""
+from pathlib import Path
+import os
+import signal
+import sys
+import time
+
+{signal_setup}
+tree_dir = Path(sys.argv[1])
+tree_dir.mkdir(parents=True, exist_ok=True)
+(tree_dir / "grandchild.pid").write_text(str(os.getpid()), encoding="utf-8")
+while True:
+    time.sleep(1)
+""".strip(),
+        encoding="utf-8",
+    )
+    (script_dir / "child.py").write_text(
+        f"""
+from pathlib import Path
+import os
+import signal
+import subprocess
+import sys
+import time
+
+{signal_setup}
+tree_dir = Path(sys.argv[1])
+tree_dir.mkdir(parents=True, exist_ok=True)
+(tree_dir / "child.pid").write_text(str(os.getpid()), encoding="utf-8")
+subprocess.Popen([sys.executable, str(Path(__file__).with_name("grandchild.py")), str(tree_dir)])
+while True:
+    time.sleep(1)
+""".strip(),
+        encoding="utf-8",
+    )
+    root_script = script_dir / "root.py"
+    root_script.write_text(
+        f"""
+from pathlib import Path
+import os
+import signal
+import subprocess
+import sys
+import time
+
+{signal_setup}
+tree_dir = Path(sys.argv[1])
+tree_dir.mkdir(parents=True, exist_ok=True)
+(tree_dir / "root.pid").write_text(str(os.getpid()), encoding="utf-8")
+subprocess.Popen([sys.executable, str(Path(__file__).with_name("child.py")), str(tree_dir)])
+while True:
+    time.sleep(1)
+""".strip(),
+        encoding="utf-8",
+    )
+    return root_script
+
+
+def _wait_for_pid_file(path: Path) -> int:
+    for _ in range(100):
+        if path.exists():
+            return int(path.read_text(encoding="utf-8"))
+        time.sleep(0.05)
+    raise AssertionError(f"pid file was not written: {path.name}")
+
+
+def _wait_for_pid_exit(pid: int) -> bool:
+    for _ in range(100):
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
 
 
 def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | None = None) -> None:

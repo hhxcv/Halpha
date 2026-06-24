@@ -374,6 +374,8 @@ Supported job implementations should record:
 - status;
 - created, started, finished, and updated timestamps;
 - process id when applicable;
+- bounded process-tree identity and termination metadata when a subprocess
+  starts;
 - exit code;
 - bounded stdout and stderr refs;
 - linked run, report, monitor, backtest, experiment, text-intelligence, or
@@ -408,6 +410,16 @@ errors, and transition events. New jobs must not write
 legacy storage for `data migrate-state` import or separate cleanup work only.
 Normal Dashboard, Schedule, and CLI job readers must not use them as fallback
 authorities.
+
+One-shot command jobs must launch subprocesses inside a platform-specific
+process-tree ownership boundary. Cancellation requests the complete owned tree
+to stop, waits a bounded interval, then escalates when graceful termination is
+not confirmed. A job reaches `cancelled` only after the owned tree is confirmed
+exited; otherwise it reaches `failed` with an actionable termination
+diagnostic. After a Dashboard runtime restart, persisted transient jobs must use
+recorded process identity metadata instead of PID alone, so an unrelated reused
+PID is not treated as the original job and a still-running owned process is not
+silently rewritten to terminal state.
 
 Bounded stdout and stderr logs are written under
 `.halpha/command_jobs/job_logs/<job_id>/` below the current working directory by
