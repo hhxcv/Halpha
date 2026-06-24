@@ -9,7 +9,8 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
-from halpha.pipeline import PipelineError, STAGE_ORDER, run_pipeline, run_pipeline_stage
+from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.product.product_validation_inspection import inspect_product_validation
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.data.run_index import (
@@ -39,8 +40,8 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
-        stage_handlers={"collect_market_data": _market_stage},
+        until_stage="refresh_data",
+        stage_handlers=_noop_handlers({"collect_market_data": _market_stage}),
     )
 
     assert result.succeeded is True
@@ -109,7 +110,7 @@ def test_run_index_records_derived_stage_rerun_without_duplicate_rows(tmp_path: 
     initial = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_text_events",
+        until_stage="refresh_data",
         stage_handlers=_noop_handlers(
             {
                 "collect_market_data": _market_stage,
@@ -122,8 +123,8 @@ def test_run_index_records_derived_stage_rerun_without_duplicate_rows(tmp_path: 
         config,
         config_path=config_path,
         run_dir=initial.run.run_dir,
-        stage="collect_text_events",
-        stage_handlers=_noop_handlers({"collect_text_events": _text_stage}),
+        stage="build_source_evidence",
+        stage_handlers=_noop_handlers(),
     )
 
     assert result.succeeded is True
@@ -274,8 +275,8 @@ def test_run_index_releases_sqlite_file_after_write_and_read_access(tmp_path: Pa
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
-        stage_handlers={"collect_market_data": _market_stage},
+        until_stage="refresh_data",
+        stage_handlers=_noop_handlers({"collect_market_data": _market_stage}),
     )
 
     assert result.succeeded is True
@@ -339,7 +340,7 @@ def _text_stage(config, run) -> list[str]:
 
 
 def _noop_handlers(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
-    handlers = {stage: _noop_stage for stage in STAGE_ORDER}
+    handlers = {stage: _noop_stage for stage in OPERATION_ORDER}
     if overrides:
         handlers.update(overrides)
     return handlers

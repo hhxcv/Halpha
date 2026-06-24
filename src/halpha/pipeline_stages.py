@@ -4,6 +4,99 @@ from dataclasses import dataclass
 
 
 STAGE_ORDER = (
+    "refresh_data",
+    "build_source_evidence",
+    "run_strategy_research",
+    "synthesize_intelligence",
+    "build_materials",
+    "generate_report",
+    "finalize_run",
+)
+STAGE_TASKS = {
+    "refresh_data": (
+        "collect_market_data",
+        "collect_derivatives_market_data",
+        "sync_derivatives_market_history",
+        "collect_macro_calendar_data",
+        "sync_macro_calendar_history",
+        "collect_onchain_flow_data",
+        "sync_onchain_flow_history",
+        "collect_text_events",
+        "sync_ohlcv",
+    ),
+    "build_source_evidence": (
+        "build_derivatives_market_views",
+        "build_derivatives_market_context",
+        "build_macro_calendar_views",
+        "build_macro_calendar_context",
+        "build_macro_calendar_material",
+        "build_onchain_flow_views",
+        "build_onchain_flow_context",
+        "build_onchain_flow_material",
+        "build_text_event_records",
+        "build_text_entity_evidence",
+        "build_text_event_classification_evidence",
+        "build_text_event_topics",
+        "build_text_event_signals",
+        "build_market_data_views",
+    ),
+    "run_strategy_research": (
+        "build_strategy_benchmark_suite",
+        "evaluate_quant_strategies",
+        "evaluate_strategy_evaluation",
+        "build_strategy_experiment_material",
+        "evaluate_market_strategy_signals",
+        "build_market_signals",
+        "build_market_signal_material",
+    ),
+    "synthesize_intelligence": (
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+        "build_decision_recommendations",
+        "build_watch_triggers",
+        "build_event_market_confluence",
+        "build_event_intelligence_assessment",
+        "build_alert_decisions",
+        "build_decision_intelligence_delta",
+        "build_outcome_targets",
+        "evaluate_outcomes",
+        "build_strategy_lifecycle_state",
+        "build_strategy_lifecycle_material",
+        "build_feature_snapshots",
+        "build_factor_states",
+        "build_multi_source_signals",
+        "build_intelligence_fusion",
+        "integrate_intelligence_fusion",
+        "build_user_state_context",
+        "build_personalized_risk_constraints",
+        "integrate_personalized_risk_constraints",
+    ),
+    "build_materials": (
+        "build_alert_decision_material",
+        "build_event_intelligence_material",
+        "build_decision_intelligence_material",
+        "build_data_quality_summary",
+        "build_personalized_risk_material",
+        "build_analysis_materials",
+    ),
+    "generate_report": (
+        "build_research_context",
+        "build_codex_context",
+        "run_codex_report",
+    ),
+    "finalize_run": ("validate_product_contracts",),
+}
+TASK_STAGE_MAP = {
+    task: stage
+    for stage, tasks in STAGE_TASKS.items()
+    for task in tasks
+}
+OPERATION_ORDER = tuple(
+    task
+    for stage in STAGE_ORDER
+    for task in STAGE_TASKS[stage]
+)
+LEGACY_OPERATION_ORDER = (
     "collect_market_data",
     "collect_derivatives_market_data",
     "sync_derivatives_market_history",
@@ -188,12 +281,12 @@ class StageOperation:
 
 STAGE_OPERATIONS = tuple(
     StageOperation(
-        operation_id=stage,
-        dependencies=() if index == 0 else (STAGE_ORDER[index - 1],),
-        outputs=STAGE_OUTPUTS.get(stage, ()),
-        enabled_condition=STAGE_ENABLED_CONDITIONS.get(stage),
+        operation_id=operation,
+        dependencies=() if index == 0 else (OPERATION_ORDER[index - 1],),
+        outputs=STAGE_OUTPUTS.get(operation, ()),
+        enabled_condition=STAGE_ENABLED_CONDITIONS.get(operation),
     )
-    for index, stage in enumerate(STAGE_ORDER)
+    for index, operation in enumerate(OPERATION_ORDER)
 )
 STAGE_OPERATION_MAP = {operation.operation_id: operation for operation in STAGE_OPERATIONS}
 
@@ -221,8 +314,20 @@ def downstream_closure(stage: str, *, through_stage: str | None = None) -> list[
         validate_stage(through_stage, option_name="through_stage")
         if STAGE_ORDER.index(through_stage) < STAGE_ORDER.index(stage):
             return []
+        terminal_index = STAGE_ORDER.index(through_stage)
+        return list(STAGE_ORDER[STAGE_ORDER.index(stage) : terminal_index + 1])
+    return list(STAGE_ORDER[STAGE_ORDER.index(stage) :])
 
-    closure = {stage}
+
+def operation_downstream_closure(operation_id: str, *, through_operation: str | None = None) -> list[str]:
+    validate_stage_graph()
+    validate_operation(operation_id, option_name="operation")
+    if through_operation is not None:
+        validate_operation(through_operation, option_name="through_operation")
+        if OPERATION_ORDER.index(through_operation) < OPERATION_ORDER.index(operation_id):
+            return []
+
+    closure = {operation_id}
     changed = True
     while changed:
         changed = False
@@ -233,11 +338,21 @@ def downstream_closure(stage: str, *, through_stage: str | None = None) -> list[
                 closure.add(operation.operation_id)
                 changed = True
 
-    ordered = [operation_id for operation_id in STAGE_ORDER if operation_id in closure]
-    if through_stage is None:
+    ordered = [item for item in OPERATION_ORDER if item in closure]
+    if through_operation is None:
         return ordered
-    terminal_index = STAGE_ORDER.index(through_stage)
-    return [operation_id for operation_id in ordered if STAGE_ORDER.index(operation_id) <= terminal_index]
+    terminal_index = OPERATION_ORDER.index(through_operation)
+    return [item for item in ordered if OPERATION_ORDER.index(item) <= terminal_index]
+
+
+def tasks_for_stage(stage: str) -> list[str]:
+    validate_stage(stage, option_name="stage")
+    return list(STAGE_TASKS[stage])
+
+
+def stage_for_task(operation_id: str) -> str:
+    validate_operation(operation_id, option_name="operation")
+    return TASK_STAGE_MAP[operation_id]
 
 
 def stages_after(stage: str) -> list[str]:
@@ -262,14 +377,29 @@ def validate_stage(stage: str, *, option_name: str) -> None:
         raise StageSelectionError(f"{option_name} must be one of: {supported}.")
 
 
+def validate_operation(operation_id: str, *, option_name: str) -> None:
+    if operation_id not in OPERATION_ORDER:
+        supported = ", ".join(OPERATION_ORDER)
+        raise StageSelectionError(f"{option_name} must be one of: {supported}.")
+
+
 def validate_stage_graph() -> None:
+    if tuple(STAGE_TASKS) != STAGE_ORDER:
+        raise ValueError("pipeline product stages must be registered exactly once in canonical order.")
+    task_ids = [task for tasks in STAGE_TASKS.values() for task in tasks]
+    if len(task_ids) != len(set(task_ids)):
+        raise ValueError("pipeline task ownership must be unique.")
+    if set(task_ids) != set(LEGACY_OPERATION_ORDER):
+        missing = sorted(set(LEGACY_OPERATION_ORDER) - set(task_ids))
+        extra = sorted(set(task_ids) - set(LEGACY_OPERATION_ORDER))
+        raise ValueError(f"pipeline task ownership mismatch; missing={missing}, extra={extra}.")
     operation_ids = [operation.operation_id for operation in STAGE_OPERATIONS]
-    if operation_ids != list(STAGE_ORDER):
+    if operation_ids != list(OPERATION_ORDER):
         raise ValueError("pipeline operation metadata must register every stage exactly once in canonical order.")
-    unknown_output_stages = set(STAGE_OUTPUTS) - set(STAGE_ORDER)
+    unknown_output_stages = set(STAGE_OUTPUTS) - set(OPERATION_ORDER)
     if unknown_output_stages:
         raise ValueError(f"pipeline operation outputs reference unknown stages: {sorted(unknown_output_stages)}.")
-    unknown_enabled_stages = set(STAGE_ENABLED_CONDITIONS) - set(STAGE_ORDER)
+    unknown_enabled_stages = set(STAGE_ENABLED_CONDITIONS) - set(OPERATION_ORDER)
     if unknown_enabled_stages:
         raise ValueError(
             f"pipeline operation enabled conditions reference unknown stages: {sorted(unknown_enabled_stages)}."
@@ -285,5 +415,9 @@ def validate_stage_graph() -> None:
             if dependency not in seen:
                 raise ValueError(
                     f"pipeline operation graph must be acyclic; {operation.operation_id} depends on {dependency}."
+                )
+            if STAGE_ORDER.index(TASK_STAGE_MAP[dependency]) > STAGE_ORDER.index(TASK_STAGE_MAP[operation.operation_id]):
+                raise ValueError(
+                    f"pipeline operation {operation.operation_id} depends on later-stage task {dependency}."
                 )
         seen.add(operation.operation_id)

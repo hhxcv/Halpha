@@ -26,7 +26,7 @@ def test_watch_triggers_generate_supported_types_and_link_decisions(tmp_path: Pa
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_watch_triggers",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -40,6 +40,7 @@ def test_watch_triggers_generate_supported_types_and_link_decisions(tmp_path: Pa
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -105,7 +106,7 @@ def test_watch_triggers_include_derivatives_risk_conditions(tmp_path: Path) -> N
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_watch_triggers",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -120,6 +121,7 @@ def test_watch_triggers_include_derivatives_risk_conditions(tmp_path: Path) -> N
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -147,7 +149,7 @@ def test_watch_triggers_include_macro_calendar_observation_conditions(tmp_path: 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_watch_triggers",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -162,6 +164,7 @@ def test_watch_triggers_include_macro_calendar_observation_conditions(tmp_path: 
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -188,7 +191,7 @@ def test_watch_triggers_include_onchain_flow_risk_conditions(tmp_path: Path) -> 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_watch_triggers",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -206,6 +209,7 @@ def test_watch_triggers_include_onchain_flow_risk_conditions(tmp_path: Path) -> 
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -233,7 +237,7 @@ def test_watch_triggers_recheck_unavailable_onchain_flow_without_false_relief(tm
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_watch_triggers",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -251,6 +255,7 @@ def test_watch_triggers_recheck_unavailable_onchain_flow_without_false_relief(tm
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -272,7 +277,7 @@ def test_watch_triggers_do_not_fabricate_conditions_without_evidence(tmp_path: P
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_watch_triggers",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -286,6 +291,7 @@ def test_watch_triggers_do_not_fabricate_conditions_without_evidence(tmp_path: P
             "build_market_regime_assessment": _write_empty_market_regime_assessment,
             "build_risk_assessment": _write_empty_risk_assessment,
             "build_decision_recommendations": _write_empty_decision_recommendations,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -323,6 +329,7 @@ def test_watch_triggers_skip_when_quant_is_not_enabled(tmp_path: Path) -> None:
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
             "run_codex_report": _noop_stage,
+            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -946,7 +953,13 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
 
 
 def _noop_stage(config, run) -> list[str]:

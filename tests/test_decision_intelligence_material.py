@@ -22,7 +22,7 @@ def test_decision_intelligence_material_summarizes_m3_artifacts(tmp_path: Path) 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_intelligence_material",
+        until_stage="build_materials",
         now=datetime(2026, 6, 5, tzinfo=timezone.utc),
         stage_handlers={
             "collect_market_data": _noop_stage,
@@ -39,6 +39,11 @@ def test_decision_intelligence_material_summarizes_m3_artifacts(tmp_path: Path) 
             "build_decision_recommendations": _write_decision_recommendations,
             "build_watch_triggers": _write_watch_triggers,
             "build_decision_intelligence_delta": _write_decision_delta,
+            "build_alert_decision_material": _noop_stage,
+            "build_event_intelligence_material": _noop_stage,
+            "build_data_quality_summary": _noop_stage,
+            "build_personalized_risk_material": _noop_stage,
+            "build_analysis_materials": _noop_stage,
         },
     )
 
@@ -103,7 +108,6 @@ def test_decision_intelligence_material_summarizes_m3_artifacts(tmp_path: Path) 
     assert _stage(manifest, "build_decision_intelligence_material")["artifacts"] == [
         "analysis/decision_intelligence_material.md"
     ]
-    assert _stage(manifest, "build_analysis_materials")["status"] == "not_run"
 
 
 def test_decision_intelligence_material_skips_when_quant_is_not_enabled(tmp_path: Path) -> None:
@@ -400,7 +404,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _decision_material_inputs(result) -> dict[str, dict[str, Any]]:

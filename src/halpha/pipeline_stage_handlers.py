@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from halpha.pipeline_stages import STAGE_ORDER
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.runtime.pipeline_contracts import RunContext, StageHandler, StageNotImplementedError
 from halpha.stage_handlers import domain_stage_handlers
 
 
 def default_stage_handlers(overrides: dict[str, StageHandler] | None = None) -> dict[str, StageHandler]:
-    handlers = {stage: _unimplemented_handler(stage) for stage in STAGE_ORDER}
+    handlers = {stage: _unimplemented_handler(stage) for stage in OPERATION_ORDER}
     for stage_group in domain_stage_handlers():
         handlers.update(stage_group)
     if overrides:

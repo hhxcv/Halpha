@@ -34,7 +34,7 @@ def test_pipeline_collects_onchain_flow_raw_artifact(tmp_path: Path, monkeypatch
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_onchain_flow_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -68,7 +68,7 @@ def test_pipeline_collects_onchain_flow_raw_artifact(tmp_path: Path, monkeypatch
     assert manifest["counts"]["onchain_flow_items"] == 6
     assert manifest["counts"]["onchain_flow_errors"] == 0
     assert manifest["counts"]["onchain_flow_unavailable"] == 1
-    assert any(stage["name"] == "collect_onchain_flow_data" for stage in manifest["stages"])
+    assert _task(manifest, "collect_onchain_flow_data")["artifacts"] == ["raw/onchain_flow.json"]
 
 
 def test_disabled_onchain_flow_config_does_not_write_fake_raw_artifact(tmp_path: Path, monkeypatch) -> None:
@@ -85,7 +85,7 @@ def test_disabled_onchain_flow_config_does_not_write_fake_raw_artifact(tmp_path:
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_onchain_flow_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -111,7 +111,7 @@ def test_onchain_flow_records_failed_source_without_fake_items(tmp_path: Path, m
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_onchain_flow_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -139,7 +139,7 @@ def test_onchain_flow_records_exchange_flow_unavailable_without_request(tmp_path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_onchain_flow_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -314,6 +314,15 @@ def _chart_payload(name: str, unit: str, values: list[float]) -> bytes:
 
 def _noop_stage(config, run) -> list[str]:
     return []
+
+
+def _task(manifest: dict, name: str) -> dict:
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 class _FakeResponse:

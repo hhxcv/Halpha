@@ -18,7 +18,7 @@ def test_text_event_topics_groups_exact_duplicate_url_and_title(tmp_path: Path, 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_topics",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_duplicate_text_raw},
     )
 
@@ -65,7 +65,7 @@ def test_text_event_topics_records_embedding_same_topic_without_erasing_traceabi
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_topics",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_embedding_text_raw},
     )
 
@@ -106,7 +106,7 @@ def test_text_event_topics_does_not_merge_on_embedding_similarity_alone(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_topics",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_no_asset_text_raw},
     )
 
@@ -325,7 +325,13 @@ def _decision(artifact: dict, records_artifact: dict, left_raw_id: str, right_ra
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
 
 
 def _skipped_embedding_model(config):

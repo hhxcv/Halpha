@@ -17,7 +17,7 @@ def test_factor_states_pipeline_writes_agreement_records_and_manifest(tmp_path: 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_factor_states",
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "build_feature_snapshots": _write_agreement_feature_snapshots,
@@ -316,4 +316,9 @@ def _record(
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )

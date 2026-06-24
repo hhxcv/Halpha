@@ -7,7 +7,8 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
-from halpha.pipeline import STAGE_ORDER, run_pipeline
+from halpha.pipeline import run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
 
 
@@ -295,15 +296,14 @@ def _run_with_targets(
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="evaluate_outcomes",
+        until_stage="synthesize_intelligence",
         stage_handlers=_handlers_for_until("evaluate_outcomes", overrides),
         now=now or datetime(2026, 6, 7, 0, 0, tzinfo=UTC),
     )
 
 
 def _handlers_for_until(stage: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
-    index = STAGE_ORDER.index(stage)
-    handlers = {name: _noop_stage for name in STAGE_ORDER[:index]}
+    handlers = {name: _noop_stage for name in OPERATION_ORDER if name != stage}
     if overrides:
         handlers.update(overrides)
     return handlers
@@ -538,7 +538,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

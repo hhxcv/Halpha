@@ -21,7 +21,7 @@ def test_text_event_classification_accepts_high_confidence_category_and_tone(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_classification_evidence",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_etf_raw},
     )
 
@@ -82,7 +82,7 @@ def test_text_event_classification_downgrades_weak_model_evidence(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_classification_evidence",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_etf_raw},
     )
 
@@ -121,7 +121,7 @@ def test_text_event_classification_marks_missing_models_unknown(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_classification_evidence",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_bitcoin_etf_raw},
     )
 

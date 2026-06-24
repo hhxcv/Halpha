@@ -126,7 +126,7 @@ def _run_until_context(config: dict[str, Any], config_path: Path, raw_stage) -> 
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_macro_calendar_context",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_macro_calendar_data": raw_stage,

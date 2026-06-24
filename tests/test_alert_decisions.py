@@ -62,7 +62,6 @@ def test_alert_decisions_escalate_p0_and_p1_only_with_explicit_relevance(tmp_pat
     assert manifest["counts"]["alert_decision_p1_records"] == 1
     assert manifest["counts"]["alert_decision_no_alert_records"] == 0
     assert _stage(manifest, "build_alert_decisions")["artifacts"] == ["analysis/alert_decisions.json"]
-    assert _stage(manifest, "build_event_intelligence_material")["status"] == "not_run"
 
 
 def test_alert_decisions_record_p2_and_p3_archival_attention(tmp_path: Path) -> None:
@@ -424,7 +423,7 @@ def test_alert_decisions_skip_when_event_assessment_is_missing(tmp_path: Path) -
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decisions",
+        until_stage="synthesize_intelligence",
         stage_handlers=_base_handlers({"build_event_intelligence_assessment": _noop_stage}),
     )
 
@@ -446,7 +445,15 @@ def test_alert_decisions_stage_rerun(tmp_path: Path) -> None:
         config,
         config_path=config_path,
         run_dir=initial.run.run_dir,
-        stage="build_alert_decisions",
+        stage="synthesize_intelligence",
+        stage_handlers=_base_handlers(
+            {
+                "build_event_intelligence_assessment": lambda config, run: _write_assessment(
+                    run,
+                    [_assessment_record("p2")],
+                )
+            }
+        ),
     )
 
     manifest = _manifest(result)
@@ -470,7 +477,7 @@ def _run_alert_pipeline(
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_alert_decisions",
+        until_stage="synthesize_intelligence",
         stage_handlers=_base_handlers(overrides),
     )
 
@@ -501,6 +508,19 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_decision_recommendations": _write_decision_recommendations,
         "build_watch_triggers": _write_watch_triggers,
         "build_event_market_confluence": _noop_stage,
+        "build_decision_intelligence_delta": _noop_stage,
+        "build_outcome_targets": _noop_stage,
+        "evaluate_outcomes": _noop_stage,
+        "build_strategy_lifecycle_state": _noop_stage,
+        "build_strategy_lifecycle_material": _noop_stage,
+        "build_feature_snapshots": _noop_stage,
+        "build_factor_states": _noop_stage,
+        "build_multi_source_signals": _noop_stage,
+        "build_intelligence_fusion": _noop_stage,
+        "integrate_intelligence_fusion": _noop_stage,
+        "build_user_state_context": _noop_stage,
+        "build_personalized_risk_constraints": _noop_stage,
+        "integrate_personalized_risk_constraints": _noop_stage,
     }
     handlers.update(overrides)
     return handlers
@@ -936,7 +956,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

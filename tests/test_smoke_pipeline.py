@@ -149,68 +149,26 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "text_event_signals": "analysis/text_event_signals.json",
         "text_material": "analysis/text_material.md",
     }
-    assert [(stage["name"], stage["status"]) for stage in manifest["stages"]] == [
-        ("collect_market_data", "succeeded"),
-        ("collect_derivatives_market_data", "succeeded"),
-        ("sync_derivatives_market_history", "succeeded"),
-        ("build_derivatives_market_views", "succeeded"),
-        ("build_derivatives_market_context", "succeeded"),
-        ("collect_macro_calendar_data", "succeeded"),
-        ("sync_macro_calendar_history", "succeeded"),
-        ("build_macro_calendar_views", "succeeded"),
-        ("build_macro_calendar_context", "succeeded"),
-        ("build_macro_calendar_material", "succeeded"),
-        ("collect_onchain_flow_data", "succeeded"),
-        ("sync_onchain_flow_history", "succeeded"),
-        ("build_onchain_flow_views", "succeeded"),
-        ("build_onchain_flow_context", "succeeded"),
-        ("build_onchain_flow_material", "succeeded"),
-        ("collect_text_events", "succeeded"),
-        ("build_text_event_records", "succeeded"),
-        ("build_text_entity_evidence", "succeeded"),
-        ("build_text_event_classification_evidence", "succeeded"),
-        ("build_text_event_topics", "succeeded"),
-        ("build_text_event_signals", "succeeded"),
-        ("sync_ohlcv", "succeeded"),
-        ("build_market_data_views", "succeeded"),
-        ("build_strategy_benchmark_suite", "succeeded"),
-        ("evaluate_quant_strategies", "succeeded"),
-        ("evaluate_strategy_evaluation", "succeeded"),
-        ("build_strategy_experiment_material", "succeeded"),
-        ("evaluate_market_strategy_signals", "succeeded"),
-        ("build_market_signals", "succeeded"),
-        ("build_market_signal_material", "succeeded"),
-        ("build_market_regime_assessment", "succeeded"),
-        ("build_risk_assessment", "succeeded"),
-        ("build_decision_recommendations", "succeeded"),
-        ("build_watch_triggers", "succeeded"),
-        ("build_event_market_confluence", "succeeded"),
-        ("build_event_intelligence_assessment", "succeeded"),
-        ("build_alert_decisions", "succeeded"),
-        ("build_alert_decision_material", "succeeded"),
-        ("build_event_intelligence_material", "succeeded"),
-        ("build_decision_intelligence_delta", "succeeded"),
-        ("build_decision_intelligence_material", "succeeded"),
-        ("build_data_quality_summary", "succeeded"),
-        ("build_outcome_targets", "succeeded"),
-        ("evaluate_outcomes", "succeeded"),
-        ("build_strategy_lifecycle_state", "succeeded"),
-        ("build_strategy_lifecycle_material", "succeeded"),
-        ("build_feature_snapshots", "succeeded"),
-        ("build_factor_states", "succeeded"),
-        ("build_multi_source_signals", "succeeded"),
-        ("build_intelligence_fusion", "succeeded"),
-        ("integrate_intelligence_fusion", "succeeded"),
-        ("build_user_state_context", "succeeded"),
-        ("build_personalized_risk_constraints", "succeeded"),
-        ("integrate_personalized_risk_constraints", "succeeded"),
-        ("build_personalized_risk_material", "succeeded"),
-        ("build_analysis_materials", "succeeded"),
-        ("build_research_context", "succeeded"),
-        ("build_codex_context", "succeeded"),
-        ("run_codex_report", "succeeded"),
-        ("validate_product_contracts", "succeeded"),
+    assert manifest["stage_order"] == [
+        "refresh_data",
+        "build_source_evidence",
+        "run_strategy_research",
+        "synthesize_intelligence",
+        "build_materials",
+        "generate_report",
+        "finalize_run",
     ]
+    assert [(stage["name"], stage["status"]) for stage in manifest["stages"]] == [
+        (stage_name, "succeeded") for stage_name in manifest["stage_order"]
+    ]
+    task_statuses = [
+        (task["name"], task["status"])
+        for stage in manifest["stages"]
+        for task in stage["tasks"]
+    ]
+    assert task_statuses == [(task_name, "succeeded") for task_name in manifest["task_order"]]
+    assert task_statuses[0] == ("collect_market_data", "succeeded")
+    assert task_statuses[-1] == ("validate_product_contracts", "succeeded")
     assert manifest["stages"][-1]["artifacts"] == ["analysis/product_contract_validation.json"]
     assert manifest["artifacts"]["product_contract_validation"] == "analysis/product_contract_validation.json"
 

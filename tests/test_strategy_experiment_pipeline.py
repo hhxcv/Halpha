@@ -25,7 +25,7 @@ def test_pipeline_writes_strategy_experiment_gate_material(tmp_path: Path) -> No
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_strategy_experiment_material",
+        until_stage="run_strategy_research",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -154,4 +154,10 @@ def _noop_stage(config, run) -> list[str]:
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")

@@ -65,7 +65,7 @@ def test_pipeline_logging_records_stage_lifecycle_without_info_noise(tmp_path: P
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
+        until_stage="refresh_data",
         now=datetime(2026, 6, 20, tzinfo=timezone.utc),
         stage_handlers={"collect_market_data": lambda config, run: []},
     )
@@ -73,11 +73,14 @@ def test_pipeline_logging_records_stage_lifecycle_without_info_noise(tmp_path: P
     assert result.succeeded is True
     events = _log_events(log_path)
     by_event = {event["event"]: event for event in events if "event" in event}
+    stage_starts = [event for event in events if event.get("event") == "pipeline.stage.start"]
+    stage_successes = [event for event in events if event.get("event") == "pipeline.stage.succeeded"]
+    collect_start = next(event for event in stage_starts if event["stage"] == "collect_market_data")
+    collect_success = next(event for event in stage_successes if event["stage"] == "collect_market_data")
     assert by_event["pipeline.run.start"]["run_id"] == result.run.run_id
-    assert by_event["pipeline.stage.start"]["stage"] == "collect_market_data"
-    assert by_event["pipeline.stage.start"]["level"] == "DEBUG"
-    assert by_event["pipeline.stage.succeeded"]["artifact_count"] == 0
-    assert by_event["pipeline.stage.succeeded"]["level"] == "DEBUG"
+    assert collect_start["level"] == "DEBUG"
+    assert collect_success["artifact_count"] == 0
+    assert collect_success["level"] == "DEBUG"
     assert by_event["pipeline.stages.not_run"]["stage_count"] > 0
     assert by_event["pipeline.run.succeeded"]["run_id"] == result.run.run_id
 
@@ -124,7 +127,7 @@ def test_market_collector_logging_records_bounded_summary(tmp_path: Path, monkey
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_market_data",
+        until_stage="refresh_data",
         now=datetime(2026, 6, 20, tzinfo=timezone.utc),
     )
 

@@ -1015,22 +1015,22 @@ Manifest rules:
 
 ## Pipeline Integration
 
-Target product pipeline order:
+Target product pipeline placement:
 
 ```text
-collect_text_events
-build_text_event_records
-build_text_entity_evidence
-build_text_event_classification_evidence
-build_text_event_topics
-build_text_event_signals
-build_event_market_confluence
-build_event_intelligence_assessment
-build_event_intelligence_material
-build_analysis_materials
-build_research_context
-build_codex_context
-run_codex_report
+refresh_data:
+  collect_text_events
+build_source_evidence:
+  build_text_event_records
+  build_text_entity_evidence
+  build_text_event_classification_evidence
+  build_text_event_topics
+  build_text_event_signals
+synthesize_intelligence:
+  build_event_market_confluence
+  build_event_intelligence_assessment
+build_materials:
+  build_event_intelligence_material
 ```
 
 Rules:

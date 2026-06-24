@@ -18,7 +18,7 @@ def test_derivatives_history_and_views_use_bounded_current_windows(tmp_path: Pat
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_derivatives_market_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_derivatives_market_data": _write_funding_raw_stage,
@@ -123,7 +123,7 @@ def test_derivatives_views_record_missing_history_state(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_derivatives_market_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_derivatives_market_data": _noop_stage,
@@ -150,7 +150,7 @@ def test_disabled_derivatives_config_skips_history_and_views(tmp_path: Path) -> 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_derivatives_market_views",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 

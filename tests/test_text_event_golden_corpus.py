@@ -29,7 +29,7 @@ def test_golden_corpus_accepts_traceable_high_confidence_event_outputs(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_signals",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _write_golden_raw,
@@ -68,7 +68,7 @@ def test_golden_corpus_keeps_model_unavailable_classification_unknown(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_signals",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _write_golden_raw,

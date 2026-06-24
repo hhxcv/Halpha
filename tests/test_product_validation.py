@@ -79,6 +79,11 @@ def test_product_contract_validation_catches_failed_stage(tmp_path: Path) -> Non
         "stage": "collect_market_data",
         "message": "source failed",
     }
+    run.manifest["stages"][0]["tasks"][0]["status"] = "failed"
+    run.manifest["stages"][0]["tasks"][0]["error"] = {
+        "stage": "collect_market_data",
+        "message": "source failed",
+    }
 
     build_product_contract_validation({}, run)
 
@@ -113,21 +118,47 @@ def _run(tmp_path: Path, *, codex_status: str) -> RunContext:
         "schema_version": 1,
         "run_id": "run-1",
         "status": "running",
-        "stage_order": ["collect_market_data", "run_codex_report", "validate_product_contracts"],
+        "stage_order": [
+            "refresh_data",
+            "build_source_evidence",
+            "run_strategy_research",
+            "synthesize_intelligence",
+            "build_materials",
+            "generate_report",
+            "finalize_run",
+        ],
         "stages": [
             {
-                "name": "collect_market_data",
+                "name": "refresh_data",
                 "status": "succeeded",
                 "started_at": "2026-06-20T00:00:00Z",
                 "finished_at": "2026-06-20T00:00:01Z",
                 "artifacts": [],
+                "tasks": [
+                    {
+                        "name": "collect_market_data",
+                        "status": "succeeded",
+                        "started_at": "2026-06-20T00:00:00Z",
+                        "finished_at": "2026-06-20T00:00:01Z",
+                        "artifacts": [],
+                    }
+                ],
             },
             {
-                "name": "validate_product_contracts",
+                "name": "finalize_run",
                 "status": "running",
                 "started_at": "2026-06-20T00:00:02Z",
                 "finished_at": None,
                 "artifacts": [],
+                "tasks": [
+                    {
+                        "name": "validate_product_contracts",
+                        "status": "running",
+                        "started_at": "2026-06-20T00:00:02Z",
+                        "finished_at": None,
+                        "artifacts": [],
+                    }
+                ],
             },
         ],
         "artifacts": {},

@@ -6,15 +6,15 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.decision.intelligence_fusion import build_intelligence_fusion
-from halpha.pipeline import STAGE_ORDER, RunContext, run_pipeline
+from halpha.pipeline import RunContext, run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
 
 
 def test_intelligence_fusion_pipeline_writes_records_and_manifest(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    index = STAGE_ORDER.index("build_intelligence_fusion")
-    handlers = {name: _noop_stage for name in STAGE_ORDER[:index]}
+    handlers = {name: _noop_stage for name in OPERATION_ORDER if name != "build_intelligence_fusion"}
     handlers.update(
         {
             "build_market_signals": _write_supportive_inputs,
@@ -28,7 +28,7 @@ def test_intelligence_fusion_pipeline_writes_records_and_manifest(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_intelligence_fusion",
+        until_stage="synthesize_intelligence",
         stage_handlers=handlers,
     )
 
@@ -46,10 +46,10 @@ def test_intelligence_fusion_pipeline_writes_records_and_manifest(tmp_path: Path
     assert manifest["artifacts"]["intelligence_fusion"] == "analysis/intelligence_fusion.json"
     assert manifest["counts"]["intelligence_fusion_records"] == len(artifact["records"])
     assert manifest["intelligence_fusion"]["state_counts"]["supportive"] == 1
-    assert _stage(manifest, "build_intelligence_fusion")["artifacts"] == [
+    assert _task(manifest, "build_intelligence_fusion")["artifacts"] == [
         "analysis/intelligence_fusion.json"
     ]
-    assert _stage(manifest, "build_analysis_materials")["status"] == "not_run"
+    assert _task(manifest, "build_analysis_materials")["status"] == "not_run"
 
 
 def test_intelligence_fusion_detects_conflicting_evidence(tmp_path: Path) -> None:
@@ -577,8 +577,9 @@ def _record(
     raise AssertionError("fusion record not found")
 
 
-def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
+def _task(manifest: dict[str, Any], name: str) -> dict[str, Any]:
     for stage in manifest["stages"]:
-        if stage["name"] == name:
-            return stage
-    raise AssertionError(f"stage {name} not found")
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"task {name} not found")

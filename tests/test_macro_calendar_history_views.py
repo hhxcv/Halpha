@@ -26,7 +26,7 @@ def test_macro_calendar_history_and_views_use_bounded_current_windows(tmp_path: 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_macro_calendar_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_macro_calendar_data": _write_current_macro_raw_stage,
@@ -137,7 +137,7 @@ def test_macro_calendar_views_record_stale_current_window(tmp_path: Path) -> Non
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_macro_calendar_views",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_macro_calendar_data": _write_stale_macro_raw_stage,

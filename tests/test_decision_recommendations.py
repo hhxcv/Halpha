@@ -8,6 +8,7 @@ import pytest
 
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
+from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
 
 
@@ -36,8 +37,8 @@ def test_decision_recommendations_apply_taxonomy_and_policy_gates(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_recommendations",
-        stage_handlers={
+        until_stage="synthesize_intelligence",
+        stage_handlers=_decision_handlers({
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
@@ -49,7 +50,7 @@ def test_decision_recommendations_apply_taxonomy_and_policy_gates(tmp_path: Path
             "build_market_signal_material": _noop_stage,
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
-        },
+        }),
     )
 
     assert result.succeeded is True
@@ -274,8 +275,8 @@ def test_decision_recommendations_do_not_fabricate_actions_when_upstream_is_empt
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_recommendations",
-        stage_handlers={
+        until_stage="synthesize_intelligence",
+        stage_handlers=_decision_handlers({
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
@@ -287,7 +288,7 @@ def test_decision_recommendations_do_not_fabricate_actions_when_upstream_is_empt
             "build_market_signal_material": _noop_stage,
             "build_market_regime_assessment": _write_empty_market_regime_assessment,
             "build_risk_assessment": _write_empty_risk_assessment,
-        },
+        }),
     )
 
     assert result.succeeded is True
@@ -312,7 +313,7 @@ def test_decision_recommendations_skip_when_quant_is_not_enabled(tmp_path: Path)
     result = run_pipeline(
         config,
         config_path=config_path,
-        stage_handlers={
+        stage_handlers=_decision_handlers({
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
@@ -326,7 +327,7 @@ def test_decision_recommendations_skip_when_quant_is_not_enabled(tmp_path: Path)
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
             "run_codex_report": _noop_stage,
-        },
+        }),
     )
 
     manifest = _manifest(result)
@@ -397,8 +398,8 @@ def _run_decision_with_derivatives(config: dict[str, Any], config_path: Path, de
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_recommendations",
-        stage_handlers={
+        until_stage="synthesize_intelligence",
+        stage_handlers=_decision_handlers({
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
@@ -411,7 +412,7 @@ def _run_decision_with_derivatives(config: dict[str, Any], config_path: Path, de
             "build_market_signal_material": _noop_stage,
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
-        },
+        }),
     )
 
 
@@ -419,8 +420,8 @@ def _run_decision_with_macro_calendar(config: dict[str, Any], config_path: Path,
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_recommendations",
-        stage_handlers={
+        until_stage="synthesize_intelligence",
+        stage_handlers=_decision_handlers({
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
@@ -433,7 +434,7 @@ def _run_decision_with_macro_calendar(config: dict[str, Any], config_path: Path,
             "build_market_signal_material": _noop_stage,
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
-        },
+        }),
     )
 
 
@@ -441,8 +442,8 @@ def _run_decision_with_onchain_flow(config: dict[str, Any], config_path: Path, o
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_decision_recommendations",
-        stage_handlers={
+        until_stage="synthesize_intelligence",
+        stage_handlers=_decision_handlers({
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "collect_onchain_flow_data": _noop_stage,
@@ -458,8 +459,18 @@ def _run_decision_with_onchain_flow(config: dict[str, Any], config_path: Path, o
             "build_market_signal_material": _noop_stage,
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
-        },
+        }),
     )
+
+
+def _decision_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
+    handlers = {
+        operation: _noop_stage
+        for operation in OPERATION_ORDER
+        if operation != "build_decision_recommendations"
+    }
+    handlers.update(overrides)
+    return handlers
 
 
 def _write_market_signals(config, run) -> list[str]:
@@ -1001,7 +1012,12 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 def _noop_stage(config, run) -> list[str]:

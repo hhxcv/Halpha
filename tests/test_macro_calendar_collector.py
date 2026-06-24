@@ -28,7 +28,7 @@ def test_pipeline_collects_macro_calendar_raw_artifact(tmp_path: Path, monkeypat
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -68,8 +68,7 @@ def test_pipeline_collects_macro_calendar_raw_artifact(tmp_path: Path, monkeypat
     assert manifest["counts"]["macro_calendar_items"] == 2
     assert manifest["counts"]["macro_calendar_errors"] == 0
     assert manifest["macro_calendar"]["status"] == "succeeded"
-    assert manifest["stages"][5]["name"] == "collect_macro_calendar_data"
-    assert manifest["stages"][5]["artifacts"] == ["raw/macro_calendar.json"]
+    assert _task(manifest, "collect_macro_calendar_data")["artifacts"] == ["raw/macro_calendar.json"]
 
 
 def test_disabled_macro_calendar_config_does_not_write_fake_raw_artifact(tmp_path: Path, monkeypatch) -> None:
@@ -86,7 +85,7 @@ def test_disabled_macro_calendar_config_does_not_write_fake_raw_artifact(tmp_pat
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -107,7 +106,7 @@ def test_unconfigured_macro_calendar_records_skipped_state(tmp_path: Path) -> No
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -130,7 +129,7 @@ def test_macro_calendar_records_failed_source_without_fake_items(tmp_path: Path,
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -171,7 +170,7 @@ def test_macro_calendar_records_partial_parse_without_dropping_valid_items(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -195,7 +194,7 @@ def test_macro_calendar_records_no_event_window(tmp_path: Path, monkeypatch) -> 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -229,7 +228,7 @@ def test_macro_calendar_records_stale_calendar(tmp_path: Path, monkeypatch) -> N
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="collect_macro_calendar_data",
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _noop_stage},
     )
 
@@ -356,6 +355,15 @@ def _fomc_html() -> bytes:
 
 def _noop_stage(config, run) -> list[str]:
     return []
+
+
+def _task(manifest: dict, name: str) -> dict:
+    return next(
+        task
+        for stage in manifest["stages"]
+        for task in stage.get("tasks", [])
+        if task["name"] == name
+    )
 
 
 class _FakeResponse:

@@ -47,7 +47,7 @@ def test_config_example_loads_successfully() -> None:
         "max_cycles": 1,
         "cooldown_seconds": 3600,
         "output_dir": "runs/monitor",
-        "target_stage": "build_personalized_risk_material",
+        "target_stage": "build_materials",
         "no_codex": True,
     }
     assert config["quant"]["enabled"] is True

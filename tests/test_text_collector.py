@@ -44,11 +44,11 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _collect_market_data},
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "build_analysis_materials"
+    assert result.succeeded is True
     assert requested_urls == ["https://www.coindesk.com/arc/outboundfeeds/rss/"]
 
     raw = json.loads((result.run.raw_dir / "text_events.json").read_text(encoding="utf-8"))
@@ -86,37 +86,15 @@ def test_pipeline_collects_rss_text_events_and_writes_raw_artifact(tmp_path: Pat
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_text_events"] == "raw/text_events.json"
     assert manifest["counts"]["text_event_items"] == 1
-    assert manifest["stages"][1]["name"] == "collect_derivatives_market_data"
-    assert manifest["stages"][1]["artifacts"] == []
-    assert manifest["stages"][2]["name"] == "sync_derivatives_market_history"
-    assert manifest["stages"][2]["artifacts"] == []
-    assert manifest["stages"][3]["name"] == "build_derivatives_market_views"
-    assert manifest["stages"][3]["artifacts"] == []
-    assert manifest["stages"][4]["name"] == "build_derivatives_market_context"
-    assert manifest["stages"][4]["artifacts"] == []
-    assert manifest["stages"][5]["name"] == "collect_macro_calendar_data"
-    assert manifest["stages"][5]["artifacts"] == []
-    assert manifest["stages"][6]["name"] == "sync_macro_calendar_history"
-    assert manifest["stages"][6]["artifacts"] == []
-    assert manifest["stages"][7]["name"] == "build_macro_calendar_views"
-    assert manifest["stages"][7]["artifacts"] == []
-    assert manifest["stages"][8]["name"] == "build_macro_calendar_context"
-    assert manifest["stages"][8]["artifacts"] == []
-    assert manifest["stages"][9]["name"] == "build_macro_calendar_material"
-    assert manifest["stages"][9]["artifacts"] == []
-    assert manifest["stages"][10]["name"] == "collect_onchain_flow_data"
-    assert manifest["stages"][10]["artifacts"] == []
-    assert manifest["stages"][11]["name"] == "sync_onchain_flow_history"
-    assert manifest["stages"][11]["artifacts"] == []
-    assert manifest["stages"][12]["name"] == "build_onchain_flow_views"
-    assert manifest["stages"][12]["artifacts"] == []
-    assert manifest["stages"][13]["name"] == "build_onchain_flow_context"
-    assert manifest["stages"][13]["artifacts"] == []
-    assert manifest["stages"][14]["name"] == "build_onchain_flow_material"
-    assert manifest["stages"][14]["artifacts"] == []
-    assert manifest["stages"][15]["name"] == "collect_text_events"
-    assert manifest["stages"][15]["status"] == "succeeded"
-    assert manifest["stages"][15]["artifacts"] == ["raw/text_events.json"]
+    assert _stage(manifest, "refresh_data")["status"] == "succeeded"
+    assert _task(manifest, "collect_derivatives_market_data")["artifacts"] == []
+    assert _task(manifest, "sync_derivatives_market_history")["artifacts"] == []
+    assert _task(manifest, "collect_macro_calendar_data")["artifacts"] == []
+    assert _task(manifest, "sync_macro_calendar_history")["artifacts"] == []
+    assert _task(manifest, "collect_onchain_flow_data")["artifacts"] == []
+    assert _task(manifest, "sync_onchain_flow_history")["artifacts"] == []
+    assert _task(manifest, "collect_text_events")["status"] == "succeeded"
+    assert _task(manifest, "collect_text_events")["artifacts"] == ["raw/text_events.json"]
 
 
 def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
@@ -147,11 +125,11 @@ def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _collect_market_data},
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "build_analysis_materials"
+    assert result.succeeded is True
 
     raw = json.loads((result.run.raw_dir / "text_events.json").read_text(encoding="utf-8"))
     assert raw["errors"] == []
@@ -159,7 +137,7 @@ def test_pipeline_collects_rss_item_without_published_at_as_source_gap(
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["counts"]["text_event_items"] == 1
-    assert manifest["stages"][4]["status"] == "succeeded"
+    assert _task(manifest, "collect_text_events")["status"] == "succeeded"
 
 
 def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_records(
@@ -176,6 +154,7 @@ def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_rec
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _collect_market_data},
     )
 
@@ -202,10 +181,10 @@ def test_text_collection_all_feed_failure_writes_error_artifact_without_fake_rec
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["artifacts"]["raw_text_events"] == "raw/text_events.json"
     assert manifest["counts"]["text_event_items"] == 0
-    assert manifest["stages"][15]["name"] == "collect_text_events"
-    assert manifest["stages"][15]["status"] == "failed"
-    assert manifest["stages"][15]["artifacts"] == ["raw/text_events.json"]
-    assert manifest["stages"][15]["error"] == manifest["errors"][0]
+    assert _stage(manifest, "refresh_data")["status"] == "failed"
+    assert _task(manifest, "collect_text_events")["status"] == "failed"
+    assert _task(manifest, "collect_text_events")["artifacts"] == ["raw/text_events.json"]
+    assert _task(manifest, "collect_text_events")["error"] == manifest["errors"][0]
     assert "coindesk: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert "cointelegraph: RSS request failed: network unreachable" in manifest["errors"][0]["message"]
     assert not (result.run.analysis_dir / "text_material.md").exists()
@@ -249,11 +228,11 @@ def test_text_collection_uses_configured_market_proxy(tmp_path: Path, monkeypatc
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="refresh_data",
         stage_handlers={"collect_market_data": _collect_market_data},
     )
 
-    assert result.succeeded is False
-    assert result.failed_stage == "build_analysis_materials"
+    assert result.succeeded is True
     assert requested_urls == ["https://www.coindesk.com/arc/outboundfeeds/rss/"]
     assert proxy_handlers == [{"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}]
 
@@ -313,6 +292,18 @@ codex:
 
 def _collect_market_data(config, run) -> list[str]:
     return []
+
+
+def _stage(manifest: dict, name: str) -> dict:
+    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+
+
+def _task(manifest: dict, name: str) -> dict:
+    for stage in manifest["stages"]:
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"task {name} not found")
 
 
 class _FakeResponse:

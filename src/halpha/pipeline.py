@@ -19,11 +19,14 @@ from halpha.runtime.pipeline_contracts import (
 from halpha.pipeline_stage_handlers import default_stage_handlers
 from halpha.pipeline_stages import (
     DECISION_INTELLIGENCE_STAGES,
+    OPERATION_ORDER,
     STAGE_OPERATION_MAP,
     STAGE_ORDER,
+    TASK_STAGE_MAP,
     downstream_closure as _downstream_closure,
     stages_after as _stages_after,
     stages_before as _stages_before,
+    tasks_for_stage as _tasks_for_stage,
     validate_optional_stage as _validate_optional_stage,
     validate_stage as _validate_stage,
     validate_stage_graph as _validate_stage_graph,
@@ -69,31 +72,23 @@ def run_pipeline(
             "started_at": _utc_timestamp(clock()),
             "finished_at": None,
             "artifacts": [],
+            "tasks": [],
         }
         run.manifest["stages"].append(stage_record)
-        _set_codex_status(run, stage=stage, status="running")
         _write_manifest(run)
 
-        if skip_codex and stage == "run_codex_report":
-            _skip_stage(
-                run,
-                stage_record,
-                stage=stage,
-                reason="--no-codex requested",
-                finished_at=_utc_timestamp(clock()),
-            )
-        else:
-            failure = _run_stage_handler(
-                config,
-                run,
-                handlers[stage],
-                stage=stage,
-                stage_record=stage_record,
-                clock=clock,
-            )
-            if failure:
-                return failure
-
+        failure = _run_stage_tasks(
+            config,
+            run,
+            stage,
+            stage_record,
+            handlers=handlers,
+            clock=clock,
+            mode=None,
+            skip_codex=skip_codex,
+        )
+        if failure:
+            return failure
         _write_manifest(run)
         if stage == until_stage:
             _record_not_run_stages(
@@ -235,8 +230,8 @@ def _resume_pipeline_stage(
     run.manifest["finished_at"] = None
     run.manifest["stage_rerun"] = {
         "mode": "resume_in_place",
-        "requested_operation_id": stage,
-        "terminal_operation_id": terminal_stage,
+        "requested_stage": stage,
+        "terminal_stage": terminal_stage,
         "downstream_closure": list(closure),
         "requested_at": _utc_timestamp(clock()),
     }
@@ -301,6 +296,7 @@ def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datet
         "artifacts": {},
         "counts": {},
         "stage_order": list(STAGE_ORDER),
+        "task_order": list(OPERATION_ORDER),
         "stages": [],
         "codex": _codex_summary(config),
         "errors": [],
@@ -355,6 +351,7 @@ def _load_run_context(config: dict[str, Any], *, config_path: Path, run_dir: Pat
     manifest.setdefault("artifacts", {})
     manifest.setdefault("counts", {})
     manifest.setdefault("stage_order", list(STAGE_ORDER))
+    manifest.setdefault("task_order", list(OPERATION_ORDER))
     manifest.setdefault("stages", [])
     manifest.setdefault("codex", _codex_summary(config))
     manifest.setdefault("errors", [])
@@ -389,17 +386,62 @@ def _run_stage_sequence(
             "started_at": _utc_timestamp(clock()),
             "finished_at": None,
             "artifacts": [],
-            "mode": mode,
+            "tasks": [],
         }
+        if mode:
+            stage_record["mode"] = mode
         run.manifest["stages"].append(stage_record)
-        _set_codex_status(run, stage=stage, status="running")
+        _write_manifest(run)
+        failure = _run_stage_tasks(
+            config,
+            run,
+            stage,
+            stage_record,
+            handlers=handlers,
+            clock=clock,
+            mode=mode,
+            skip_codex=skip_codex,
+        )
+        if failure:
+            return failure
+        _write_manifest(run)
+    return None
+
+
+def _run_stage_tasks(
+    config: dict[str, Any],
+    run: RunContext,
+    stage: str,
+    stage_record: dict[str, Any],
+    *,
+    handlers: dict[str, StageHandler],
+    clock: Callable[[], datetime],
+    mode: str | None,
+    skip_codex: bool,
+) -> RunResult | None:
+    for task in _tasks_for_stage(stage):
+        task_record: dict[str, Any] = {
+            "name": task,
+            "status": "running",
+            "started_at": _utc_timestamp(clock()),
+            "finished_at": None,
+            "artifacts": [],
+            "warnings": [],
+            "errors": [],
+            "dependencies": _task_dependencies(task),
+        }
+        if mode:
+            task_record["mode"] = mode
+        stage_record.setdefault("tasks", []).append(task_record)
+        _set_codex_status(run, stage=task, status="running")
+        _refresh_stage_record(stage_record)
         _write_manifest(run)
 
-        if skip_codex and stage == "run_codex_report":
+        if skip_codex and task == "run_codex_report":
             _skip_stage(
                 run,
-                stage_record,
-                stage=stage,
+                task_record,
+                stage=task,
                 reason="--no-codex requested",
                 finished_at=_utc_timestamp(clock()),
             )
@@ -407,15 +449,54 @@ def _run_stage_sequence(
             failure = _run_stage_handler(
                 config,
                 run,
-                handlers[stage],
-                stage=stage,
-                stage_record=stage_record,
+                handlers[task],
+                stage=task,
+                stage_record=task_record,
                 clock=clock,
+                parent_stage_record=stage_record,
             )
             if failure:
                 return failure
+        _refresh_stage_record(stage_record)
         _write_manifest(run)
+    _finish_stage_record(stage_record, finished_at=_utc_timestamp(clock()))
     return None
+
+
+def _refresh_stage_record(stage_record: dict[str, Any]) -> None:
+    tasks = [task for task in stage_record.get("tasks", []) if isinstance(task, dict)]
+    stage_record["artifacts"] = _unique_artifact_refs(task.get("artifacts") for task in tasks)
+    if not tasks:
+        return
+    statuses = [str(task.get("status") or "unknown") for task in tasks]
+    if any(status == "failed" for status in statuses):
+        stage_record["status"] = "failed"
+    elif any(status == "running" for status in statuses):
+        stage_record["status"] = "running"
+    elif any(status == "succeeded" for status in statuses):
+        stage_record["status"] = "succeeded"
+    elif all(status == "not_run" for status in statuses):
+        stage_record["status"] = "not_run"
+    elif all(status in {"skipped", "disabled"} for status in statuses):
+        stage_record["status"] = "skipped"
+    else:
+        stage_record["status"] = "succeeded"
+
+
+def _finish_stage_record(stage_record: dict[str, Any], *, finished_at: str) -> None:
+    _refresh_stage_record(stage_record)
+    stage_record["finished_at"] = finished_at
+
+
+def _unique_artifact_refs(values: Any) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for ref in _artifact_ref_strings(value):
+            if ref not in seen:
+                refs.append(ref)
+                seen.add(ref)
+    return refs
 
 
 def _prepare_derived_manifest(
@@ -442,10 +523,10 @@ def _prepare_derived_manifest(
     run.manifest["stage_rerun"] = {
         "mode": "derived_run",
         "parent_run_id": parent.run_id,
-        "requested_operation_id": stage,
-        "terminal_operation_id": terminal_stage,
+        "requested_stage": stage,
+        "terminal_stage": terminal_stage,
         "downstream_closure": list(closure),
-        "reused_operation_ids": [str(record.get("name")) for record in reusable_records],
+        "reused_stages": [str(record.get("name")) for record in reusable_records],
         "reused_artifacts": list(reusable_refs),
         "requested_at": requested_at,
     }
@@ -454,7 +535,7 @@ def _prepare_derived_manifest(
         "until_stage": None if terminal_stage == STAGE_ORDER[-1] else terminal_stage,
         "skip_codex": skip_codex,
     }
-    if any(record.get("name") == "run_codex_report" for record in reusable_records) and isinstance(
+    if any(_stage_record_has_task(record, "run_codex_report") for record in reusable_records) and isinstance(
         parent.manifest.get("codex"), dict
     ):
         run.manifest["codex"] = deepcopy(parent.manifest["codex"])
@@ -635,7 +716,18 @@ def _reused_stage_record(parent_run_id: str, record: dict[str, Any]) -> dict[str
     reused = deepcopy(record)
     reused["mode"] = "reused"
     reused["source_run_id"] = parent_run_id
+    for task in reused.get("tasks", []):
+        if isinstance(task, dict):
+            task["mode"] = "reused"
+            task["source_run_id"] = parent_run_id
     return reused
+
+
+def _stage_record_has_task(record: dict[str, Any], task_name: str) -> bool:
+    tasks = record.get("tasks")
+    if not isinstance(tasks, list):
+        return False
+    return any(isinstance(task, dict) and task.get("name") == task_name for task in tasks)
 
 
 def _inherits_no_codex(run: RunContext) -> bool:
@@ -724,13 +816,14 @@ def _operation_output_refs(stages: list[str]) -> list[str]:
     refs: list[str] = []
     seen: set[str] = set()
     for stage in stages:
-        operation = STAGE_OPERATION_MAP.get(stage)
-        if operation is None:
-            continue
-        for ref in operation.outputs:
-            if ref not in seen:
-                refs.append(ref)
-                seen.add(ref)
+        for task in _tasks_for_stage(stage):
+            operation = STAGE_OPERATION_MAP.get(task)
+            if operation is None:
+                continue
+            for ref in operation.outputs:
+                if ref not in seen:
+                    refs.append(ref)
+                    seen.add(ref)
     return refs
 
 
@@ -768,8 +861,10 @@ def _drop_stage_errors(run: RunContext, *, start_index: int) -> None:
         if not isinstance(error, dict):
             continue
         stage = error.get("stage")
-        if isinstance(stage, str) and stage in STAGE_ORDER and STAGE_ORDER.index(stage) >= start_index:
-            continue
+        if isinstance(stage, str):
+            product_stage = stage if stage in STAGE_ORDER else TASK_STAGE_MAP.get(stage)
+            if product_stage is not None and STAGE_ORDER.index(product_stage) >= start_index:
+                continue
         kept.append(error)
     run.manifest["errors"] = kept
 
@@ -782,6 +877,7 @@ def _run_stage_handler(
     stage: str,
     stage_record: dict[str, Any],
     clock: Callable[[], datetime],
+    parent_stage_record: dict[str, Any] | None = None,
 ) -> RunResult | None:
     LOGGER.debug(
         "Pipeline stage started.",
@@ -807,6 +903,13 @@ def _run_stage_handler(
         stage_record["finished_at"] = finished_at
         stage_record["artifacts"] = exc.artifacts
         stage_record["error"] = error
+        stage_record["errors"] = [error]
+        if parent_stage_record is not None:
+            parent_stage_record["status"] = "failed"
+            parent_stage_record["finished_at"] = finished_at
+            parent_stage_record["error"] = error
+            parent_stage_record["errors"] = [error]
+            _refresh_stage_record(parent_stage_record)
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
         _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
@@ -829,6 +932,13 @@ def _run_stage_handler(
         stage_record["status"] = "failed"
         stage_record["finished_at"] = finished_at
         stage_record["error"] = error
+        stage_record["errors"] = [error]
+        if parent_stage_record is not None:
+            parent_stage_record["status"] = "failed"
+            parent_stage_record["finished_at"] = finished_at
+            parent_stage_record["error"] = error
+            parent_stage_record["errors"] = [error]
+            _refresh_stage_record(parent_stage_record)
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
         _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
@@ -883,6 +993,13 @@ def _skip_stage(
     )
 
 
+def _task_dependencies(task: str) -> list[str]:
+    operation = STAGE_OPERATION_MAP.get(task)
+    if operation is None:
+        return []
+    return list(operation.dependencies)
+
+
 def _record_stage_failure_context(
     config: dict[str, Any],
     run: RunContext,
@@ -908,9 +1025,23 @@ def _record_not_run_stages(run: RunContext, stages: list[str], *, reason: str) -
             "finished_at": None,
             "artifacts": [],
             "reason": reason,
+            "tasks": [
+                {
+                    "name": task,
+                    "status": "not_run",
+                    "started_at": None,
+                    "finished_at": None,
+                    "artifacts": [],
+                    "warnings": [],
+                    "errors": [],
+                    "dependencies": _task_dependencies(task),
+                    "reason": reason,
+                }
+                for task in _tasks_for_stage(stage)
+            ],
         }
         run.manifest["stages"].append(record)
-        if stage == "run_codex_report":
+        if "run_codex_report" in _tasks_for_stage(stage):
             run.manifest["codex"]["status"] = "not_run"
             run.manifest["codex"]["exit_code"] = None
             run.manifest["codex"]["skip_reason"] = reason

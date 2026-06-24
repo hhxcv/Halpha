@@ -127,7 +127,7 @@ def _run_until_context(config: dict[str, Any], config_path: Path, collect_stage)
     return run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_onchain_flow_context",
+        until_stage="build_source_evidence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_onchain_flow_data": collect_stage,

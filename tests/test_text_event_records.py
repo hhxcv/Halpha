@@ -15,7 +15,7 @@ def test_pipeline_generates_normalized_text_event_records(tmp_path: Path) -> Non
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_records",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_complete_text_raw},
     )
 
@@ -83,7 +83,7 @@ def test_text_event_records_preserve_missing_optional_fields_as_warnings(tmp_pat
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_records",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_minimum_text_raw},
     )
 
@@ -117,7 +117,7 @@ def test_text_event_records_skip_when_text_disabled(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, text_enabled=False)
     config = load_config(config_path)
 
-    result = run_pipeline(config, config_path=config_path, until_stage="build_text_event_records")
+    result = run_pipeline(config, config_path=config_path, until_stage="build_source_evidence")
 
     assert result.succeeded is True
     assert not (result.run.analysis_dir / "text_event_records.json").exists()
@@ -136,7 +136,7 @@ def test_text_event_records_fail_when_raw_text_events_are_missing(tmp_path: Path
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_records",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _skip_text_collection},
     )
 
@@ -153,7 +153,7 @@ def test_text_event_records_reject_invalid_raw_text_artifact(tmp_path: Path) -> 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_text_event_records",
+        until_stage="build_source_evidence",
         stage_handlers={"collect_text_events": _write_invalid_text_raw},
     )
 
@@ -228,7 +228,13 @@ def _write_invalid_text_raw(config, run) -> list[str]:
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
 
 
 def _text_raw(

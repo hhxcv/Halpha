@@ -194,11 +194,12 @@ def test_research_context_compresses_over_budget_material_for_codex_input(
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_research_context",
+        until_stage="generate_report",
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _noop_stage,
             "build_analysis_materials": _write_large_market_material,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
@@ -313,7 +314,7 @@ def test_research_context_embeds_onchain_flow_material_when_enabled(tmp_path: Pa
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="build_research_context",
+        until_stage="generate_report",
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _noop_stage,
@@ -321,6 +322,7 @@ def test_research_context_embeds_onchain_flow_material_when_enabled(tmp_path: Pa
             "sync_onchain_flow_history": _noop_stage,
             "build_onchain_flow_views": _noop_stage,
             "build_onchain_flow_context": _write_onchain_flow_context,
+            "run_codex_report": _skip_codex_report,
         },
     )
 
@@ -830,4 +832,10 @@ def _skip_codex_report(config, run) -> list[str]:
 
 
 def _stage(manifest: dict, name: str) -> dict:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")

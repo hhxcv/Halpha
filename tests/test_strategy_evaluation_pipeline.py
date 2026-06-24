@@ -98,11 +98,11 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert "overfitting_risk:" in material
     assert "codex_may_generate_metrics: false" in material
     assert "best_parameter_selection_allowed: false" in material
-    stage_names = [item["name"] for item in manifest["stages"]]
-    assert stage_names.index("evaluate_quant_strategies") < stage_names.index(
+    task_names = [item["name"] for item in _stage(manifest, "run_strategy_research")["tasks"]]
+    assert task_names.index("evaluate_quant_strategies") < task_names.index(
         "evaluate_strategy_evaluation"
     )
-    assert stage_names.index("evaluate_strategy_evaluation") < stage_names.index(
+    assert task_names.index("evaluate_strategy_evaluation") < task_names.index(
         "evaluate_market_strategy_signals"
     )
 
@@ -269,7 +269,7 @@ def test_pipeline_skips_strategy_evaluation_when_quant_disabled(tmp_path: Path) 
     result = run_pipeline(
         config,
         config_path=config_path,
-        until_stage="evaluate_strategy_evaluation",
+        until_stage="run_strategy_research",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -403,7 +403,13 @@ def _manifest(result) -> dict[str, Any]:
 
 
 def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
-    return next(stage for stage in manifest["stages"] if stage["name"] == name)
+    for stage in manifest["stages"]:
+        if stage["name"] == name:
+            return stage
+        for task in stage.get("tasks", []):
+            if task["name"] == name:
+                return task
+    raise AssertionError(f"stage or task {name} not found")
 
 
 def _noop_stage(config, run) -> list[str]:

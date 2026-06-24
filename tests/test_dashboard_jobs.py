@@ -390,7 +390,7 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
         ),
         (
             "run_until",
-            {"stage_name": "build_research_context"},
+            {"stage_name": "build_materials"},
             [
                 "python",
                 "-m",
@@ -399,12 +399,12 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
                 "--config",
                 "<external-config>",
                 "--until",
-                "build_research_context",
+                "build_materials",
             ],
         ),
         (
             "run_until",
-            {"stage_name": "run_codex_report", "confirm_codex": True},
+            {"stage_name": "generate_report", "confirm_codex": True},
             [
                 "python",
                 "-m",
@@ -413,18 +413,18 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
                 "--config",
                 "<external-config>",
                 "--until",
-                "run_codex_report",
+                "generate_report",
             ],
         ),
         (
             "stage_rerun",
-            {"stage_name": "build_market_data_views", "run_dir": "runs/run-1"},
+            {"stage_name": "build_source_evidence", "run_dir": "runs/run-1"},
             [
                 "python",
                 "-m",
                 "halpha",
                 "stage",
-                "build_market_data_views",
+                "build_source_evidence",
                 "--config",
                 "<external-config>",
                 "--run-dir",
@@ -647,7 +647,7 @@ def test_dashboard_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process
     job = manager.create_job(
         {
             "intent": "stage_rerun",
-            "params": {"stage_name": "build_market_data_views", "run_dir": "../outside"},
+            "params": {"stage_name": "build_source_evidence", "run_dir": "../outside"},
         }
     )
 
@@ -796,8 +796,8 @@ def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_pa
     manager = DashboardJobManager(config, config_path=config_path)
     cases = [
         {"intent": "run", "params": {}},
-        {"intent": "run_until", "params": {"stage_name": "run_codex_report"}},
-        {"intent": "stage_rerun", "params": {"stage_name": "run_codex_report", "run_dir": "runs/run-1"}},
+        {"intent": "run_until", "params": {"stage_name": "generate_report"}},
+        {"intent": "stage_rerun", "params": {"stage_name": "generate_report", "run_dir": "runs/run-1"}},
     ]
 
     for request in cases:
