@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import suppress
 from datetime import datetime, timezone
 import logging
-import os
 from pathlib import Path
 import re
 import subprocess
@@ -11,27 +10,31 @@ import threading
 from typing import Any
 from uuid import uuid4
 
-from halpha.dashboard.common import dashboard_read_json
 from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.dashboard.job_commands import CommandSpec
 from halpha.dashboard.job_commands import DashboardJobCommandBuilder
 from halpha.dashboard.job_commands import DashboardJobError
 from halpha.dashboard.job_commands import dashboard_config_ref
-from halpha.dashboard.paths import dashboard_control_path, dashboard_control_ref
-from halpha.dashboard.time import parse_utc_timestamp, utc_now_timestamp
+from halpha.dashboard.job_store import (
+    DASHBOARD_JOB_LOG_ROOT_REF,
+    DASHBOARD_JOB_STORE_ARTIFACT,
+    DashboardJobRepository,
+    DashboardJobStoreError,
+    JOB_TERMINAL_STATUSES,
+)
+from halpha.dashboard.time import utc_now_timestamp
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
-from halpha.storage import artifact_base as _artifact_base, write_json
+from halpha.storage import artifact_base as _artifact_base
 
 
-DASHBOARD_JOB_INDEX = dashboard_control_ref("jobs", "index.json")
+DASHBOARD_JOB_INDEX = DASHBOARD_JOB_STORE_ARTIFACT
 MAX_JOB_LOG_CHARS = 20_000
-STALE_RUNNING_JOB_GRACE_SECONDS = 30
 EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REDACTED_ARTIFACT_REF = "<redacted-artifact>"
 RESULT_REF_PLACEHOLDERS = {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}
-JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
-JOB_PROCESS_STATUSES = {"running"}
+JOB_PROCESS_STATUSES = {"running", "cancel_requested"}
+JOB_REQUESTED_BY_VALUES = {"CLI", "Dashboard", "Monitor", "Schedule"}
 DASHBOARD_JOB_ID_RE = re.compile(r"^\d{8}T\d{6}Z_[0-9a-f]{8}$")
 RESULT_ARTIFACT_KEYS = {
     "event_intelligence_material",
@@ -74,20 +77,23 @@ class DashboardJobManager:
         self.resolved_config_path = self.config_path.resolve()
         self.base = _artifact_base(self.config_path)
         self.control_base = Path.cwd()
-        self.jobs_root = dashboard_control_path("jobs")
+        self.jobs_root = Path.cwd() / DASHBOARD_JOB_LOG_ROOT_REF
         with suppress(OSError):
             configure_local_logging(config_path=self.config_path, config=config)
         self._command_builder = DashboardJobCommandBuilder(config, config_path=self.config_path, base=self.base)
+        self._repository = DashboardJobRepository(config_path=self.config_path)
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
         self._processes: dict[str, subprocess.Popen[str]] = {}
         self._cancel_requested: set[str] = set()
+        self._reconcile_unattached_jobs()
 
     def create_job(self, request: dict[str, Any]) -> dict[str, Any]:
         now = _utc_now()
         intent = str(request.get("intent") or "").strip()
         params = request.get("params") if isinstance(request.get("params"), dict) else {}
-        job = self._new_job(intent=intent, params=params, now=now)
+        requested_by = _requested_by(request.get("requested_by"))
+        job = self._new_job(intent=intent, params=params, requested_by=requested_by, now=now)
         try:
             job_command = self._command_builder.build(intent, params)
         except DashboardJobError as exc:
@@ -99,8 +105,7 @@ class DashboardJobManager:
                     "errors": [str(exc)],
                 }
             )
-            self._write_job(job)
-            self._write_index()
+            job = self._save_job(job, event_type=exc.status)
             if exc.status == "unsupported":
                 self._logger.warning(
                     "Dashboard job was rejected.",
@@ -131,8 +136,7 @@ class DashboardJobManager:
         job["kind"] = spec.kind
         job["command"] = command_preview
         job["cancellable"] = spec.cancellable
-        self._write_job(job)
-        self._write_index()
+        job = self._save_job(job, event_type="queued")
         self._logger.info(
             "Dashboard job queued.",
             extra={
@@ -154,7 +158,7 @@ class DashboardJobManager:
 
     def list_jobs(self, *, limit: int = 100) -> dict[str, Any]:
         jobs = sorted(
-            (self._normalize_runtime_job_state(job) for job in self._read_jobs() if job),
+            (self._normalize_runtime_job_state(job) for job in self._repository.list_jobs(limit=limit) if job),
             key=lambda item: str(item.get("created_at") or ""),
             reverse=True,
         )[:limit]
@@ -171,12 +175,8 @@ class DashboardJobManager:
     def get_job(self, job_id: str) -> dict[str, Any] | None:
         if not _is_dashboard_job_id(job_id):
             return None
-        path = self._job_path(job_id)
-        if not path.exists():
-            return None
-        try:
-            data = _read_json(path)
-        except DashboardJobError:
+        data = self._repository.get_job(job_id)
+        if data is None:
             return None
         return self._normalize_runtime_job_state(data)
 
@@ -198,20 +198,13 @@ class DashboardJobManager:
                 return job
             process = self._processes.get(job_id)
             if process is None:
-                job["status"] = "blocked"
-                job["updated_at"] = _utc_now()
-                job["finished_at"] = job["updated_at"]
-                job.setdefault("errors", []).append(
-                    "running job process is not attached to this dashboard runtime; cancellation is unsupported."
-                )
-                self._write_job(job)
-                self._write_index()
-                return job
+                return self._mark_process_lost(job)
             self._cancel_requested.add(job_id)
             job["status"] = "cancel_requested"
             job["updated_at"] = _utc_now()
-            self._write_job(job)
-            self._write_index()
+            job["cancellation_requested_at"] = job["updated_at"]
+            job["cancel_reason"] = "dashboard_request"
+            job = self._save_job(job, event_type="cancel_requested")
             with suppress(OSError):
                 process.terminate()
             return job
@@ -252,8 +245,7 @@ class DashboardJobManager:
                     "diagnostic": bounded_exception_diagnostic(exc, context={"phase": "process_start"}),
                 }
             )
-            self._write_job(job)
-            self._write_index()
+            self._save_job(job, event_type="start_failed")
             self._logger.error(
                 "Dashboard job process could not start.",
                 extra={
@@ -277,19 +269,16 @@ class DashboardJobManager:
                     "pid": process.pid,
                 }
             )
-            self._write_job(job)
-            self._write_index()
+            self._save_job(job, event_type="started")
 
         stdout, stderr = process.communicate()
         finished_at = _utc_now()
-        with self._lock:
-            self._processes.pop(job_id, None)
         was_cancelled = job_id in self._cancel_requested
         if was_cancelled:
             self._cancel_requested.discard(job_id)
-        job = self.get_job(job_id) or job
-        stdout_ref, stdout_truncated = self._write_log(job_id, "stdout.log", stdout)
-        stderr_ref, stderr_truncated = self._write_log(job_id, "stderr.log", stderr)
+        job = self._repository.get_job(job_id) or job
+        stdout_ref, stdout_truncated, stdout_chars = self._write_log(job_id, "stdout.log", stdout)
+        stderr_ref, stderr_truncated, stderr_chars = self._write_log(job_id, "stderr.log", stderr)
         result_refs = self._job_result_refs(stdout, spec=spec)
         source_artifacts = [stdout_ref, stderr_ref]
         for key, artifact_ref in result_refs.items():
@@ -311,6 +300,8 @@ class DashboardJobManager:
                 "logs": {
                     "stdout_ref": stdout_ref,
                     "stderr_ref": stderr_ref,
+                    "stdout_chars": stdout_chars,
+                    "stderr_chars": stderr_chars,
                     "stdout_truncated": stdout_truncated,
                     "stderr_truncated": stderr_truncated,
                     "max_chars": MAX_JOB_LOG_CHARS,
@@ -323,8 +314,9 @@ class DashboardJobManager:
             job.setdefault("warnings", []).append("job was cancelled by dashboard request.")
         elif status == "failed":
             job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
-        self._write_job(job)
-        self._write_index()
+        self._save_job(job, event_type=status)
+        with self._lock:
+            self._processes.pop(job_id, None)
         self._logger.log(
             logging.INFO if status == "succeeded" else logging.WARNING,
             "Dashboard job finished.",
@@ -338,7 +330,7 @@ class DashboardJobManager:
             },
         )
 
-    def _new_job(self, *, intent: str, params: dict[str, Any], now: str) -> dict[str, Any]:
+    def _new_job(self, *, intent: str, params: dict[str, Any], requested_by: str, now: str) -> dict[str, Any]:
         job_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid4().hex[:8]}"
         job_dir = self.jobs_root / job_id
         return {
@@ -347,6 +339,7 @@ class DashboardJobManager:
             "job_id": job_id,
             "kind": "command",
             "intent": intent,
+            "requested_by": requested_by,
             "params": self._redact_value(params),
             "config_ref": dashboard_config_ref(self.config_path),
             "status": "queued",
@@ -362,6 +355,8 @@ class DashboardJobManager:
             "logs": {
                 "stdout_ref": _safe_ref(job_dir / "stdout.log", base=self.control_base),
                 "stderr_ref": _safe_ref(job_dir / "stderr.log", base=self.control_base),
+                "stdout_chars": 0,
+                "stderr_chars": 0,
                 "stdout_truncated": False,
                 "stderr_truncated": False,
                 "max_chars": MAX_JOB_LOG_CHARS,
@@ -372,57 +367,16 @@ class DashboardJobManager:
             "errors": [],
         }
 
-    def _write_job(self, job: dict[str, Any]) -> None:
-        write_json(self._job_path(str(job["job_id"])), self._redact_value(job))
+    def _save_job(self, job: dict[str, Any], *, event_type: str) -> dict[str, Any]:
+        return self._repository.save_job(self._redact_value(job), event_type=event_type)
 
-    def _write_index(self) -> None:
-        jobs = sorted(
-            (job for job in self._read_jobs() if job),
-            key=lambda item: str(item.get("created_at") or ""),
-            reverse=True,
-        )
-        write_json(
-            dashboard_control_path("jobs", "index.json"),
-            {
-                "schema_version": 1,
-                "artifact_type": "dashboard_job_index",
-                "status": "available" if jobs else "missing",
-                "updated_at": _utc_now(),
-                "job_count": len(jobs),
-                "jobs": [
-                    {
-                        "job_id": job.get("job_id"),
-                        "intent": job.get("intent"),
-                        "kind": job.get("kind"),
-                        "status": job.get("status"),
-                        "created_at": job.get("created_at"),
-                        "updated_at": job.get("updated_at"),
-                        "result_refs": job.get("result_refs") or {},
-                        "job_ref": _safe_ref(self._job_path(str(job.get("job_id"))), base=self.control_base),
-                    }
-                    for job in jobs[:100]
-                ],
-                "warnings": [],
-                "errors": [],
-            },
-        )
-
-    def _read_jobs(self) -> list[dict[str, Any]]:
-        if not self.jobs_root.exists():
-            return []
-        jobs = []
-        for path in sorted(self.jobs_root.glob("*/job.json")):
-            with suppress(DashboardJobError):
-                jobs.append(_read_json(path))
-        return jobs
-
-    def _write_log(self, job_id: str, filename: str, content: str | None) -> tuple[str, bool]:
+    def _write_log(self, job_id: str, filename: str, content: str | None) -> tuple[str, bool, int]:
         path = self.jobs_root / job_id / filename
         safe = self._redact_text(content or "")
         bounded = safe[:MAX_JOB_LOG_CHARS]
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(bounded, encoding="utf-8")
-        return _safe_ref(path, base=self.control_base), len(safe) > MAX_JOB_LOG_CHARS
+        return _safe_ref(path, base=self.control_base), len(safe) > MAX_JOB_LOG_CHARS, len(safe)
 
     def _job_result_refs(self, stdout: str | None, *, spec: CommandSpec) -> dict[str, str]:
         refs: dict[str, str] = {}
@@ -469,9 +423,6 @@ class DashboardJobManager:
             return EXTERNAL_ARTIFACT_REF
         return REDACTED_ARTIFACT_REF if self._redact_text(ref) != ref else ref
 
-    def _job_path(self, job_id: str) -> Path:
-        return self.jobs_root / job_id / "job.json"
-
     def _normalize_runtime_job_state(self, job: dict[str, Any]) -> dict[str, Any]:
         status = str(job.get("status") or "").lower()
         if status not in JOB_PROCESS_STATUSES:
@@ -482,35 +433,42 @@ class DashboardJobManager:
             job["process_alive"] = True
             return job
 
-        alive = _process_is_alive(job.get("pid"))
-        job["runtime_attached"] = False
-        job["process_alive"] = alive
-        if alive:
-            job["cancellable"] = False
-            warning = (
-                "job process is running outside this dashboard runtime; "
-                "cancellation is unsupported from the current dashboard process."
-            )
-            warnings = job.setdefault("warnings", [])
-            if isinstance(warnings, list) and warning not in warnings:
-                warnings.append(warning)
-            return job
-        if _job_recently_updated(job, grace_seconds=STALE_RUNNING_JOB_GRACE_SECONDS):
-            return job
+        latest = self._repository.get_job(job_id)
+        if latest is not None and str(latest.get("status") or "").lower() != status:
+            return self._normalize_runtime_job_state(latest)
+        return self._mark_process_lost(job)
 
-        job["status"] = "blocked"
+    def _mark_process_lost(self, job: dict[str, Any]) -> dict[str, Any]:
+        status = str(job.get("status") or "").lower()
+        job["runtime_attached"] = False
+        job["process_alive"] = False
+        job["status"] = "cancelled" if status == "cancel_requested" else "failed"
         job["updated_at"] = _utc_now()
         job["finished_at"] = job["updated_at"]
-        error = (
-            "job was marked running, but its recorded process is not running "
-            "and is not attached to this dashboard runtime."
+        job["cancellable"] = False
+        message = (
+            "job process identity was lost after dashboard restart; "
+            "the recorded PID was not treated as proof of the original job."
         )
-        errors = job.setdefault("errors", [])
-        if isinstance(errors, list) and error not in errors:
-            errors.append(error)
-        self._write_job(job)
-        self._write_index()
-        return job
+        if job["status"] == "cancelled":
+            warnings = job.setdefault("warnings", [])
+            if isinstance(warnings, list) and message not in warnings:
+                warnings.append(message)
+        else:
+            errors = job.setdefault("errors", [])
+            if isinstance(errors, list) and message not in errors:
+                errors.append(message)
+        try:
+            return self._save_job(job, event_type="process_lost")
+        except DashboardJobStoreError:
+            latest = self._repository.get_job(str(job.get("job_id") or ""))
+            if latest is not None and str(latest.get("status") or "").lower() in JOB_TERMINAL_STATUSES:
+                return latest
+            raise
+
+    def _reconcile_unattached_jobs(self) -> None:
+        for job in self._repository.list_transient_jobs():
+            self._normalize_runtime_job_state(job)
 
     def _redact_value(self, value: Any) -> Any:
         if isinstance(value, dict):
@@ -542,31 +500,9 @@ class DashboardJobManager:
         return sorted(values, key=len, reverse=True)
 
 
-def _read_json(path: Path) -> dict[str, Any]:
-    data, error = dashboard_read_json(path)
-    if error:
-        raise DashboardJobError(error)
-    return data
-
-
-def _process_is_alive(pid: Any) -> bool:
-    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except (OSError, OverflowError, SystemError, ValueError):
-        return False
-    return True
-
-
-def _job_recently_updated(job: dict[str, Any], *, grace_seconds: int) -> bool:
-    for key in ("updated_at", "started_at", "created_at"):
-        timestamp = parse_utc_timestamp(job.get(key))
-        if timestamp is None:
-            continue
-        age = datetime.now(timezone.utc) - timestamp
-        return age.total_seconds() < grace_seconds
-    return False
+def _requested_by(value: Any) -> str:
+    requested_by = str(value or "").strip()
+    return requested_by if requested_by in JOB_REQUESTED_BY_VALUES else "Dashboard"
 
 
 def _config_private_values(config: dict[str, Any]) -> set[str]:

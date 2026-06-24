@@ -152,11 +152,11 @@ workflow engine, or hidden daemon.
 
 The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
-state remains split across the run index, dashboard JSON, and monitor JSON
-until later domain migrations move those facts into `.halpha/state.sqlite`.
-The runtime state-store foundation itself is implemented. Dashboard read
-models, health summaries, workbench outputs, and latest selections are derived
-views, not parallel authorities.
+runtime state keeps the run index and dashboard command-job lifecycle in
+`.halpha/state.sqlite`; daily report schedule, selected dashboard config, and
+monitor state remain in local JSON until their domain migrations are
+implemented. Dashboard read models, health summaries, workbench outputs, and
+latest selections are derived views, not parallel authorities.
 
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:
@@ -423,7 +423,7 @@ A successful configured run can write:
 - `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
 - `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, and future migrated operational state.
+- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, dashboard command-job lifecycle metadata, and future migrated operational state.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
 - `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.

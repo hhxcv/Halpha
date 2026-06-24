@@ -35,8 +35,9 @@ forecast, validation, or report truth.
 Primary sources:
 
 - `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
-  foundation and current run-index projection. Dashboard, monitor, schedule,
-  and job consumers are not migrated to their own state domains yet.
+  foundation, current run-index projection, and dashboard command-job
+  lifecycle. Monitor and schedule consumers are not migrated to their own state
+  domains yet.
 - `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
   Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run
@@ -343,6 +344,7 @@ Supported job implementations should record:
 - job id;
 - job kind or command intent;
 - structured request parameters;
+- requested-by source;
 - config ref;
 - status;
 - created, started, finished, and updated timestamps;
@@ -374,11 +376,17 @@ Codex-capable full report jobs require explicit user confirmation before the
 dashboard invokes Codex CLI. No monitor job or read-only inspection job should
 invoke Codex unless its command contract explicitly says so.
 
-Job records are written under `.halpha/dashboard/jobs/` below the current
-working directory by default. Relative dashboard control-state paths resolve
-from the current working directory, not from the config file location or
-product run output root. The job index records bounded metadata and result
-refs. Full job logs are local runtime artifacts and must not be copied into
+Current command-job lifecycle records are written to `.halpha/state.sqlite`.
+They include bounded metadata, safe relative log refs, result refs, warnings,
+errors, and transition events. New jobs must not write
+`.halpha/dashboard/jobs/index.json` or per-job `job.json`; those files are
+legacy storage until explicit import or cleanup work.
+
+Bounded stdout and stderr logs are written under
+`.halpha/dashboard/job_logs/<job_id>/` below the current working directory by
+default. Relative dashboard control-state paths resolve from the current
+working directory, not from the config file location or product run output
+root. Full job logs are local runtime artifacts and must not be copied into
 Codex context by default.
 
 ## Schedule Contract

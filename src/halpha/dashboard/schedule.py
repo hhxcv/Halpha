@@ -127,7 +127,7 @@ class DashboardScheduleManager:
                     "confirm_codex must be true to trigger a Codex-capable daily report job.",
                 )
             params["confirm_codex"] = True
-        job = self.job_manager.create_job({"intent": intent, "params": params})
+        job = self.job_manager.create_job({"intent": intent, "params": params, "requested_by": "Schedule"})
         updated = self._record_triggered_job(current, job)
         return {
             "schema_version": 1,
@@ -168,7 +168,7 @@ class DashboardScheduleManager:
                 error = "automatic Codex-capable daily report dispatch requires manual confirmation."
                 blocked = self._record_dispatch_blocked(current, error)
                 return _dispatch_response("blocked", blocked, job=None, errors=[error])
-            job = self.job_manager.create_job({"intent": intent, "params": {}})
+            job = self.job_manager.create_job({"intent": intent, "params": {}, "requested_by": "Schedule"})
             updated = self._record_triggered_job(current, job)
             return _dispatch_response("available", updated, job=job)
 

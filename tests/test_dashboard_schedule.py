@@ -182,6 +182,7 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
     assert trigger_payload["schedule"]["report_generation"]["generates_report"] is False
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
+    assert completed["requested_by"] == "Schedule"
     assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>", "--no-codex"]
     assert schedule_response.json()["last_job_id"] == job_id
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path), "--no-codex"]]
@@ -252,6 +253,7 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
     assert trigger_payload["schedule"]["report_generation"]["generates_report"] is True
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run"
+    assert completed["requested_by"] == "Schedule"
     assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>"]
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path)]]
 
@@ -279,11 +281,14 @@ def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(
     current["value"] = datetime(2026, 6, 20, 0, 2, tzinfo=timezone.utc)
 
     result = schedule_manager.dispatch_due_daily_report()
+    completed = _wait_for_manager_terminal(job_manager, str(result["job"]["job_id"]))
 
     assert enabled["settings"]["job_intent"] == "run_no_codex"
     assert enabled["report_generation"]["generates_report"] is False
     assert result["status"] == "available"
     assert result["job"]["intent"] == "run_no_codex"
+    assert completed["requested_by"] == "Schedule"
+    assert completed["status"] == "succeeded"
     assert result["errors"] == []
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path.resolve()), "--no-codex"]]
 

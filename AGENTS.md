@@ -184,6 +184,9 @@ Current bias:
 * `.halpha/state.sqlite` records the implemented runtime-state foundation and future migrated mutable operational state; it is not research evidence or Codex input.
 * `.halpha/state.sqlite-wal` and `.halpha/state.sqlite-shm` are SQLite side files; back them up with `state.sqlite` when present.
 * `.halpha/state.sqlite` records current run, stage, artifact, and derived latest-run index metadata; it stores references, not artifact contents.
+* `.halpha/state.sqlite` records current dashboard command-job lifecycle metadata, bounded parameter/result refs, and transition events; it stores references, not stdout or stderr contents.
+* `.halpha/dashboard/job_logs/` stores bounded dashboard command-job stdout and stderr logs.
+* `.halpha/dashboard/jobs/index.json` and `.halpha/dashboard/jobs/<job_id>/job.json` are legacy dashboard job storage; do not write them for new jobs outside explicit legacy migration or cleanup work.
 * `data/research/index.sqlite` is legacy run-index storage; do not write it outside explicit legacy migration or cleanup work.
 * Latest selections are derived or rebuildable views, not parallel authorities.
 * `data/research/metadata/text_event_history_state.json` records shared text-event history state, counts, duplicates, conflicts, warnings, and source refs.
