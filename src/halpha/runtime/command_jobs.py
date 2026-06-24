@@ -1,8 +1,9 @@
 ﻿from __future__ import annotations
 
-from contextlib import suppress
+from contextlib import nullcontext, suppress
 from datetime import datetime, timezone
 import logging
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -23,6 +24,11 @@ from halpha.runtime.command_job_store import (
 )
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
+from halpha.runtime.mutation_lease import MutationLease
+from halpha.runtime.mutation_lease import MutationLeaseBlocked
+from halpha.runtime.mutation_lease import acquire_mutation_lease
+from halpha.runtime.mutation_lease import is_mutating_workflow_kind
+from halpha.runtime.pipeline_contracts import PipelineError
 from halpha.storage import artifact_base as _artifact_base
 from halpha.storage import safe_local_ref as _safe_ref
 
@@ -234,14 +240,39 @@ class CommandJobManager:
             },
         )
         try:
-            process = subprocess.Popen(
-                command,
-                cwd=self.base,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                shell=False,
-            )
+            lease = self._acquire_job_mutation_lease(job, spec=spec)
+        except MutationLeaseBlocked as exc:
+            self._mark_job_blocked_by_mutation_lease(job, started_at=started_at, exc=exc)
+            return
+        except PipelineError as exc:
+            self._mark_job_failed_before_process(job, started_at=started_at, exc=exc)
+            return
+
+        lease_context = lease if lease is not None else nullcontext()
+        try:
+            with lease_context:
+                process = subprocess.Popen(
+                    command,
+                    cwd=self.base,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    shell=False,
+                    env=lease.subprocess_env(os.environ) if lease is not None else None,
+                )
+                with self._lock:
+                    self._processes[job_id] = process
+                    job.update(
+                        {
+                            "status": "running",
+                            "started_at": started_at,
+                            "updated_at": started_at,
+                            "pid": process.pid,
+                        }
+                    )
+                    self._save_job(job, event_type="started")
+
+                stdout, stderr = process.communicate()
         except OSError as exc:
             reason = self._redact_text(f"job process could not start: {exc}")
             job.update(
@@ -268,19 +299,6 @@ class CommandJobManager:
             )
             return
 
-        with self._lock:
-            self._processes[job_id] = process
-            job.update(
-                {
-                    "status": "running",
-                    "started_at": started_at,
-                    "updated_at": started_at,
-                    "pid": process.pid,
-                }
-            )
-            self._save_job(job, event_type="started")
-
-        stdout, stderr = process.communicate()
         finished_at = _utc_now()
         was_cancelled = job_id in self._cancel_requested
         if was_cancelled:
@@ -336,6 +354,74 @@ class CommandJobManager:
                 "kind": spec.kind,
                 "status": status,
                 "exit_code": exit_code,
+            },
+        )
+
+    def _acquire_job_mutation_lease(self, job: dict[str, Any], *, spec: CommandSpec) -> MutationLease | None:
+        if not is_mutating_workflow_kind(spec.kind):
+            return None
+        return acquire_mutation_lease(
+            config_path=self.config_path,
+            owner_kind="command_job",
+            workflow=spec.kind,
+            requested_by=str(job.get("requested_by") or self.default_requested_by),
+            owner_id=str(job.get("job_id") or ""),
+            owner_pid=os.getpid(),
+        )
+
+    def _mark_job_blocked_by_mutation_lease(
+        self,
+        job: dict[str, Any],
+        *,
+        started_at: str,
+        exc: MutationLeaseBlocked,
+    ) -> None:
+        now = _utc_now()
+        job.update(
+            {
+                "status": "blocked",
+                "updated_at": now,
+                "started_at": started_at,
+                "finished_at": now,
+                "cancellable": False,
+                "errors": [str(exc)],
+                "diagnostic": exc.error_details,
+            }
+        )
+        self._save_job(job, event_type="blocked")
+        self._logger.warning(
+            "command job was blocked by runtime mutation lease.",
+            extra={
+                "event": "command_job.blocked",
+                "job_id": job.get("job_id"),
+                "intent": job.get("intent"),
+                "kind": job.get("kind"),
+                "reason": str(exc),
+            },
+        )
+
+    def _mark_job_failed_before_process(self, job: dict[str, Any], *, started_at: str, exc: PipelineError) -> None:
+        now = _utc_now()
+        job.update(
+            {
+                "status": "failed",
+                "updated_at": now,
+                "started_at": started_at,
+                "finished_at": now,
+                "cancellable": False,
+                "errors": [str(exc)],
+                "diagnostic": exc.error_details,
+            }
+        )
+        self._save_job(job, event_type="start_failed")
+        self._logger.error(
+            "command job failed before starting process.",
+            extra={
+                "event": "command_job.start_failed",
+                "job_id": job.get("job_id"),
+                "intent": job.get("intent"),
+                "kind": job.get("kind"),
+                "reason": str(exc),
             },
         )
 

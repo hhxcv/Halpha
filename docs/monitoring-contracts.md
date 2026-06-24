@@ -83,6 +83,12 @@ When generated `analysis/alert_decisions.json` exists, the cycle commits alert
 archive records, suppression results, cooldown updates, and the monitor cycle
 index to `.halpha/state.sqlite`.
 
+Monitor cycle, finite-loop, and resident source-cadence paths acquire the
+runtime-root mutation lease before writing monitor cycle artifacts or starting
+product pipeline work. If another live mutating product workflow owns the
+lease, the monitor command fails with an explicit `runtime_mutation_lease`
+reason and does not create a partial cycle manifest.
+
 Current implemented resident-service commands:
 
 ```bash

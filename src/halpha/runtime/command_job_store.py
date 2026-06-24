@@ -16,6 +16,7 @@ from halpha.runtime.state_store import (
     runtime_state_transaction,
     runtime_state_path,
 )
+from halpha.runtime.mutation_lease import MUTATION_LEASE_MIGRATIONS
 
 
 COMMAND_JOB_STORE_ARTIFACT = STATE_STORE_REF
@@ -337,7 +338,11 @@ class CommandJobRepository:
 
 
 def apply_command_job_migrations(connection: sqlite3.Connection, *, now: str | None = None) -> None:
-    apply_runtime_state_migrations(connection, migrations=RUNTIME_STATE_MIGRATIONS + COMMAND_JOB_MIGRATIONS, now=now)
+    apply_runtime_state_migrations(
+        connection,
+        migrations=RUNTIME_STATE_MIGRATIONS + COMMAND_JOB_MIGRATIONS + MUTATION_LEASE_MIGRATIONS,
+        now=now,
+    )
 
 
 def _validate_transition(previous: str | None, status: str) -> None:

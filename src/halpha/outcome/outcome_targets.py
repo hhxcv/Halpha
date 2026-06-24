@@ -296,6 +296,8 @@ def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -
             if selected is None:
                 return None, "No previous successful run found in run index."
     except sqlite3.Error as exc:
+        if _missing_run_index_table(exc):
+            return None, "Run index was not found; no previous successful run can be selected."
         return None, f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"
 
     run_dir = Path(selected.run.run_dir)
@@ -312,6 +314,10 @@ def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -
         ),
         None,
     )
+
+
+def _missing_run_index_table(exc: sqlite3.Error) -> bool:
+    return "no such table: runs" in str(exc).lower()
 
 
 def _read_previous_artifact(previous: PreviousRun, artifact_path: str) -> tuple[dict[str, Any] | None, str | None]:
