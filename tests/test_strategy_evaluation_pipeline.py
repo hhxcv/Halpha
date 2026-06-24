@@ -103,7 +103,7 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
         "evaluate_strategy_evaluation"
     )
     assert task_names.index("evaluate_strategy_evaluation") < task_names.index(
-        "evaluate_market_strategy_signals"
+        "build_market_signals"
     )
 
 

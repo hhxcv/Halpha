@@ -26,7 +26,6 @@ WATCH_TRIGGERS_ARTIFACT = "analysis/watch_triggers.json"
 DECISION_INTELLIGENCE_DELTA_ARTIFACT = "analysis/decision_intelligence_delta.json"
 DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
 MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
-MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_DATA_VIEWS_ARTIFACT = "raw/market_data_views.json"
 DERIVATIVES_MARKET_CONTEXT_ARTIFACT = "analysis/derivatives_market_context.json"
@@ -1444,7 +1443,6 @@ def _decision_record_source_artifacts(
                 for signal in signals
                 for artifact in _string_list(signal.get("source_artifacts"))
             ],
-            MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -2005,7 +2003,6 @@ def _watch_record_source_artifacts(
                 for signal in signals
                 for artifact in _string_list(signal.get("source_artifacts"))
             ],
-            MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -2037,7 +2034,6 @@ def _watch_source_artifacts(
             *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
             *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_artifact is not None else []),
             *_string_list(onchain_artifact.get("source_artifacts") if onchain_artifact else None),
-            MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -2085,7 +2081,6 @@ def _decision_source_artifacts(
             *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
             *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_artifact is not None else []),
             *_string_list(onchain_artifact.get("source_artifacts") if onchain_artifact else None),
-            MARKET_STRATEGY_SIGNALS_ARTIFACT,
             QUANT_STRATEGY_RUNS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
@@ -2442,7 +2437,6 @@ def _source_artifacts(
             *_string_list(strategy_artifact.get("source_artifacts") if strategy_artifact else None),
             *([DERIVATIVES_MARKET_CONTEXT_ARTIFACT] if derivatives_artifact is not None else []),
             *_string_list(derivatives_artifact.get("source_artifacts") if derivatives_artifact else None),
-            MARKET_STRATEGY_SIGNALS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
     )
@@ -3234,7 +3228,6 @@ def _risk_source_artifacts(
             *_string_list(macro_artifact.get("source_artifacts") if macro_artifact else None),
             *([ONCHAIN_FLOW_CONTEXT_ARTIFACT] if onchain_artifact is not None else []),
             *_string_list(onchain_artifact.get("source_artifacts") if onchain_artifact else None),
-            MARKET_STRATEGY_SIGNALS_ARTIFACT,
             MARKET_DATA_VIEWS_ARTIFACT,
         ]
     )

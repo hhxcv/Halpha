@@ -232,7 +232,6 @@ Current bias:
 * Strategy lifecycle contracts live in `docs/strategy-lifecycle-contracts.md`.
 * `analysis/strategy_lifecycle_state.json` records deterministic strategy identity, contract version, parameter version, parameter digest, lifecycle status, degradation, insufficient-evidence, watchlist, rejection, retirement, policy, warnings, errors, and source refs from existing strategy and outcome evidence when quant strategy evidence is enabled.
 * `analysis/strategy_lifecycle_material.md` records bounded AI-readable lifecycle status, selected high-signal lifecycle records, omission counts, source refs, and Codex/report boundaries.
-* `analysis/market_strategy_signals.json` records evaluator outputs.
 * `analysis/market_signals.json` records normalized report-facing market signals.
 * `analysis/market_signal_material.md` is bounded AI-readable signal material.
 * Feature/factor contracts live in `docs/feature-factor-contracts.md`.

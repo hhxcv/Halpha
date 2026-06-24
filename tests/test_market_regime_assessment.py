@@ -23,7 +23,6 @@ def test_market_regime_assessment_classifies_groups_and_records_evidence(tmp_pat
             "build_market_data_views": _write_market_data_views,
             "evaluate_quant_strategies": _write_quant_strategy_runs,
             "evaluate_strategy_evaluation": _noop_stage,
-            "evaluate_market_strategy_signals": _write_strategy_signals,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
@@ -41,7 +40,6 @@ def test_market_regime_assessment_classifies_groups_and_records_evidence(tmp_pat
     assert artifact["created_at"] == "2026-06-05T00:00:00Z"
     assert artifact["source_artifacts"] == [
         "analysis/market_signals.json",
-        "analysis/market_strategy_signals.json",
         "analysis/quant_strategy_runs.json",
         "raw/market_data_views.json",
     ]
@@ -60,7 +58,6 @@ def test_market_regime_assessment_classifies_groups_and_records_evidence(tmp_pat
     assert any("tsmom_vol_scaled" in item for item in btc["evidence"])
     assert btc["source_artifacts"] == [
         "analysis/market_signals.json",
-        "analysis/market_strategy_signals.json",
         "analysis/quant_strategy_runs.json",
         "raw/market_data_views.json",
     ]
@@ -106,7 +103,6 @@ def test_market_regime_assessment_qualifies_trend_with_conflicting_derivatives_c
             "build_derivatives_market_context": _write_stressed_derivatives_context,
             "evaluate_quant_strategies": _write_quant_strategy_runs,
             "evaluate_strategy_evaluation": _noop_stage,
-            "evaluate_market_strategy_signals": _write_strategy_signals,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
@@ -145,7 +141,6 @@ def test_market_regime_assessment_writes_warning_without_fake_records_when_signa
             "build_market_data_views": _noop_stage,
             "evaluate_quant_strategies": _write_quant_strategy_runs,
             "evaluate_strategy_evaluation": _noop_stage,
-            "evaluate_market_strategy_signals": _noop_stage,
             "build_market_signals": _write_empty_market_signals,
             "build_market_signal_material": _noop_stage,
             "build_analysis_materials": _noop_stage,
@@ -262,35 +257,18 @@ def _write_market_data_views(config, run) -> list[str]:
 
 
 def _write_quant_strategy_runs(config, run) -> list[str]:
-    write_json(
-        run.analysis_dir / "quant_strategy_runs.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "quant_strategy_runs",
-            "created_at": "2026-06-05T00:00:00Z",
-            "engine": {"name": "vectorbt", "version": "1.0.0", "objects_exposed": False},
-            "source_artifacts": ["raw/market_data_views.json"],
-            "runs": [],
-        },
-    )
-    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
-    run.manifest["counts"]["quant_strategy_runs"] = 0
-    return ["analysis/quant_strategy_runs.json"]
-
-
-def _write_strategy_signals(config, run) -> list[str]:
-    signals = [
-        _strategy_signal("tsmom_vol_scaled", "BTCUSDT", "bullish", "high", "risk_on_momentum"),
-        _strategy_signal(
+    runs = [
+        _strategy_run("tsmom_vol_scaled", "BTCUSDT", "bullish", "high", "risk_on_momentum"),
+        _strategy_run(
             "bollinger_rsi_reversion",
             "BTCUSDT",
             "bearish",
             "low",
             "overbought_reversion_watch",
         ),
-        _strategy_signal("tsmom_vol_scaled", "ETHUSDT", "bullish", "high", "risk_on_momentum"),
-        _strategy_signal("breakout_atr_trend", "ETHUSDT", "bullish", "high", "confirmed_breakout"),
-        _strategy_signal(
+        _strategy_run("tsmom_vol_scaled", "ETHUSDT", "bullish", "high", "risk_on_momentum"),
+        _strategy_run("breakout_atr_trend", "ETHUSDT", "bullish", "high", "confirmed_breakout"),
+        _strategy_run(
             "breakout_atr_trend",
             "SOLUSDT",
             "unknown",
@@ -300,22 +278,19 @@ def _write_strategy_signals(config, run) -> list[str]:
         ),
     ]
     write_json(
-        run.analysis_dir / "market_strategy_signals.json",
+        run.analysis_dir / "quant_strategy_runs.json",
         {
             "schema_version": 1,
-            "artifact_type": "market_strategy_signals",
+            "artifact_type": "quant_strategy_runs",
             "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": [
-                "analysis/quant_strategy_runs.json",
-                "raw/market_data_views.json",
-            ],
-            "signals": signals,
+            "engine": {"name": "vectorbt", "version": "1.0.0", "objects_exposed": False},
+            "source_artifacts": ["raw/market_data_views.json"],
+            "runs": runs,
         },
     )
-    run.manifest["artifacts"]["market_strategy_signals"] = "analysis/market_strategy_signals.json"
-    run.manifest["counts"]["market_strategy_signals"] = len(signals)
-    run.manifest["counts"]["market_strategy_signals_insufficient_data"] = 1
-    return ["analysis/market_strategy_signals.json"]
+    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["counts"]["quant_strategy_runs"] = len(runs)
+    return ["analysis/quant_strategy_runs.json"]
 
 
 def _write_empty_market_signals(config, run) -> list[str]:
@@ -326,7 +301,6 @@ def _write_empty_market_signals(config, run) -> list[str]:
             "artifact_type": "market_signals",
             "created_at": "2026-06-05T00:00:00Z",
             "source_artifacts": [
-                "analysis/market_strategy_signals.json",
                 "analysis/quant_strategy_runs.json",
             ],
             "signals": [],
@@ -399,7 +373,7 @@ def _derivatives_context_record(
     }
 
 
-def _strategy_signal(
+def _strategy_run(
     strategy_name: str,
     symbol: str,
     direction: str,
@@ -419,10 +393,21 @@ def _strategy_signal(
         key_values["atr_pct"] = 2.0
     if insufficient:
         key_values = {"requested_lookback": 3, "row_count": 1}
+    indicators = {
+        key: value
+        for key, value in key_values.items()
+        if key not in {"latest_regime", "requested_lookback"}
+    }
+    signals = {
+        key: value
+        for key, value in key_values.items()
+        if key == "latest_regime"
+    }
     return {
-        "strategy_signal_id": (
-            f"strategy_signal:{strategy_name}:binance:{symbol}:1d:2026-06-03T00:00:00Z"
+        "strategy_run_id": (
+            f"quant_strategy_run:{strategy_name}:binance:{symbol}:1d:2026-06-03T00:00:00Z"
         ),
+        "status": "insufficient_data" if insufficient else "succeeded",
         "strategy_name": strategy_name,
         "source": "binance",
         "symbol": symbol,
@@ -431,23 +416,35 @@ def _strategy_signal(
         "input_window_start": "2026-06-01T00:00:00Z",
         "input_window_end": "2026-06-03T00:00:00Z",
         "latest_candle_time": "2026-06-03T00:00:00Z",
-        "direction": direction,
-        "strength": "medium" if direction != "unknown" else "unknown",
-        "confidence": confidence,
-        "key_values": key_values,
-        "evidence": (
-            ["input view has 1 OHLCV rows for requested_lookback 3."]
-            if insufficient
-            else [f"{strategy_name} evidence summary for {symbol}."]
-        ),
-        "uncertainty": (
-            ["binance SOLUSDT 1d has insufficient OHLCV rows."]
-            if insufficient
-            else [f"{strategy_name} uncertainty summary for {symbol}."]
-        ),
-        "insufficient_data": insufficient,
+        "data_quality": {
+            "row_count": key_values["row_count"],
+            "requested_lookback": key_values.get("requested_lookback", 3),
+            "minimum_required_rows": 3,
+            "sufficient_data": not insufficient,
+            "warnings": [],
+        },
+        "indicators": indicators,
+        "signals": signals,
+        "backtest_diagnostic": {"enabled": False, "status": "disabled"},
+        "parameter_diagnostic": {"enabled": False, "status": "disabled"},
+        "assessment": {
+            "direction": direction,
+            "strength": "medium" if direction != "unknown" else "unknown",
+            "confidence": confidence,
+            "evidence": (
+                ["input view has 1 OHLCV rows for requested_lookback 3."]
+                if insufficient
+                else [f"{strategy_name} evidence summary for {symbol}."]
+            ),
+            "uncertainty": (
+                ["binance SOLUSDT 1d has insufficient OHLCV rows."]
+                if insufficient
+                else [f"{strategy_name} uncertainty summary for {symbol}."]
+            ),
+        },
+        "warnings": [],
+        "error": None,
         "source_artifacts": [
-            "analysis/quant_strategy_runs.json",
             "raw/market_data_views.json",
         ],
         "created_at": "2026-06-05T00:00:00Z",

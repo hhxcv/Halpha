@@ -292,7 +292,7 @@ def _write_market_signals(config, run) -> list[str]:
             "artifact_type": "market_signals",
             "run_id": run.run_id,
             "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": ["analysis/market_strategy_signals.json"],
+            "source_artifacts": ["analysis/quant_strategy_runs.json"],
             "signals": [_market_signal()],
             "warnings": [],
             "errors": [],
@@ -311,7 +311,7 @@ def _write_duplicate_and_incomplete_market_signals(config, run) -> list[str]:
             "artifact_type": "market_signals",
             "run_id": run.run_id,
             "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": ["analysis/market_strategy_signals.json"],
+            "source_artifacts": ["analysis/quant_strategy_runs.json"],
             "signals": [
                 _market_signal(),
                 _market_signal(),
@@ -323,7 +323,7 @@ def _write_duplicate_and_incomplete_market_signals(config, run) -> list[str]:
                     "direction": "bullish",
                     "strength": "medium",
                     "confidence": "medium",
-                    "source_artifacts": ["analysis/market_strategy_signals.json"],
+                    "source_artifacts": ["analysis/quant_strategy_runs.json"],
                 },
             ],
             "warnings": [],
@@ -583,7 +583,7 @@ def _market_signal() -> dict[str, Any]:
         "evidence": ["Market signal evidence."],
         "uncertainty": ["Market signal uncertainty."],
         "insufficient_data": False,
-        "source_artifacts": ["analysis/market_strategy_signals.json"],
+        "source_artifacts": ["analysis/quant_strategy_runs.json"],
         "created_at": "2026-06-05T00:00:00Z",
     }
 

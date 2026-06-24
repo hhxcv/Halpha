@@ -243,7 +243,7 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
-            "evaluate_market_strategy_signals": _write_strategy_signals,
+            "evaluate_quant_strategies": _write_quant_strategy_runs,
             "build_strategy_experiment_material": _write_strategy_experiment_material,
             "run_codex_report": _skip_codex_report,
         },
@@ -253,7 +253,6 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
     context = (result.run.analysis_dir / "research_context.md").read_text(encoding="utf-8")
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_data_views: raw/market_data_views.json" in context
-    assert "market_strategy_signals: analysis/market_strategy_signals.json" in context
     assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
     assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
     assert "strategy_experiment: analysis/strategy_experiment.json" in context
@@ -368,7 +367,7 @@ def test_research_context_fails_when_decision_material_is_missing_for_quant_enab
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
-            "evaluate_market_strategy_signals": _write_strategy_signals,
+            "evaluate_quant_strategies": _write_quant_strategy_runs,
             "build_decision_intelligence_material": _noop_stage,
         },
     )
@@ -633,19 +632,21 @@ def _write_market_data_views(config, run) -> list[str]:
     return ["raw/market_data_views.json"]
 
 
-def _write_strategy_signals(config, run) -> list[str]:
+def _write_quant_strategy_runs(config, run) -> list[str]:
     write_json(
-        run.analysis_dir / "market_strategy_signals.json",
+        run.analysis_dir / "quant_strategy_runs.json",
         {
             "schema_version": 1,
-            "artifact_type": "market_strategy_signals",
+            "artifact_type": "quant_strategy_runs",
             "created_at": "2026-06-05T00:00:00Z",
+            "engine": {"name": "vectorbt", "version": "0.28.0", "objects_exposed": False},
             "source_artifacts": ["raw/market_data_views.json"],
-            "signals": [
+            "runs": [
                 {
-                    "strategy_signal_id": (
-                        "strategy_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z"
+                    "strategy_run_id": (
+                        "quant_strategy_run:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z"
                     ),
+                    "status": "succeeded",
                     "strategy_name": "tsmom_vol_scaled",
                     "source": "binance",
                     "symbol": "BTCUSDT",
@@ -654,25 +655,37 @@ def _write_strategy_signals(config, run) -> list[str]:
                     "input_window_start": "2026-06-01T00:00:00Z",
                     "input_window_end": "2026-06-03T00:00:00Z",
                     "latest_candle_time": "2026-06-03T00:00:00Z",
-                    "direction": "bullish",
-                    "strength": "medium",
-                    "confidence": "medium",
-                    "key_values": {"latest_close": 106.0, "row_count": 3},
-                    "evidence": ["return_window_pct is 6.0% over the configured return window."],
-                    "uncertainty": [
-                        "Strategy uses OHLCV close prices only and excludes text events."
-                    ],
-                    "insufficient_data": False,
+                    "data_quality": {
+                        "row_count": 3,
+                        "requested_lookback": 3,
+                        "minimum_required_rows": 3,
+                        "sufficient_data": True,
+                        "warnings": [],
+                    },
+                    "indicators": {"latest_close": 106.0, "row_count": 3},
+                    "signals": {},
+                    "backtest_diagnostic": {"enabled": False, "status": "disabled"},
+                    "parameter_diagnostic": {"enabled": False, "status": "disabled"},
+                    "assessment": {
+                        "direction": "bullish",
+                        "strength": "medium",
+                        "confidence": "medium",
+                        "evidence": ["return_window_pct is 6.0% over the configured return window."],
+                        "uncertainty": [
+                            "Strategy uses OHLCV close prices only and excludes text events."
+                        ],
+                    },
+                    "warnings": [],
+                    "error": None,
                     "source_artifacts": ["raw/market_data_views.json"],
                     "created_at": "2026-06-05T00:00:00Z",
                 }
             ],
         },
     )
-    run.manifest["artifacts"]["market_strategy_signals"] = "analysis/market_strategy_signals.json"
-    run.manifest["counts"]["market_strategy_signals"] = 1
-    run.manifest["counts"]["market_strategy_signals_insufficient_data"] = 0
-    return ["analysis/market_strategy_signals.json"]
+    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["counts"]["quant_strategy_runs"] = 1
+    return ["analysis/quant_strategy_runs.json"]
 
 
 def _write_strategy_experiment_material(config, run) -> list[str]:

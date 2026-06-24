@@ -297,7 +297,6 @@ Strategy and signal artifacts:
 - `analysis/strategy_evaluation_summary.json`
 - `analysis/strategy_experiment.json`
 - `analysis/strategy_effectiveness_gates.json`
-- `analysis/market_strategy_signals.json`
 - `analysis/market_signals.json`
 
 Codex should consume bounded strategy and signal material instead of full

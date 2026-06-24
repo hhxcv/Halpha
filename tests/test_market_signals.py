@@ -21,7 +21,10 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
     signal = market_signals["signals"][0]
     assert result.succeeded is True
     assert market_signals["artifact_type"] == "market_signals"
-    assert market_signals["source_artifacts"] == ["analysis/market_strategy_signals.json"]
+    assert market_signals["source_artifacts"] == [
+        "analysis/quant_strategy_runs.json",
+        "raw/market_data_views.json",
+    ]
     assert signal == {
         "signal_id": "market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
         "strategy_name": "tsmom_vol_scaled",
@@ -34,12 +37,18 @@ def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: 
         "direction": "bullish",
         "strength": "medium",
         "confidence": "medium",
-        "key_values": {"latest_close": 106.0, "row_count": 3},
+        "key_values": {
+            "latest_close": 106.0,
+            "row_count": 3,
+            "requested_lookback": 3,
+            "minimum_required_rows": 3,
+            "backtest_diagnostic_status": "disabled",
+        },
         "evidence": ["return_window_pct is 6.0% over the configured return window."],
         "uncertainty": ["Strategy uses OHLCV close prices only and excludes text events."],
         "insufficient_data": False,
         "source_artifacts": [
-            "analysis/market_strategy_signals.json",
+            "analysis/quant_strategy_runs.json",
             "raw/market_data_views.json",
         ],
         "created_at": "2026-06-05T00:00:00Z",
@@ -127,7 +136,12 @@ def test_market_signals_preserve_insufficient_signal_state(tmp_path: Path) -> No
     assert signal["direction"] == "unknown"
     assert signal["strength"] == "unknown"
     assert signal["confidence"] == "low"
-    assert signal["key_values"] == {"requested_lookback": 3, "row_count": 1}
+    assert signal["key_values"] == {
+        "row_count": 1,
+        "requested_lookback": 3,
+        "minimum_required_rows": 3,
+        "backtest_diagnostic_status": "disabled",
+    }
     assert signal["evidence"] == ["input view has 1 OHLCV rows for requested_lookback 3."]
     assert signal["uncertainty"] == ["binance BTCUSDT 1d has insufficient OHLCV rows."]
     assert signal["insufficient_data"] is True
@@ -177,7 +191,8 @@ def test_market_signals_fail_when_strategy_outputs_are_missing(tmp_path: Path) -
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
-            "evaluate_market_strategy_signals": _noop_stage,
+            "evaluate_quant_strategies": _noop_stage,
+            "evaluate_strategy_evaluation": _noop_stage,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
@@ -189,8 +204,8 @@ def test_market_signals_fail_when_strategy_outputs_are_missing(tmp_path: Path) -
     assert result.succeeded is False
     assert result.failed_stage == "build_market_signals"
     assert result.reason == (
-        "analysis/market_strategy_signals.json was not found; "
-        "evaluate_market_strategy_signals must run first."
+        "analysis/quant_strategy_runs.json was not found; "
+        "evaluate_quant_strategies must run first."
     )
     assert not (result.run.analysis_dir / "market_signals.json").exists()
     assert _stage(manifest, "build_market_signals")["status"] == "failed"
@@ -210,8 +225,8 @@ def _run_pipeline_with_strategy_outputs(
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
-            "evaluate_market_strategy_signals": (
-                lambda config, run: _write_strategy_signals(
+            "evaluate_quant_strategies": (
+                lambda config, run: _write_quant_strategy_runs(
                     config,
                     run,
                     insufficient=insufficient,
@@ -236,7 +251,6 @@ def _run_pipeline_with_representative_strategy_runs(config: dict[str, Any], conf
             "build_market_data_views": _write_market_data_views,
             "evaluate_quant_strategies": _write_representative_quant_strategy_runs,
             "evaluate_strategy_evaluation": _noop_stage,
-            "evaluate_market_strategy_signals": _write_representative_strategy_signals,
             "build_analysis_materials": _noop_stage,
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
@@ -356,54 +370,10 @@ def _write_representative_quant_strategy_runs(config, run) -> list[str]:
     return ["analysis/quant_strategy_runs.json"]
 
 
-def _write_representative_strategy_signals(config, run) -> list[str]:
-    signals = [
-        _strategy_signal("tsmom_vol_scaled", "BTCUSDT", "bullish", "high", "risk_on_momentum"),
-        _strategy_signal(
-            "bollinger_rsi_reversion",
-            "BTCUSDT",
-            "bearish",
-            "low",
-            "overbought_reversion_watch",
-        ),
-        _strategy_signal("tsmom_vol_scaled", "ETHUSDT", "bullish", "high", "risk_on_momentum"),
-        _strategy_signal("breakout_atr_trend", "ETHUSDT", "bullish", "medium", "confirmed_breakout"),
-        _strategy_signal(
-            "breakout_atr_trend",
-            "SOLUSDT",
-            "unknown",
-            "low",
-            None,
-            insufficient=True,
-        ),
-    ]
-    write_json(
-        run.analysis_dir / "market_strategy_signals.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "market_strategy_signals",
-            "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": [
-                "analysis/quant_strategy_runs.json",
-                "raw/market_data_views.json",
-            ],
-            "signals": signals,
-        },
-    )
-    run.manifest["artifacts"]["market_strategy_signals"] = "analysis/market_strategy_signals.json"
-    run.manifest["counts"]["market_strategy_signals"] = len(signals)
-    run.manifest["counts"]["market_strategy_signals_insufficient_data"] = 1
-    return ["analysis/market_strategy_signals.json"]
-
-
-def _write_strategy_signals(config, run, *, insufficient: bool) -> list[str]:
-    key_values = (
-        {"requested_lookback": 3, "row_count": 1}
-        if insufficient
-        else {"latest_close": 106.0, "row_count": 3}
-    )
-    signal = {
-        "strategy_signal_id": "strategy_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+def _write_quant_strategy_runs(config, run, *, insufficient: bool) -> list[str]:
+    strategy_run = {
+        "strategy_run_id": "quant_strategy_run:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+        "status": "insufficient_data" if insufficient else "succeeded",
         "strategy_name": "tsmom_vol_scaled",
         "source": "binance",
         "symbol": "BTCUSDT",
@@ -412,38 +382,54 @@ def _write_strategy_signals(config, run, *, insufficient: bool) -> list[str]:
         "input_window_start": "2026-06-01T00:00:00Z",
         "input_window_end": "2026-06-03T00:00:00Z",
         "latest_candle_time": "2026-06-03T00:00:00Z",
-        "direction": "unknown" if insufficient else "bullish",
-        "strength": "unknown" if insufficient else "medium",
-        "confidence": "low" if insufficient else "medium",
-        "key_values": key_values,
-        "evidence": (
-            ["input view has 1 OHLCV rows for requested_lookback 3."]
-            if insufficient
-            else ["return_window_pct is 6.0% over the configured return window."]
-        ),
-        "uncertainty": (
-            ["binance BTCUSDT 1d has insufficient OHLCV rows."]
-            if insufficient
-            else ["Strategy uses OHLCV close prices only and excludes text events."]
-        ),
-        "insufficient_data": insufficient,
+        "data_quality": {
+            "row_count": 1 if insufficient else 3,
+            "requested_lookback": 3,
+            "minimum_required_rows": 3,
+            "sufficient_data": not insufficient,
+            "missing_row_policy": "do_not_fabricate",
+            "warnings": [],
+        },
+        "indicators": {} if insufficient else {"latest_close": 106.0, "row_count": 3},
+        "signals": {},
+        "backtest_diagnostic": {"enabled": False, "status": "disabled"},
+        "parameter_diagnostic": {"enabled": False, "status": "disabled"},
+        "assessment": {
+            "direction": "unknown" if insufficient else "bullish",
+            "strength": "unknown" if insufficient else "medium",
+            "confidence": "low" if insufficient else "medium",
+            "evidence": (
+                ["input view has 1 OHLCV rows for requested_lookback 3."]
+                if insufficient
+                else ["return_window_pct is 6.0% over the configured return window."]
+            ),
+            "uncertainty": (
+                ["binance BTCUSDT 1d has insufficient OHLCV rows."]
+                if insufficient
+                else ["Strategy uses OHLCV close prices only and excludes text events."]
+            ),
+        },
+        "warnings": [],
+        "error": None,
         "source_artifacts": ["raw/market_data_views.json"],
         "created_at": "2026-06-05T00:00:00Z",
     }
     write_json(
-        run.analysis_dir / "market_strategy_signals.json",
+        run.analysis_dir / "quant_strategy_runs.json",
         {
             "schema_version": 1,
-            "artifact_type": "market_strategy_signals",
+            "artifact_type": "quant_strategy_runs",
             "created_at": "2026-06-05T00:00:00Z",
+            "engine": {"name": "vectorbt", "version": "0.28.0", "objects_exposed": False},
             "source_artifacts": ["raw/market_data_views.json"],
-            "signals": [signal],
+            "runs": [strategy_run],
         },
     )
-    run.manifest["artifacts"]["market_strategy_signals"] = "analysis/market_strategy_signals.json"
-    run.manifest["counts"]["market_strategy_signals"] = 1
-    run.manifest["counts"]["market_strategy_signals_insufficient_data"] = int(insufficient)
-    return ["analysis/market_strategy_signals.json"]
+    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["counts"]["quant_strategy_runs"] = 1
+    run.manifest["counts"]["quant_strategy_runs_succeeded"] = 0 if insufficient else 1
+    run.manifest["counts"]["quant_strategy_runs_insufficient_data"] = int(insufficient)
+    return ["analysis/quant_strategy_runs.json"]
 
 
 def _strategy_run(
@@ -473,51 +459,6 @@ def _strategy_run(
         },
         "warnings": [],
         "source_artifacts": ["raw/market_data_views.json"],
-        "created_at": "2026-06-05T00:00:00Z",
-    }
-
-
-def _strategy_signal(
-    strategy_name: str,
-    symbol: str,
-    direction: str,
-    confidence: str,
-    latest_regime: str | None,
-    *,
-    insufficient: bool = False,
-) -> dict[str, Any]:
-    key_values = {"row_count": 3}
-    if latest_regime:
-        key_values["latest_regime"] = latest_regime
-    if strategy_name == "tsmom_vol_scaled":
-        key_values["return_window_pct"] = 6.0
-    if strategy_name == "bollinger_rsi_reversion":
-        key_values["rsi"] = 82.0
-    if insufficient:
-        key_values = {"requested_lookback": 3, "row_count": 1}
-    return {
-        "strategy_signal_id": (
-            f"strategy_signal:{strategy_name}:binance:{symbol}:1d:2026-06-03T00:00:00Z"
-        ),
-        "strategy_name": strategy_name,
-        "source": "binance",
-        "symbol": symbol,
-        "timeframe": "1d",
-        "input_view_id": f"ohlcv_view:binance:{symbol}:1d:2026-06-03T00:00:00Z",
-        "input_window_start": "2026-06-01T00:00:00Z",
-        "input_window_end": "2026-06-03T00:00:00Z",
-        "latest_candle_time": "2026-06-03T00:00:00Z",
-        "direction": direction,
-        "strength": "medium" if direction != "unknown" else "unknown",
-        "confidence": confidence,
-        "key_values": key_values,
-        "evidence": [f"{strategy_name} evidence summary for {symbol}."],
-        "uncertainty": [f"{strategy_name} uncertainty summary for {symbol}."],
-        "insufficient_data": insufficient,
-        "source_artifacts": [
-            "analysis/quant_strategy_runs.json",
-            "raw/market_data_views.json",
-        ],
         "created_at": "2026-06-05T00:00:00Z",
     }
 

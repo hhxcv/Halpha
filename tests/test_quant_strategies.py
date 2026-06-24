@@ -59,12 +59,11 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     result = _run_pipeline_with_strategies(config, config_path)
 
     strategy_runs = _strategy_runs(result)
-    strategy_signals = _strategy_signals(result)
     market_signals = _market_signals(result)
     material = (result.run.analysis_dir / "market_signal_material.md").read_text(encoding="utf-8")
     manifest = _manifest(result)
     strategy_run = strategy_runs["runs"][0]
-    strategy_signal = strategy_signals["signals"][0]
+    market_signal = market_signals["signals"][0]
 
     assert result.succeeded is True
     assert strategy_runs["artifact_type"] == "quant_strategy_runs"
@@ -139,24 +138,20 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert strategy_run["parameter_diagnostic"] == {"enabled": False, "status": "disabled"}
     assert strategy_run["error"] is None
 
-    assert strategy_signals["source_artifacts"] == [
-        "analysis/quant_strategy_runs.json",
-        "raw/market_data_views.json",
-    ]
-    assert strategy_signal["strategy_name"] == "tsmom_vol_scaled"
-    assert strategy_signal["direction"] == "bullish"
-    assert strategy_signal["key_values"]["return_window_pct"] == 4.807692
-    assert strategy_signal["key_values"]["entry_count"] == 1
-    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "succeeded"
-    assert strategy_signal["key_values"]["backtest_trade_count"] >= 1
-    assert strategy_signal["key_values"]["backtest_final_equity"] > 0
-    assert strategy_signal["source_artifacts"] == [
+    assert market_signal["strategy_name"] == "tsmom_vol_scaled"
+    assert market_signal["direction"] == "bullish"
+    assert market_signal["key_values"]["return_window_pct"] == 4.807692
+    assert market_signal["key_values"]["entry_count"] == 1
+    assert market_signal["key_values"]["backtest_diagnostic_status"] == "succeeded"
+    assert market_signal["key_values"]["backtest_trade_count"] >= 1
+    assert market_signal["key_values"]["backtest_final_equity"] > 0
+    assert market_signal["source_artifacts"] == [
         "analysis/quant_strategy_runs.json",
         "raw/market_data_views.json",
     ]
     assert market_signals["source_artifacts"] == [
-        "analysis/market_strategy_signals.json",
         "analysis/quant_strategy_runs.json",
+        "raw/market_data_views.json",
     ]
     assert market_signals["signals"][0]["strategy_name"] == "tsmom_vol_scaled"
     assert "analysis/quant_strategy_runs.json" in material
@@ -164,12 +159,10 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert "backtest_diagnostic_policy: historical_research_material_only_not_forecast" in material
 
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
-    assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["counts"]["quant_strategy_runs"] == 1
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
     assert manifest["counts"]["quant_strategy_runs_failed"] == 0
     assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 0
-    assert manifest["counts"]["market_strategy_signals"] == 1
     assert manifest["quant_strategies"]["enabled"] == ["tsmom_vol_scaled"]
     assert manifest["quant_strategies"]["backtest_diagnostics_enabled"] is True
     assert manifest["quant_strategies"]["parameter_diagnostics_enabled"] is False
@@ -177,9 +170,6 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert manifest["quant_strategies"]["insufficient_data"] == []
     assert _stage(manifest, "evaluate_quant_strategies")["artifacts"] == [
         "analysis/quant_strategy_runs.json"
-    ]
-    assert _stage(manifest, "evaluate_market_strategy_signals")["artifacts"] == [
-        "analysis/market_strategy_signals.json"
     ]
 
 
@@ -192,7 +182,7 @@ def test_quant_strategy_runner_records_insufficient_data_without_fabrication(tmp
     result = _run_pipeline_with_strategies(config, config_path)
 
     strategy_run = _strategy_runs(result)["runs"][0]
-    strategy_signal = _strategy_signals(result)["signals"][0]
+    market_signal = _market_signals(result)["signals"][0]
     manifest = _manifest(result)
 
     assert result.succeeded is True
@@ -205,11 +195,11 @@ def test_quant_strategy_runner_records_insufficient_data_without_fabrication(tmp
     assert strategy_run["assessment"]["direction"] == "unknown"
     assert strategy_run["assessment"]["confidence"] == "low"
     assert strategy_run["warnings"][0]["code"] == "insufficient_ohlcv_rows"
-    assert strategy_signal["direction"] == "unknown"
-    assert strategy_signal["insufficient_data"] is True
-    assert strategy_signal["key_values"]["backtest_diagnostic_status"] == "skipped"
+    assert market_signal["direction"] == "unknown"
+    assert market_signal["insufficient_data"] is True
+    assert market_signal["key_values"]["backtest_diagnostic_status"] == "skipped"
     assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
-    assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 1
+    assert manifest["counts"]["market_signals_insufficient_data"] == 1
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 1
 
 
@@ -381,7 +371,6 @@ def test_quant_strategy_runner_records_manifest_diagnostics_for_mixed_strategy_s
 
     assert result.succeeded is True
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
-    assert manifest["artifacts"]["market_strategy_signals"] == "analysis/market_strategy_signals.json"
     assert manifest["counts"]["quant_strategy_runs"] == 3
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
     assert manifest["counts"]["quant_strategy_runs_failed"] == 1
@@ -389,8 +378,8 @@ def test_quant_strategy_runner_records_manifest_diagnostics_for_mixed_strategy_s
     assert manifest["counts"]["quant_strategy_runs_disabled"] == 0
     assert manifest["counts"]["quant_strategies_enabled"] == 3
     assert manifest["counts"]["quant_strategies_disabled"] == 1
-    assert manifest["counts"]["market_strategy_signals"] == 3
-    assert manifest["counts"]["market_strategy_signals_insufficient_data"] == 1
+    assert manifest["counts"]["market_signals"] == 3
+    assert manifest["counts"]["market_signals_insufficient_data"] == 1
     assert manifest["quant_strategies"]["engine"]["name"] == "vectorbt"
     assert "version" in manifest["quant_strategies"]["engine"]
     assert manifest["quant_strategies"]["enabled"] == [
@@ -1341,7 +1330,7 @@ def _strategy_runs(result) -> dict[str, Any]:
 
 
 def _strategy_signals(result) -> dict[str, Any]:
-    return json.loads((result.run.analysis_dir / "market_strategy_signals.json").read_text(encoding="utf-8"))
+    return _market_signals(result)
 
 
 def _market_signals(result) -> dict[str, Any]:

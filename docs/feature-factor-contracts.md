@@ -54,7 +54,6 @@ Feature extraction may use implemented current-run artifacts when present:
 
 - `raw/market.json`
 - `raw/market_data_views.json`
-- `analysis/market_strategy_signals.json`
 - `analysis/market_signals.json`
 - `analysis/strategy_evaluation_summary.json`
 - `analysis/strategy_effectiveness_gates.json`

@@ -118,7 +118,6 @@ def _run_confluence_pipeline(
             "evaluate_quant_strategies": _noop_stage,
             "evaluate_strategy_evaluation": _noop_stage,
             "build_strategy_experiment_material": _noop_stage,
-            "evaluate_market_strategy_signals": _noop_stage,
             "build_market_signals": lambda config, run: _write_market_signals(
                 config,
                 run,
@@ -250,7 +249,7 @@ def _write_market_signals(config, run, *, direction: str) -> list[str]:
             "schema_version": 1,
             "artifact_type": "market_signals",
             "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": ["analysis/market_strategy_signals.json"],
+            "source_artifacts": ["analysis/quant_strategy_runs.json"],
             "signals": [
                 {
                     "signal_id": "market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
@@ -264,7 +263,7 @@ def _write_market_signals(config, run, *, direction: str) -> list[str]:
                     "evidence": [f"market direction is {direction}."],
                     "uncertainty": [],
                     "insufficient_data": False,
-                    "source_artifacts": ["analysis/market_strategy_signals.json"],
+                    "source_artifacts": ["analysis/quant_strategy_runs.json"],
                 }
             ],
         },
