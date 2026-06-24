@@ -11,6 +11,7 @@ import pytest
 from halpha.cli import main
 from halpha.config import load_config
 from halpha.monitor.monitoring import run_monitor_loop
+from halpha.monitor.state_store import MonitorStateRepository
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +33,7 @@ def test_monitor_loop_runs_finite_count_and_writes_health_state(tmp_path: Path) 
         pipeline_runner=pipeline,
     )
 
-    health_state = _json(tmp_path / "monitor" / "monitor_health_state.json")
+    health_state = _health_state(config_path)
     cycle_manifests = _cycle_manifests(tmp_path)
 
     assert result.succeeded is True
@@ -45,6 +46,8 @@ def test_monitor_loop_runs_finite_count_and_writes_health_state(tmp_path: Path) 
     assert health_state["latest_loop"]["loop_id"] == result.loop_id
     assert health_state["latest_loop"]["completed_cycles"] == 2
     assert health_state["cycle_count"] == 2
+    assert result.health_state_path == tmp_path / ".halpha" / "state.sqlite"
+    assert not (tmp_path / "monitor" / "monitor_health_state.json").exists()
 
 
 def test_monitor_loop_stops_on_failed_cycle_and_health_records_failure(tmp_path: Path) -> None:
@@ -61,7 +64,7 @@ def test_monitor_loop_stops_on_failed_cycle_and_health_records_failure(tmp_path:
         pipeline_runner=pipeline,
     )
 
-    health_state = _json(tmp_path / "monitor" / "monitor_health_state.json")
+    health_state = _health_state(config_path)
 
     assert result.succeeded is False
     assert result.completed_cycles == 2
@@ -279,6 +282,10 @@ def _cycle_manifests(tmp_path: Path) -> list[dict[str, Any]]:
 
 def _json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _health_state(config_path: Path) -> dict[str, Any]:
+    return MonitorStateRepository(config_path=config_path).health_state(monitor_output_dir="monitor", base=config_path.parent)
 
 
 def _time() -> datetime:

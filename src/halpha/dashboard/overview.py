@@ -13,7 +13,8 @@ from halpha.dashboard.common import dashboard_strict_overall_status as _overall_
 from halpha.dashboard.runs import dashboard_latest_run_section
 from halpha.dashboard.settings import dashboard_config_ref
 from halpha.data.run_index import RUN_INDEX_ARTIFACT
-from halpha.monitor.monitoring import MONITOR_HEALTH_STATE_FILENAME, load_monitor_config
+from halpha.monitor.monitoring import load_monitor_config
+from halpha.monitor.state_store import MONITOR_STATE_STORE_ARTIFACT, MonitorStateRepository
 from halpha.storage import artifact_base as _artifact_base
 from halpha.utils.value_helpers import (
     as_dict as _dict,
@@ -176,13 +177,12 @@ def _monitor_section(config: dict[str, Any], *, config_path: Path, base: Path) -
     output_dir = Path(settings.output_dir)
     if not output_dir.is_absolute():
         output_dir = base / output_dir
-    path = output_dir / MONITOR_HEALTH_STATE_FILENAME
-    artifact = _safe_ref(path, base=base)
-    data, error = _read_json(path)
-    if error:
-        return _section("monitor", "missing" if "was not found" in error else "failed", source_artifacts=[artifact], errors=[error])
+    data = MonitorStateRepository(config_path=config_path).health_state(
+        monitor_output_dir=_safe_ref(output_dir, base=base),
+        base=base,
+    )
     fields = {
-        "artifact": artifact,
+        "artifact": MONITOR_STATE_STORE_ARTIFACT,
         "artifact_type": data.get("artifact_type"),
         "cycle_count": data.get("cycle_count"),
         "failed_cycle_count": data.get("failed_cycle_count"),
@@ -195,7 +195,14 @@ def _monitor_section(config: dict[str, Any], *, config_path: Path, base: Path) -
         "warning_count": data.get("warning_count"),
         "error_count": data.get("error_count"),
     }
-    return _section("monitor", "available", fields=fields, source_artifacts=[artifact])
+    return _section(
+        "monitor",
+        str(data.get("status") or "unknown"),
+        fields=fields,
+        source_artifacts=_string_list(data.get("source_artifacts")),
+        warnings=_string_list(data.get("warnings")),
+        errors=_string_list(data.get("errors")),
+    )
 
 
 def _workbench_section(
@@ -268,7 +275,7 @@ def _workbench_stale_diagnostics(
     if workbench_cycle_id == "none":
         workbench_cycle_id = None
     if workbench_cycle_id and current_cycle_id and workbench_cycle_id != current_cycle_id:
-        monitor_artifact = _clean_text(monitor_fields.get("artifact")) or f"runs/monitor/{MONITOR_HEALTH_STATE_FILENAME}"
+        monitor_artifact = _clean_text(monitor_fields.get("artifact")) or MONITOR_STATE_STORE_ARTIFACT
         warnings.append(
             f"workbench summary references monitor cycle {workbench_cycle_id}, "
             f"but latest monitor cycle is {current_cycle_id}. Source: {monitor_artifact}."

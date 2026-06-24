@@ -9,7 +9,13 @@ from pathlib import Path
 import time
 from typing import Any, Callable
 
+from halpha.monitor.state_store import (
+    MONITOR_STATE_STORE_ARTIFACT,
+    MonitorArchivePersistence,
+    MonitorStateRepository,
+)
 from halpha.runtime.pipeline_contracts import RunResult
+from halpha.runtime.state_store import runtime_state_path
 from halpha.pipeline_stages import StageSelectionError
 from halpha.pipeline import run_pipeline
 from halpha.storage import artifact_base, write_json
@@ -25,10 +31,6 @@ DEFAULT_MONITOR_COOLDOWN_SECONDS = 3600
 DEFAULT_MONITOR_OUTPUT_DIR = "runs/monitor"
 DEFAULT_MONITOR_TARGET_STAGE = "build_personalized_risk_material"
 DEFAULT_MONITOR_NO_CODEX = True
-ALERT_ARCHIVE_FILENAME = "alert_archive.jsonl"
-ALERT_COOLDOWN_STATE_FILENAME = "alert_cooldown_state.json"
-ALERT_ARCHIVE_STATE_FILENAME = "alert_archive_state.json"
-MONITOR_HEALTH_STATE_FILENAME = "monitor_health_state.json"
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 SUPPORTED_MONITOR_FIELDS = {
     "cooldown_seconds",
@@ -149,15 +151,7 @@ def run_monitor_cycle(
         "run_manifest": None,
         "product_run": None,
         "source_artifacts": {},
-        "alert_archive": {
-            "status": "not_run",
-            "archive": _portable_path(output_dir / ALERT_ARCHIVE_FILENAME, base=base),
-            "cooldown_state": _portable_path(output_dir / ALERT_COOLDOWN_STATE_FILENAME, base=base),
-            "archive_state": _portable_path(output_dir / ALERT_ARCHIVE_STATE_FILENAME, base=base),
-            "counts": _empty_alert_archive_counts(),
-            "warnings": [],
-            "errors": [],
-        },
+        "alert_archive": _monitor_alert_archive_summary(status="not_run"),
         "warnings": [],
         "errors": [],
     }
@@ -194,7 +188,7 @@ def run_monitor_cycle(
             }
         )
         write_json(manifest_path, manifest)
-        _write_monitor_health_state(output_dir, config_base=base, timestamp=finished_at)
+        _persist_monitor_cycle(config_path=config_path, manifest=manifest, manifest_path=manifest_path, output_dir=output_dir, base=base)
         LOGGER.error(
             "Monitor cycle failed.",
             extra={
@@ -223,14 +217,6 @@ def run_monitor_cycle(
     product_run = _product_run_summary(pipeline_result, base=base)
     errors = _result_errors(pipeline_result)
     status = "succeeded" if pipeline_result.succeeded else "failed"
-    alert_archive = _archive_alert_decisions(
-        pipeline_result,
-        cycle_id=cycle_id,
-        output_dir=output_dir,
-        config_base=base,
-        timestamp=finished_at,
-        cooldown_seconds=settings.cooldown_seconds,
-    )
     manifest.update(
         {
             "status": status,
@@ -241,13 +227,23 @@ def run_monitor_cycle(
             "run_manifest": _portable_path(pipeline_result.run.manifest_path, base=base),
             "product_run": product_run,
             "source_artifacts": _artifact_refs(pipeline_result.run.manifest),
-            "alert_archive": alert_archive,
+            "alert_archive": _monitor_alert_archive_summary(status="not_run"),
             "warnings": _manifest_warnings(pipeline_result.run.manifest),
             "errors": errors,
         }
     )
+    alert_archive = _archive_alert_decisions(
+        pipeline_result,
+        cycle_manifest=manifest,
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        config_path=config_path,
+        config_base=base,
+        timestamp=finished_at,
+        cooldown_seconds=settings.cooldown_seconds,
+    )
+    manifest["alert_archive"] = alert_archive
     write_json(manifest_path, manifest)
-    _write_monitor_health_state(output_dir, config_base=base, timestamp=finished_at)
     LOGGER.log(
         logging.INFO if pipeline_result.succeeded else logging.WARNING,
         "Monitor cycle finished.",
@@ -333,21 +329,24 @@ def run_monitor_loop(
             sleeper(interval_seconds)
 
     finished_at = started_at if now is not None else datetime.now(timezone.utc)
-    health_state_path = _write_monitor_health_state(
-        output_dir,
-        config_base=base,
-        timestamp=finished_at,
-        loop_summary={
+    updated_at = _utc_timestamp(finished_at)
+    repository = MonitorStateRepository(config_path=config_path)
+    repository.save_loop(
+        {
             "loop_id": loop_id,
             "status": status,
             "max_cycles": max_cycles,
             "completed_cycles": len(cycle_results),
             "stop_reason": stop_reason,
             "started_at": _utc_timestamp(started_at),
-            "finished_at": _utc_timestamp(finished_at),
+            "finished_at": updated_at,
             "latest_cycle_id": cycle_results[-1].cycle_id if cycle_results else None,
+            "reason": reason,
         },
+        monitor_output_dir=_portable_path(output_dir, base=base),
+        updated_at=updated_at,
     )
+    health_state_path = runtime_state_path(config_path=config_path)
     LOGGER.log(
         logging.INFO if status == "succeeded" else logging.WARNING,
         "Monitor loop finished.",
@@ -379,7 +378,10 @@ def inspect_monitor_health(config: dict[str, Any], *, config_path: Path) -> Moni
     settings = load_monitor_config(config)
     output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
     base = artifact_base(config_path)
-    health_state = _monitor_health_state(output_dir, config_base=base)
+    health_state = MonitorStateRepository(config_path=config_path).health_state(
+        monitor_output_dir=_portable_path(output_dir, base=base),
+        base=base,
+    )
     lines = [
         "Halpha monitor inspection succeeded.",
         f"monitor_output_dir: {_portable_path(output_dir, base=base)}",
@@ -510,88 +512,205 @@ def _result_errors(result: RunResult) -> list[dict[str, str]]:
     ]
 
 
-def _archive_alert_decisions(
-    result: RunResult,
-    *,
-    cycle_id: str,
-    output_dir: Path,
-    config_base: Path,
-    timestamp: datetime,
-    cooldown_seconds: int,
-) -> dict[str, Any]:
-    archive_path = output_dir / ALERT_ARCHIVE_FILENAME
-    cooldown_path = output_dir / ALERT_COOLDOWN_STATE_FILENAME
-    archive_state_path = output_dir / ALERT_ARCHIVE_STATE_FILENAME
-    summary: dict[str, Any] = {
-        "status": "skipped",
-        "archive": _portable_path(archive_path, base=config_base),
-        "cooldown_state": _portable_path(cooldown_path, base=config_base),
-        "archive_state": _portable_path(archive_state_path, base=config_base),
+def _monitor_alert_archive_summary(*, status: str) -> dict[str, Any]:
+    return {
+        "status": status,
+        "state_store": MONITOR_STATE_STORE_ARTIFACT,
+        "archive": MONITOR_STATE_STORE_ARTIFACT,
+        "cooldown_state": MONITOR_STATE_STORE_ARTIFACT,
+        "archive_state": MONITOR_STATE_STORE_ARTIFACT,
         "counts": _empty_alert_archive_counts(),
         "warnings": [],
         "errors": [],
     }
 
+
+def _persist_monitor_cycle(
+    *,
+    config_path: Path,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+    output_dir: Path,
+    base: Path,
+) -> None:
+    updated_at = _clean_text(manifest.get("finished_at"), fallback=_utc_timestamp(datetime.now(timezone.utc)))
+    MonitorStateRepository(config_path=config_path).save_cycle(
+        _monitor_cycle_state_record(manifest, manifest_path=manifest_path, output_dir=output_dir, base=base),
+        updated_at=updated_at,
+    )
+
+
+def _persist_monitor_archive(
+    *,
+    config_path: Path,
+    cycle_manifest: dict[str, Any],
+    manifest_path: Path,
+    output_dir: Path,
+    base: Path,
+    timestamp: datetime,
+    summary: dict[str, Any],
+    archive_records: list[dict[str, Any]],
+    build_archive: Callable[[dict[str, dict[str, Any]]], MonitorArchivePersistence] | None = None,
+) -> dict[str, Any]:
+    def default_builder(cooldown_state: dict[str, dict[str, Any]]) -> MonitorArchivePersistence:
+        return MonitorArchivePersistence(
+            summary=summary,
+            records=archive_records,
+            cooldown_records=cooldown_state,
+        )
+
+    return MonitorStateRepository(config_path=config_path).persist_cycle_with_archive_builder(
+        _monitor_cycle_state_record(cycle_manifest, manifest_path=manifest_path, output_dir=output_dir, base=base),
+        build_archive=build_archive or default_builder,
+        updated_at=_utc_timestamp(timestamp),
+    )
+
+
+def _monitor_cycle_state_record(
+    manifest: dict[str, Any],
+    *,
+    manifest_path: Path,
+    output_dir: Path,
+    base: Path,
+) -> dict[str, Any]:
+    return {
+        "cycle_id": _clean_text(manifest.get("cycle_id")),
+        "monitor_output_dir": _portable_path(output_dir, base=base),
+        "cycle_manifest": _portable_path(manifest_path, base=base),
+        "cycle_mode": _clean_text(manifest.get("cycle_mode")),
+        "loop_id": manifest.get("loop_id") if isinstance(manifest.get("loop_id"), str) else None,
+        "cycle_sequence": manifest.get("cycle_sequence"),
+        "trigger_source": _clean_text(manifest.get("trigger_source")),
+        "status": _clean_text(manifest.get("status")),
+        "started_at": _clean_text(manifest.get("started_at")),
+        "finished_at": manifest.get("finished_at") if isinstance(manifest.get("finished_at"), str) else None,
+        "config_ref": _clean_text(manifest.get("config_ref")),
+        "target_stage": _clean_text(manifest.get("target_stage")),
+        "no_codex": manifest.get("no_codex") is True,
+        "exit_code": manifest.get("exit_code"),
+        "run_id": manifest.get("run_id") if isinstance(manifest.get("run_id"), str) else None,
+        "run_dir": manifest.get("run_dir") if isinstance(manifest.get("run_dir"), str) else None,
+        "run_manifest": manifest.get("run_manifest") if isinstance(manifest.get("run_manifest"), str) else None,
+        "product_run": manifest.get("product_run") if isinstance(manifest.get("product_run"), dict) else {},
+        "source_artifacts": manifest.get("source_artifacts") if isinstance(manifest.get("source_artifacts"), dict) else {},
+        "alert_archive": manifest.get("alert_archive") if isinstance(manifest.get("alert_archive"), dict) else {},
+        "warnings": manifest.get("warnings") if isinstance(manifest.get("warnings"), list) else [],
+        "errors": [
+            str(error.get("message") or error)
+            if isinstance(error, dict)
+            else str(error)
+            for error in manifest.get("errors", [])
+            if error
+        ]
+        if isinstance(manifest.get("errors"), list)
+        else [],
+    }
+
+
+def _archive_alert_decisions(
+    result: RunResult,
+    *,
+    cycle_manifest: dict[str, Any],
+    manifest_path: Path,
+    output_dir: Path,
+    config_path: Path,
+    config_base: Path,
+    timestamp: datetime,
+    cooldown_seconds: int,
+) -> dict[str, Any]:
+    summary: dict[str, Any] = _monitor_alert_archive_summary(status="skipped")
+
     artifact_ref = _alert_decisions_artifact_ref(result.run.manifest)
     if not artifact_ref:
         summary["warnings"].append("analysis/alert_decisions.json was not produced by the linked run.")
-        _write_alert_archive_state(archive_state_path, summary, cycle_id=cycle_id, timestamp=timestamp)
-        return summary
+        return _persist_monitor_archive(
+            config_path=config_path,
+            cycle_manifest=cycle_manifest,
+            manifest_path=manifest_path,
+            output_dir=output_dir,
+            base=config_base,
+            timestamp=timestamp,
+            summary=summary,
+            archive_records=[],
+        )
 
     artifact_path = result.run.run_dir / artifact_ref
     artifact, error = _read_alert_decisions_artifact(artifact_path)
     if error:
         summary["status"] = "degraded"
         summary["errors"].append(error)
-        _write_alert_archive_state(archive_state_path, summary, cycle_id=cycle_id, timestamp=timestamp)
-        return summary
+        return _persist_monitor_archive(
+            config_path=config_path,
+            cycle_manifest=cycle_manifest,
+            manifest_path=manifest_path,
+            output_dir=output_dir,
+            base=config_base,
+            timestamp=timestamp,
+            summary=summary,
+            archive_records=[],
+        )
 
     records = artifact.get("records")
     if not isinstance(records, list):
         summary["status"] = "degraded"
         summary["errors"].append("analysis/alert_decisions.json records must be a list.")
-        _write_alert_archive_state(archive_state_path, summary, cycle_id=cycle_id, timestamp=timestamp)
-        return summary
-
-    cooldown_state, state_warnings = _load_cooldown_state(cooldown_path)
-    summary["warnings"].extend(state_warnings)
-    archive_records: list[dict[str, Any]] = []
-    seen_keys: set[str] = set()
-    created_at = _utc_timestamp(timestamp)
-
-    for index, record in enumerate(records):
-        archive_record = _alert_archive_record(
-            record,
-            index=index,
-            cycle_id=cycle_id,
-            created_at=created_at,
+        return _persist_monitor_archive(
+            config_path=config_path,
+            cycle_manifest=cycle_manifest,
+            manifest_path=manifest_path,
+            output_dir=output_dir,
+            base=config_base,
             timestamp=timestamp,
-            cooldown_seconds=cooldown_seconds,
-            cooldown_state=cooldown_state,
-            seen_keys=seen_keys,
-            run=result.run,
-            config_base=config_base,
+            summary=summary,
+            archive_records=[],
         )
-        archive_records.append(archive_record)
-        status = str(archive_record["status"])
-        summary["counts"][status] = summary["counts"].get(status, 0) + 1
-        summary["counts"]["records"] += 1
 
-    if archive_records:
-        _append_archive_records(archive_path, archive_records)
-        summary["status"] = "succeeded"
-    else:
-        summary["warnings"].append("analysis/alert_decisions.json contained no alert decision records.")
+    def build_archive(cooldown_state: dict[str, dict[str, Any]]) -> MonitorArchivePersistence:
+        archive_summary = _monitor_alert_archive_summary(status="skipped")
+        archive_records: list[dict[str, Any]] = []
+        seen_keys: set[str] = set()
+        created_at = _utc_timestamp(timestamp)
 
-    _write_cooldown_state(
-        cooldown_path,
-        cooldown_state,
-        cooldown_seconds=cooldown_seconds,
+        for index, record in enumerate(records):
+            archive_record = _alert_archive_record(
+                record,
+                index=index,
+                cycle_id=str(cycle_manifest.get("cycle_id") or ""),
+                created_at=created_at,
+                timestamp=timestamp,
+                cooldown_seconds=cooldown_seconds,
+                cooldown_state=cooldown_state,
+                seen_keys=seen_keys,
+                run=result.run,
+                config_base=config_base,
+            )
+            archive_records.append(archive_record)
+            status = str(archive_record["status"])
+            archive_summary["counts"][status] = archive_summary["counts"].get(status, 0) + 1
+            archive_summary["counts"]["records"] += 1
+
+        if archive_records:
+            archive_summary["status"] = "succeeded"
+        else:
+            archive_summary["warnings"].append("analysis/alert_decisions.json contained no alert decision records.")
+
+        return MonitorArchivePersistence(
+            summary=archive_summary,
+            records=archive_records,
+            cooldown_records=cooldown_state,
+        )
+
+    return _persist_monitor_archive(
+        config_path=config_path,
+        cycle_manifest=cycle_manifest,
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        base=config_base,
         timestamp=timestamp,
-        config_base=config_base,
+        summary=summary,
+        archive_records=[],
+        build_archive=build_archive,
     )
-    _write_alert_archive_state(archive_state_path, summary, cycle_id=cycle_id, timestamp=timestamp)
-    return summary
 
 
 def _alert_decisions_artifact_ref(manifest: dict[str, Any]) -> str | None:
@@ -800,191 +919,6 @@ def _record_id(*, cycle_id: str, index: int, alert_key: str) -> str:
 def _stable_hash(value: Any) -> str:
     payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
-
-
-def _load_cooldown_state(path: Path) -> tuple[dict[str, Any], list[str]]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {}, []
-    except json.JSONDecodeError:
-        return {}, [f"{ALERT_COOLDOWN_STATE_FILENAME} was not valid JSON; starting with empty cooldown state."]
-    if not isinstance(data, dict):
-        return {}, [f"{ALERT_COOLDOWN_STATE_FILENAME} was not a JSON object; starting with empty cooldown state."]
-    records = data.get("records", {})
-    if not isinstance(records, dict):
-        return {}, [f"{ALERT_COOLDOWN_STATE_FILENAME}.records was not a JSON object; starting with empty cooldown state."]
-    return {str(key): value for key, value in records.items() if isinstance(value, dict)}, []
-
-
-def _append_archive_records(path: Path, records: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        for record in records:
-            handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
-            handle.write("\n")
-
-
-def _write_cooldown_state(
-    path: Path,
-    records: dict[str, Any],
-    *,
-    cooldown_seconds: int,
-    timestamp: datetime,
-    config_base: Path,
-) -> None:
-    state = {
-        "schema_version": 1,
-        "artifact_type": "monitor_alert_cooldown_state",
-        "updated_at": _utc_timestamp(timestamp),
-        "cooldown_seconds": cooldown_seconds,
-        "records": records,
-        "record_count": len(records),
-        "state_path": _portable_path(path, base=config_base),
-    }
-    write_json(path, state)
-
-
-def _write_alert_archive_state(
-    path: Path,
-    summary: dict[str, Any],
-    *,
-    cycle_id: str,
-    timestamp: datetime,
-) -> None:
-    state = {
-        "schema_version": 1,
-        "artifact_type": "monitor_alert_archive_state",
-        "updated_at": _utc_timestamp(timestamp),
-        "last_cycle_id": cycle_id,
-        "status": summary["status"],
-        "archive": summary["archive"],
-        "cooldown_state": summary["cooldown_state"],
-        "counts": summary["counts"],
-        "warnings": summary["warnings"],
-        "errors": summary["errors"],
-    }
-    write_json(path, state)
-
-
-def _write_monitor_health_state(
-    output_dir: Path,
-    *,
-    config_base: Path,
-    timestamp: datetime,
-    loop_summary: dict[str, Any] | None = None,
-) -> Path:
-    health_state_path = output_dir / MONITOR_HEALTH_STATE_FILENAME
-    state = _monitor_health_state(output_dir, config_base=config_base, latest_loop=loop_summary)
-    state["updated_at"] = _utc_timestamp(timestamp)
-    write_json(health_state_path, state)
-    return health_state_path
-
-
-def _monitor_health_state(
-    output_dir: Path,
-    *,
-    config_base: Path,
-    latest_loop: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    health_state_path = output_dir / MONITOR_HEALTH_STATE_FILENAME
-    previous_health = _read_json_object(health_state_path)
-    cycle_manifests = _read_cycle_manifests(output_dir)
-    latest_cycle = cycle_manifests[0] if cycle_manifests else {}
-    archive_state = _read_json_object(output_dir / ALERT_ARCHIVE_STATE_FILENAME)
-    cooldown_state = _read_json_object(output_dir / ALERT_COOLDOWN_STATE_FILENAME)
-    alert_counts = _dict(archive_state.get("counts"))
-    if not alert_counts:
-        alert_counts = _empty_alert_archive_counts()
-    cooldown_records = _dict(cooldown_state.get("records"))
-    warning_count = _health_warning_count(cycle_manifests, archive_state)
-    error_count = _health_error_count(cycle_manifests, archive_state)
-
-    loop = latest_loop if latest_loop is not None else _dict(previous_health.get("latest_loop"))
-    return {
-        "schema_version": 1,
-        "artifact_type": "monitor_health_state",
-        "health_state_path": _portable_path(health_state_path, base=config_base),
-        "monitor_output_dir": _portable_path(output_dir, base=config_base),
-        "cycle_count": len(cycle_manifests),
-        "failed_cycle_count": sum(1 for manifest in cycle_manifests if manifest.get("status") == "failed"),
-        "latest_cycle_id": _clean_text(latest_cycle.get("cycle_id"), fallback="none"),
-        "latest_cycle_status": _clean_text(latest_cycle.get("status"), fallback="missing"),
-        "latest_run_id": _clean_text(latest_cycle.get("run_id"), fallback="none"),
-        "latest_run_manifest": _clean_text(latest_cycle.get("run_manifest"), fallback="none"),
-        "latest_cycle_manifest": _portable_path(Path(str(latest_cycle.get("_path", ""))), base=config_base)
-        if latest_cycle
-        else "none",
-        "alert_archive_status": _clean_text(archive_state.get("status"), fallback="missing"),
-        "alert_counts": {
-            "records": int(alert_counts.get("records", 0)),
-            "emitted": int(alert_counts.get("emitted", 0)),
-            "suppressed_duplicate": int(alert_counts.get("suppressed_duplicate", 0)),
-            "suppressed_cooldown": int(alert_counts.get("suppressed_cooldown", 0)),
-            "suppressed_no_alert": int(alert_counts.get("suppressed_no_alert", 0)),
-            "skipped": int(alert_counts.get("skipped", 0)),
-        },
-        "cooldown_records": int(cooldown_state.get("record_count", len(cooldown_records))),
-        "warning_count": warning_count,
-        "error_count": error_count,
-        "latest_loop": loop,
-    }
-
-
-def _read_cycle_manifests(output_dir: Path) -> list[dict[str, Any]]:
-    cycle_dir = output_dir / "cycles"
-    manifests: list[dict[str, Any]] = []
-    for path in sorted(cycle_dir.glob("*/monitor_cycle_manifest.json")):
-        manifest = _read_json_object(path)
-        if not manifest:
-            continue
-        manifest["_path"] = path
-        manifests.append(manifest)
-    return sorted(
-        manifests,
-        key=lambda manifest: str(manifest.get("finished_at") or manifest.get("started_at") or ""),
-        reverse=True,
-    )
-
-
-def _read_json_object(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _health_warning_count(cycle_manifests: list[dict[str, Any]], archive_state: dict[str, Any]) -> int:
-    count = 0
-    for manifest in cycle_manifests:
-        warnings = manifest.get("warnings", [])
-        if isinstance(warnings, list):
-            count += len(warnings)
-        archive = _dict(manifest.get("alert_archive"))
-        archive_warnings = archive.get("warnings", [])
-        if isinstance(archive_warnings, list):
-            count += len(archive_warnings)
-    state_warnings = archive_state.get("warnings", [])
-    if isinstance(state_warnings, list):
-        count += len(state_warnings)
-    return count
-
-
-def _health_error_count(cycle_manifests: list[dict[str, Any]], archive_state: dict[str, Any]) -> int:
-    count = 0
-    for manifest in cycle_manifests:
-        errors = manifest.get("errors", [])
-        if isinstance(errors, list):
-            count += len(errors)
-        archive = _dict(manifest.get("alert_archive"))
-        archive_errors = archive.get("errors", [])
-        if isinstance(archive_errors, list):
-            count += len(archive_errors)
-    state_errors = archive_state.get("errors", [])
-    if isinstance(state_errors, list):
-        count += len(state_errors)
-    return count
 
 
 def _empty_alert_archive_counts() -> dict[str, int]:

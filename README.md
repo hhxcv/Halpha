@@ -153,10 +153,11 @@ startup task, cron job, workflow engine, or hidden daemon.
 The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
 runtime state keeps the run index, dashboard command-job lifecycle, and daily
-report schedule dispatch state in `.halpha/state.sqlite`; selected dashboard
-config and monitor state remain in local JSON until their domain migrations are
-implemented. Dashboard read models, health summaries, workbench outputs, and
-latest selections are derived views, not parallel authorities.
+report schedule dispatch state, monitor cycle indexes, alert archive records,
+cooldown state, and monitor health query state in `.halpha/state.sqlite`;
+selected dashboard config remains local JSON. Dashboard read models, health
+summaries, workbench outputs, and latest selections are derived views, not
+parallel authorities.
 
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:
@@ -186,11 +187,11 @@ python -m halpha monitor inspect --config config.example.yaml
 
 The default monitor cycle reuses the configured product pipeline through the
 configured monitor target stage and stops before Codex report generation unless
-monitor config explicitly changes that boundary. The cycle also updates the
-local alert archive and cooldown state from generated alert decisions. Monitor
-notification delivery and daemon/service behavior are not implemented by the
-current monitor command. Dashboard service behavior is provided by the separate
-`dashboard` command.
+monitor config explicitly changes that boundary. The cycle also updates
+state-store alert archive records and cooldown state from generated alert
+decisions. Monitor notification delivery and daemon/service behavior are not
+implemented by the current monitor command. Dashboard service behavior is
+provided by the separate `dashboard` command.
 
 Inspect local research data and data-quality state without collection or Codex:
 

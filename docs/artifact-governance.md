@@ -94,17 +94,16 @@ port, monitor output directory, or schedule file location.
 | --- | --- | --- |
 | Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |
 | Reusable market and research history | Physical local store plus store-local schema and state metadata | Examples include `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/` history stores. |
-| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, current run-index projection, dashboard command-job lifecycle, and daily report schedule dispatch state are implemented. Later domain migrations own service registry, monitor-cycle indexes, alert archive indexes, cooldowns, UI preferences, and searchable run or artifact indexes. |
+| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, current run-index projection, dashboard command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, and monitor health query state are implemented. Later domain migrations own service registry, UI preferences, and searchable run or artifact indexes. |
 | Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
 | Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
 
-Current implemented state is still split across `.halpha/state.sqlite`,
-`.halpha/dashboard/`, and `runs/monitor/`. The run-index projection, dashboard
-command-job lifecycle, and daily report schedule dispatch state have moved to
-`.halpha/state.sqlite`; selected-config state plus monitor state remain current
-or legacy storage until their domain-specific state-store migrations are
-implemented. New contracts must avoid adding another authority for the same
-fact.
+Current implemented mutable operational state is split between
+`.halpha/state.sqlite` and selected-config JSON under `.halpha/dashboard/`.
+The run-index projection, dashboard command-job lifecycle, daily report
+schedule dispatch state, monitor cycle index, alert archive records, cooldown
+state, and monitor health query state live in `.halpha/state.sqlite`. New
+contracts must avoid adding another authority for the same fact.
 
 The only supported resident Halpha process roles are:
 
@@ -429,13 +428,19 @@ evaluation, or history records.
 Monitor artifacts:
 
 - `runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json`
+- `.halpha/state.sqlite`
+
+Monitor cycle manifests are immutable local evidence. Monitor indexes, alert
+archive records, cooldown state, and health query state are mutable local
+operational state in `.halpha/state.sqlite`. They are not Codex input by
+default.
+
+Legacy no-new-write monitor state files:
+
 - `runs/monitor/alert_archive.jsonl`
 - `runs/monitor/alert_cooldown_state.json`
 - `runs/monitor/alert_archive_state.json`
 - `runs/monitor/monitor_health_state.json`
-
-Monitor artifacts are local operational state. They are not Codex input by
-default.
 
 Workbench delivery artifacts:
 

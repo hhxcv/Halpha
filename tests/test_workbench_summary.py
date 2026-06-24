@@ -9,6 +9,7 @@ import pytest
 
 from halpha.pipeline import RunContext
 from halpha.data.run_index import write_run_index
+from halpha.monitor.state_store import MonitorArchivePersistence, MonitorStateRepository
 from halpha.storage import write_json
 from halpha.workbench.workbench import build_workbench_summary, render_workbench_html
 from halpha.workbench.workbench_rendering import render_workbench_markdown
@@ -359,32 +360,14 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
             "errors": [],
         },
     )
-    write_json(
-        tmp_path / "runs" / "monitor" / "alert_archive_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_alert_archive_state",
-            "status": "ok",
-            "counts": {"records": 3, "emitted": 1, "suppressed_duplicate": 1, "suppressed_cooldown": 1},
-        },
-    )
-    write_json(
-        tmp_path / "runs" / "monitor" / "monitor_health_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_health_state",
-            "cycle_count": 2,
-            "failed_cycle_count": 0,
-            "latest_cycle_id": "cycle-1",
-            "latest_cycle_status": "succeeded",
-            "latest_run_id": "run-1",
-            "latest_run_manifest": "runs/run-1/run_manifest.json",
-            "alert_archive_status": "ok",
-            "alert_counts": {"records": 3, "emitted": 1},
-            "cooldown_records": 1,
-            "warning_count": 0,
-            "error_count": 0,
-        },
+    _write_monitor_cycle_state(run.config_path, tmp_path, cycle_id="cycle-1", record_statuses=["emitted"])
+    _write_monitor_cycle_state(
+        run.config_path,
+        tmp_path,
+        cycle_id="cycle-2",
+        record_statuses=["suppressed_duplicate", "suppressed_cooldown"],
+        started_at="2026-06-20T00:10:00Z",
+        finished_at="2026-06-20T00:11:00Z",
     )
     write_json(
         tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json",
@@ -396,6 +379,92 @@ def _write_complete_artifacts(run: RunContext, tmp_path: Path) -> None:
         },
     )
     write_json(run.manifest_path, run.manifest)
+
+
+def _write_monitor_cycle_state(
+    config_path: Path,
+    tmp_path: Path,
+    *,
+    cycle_id: str,
+    record_statuses: list[str],
+    started_at: str = "2026-06-20T00:08:00Z",
+    finished_at: str = "2026-06-20T00:09:00Z",
+) -> None:
+    write_json(
+        tmp_path / "runs" / "monitor" / "cycles" / cycle_id / "monitor_cycle_manifest.json",
+        {"artifact_type": "monitor_cycle_manifest", "cycle_id": cycle_id, "status": "succeeded"},
+    )
+    records = [
+        {
+            "record_id": f"{cycle_id}-record-{index}",
+            "cycle_id": cycle_id,
+            "created_at": finished_at,
+            "status": status,
+            "alert_key": f"{cycle_id}-alert-{index}",
+            "decision_id": f"{cycle_id}-decision-{index}",
+            "symbol": "BTCUSDT",
+            "timeframe": "1d",
+            "priority": "P1",
+            "attention_decision": "review_soon",
+            "requires_user_attention": status == "emitted",
+            "suppression_reasons": [],
+            "cooldown_until": "2026-06-20T01:00:00Z" if status != "suppressed_duplicate" else None,
+            "source_artifacts": ["analysis/alert_decisions.json"],
+            "personalized_context": {"present": False},
+            "source_run": {"run_id": "run-1", "run_manifest": "runs/run-1/run_manifest.json"},
+        }
+        for index, status in enumerate(record_statuses)
+    ]
+    counts = {
+        "records": len(records),
+        "emitted": sum(1 for status in record_statuses if status == "emitted"),
+        "suppressed_duplicate": sum(1 for status in record_statuses if status == "suppressed_duplicate"),
+        "suppressed_cooldown": sum(1 for status in record_statuses if status == "suppressed_cooldown"),
+        "suppressed_no_alert": sum(1 for status in record_statuses if status == "suppressed_no_alert"),
+        "skipped": sum(1 for status in record_statuses if status == "skipped"),
+    }
+    summary = {
+        "status": "succeeded",
+        "state_store": ".halpha/state.sqlite",
+        "archive": ".halpha/state.sqlite",
+        "cooldown_state": ".halpha/state.sqlite",
+        "archive_state": ".halpha/state.sqlite",
+        "counts": counts,
+        "warnings": [],
+        "errors": [],
+    }
+    MonitorStateRepository(config_path=config_path).persist_cycle_with_archive_builder(
+        {
+            "cycle_id": cycle_id,
+            "monitor_output_dir": "runs/monitor",
+            "cycle_manifest": f"runs/monitor/cycles/{cycle_id}/monitor_cycle_manifest.json",
+            "cycle_mode": "once",
+            "loop_id": None,
+            "cycle_sequence": None,
+            "trigger_source": "cli",
+            "status": "succeeded",
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "config_ref": "config.yaml",
+            "target_stage": "build_personalized_risk_material",
+            "no_codex": True,
+            "exit_code": 0,
+            "run_id": "run-1",
+            "run_dir": "runs/run-1",
+            "run_manifest": "runs/run-1/run_manifest.json",
+            "product_run": {"run_id": "run-1", "status": "succeeded"},
+            "source_artifacts": {"alert_decisions": "analysis/alert_decisions.json"},
+            "alert_archive": summary,
+            "warnings": [],
+            "errors": [],
+        },
+        build_archive=lambda _cooldown: MonitorArchivePersistence(
+            summary=summary,
+            records=records,
+            cooldown_records={},
+        ),
+        updated_at=finished_at,
+    )
 
 
 def _artifact(artifact_type: str, *, counts: dict[str, Any] | None = None) -> dict[str, Any]:

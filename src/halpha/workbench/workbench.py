@@ -10,11 +10,8 @@ import sqlite3
 from typing import Any
 
 from halpha.dashboard.time import utc_timestamp as _utc_timestamp
-from halpha.monitor.monitoring import (
-    ALERT_ARCHIVE_STATE_FILENAME,
-    MONITOR_HEALTH_STATE_FILENAME,
-    load_monitor_config,
-)
+from halpha.monitor.monitoring import load_monitor_config
+from halpha.monitor.state_store import MONITOR_STATE_STORE_ARTIFACT, MonitorStateRepository
 from halpha.data.run_index import (
     RUN_INDEX_ARTIFACT,
     run_index_path,
@@ -89,7 +86,7 @@ def build_workbench_summary(
 
     latest_run = _latest_run_state(selection, manifest, manifest_error, base=base)
     decision_state = _decision_state(selection, manifest)
-    alert_state = _alert_state(config, selection, manifest, base=base)
+    alert_state = _alert_state(config, selection, manifest, config_path=config_path, base=base)
     monitor_state = _monitor_state(config, config_path=config_path, base=base)
     outcome_state = _outcome_state(config_path, selection, manifest, base=base)
     strategy_state = _strategy_state(selection, manifest)
@@ -377,44 +374,52 @@ def _decision_state(selection: _RunSelection, manifest: dict[str, Any]) -> dict[
     )
 
 
-def _alert_state(config: dict[str, Any], selection: _RunSelection, manifest: dict[str, Any], *, base: Path) -> dict[str, Any]:
+def _alert_state(
+    config: dict[str, Any],
+    selection: _RunSelection,
+    manifest: dict[str, Any],
+    *,
+    config_path: Path,
+    base: Path,
+) -> dict[str, Any]:
     refs = _manifest_artifact_refs(manifest, {"alert_decisions": "analysis/alert_decisions.json"})
     artifacts = _artifact_statuses(selection.run_dir, refs) if selection.run_dir is not None else []
     settings = load_monitor_config(config)
     monitor_dir = _resolve_path(settings.output_dir, base=base)
-    archive_state_ref = _portable_path(monitor_dir / ALERT_ARCHIVE_STATE_FILENAME, base=base)
-    archive_state, archive_error = _read_json(monitor_dir / ALERT_ARCHIVE_STATE_FILENAME)
-    archive_status = _json_status(archive_state, archive_error)
+    output_ref = _portable_path(monitor_dir, base=base)
+    archive = MonitorStateRepository(config_path=config_path).alert_summary(monitor_output_dir=output_ref)
+    archive_fields = _dict(archive.get("fields"))
+    archive_status = str(archive.get("status") or "missing")
     counts = _dict(manifest.get("counts"))
     fields = {
         "alert_decision_records": _int(counts.get("alert_decision_records")),
         "alert_decision_attention_records": _int(counts.get("alert_decision_attention_records")),
         "archive_state": {
             "status": archive_status,
-            "artifact": archive_state_ref,
-            "counts": _dict(archive_state.get("counts")),
+            "artifact": MONITOR_STATE_STORE_ARTIFACT,
+            "counts": _dict(archive_fields.get("counts")),
         },
     }
     status_inputs = [item["status"] for item in artifacts] + [archive_status]
     return _section(
         _overall_status(status_inputs),
-        source_artifacts={**refs, "alert_archive_state": archive_state_ref},
+        source_artifacts={**refs, "alert_archive_state": MONITOR_STATE_STORE_ARTIFACT},
         fields=fields,
         details={"artifacts": artifacts},
-        warnings=[*_artifact_warnings(artifacts), *([archive_error] if archive_error and archive_status == "missing" else [])],
-        errors=[*_artifact_errors(artifacts), *([archive_error] if archive_error and archive_status == "failed" else [])],
+        warnings=[*_artifact_warnings(artifacts), *[str(item) for item in _list(archive.get("warnings"))]],
+        errors=[*_artifact_errors(artifacts), *[str(item) for item in _list(archive.get("errors"))]],
     )
 
 
 def _monitor_state(config: dict[str, Any], *, config_path: Path, base: Path) -> dict[str, Any]:
     settings = load_monitor_config(config)
     monitor_dir = _resolve_path(settings.output_dir, base=base)
-    health_ref = _portable_path(monitor_dir / MONITOR_HEALTH_STATE_FILENAME, base=base)
-    health, error = _read_json(monitor_dir / MONITOR_HEALTH_STATE_FILENAME)
-    status = _json_status(health, error)
+    output_ref = _portable_path(monitor_dir, base=base)
+    health = MonitorStateRepository(config_path=config_path).health_state(monitor_output_dir=output_ref, base=base)
+    status = str(health.get("status") or "missing")
     fields = {
         "monitor_output_dir": _portable_path(monitor_dir, base=base),
-        "health_state": health_ref,
+        "health_state": MONITOR_STATE_STORE_ARTIFACT,
         "cycle_count": _int(health.get("cycle_count")),
         "failed_cycle_count": _int(health.get("failed_cycle_count")),
         "latest_cycle_id": health.get("latest_cycle_id"),
@@ -429,10 +434,10 @@ def _monitor_state(config: dict[str, Any], *, config_path: Path, base: Path) -> 
     }
     return _section(
         status,
-        artifact=health_ref,
+        artifact=MONITOR_STATE_STORE_ARTIFACT,
         fields=fields,
-        warnings=[error] if error and status == "missing" else [],
-        errors=[error] if error and status == "failed" else [],
+        warnings=[str(item) for item in _list(health.get("warnings"))],
+        errors=[str(item) for item in _list(health.get("errors"))],
     )
 
 

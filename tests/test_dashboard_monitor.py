@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -8,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
+from halpha.monitor.state_store import MonitorArchivePersistence, MonitorStateRepository
 from halpha.storage import write_json
 
 
@@ -19,7 +19,7 @@ def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 def test_dashboard_monitor_api_summarizes_complete_state_without_dumping_alerts(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    _write_complete_monitor_state(tmp_path)
+    _write_complete_monitor_state(config_path, tmp_path)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     summary_response = client.get("/api/monitor")
@@ -73,29 +73,13 @@ def test_dashboard_monitor_api_reports_missing_state(tmp_path: Path) -> None:
     assert payload["cycles"]["status"] == "missing"
     assert payload["alert_archive"]["status"] == "missing"
     assert payload["cooldown"]["status"] == "missing"
-    assert "monitor_health_state.json was not found." in payload["warnings"]
+    assert "monitor state store was not found." in payload["warnings"]
 
 
 def test_dashboard_monitor_api_reports_partial_state(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    monitor_dir = tmp_path / "runs" / "monitor"
-    write_json(
-        monitor_dir / "monitor_health_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_health_state",
-            "cycle_count": 0,
-            "failed_cycle_count": 0,
-            "latest_cycle_id": "none",
-            "latest_cycle_status": "missing",
-            "alert_archive_status": "missing",
-            "alert_counts": {},
-            "cooldown_records": 0,
-            "warning_count": 0,
-            "error_count": 0,
-        },
-    )
+    _write_monitor_cycle_state(config_path, tmp_path, records=[], cooldown_records={})
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.get("/api/monitor")
@@ -104,7 +88,7 @@ def test_dashboard_monitor_api_reports_partial_state(tmp_path: Path) -> None:
     payload = response.json()
     assert payload["status"] == "partial"
     assert payload["health"]["status"] == "available"
-    assert payload["cycles"]["status"] == "missing"
+    assert payload["cycles"]["status"] == "available"
     assert payload["alert_archive"]["status"] == "missing"
     assert payload["cooldown"]["status"] == "missing"
 
@@ -112,26 +96,29 @@ def test_dashboard_monitor_api_reports_partial_state(tmp_path: Path) -> None:
 def test_dashboard_monitor_api_promotes_failed_health_state(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    monitor_dir = tmp_path / "runs" / "monitor"
-    write_json(
-        monitor_dir / "monitor_health_state.json",
+    _write_monitor_cycle_state(
+        config_path,
+        tmp_path,
+        cycle_id="cycle-failed",
+        run_id="run-failed",
+        status="failed",
+        errors=["market source unavailable"],
+        records=[],
+        cooldown_records={},
+    )
+    MonitorStateRepository(config_path=config_path).save_loop(
         {
-            "schema_version": 1,
-            "artifact_type": "monitor_health_state",
-            "cycle_count": 6,
-            "failed_cycle_count": 1,
+            "loop_id": "loop-1",
+            "status": "failed",
+            "max_cycles": 3,
+            "completed_cycles": 2,
+            "stop_reason": "cycle_failed",
+            "started_at": "2026-06-20T00:00:00Z",
+            "finished_at": "2026-06-20T00:20:00Z",
             "latest_cycle_id": "cycle-failed",
-            "latest_cycle_status": "failed",
-            "latest_run_id": "run-failed",
-            "latest_run_manifest": "runs/run-failed/run_manifest.json",
-            "latest_cycle_manifest": "runs/monitor/cycles/cycle-failed/monitor_cycle_manifest.json",
-            "alert_archive_status": "skipped",
-            "alert_counts": {},
-            "cooldown_records": 0,
-            "warning_count": 2,
-            "error_count": 1,
-            "latest_loop": {"status": "failed", "stop_reason": "cycle_failed"},
         },
+        monitor_output_dir="runs/monitor",
+        updated_at="2026-06-20T00:20:00Z",
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -142,37 +129,34 @@ def test_dashboard_monitor_api_promotes_failed_health_state(tmp_path: Path) -> N
     assert payload["status"] == "failed"
     assert payload["health"]["status"] == "failed"
     assert payload["health"]["fields"]["latest_cycle_status"] == "failed"
-    assert payload["health"]["fields"]["warning_count"] == 2
+    assert payload["health"]["fields"]["warning_count"] == 0
     assert payload["health"]["fields"]["error_count"] == 1
-    assert "latest monitor cycle status is failed." in payload["errors"]
-    assert "latest monitor loop status is failed." in payload["errors"]
+    assert "market source unavailable" in payload["errors"]
 
 
-def test_dashboard_monitor_api_reports_malformed_artifacts(tmp_path: Path) -> None:
+def test_dashboard_monitor_api_reports_missing_cycle_evidence(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    monitor_dir = tmp_path / "runs" / "monitor"
-    cycle_dir = monitor_dir / "cycles" / "cycle-bad"
-    cycle_dir.mkdir(parents=True)
-    (monitor_dir / "monitor_health_state.json").write_text("{", encoding="utf-8")
-    (cycle_dir / "monitor_cycle_manifest.json").write_text("{", encoding="utf-8")
-    (monitor_dir / "alert_archive_state.json").write_text("{", encoding="utf-8")
-    (monitor_dir / "alert_cooldown_state.json").write_text("[]", encoding="utf-8")
-    (monitor_dir / "alert_archive.jsonl").write_text("{bad json}\n", encoding="utf-8")
+    _write_monitor_cycle_state(
+        config_path,
+        tmp_path,
+        cycle_id="cycle-missing",
+        run_id="run-missing",
+        create_evidence=False,
+        records=[],
+        cooldown_records={},
+    )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.get("/api/monitor")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "failed"
-    assert payload["health"]["status"] == "failed"
-    assert payload["cycles"]["status"] == "failed"
-    assert payload["alert_archive"]["status"] == "partial"
-    assert payload["cooldown"]["status"] == "failed"
-    assert any("monitor_health_state.json is not valid JSON" in error for error in payload["errors"])
-    assert any("alert_cooldown_state.json must be a JSON object" in error for error in payload["errors"])
-    assert "alert_archive.jsonl line 1 is not valid JSON." in payload["warnings"]
+    assert payload["status"] == "partial"
+    assert payload["health"]["status"] == "partial"
+    assert payload["cycles"]["status"] == "partial"
+    assert any("monitor cycle manifest was not found" in warning for warning in payload["warnings"])
+    assert any("linked run manifest was not found" in warning for warning in payload["warnings"])
 
 
 def _write_config(tmp_path: Path) -> Path:
@@ -199,117 +183,104 @@ codex:
     return path
 
 
-def _write_complete_monitor_state(tmp_path: Path) -> None:
-    monitor_dir = tmp_path / "runs" / "monitor"
-    cycle_dir = monitor_dir / "cycles" / "cycle-1"
-    cycle_dir.mkdir(parents=True)
-    write_json(
-        monitor_dir / "monitor_health_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_health_state",
-            "updated_at": "2026-06-20T00:20:00Z",
-            "cycle_count": 1,
-            "failed_cycle_count": 0,
-            "latest_cycle_id": "cycle-1",
-            "latest_cycle_status": "succeeded",
-            "latest_run_id": "run-1",
-            "latest_run_manifest": "runs/run-1/run_manifest.json",
-            "latest_cycle_manifest": "runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json",
-            "alert_archive_status": "succeeded",
-            "alert_counts": {
-                "records": 25,
-                "emitted": 20,
-                "suppressed_duplicate": 2,
-                "suppressed_cooldown": 1,
-                "suppressed_no_alert": 1,
-                "skipped": 1,
+def _write_complete_monitor_state(config_path: Path, tmp_path: Path) -> None:
+    counts = {
+        "records": 25,
+        "emitted": 20,
+        "suppressed_duplicate": 2,
+        "suppressed_cooldown": 1,
+        "suppressed_no_alert": 1,
+        "skipped": 1,
+    }
+    _write_monitor_cycle_state(
+        config_path,
+        tmp_path,
+        records=[_alert_record(index) for index in range(25)],
+        cooldown_records={
+            "alert:BTCUSDT": {
+                "alert_key": "alert:BTCUSDT",
+                "cooldown_until": "2026-06-20T00:46:00Z",
+                "last_record_id": "record-1",
             },
-            "cooldown_records": 2,
-            "warning_count": 0,
-            "error_count": 0,
-            "latest_loop": {"completed_cycles": 1, "stop_reason": "max_cycles_reached"},
-        },
-    )
-    write_json(
-        cycle_dir / "monitor_cycle_manifest.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_cycle_manifest",
-            "cycle_id": "cycle-1",
-            "cycle_mode": "loop",
-            "cycle_sequence": 1,
-            "status": "succeeded",
-            "started_at": "2026-06-20T00:10:00Z",
-            "finished_at": "2026-06-20T00:15:00Z",
-            "target_stage": "build_personalized_risk_material",
-            "no_codex": True,
-            "exit_code": 0,
-            "run_id": "run-1",
-            "run_dir": "runs/run-1",
-            "run_manifest": "runs/run-1/run_manifest.json",
-            "product_run": {"status": "succeeded", "run_id": "run-1"},
-            "alert_archive": {
-                "status": "succeeded",
-                "archive": "runs/monitor/alert_archive.jsonl",
-                "cooldown_state": "runs/monitor/alert_cooldown_state.json",
-                "counts": {
-                    "records": 25,
-                    "emitted": 20,
-                    "suppressed_duplicate": 2,
-                    "suppressed_cooldown": 1,
-                    "suppressed_no_alert": 1,
-                    "skipped": 1,
-                },
-                "warnings": [],
-                "errors": [],
+            "alert:ETHUSDT": {
+                "alert_key": "alert:ETHUSDT",
+                "cooldown_until": "2026-06-20T00:47:00Z",
+                "last_record_id": "record-2",
             },
-            "source_artifacts": ["runs/run-1/analysis/alert_decisions.json"],
-            "warnings": ["cycle warning"],
-            "errors": [],
         },
+        counts=counts,
     )
-    write_json(
-        monitor_dir / "alert_archive_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_alert_archive_state",
-            "updated_at": "2026-06-20T00:16:00Z",
-            "last_cycle_id": "cycle-1",
-            "status": "succeeded",
-            "archive": "runs/monitor/alert_archive.jsonl",
-            "cooldown_state": "runs/monitor/alert_cooldown_state.json",
-            "counts": {
-                "records": 25,
-                "emitted": 20,
-                "suppressed_duplicate": 2,
-                "suppressed_cooldown": 1,
-                "suppressed_no_alert": 1,
-                "skipped": 1,
-            },
-            "warnings": [],
-            "errors": [],
+
+
+def _write_monitor_cycle_state(
+    config_path: Path,
+    tmp_path: Path,
+    *,
+    cycle_id: str = "cycle-1",
+    run_id: str = "run-1",
+    status: str = "succeeded",
+    records: list[dict[str, object]],
+    cooldown_records: dict[str, dict[str, object]],
+    counts: dict[str, int] | None = None,
+    errors: list[str] | None = None,
+    create_evidence: bool = True,
+) -> None:
+    if create_evidence:
+        write_json(tmp_path / "runs" / run_id / "run_manifest.json", {"run_id": run_id, "status": status})
+        write_json(
+            tmp_path / "runs" / "monitor" / "cycles" / cycle_id / "monitor_cycle_manifest.json",
+            {"artifact_type": "monitor_cycle_manifest", "cycle_id": cycle_id, "status": status},
+        )
+    summary = {
+        "status": "succeeded" if records else "skipped",
+        "state_store": ".halpha/state.sqlite",
+        "archive": ".halpha/state.sqlite",
+        "cooldown_state": ".halpha/state.sqlite",
+        "archive_state": ".halpha/state.sqlite",
+        "counts": counts
+        or {
+            "records": len(records),
+            "emitted": sum(1 for record in records if record.get("status") == "emitted"),
+            "suppressed_duplicate": sum(1 for record in records if record.get("status") == "suppressed_duplicate"),
+            "suppressed_cooldown": sum(1 for record in records if record.get("status") == "suppressed_cooldown"),
+            "suppressed_no_alert": sum(1 for record in records if record.get("status") == "suppressed_no_alert"),
+            "skipped": sum(1 for record in records if record.get("status") == "skipped"),
         },
-    )
-    write_json(
-        monitor_dir / "alert_cooldown_state.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "monitor_alert_cooldown_state",
-            "updated_at": "2026-06-20T00:16:00Z",
-            "cooldown_seconds": 1800,
-            "record_count": 2,
-            "records": {
-                "alert:BTCUSDT": {"cooldown_until": "2026-06-20T00:46:00Z"},
-                "alert:ETHUSDT": {"cooldown_until": "2026-06-20T00:47:00Z"},
-            },
-            "state_path": "runs/monitor/alert_cooldown_state.json",
-        },
-    )
-    records = [_alert_record(index) for index in range(25)]
-    (monitor_dir / "alert_archive.jsonl").write_text(
-        "\n".join(json.dumps(record, sort_keys=True) for record in records) + "\n",
-        encoding="utf-8",
+        "warnings": [],
+        "errors": [],
+    }
+    cycle = {
+        "cycle_id": cycle_id,
+        "monitor_output_dir": "runs/monitor",
+        "cycle_manifest": f"runs/monitor/cycles/{cycle_id}/monitor_cycle_manifest.json",
+        "cycle_mode": "loop",
+        "loop_id": "loop-1",
+        "cycle_sequence": 1,
+        "trigger_source": "cli",
+        "status": status,
+        "started_at": "2026-06-20T00:10:00Z",
+        "finished_at": "2026-06-20T00:15:00Z",
+        "config_ref": "config.yaml",
+        "target_stage": "build_personalized_risk_material",
+        "no_codex": True,
+        "exit_code": 0 if status == "succeeded" else 3,
+        "run_id": run_id,
+        "run_dir": f"runs/{run_id}",
+        "run_manifest": f"runs/{run_id}/run_manifest.json",
+        "product_run": {"status": status, "run_id": run_id},
+        "source_artifacts": {"alert_decisions": "analysis/alert_decisions.json"},
+        "alert_archive": summary,
+        "warnings": [],
+        "errors": errors or [],
+    }
+    MonitorStateRepository(config_path=config_path).persist_cycle_with_archive_builder(
+        cycle,
+        build_archive=lambda _cooldown: MonitorArchivePersistence(
+            summary=summary,
+            records=records,
+            cooldown_records=cooldown_records,
+        ),
+        updated_at="2026-06-20T00:16:00Z",
     )
 
 
@@ -333,8 +304,9 @@ def _alert_record(index: int) -> dict[str, object]:
         "source_artifacts": ["runs/run-1/analysis/alert_decisions.json"],
         "personalized_context": {
             "present": True,
-            "constraint_id": "private_constraint",
-            "evidence": "private evidence",
+            "constraint_id": "personalized:BTCUSDT:1d:watch",
+            "state": "watch",
+            "action": "downgrade",
         },
         "source_run": {"run_id": "run-1", "run_manifest": "runs/run-1/run_manifest.json"},
     }

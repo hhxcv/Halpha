@@ -262,10 +262,8 @@ Current bias:
 * `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
 * `analysis/outcome_tracking_material.md` records bounded AI-readable outcome accountability material from targets, evaluations, and outcome history summaries.
 * `runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json` records one local monitor cycle status, target stage, no-Codex state, linked product run refs, source artifact refs, warnings, and errors; it is local operational state, not Codex input by default.
-* `runs/monitor/alert_archive.jsonl` records emitted, suppressed_duplicate, suppressed_cooldown, suppressed_no_alert, and skipped alert archive records from generated alert decisions; it stores bounded refs and sanitized personalized linkage only.
-* `runs/monitor/alert_cooldown_state.json` records deterministic alert cooldown state keyed by alert key.
-* `runs/monitor/alert_archive_state.json` records latest local alert archive metadata, counts, warnings, and errors.
-* `runs/monitor/monitor_health_state.json` records latest local monitor health metadata, cycle counts, latest cycle refs, alert archive counts, cooldown counts, warning counts, error counts, and latest finite-loop status.
+* `.halpha/state.sqlite` records monitor cycle indexes, alert archive records, deterministic cooldown state, latest finite-loop status, and monitor health query state.
+* `runs/monitor/alert_archive.jsonl`, `runs/monitor/alert_cooldown_state.json`, `runs/monitor/alert_archive_state.json`, and `runs/monitor/monitor_health_state.json` are legacy monitor state files; new monitor cycles do not write them.
 * `runs/workbench/latest/workbench_summary.json` records bounded local delivery state, source artifact refs, latest report refs, decision/risk/watch summaries, alert archive status, monitor health, outcome state, strategy state, product-validation state, data-quality state, warnings, errors, and Codex-boundary metadata; it is delivery output, not upstream decision input or Codex input by default.
 * `runs/workbench/latest/index.md` records the human-readable local Markdown workbench index generated from `workbench_summary.json`.
 * `runs/workbench/latest/index.html` records the static local HTML workbench index generated from `workbench_summary.json`.
@@ -410,7 +408,7 @@ They must not fabricate skipped artifacts.
 
 `monitor run --dry-run` does not collect network data, run processors, run pipeline stages, run Codex CLI, write monitor artifacts, or start a background process.
 
-`monitor run --once` runs exactly one bounded local monitor cycle through the configured product pipeline target stage, writes a monitor cycle manifest, and updates the local alert archive when generated alert decisions exist.
+`monitor run --once` runs exactly one bounded local monitor cycle through the configured product pipeline target stage, writes a monitor cycle manifest, and updates monitor alert/cooldown state in `.halpha/state.sqlite` when generated alert decisions exist.
 
 `monitor run --once` defaults to no Codex report generation through `monitor.no_codex: true`.
 
@@ -470,7 +468,7 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha validate --config <local-config.yaml>` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
 * Use `python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
 * Use `python -m halpha monitor run --config <local-config.yaml> --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
-* Use `python -m halpha monitor run --config <local-config.yaml> --once` to validate one bounded monitor cycle, monitor cycle manifest, alert archive, and cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
+* Use `python -m halpha monitor run --config <local-config.yaml> --once` to validate one bounded monitor cycle, monitor cycle manifest, and state-store alert/cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
 * Use `python -m halpha monitor run --config <local-config.yaml> --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.
 * Use `python -m halpha monitor inspect --config <local-config.yaml>` to validate read-only monitor health output without running collection, pipeline stages, Codex CLI, or raw archive export.
 * Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.

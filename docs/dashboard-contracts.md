@@ -50,8 +50,10 @@ Primary sources:
   stdout plus deterministic post-processing.
 - `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/`:
   reusable local stores and metadata.
-- `runs/monitor/`: monitor cycles, alert archive, cooldown state, archive state,
-  and monitor health state.
+- `runs/monitor/`: immutable monitor cycle manifests.
+- `.halpha/state.sqlite`: run index, dashboard jobs, daily report schedule
+  dispatches, monitor cycle indexes, alert archive records, cooldown state, and
+  monitor health query state.
 - `runs/workbench/latest/`: bounded delivery snapshot summaries and local
   indexes for inspection and recovery fallback, not replacements for dashboard
   views.
@@ -127,7 +129,7 @@ Implemented dashboard views expose:
   lifecycle state, including bounded K-line backtest visualizations when the
   standalone backtest artifact records visualization data;
 - monitor health, recent cycles, alert counts, cooldown state, alert samples,
-  and monitor job history.
+  and monitor job history from the shared runtime state store.
 
 Implemented dashboard command controls are backed by allowlisted job intents.
 The current job runner supports:
@@ -225,9 +227,9 @@ Dashboard pages should expose the current product shape through bounded views:
   markers, and an equity curve from the `strategy_backtest.json`
   `visualization` block. The dashboard must not reconstruct charts by dumping
   full reusable OHLCV history by default.
-- Monitor: monitor control, configured loop parameters, cycle history, linked
-  runs, alert archive aggregates, cooldown state, warnings, errors, and
-  explicit daily-report schedule state.
+- Monitor: monitor control, configured loop parameters, state-store cycle
+  history, linked runs, alert archive aggregates, cooldown state, warnings,
+  errors, and explicit daily-report schedule state.
 - Intelligence: source-aware non-OHLCV intelligence summaries, including text,
   derivatives, on-chain, macro, outcomes, and data-quality tabs where the
   corresponding artifacts exist.
