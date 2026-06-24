@@ -42,7 +42,7 @@ run manifests as plain files so each run can be inspected after it finishes.
 - Validates product contract health through a deterministic artifact and read-only CLI inspection.
 - Validates local monitor configuration without starting hidden background execution.
 - Runs one bounded local monitor cycle and writes a monitor cycle manifest.
-- Archives emitted and suppressed monitor alert decisions in local plain files.
+- Archives emitted and suppressed monitor alert decisions in `.halpha/state.sqlite`.
 - Runs a local web dashboard service as the primary local user entry point for
   overview, report review, strategy research, monitor control, intelligence
   review, settings, bounded artifact previews, command jobs, storage cleanup,
@@ -244,6 +244,34 @@ The inspection command summarizes shared OHLCV, derivatives, macro/calendar,
 on-chain flow, text-event, run-index, intelligence-fusion, strategy-lifecycle,
 product-validation, and data-quality state, plus workbench output refs when
 available, without dumping full reusable histories or raw records.
+
+Inspect legacy local state without mutating files:
+
+```bash
+python -m halpha data migrate-state --config config.example.yaml --dry-run
+```
+
+Apply supported legacy local state imports explicitly:
+
+```bash
+python -m halpha data migrate-state --config config.example.yaml --apply
+python -m halpha data migrate-state --config config.example.yaml --apply --replace-schedule
+```
+
+Legacy migration scans documented legacy run-index, Dashboard job, Dashboard
+schedule, selected-config, service-state, monitor cycle, alert archive,
+cooldown, archive metadata, and health files. Dry-run does not create or update
+`.halpha/state.sqlite`. Apply records source fingerprints for idempotency,
+creates bounded backups under `.halpha/legacy_state_backups/`, imports only
+supported safe records, reports conflicts and invalid records, and leaves
+legacy files unchanged. Cleanup is a separate explicit action.
+
+Rebuild the current run-index projection from existing run manifests without
+importing mutable legacy service, job, schedule, or alert state:
+
+```bash
+python -m halpha data rebuild-index --config config.example.yaml
+```
 
 Inspect outcome tracking artifacts and shared outcome history state without
 collection or Codex:

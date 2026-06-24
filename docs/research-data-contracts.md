@@ -193,6 +193,16 @@ Authority boundary:
 - `data/research/index.sqlite` is legacy storage. It must not be written by new
   run completions or stage reruns outside explicit legacy migration or cleanup
   work.
+- `python -m halpha data migrate-state --config <config> --dry-run` reports
+  legacy run-index rows without mutating runtime state.
+- `python -m halpha data migrate-state --config <config> --apply` imports
+  legacy run-index rows only when the referenced `run_manifest.json` exists and
+  validates. Manifest evidence wins over legacy row metadata. Dangling or
+  invalid rows remain diagnostics.
+- `python -m halpha data rebuild-index --config <config>` clears and rebuilds
+  the current run-index projection from current `runs/*/run_manifest.json`
+  files only. It does not import mutable legacy Dashboard, Schedule, Monitor,
+  job, alert, cooldown, or service state.
 
 Required tables:
 
@@ -243,6 +253,9 @@ Rules:
 - update partial and failed runs with explicit status.
 - make any replacement or migration explicit; do not dual-write, auto-migrate,
   or retain fallback authorities without a dedicated migration contract.
+- after explicit migration, normal runtime readers and writers must use
+  `.halpha/state.sqlite` and must not consult `data/research/index.sqlite` as a
+  fallback authority.
 
 ## Text Event History
 

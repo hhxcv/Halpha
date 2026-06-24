@@ -14,7 +14,9 @@ inspection, and operational acceptance. It is not a milestone plan.
   implemented.
 - Existing validation paths remain `python -m pytest`, `python -m halpha run`,
   `python -m halpha validate`, `python -m halpha data inspect`,
-  `python -m halpha monitor inspect`, and `python -m halpha workbench inspect`.
+  `python -m halpha data migrate-state --dry-run`,
+  `python -m halpha data rebuild-index`, `python -m halpha monitor inspect`,
+  and `python -m halpha workbench inspect`.
 
 ## Related Docs
 
@@ -298,6 +300,9 @@ Recommended backup groups:
   `state.sqlite-wal` and `state.sqlite-shm` side files when they exist.
   Backups should treat mutable runtime state as local operational state, not
   research evidence.
+- `.halpha/legacy_state_backups/`: bounded backups created by explicit legacy
+  migration apply. These backups are local recovery aids and are not cleanup
+  approval, public artifacts, Codex input, or research evidence.
 - machine-local config files: local validation config, local user-state files,
   and private policy files. These must remain outside public commits and public
   docs.
@@ -324,6 +329,9 @@ Product-stability validation should use the narrowest relevant check first:
 - read-only `validate` command for latest or selected run contract health;
 - read-only `data inspect` for local store, product-validation, and artifact
   visibility;
+- `data migrate-state --dry-run` before any legacy state import;
+- `data rebuild-index` when the run-index projection should be reconstructed
+  from current run manifests without importing mutable legacy state;
 - read-only `monitor inspect` for local monitor health;
 - `workbench build` and `workbench inspect` for local delivery visibility;
 - full Codex product acceptance when Codex context or final report behavior is

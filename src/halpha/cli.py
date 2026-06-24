@@ -22,6 +22,11 @@ from halpha.dashboard import (
     validate_dashboard_port,
 )
 from halpha.data.data_inspection import DataInspectionError, inspect_local_data
+from halpha.runtime.legacy_state_migration import (
+    apply_legacy_state_migration,
+    legacy_state_migration_dry_run,
+    rebuild_run_index_from_manifests,
+)
 from halpha.runtime.logging_utils import configure_local_logging
 from halpha.runtime.schedule_service import (
     ScheduleServiceError,
@@ -177,6 +182,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     inspect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
     inspect_parser.add_argument("--run-dir", help="Optional run directory for data-quality inspection.")
+    migrate_state_parser = data_subparsers.add_parser(
+        "migrate-state",
+        help="Inspect or apply explicit legacy local state migration.",
+        description="Inspect or apply explicit legacy local state migration.",
+    )
+    migrate_state_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    migrate_state_mode = migrate_state_parser.add_mutually_exclusive_group()
+    migrate_state_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Inspect legacy state and print a migration plan without changing files.",
+    )
+    migrate_state_mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply supported legacy state imports and create bounded backups.",
+    )
+    migrate_state_parser.add_argument(
+        "--replace-schedule",
+        action="store_true",
+        help="Replace an existing unified daily report schedule with the legacy schedule.",
+    )
+    rebuild_index_parser = data_subparsers.add_parser(
+        "rebuild-index",
+        help="Rebuild the unified run index from current run manifests.",
+        description="Rebuild the unified run index from current run manifests.",
+    )
+    rebuild_index_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
 
     outcomes_parser = subparsers.add_parser("outcomes", help="Inspect local outcome tracking state.")
     outcomes_subparsers = outcomes_parser.add_subparsers(dest="outcomes_command", required=True)
@@ -316,6 +349,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "data" and args.data_command == "inspect":
         return _data_inspect(args.config, run_dir=args.run_dir)
+
+    if args.command == "data" and args.data_command == "migrate-state":
+        return _data_migrate_state(
+            args.config,
+            apply=args.apply,
+            replace_schedule=args.replace_schedule,
+        )
+
+    if args.command == "data" and args.data_command == "rebuild-index":
+        return _data_rebuild_index(args.config)
 
     if args.command == "outcomes" and args.outcomes_command == "inspect":
         return _outcomes_inspect(args.config, run_dir=args.run_dir)
@@ -1008,6 +1051,145 @@ def _data_inspect(config_arg: str, *, run_dir: str | None) -> int:
         print(line)
     _log_command_succeeded("data inspect", status=result.status, explicit_run=run_dir is not None)
     return 0
+
+
+def _data_migrate_state(config_arg: str, *, apply: bool, replace_schedule: bool) -> int:
+    config_path = Path(config_arg)
+    command = "data migrate-state"
+    mode = "apply" if apply else "dry_run"
+    _configure_logging(config_path=config_path)
+    _log_command_start(command, mode=mode, replace_schedule=replace_schedule)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        _log_command_failed(command, stage="config", reason=str(exc), exit_code=2)
+        print("Halpha legacy state migration failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    _configure_logging(config_path=config_path, config=config)
+    try:
+        if apply:
+            result = apply_legacy_state_migration(
+                config,
+                config_path=config_path,
+                replace_schedule=replace_schedule,
+            )
+        else:
+            result = legacy_state_migration_dry_run(
+                config,
+                config_path=config_path,
+                replace_schedule=replace_schedule,
+            )
+    except Exception as exc:  # pragma: no cover - CLI boundary
+        _log_command_failed(command, stage="legacy_state_migration", reason=type(exc).__name__, exit_code=1)
+        print("Halpha legacy state migration failed.")
+        print("stage: legacy_state_migration")
+        print("reason: legacy state migration failed; inspect local logs.")
+        return 1
+
+    title = "Halpha legacy state migration apply succeeded." if apply else "Halpha legacy state migration dry run succeeded."
+    _print_legacy_state_migration_result(title, result)
+    exit_code = 1 if result.get("status") == "failed" else 0
+    if exit_code == 0:
+        _log_command_succeeded(command, status=str(result.get("status") or "unknown"), mode=mode)
+    else:
+        _log_command_failed(
+            command,
+            stage="legacy_state_migration",
+            reason=str(result.get("status") or "failed"),
+            exit_code=exit_code,
+        )
+    return exit_code
+
+
+def _data_rebuild_index(config_arg: str) -> int:
+    config_path = Path(config_arg)
+    command = "data rebuild-index"
+    _configure_logging(config_path=config_path)
+    _log_command_start(command)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        _log_command_failed(command, stage="config", reason=str(exc), exit_code=2)
+        print("Halpha run index rebuild failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    _configure_logging(config_path=config_path, config=config)
+    try:
+        result = rebuild_run_index_from_manifests(config, config_path=config_path)
+    except Exception as exc:  # pragma: no cover - CLI boundary
+        _log_command_failed(command, stage="run_index_rebuild", reason=type(exc).__name__, exit_code=1)
+        print("Halpha run index rebuild failed.")
+        print("stage: run_index_rebuild")
+        print("reason: run index rebuild failed; inspect local logs.")
+        return 1
+
+    print("Halpha run index rebuild succeeded.")
+    print(f"status: {result.get('status')}")
+    print(f"run_index: {result.get('run_index')}")
+    _print_counts(
+        result.get("counts"),
+        keys=("run_manifests", "rebuilt_runs", "diagnostics"),
+    )
+    for warning in (result.get("warnings") or [])[:10]:
+        print(f"warning: {warning}")
+    _log_command_succeeded(command, status=str(result.get("status") or "unknown"))
+    return 0
+
+
+def _print_legacy_state_migration_result(title: str, result: dict) -> None:
+    print(title)
+    print(f"status: {result.get('status')}")
+    print(f"mode: {result.get('mode')}")
+    print(f"runtime_state: {result.get('runtime_state')}")
+    _print_counts(
+        result.get("counts"),
+        keys=(
+            "discovered_files",
+            "supported_sources",
+            "supported_records",
+            "importable_records",
+            "imported_records",
+            "duplicate_records",
+            "diagnostic_records",
+            "conflicts",
+            "invalid_sources",
+            "invalid_records",
+            "cleanup_candidates",
+            "backups_created",
+        ),
+    )
+    for source in (result.get("sources") or [])[:20]:
+        if not isinstance(source, dict) or not source.get("exists"):
+            continue
+        print(
+            "source: "
+            f"{source.get('source_type')} "
+            f"status={source.get('status')} "
+            f"records={source.get('record_count')} "
+            f"importable={source.get('importable_records')} "
+            f"ref={source.get('ref')}"
+        )
+    for conflict in (result.get("conflicts") or [])[:10]:
+        print(f"conflict: {conflict}")
+    for warning in (result.get("warnings") or [])[:10]:
+        print(f"warning: {warning}")
+    for error in (result.get("errors") or [])[:10]:
+        print(f"error: {error}")
+
+
+def _print_counts(counts: object, *, keys: tuple[str, ...]) -> None:
+    if not isinstance(counts, dict):
+        return
+    for key in keys:
+        if key in counts:
+            print(f"{key}: {counts[key]}")
 
 
 def _outcomes_inspect(config_arg: str, *, run_dir: str | None) -> int:
