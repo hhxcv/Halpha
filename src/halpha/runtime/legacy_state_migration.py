@@ -251,7 +251,7 @@ def _legacy_state_migration(
 
     counts = _migration_counts(sources, apply_results=apply_results, backups=backups)
     errors = [error for source in sources for error in source.errors]
-    conflicts = [conflict for source in sources for conflict in source.conflicts]
+    conflicts = _active_conflicts(sources, apply_results=apply_results)
     status = "succeeded" if apply else "available"
     if errors or conflicts:
         status = "partial"
@@ -888,7 +888,18 @@ def _cleanup_plan(sources: list[LegacySource]) -> dict[str, Any]:
     }
 
 
+def _active_conflicts(sources: list[LegacySource], *, apply_results: dict[str, dict[str, Any]]) -> list[str]:
+    conflicts: list[str] = []
+    for source in sources:
+        result = apply_results.get(source.ref)
+        if result and result.get("status") == "already_applied":
+            continue
+        conflicts.extend(source.conflicts)
+    return conflicts
+
+
 def _migration_counts(sources: list[LegacySource], *, apply_results: dict[str, dict[str, Any]], backups: list[str]) -> dict[str, int]:
+    conflicts = _active_conflicts(sources, apply_results=apply_results)
     return {
         "discovered_files": sum(1 for source in sources if source.exists),
         "supported_sources": sum(1 for source in sources if source.exists and source.supported_import_type),
@@ -897,7 +908,7 @@ def _migration_counts(sources: list[LegacySource], *, apply_results: dict[str, d
         "imported_records": sum(_int(result.get("imported_records")) for result in apply_results.values()),
         "duplicate_records": sum(_int(result.get("duplicate_records")) for result in apply_results.values()),
         "diagnostic_records": sum(source.diagnostic_records for source in sources),
-        "conflicts": sum(len(source.conflicts) for source in sources),
+        "conflicts": len(conflicts),
         "invalid_sources": sum(1 for source in sources if source.status == "invalid"),
         "invalid_records": sum(sum(1 for record in source.records if record.get("status") == "invalid") for source in sources),
         "cleanup_candidates": sum(1 for source in sources if source.cleanup_candidate),

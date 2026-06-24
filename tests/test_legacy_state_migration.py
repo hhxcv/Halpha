@@ -79,6 +79,8 @@ def test_apply_imports_legacy_state_and_repeat_is_idempotent(tmp_path: Path) -> 
     assert first["status"] == "succeeded"
     assert first["counts"]["imported_records"] == 4
     assert first["counts"]["backups_created"] >= 4
+    assert second["status"] == "succeeded"
+    assert second["counts"]["conflicts"] == 0
     assert second["counts"]["imported_records"] == 0
     assert second["counts"]["duplicate_records"] >= 4
     assert run_row == ("succeeded", "runs/run-1/run_manifest.json")
