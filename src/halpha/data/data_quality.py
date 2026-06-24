@@ -10,7 +10,7 @@ from halpha.data.data_quality_post_artifacts import post_data_quality_artifact_c
 from halpha.data.data_quality_raw import raw_data_quality_checks
 from halpha.data.run_index import RUN_INDEX_ARTIFACT
 from halpha.runtime.pipeline_contracts import RunContext
-from halpha.storage import write_json
+from halpha.storage import resolve_runtime_path, write_json
 
 
 STAGE_NAME = "build_data_quality_summary"
@@ -152,7 +152,7 @@ def _derivatives_history_check(config: dict[str, Any], run: RunContext) -> dict[
     summary = run.manifest.get("derivatives_market_history")
     if not isinstance(summary, dict):
         return _check("derivatives_market_history", "shared_data", "skipped", "derivatives market history was not produced.", [])
-    state, error = _read_json(run.config_path.parent / artifact)
+    state, error = _read_json(resolve_runtime_path(artifact, config_path=run.config_path))
     if error:
         return _check("derivatives_market_history", "shared_data", "failed", error, [artifact], errors=[error])
     warnings = _string_list(state.get("warnings"))
@@ -180,7 +180,7 @@ def _macro_calendar_history_check(config: dict[str, Any], run: RunContext) -> di
     summary = run.manifest.get("macro_calendar_history")
     if not isinstance(summary, dict):
         return _check("macro_calendar_history", "shared_data", "skipped", "macro calendar history was not produced.", [])
-    state, error = _read_json(run.config_path.parent / artifact)
+    state, error = _read_json(resolve_runtime_path(artifact, config_path=run.config_path))
     if error:
         return _check("macro_calendar_history", "shared_data", "failed", error, [artifact], errors=[error])
     warnings = _string_list(state.get("warnings"))
@@ -222,7 +222,7 @@ def _onchain_flow_history_check(config: dict[str, Any], run: RunContext) -> dict
     summary = run.manifest.get("onchain_flow_history")
     if not isinstance(summary, dict):
         return _check("onchain_flow_history", "shared_data", "skipped", "on-chain flow history was not produced.", [])
-    state, error = _read_json(run.config_path.parent / artifact)
+    state, error = _read_json(resolve_runtime_path(artifact, config_path=run.config_path))
     if error:
         return _check("onchain_flow_history", "shared_data", "failed", error, [artifact], errors=[error])
     warnings = _string_list(state.get("warnings"))
@@ -522,7 +522,7 @@ def _text_event_history_check(run: RunContext) -> dict[str, Any]:
     summary = run.manifest.get("text_event_history")
     if not isinstance(summary, dict):
         return _check("text_event_history", "shared_data", "skipped", "text event history was not produced.", [])
-    state, error = _read_json(run.config_path.parent / artifact)
+    state, error = _read_json(resolve_runtime_path(artifact, config_path=run.config_path))
     if error:
         return _check("text_event_history", "shared_data", "failed", error, [artifact], errors=[error])
     warnings = _string_list(state.get("warnings"))
@@ -545,7 +545,7 @@ def _research_data_catalog_check(run: RunContext) -> dict[str, Any]:
     summary = run.manifest.get("research_data_catalog")
     if not isinstance(summary, dict):
         return _check("research_data_catalog", "shared_data", "skipped", "research data catalog was not produced.", [])
-    catalog, error = _read_json(run.config_path.parent / artifact)
+    catalog, error = _read_json(resolve_runtime_path(artifact, config_path=run.config_path))
     if error:
         return _check("research_data_catalog", "shared_data", "failed", error, [artifact], errors=[error])
     warnings = _string_list(catalog.get("warnings"))

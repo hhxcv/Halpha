@@ -5,6 +5,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
+from halpha.storage import resolve_runtime_path
 
 
 STAGE_NAME = "build_analysis_materials"
@@ -138,7 +139,7 @@ def _read_optional_run_artifact(run: RunContext, file_name: str, artifact: str) 
 
 
 def _read_optional_shared_artifact(run: RunContext, artifact: str) -> dict[str, Any] | None:
-    loaded = _read_optional_json(run.config_path.parent / artifact, artifact)
+    loaded = _read_optional_json(resolve_runtime_path(artifact, config_path=run.config_path), artifact)
     if loaded is None:
         return None
     if not isinstance(loaded, dict):

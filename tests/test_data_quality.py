@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.data.data_quality import build_data_quality_summary
 from halpha.data.data_quality_groups import POST_DATA_QUALITY_CHECK_NAMES
@@ -11,6 +13,11 @@ from halpha.data.data_quality_post_artifacts import post_data_quality_artifact_c
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) -> None:

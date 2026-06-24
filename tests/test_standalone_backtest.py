@@ -11,6 +11,11 @@ from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.strategy.standalone_backtest import _visualization_record
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -110,6 +115,53 @@ def test_cli_backtest_reports_missing_history(
     assert "Halpha backtest failed." in output
     assert "stage: backtest" in output
     assert "no OHLCV history found" in output
+
+
+def test_cli_backtest_uses_runtime_root_for_external_config_defaults(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    config_dir = tmp_path / "external-config"
+    runtime_root.mkdir()
+    config_dir.mkdir()
+    monkeypatch.chdir(runtime_root)
+    config_path = _write_config(config_dir)
+    store = OHLCVParquetStore(runtime_root / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=101),
+            _record(open_time="2026-06-03T00:00:00Z", close=99),
+            _record(open_time="2026-06-04T00:00:00Z", close=102),
+        ]
+    )
+
+    exit_code = main(
+        [
+            "backtest",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--symbol",
+            "BTCUSDT",
+            "--timeframe",
+            "1d",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    output_dir = runtime_root / "runs" / "strategy_backtests"
+    run_dirs = list(output_dir.iterdir())
+
+    assert exit_code == 0
+    assert "Halpha backtest succeeded." in output
+    assert len(run_dirs) == 1
+    assert (run_dirs[0] / "strategy_backtest.json").is_file()
+    assert not (config_dir / "runs").exists()
+    assert not (config_dir / "data").exists()
 
 
 @pytest.mark.parametrize(

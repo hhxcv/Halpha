@@ -12,7 +12,7 @@ from typing import Any
 
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path, select_previous_successful_run_record
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 STAGE_NAME = "build_outcome_targets"
@@ -154,7 +154,7 @@ def build_outcome_targets(
         "previous_run": {
             "status": "found",
             "run_id": previous.run_id,
-            "run_dir": display_path(previous.run_dir, base=run.config_path.parent),
+            "run_dir": display_path(previous.run_dir, base=runtime_root(run.config_path)),
             "finished_at": previous.finished_at,
         },
         "target_policy": _target_policy(),
@@ -302,8 +302,8 @@ def _latest_previous_successful_run(config_path: Path, *, current_run_id: str) -
 
     run_dir = Path(selected.run.run_dir)
     if not run_dir.is_absolute():
-        run_dir = config_path.parent / run_dir
-    if _project_local_path(run_dir, base=config_path.parent) is None:
+        run_dir = resolve_runtime_path(run_dir, config_path=config_path)
+    if _project_local_path(run_dir, base=runtime_root(config_path)) is None:
         return None, "Previous successful run in run index points outside the configured project root."
     return (
         PreviousRun(

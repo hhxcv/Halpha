@@ -4,12 +4,19 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline, run_pipeline_stage
 from halpha.storage import write_json
 
 
 GOLDEN_PATH = Path(__file__).parent / "fixtures" / "alert_decision_golden_cases.json"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_alert_decision_golden_cases_cover_priority_downgrade_and_material_boundaries(

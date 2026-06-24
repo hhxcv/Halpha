@@ -13,7 +13,7 @@ from halpha.shared_publication import (
     read_staged_payload,
     stage_shared_payloads,
 )
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 CATALOG_SCHEMA_VERSION = 1
@@ -110,7 +110,7 @@ def build_research_data_catalog(
 
 
 def research_data_catalog_path(config_path: Path) -> Path:
-    return config_path.parent / CATALOG_ARTIFACT
+    return resolve_runtime_path(CATALOG_ARTIFACT, config_path=config_path)
 
 
 def _ohlcv_store_record(config: dict[str, Any], run: RunContext) -> dict[str, Any] | None:
@@ -157,9 +157,9 @@ def _ohlcv_store_record(config: dict[str, Any], run: RunContext) -> dict[str, An
         "kind": "market_ohlcv_history",
         "status": _store_status(sync_summary, warning_count=warning_count, error_count=error_count),
         "format": "parquet",
-        "storage_path": display_path(storage_dir, base=run.config_path.parent),
-        "schema_path": display_path(schema_path, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_dir, base=runtime_root(run.config_path)),
+        "schema_path": display_path(schema_path, base=runtime_root(run.config_path)),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
         "partition_fields": ["source", "symbol", "timeframe", "year", "month"],
         "unique_key_fields": _string_list(schema.get("unique_key")) if isinstance(schema, dict) else [],
@@ -177,8 +177,8 @@ def _ohlcv_store_record(config: dict[str, Any], run: RunContext) -> dict[str, An
             "standalone_strategy_experiment",
         ],
         "source_artifacts": [
-            display_path(schema_path, base=run.config_path.parent),
-            display_path(state_path, base=run.config_path.parent),
+            display_path(schema_path, base=runtime_root(run.config_path)),
+            display_path(state_path, base=runtime_root(run.config_path)),
         ],
         "warnings": _unique_sorted(warnings),
         "errors": errors,
@@ -207,9 +207,9 @@ def _run_index_store_record(run: RunContext) -> dict[str, Any] | None:
         "kind": "run_audit_index",
         "status": status,
         "format": "sqlite",
-        "storage_path": display_path(index_path, base=run.config_path.parent),
+        "storage_path": display_path(index_path, base=runtime_root(run.config_path)),
         "schema_path": None,
-        "state_path": display_path(index_path, base=run.config_path.parent),
+        "state_path": display_path(index_path, base=runtime_root(run.config_path)),
         "schema_version": index_summary.get("schema_version"),
         "partition_fields": [],
         "unique_key_fields": ["run_id"],
@@ -224,16 +224,16 @@ def _run_index_store_record(run: RunContext) -> dict[str, Any] | None:
             "data_inspection",
             "audit",
         ],
-        "source_artifacts": [display_path(index_path, base=run.config_path.parent)],
+        "source_artifacts": [display_path(index_path, base=runtime_root(run.config_path))],
         "warnings": warnings,
         "errors": errors,
     }
 
 
 def _derivatives_market_history_store_record(run: RunContext) -> dict[str, Any] | None:
-    state_path = run.config_path.parent / "data" / "market" / "metadata" / "derivatives_market_state.json"
-    schema_path = run.config_path.parent / "data" / "market" / "metadata" / "derivatives_market_schema.json"
-    storage_path = run.config_path.parent / "data" / "market" / "derivatives"
+    state_path = runtime_root(run.config_path) / "data" / "market" / "metadata" / "derivatives_market_state.json"
+    schema_path = runtime_root(run.config_path) / "data" / "market" / "metadata" / "derivatives_market_schema.json"
+    storage_path = runtime_root(run.config_path) / "data" / "market" / "derivatives"
     state = _read_json_object(state_path)
     summary = run.manifest.get("derivatives_market_history")
     if state is None and (
@@ -256,9 +256,9 @@ def _derivatives_market_history_store_record(run: RunContext) -> dict[str, Any] 
         "kind": "derivatives_market_history",
         "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
         "format": "json",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
-        "schema_path": display_path(schema_path, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
+        "schema_path": display_path(schema_path, base=runtime_root(run.config_path)),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
         "partition_fields": ["source", "data_class", "symbol", "period"],
         "unique_key_fields": _string_list(schema.get("identity")) if isinstance(schema, dict) else [
@@ -282,8 +282,8 @@ def _derivatives_market_history_store_record(run: RunContext) -> dict[str, Any] 
             "future_derivatives_context",
         ],
         "source_artifacts": [
-            display_path(schema_path, base=run.config_path.parent),
-            display_path(state_path, base=run.config_path.parent),
+            display_path(schema_path, base=runtime_root(run.config_path)),
+            display_path(state_path, base=runtime_root(run.config_path)),
         ],
         "details": {
             "groups": len(groups) if isinstance(groups, list) else 0,
@@ -297,9 +297,9 @@ def _derivatives_market_history_store_record(run: RunContext) -> dict[str, Any] 
 
 
 def _macro_calendar_history_store_record(run: RunContext) -> dict[str, Any] | None:
-    state_path = run.config_path.parent / "data" / "macro" / "metadata" / "macro_calendar_state.json"
-    schema_path = run.config_path.parent / "data" / "macro" / "metadata" / "macro_calendar_schema.json"
-    storage_path = run.config_path.parent / "data" / "macro" / "calendar"
+    state_path = runtime_root(run.config_path) / "data" / "macro" / "metadata" / "macro_calendar_state.json"
+    schema_path = runtime_root(run.config_path) / "data" / "macro" / "metadata" / "macro_calendar_schema.json"
+    storage_path = runtime_root(run.config_path) / "data" / "macro" / "calendar"
     state = _read_json_object(state_path)
     summary = run.manifest.get("macro_calendar_history")
     if state is None and (
@@ -322,9 +322,9 @@ def _macro_calendar_history_store_record(run: RunContext) -> dict[str, Any] | No
         "kind": "macro_calendar_history",
         "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
         "format": "json",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
-        "schema_path": display_path(schema_path, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
+        "schema_path": display_path(schema_path, base=runtime_root(run.config_path)),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
         "partition_fields": ["source", "data_class", "region"],
         "unique_key_fields": _string_list(schema.get("identity")) if isinstance(schema, dict) else [
@@ -347,8 +347,8 @@ def _macro_calendar_history_store_record(run: RunContext) -> dict[str, Any] | No
             "data_inspection",
         ],
         "source_artifacts": [
-            display_path(schema_path, base=run.config_path.parent),
-            display_path(state_path, base=run.config_path.parent),
+            display_path(schema_path, base=runtime_root(run.config_path)),
+            display_path(state_path, base=runtime_root(run.config_path)),
         ],
         "details": {
             "groups": len(groups) if isinstance(groups, list) else 0,
@@ -362,9 +362,9 @@ def _macro_calendar_history_store_record(run: RunContext) -> dict[str, Any] | No
 
 
 def _onchain_flow_history_store_record(run: RunContext) -> dict[str, Any] | None:
-    state_path = run.config_path.parent / "data" / "onchain" / "metadata" / "onchain_flow_state.json"
-    schema_path = run.config_path.parent / "data" / "onchain" / "metadata" / "onchain_flow_schema.json"
-    storage_path = run.config_path.parent / "data" / "onchain" / "flow"
+    state_path = runtime_root(run.config_path) / "data" / "onchain" / "metadata" / "onchain_flow_state.json"
+    schema_path = runtime_root(run.config_path) / "data" / "onchain" / "metadata" / "onchain_flow_schema.json"
+    storage_path = runtime_root(run.config_path) / "data" / "onchain" / "flow"
     state = _read_json_object(state_path)
     summary = run.manifest.get("onchain_flow_history")
     if state is None and (
@@ -387,9 +387,9 @@ def _onchain_flow_history_store_record(run: RunContext) -> dict[str, Any] | None
         "kind": "onchain_flow_history",
         "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
         "format": "json",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
-        "schema_path": display_path(schema_path, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
+        "schema_path": display_path(schema_path, base=runtime_root(run.config_path)),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
         "partition_fields": ["source", "data_class", "asset", "chain"],
         "unique_key_fields": _string_list(schema.get("identity")) if isinstance(schema, dict) else [
@@ -412,8 +412,8 @@ def _onchain_flow_history_store_record(run: RunContext) -> dict[str, Any] | None
             "data_inspection",
         ],
         "source_artifacts": [
-            display_path(schema_path, base=run.config_path.parent),
-            display_path(state_path, base=run.config_path.parent),
+            display_path(schema_path, base=runtime_root(run.config_path)),
+            display_path(state_path, base=runtime_root(run.config_path)),
         ],
         "details": {
             "groups": len(groups) if isinstance(groups, list) else 0,
@@ -427,8 +427,8 @@ def _onchain_flow_history_store_record(run: RunContext) -> dict[str, Any] | None
 
 
 def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
-    state_path = run.config_path.parent / "data" / "research" / "metadata" / "text_event_history_state.json"
-    storage_path = run.config_path.parent / "data" / "research" / "text_events"
+    state_path = runtime_root(run.config_path) / "data" / "research" / "metadata" / "text_event_history_state.json"
+    storage_path = runtime_root(run.config_path) / "data" / "research" / "text_events"
     state = _read_json_object(state_path)
     summary = run.manifest.get("text_event_history")
     if state is None and not isinstance(summary, dict):
@@ -442,9 +442,9 @@ def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
         "kind": "text_event_history",
         "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
         "format": "parquet",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
         "schema_path": None,
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
         "partition_fields": ["source", "year", "month"],
         "unique_key_fields": ["stable_event_key"],
@@ -459,7 +459,7 @@ def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
             "future_event_workflows",
             "future_outcome_workflows",
         ],
-        "source_artifacts": [display_path(state_path, base=run.config_path.parent)],
+        "source_artifacts": [display_path(state_path, base=runtime_root(run.config_path))],
         "warnings": warnings,
         "errors": errors,
     }
@@ -470,8 +470,8 @@ def _outcome_history_store_record(
     *,
     candidate_state: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    state_path = run.config_path.parent / "data" / "research" / "metadata" / "outcome_history_state.json"
-    storage_path = run.config_path.parent / "data" / "research" / "outcomes"
+    state_path = runtime_root(run.config_path) / "data" / "research" / "metadata" / "outcome_history_state.json"
+    storage_path = runtime_root(run.config_path) / "data" / "research" / "outcomes"
     history_path = storage_path / "outcome_history.json"
     state = candidate_state if isinstance(candidate_state, dict) else _read_json_object(state_path)
     summary = run.manifest.get("outcome_history")
@@ -493,9 +493,9 @@ def _outcome_history_store_record(
         "kind": "outcome_history",
         "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
         "format": "json",
-        "storage_path": display_path(storage_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_path, base=runtime_root(run.config_path)),
         "schema_path": None,
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "state_path": display_path(state_path, base=runtime_root(run.config_path)),
         "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
         "partition_fields": [],
         "unique_key_fields": ["stable_outcome_key"],
@@ -511,8 +511,8 @@ def _outcome_history_store_record(
             "future_research_calibration",
         ],
         "source_artifacts": [
-            display_path(history_path, base=run.config_path.parent),
-            display_path(state_path, base=run.config_path.parent),
+            display_path(history_path, base=runtime_root(run.config_path)),
+            display_path(state_path, base=runtime_root(run.config_path)),
         ],
         "warnings": warnings,
         "errors": errors,
@@ -588,7 +588,7 @@ def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:
     storage_dir = Path(str(ohlcv["storage_dir"]))
     if storage_dir.is_absolute():
         return storage_dir
-    return config_path.parent / storage_dir
+    return resolve_runtime_path(storage_dir, config_path=config_path)
 
 
 def _read_json_object(path: Path) -> dict[str, Any] | None:

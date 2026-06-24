@@ -3,8 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from halpha.analysis.outcome_tracking_material import build_outcome_tracking_material
 from halpha.pipeline import RunContext
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_outcome_tracking_material_summarizes_evidence_without_full_history(tmp_path: Path) -> None:

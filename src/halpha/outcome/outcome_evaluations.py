@@ -9,7 +9,7 @@ from typing import Any
 
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 STAGE_NAME = "evaluate_outcomes"
@@ -357,7 +357,9 @@ def _follow_through_context(run: RunContext) -> dict[str, Any]:
             "records",
         ),
     }
-    text_history_state = _read_optional_json(run.config_path.parent / TEXT_EVENT_HISTORY_STATE_ARTIFACT)
+    text_history_state = _read_optional_json(
+        resolve_runtime_path(TEXT_EVENT_HISTORY_STATE_ARTIFACT, config_path=run.config_path)
+    )
     source_artifacts = [
         artifact_path
         for artifact_path, artifact in (
@@ -688,8 +690,8 @@ def _ohlcv_storage(config: dict[str, Any], run: RunContext) -> tuple[Path | None
         return None, None, "market.ohlcv storage is not configured."
     storage_dir = Path(str(ohlcv["storage_dir"]))
     if not storage_dir.is_absolute():
-        storage_dir = run.config_path.parent / storage_dir
-    artifact = display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=run.config_path.parent)
+        storage_dir = resolve_runtime_path(storage_dir, config_path=run.config_path)
+    artifact = display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=runtime_root(run.config_path))
     return storage_dir, artifact, None
 
 

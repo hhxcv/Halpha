@@ -7,6 +7,11 @@ from halpha.pipeline import PipelineError, RunContext
 from halpha.decision.user_state import build_user_state_context
 
 
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+
 def test_build_user_state_context_skips_when_not_configured(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
 

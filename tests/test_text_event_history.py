@@ -4,10 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 import pyarrow.parquet as pq
 
 from halpha.pipeline import RunContext
 from halpha.text.text_event_history import write_text_event_history
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_text_event_history_appends_records_and_updates_manifest(tmp_path: Path) -> None:
@@ -73,7 +79,10 @@ def test_text_event_history_warns_on_conflicting_duplicate_content(tmp_path: Pat
     assert record["origin_run_ids"] == ["run-1", "run-2"]
 
 
-def test_text_event_history_records_malformed_timestamps_and_no_record_state(tmp_path: Path) -> None:
+def test_text_event_history_records_malformed_timestamps_and_no_record_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     config_path = _write_config(tmp_path)
     run = _run_context(tmp_path, config_path, "run-1")
 
@@ -93,6 +102,7 @@ def test_text_event_history_records_malformed_timestamps_and_no_record_state(tmp
 
     empty_run = _run_context(tmp_path / "empty", tmp_path / "empty" / "config.yaml", "run-empty")
     empty_run.config_path.write_text("run:\n  output_dir: runs\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path / "empty")
     write_text_event_history(_config(), empty_run, [], now="2026-06-05T00:00:00Z")
     assert _state(tmp_path / "empty")["status"] == "skipped"
 

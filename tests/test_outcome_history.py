@@ -4,8 +4,15 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.outcome.outcome_history import write_outcome_history
 from halpha.pipeline import RunContext
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_outcome_history_appends_records_and_updates_manifest(tmp_path: Path) -> None:

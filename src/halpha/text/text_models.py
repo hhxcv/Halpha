@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from halpha.config import SUPPORTED_TEXT_INTELLIGENCE_MODEL_PROVIDERS
-from halpha.storage import write_json
+from halpha.storage import resolve_runtime_path, write_json
 
 
 TEXT_MODEL_PREPARE_MANIFEST = "model_prepare_manifest.json"
@@ -271,14 +271,13 @@ def _resolve_output_dir(
     output_dir: Path | str | None,
 ) -> Path:
     if output_dir is not None:
-        return Path(output_dir)
+        return resolve_runtime_path(output_dir, config_path=Path(config_path) if config_path is not None else None)
 
     configured = Path(str(intelligence.get("model_cache_dir") or "data/models/text"))
     if configured.is_absolute():
         return configured
 
-    base = Path(config_path).parent if config_path is not None else Path.cwd()
-    return base / configured
+    return resolve_runtime_path(configured, config_path=Path(config_path) if config_path is not None else None)
 
 
 def _mapping(value: Any) -> dict[str, Any]:

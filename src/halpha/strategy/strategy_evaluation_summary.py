@@ -18,7 +18,7 @@ from halpha.strategy.strategy_evaluation_material import (
     STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
     render_strategy_evaluation_material,
 )
-from halpha.storage import write_json
+from halpha.storage import resolve_runtime_path, write_json
 
 
 STAGE_NAME = "evaluate_strategy_evaluation"
@@ -832,9 +832,7 @@ def _read_market_data_views(run: RunContext) -> dict[str, Any]:
 def _storage_dir(config: dict[str, Any], config_path: Path) -> Path:
     ohlcv = config.get("market", {}).get("ohlcv", {})
     storage_dir = Path(str(ohlcv["storage_dir"]))
-    if storage_dir.is_absolute():
-        return storage_dir
-    return config_path.parent / storage_dir
+    return resolve_runtime_path(storage_dir, config_path=config_path)
 
 
 def _record_zero_counts(run: RunContext) -> None:

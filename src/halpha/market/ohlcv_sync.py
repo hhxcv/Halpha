@@ -9,7 +9,7 @@ from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, TIMEFR
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.research_data_catalog import write_research_data_catalog
-from halpha.storage import display_path
+from halpha.storage import display_path, resolve_runtime_path, runtime_root
 
 
 STAGE_NAME = "sync_ohlcv"
@@ -48,7 +48,8 @@ def sync_ohlcv_history(
 
     storage_dir = _storage_dir(ohlcv, run.config_path)
     metadata_paths = _metadata_paths(storage_dir)
-    artifacts = _artifact_paths(metadata_paths, run.config_path.parent)
+    base = runtime_root(run.config_path)
+    artifacts = _artifact_paths(metadata_paths, base)
     store = OHLCVParquetStore(storage_dir, run_output_dir=run.run_dir.parent)
     factory = source_factory or _default_source_factory
     source_name = str(market["source"])
@@ -69,7 +70,7 @@ def sync_ohlcv_history(
             items=[],
             warnings=[],
             errors=[item_error],
-            config_base=run.config_path.parent,
+            config_base=base,
         )
         metadata_errors = _write_store_metadata(store, source=source_name)
         if metadata_errors:
@@ -103,7 +104,7 @@ def sync_ohlcv_history(
         items=items,
         warnings=warnings,
         errors=errors,
-        config_base=run.config_path.parent,
+        config_base=base,
     )
     metadata_errors = _write_store_metadata(store, source=source_name)
     if metadata_errors:
@@ -340,9 +341,7 @@ def _records_to_store(
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:
     storage_dir = Path(str(ohlcv["storage_dir"]))
-    if storage_dir.is_absolute():
-        return storage_dir
-    return config_path.parent / storage_dir
+    return resolve_runtime_path(storage_dir, config_path=config_path)
 
 
 def _metadata_paths(storage_dir: Path) -> dict[str, Path]:

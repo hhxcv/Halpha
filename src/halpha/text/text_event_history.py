@@ -9,7 +9,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from halpha.runtime.pipeline_contracts import RunContext
-from halpha.storage import display_path, write_json
+from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
 TEXT_EVENT_HISTORY_SCHEMA_VERSION = 1
@@ -63,13 +63,14 @@ def write_text_event_history(
     status = _status(record_count=len(merged_records), warnings=warnings)
 
     _rewrite_history(storage_root, merged_records)
+    base = runtime_root(run.config_path)
     state = {
         "schema_version": TEXT_EVENT_HISTORY_SCHEMA_VERSION,
         "artifact_type": "text_event_history_state",
         "updated_at": _format_utc(now),
         "status": status,
-        "storage_path": display_path(storage_root, base=run.config_path.parent),
-        "state_path": display_path(state_path, base=run.config_path.parent),
+        "storage_path": display_path(storage_root, base=base),
+        "state_path": display_path(state_path, base=base),
         "totals": {
             "records": len(merged_records),
             "incoming_records": len(incoming_records),
@@ -91,11 +92,11 @@ def write_text_event_history(
 
 
 def text_event_history_storage_path(config_path: Path) -> Path:
-    return config_path.parent / TEXT_EVENT_HISTORY_STORAGE_ARTIFACT
+    return resolve_runtime_path(TEXT_EVENT_HISTORY_STORAGE_ARTIFACT, config_path=config_path)
 
 
 def text_event_history_state_path(config_path: Path) -> Path:
-    return config_path.parent / TEXT_EVENT_HISTORY_STATE_ARTIFACT
+    return resolve_runtime_path(TEXT_EVENT_HISTORY_STATE_ARTIFACT, config_path=config_path)
 
 
 def _history_records(
@@ -258,8 +259,11 @@ def _skipped_state(run: RunContext, *, reason: str, now: datetime | str | None) 
         "artifact_type": "text_event_history_state",
         "updated_at": _format_utc(now),
         "status": "skipped",
-        "storage_path": display_path(text_event_history_storage_path(run.config_path), base=run.config_path.parent),
-        "state_path": display_path(text_event_history_state_path(run.config_path), base=run.config_path.parent),
+        "storage_path": display_path(
+            text_event_history_storage_path(run.config_path),
+            base=runtime_root(run.config_path),
+        ),
+        "state_path": display_path(text_event_history_state_path(run.config_path), base=runtime_root(run.config_path)),
         "totals": {
             "records": 0,
             "incoming_records": 0,
@@ -308,11 +312,11 @@ def _source_summaries(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _source_artifacts(record: dict[str, Any], run: RunContext) -> list[str]:
-    artifacts = [display_path(run.analysis_dir / "text_event_records.json", base=run.config_path.parent)]
+    artifacts = [display_path(run.analysis_dir / "text_event_records.json", base=runtime_root(run.config_path))]
     for artifact in record.get("source_artifacts") or []:
         if not isinstance(artifact, str) or not artifact:
             continue
-        artifacts.append(display_path(run.run_dir / artifact, base=run.config_path.parent))
+        artifacts.append(display_path(run.run_dir / artifact, base=runtime_root(run.config_path)))
     return _unique_sorted(artifacts)
 
 

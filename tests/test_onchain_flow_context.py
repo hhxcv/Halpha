@@ -4,12 +4,19 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.onchain.onchain_flow_context import build_onchain_flow_context
 from halpha.onchain.onchain_flow_history import sync_onchain_flow_history
 from halpha.onchain.onchain_flow_views import build_onchain_flow_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_onchain_flow_context_builds_abnormal_activity_congestion_and_unavailable_source(

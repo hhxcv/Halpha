@@ -55,6 +55,30 @@ def test_prepare_text_models_records_unavailable_when_download_dependency_is_mis
     assert 'python -m pip install -e ".[nlp]"' in result.manifest["errors"][0]
 
 
+def test_prepare_text_models_uses_runtime_root_for_configured_model_cache(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    config_dir = tmp_path / "external-config"
+    runtime_root.mkdir()
+    config_dir.mkdir()
+    monkeypatch.chdir(runtime_root)
+    config_path = config_dir / "config.yaml"
+    config_path.write_text(_config_yaml(), encoding="utf-8")
+
+    result = text_models.prepare_text_models(
+        _config(),
+        config_path=config_path,
+        now="2026-01-01T00:00:00Z",
+    )
+
+    assert result.succeeded
+    assert result.manifest_path == runtime_root / "data" / "models" / "text" / text_models.TEXT_MODEL_PREPARE_MANIFEST
+    assert result.manifest_path.exists()
+    assert not (config_dir / "data").exists()
+
+
 def test_text_models_prepare_cli_writes_manifest_without_optional_nlp_dependencies(
     tmp_path: Path,
     capsys,

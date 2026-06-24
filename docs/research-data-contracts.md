@@ -61,9 +61,10 @@ Halpha keeps these layers separate:
 
 Artifacts and stores must use stable references:
 
-- prefer repo-relative paths for files under the repository;
-- prefer config-relative paths when a configured data root sits outside the run
-  directory;
+- prefer runtime-root-relative paths for files under the runtime root;
+- resolve relative configured reusable data roots from the runtime root, not
+  from the config file location;
+- preserve absolute configured data roots as explicit local overrides;
 - do not write machine-local absolute paths into public docs, examples, PRs, or
   issue text;
 - do not print proxy URLs, hostnames, ports, credentials, tokens, cookies,

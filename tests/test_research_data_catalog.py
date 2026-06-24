@@ -4,9 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import RunContext
 from halpha.data.research_data_catalog import build_research_data_catalog, write_research_data_catalog
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_research_data_catalog_registers_shared_ohlcv_store(tmp_path: Path) -> None:

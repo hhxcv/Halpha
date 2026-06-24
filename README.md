@@ -396,11 +396,12 @@ Full report runs require public network access, configured public sources, a
 working Codex CLI on `PATH`, and Codex CLI authentication outside this
 repository. The generated local prompt is sent to Codex CLI through stdin.
 
-Relative runtime artifact directories resolve from the current working
-directory, not from the config file location. The portable example keeps local
-outputs under `runs/` and `logs/` through `run.output_dir: runs` and
-`logging.output_dir: logs`. Gitignored local configs should set those fields
-explicitly when they need the same repo-root output layout.
+Relative runtime artifact directories, reusable data roots, standalone output
+directories, and model cache paths resolve from the current working directory,
+not from the config file location. The portable example keeps local outputs
+under `runs/`, `logs/`, `data/`, and `.halpha/` through relative config values.
+Gitignored local configs should set those fields explicitly when they need the
+same repo-root output layout.
 
 If a local proxy is needed, keep it in a gitignored local config file:
 
