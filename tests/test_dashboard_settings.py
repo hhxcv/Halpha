@@ -96,6 +96,7 @@ NON_EDITABLE_CONFIG_PATTERNS = (
     "market.proxy.url",
     "monitor.enabled",
     "monitor.output_dir",
+    "monitor.source_cadence_seconds.*",
     "monitor.target_stage",
     "onchain_flow.chain_activity_source_url",
     "onchain_flow.network_congestion_source_url",

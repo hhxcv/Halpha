@@ -19,7 +19,7 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
-from halpha.monitor.monitoring import SUPPORTED_MONITOR_FIELDS
+from halpha.monitor.monitoring import MONITOR_SOURCE_KEYS, SUPPORTED_MONITOR_FIELDS
 from halpha.quant.registry import SUPPORTED_STRATEGY_NAMES
 
 
@@ -318,6 +318,25 @@ def _validate_monitor_config(monitor: dict[str, Any]) -> None:
         _require_non_empty_string(monitor, "target_stage", "monitor.target_stage")
     if "no_codex" in monitor:
         _require_bool(monitor, "no_codex", "monitor.no_codex")
+    if "source_cadence_seconds" in monitor:
+        _validate_monitor_source_cadence_config(monitor["source_cadence_seconds"])
+
+
+def _validate_monitor_source_cadence_config(value: Any) -> None:
+    if not isinstance(value, dict) or not value:
+        raise ConfigError("monitor.source_cadence_seconds must be a non-empty mapping.")
+    unsupported = sorted(set(value) - set(MONITOR_SOURCE_KEYS))
+    if unsupported:
+        supported = ", ".join(MONITOR_SOURCE_KEYS)
+        names = ", ".join(str(item) for item in unsupported)
+        raise ConfigError(
+            "unsupported monitor.source_cadence_seconds source(s): "
+            f"{names}. Supported sources: {supported}."
+        )
+    for source_key in sorted(value):
+        item = value[source_key]
+        if not isinstance(item, int) or isinstance(item, bool) or item <= 0:
+            raise ConfigError(f"monitor.source_cadence_seconds.{source_key} must be a positive integer.")
 
 
 def _validate_dashboard_config(dashboard: Any) -> None:

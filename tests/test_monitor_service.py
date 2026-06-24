@@ -128,7 +128,7 @@ def test_monitor_restart_launches_with_previous_terminal_instance_id(
 
 
 def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path, no_codex=False)
+    config_path = _write_config(tmp_path, no_codex=False, text_enabled=True)
     config = load_config(config_path)
     pipeline_calls: list[dict[str, Any]] = []
     sleeps: list[float] = []
@@ -137,51 +137,60 @@ def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_pat
         config,
         config_path=config_path,
         max_cycles=2,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=["failed", "succeeded"], calls=pipeline_calls),
+        pipeline_runner=_pipeline_factory(tmp_path, statuses=["failed"], calls=pipeline_calls),
         sleeper=lambda seconds: sleeps.append(seconds),
     )
 
     health_state = _health_state(config_path)
     manifests = _cycle_manifests(tmp_path)
+    source_states = {state["source_key"]: state for state in health_state["source_states"]}
 
     assert len(manifests) == 2
-    assert [manifest["status"] for manifest in manifests] == ["failed", "succeeded"]
-    assert {manifest["cycle_mode"] for manifest in manifests} == {"service"}
+    assert [manifest["status"] for manifest in manifests] == ["partial", "no_due_sources"]
+    assert {manifest["cycle_mode"] for manifest in manifests} == {"source_cadence"}
     assert {manifest["trigger_source"] for manifest in manifests} == {"monitor_service"}
     assert all(call["skip_codex"] is True for call in pipeline_calls)
+    assert all(call["until_stage"] == "refresh_data" for call in pipeline_calls)
+    assert [call["source_key"] for call in pipeline_calls] == ["text"]
     assert health_state["cycle_count"] == 2
-    assert health_state["failed_cycle_count"] == 1
+    assert health_state["failed_cycle_count"] == 0
     assert health_state["service"]["status"] == "stopped"
     assert health_state["service"]["consecutive_failures"] == 0
     assert health_state["service"]["next_retry_at"] is None
     assert health_state["service"]["last_error"] == {}
+    assert source_states["text"]["status"] == "failed"
+    assert source_states["text"]["consecutive_failures"] == 1
+    assert source_states["text"]["last_error"]["message"] == "simulated source failure"
     assert sum(sleeps) == pytest.approx(1.0)
     assert not (tmp_path / "monitor" / "monitor_health_state.json").exists()
 
 
 def test_monitor_service_backs_off_recoverable_failures_with_configured_cap(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path, interval_seconds=2, failure_backoff_max_seconds=3)
+    config_path = _write_config(tmp_path, interval_seconds=2, failure_backoff_max_seconds=3, text_enabled=True)
     config = load_config(config_path)
     sleeps: list[float] = []
 
     run_monitor_service(
         config,
         config_path=config_path,
-        max_cycles=3,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=["failed", "failed", "failed"]),
+        max_cycles=1,
+        pipeline_runner=_pipeline_factory(tmp_path, statuses=["failed"]),
         sleeper=lambda seconds: sleeps.append(seconds),
     )
 
     health_state = _health_state(config_path)
+    source_states = {state["source_key"]: state for state in health_state["source_states"]}
 
-    assert health_state["failed_cycle_count"] == 3
-    assert health_state["service"]["consecutive_failures"] == 3
-    assert health_state["service"]["last_error"]["message"] == "simulated source failure"
-    assert sum(sleeps) == pytest.approx(5.0)
+    assert health_state["failed_cycle_count"] == 0
+    assert health_state["service"]["consecutive_failures"] == 0
+    assert health_state["service"]["last_error"] == {}
+    assert source_states["text"]["status"] == "failed"
+    assert source_states["text"]["backoff_seconds"] == 2
+    assert sleeps == []
 
 
 def test_monitor_service_observes_graceful_stop_during_wait(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path, interval_seconds=5)
+    config_path = _write_config(tmp_path, interval_seconds=5, text_enabled=True)
     config = load_config(config_path)
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     sleep_calls = 0
@@ -222,8 +231,19 @@ def _write_config(
     interval_seconds: int = 1,
     failure_backoff_max_seconds: int = 4,
     no_codex: bool = True,
+    text_enabled: bool = False,
 ) -> Path:
     path = tmp_path / "config.yaml"
+    text_sources = (
+        """
+  sources:
+    - name: feed
+      type: rss
+      url: https://example.invalid/feed.xml
+""".rstrip()
+        if text_enabled
+        else "  sources: []"
+    )
     path.write_text(
         f"""
 run:
@@ -232,8 +252,8 @@ run:
 market:
   enabled: false
 text:
-  enabled: false
-  sources: []
+  enabled: {str(text_enabled).lower()}
+{text_sources}
 report:
   language: zh-CN
 codex:
@@ -261,28 +281,21 @@ def _pipeline_factory(
 
     def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
         state["count"] += 1
+        source_key = _enabled_source(config)
         if calls is not None:
-            calls.append({"until_stage": until_stage, "skip_codex": skip_codex, "monitor": dict(config.get("monitor", {}))})
+            calls.append(
+                {
+                    "until_stage": until_stage,
+                    "skip_codex": skip_codex,
+                    "monitor": dict(config.get("monitor", {})),
+                    "source_key": source_key,
+                }
+            )
         status = statuses[state["count"] - 1]
         run_id = f"run-{state['count']}"
         run_dir = tmp_path / "runs" / run_id
-        analysis_dir = run_dir / "analysis"
-        analysis_dir.mkdir(parents=True, exist_ok=True)
-        artifacts = {}
-        if status == "succeeded":
-            (analysis_dir / "alert_decisions.json").write_text(
-                json.dumps(
-                    {
-                        "schema_version": 1,
-                        "artifact_type": "alert_decisions",
-                        "records": [_alert_record()],
-                    },
-                    ensure_ascii=False,
-                    sort_keys=True,
-                ),
-                encoding="utf-8",
-            )
-            artifacts = {"alert_decisions": "analysis/alert_decisions.json"}
+        run_dir.mkdir(parents=True, exist_ok=True)
+        artifacts = {source_key: f"raw/{source_key}.json"} if status == "succeeded" else {}
         return SimpleNamespace(
             succeeded=status == "succeeded",
             exit_code=0 if status == "succeeded" else 3,
@@ -292,29 +305,31 @@ def _pipeline_factory(
                 run_id=run_id,
                 run_dir=run_dir,
                 manifest_path=run_dir / "run_manifest.json",
-                manifest={"status": status, "artifacts": artifacts, "stages": []},
+                manifest={
+                    "status": status,
+                    "artifacts": artifacts,
+                    "stages": [],
+                    "monitor_source_revision": f"{source_key}-revision-{state['count']}" if status == "succeeded" else None,
+                },
             ),
         )
 
     return pipeline
 
 
-def _alert_record() -> dict[str, Any]:
-    return {
-        "alert_decision_id": "alert_decision:BTCUSDT:1d:assessment-1",
-        "status": "active",
-        "priority": "P1",
-        "scope": {
-            "symbol": "BTCUSDT",
-            "timeframe": "1d",
-            "assessment_id": "assessment-1",
-            "topic_ids": ["topic-1"],
-            "event_signal_ids": ["signal-1"],
-        },
-        "attention_decision": "review_soon",
-        "requires_user_attention": True,
-        "source_artifacts": ["analysis/alert_decisions.json"],
-    }
+def _enabled_source(config: dict[str, Any]) -> str:
+    if config.get("text", {}).get("enabled"):
+        return "text"
+    if config.get("macro_calendar", {}).get("enabled"):
+        return "macro_calendar"
+    if config.get("onchain_flow", {}).get("enabled"):
+        return "onchain_flow"
+    derivatives = config.get("market", {}).get("derivatives")
+    if isinstance(derivatives, dict) and derivatives.get("enabled"):
+        return "derivatives"
+    if config.get("market", {}).get("enabled"):
+        return "market"
+    raise AssertionError("one source group must be enabled")
 
 
 def _cycle_manifests(tmp_path: Path) -> list[dict[str, Any]]:

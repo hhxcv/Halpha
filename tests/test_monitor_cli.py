@@ -107,6 +107,7 @@ def test_monitor_run_dry_run_uses_defaults_without_running_pipeline(
     assert "output_dir: runs/monitor" in output
     assert "target_stage: build_materials" in output
     assert "no_codex: true" in output
+    assert "source_cadence_seconds: derivatives=300, macro_calendar=3600, market=300, onchain_flow=3600, text=300" in output
 
 
 def test_monitor_run_dry_run_prints_configured_values(tmp_path: Path, capsys) -> None:
@@ -137,6 +138,7 @@ monitor:
     assert "output_dir: local-monitor" in output
     assert "target_stage: build_materials" in output
     assert "no_codex: true" in output
+    assert "source_cadence_seconds: derivatives=60, macro_calendar=3600, market=60, onchain_flow=3600, text=60" in output
 
 
 def test_monitor_run_without_dry_run_does_not_execute_pipeline(

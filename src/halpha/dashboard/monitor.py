@@ -128,6 +128,7 @@ def _health_summary(repository: MonitorStateRepository, *, output_ref: str, base
         "error_count": _int(data.get("error_count")),
         "latest_loop": _bounded_mapping(data.get("latest_loop")),
         "service": _bounded_mapping(data.get("service")),
+        "source_states": _bounded_source_states(data.get("source_states")),
     }
     return _component(
         "monitor_health",
@@ -203,6 +204,33 @@ def _bounded_mapping(value: Any) -> dict[str, Any]:
             ]
         else:
             output[str(key)] = str(item)
+    return output
+
+
+def _bounded_source_states(value: Any) -> list[dict[str, Any]]:
+    states = _list(value)
+    output: list[dict[str, Any]] = []
+    for state in states[:10]:
+        if not isinstance(state, dict):
+            continue
+        output.append(
+            {
+                "source_key": state.get("source_key"),
+                "enabled": state.get("enabled") is True,
+                "cadence_seconds": _int(state.get("cadence_seconds")),
+                "status": state.get("status"),
+                "last_attempt_at": state.get("last_attempt_at"),
+                "last_success_at": state.get("last_success_at"),
+                "next_attempt_at": state.get("next_attempt_at"),
+                "consecutive_failures": _int(state.get("consecutive_failures")),
+                "backoff_seconds": _int(state.get("backoff_seconds")),
+                "latest_published_data_revision": state.get("latest_published_data_revision"),
+                "latest_run_id": state.get("latest_run_id"),
+                "latest_run_manifest": state.get("latest_run_manifest"),
+                "changed_scope": _bounded_mapping(state.get("changed_scope")),
+                "last_error": _bounded_mapping(state.get("last_error")),
+            }
+        )
     return output
 
 

@@ -48,6 +48,13 @@ def test_config_example_loads_successfully() -> None:
         "failure_backoff_max_seconds": 3600,
         "cooldown_seconds": 3600,
         "output_dir": "runs/monitor",
+        "source_cadence_seconds": {
+            "market": 300,
+            "derivatives": 300,
+            "text": 300,
+            "macro_calendar": 3600,
+            "onchain_flow": 3600,
+        },
         "target_stage": "build_materials",
         "no_codex": True,
     }
@@ -333,6 +340,12 @@ def test_load_config_rejects_invalid_user_state_config(
         ("  output_dir: ''", r"monitor\.output_dir must be a non-empty string"),
         ("  target_stage: ''", r"monitor\.target_stage must be a non-empty string"),
         ("  no_codex: \"no\"", r"monitor\.no_codex must be a boolean"),
+        ("  source_cadence_seconds: []", r"monitor\.source_cadence_seconds must be a non-empty mapping"),
+        ("  source_cadence_seconds:\n    text: 0", r"monitor\.source_cadence_seconds\.text must be a positive integer"),
+        (
+            "  source_cadence_seconds:\n    private_feed: 60",
+            r"unsupported monitor\.source_cadence_seconds source\(s\): private_feed",
+        ),
         ("  surprise: value", r"unsupported monitor field\(s\): surprise"),
     ],
 )
