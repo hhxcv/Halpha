@@ -104,6 +104,7 @@ class CommandJobManager:
         self._lock = threading.Lock()
         self._processes: dict[str, CommandJobProcess] = {}
         self._cancel_requested: set[str] = set()
+        self._reconcile_diagnostic: dict[str, Any] | None = None
         self._reconcile_unattached_jobs()
 
     def create_job(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -176,32 +177,50 @@ class CommandJobManager:
         return job
 
     def list_jobs(self, *, limit: int = 100) -> dict[str, Any]:
-        jobs = sorted(
-            (self._normalize_runtime_job_state(job) for job in self._repository.list_jobs(limit=limit) if job),
-            key=lambda item: str(item.get("created_at") or ""),
-            reverse=True,
-        )[:limit]
+        try:
+            jobs = sorted(
+                (self._normalize_runtime_job_state(job) for job in self._repository.list_jobs(limit=limit) if job),
+                key=lambda item: str(item.get("created_at") or ""),
+                reverse=True,
+            )[:limit]
+        except CommandJobStoreError as exc:
+            return self._job_list_store_failure(exc)
+        status = "degraded" if self._reconcile_diagnostic else "available" if jobs else "missing"
+        warnings = [] if jobs else ["command job history is empty."]
+        errors: list[str] = []
+        if self._reconcile_diagnostic:
+            warnings = [*warnings, "transient command-job reconciliation could not read runtime state."]
+            errors.append("command job state store could not be read during startup reconciliation.")
         return {
             "schema_version": 1,
             "artifact_type": "command_job_list",
-            "status": "available" if jobs else "missing",
+            "status": status,
             "source_artifacts": [COMMAND_JOB_INDEX],
             "jobs": jobs,
-            "warnings": [] if jobs else ["command job history is empty."],
-            "errors": [],
+            "warnings": warnings,
+            "errors": errors,
+            **({"diagnostic": self._reconcile_diagnostic} if self._reconcile_diagnostic else {}),
         }
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
         if not _is_command_job_id(job_id):
             return None
-        data = self._repository.get_job(job_id)
+        try:
+            data = self._repository.get_job(job_id)
+        except CommandJobStoreError as exc:
+            return self._job_store_failure(job_id=job_id, exc=exc)
         if data is None:
             return None
-        return self._normalize_runtime_job_state(data)
+        try:
+            return self._normalize_runtime_job_state(data)
+        except CommandJobStoreError as exc:
+            return self._job_store_failure(job_id=job_id, exc=exc)
 
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         with self._lock:
             job = self.get_job(job_id)
+            if _is_store_read_failure(job):
+                return job
             if job is None:
                 return {
                     "schema_version": 1,
@@ -239,7 +258,7 @@ class CommandJobManager:
 
     def _run_job(self, job_id: str, command: list[str], spec: CommandSpec) -> None:
         job = self.get_job(job_id)
-        if job is None:
+        if job is None or _is_store_read_failure(job):
             return
         started_at = _utc_now()
         self._logger.info(
@@ -315,7 +334,10 @@ class CommandJobManager:
         was_cancelled = job_id in self._cancel_requested
         if was_cancelled:
             self._cancel_requested.discard(job_id)
-        job = self._repository.get_job(job_id) or job
+        try:
+            job = self._repository.get_job(job_id) or job
+        except CommandJobStoreError:
+            return
         stdout_ref, stdout_truncated, stdout_chars = self._write_log(job_id, "stdout.log", stdout)
         stderr_ref, stderr_truncated, stderr_chars = self._write_log(job_id, "stderr.log", stderr)
         result_refs = self._job_result_refs(stdout, spec=spec)
@@ -503,6 +525,31 @@ class CommandJobManager:
             "errors": [],
         }
 
+    def _job_list_store_failure(self, exc: CommandJobStoreError) -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "artifact_type": "command_job_list",
+            "status": "failed",
+            "source_artifacts": [COMMAND_JOB_INDEX],
+            "jobs": [],
+            "warnings": [],
+            "errors": ["command job state store could not be read."],
+            "diagnostic": exc.diagnostic,
+        }
+
+    def _job_store_failure(self, *, job_id: str, exc: CommandJobStoreError) -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "artifact_type": "command_job",
+            "job_id": job_id,
+            "status": "failed",
+            "store_read_failed": True,
+            "cancellable": False,
+            "warnings": [],
+            "errors": ["command job state store could not be read."],
+            "diagnostic": exc.diagnostic,
+        }
+
     def _save_job(self, job: dict[str, Any], *, event_type: str) -> dict[str, Any]:
         return self._repository.save_job(self._redact_value(job), event_type=event_type)
 
@@ -621,7 +668,20 @@ class CommandJobManager:
             raise
 
     def _reconcile_unattached_jobs(self) -> None:
-        for job in self._repository.list_transient_jobs():
+        try:
+            transient_jobs = self._repository.list_transient_jobs()
+        except CommandJobStoreError as exc:
+            self._reconcile_diagnostic = exc.diagnostic
+            self._logger.error(
+                "command job transient reconciliation could not read runtime state.",
+                extra={
+                    "event": "command_job.reconcile_failed",
+                    "status": "failed",
+                    "diagnostic": exc.diagnostic,
+                },
+            )
+            return
+        for job in transient_jobs:
             self._normalize_runtime_job_state(job)
 
     def _requester_for_request(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -666,6 +726,10 @@ def _requested_by(value: Any, *, default: str) -> str:
     if requested_by in JOB_REQUESTED_BY_VALUES:
         return requested_by
     return default if default in JOB_REQUESTED_BY_VALUES else "CLI"
+
+
+def _is_store_read_failure(job: dict[str, Any] | None) -> bool:
+    return isinstance(job, dict) and job.get("store_read_failed") is True
 
 
 def _requester_metadata(value: Any) -> dict[str, Any]:

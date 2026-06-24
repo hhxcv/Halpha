@@ -1,8 +1,11 @@
 ﻿from __future__ import annotations
 
+from contextlib import closing
+
 import json
 import os
 from pathlib import Path
+import sqlite3
 import sys
 import threading
 import time
@@ -13,10 +16,10 @@ from fastapi.testclient import TestClient
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.runtime.command_job_commands import CommandJobBuilder, CommandJobCommand, CommandJobError, CommandSpec
-from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError
+from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError, apply_command_job_migrations
 from halpha.runtime.command_jobs import CommandJobManager, MAX_JOB_LOG_CHARS
 from halpha.runtime.mutation_lease import acquire_mutation_lease
-from halpha.runtime.state_store import runtime_state_path
+from halpha.runtime.state_store import open_runtime_state_connection, runtime_state_path
 
 
 @pytest.fixture(autouse=True)
@@ -1154,6 +1157,94 @@ def test_command_job_repository_rejects_terminal_transition_transactionally(tmp_
     assert [event["event_type"] for event in events] == ["seed"]
 
 
+def test_command_job_repository_reads_missing_store_as_empty_without_creating_database(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    repository = CommandJobRepository(config_path=config_path)
+    job_id = "20260622T000003Z_deadbeef"
+
+    assert repository.get_job(job_id) is None
+    assert repository.list_jobs(limit=10) == []
+    assert repository.list_transient_jobs() == []
+    assert repository.job_events(job_id) == []
+    assert not runtime_state_path(config_path=config_path).exists()
+
+
+def test_command_job_repository_reads_valid_empty_store_without_error(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    repository = CommandJobRepository(config_path=config_path)
+
+    with closing(open_runtime_state_connection(config_path=config_path)) as connection:
+        apply_command_job_migrations(connection, now="2026-06-22T00:00:00Z")
+
+    assert repository.list_jobs(limit=10) == []
+    assert repository.list_transient_jobs() == []
+
+
+def test_command_job_repository_read_does_not_apply_migrations(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    state_path = runtime_state_path(config_path=config_path)
+    state_path.parent.mkdir(parents=True)
+    sqlite3.connect(state_path).close()
+    repository = CommandJobRepository(config_path=config_path)
+
+    with pytest.raises(CommandJobStoreError, match="could not be read") as exc_info:
+        repository.list_jobs(limit=10)
+
+    diagnostic = exc_info.value.diagnostic
+    assert diagnostic["status"] == "failed"
+    assert diagnostic["operation"] == "list command jobs"
+    assert diagnostic["database_ref"] == ".halpha/state.sqlite"
+    with closing(sqlite3.connect(state_path)) as connection:
+        tables = connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+    assert tables == []
+
+
+def test_command_job_repository_surfaces_locked_read_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    _seed_state_job(config_path, job_id="20260622T000004Z_deadbeef", status="running")
+    repository = CommandJobRepository(config_path=config_path)
+
+    def fail_readonly_connection(**kwargs):  # noqa: ANN003
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(
+        "halpha.runtime.command_job_store.open_runtime_state_readonly_connection",
+        fail_readonly_connection,
+    )
+
+    with pytest.raises(CommandJobStoreError, match="could not be read") as exc_info:
+        repository.list_transient_jobs()
+
+    assert exc_info.value.diagnostic == {
+        "status": "failed",
+        "operation": "list transient command jobs",
+        "error_type": "OperationalError",
+        "message": "runtime state database is locked; retry after the current writer finishes.",
+        "database_ref": ".halpha/state.sqlite",
+        "private_values_embedded": False,
+    }
+
+
+def test_command_job_repository_surfaces_corrupt_database_without_private_paths(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    state_path = runtime_state_path(config_path=config_path)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text("not a sqlite database", encoding="utf-8")
+    repository = CommandJobRepository(config_path=config_path)
+
+    with pytest.raises(CommandJobStoreError, match="could not be read") as exc_info:
+        repository.get_job("20260622T000005Z_deadbeef")
+
+    diagnostic_text = repr(exc_info.value.diagnostic)
+    assert exc_info.value.diagnostic["status"] == "failed"
+    assert exc_info.value.diagnostic["operation"] == "read command job detail"
+    assert exc_info.value.diagnostic["database_ref"] == ".halpha/state.sqlite"
+    assert str(tmp_path) not in diagnostic_text
+
+
 def test_command_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -1176,6 +1267,66 @@ def test_command_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> No
     assert detail_response.json()["status"] == "succeeded"
     assert str(tmp_path) not in list_response.text
     assert str(tmp_path) not in detail_response.text
+
+
+def test_command_job_api_surfaces_state_store_read_failure_without_private_paths(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    state_path = runtime_state_path(config_path=config_path)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text("not a sqlite database", encoding="utf-8")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    job_id = "20260622T000006Z_deadbeef"
+
+    list_response = client.get("/api/jobs")
+    detail_response = client.get(f"/api/jobs/{job_id}")
+    cancel_response = client.post(f"/api/jobs/{job_id}/cancel")
+
+    assert list_response.status_code == 200
+    assert detail_response.status_code == 200
+    assert cancel_response.status_code == 200
+    assert list_response.json()["status"] == "failed"
+    assert list_response.json()["jobs"] == []
+    assert detail_response.json()["status"] == "failed"
+    assert detail_response.json()["store_read_failed"] is True
+    assert cancel_response.json()["status"] == "failed"
+    assert cancel_response.json()["store_read_failed"] is True
+    assert "command job state store could not be read." in list_response.json()["errors"]
+    assert "command job was not found" not in cancel_response.text
+    assert str(tmp_path) not in list_response.text
+    assert str(tmp_path) not in detail_response.text
+    assert str(tmp_path) not in cancel_response.text
+
+
+def test_command_job_manager_reports_transient_reconciliation_read_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_transient_jobs(self):  # noqa: ANN001
+        raise CommandJobStoreError(
+            "command job state store could not be read.",
+            diagnostic={
+                "status": "failed",
+                "operation": "list transient command jobs",
+                "error_type": "OperationalError",
+                "message": "runtime state database is locked; retry after the current writer finishes.",
+                "database_ref": ".halpha/state.sqlite",
+                "private_values_embedded": False,
+            },
+        )
+
+    monkeypatch.setattr(CommandJobRepository, "list_transient_jobs", fail_transient_jobs)
+
+    manager = CommandJobManager(config, config_path=config_path)
+    payload = manager.list_jobs()
+
+    assert payload["status"] == "degraded"
+    assert "transient command-job reconciliation could not read runtime state." in payload["warnings"]
+    assert "command job state store could not be read during startup reconciliation." in payload["errors"]
+    assert payload["diagnostic"]["database_ref"] == ".halpha/state.sqlite"
 
 
 def test_command_job_api_rejects_path_shaped_job_ids(tmp_path: Path) -> None:
