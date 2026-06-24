@@ -39,7 +39,6 @@ def test_watch_triggers_generate_supported_types_and_link_decisions(tmp_path: Pa
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -54,14 +53,17 @@ def test_watch_triggers_generate_supported_types_and_link_decisions(tmp_path: Pa
     assert artifact["run_id"] == result.run.run_id
     assert artifact["created_at"] == "2026-06-05T00:00:00Z"
     assert artifact["trigger_types"] == TRIGGER_TYPES
-    assert artifact["source_artifacts"] == [
+    assert set(artifact["source_artifacts"]) == {
         "analysis/decision_recommendations.json",
         "analysis/risk_assessment.json",
         "analysis/market_regime_assessment.json",
         "analysis/market_signals.json",
         "analysis/quant_strategy_runs.json",
         "raw/market_data_views.json",
-    ]
+        "analysis/personalized_risk_constraints.json",
+        "analysis/user_state_context.json",
+        "analysis/intelligence_fusion.json",
+    }
     assert artifact["errors"] == []
     assert records_by_type == set(TRIGGER_TYPES)
     assert all(record["condition"] for record in records)
@@ -118,7 +120,6 @@ def test_watch_triggers_include_derivatives_risk_conditions(tmp_path: Path) -> N
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -160,7 +161,6 @@ def test_watch_triggers_include_macro_calendar_observation_conditions(tmp_path: 
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -204,7 +204,6 @@ def test_watch_triggers_include_onchain_flow_risk_conditions(tmp_path: Path) -> 
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -249,7 +248,6 @@ def test_watch_triggers_recheck_unavailable_onchain_flow_without_false_relief(tm
             "build_market_regime_assessment": _write_market_regime_assessment,
             "build_risk_assessment": _write_risk_assessment,
             "build_decision_recommendations": _write_decision_recommendations,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -284,7 +282,6 @@ def test_watch_triggers_do_not_fabricate_conditions_without_evidence(tmp_path: P
             "build_market_regime_assessment": _write_empty_market_regime_assessment,
             "build_risk_assessment": _write_empty_risk_assessment,
             "build_decision_recommendations": _write_empty_decision_recommendations,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -321,7 +318,6 @@ def test_watch_triggers_skip_when_quant_is_not_enabled(tmp_path: Path) -> None:
             "build_research_context": _noop_stage,
             "build_codex_context": _noop_stage,
             "run_codex_report": _noop_stage,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 

@@ -111,7 +111,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert manifest["counts"]["user_state_watchlist_records"] == 0
     assert manifest["personalized_risk_constraints"]["status"] == "skipped"
     assert manifest["counts"]["personalized_risk_constraint_records"] >= 1
-    assert manifest["personalized_risk_integration"]["status"] == "succeeded"
+    assert "personalized_risk_integration" not in manifest
     assert manifest["codex"]["status"] == "succeeded"
     assert manifest["codex"]["exit_code"] == 0
     assert manifest["artifacts"] == {
@@ -369,6 +369,17 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
 
     manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "succeeded"
+    task_records = [task for stage in manifest["stages"] for task in stage["tasks"]]
+    task_names = [task["name"] for task in task_records]
+    assert "integrate_intelligence_fusion" not in task_names
+    assert "integrate_personalized_risk_constraints" not in task_names
+    final_artifact_producers = {
+        "build_decision_recommendations": "analysis/decision_recommendations.json",
+        "build_watch_triggers": "analysis/watch_triggers.json",
+        "build_alert_decisions": "analysis/alert_decisions.json",
+    }
+    for task_name, artifact in final_artifact_producers.items():
+        assert [task["name"] for task in task_records if artifact in task["artifacts"]] == [task_name]
     assert manifest["ohlcv_sync"]["status"] == "succeeded"
     assert manifest["counts"]["ohlcv_sync_items"] == 4
     assert manifest["counts"]["market_data_views"] == 4
@@ -448,7 +459,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert manifest["counts"]["user_state_watchlist_records"] == 0
     assert manifest["personalized_risk_constraints"]["status"] == "skipped"
     assert manifest["counts"]["personalized_risk_constraint_records"] >= 1
-    assert manifest["personalized_risk_integration"]["status"] == "succeeded"
+    assert "personalized_risk_integration" not in manifest
     assert manifest["counts"]["personalized_risk_decision_linked_records"] >= 1
     assert manifest["counts"]["personalized_risk_decision_adjusted_records"] == 0
     assert manifest["personalized_risk_material"]["status"] == "skipped"
@@ -520,7 +531,11 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
             "run_id": None,
             "path": None,
         },
-        "warnings": ["No previous successful decision-intelligence run found."],
+        "warnings": [
+            "No previous successful decision-intelligence run found.",
+            "insufficient_event_evidence",
+            "classifier_model_skipped",
+        ],
         "errors": [],
     }
 

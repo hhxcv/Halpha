@@ -1,21 +1,9 @@
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
-from json import JSONDecodeError
-from pathlib import Path
 from typing import Any
 
-from halpha.runtime.pipeline_contracts import PipelineError, RunContext
-from halpha.storage import write_json
 
-
-STAGE_NAME = "integrate_intelligence_fusion"
 INTELLIGENCE_FUSION_ARTIFACT = "analysis/intelligence_fusion.json"
-DECISION_RECOMMENDATIONS_ARTIFACT = "analysis/decision_recommendations.json"
-ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
-DECISION_INTELLIGENCE_MATERIAL_ARTIFACT = "analysis/decision_intelligence_material.md"
-ALERT_DECISION_MATERIAL_ARTIFACT = "analysis/alert_decision_material.md"
 
 ACTIONABLE_ACTION_LEVELS = {
     "STRONG_DO",
@@ -35,88 +23,63 @@ ATTENTION_DECISIONS = {
 }
 
 
-def integrate_intelligence_fusion(config: dict[str, Any], run: RunContext) -> list[str]:
-    fusion_artifact = _read_optional_artifact(
-        run.analysis_dir / "intelligence_fusion.json",
-        INTELLIGENCE_FUSION_ARTIFACT,
-        records_key="records",
-    )
+def apply_fusion_to_decision_records(
+    records: list[dict[str, Any]],
+    fusion_artifact: dict[str, Any] | None,
+) -> dict[str, Any]:
     if fusion_artifact is None:
-        _record_manifest(run, status="skipped", decision_records=[], alert_records=[], warnings=[], errors=[])
-        return []
-
+        return _application_result("skipped", records, warnings=[], errors=[])
     fusion_records = _dict_list(fusion_artifact.get("records"))
-    fusion_index = _FusionIndex(fusion_records)
-    decision_artifact = _read_optional_artifact(
-        run.analysis_dir / "decision_recommendations.json",
-        DECISION_RECOMMENDATIONS_ARTIFACT,
-        records_key="records",
+    result = _integrate_decision_records({"records": records}, _FusionIndex(fusion_records))
+    return _application_result(
+        "succeeded",
+        result["records"],
+        warnings=result["warnings"],
+        errors=[],
+        source_artifacts=_unique_strings(
+            [INTELLIGENCE_FUSION_ARTIFACT, *_string_list(fusion_artifact.get("source_artifacts"))]
+        ),
     )
-    alert_artifact = _read_optional_artifact(
-        run.analysis_dir / "alert_decisions.json",
-        ALERT_DECISIONS_ARTIFACT,
-        records_key="records",
+
+
+def apply_fusion_to_alert_records(
+    records: list[dict[str, Any]],
+    fusion_artifact: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if fusion_artifact is None:
+        return _application_result("skipped", records, warnings=[], errors=[])
+    fusion_records = _dict_list(fusion_artifact.get("records"))
+    result = _integrate_alert_records({"records": records}, _FusionIndex(fusion_records))
+    return _application_result(
+        "succeeded",
+        result["records"],
+        warnings=result["warnings"],
+        errors=[],
+        source_artifacts=_unique_strings(
+            [INTELLIGENCE_FUSION_ARTIFACT, *_string_list(fusion_artifact.get("source_artifacts"))]
+        ),
     )
 
-    artifacts: list[str] = []
-    warnings: list[str] = []
-    errors: list[dict[str, Any]] = []
-    decision_records: list[dict[str, Any]] = []
-    alert_records: list[dict[str, Any]] = []
 
-    if decision_artifact is not None:
-        decision_result = _integrate_decision_records(decision_artifact, fusion_index)
-        decision_records = decision_result["records"]
-        warnings.extend(decision_result["warnings"])
-        decision_artifact["records"] = decision_records
-        decision_artifact["source_artifacts"] = _unique_strings(
-            [
-                DECISION_RECOMMENDATIONS_ARTIFACT,
-                INTELLIGENCE_FUSION_ARTIFACT,
-                *_string_list(decision_artifact.get("source_artifacts")),
-                *_string_list(fusion_artifact.get("source_artifacts")),
-            ]
-        )
-        decision_artifact["warnings"] = _unique_strings(
-            [*_string_list(decision_artifact.get("warnings")), *decision_result["warnings"]]
-        )
-        decision_artifact["created_at"] = _created_at(fusion_artifact)
-        write_json(run.analysis_dir / "decision_recommendations.json", decision_artifact)
-        artifacts.append(DECISION_RECOMMENDATIONS_ARTIFACT)
-        _refresh_decision_recommendation_counts(run, decision_records)
-
-    if alert_artifact is not None:
-        alert_result = _integrate_alert_records(alert_artifact, fusion_index)
-        alert_records = alert_result["records"]
-        warnings.extend(alert_result["warnings"])
-        alert_artifact["records"] = alert_records
-        alert_artifact["source_artifacts"] = _unique_strings(
-            [
-                ALERT_DECISIONS_ARTIFACT,
-                INTELLIGENCE_FUSION_ARTIFACT,
-                *_string_list(alert_artifact.get("source_artifacts")),
-                *_string_list(fusion_artifact.get("source_artifacts")),
-            ]
-        )
-        alert_artifact["warnings"] = _unique_strings(
-            [*_string_list(alert_artifact.get("warnings")), *alert_result["warnings"]]
-        )
-        alert_artifact["coverage"] = _alert_coverage(alert_records)
-        alert_artifact["created_at"] = _created_at(fusion_artifact)
-        write_json(run.analysis_dir / "alert_decisions.json", alert_artifact)
-        artifacts.append(ALERT_DECISIONS_ARTIFACT)
-        _refresh_alert_decision_counts(run, alert_records)
-
-    artifacts.extend(_refresh_materials(config, run, decision_changed=bool(decision_records), alert_changed=bool(alert_records)))
-    _record_manifest(
-        run,
-        status="succeeded",
-        decision_records=decision_records,
-        alert_records=alert_records,
-        warnings=warnings,
-        errors=errors,
-    )
-    return _unique_strings(artifacts)
+def _application_result(
+    status: str,
+    records: list[dict[str, Any]],
+    *,
+    warnings: list[str],
+    errors: list[dict[str, Any]],
+    source_artifacts: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "records": records,
+        "warnings": _unique_strings(warnings),
+        "errors": errors,
+        "source_artifacts": _unique_strings(source_artifacts or []),
+        "decision_linked_records": sum(1 for record in records if record.get("fusion_record_id")),
+        "decision_adjusted_records": sum(1 for record in records if record.get("pre_fusion_action_level")),
+        "alert_linked_records": sum(1 for record in records if record.get("fusion_record_id")),
+        "alert_adjusted_records": sum(1 for record in records if record.get("pre_fusion_priority")),
+    }
 
 
 class _FusionIndex:
@@ -446,128 +409,6 @@ def _fusion_alert_warnings(context: dict[str, Any]) -> list[str]:
     return _unique_strings(warnings)
 
 
-def _refresh_materials(
-    config: dict[str, Any],
-    run: RunContext,
-    *,
-    decision_changed: bool,
-    alert_changed: bool,
-) -> list[str]:
-    artifacts: list[str] = []
-    if decision_changed and (run.analysis_dir / "decision_intelligence_material.md").is_file():
-        from halpha.decision.decision_intelligence import build_decision_intelligence_material
-
-        artifacts.extend(build_decision_intelligence_material(config, run))
-    if alert_changed and (run.analysis_dir / "alert_decision_material.md").is_file():
-        from halpha.analysis.alert_decision_material import build_alert_decision_material
-
-        artifacts.extend(build_alert_decision_material(config, run))
-    return artifacts
-
-
-def _refresh_decision_recommendation_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
-    run.manifest["counts"]["decision_recommendation_records"] = len(records)
-    run.manifest["counts"]["decision_recommendation_actionable_records"] = sum(
-        1 for record in records if record.get("action_level") in ACTIONABLE_ACTION_LEVELS
-    )
-    run.manifest["counts"]["decision_recommendation_non_actionable_records"] = sum(
-        1 for record in records if record.get("action_level") not in ACTIONABLE_ACTION_LEVELS
-    )
-    run.manifest["counts"]["decision_recommendation_fusion_linked_records"] = sum(
-        1 for record in records if record.get("fusion_record_id")
-    )
-    run.manifest["counts"]["decision_recommendation_fusion_adjusted_records"] = sum(
-        1 for record in records if record.get("pre_fusion_action_level")
-    )
-
-
-def _refresh_alert_decision_counts(run: RunContext, records: list[dict[str, Any]]) -> None:
-    priority = _count_by(records, "priority")
-    run.manifest["counts"]["alert_decision_records"] = len(records)
-    run.manifest["counts"]["alert_decision_p0_records"] = priority.get("P0", 0)
-    run.manifest["counts"]["alert_decision_p1_records"] = priority.get("P1", 0)
-    run.manifest["counts"]["alert_decision_p2_records"] = priority.get("P2", 0)
-    run.manifest["counts"]["alert_decision_p3_records"] = priority.get("P3", 0)
-    run.manifest["counts"]["alert_decision_no_alert_records"] = priority.get("no_alert", 0)
-    run.manifest["counts"]["alert_decision_fusion_linked_records"] = sum(
-        1 for record in records if record.get("fusion_record_id")
-    )
-    run.manifest["counts"]["alert_decision_fusion_adjusted_records"] = sum(
-        1 for record in records if record.get("pre_fusion_priority")
-    )
-
-
-def _record_manifest(
-    run: RunContext,
-    *,
-    status: str,
-    decision_records: list[dict[str, Any]],
-    alert_records: list[dict[str, Any]],
-    warnings: list[str],
-    errors: list[dict[str, Any]],
-) -> None:
-    decision_linked = sum(1 for record in decision_records if record.get("fusion_record_id"))
-    alert_linked = sum(1 for record in alert_records if record.get("fusion_record_id"))
-    decision_adjusted = sum(1 for record in decision_records if record.get("pre_fusion_action_level"))
-    alert_adjusted = sum(1 for record in alert_records if record.get("pre_fusion_priority"))
-    run.manifest["counts"]["intelligence_fusion_decision_linked_records"] = decision_linked
-    run.manifest["counts"]["intelligence_fusion_alert_linked_records"] = alert_linked
-    run.manifest["counts"]["intelligence_fusion_decision_adjusted_records"] = decision_adjusted
-    run.manifest["counts"]["intelligence_fusion_alert_adjusted_records"] = alert_adjusted
-    run.manifest["counts"]["intelligence_fusion_integration_warnings"] = len(warnings)
-    run.manifest["counts"]["intelligence_fusion_integration_errors"] = len(errors)
-    run.manifest["intelligence_fusion_integration"] = {
-        "status": status,
-        "source_artifact": INTELLIGENCE_FUSION_ARTIFACT if status == "succeeded" else None,
-        "decision_records": len(decision_records),
-        "decision_linked_records": decision_linked,
-        "decision_adjusted_records": decision_adjusted,
-        "alert_records": len(alert_records),
-        "alert_linked_records": alert_linked,
-        "alert_adjusted_records": alert_adjusted,
-        "warnings": len(warnings),
-        "errors": len(errors),
-    }
-
-
-def _alert_coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
-    priority = _count_by(records, "priority")
-    return {
-        "records": len(records),
-        "priority": priority,
-        "no_alert_records": priority.get("no_alert", 0),
-        "user_attention_records": sum(1 for record in records if record.get("requires_user_attention") is True),
-        "downgraded_records": sum(1 for record in records if _string_list(record.get("downgrade_reasons"))),
-        "suppressed_records": sum(1 for record in records if _string_list(record.get("suppression_reasons"))),
-        "warning_records": sum(1 for record in records if _string_list(record.get("warnings"))),
-        "derivatives_linked_records": sum(1 for record in records if record.get("linked_derivatives_context_ids")),
-        "macro_calendar_linked_records": sum(1 for record in records if record.get("linked_macro_calendar_context_ids")),
-        "onchain_flow_linked_records": sum(1 for record in records if record.get("linked_onchain_flow_context_ids")),
-        "p0_p1_records": priority.get("P0", 0) + priority.get("P1", 0),
-    }
-
-
-def _read_optional_artifact(path: Path, artifact_name: str, *, records_key: str) -> dict[str, Any] | None:
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return None
-    except JSONDecodeError as exc:
-        raise PipelineError(f"{artifact_name} is not valid JSON: {exc.msg}.", stage=STAGE_NAME, exit_code=3) from exc
-    if not isinstance(loaded, dict):
-        raise PipelineError(f"{artifact_name} must be a JSON object.", stage=STAGE_NAME, exit_code=3)
-    if not isinstance(loaded.get(records_key), list):
-        raise PipelineError(f"{artifact_name} is invalid: {records_key} must be a list.", stage=STAGE_NAME, exit_code=3)
-    return loaded
-
-
-def _created_at(fusion_artifact: dict[str, Any]) -> str:
-    created_at = fusion_artifact.get("created_at")
-    if isinstance(created_at, str) and created_at:
-        return created_at
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
 def _scope_value(value: Any) -> str | None:
     if value is None:
         return None
@@ -575,14 +416,6 @@ def _scope_value(value: Any) -> str | None:
     if not text or text in {"unknown", "missing", "market_wide", "event"}:
         return None
     return text
-
-
-def _count_by(records: list[dict[str, Any]], key: str) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for record in records:
-        value = _text(record.get(key), fallback="unknown")
-        counts[value] = counts.get(value, 0) + 1
-    return dict(sorted(counts.items()))
 
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:

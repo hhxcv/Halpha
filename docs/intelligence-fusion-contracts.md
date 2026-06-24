@@ -6,8 +6,8 @@ project documentation, not a milestone plan.
 Implementation status:
 
 - `analysis/intelligence_fusion.json` is implemented in product runs.
-- Decision recommendation and alert decision fusion integration is implemented
-  in product runs.
+- Decision recommendation and alert decision fusion fields are applied by the
+  final artifact builders in product runs.
 - `analysis/intelligence_fusion_material.md` is implemented in product runs.
 - Fusion artifacts must remain additive. They must not replace strategy
   evaluation, feature/factor, event intelligence, risk assessment, decision
@@ -45,11 +45,10 @@ strategy evidence
 + multi-source signals
 + event intelligence
 + risk and regime assessment
-+ alert decisions
 + outcome tracking
 + data quality
 -> analysis/intelligence_fusion.json
--> decision and alert fusion context
+-> final decision and alert fusion context
 -> analysis/intelligence_fusion_material.md
 -> research context, Codex context, and reports
 ```
@@ -71,7 +70,6 @@ Fusion may use implemented current-run artifacts when present:
 - `analysis/factor_states.json`
 - `analysis/multi_source_signals.json`
 - `analysis/event_intelligence_assessment.json`
-- `analysis/alert_decisions.json`
 - `analysis/outcome_evaluations.json`
 - `analysis/data_quality_summary.json`
 
@@ -200,7 +198,7 @@ Required fields:
 
 ```json
 {
-  "source_layer": "strategy|strategy_evaluation|strategy_gate|strategy_lifecycle|factor|event|risk|regime|alert|outcome|data_quality",
+  "source_layer": "strategy|strategy_evaluation|strategy_gate|strategy_lifecycle|factor|event|risk|regime|outcome|data_quality",
   "source_artifact": "analysis/factor_states.json",
   "status": "used|skipped|missing|unavailable|degraded|failed",
   "records": 0,
@@ -253,10 +251,11 @@ Material selection rules:
 - Do not embed full raw streams, reusable histories, current-run views, full
   run manifests, or full intermediate JSON.
 
-## Decision And Alert Integration
+## Decision And Alert Application
 
-Product runs integrate fusion evidence into decision recommendations and alert
-decisions by adding bounded fusion context fields such as:
+Product runs apply fusion evidence in memory while publishing final decision
+recommendations and alert decisions. Fusion application adds bounded context
+fields such as:
 
 - `fusion_record_id`
 - `fusion_state`
@@ -268,7 +267,7 @@ decisions by adding bounded fusion context fields such as:
 - `fusion_uncertainty`
 - `fusion_source_artifacts`
 
-Integration rules:
+Application rules:
 
 - Preserve original deterministic decision and alert source evidence.
 - Preserve pre-fusion action levels or priorities when integration changes a
@@ -284,8 +283,13 @@ Integration rules:
 - Conservative alert attention downgrades are allowed only for severe conflict,
   degraded evidence, or insufficient evidence. Blocking risk and event override
   require reassessment annotations instead of hidden priority upgrades.
-- Integration must be visible in material artifacts before research context is
-  built.
+- Fusion may downgrade, preserve, qualify, block, or request reassessment. It
+  must not upgrade action levels or alert priorities.
+- Fusion application must happen before the public final JSON files are
+  written. There is no later task that rewrites final decision or alert
+  artifacts.
+- Applied fusion fields must be visible in material artifacts before research
+  context is built.
 
 ## Manifest Expectations
 
@@ -296,7 +300,7 @@ Integration rules:
 - confluence, conflict, risk override, event override, outcome feedback, and
   insufficient-evidence counts;
 - warning and error counts;
-- decision and alert fusion integration counts;
+- decision and alert fusion linked and adjusted counts;
 - Codex input budget metadata for `analysis/intelligence_fusion_material.md`.
 
 ## Data Quality And Inspection
@@ -306,7 +310,7 @@ Data quality and inspection should cover:
 - `analysis/intelligence_fusion.json` presence, shape, status, counts,
   warnings, errors, source coverage, and degraded states;
 - `analysis/intelligence_fusion_material.md` Codex boundaries and budget state;
-- decision and alert fusion integration counts.
+- decision and alert fusion linked and adjusted counts.
 
 `python -m halpha data inspect --config config.example.yaml` should summarize
 fusion status without dumping fusion records or full upstream records.

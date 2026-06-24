@@ -61,7 +61,7 @@ def test_event_market_confluence_records_conflict_without_upgrading_actions(tmp_
 
     assert record["relationship"] == "conflict"
     assert record["decision_action_level"] == "WATCH"
-    assert record["risk_effect"] == "do_not_upgrade"
+    assert record["risk_effect"] == "do_not_upgrade_due_to_risk"
     assert "Review event-quant conflict before using stronger decision bias." in record["watch_implications"]
     assert any("conflict" in item.lower() for item in record["uncertainty"])
 
@@ -124,12 +124,11 @@ def _run_confluence_pipeline(
                 direction=market_direction,
             ),
             "build_market_signal_material": _noop_stage,
-            "build_market_regime_assessment": _noop_stage,
-            "build_risk_assessment": _write_risk_assessment,
-            "build_decision_recommendations": lambda config, run: _write_decision_recommendations(
+            "build_market_regime_assessment": _write_market_regime,
+            "build_risk_assessment": lambda config, run: _write_risk_assessment(
                 config,
                 run,
-                action_level=action_level,
+                risk_level="high" if action_level == "WATCH" else "low",
             ),
             "build_watch_triggers": _write_watch_triggers,
             "build_event_intelligence_assessment": _noop_stage,
@@ -143,10 +142,8 @@ def _run_confluence_pipeline(
             "build_factor_states": _noop_stage,
             "build_multi_source_signals": _noop_stage,
             "build_intelligence_fusion": _noop_stage,
-            "integrate_intelligence_fusion": _noop_stage,
             "build_user_state_context": _noop_stage,
             "build_personalized_risk_constraints": _noop_stage,
-            "integrate_personalized_risk_constraints": _noop_stage,
         },
     )
 
@@ -260,6 +257,7 @@ def _write_market_signals(config, run, *, direction: str) -> list[str]:
                     "direction": direction,
                     "strength": "medium",
                     "confidence": "medium",
+                    "latest_candle_time": "2026-06-05T00:00:00Z",
                     "evidence": [f"market direction is {direction}."],
                     "uncertainty": [],
                     "insufficient_data": False,
@@ -273,7 +271,37 @@ def _write_market_signals(config, run, *, direction: str) -> list[str]:
     return ["analysis/market_signals.json"]
 
 
-def _write_risk_assessment(config, run) -> list[str]:
+def _write_market_regime(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "market_regime_assessment.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "market_regime_assessment",
+            "run_id": run.run_id,
+            "created_at": "2026-06-05T00:00:00Z",
+            "source_artifacts": ["analysis/market_signals.json"],
+            "records": [
+                {
+                    "record_id": "market_regime_assessment:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "regime": "trend_up",
+                    "confidence": "medium",
+                    "status": "succeeded",
+                    "evidence": ["regime=trend_up"],
+                    "source_artifacts": ["analysis/market_signals.json"],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    run.manifest["artifacts"]["market_regime_assessment"] = "analysis/market_regime_assessment.json"
+    return ["analysis/market_regime_assessment.json"]
+
+
+def _write_risk_assessment(config, run, *, risk_level: str) -> list[str]:
     write_json(
         run.analysis_dir / "risk_assessment.json",
         {
@@ -288,8 +316,9 @@ def _write_risk_assessment(config, run) -> list[str]:
                     "source": "binance",
                     "symbol": "BTCUSDT",
                     "timeframe": "1d",
-                    "risk_level": "low",
+                    "risk_level": risk_level,
                     "status": "succeeded",
+                    "evidence": [f"risk_level={risk_level}"],
                     "source_artifacts": ["analysis/market_signals.json"],
                 }
             ],
@@ -299,35 +328,6 @@ def _write_risk_assessment(config, run) -> list[str]:
     )
     run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
     return ["analysis/risk_assessment.json"]
-
-
-def _write_decision_recommendations(config, run, *, action_level: str) -> list[str]:
-    write_json(
-        run.analysis_dir / "decision_recommendations.json",
-        {
-            "schema_version": 1,
-            "artifact_type": "decision_recommendations",
-            "run_id": run.run_id,
-            "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": ["analysis/risk_assessment.json", "analysis/market_signals.json"],
-            "records": [
-                {
-                    "record_id": "decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
-                    "source": "binance",
-                    "symbol": "BTCUSDT",
-                    "timeframe": "1d",
-                    "action_level": action_level,
-                    "decision_bias": "tentative_constructive" if action_level == "TRY_SMALL" else "watch",
-                    "status": "actionable" if action_level == "TRY_SMALL" else "watch",
-                    "source_artifacts": ["analysis/risk_assessment.json", "analysis/market_signals.json"],
-                }
-            ],
-            "warnings": [],
-            "errors": [],
-        },
-    )
-    run.manifest["artifacts"]["decision_recommendations"] = "analysis/decision_recommendations.json"
-    return ["analysis/decision_recommendations.json"]
 
 
 def _write_watch_triggers(config, run) -> list[str]:

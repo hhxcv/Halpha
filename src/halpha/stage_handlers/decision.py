@@ -57,18 +57,10 @@ def stage_handlers() -> dict[str, StageHandler]:
             "halpha.decision.intelligence_fusion",
             "build_intelligence_fusion",
         ),
-        "integrate_intelligence_fusion": lazy_stage_handler(
-            "halpha.decision.fusion_integration",
-            "integrate_intelligence_fusion",
-        ),
         "build_user_state_context": lazy_stage_handler("halpha.decision.user_state", "build_user_state_context"),
         "build_personalized_risk_constraints": lazy_stage_handler(
             "halpha.decision.personalized_risk",
             "build_personalized_risk_constraints",
-        ),
-        "integrate_personalized_risk_constraints": lazy_stage_handler(
-            "halpha.decision.personalized_integration",
-            "integrate_personalized_risk_constraints",
         ),
         "build_personalized_risk_material": lazy_stage_handler(
             "halpha.analysis.personalized_risk_material",

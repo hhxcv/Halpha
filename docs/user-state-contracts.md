@@ -40,13 +40,10 @@ Out of scope:
 
 ```text
 optional local user-state input
-+ intelligence fusion
-+ decision recommendations
-+ watch triggers
-+ alert decisions
 -> analysis/user_state_context.json
++ intelligence fusion
 -> analysis/personalized_risk_constraints.json
--> decision/watch/alert personalization fields
+-> final decision/watch/alert personalization fields
 -> analysis/personalized_risk_material.md
 -> research context
 -> Codex context
@@ -223,9 +220,6 @@ Primary inputs:
 
 - `analysis/user_state_context.json`
 - `analysis/intelligence_fusion.json`
-- `analysis/decision_recommendations.json`
-- `analysis/watch_triggers.json`
-- `analysis/alert_decisions.json`
 
 Contract shape:
 
@@ -319,10 +313,12 @@ Rules:
 - The artifact must not contain private notes, account identifiers, exact
   holdings, balances, or machine paths.
 
-## Decision, Watch, And Alert Integration
+## Decision, Watch, And Alert Application
 
-Product runs integrate personalization fields into downstream artifacts after
-constraints are generated.
+Product runs apply personalization fields in memory while publishing final
+decision recommendations, watch triggers, and alert decisions. Constraints are
+generated first from sanitized user state and completed deterministic
+intelligence, then final writers apply them before public JSON is written.
 
 Expected fields:
 
@@ -341,11 +337,18 @@ as:
 - `pre_personalized_decision_bias`
 - `pre_personalized_recommended_actions`
 - `pre_personalized_priority`
-- `pre_personalized_trigger_state`
+- `pre_personalized_expected_decision_impact`
+- `pre_personalized_attention_decision`
+- `pre_personalized_requires_user_attention`
+- `pre_personalized_status`
 
-Integration must be conservative. It may block, downgrade, annotate, or add
+Application must be conservative. It may block, downgrade, annotate, or add
 uncertainty. It must not create stronger action levels, higher alert priorities,
 position sizes, allocations, or trading instructions.
+
+There is no standalone post-publication rewrite task. Final decision, watch,
+and alert JSON artifacts should each be published once with personalization
+already applied.
 
 ## analysis/personalized_risk_material.md
 
@@ -387,8 +390,8 @@ Material should record selected counts, omitted counts, omitted state counts,
 omission reasons, warnings, errors, and source artifacts.
 
 The implemented material is built by the `build_personalized_risk_material`
-task inside the `build_materials` public stage, after decision/watch/alert
-integration and before general research-context assembly.
+task inside the `build_materials` public stage, after final decision/watch/alert
+artifacts exist and before general research-context assembly.
 It is the only personalized-risk artifact eligible for Codex embedding by
 default. `analysis/user_state_context.json` and
 `analysis/personalized_risk_constraints.json` may be referenced by path, but
@@ -404,7 +407,7 @@ their full JSON contents must not be embedded as Codex input.
 - sanitized record counts;
 - omitted private value counts;
 - constraint state counts and action counts;
-- decision, watch, and alert integration counts;
+- decision, watch, and alert linked and adjusted counts;
 - warning and error counts;
 - Codex input budget metadata for `analysis/personalized_risk_material.md`.
 
@@ -422,7 +425,7 @@ Data quality should cover:
 - material boundary metadata and Codex budget state.
 
 `python -m halpha data inspect --config config.example.yaml` should summarize
-user-state and personalized-risk status, counts, state counts, integration
+user-state and personalized-risk status, counts, state counts, linked/adjusted
 counts, warnings, errors, and budget state without dumping raw local user-state
 records or private values.
 

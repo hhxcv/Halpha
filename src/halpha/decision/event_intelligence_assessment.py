@@ -6,6 +6,10 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from halpha.decision.decision_intelligence import (
+    decision_recommendation_candidate_artifact,
+    watch_trigger_candidate_artifact,
+)
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import write_json
 
@@ -84,16 +88,8 @@ def build_event_intelligence_assessment(
         RISK_ASSESSMENT_ARTIFACT,
         records_key="records",
     )
-    decision_artifact = _read_optional_artifact(
-        run.analysis_dir / "decision_recommendations.json",
-        DECISION_RECOMMENDATIONS_ARTIFACT,
-        records_key="records",
-    )
-    watch_artifact = _read_optional_artifact(
-        run.analysis_dir / "watch_triggers.json",
-        WATCH_TRIGGERS_ARTIFACT,
-        records_key="records",
-    )
+    decision_artifact = _decision_recommendations_for_event(config, run)
+    watch_artifact = _watch_triggers_for_event(config, run, decision_artifact)
     macro_artifact = _read_optional_artifact(
         run.analysis_dir / "macro_calendar_context.json",
         MACRO_CALENDAR_CONTEXT_ARTIFACT,
@@ -415,6 +411,45 @@ def _read_optional_artifact(path: Path, artifact_name: str, *, records_key: str)
     if not isinstance(artifact.get(records_key), list):
         raise PipelineError(f"{artifact_name} is invalid: {records_key} must be a list.", stage=STAGE_NAME, exit_code=3)
     return artifact
+
+
+def _decision_recommendations_for_event(config: dict[str, Any], run: RunContext) -> dict[str, Any] | None:
+    existing = _read_optional_artifact(
+        run.analysis_dir / "decision_recommendations.json",
+        DECISION_RECOMMENDATIONS_ARTIFACT,
+        records_key="records",
+    )
+    if existing is not None:
+        return existing
+    try:
+        return decision_recommendation_candidate_artifact(config, run, stage=STAGE_NAME)
+    except PipelineError:
+        return None
+
+
+def _watch_triggers_for_event(
+    config: dict[str, Any],
+    run: RunContext,
+    decision_artifact: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    existing = _read_optional_artifact(
+        run.analysis_dir / "watch_triggers.json",
+        WATCH_TRIGGERS_ARTIFACT,
+        records_key="records",
+    )
+    if existing is not None:
+        return existing
+    if decision_artifact is None:
+        return None
+    try:
+        return watch_trigger_candidate_artifact(
+            config,
+            run,
+            decision_recommendations=decision_artifact,
+            stage=STAGE_NAME,
+        )
+    except PipelineError:
+        return None
 
 
 def _records(artifact: dict[str, Any] | None, key: str) -> list[dict[str, Any]]:

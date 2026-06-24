@@ -431,7 +431,6 @@ def _personalized_risk_constraints_check(run: RunContext, *, expected: bool) -> 
     )
     manifest_summary = _dict(run.manifest.get("personalized_risk_constraints"))
     manifest_counts = _dict(run.manifest.get("counts"))
-    integration_summary = _dict(run.manifest.get("personalized_risk_integration"))
     return _check(
         "personalized_risk_constraints",
         "analysis",
@@ -456,7 +455,6 @@ def _personalized_risk_constraints_check(run: RunContext, *, expected: bool) -> 
             "timeframe_mismatch_records": _int(state_counts.get("timeframe_mismatch")),
             "watchlist_relevant_records": _int(state_counts.get("watchlist_relevant")),
             "strategy_preference_note_records": _int(state_counts.get("strategy_preference_note")),
-            "integration_status": str(integration_summary.get("status") or "unknown"),
             "decision_linked_records": _int(manifest_counts.get("personalized_risk_decision_linked_records")),
             "decision_adjusted_records": _int(manifest_counts.get("personalized_risk_decision_adjusted_records")),
             "watch_linked_records": _int(manifest_counts.get("personalized_risk_watch_linked_records")),

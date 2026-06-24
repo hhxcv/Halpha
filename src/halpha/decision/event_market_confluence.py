@@ -6,6 +6,10 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+from halpha.decision.decision_intelligence import (
+    decision_recommendation_candidate_artifact,
+    watch_trigger_candidate_artifact,
+)
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import write_json
 
@@ -49,16 +53,8 @@ def build_event_market_confluence(config: dict[str, Any], run: RunContext) -> li
         RISK_ASSESSMENT_ARTIFACT,
         records_key="records",
     )
-    decision_recommendations = _read_optional_artifact(
-        run.analysis_dir / "decision_recommendations.json",
-        DECISION_RECOMMENDATIONS_ARTIFACT,
-        records_key="records",
-    )
-    watch_triggers = _read_optional_artifact(
-        run.analysis_dir / "watch_triggers.json",
-        WATCH_TRIGGERS_ARTIFACT,
-        records_key="records",
-    )
+    decision_recommendations = _decision_recommendations_for_event(config, run)
+    watch_triggers = _watch_triggers_for_event(config, run, decision_recommendations)
 
     comparison_artifacts = [
         artifact
@@ -126,6 +122,45 @@ def _read_optional_artifact(
     if key is not None and isinstance(artifact.get(key), list):
         return artifact
     raise PipelineError(f"{artifact_name} is invalid: {records_key} must be a list.", stage=STAGE_NAME, exit_code=3)
+
+
+def _decision_recommendations_for_event(config: dict[str, Any], run: RunContext) -> dict[str, Any] | None:
+    existing = _read_optional_artifact(
+        run.analysis_dir / "decision_recommendations.json",
+        DECISION_RECOMMENDATIONS_ARTIFACT,
+        records_key="records",
+    )
+    if existing is not None:
+        return existing
+    try:
+        return decision_recommendation_candidate_artifact(config, run, stage=STAGE_NAME)
+    except PipelineError:
+        return None
+
+
+def _watch_triggers_for_event(
+    config: dict[str, Any],
+    run: RunContext,
+    decision_recommendations: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    existing = _read_optional_artifact(
+        run.analysis_dir / "watch_triggers.json",
+        WATCH_TRIGGERS_ARTIFACT,
+        records_key="records",
+    )
+    if existing is not None:
+        return existing
+    if decision_recommendations is None:
+        return None
+    try:
+        return watch_trigger_candidate_artifact(
+            config,
+            run,
+            decision_recommendations=decision_recommendations,
+            stage=STAGE_NAME,
+        )
+    except PipelineError:
+        return None
 
 
 def _confluence_records(

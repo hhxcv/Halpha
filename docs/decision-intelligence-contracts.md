@@ -910,10 +910,22 @@ stage. Task order within that stage:
 ```text
 build_market_regime_assessment
 build_risk_assessment
+build_event_market_confluence
+build_event_intelligence_assessment
+build_strategy_lifecycle_state
+build_strategy_lifecycle_material
+build_feature_snapshots
+build_factor_states
+build_multi_source_signals
+build_intelligence_fusion
+build_user_state_context
+build_personalized_risk_constraints
 build_decision_recommendations
 build_watch_triggers
 build_alert_decisions
 build_decision_intelligence_delta
+build_outcome_targets
+evaluate_outcomes
 ```
 
 Rules:
@@ -921,11 +933,17 @@ Rules:
 - Use one nested task per decision-intelligence artifact.
 - Place decision-intelligence tasks after `run_strategy_research` and before
   `build_materials`.
+- `build_decision_recommendations`, `build_watch_triggers`, and
+  `build_alert_decisions` publish their final public JSON artifacts once, after
+  fusion and personalized constraints are available.
 - `build_alert_decisions` runs after event intelligence assessment, current
-  risk, decision, and watch-trigger artifacts exist.
+  risk, decision, watch-trigger, fusion, and personalized constraint context
+  exists.
 - `build_decision_intelligence_delta` runs after current regime, risk, decision, and watch artifacts exist.
 - `build_alert_decision_material` and `build_decision_intelligence_material`
   run inside the later `build_materials` public stage.
+- Fusion and personalization must not be separate downstream tasks that rewrite
+  final decision, watch, or alert JSON files.
 - Failure handling should preserve artifacts from completed stages and record actionable errors.
 - Do not write fake artifacts to make downstream stages appear complete.
 

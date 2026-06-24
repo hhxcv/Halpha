@@ -31,18 +31,19 @@ def test_event_intelligence_assessment_records_supported_event(tmp_path: Path) -
     assert record["source_reliability"] == "high"
     assert record["event_severity"] == "medium"
     assert record["market_response_relationship"] == "confirmed"
-    assert record["decision_impact"] == "supports_existing_view"
+    assert record["decision_impact"] == "could_invalidate"
     assert record["risk_effect"] == "neutral"
-    assert record["watch_relevance"] == "confirmation"
+    assert record["watch_relevance"] == "invalidation"
     assert record["confidence"] == "high"
     assert record["downgrade_reasons"] == []
     assert record["linked_event_signal_ids"] == ["text_event_signal:btcusdt:etf_flows:abc123"]
     assert record["linked_decision_record_ids"] == [
         "decision_recommendation:binance:BTCUSDT:1d:2026-06-05T00:00:00Z"
     ]
-    assert record["linked_watch_trigger_ids"] == [
-        "watch_trigger:binance:BTCUSDT:1d:confirmation:2026-06-05T00:00:00Z"
+    assert "watch_trigger:binance:BTCUSDT:1d:confirmation:2026-06-05T00:00:00Z" in record[
+        "linked_watch_trigger_ids"
     ]
+    assert any(":invalidation:" in trigger_id for trigger_id in record["linked_watch_trigger_ids"])
     assert "analysis/event_market_confluence.json" in record["source_artifacts"]
 
     assert manifest["artifacts"]["event_intelligence_assessment"] == "analysis/event_intelligence_assessment.json"
@@ -209,7 +210,7 @@ def test_event_intelligence_assessment_downgrades_duplicate_and_stale_event(tmp_
     assert record["event_severity"] == "low"
     assert {"duplicate_event_group", "stale_event"} <= set(record["downgrade_reasons"])
     assert record["market_response_relationship"] == "confirmed"
-    assert record["decision_impact"] == "supports_existing_view"
+    assert record["decision_impact"] == "could_invalidate"
 
 
 def test_event_intelligence_assessment_suppresses_unrelated_signal_without_market_context(tmp_path: Path) -> None:
@@ -275,8 +276,8 @@ def test_event_intelligence_assessment_records_onchain_flow_relevance(tmp_path: 
     manifest = _manifest(result)
 
     assert record["risk_effect"] == "risk_up"
-    assert record["decision_impact"] == "could_downgrade"
-    assert record["event_severity"] == "high"
+    assert record["decision_impact"] == "could_upgrade_attention"
+    assert record["event_severity"] == "medium"
     assert record["linked_onchain_flow_context_ids"] == [
         "onchain_flow_context:stablecoin_liquidity:defillama_stablecoins:ALL_STABLECOINS:all:2026-06-05T00:00:00Z"
     ]
@@ -410,10 +411,8 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "build_factor_states": _noop_stage,
         "build_multi_source_signals": _noop_stage,
         "build_intelligence_fusion": _noop_stage,
-        "integrate_intelligence_fusion": _noop_stage,
         "build_user_state_context": _noop_stage,
         "build_personalized_risk_constraints": _noop_stage,
-        "integrate_personalized_risk_constraints": _noop_stage,
     }
     handlers.update(overrides)
     return handlers
@@ -573,6 +572,7 @@ def _write_market_signals(config, run) -> list[str]:
                     "direction": "bullish",
                     "strength": "medium",
                     "confidence": "medium",
+                    "latest_candle_time": "2026-06-05T00:00:00Z",
                     "evidence": ["market direction is bullish."],
                     "uncertainty": [],
                     "insufficient_data": False,
@@ -599,6 +599,7 @@ def _write_market_regime(config, run) -> list[str]:
             "records": [
                 {
                     "record_id": "market_regime_assessment:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                    "source": "binance",
                     "symbol": "BTCUSDT",
                     "timeframe": "1d",
                     "regime": "trend_up",

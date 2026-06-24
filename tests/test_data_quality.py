@@ -1038,22 +1038,6 @@ def _write_personalized_risk_artifacts(run: RunContext) -> None:
     run.manifest["counts"]["personalized_risk_watch_adjusted_records"] = 0
     run.manifest["counts"]["personalized_risk_alert_linked_records"] = 1
     run.manifest["counts"]["personalized_risk_alert_adjusted_records"] = 0
-    run.manifest["personalized_risk_integration"] = {
-        "status": "succeeded",
-        "source_artifact": "analysis/personalized_risk_constraints.json",
-        "decision_records": 1,
-        "decision_linked_records": 1,
-        "decision_adjusted_records": 0,
-        "watch_records": 1,
-        "watch_linked_records": 1,
-        "watch_adjusted_records": 0,
-        "alert_records": 1,
-        "alert_linked_records": 1,
-        "alert_adjusted_records": 0,
-        "warnings": 0,
-        "errors": 0,
-    }
-
     material = "\n".join(
         [
             "---",
