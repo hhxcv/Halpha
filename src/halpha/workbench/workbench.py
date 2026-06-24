@@ -398,6 +398,11 @@ def _alert_state(
             "status": archive_status,
             "artifact": MONITOR_STATE_STORE_ARTIFACT,
             "counts": _dict(archive_fields.get("counts")),
+            "updated_at": archive_fields.get("updated_at"),
+            "last_cycle_id": archive_fields.get("last_cycle_id"),
+            "sample_order": archive_fields.get("sample_order"),
+            "sample_record_limit": _int(archive_fields.get("sample_record_limit")),
+            "sample_truncated": archive_fields.get("sample_truncated") is True,
         },
     }
     status_inputs = [item["status"] for item in artifacts] + [archive_status]

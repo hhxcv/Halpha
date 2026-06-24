@@ -54,7 +54,13 @@ def test_dashboard_monitor_api_summarizes_complete_state_without_dumping_alerts(
     assert alerts["status"] == "available"
     sample = alerts["alert_archive"]["fields"]["sample_records"]
     assert len(sample) == 20
+    assert alerts["alert_archive"]["fields"]["updated_at"] == "2026-06-20T00:24:00Z"
+    assert alerts["alert_archive"]["fields"]["last_cycle_id"] == "cycle-1"
+    assert alerts["alert_archive"]["fields"]["sample_order"] == "newest_first"
     assert alerts["alert_archive"]["fields"]["sample_truncated"] is True
+    assert sample[0]["record_id"] == "record-24"
+    assert sample[-1]["record_id"] == "record-5"
+    assert sample[0]["sample_order"] == 1
     assert sample[0]["personalized_context_present"] is True
     assert sample[0]["source_artifact_count"] == 1
     assert "private_constraint" not in alerts_response.text

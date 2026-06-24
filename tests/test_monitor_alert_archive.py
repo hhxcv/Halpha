@@ -98,9 +98,9 @@ def test_monitor_cycle_suppresses_duplicate_alert_key_in_same_cycle(tmp_path: Pa
 
     archive_records = _archive_records(config_path)
 
-    assert [record["status"] for record in archive_records] == ["emitted", "suppressed_duplicate"]
+    assert [record["status"] for record in archive_records] == ["suppressed_duplicate", "emitted"]
     assert archive_records[0]["alert_key"] == archive_records[1]["alert_key"]
-    assert archive_records[1]["suppression_reasons"] == ["duplicate_alert_key_in_cycle"]
+    assert archive_records[0]["suppression_reasons"] == ["duplicate_alert_key_in_cycle"]
 
 
 def test_monitor_cycle_suppresses_alert_during_cooldown_across_cycles(tmp_path: Path) -> None:
@@ -123,9 +123,9 @@ def test_monitor_cycle_suppresses_alert_during_cooldown_across_cycles(tmp_path: 
     archive_records = _archive_records(config_path)
     archive = _archive_summary(config_path)
 
-    assert [record["status"] for record in archive_records] == ["emitted", "suppressed_cooldown"]
-    assert archive_records[1]["suppression_reasons"] == ["cooldown_active"]
-    assert archive_records[1]["cooldown_until"] == "2026-01-01T01:00:00Z"
+    assert [record["status"] for record in archive_records] == ["suppressed_cooldown", "emitted"]
+    assert archive_records[0]["suppression_reasons"] == ["cooldown_active"]
+    assert archive_records[0]["cooldown_until"] == "2026-01-01T01:00:00Z"
     assert archive["fields"]["counts"]["suppressed_cooldown"] == 1
 
 
@@ -214,6 +214,42 @@ def test_monitor_alert_archive_preserves_personalized_link_without_private_value
     assert "PRIVATE_HOLDING_SHOULD_NOT_APPEAR" not in database_text
 
 
+def test_alert_summary_returns_latest_bounded_sample_and_latest_metadata(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    repository = MonitorStateRepository(config_path=config_path)
+    records = [
+        _archive_record(index, cycle_id=f"cycle-{index // 3}", created_at=f"2026-01-01T00:{index:02d}:00Z")
+        for index in range(8)
+    ]
+    records.append(_archive_record(8, cycle_id="cycle-latest-a", created_at="2026-01-01T00:08:00Z"))
+    records.append(_archive_record(9, cycle_id="cycle-latest-b", created_at="2026-01-01T00:08:00Z"))
+    for cycle_id in sorted({str(record["cycle_id"]) for record in records}):
+        repository.save_cycle(_cycle_record(cycle_id), updated_at="2026-01-01T00:10:00Z")
+
+    repository.import_alert_records(records, monitor_output_dir="monitor", updated_at="2026-01-01T00:10:00Z")
+
+    summary = repository.alert_summary(monitor_output_dir="monitor", limit=3)
+    fields = summary["fields"]
+    sample = fields["sample_records"]
+
+    assert fields["counts"]["records"] == 10
+    assert fields["counts"]["emitted"] == 10
+    assert fields["sample_truncated"] is True
+    assert fields["sample_record_limit"] == 3
+    assert fields["sample_order"] == "newest_first"
+    assert fields["updated_at"] == "2026-01-01T00:08:00Z"
+    assert fields["last_cycle_id"] == "cycle-latest-b"
+    assert [record["record_id"] for record in sample] == ["record-9", "record-8", "record-7"]
+    assert [record["sample_order"] for record in sample] == [1, 2, 3]
+    assert {record["record_id"] for record in sample}.isdisjoint({"record-0", "record-1", "record-2"})
+
+    zero_sample = repository.alert_summary(monitor_output_dir="monitor", limit=0)["fields"]
+    assert zero_sample["sample_records"] == []
+    assert zero_sample["sample_truncated"] is True
+    assert zero_sample["updated_at"] == "2026-01-01T00:08:00Z"
+    assert zero_sample["last_cycle_id"] == "cycle-latest-b"
+
+
 def _write_config(tmp_path: Path, *, cooldown_seconds: int = 3600) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -295,6 +331,47 @@ def _alert_record(*, priority: str, personalized: dict[str, Any] | None = None) 
     if personalized:
         record.update(personalized)
     return record
+
+
+def _archive_record(index: int, *, cycle_id: str, created_at: str) -> dict[str, Any]:
+    return {
+        "record_id": f"record-{index}",
+        "cycle_id": cycle_id,
+        "created_at": created_at,
+        "status": "emitted",
+        "alert_key": f"BTCUSDT:1d:{index}",
+        "decision_id": f"decision-{index}",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "priority": "P1",
+        "attention_decision": "watch",
+        "requires_user_attention": True,
+        "suppression_reasons": [],
+        "source_artifacts": ["analysis/alert_decisions.json"],
+    }
+
+
+def _cycle_record(cycle_id: str) -> dict[str, Any]:
+    return {
+        "cycle_id": cycle_id,
+        "monitor_output_dir": "monitor",
+        "cycle_manifest": f"monitor/cycles/{cycle_id}/monitor_cycle_manifest.json",
+        "cycle_mode": "once",
+        "trigger_source": "cli",
+        "status": "succeeded",
+        "started_at": "2026-01-01T00:00:00Z",
+        "finished_at": "2026-01-01T00:10:00Z",
+        "config_ref": "config.yaml",
+        "target_stage": "build_materials",
+        "no_codex": True,
+        "exit_code": 0,
+        "run_id": cycle_id.replace("cycle", "run"),
+        "run_dir": f"runs/{cycle_id.replace('cycle', 'run')}",
+        "run_manifest": f"runs/{cycle_id.replace('cycle', 'run')}/run_manifest.json",
+        "alert_archive": {"status": "succeeded", "counts": {"records": 0}},
+        "warnings": [],
+        "errors": [],
+    }
 
 
 def _archive_records(config_path: Path) -> list[dict[str, Any]]:
