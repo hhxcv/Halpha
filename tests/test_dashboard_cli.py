@@ -245,6 +245,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-monitor-endpoint="/api/monitor"' in response.text
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
+    assert 'data-services-endpoint="/api/services"' in response.text
     assert 'data-settings-endpoint="/api/config/profile"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert 'data-display-timezone="Asia/Shanghai"' in response.text

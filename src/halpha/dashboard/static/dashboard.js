@@ -13,6 +13,7 @@
       monitorAlerts: app.dataset.monitorAlertsEndpoint,
       jobs: app.dataset.jobsEndpoint,
       schedule: app.dataset.scheduleEndpoint,
+      services: app.dataset.servicesEndpoint,
       settings: app.dataset.settingsEndpoint,
       configSelect: app.dataset.configSelectEndpoint,
       textIntel: app.dataset.textIntelligenceEndpoint,
@@ -68,6 +69,7 @@
       monitorCycles: [],
       monitorAlerts: null,
       schedule: null,
+      services: null,
       jobs: [],
       intelligence: null,
       selectedIntelTab: "text",
@@ -284,18 +286,20 @@
     }
 
     async function loadMonitorPayload() {
-      const [monitor, cycles, alerts, jobs, schedule] = await Promise.allSettled([
+      const [monitor, cycles, alerts, jobs, schedule, services] = await Promise.allSettled([
         fetchJson(endpoints.monitor),
         fetchJson(endpoints.monitorCycles),
         fetchJson(endpoints.monitorAlerts),
         loadJobs(),
         fetchJson(endpoints.schedule),
+        fetchJson(endpoints.services),
       ]);
       state.monitor = monitor.status === "fulfilled" ? monitor.value : null;
       state.monitorCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
       state.monitorAlerts = alerts.status === "fulfilled" ? alerts.value : null;
       state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
       state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
+      state.services = services.status === "fulfilled" ? services.value : null;
     }
 
     function renderOverview() {
@@ -378,17 +382,22 @@
     function renderOverviewMonitor() {
       const health = state.monitor?.health?.fields || {};
       const latest = state.monitor?.latest_cycle || {};
-      const status = latest.status || health.latest_cycle_status || state.monitor?.status || "partial";
+      const services = state.services?.services || {};
+      const monitorService = services.monitor || {};
+      const scheduleService = services.schedule || {};
+      const status = monitorService.status || latest.status || health.latest_cycle_status || state.monitor?.status || "partial";
       const schedule = state.schedule || {};
       const scheduleLabel = schedule.enabled
         ? formatTimestamp(schedule.next_run_at)
         : "No daily report scheduled";
       setPill("#overview-monitor-pill", status, status);
       document.querySelector("#overview-monitor").innerHTML = [
-        detailRow("Monitor state", label(status)),
-        detailRow("Monitor start time", formatTimestamp(health.updated_at || latest.started_at)),
-        detailRow("Trigger count", health.cycle_count ?? state.monitorCycles.length),
+        detailRow("Monitor service", label(monitorService.lifecycle_status || status)),
+        detailRow("Monitor heartbeat", formatTimestamp(monitorService.heartbeat_at)),
+        detailRow("Latest cycle", label(latest.status || health.latest_cycle_status || "n/a")),
+        detailRow("Cycle count", health.cycle_count ?? state.monitorCycles.length),
         detailRow("Last trigger time", formatTimestamp(latest.finished_at || latest.started_at)),
+        detailRow("Schedule service", label(scheduleService.lifecycle_status || "n/a")),
         detailRow("Next scheduled report", scheduleLabel),
         detailRow("Recent alerts", monitorWorkflow.alertCount(state.monitorAlerts)),
       ].join("");

@@ -31,9 +31,16 @@
           const schedule = state.schedule || {};
           const scheduleSettings = schedule.settings || {};
           const reportGeneration = schedule.report_generation || {};
+          const authorization = schedule.codex_authorization || {};
+          const dispatches = Array.isArray(schedule.dispatches) ? schedule.dispatches : [];
+          const latestDispatch = dispatches[0] || {};
+          const services = state.services?.services || {};
+          const monitorService = services.monitor || {};
+          const scheduleService = services.schedule || {};
           document.querySelector("#monitor-hero").innerHTML = [
-            metricCell("Monitor", latest.status === "running" ? "Running" : label(latest.status || health.latest_cycle_status || "Idle"), "current state"),
+            metricCell("Monitor service", label(monitorService.lifecycle_status || monitorService.status || "unknown"), monitorService.config_conflict ? "config conflict" : "process health"),
             metricCell("Last cycle", formatTimestamp(latest.finished_at || latest.started_at), latest.status || "n/a"),
+            metricCell("Schedule service", label(scheduleService.lifecycle_status || scheduleService.status || "unknown"), schedule.enabled ? "schedule enabled" : "schedule config disabled"),
             metricCell("Next report", schedule.enabled ? formatTimestamp(schedule.next_run_at) : "Disabled", schedule.status || "schedule"),
             metricCell("Alerts today", alerts, "recent archive"),
             metricCell("Error state", health.error_count ? `${health.error_count} errors` : "None", "active errors"),
@@ -47,16 +54,38 @@
             `${label(source.status || "unknown")} / next ${formatTimestamp(source.next_attempt_at)}`,
           ));
           document.querySelector("#monitor-config").innerHTML = [
+            detailRow("Monitor process health", label(monitorService.process_health || monitorService.lifecycle_status || "unknown")),
+            detailRow("Monitor instance", monitorService.instance_id || "n/a"),
+            detailRow("Monitor started", formatTimestamp(monitorService.started_at)),
+            detailRow("Monitor heartbeat", formatTimestamp(monitorService.heartbeat_at)),
+            detailRow("Monitor heartbeat freshness", label(monitorService.heartbeat_freshness || "unknown")),
+            detailRow("Monitor stop requested", formatTimestamp(monitorService.stop_requested_at)),
+            detailRow("Monitor terminal state", formatTimestamp(monitorService.terminal_at)),
+            detailRow("Monitor last error", monitorService.last_error?.message || "none"),
+            detailRow("Monitor config conflict", monitorService.config_conflict ? "yes" : "no"),
             detailRow("Monitor interval", text(monitorSettings.interval_seconds, "n/a")),
             detailRow("Retry backoff cap", text(monitorSettings.failure_backoff_max_seconds, "n/a")),
-            detailRow("Service status", label(service.status || "missing")),
+            detailRow("Cycle state", label(service.status || "missing")),
             detailRow("Consecutive failures", text(service.consecutive_failures, "0")),
             detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
             ...sourceRows,
+            detailRow("Schedule process health", label(scheduleService.process_health || scheduleService.lifecycle_status || "unknown")),
+            detailRow("Schedule instance", scheduleService.instance_id || "n/a"),
+            detailRow("Schedule started", formatTimestamp(scheduleService.started_at)),
+            detailRow("Schedule heartbeat", formatTimestamp(scheduleService.heartbeat_at)),
+            detailRow("Schedule heartbeat freshness", label(scheduleService.heartbeat_freshness || "unknown")),
+            detailRow("Schedule stop requested", formatTimestamp(scheduleService.stop_requested_at)),
+            detailRow("Schedule terminal state", formatTimestamp(scheduleService.terminal_at)),
+            detailRow("Schedule last error", scheduleService.last_error?.message || "none"),
+            detailRow("Schedule config conflict", scheduleService.config_conflict ? "yes" : "no"),
             detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
             detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
             detailRow("Daily report mode", reportGeneration.generates_report ? "Codex report" : "No-Codex run"),
             detailRow("Daily report status", schedule.enabled ? "enabled" : "disabled"),
+            detailRow("Daily report authorization", authorization.valid ? "valid" : "not authorized"),
+            detailRow("Latest schedule dispatch", latestDispatch.scheduled_for ? `${formatTimestamp(latestDispatch.scheduled_for)} / ${latestDispatch.status || "unknown"}` : "n/a"),
+            detailRow("Latest schedule job", schedule.last_job_id || latestDispatch.job_id || "n/a"),
+            detailRow("Latest linked report", (Array.isArray(schedule.linked_report_refs) && schedule.linked_report_refs[0]) || latestDispatch.report_ref || "n/a"),
             detailRow("Watched assets", "configured in Settings"),
             detailRow("Notification channels", "Local only"),
           ].join("");
@@ -89,6 +118,24 @@
           ])) : `<div class="message">No monitor jobs yet.</div>`;
         }
 
+        async function serviceAction(role, action) {
+          try {
+            const result = await postJson(`${endpoints.services}/${role}/${action}`, {});
+            await loadMonitorPayload();
+            renderMonitor();
+            const service = result.service || {};
+            const status = result.status || service.status || "updated";
+            const conflict = service.config_conflict ? " Config conflict is active." : "";
+            document.querySelector("#monitor-control-result").innerHTML = `<div class="message">${escapeHtml(label(role))} ${escapeHtml(action)}: ${escapeHtml(label(status))}.${escapeHtml(conflict)}</div>`;
+            if (Array.isArray(result.errors) && result.errors.length) {
+              document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(result.errors[0])}</div>`;
+            }
+            showToast(`${label(role)} service ${label(status)}.`);
+          } catch (error) {
+            document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+          }
+        }
+
         async function startMonitorJob(intent) {
           await loadMonitorPayload();
           try {
@@ -119,6 +166,9 @@
         }
 
         function wire() {
+          document.querySelectorAll("[data-service-role][data-service-action]").forEach((button) => {
+            button.addEventListener("click", () => serviceAction(button.dataset.serviceRole, button.dataset.serviceAction));
+          });
           document.querySelectorAll("[data-monitor-job]").forEach((button) => button.addEventListener("click", () => startMonitorJob(button.dataset.monitorJob)));
           document.querySelector("#enable-daily-report").addEventListener("click", enableDailyReport);
           document.querySelector("#schedule-monitor-button").addEventListener("click", showMonitorSchedule);
@@ -131,6 +181,7 @@
           renderMonitor,
           renderMonitorAlertsTable,
           renderMonitorJobsTable,
+          serviceAction,
           showMonitorSchedule,
           startMonitorJob,
           wire,
