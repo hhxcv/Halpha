@@ -393,7 +393,6 @@ A successful configured run can write:
 - `analysis/strategy_experiment_material.md`: AI-readable strategy experiment and gate material.
 - `analysis/strategy_lifecycle_state.json`: deterministic strategy lifecycle health, degradation, version, and explicit retirement state.
 - `analysis/strategy_lifecycle_material.md`: bounded AI-readable strategy lifecycle material for Codex and report generation.
-- `analysis/market_strategy_signals.json`: strategy signal outputs.
 - `analysis/market_signals.json`: normalized report-facing market signals.
 - `analysis/market_signal_material.md`: AI-readable market signal material.
 - `analysis/derivatives_market_context.json`: deterministic funding, open-interest, premium, basis, bounded liquidity-depth, and liquidation-availability derivatives context records.

@@ -1624,7 +1624,7 @@ Downstream evaluation consumers:
 
 | Consumer | Input | Rule |
 | --- | --- | --- |
-| `analysis/market_strategy_signals.json` | `analysis/quant_strategy_runs.json` | Keeps signal direction separate from backtest evaluation; it must not convert backtest performance into direction. |
+| `analysis/market_signals.json` | `analysis/quant_strategy_runs.json` | Maps strategy run assessments into report-loop strategy signals. Preserve strategy name, input window, evidence, uncertainty, insufficient-data state, warnings, and source artifacts. |
 | `analysis/market_signal_material.md` | Normalized market signals | Remains signal-facing material; report context carries strategy evaluation material separately. |
 | `analysis/strategy_experiment.json` | `analysis/strategy_benchmark_suite.json` | Evaluates configured strategy candidates against fixed benchmark records for the current run. |
 | `analysis/strategy_effectiveness_gates.json` | `analysis/strategy_experiment.json` | Classifies candidates as effective, watchlisted, rejected, or insufficient-evidence with deterministic gate reasons. |
@@ -1638,146 +1638,11 @@ Downstream consumers:
 
 | Consumer | Input | Rule |
 | --- | --- | --- |
-| `analysis/market_strategy_signals.json` | `analysis/quant_strategy_runs.json` | Maps strategy run assessments into report-loop strategy signals. Preserve strategy name, input window, evidence, uncertainty, insufficient-data state, warnings, and source artifacts. |
-| `analysis/market_signals.json` | `analysis/market_strategy_signals.json` | Normalizes strategy signals into the existing report interface. |
+| `analysis/market_signals.json` | `analysis/quant_strategy_runs.json` | Normalizes strategy run assessments into the existing report interface. |
 | `analysis/market_signal_material.md` | Strategy runs and normalized market signals | Summarizes strategy conclusions, diagnostics, conflicts, risks, and uncertainty without embedding large OHLCV history. |
 | `analysis/research_context.md` | AI-readable quant material | Adds bounded quant material to the report context. |
 | `codex_context/context.md` and `codex_context/prompt.md` | Research context and prompt rules | Require Codex CLI to use upstream strategy conclusions and not derive new quant conclusions from raw OHLCV. |
 | `run_manifest.json` | Strategy run artifacts and pipeline statuses | Records artifact paths, counts, failures, insufficient-data runs, enabled strategies, disabled strategies, and assumptions summaries. |
-
-## Market Strategy Signal Artifact Contract
-
-Strategy signal artifacts store quantitative output before report-loop normalization.
-
-Current shipped signal flow writes these records from `analysis/quant_strategy_runs.json` assessments.
-
-Artifact:
-
-```text
-runs/<run_id>/analysis/market_strategy_signals.json
-```
-
-Top-level contract:
-
-```json
-{
-  "schema_version": 1,
-  "artifact_type": "market_strategy_signals",
-  "created_at": "2026-06-06T00:00:00Z",
-  "source_artifacts": [
-    "analysis/quant_strategy_runs.json",
-    "raw/market_data_views.json"
-  ],
-  "signals": []
-}
-```
-
-Signal record contract:
-
-```json
-{
-  "strategy_signal_id": "strategy_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
-  "strategy_name": "tsmom_vol_scaled",
-  "source": "binance",
-  "symbol": "BTCUSDT",
-  "timeframe": "1d",
-  "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
-  "input_window_start": "2025-01-22T00:00:00Z",
-  "input_window_end": "2026-06-05T00:00:00Z",
-  "latest_candle_time": "2026-06-05T00:00:00Z",
-  "direction": "bullish",
-  "strength": "medium",
-  "confidence": "medium",
-  "key_values": {
-    "latest_close": 104000.0,
-    "return_window_pct": 6.2,
-    "realized_volatility_pct": 31.4,
-    "volatility_scaled_exposure": 0.64,
-    "latest_regime": "risk_limited_momentum"
-  },
-  "evidence": [
-    "return_window_pct is 6.2% over the configured return window.",
-    "realized_volatility_pct is 31.4% against target_volatility_pct 20.0%."
-  ],
-  "uncertainty": [
-    "Strategy uses OHLCV close prices only and excludes text events."
-  ],
-  "insufficient_data": false,
-  "source_artifacts": [
-    "raw/market_data_views.json"
-  ],
-  "created_at": "2026-06-06T00:00:00Z"
-}
-```
-
-Strategy run mapping rules:
-
-| Market strategy signal field | Strategy run source |
-| --- | --- |
-| `strategy_signal_id` | Deterministic ID derived from strategy name, source, symbol, timeframe, and latest candle. |
-| `strategy_name` | `strategy_run.strategy_name`. |
-| `source`, `symbol`, `timeframe` | Strategy run market identity fields. |
-| `input_view_id`, `input_window_start`, `input_window_end`, `latest_candle_time` | Strategy run input view fields. |
-| `direction`, `strength`, `confidence` | `strategy_run.assessment` values. |
-| `key_values` | Bounded values selected from strategy run `indicators`, `signals`, and diagnostics summaries. |
-| `evidence` | `strategy_run.assessment.evidence`. |
-| `uncertainty` | `strategy_run.assessment.uncertainty` plus relevant warning messages. |
-| `insufficient_data` | True when strategy run status is `insufficient_data`. |
-| `source_artifacts` | Must include `analysis/quant_strategy_runs.json` and `raw/market_data_views.json`. |
-
-Mapping rules:
-
-- Strategy-centered flow must include `analysis/quant_strategy_runs.json` and `raw/market_data_views.json` as source artifacts.
-- Do not expose vectorbt objects or raw indicator series.
-- Do not convert backtest metrics into forecasts.
-- Preserve failed and insufficient-data strategy runs as low-confidence `unknown` signals when downstream material needs to explain missing conclusions.
-- Preserve warnings that affect report interpretation.
-- A strategy signal remains research material, not a trade, position, or investment recommendation.
-
-Allowed direction values:
-
-```text
-bullish
-bearish
-neutral
-mixed
-unknown
-```
-
-Allowed strength values:
-
-```text
-low
-medium
-high
-unknown
-```
-
-Allowed confidence values:
-
-```text
-low
-medium
-high
-unknown
-```
-
-Strategy-centered signal names are produced from strategy run names. Initial strategy contract names include:
-
-```text
-tsmom_vol_scaled
-breakout_atr_trend
-sma_cross_trend
-bollinger_rsi_reversion
-```
-
-Rules:
-
-- Evidence must refer to calculated values or actual input-window facts.
-- Uncertainty must be explicit when data is thin, stale, missing, or method-limited.
-- Retired M1 signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are not valid product strategy names.
-- A strategy signal must not include trade entries, exits, position sizing, expected returns, or backtest performance.
-- `insufficient_data: true` is a valid strategy-run-derived output and must not be hidden.
 
 ## Normalized Market Signal Artifact Contract
 
@@ -1799,8 +1664,8 @@ Top-level contract:
   "artifact_type": "market_signals",
   "created_at": "2026-06-06T00:00:00Z",
   "source_artifacts": [
-    "analysis/market_strategy_signals.json",
-    "analysis/quant_strategy_runs.json"
+    "analysis/quant_strategy_runs.json",
+    "raw/market_data_views.json"
   ],
   "signals": []
 }
@@ -1837,7 +1702,7 @@ Signal record contract:
   ],
   "insufficient_data": false,
   "source_artifacts": [
-    "analysis/market_strategy_signals.json",
+    "analysis/quant_strategy_runs.json",
     "raw/market_data_views.json"
   ],
   "created_at": "2026-06-06T00:00:00Z"
@@ -2362,7 +2227,6 @@ Artifact keys:
     "strategy_experiment": "analysis/strategy_experiment.json",
     "strategy_effectiveness_gates": "analysis/strategy_effectiveness_gates.json",
     "strategy_experiment_material": "analysis/strategy_experiment_material.md",
-    "market_strategy_signals": "analysis/market_strategy_signals.json",
     "market_signals": "analysis/market_signals.json",
     "market_signal_material": "analysis/market_signal_material.md"
   },
@@ -2389,8 +2253,6 @@ Artifact keys:
     "strategy_gate_rejected": 1,
     "strategy_gate_insufficient_evidence": 0,
     "strategy_experiment_material_records": 4,
-    "market_strategy_signals": 16,
-    "market_strategy_signals_insufficient_data": 0,
     "market_signals": 16,
     "market_signals_insufficient_data": 0,
     "market_signal_material_records": 16
@@ -2407,7 +2269,6 @@ build_strategy_benchmark_suite
 evaluate_quant_strategies
 evaluate_strategy_evaluation
 build_strategy_experiment_material
-evaluate_market_strategy_signals
 build_market_signals
 build_market_signal_material
 ```
@@ -2416,7 +2277,7 @@ The implemented benchmark suite stage is `build_strategy_benchmark_suite`. It si
 
 The implemented strategy evaluation stage is `evaluate_strategy_evaluation`. It sits after `evaluate_quant_strategies` and before current-run strategy experiment material.
 
-The implemented strategy experiment material stage is `build_strategy_experiment_material`. It sits after `evaluate_strategy_evaluation` and before downstream market strategy signal interpretation.
+The implemented strategy experiment material stage is `build_strategy_experiment_material`. It sits after `evaluate_strategy_evaluation` and before downstream market signal material.
 
 Failure rules:
 

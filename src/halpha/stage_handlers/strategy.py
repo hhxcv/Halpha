@@ -22,10 +22,6 @@ def stage_handlers() -> dict[str, StageHandler]:
             "halpha.strategy.strategy_experiment",
             "build_strategy_experiment_material",
         ),
-        "evaluate_market_strategy_signals": lazy_stage_handler(
-            "halpha.strategy.quant_signals",
-            "evaluate_market_strategy_signals",
-        ),
         "build_strategy_lifecycle_state": lazy_stage_handler(
             "halpha.strategy.strategy_lifecycle",
             "build_strategy_lifecycle_state",

@@ -99,7 +99,6 @@ Retained upstream artifacts:
 
 ```text
 analysis/quant_strategy_runs.json
-analysis/market_strategy_signals.json
 analysis/market_signals.json
 analysis/market_signal_material.md
 ```

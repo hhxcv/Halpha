@@ -399,7 +399,6 @@ def _base_handlers(overrides: dict[str, Any]) -> dict[str, Any]:
         "evaluate_quant_strategies": _noop_stage,
         "evaluate_strategy_evaluation": _noop_stage,
         "build_strategy_experiment_material": _noop_stage,
-        "evaluate_market_strategy_signals": _noop_stage,
         "build_market_signal_material": _noop_stage,
         "build_alert_decisions": _noop_stage,
         "build_decision_intelligence_delta": _noop_stage,
@@ -563,7 +562,7 @@ def _write_market_signals(config, run) -> list[str]:
             "artifact_type": "market_signals",
             "run_id": run.run_id,
             "created_at": "2026-06-05T00:00:00Z",
-            "source_artifacts": ["analysis/market_strategy_signals.json"],
+            "source_artifacts": ["analysis/quant_strategy_runs.json"],
             "signals": [
                 {
                     "signal_id": "market_signal:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
@@ -577,7 +576,7 @@ def _write_market_signals(config, run) -> list[str]:
                     "evidence": ["market direction is bullish."],
                     "uncertainty": [],
                     "insufficient_data": False,
-                    "source_artifacts": ["analysis/market_strategy_signals.json"],
+                    "source_artifacts": ["analysis/quant_strategy_runs.json"],
                 }
             ],
             "warnings": [],

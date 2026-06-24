@@ -367,7 +367,6 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
                 "strategy_experiment_material": artifacts.get("strategy_experiment_material"),
                 "strategy_lifecycle_state": artifacts.get("strategy_lifecycle_state"),
                 "strategy_lifecycle_material": artifacts.get("strategy_lifecycle_material"),
-                "market_strategy_signals": artifacts.get("market_strategy_signals"),
                 "market_signals": artifacts.get("market_signals"),
             }
         )

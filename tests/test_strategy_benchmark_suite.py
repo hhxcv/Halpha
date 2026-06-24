@@ -203,7 +203,6 @@ def _run_until_benchmark_suite(config: dict[str, Any], config_path: Path):
             "evaluate_quant_strategies": _noop_stage,
             "evaluate_strategy_evaluation": _noop_stage,
             "build_strategy_experiment_material": _noop_stage,
-            "evaluate_market_strategy_signals": _noop_stage,
             "build_market_signals": _noop_stage,
             "build_market_signal_material": _noop_stage,
         },

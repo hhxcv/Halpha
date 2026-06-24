@@ -11,7 +11,6 @@ from halpha.storage import write_json
 
 BUILD_MARKET_SIGNALS_STAGE = "build_market_signals"
 BUILD_MARKET_SIGNAL_MATERIAL_STAGE = "build_market_signal_material"
-MARKET_STRATEGY_SIGNALS_ARTIFACT = "analysis/market_strategy_signals.json"
 QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 MARKET_SIGNALS_ARTIFACT = "analysis/market_signals.json"
 MARKET_SIGNAL_MATERIAL_ARTIFACT = "analysis/market_signal_material.md"
@@ -32,14 +31,17 @@ def build_market_signals(
         return []
 
     strategy_artifact = _read_json_artifact(
-        run.analysis_dir / "market_strategy_signals.json",
-        MARKET_STRATEGY_SIGNALS_ARTIFACT,
-        producer_stage="evaluate_market_strategy_signals",
+        run.analysis_dir / "quant_strategy_runs.json",
+        QUANT_STRATEGY_RUNS_ARTIFACT,
+        producer_stage="evaluate_quant_strategies",
         stage=BUILD_MARKET_SIGNALS_STAGE,
     )
-    strategy_signals = _signals_from_artifact(strategy_artifact, stage=BUILD_MARKET_SIGNALS_STAGE)
+    strategy_runs = _strategy_runs_from_artifact(strategy_artifact, stage=BUILD_MARKET_SIGNALS_STAGE)
     created_at = _created_at(strategy_artifact, now)
-    signals = [_normalize_signal(signal, created_at=created_at) for signal in strategy_signals]
+    signals = [
+        _market_signal_from_strategy_run(strategy_run, created_at=created_at)
+        for strategy_run in strategy_runs
+    ]
 
     artifact = {
         "schema_version": MARKET_SIGNALS_SCHEMA_VERSION,
@@ -185,41 +187,142 @@ def _read_strategy_runs_for_material(run: RunContext, market_signals: dict[str, 
     return artifact
 
 
-def _normalize_signal(signal: dict[str, Any], *, created_at: str) -> dict[str, Any]:
-    strategy_name = signal.get("strategy_name")
-    source = signal.get("source")
-    symbol = signal.get("symbol")
-    timeframe = signal.get("timeframe")
-    latest = signal.get("latest_candle_time") or "missing"
+def _market_signal_from_strategy_run(strategy_run: dict[str, Any], *, created_at: str) -> dict[str, Any]:
+    assessment = strategy_run.get("assessment") if isinstance(strategy_run.get("assessment"), dict) else {}
+    warnings = _warning_messages(strategy_run.get("warnings"))
+    error = strategy_run.get("error") if isinstance(strategy_run.get("error"), dict) else None
+    backtest = (
+        strategy_run.get("backtest_diagnostic")
+        if isinstance(strategy_run.get("backtest_diagnostic"), dict)
+        else {}
+    )
+    parameter = (
+        strategy_run.get("parameter_diagnostic")
+        if isinstance(strategy_run.get("parameter_diagnostic"), dict)
+        else {}
+    )
+    uncertainty = [
+        *_string_list(assessment.get("uncertainty")),
+        *warnings,
+        *_warning_messages(backtest.get("warnings")),
+        *_string_list(parameter.get("notes")),
+        *_warning_messages(parameter.get("warnings")),
+    ]
+    if error and isinstance(error.get("message"), str):
+        uncertainty.append(error["message"])
+    latest = strategy_run.get("latest_candle_time") or "missing"
     return {
-        "signal_id": f"market_signal:{strategy_name}:{source}:{symbol}:{timeframe}:{latest}",
-        "strategy_name": strategy_name,
-        "source": source,
-        "symbol": symbol,
-        "timeframe": timeframe,
-        "input_window_start": signal.get("input_window_start"),
-        "input_window_end": signal.get("input_window_end"),
-        "latest_candle_time": signal.get("latest_candle_time"),
-        "direction": signal.get("direction", "unknown"),
-        "strength": signal.get("strength", "unknown"),
-        "confidence": signal.get("confidence", "unknown"),
-        "key_values": signal.get("key_values") if isinstance(signal.get("key_values"), dict) else {},
-        "evidence": _string_list(signal.get("evidence")),
-        "uncertainty": _string_list(signal.get("uncertainty")),
-        "insufficient_data": bool(signal.get("insufficient_data")),
-        "source_artifacts": _unique_ordered(
-            [MARKET_STRATEGY_SIGNALS_ARTIFACT, *_string_list(signal.get("source_artifacts"))]
+        "signal_id": (
+            f"market_signal:{strategy_run.get('strategy_name')}:{strategy_run.get('source')}:"
+            f"{strategy_run.get('symbol')}:{strategy_run.get('timeframe')}:{latest}"
         ),
-        "created_at": signal.get("created_at") or created_at,
+        "strategy_name": strategy_run.get("strategy_name"),
+        "source": strategy_run.get("source"),
+        "symbol": strategy_run.get("symbol"),
+        "timeframe": strategy_run.get("timeframe"),
+        "input_window_start": strategy_run.get("input_window_start"),
+        "input_window_end": strategy_run.get("input_window_end"),
+        "latest_candle_time": strategy_run.get("latest_candle_time"),
+        "direction": assessment.get("direction", "unknown"),
+        "strength": assessment.get("strength", "unknown"),
+        "confidence": assessment.get("confidence", "unknown"),
+        "key_values": _strategy_run_key_values(strategy_run),
+        "evidence": _string_list(assessment.get("evidence")),
+        "uncertainty": uncertainty,
+        "insufficient_data": strategy_run.get("status") == "insufficient_data",
+        "source_artifacts": _unique_ordered(
+            [QUANT_STRATEGY_RUNS_ARTIFACT, *_string_list(strategy_run.get("source_artifacts"))]
+        ),
+        "created_at": strategy_run.get("created_at") or created_at,
     }
 
 
+def _strategy_run_key_values(strategy_run: dict[str, Any]) -> dict[str, Any]:
+    data_quality = strategy_run.get("data_quality") if isinstance(strategy_run.get("data_quality"), dict) else {}
+    indicators = strategy_run.get("indicators") if isinstance(strategy_run.get("indicators"), dict) else {}
+    signals = strategy_run.get("signals") if isinstance(strategy_run.get("signals"), dict) else {}
+    backtest = (
+        strategy_run.get("backtest_diagnostic")
+        if isinstance(strategy_run.get("backtest_diagnostic"), dict)
+        else {}
+    )
+    parameter = (
+        strategy_run.get("parameter_diagnostic")
+        if isinstance(strategy_run.get("parameter_diagnostic"), dict)
+        else {}
+    )
+    keys = (
+        "latest_close",
+        "return_window_pct",
+        "latest_return_pct",
+        "realized_volatility_pct",
+        "target_volatility_pct",
+        "volatility_scaled_exposure",
+        "breakout_window_high",
+        "breakout_window_low",
+        "exit_window_low",
+        "atr",
+        "atr_pct",
+        "range_width_pct",
+        "breakout_distance_atr",
+        "short_sma",
+        "long_sma",
+        "trend_spread_pct",
+        "bollinger_middle",
+        "bollinger_upper",
+        "bollinger_lower",
+        "bollinger_band_width_pct",
+        "bollinger_percent_b",
+        "rsi",
+        "rsi_oversold_threshold",
+        "rsi_overbought_threshold",
+        "trend_window_pct",
+        "trend_filter_pct",
+        "row_count",
+    )
+    result = {key: indicators[key] for key in keys if key in indicators}
+    for key in ("row_count", "requested_lookback", "minimum_required_rows"):
+        if key in data_quality and key not in result:
+            result[key] = data_quality[key]
+    for key in (
+        "latest_regime",
+        "entry_count",
+        "exit_count",
+        "latest_signal_active",
+        "latest_oversold",
+        "latest_overbought",
+        "trend_filter_active",
+        "strong_trend_direction",
+    ):
+        if key in signals:
+            result[key] = signals[key]
+    if "status" in backtest:
+        result["backtest_diagnostic_status"] = backtest["status"]
+    metrics = backtest.get("metrics") if isinstance(backtest.get("metrics"), dict) else {}
+    for key in (
+        "total_return_pct",
+        "max_drawdown_pct",
+        "trade_count",
+        "exposure_pct",
+        "final_equity",
+    ):
+        if key in metrics:
+            result[f"backtest_{key}"] = metrics[key]
+    if parameter.get("enabled") is True and "status" in parameter:
+        result["parameter_diagnostic_status"] = parameter["status"]
+        for key in ("tested_combinations", "valid_combinations", "invalid_combinations", "stability"):
+            if key in parameter:
+                result[f"parameter_{key}"] = parameter[key]
+    return result
+
+
 def _market_signal_source_artifacts(strategy_artifact: dict[str, Any]) -> list[str]:
-    source_artifacts = [MARKET_STRATEGY_SIGNALS_ARTIFACT]
-    upstream = _string_list(strategy_artifact.get("source_artifacts"))
-    if QUANT_STRATEGY_RUNS_ARTIFACT in upstream:
-        source_artifacts.append(QUANT_STRATEGY_RUNS_ARTIFACT)
-    return source_artifacts
+    return _unique_ordered(
+        [
+            QUANT_STRATEGY_RUNS_ARTIFACT,
+            *_string_list(strategy_artifact.get("source_artifacts")),
+        ]
+    )
 
 
 def _material_record(signal: dict[str, Any]) -> dict[str, Any]:
@@ -448,6 +551,24 @@ def _signals_from_artifact(artifact: dict[str, Any], *, stage: str) -> list[dict
     return signals
 
 
+def _strategy_runs_from_artifact(artifact: dict[str, Any], *, stage: str) -> list[dict[str, Any]]:
+    runs = artifact.get("runs")
+    if not isinstance(runs, list):
+        raise PipelineError(
+            f"{QUANT_STRATEGY_RUNS_ARTIFACT} must contain a runs list.",
+            stage=stage,
+            exit_code=3,
+        )
+    for index, item in enumerate(runs):
+        if not isinstance(item, dict):
+            raise PipelineError(
+                f"runs[{index}] must be a mapping.",
+                stage=stage,
+                exit_code=3,
+            )
+    return runs
+
+
 def _created_at(strategy_artifact: dict[str, Any], now: datetime | str | None) -> str:
     if now is not None:
         return _format_utc(now)
@@ -508,6 +629,18 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, str) and item.strip()]
+
+
+def _warning_messages(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    messages = []
+    for item in value:
+        if isinstance(item, dict) and isinstance(item.get("message"), str):
+            messages.append(item["message"])
+        elif isinstance(item, str) and item.strip():
+            messages.append(item)
+    return messages
 
 
 def _strategy_names(signals: list[dict[str, Any]]) -> list[str]:
