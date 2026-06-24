@@ -145,15 +145,22 @@ The stable product stages are:
 - `finalize_run`
 
 Fine-grained implementation work may remain inspectable as tasks, but it should
-not be exposed as a long list of top-level product stages. Completed runs are
-immutable product records. Final decision, watch, alert, data-quality, and
-report-facing material artifacts should be written once in their terminal
-stage. The `build_materials` stage writes `analysis/data_quality_summary.json`
-first from finalized structured evidence, then writes report-facing material
-files as deterministic readers. A stage rerun against an existing run must be non-destructive: downstream
-artifacts are either recomputed, explicitly marked stale or not complete, or the
-work is done in a new run. A rerun must not leave stale downstream artifacts
-marked as successful.
+not be exposed as a long list of top-level product stages. Task metadata uses an
+explicit direct-dependency graph for internal diagnostics and downstream closure
+calculation. Unrelated source branches stay independent in that graph, while
+downstream consumers that can use optional source evidence declare that
+relationship. No task receives an implicit dependency on the previous canonical
+task.
+
+Completed runs are immutable product records. Final decision, watch, alert,
+data-quality, and report-facing material artifacts should be written once in
+their terminal stage. The `build_materials` stage writes
+`analysis/data_quality_summary.json` first from finalized structured evidence,
+then writes report-facing material files as deterministic readers. A stage
+rerun against an existing run must be non-destructive: downstream artifacts are
+either recomputed, explicitly marked stale or not complete, or the work is done
+in a new run. A rerun must not leave stale downstream artifacts marked as
+successful.
 The `finalize_run` stage owns terminal shared-state publication for outcome
 history, research data catalog refresh, product-contract validation, and the
 terminal manifest. After that manifest is durable, `.halpha/state.sqlite`

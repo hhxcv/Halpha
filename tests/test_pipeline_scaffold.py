@@ -129,7 +129,7 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
     assert text_task["started_at"].endswith("Z")
     assert text_task["finished_at"].endswith("Z")
     assert text_task["artifacts"] == []
-    assert text_task["dependencies"] == ["sync_onchain_flow_history"]
+    assert text_task["dependencies"] == []
     assert text_task["error"] == {
         "stage": "collect_text_events",
         "message": "stage collect_text_events is not implemented",
