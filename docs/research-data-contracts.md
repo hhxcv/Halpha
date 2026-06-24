@@ -8,8 +8,8 @@ their downstream consumers. It is not a milestone plan.
 
 - `README.md`: project overview, implemented commands, and validation.
 - `AGENTS.md`: AI-agent rules, artifact expectations, and validation rules.
-- `docs/artifact-governance.md`: artifact layers, Codex input policy, and
-  documentation index.
+- `docs/artifact-governance.md`: runtime state authority, artifact layers,
+  Codex input policy, and documentation index.
 - `docs/quant-contracts.md`: market data, strategy, evaluation, signal, and
   strategy-material contracts.
 - `docs/derivatives-market-contracts.md`: derivatives and
@@ -33,7 +33,7 @@ must stay marked until their producers are added.
 | --- | --- | --- | --- |
 | Shared OHLCV history | Implemented | OHLCV sync stage | market views, strategy evaluation, standalone backtest, experiments |
 | Research data catalog | Implemented | local data catalog writer | manifest, data inspection, data quality summary |
-| Local run index | Implemented | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
+| Current local run index | Implemented | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
 | Text event history | Implemented | text event history writer | data quality summary, future event/outcome workflows |
 | Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
 | Data quality material | Implemented | analysis material stage | research context, Codex context, report |
@@ -163,7 +163,7 @@ Rules:
 
 ## Local Run Index
 
-Target index path:
+Current implemented index path:
 
 - `data/research/index.sqlite`
 
@@ -172,6 +172,20 @@ Purpose:
 - preserve compact run audit metadata;
 - make latest successful runs discoverable without scanning every run directory;
 - keep full artifacts in per-run files rather than SQLite blobs.
+
+Authority boundary:
+
+- `run_manifest.json` remains the authoritative lifecycle record for a
+  completed run.
+- Per-run artifacts remain the authoritative research evidence.
+- The index stores references and searchable metadata only.
+- `run_latest` is current implemented mutable selection state. The target
+  runtime-state model derives latest selections from authoritative run records
+  or stores them as rebuildable runtime indexes, not as a second run authority.
+- The planned unified runtime state store at `.halpha/state.sqlite` will own
+  mutable run and artifact indexes after migration. Until that migration is
+  implemented, `data/research/index.sqlite` remains the current implemented
+  index and must not be silently bypassed.
 
 Required tables:
 
@@ -219,6 +233,8 @@ Rules:
   prompts in the index;
 - make re-indexing the same run idempotent;
 - update partial and failed runs with explicit status.
+- make any replacement or migration explicit; do not dual-write, auto-migrate,
+  or retain fallback authorities without a dedicated migration contract.
 
 ## Text Event History
 
@@ -343,6 +359,12 @@ When implemented, product runs should record:
 
 `run_manifest.json` remains the per-run lifecycle record. Reusable stores and
 indexes do not replace it.
+
+After the runtime-state migration, run manifests remain immutable product
+records and the runtime state store remains an operational index. Validation,
+dashboard, workbench, and inspection paths may query the runtime index for
+discovery, but source refs must still point back to the authoritative run
+manifest and artifacts.
 
 ## Outcome History
 

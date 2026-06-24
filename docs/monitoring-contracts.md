@@ -8,7 +8,7 @@ implementation contract, not a milestone plan.
 The monitor path turns repeated manual research runs into explicit local cycles.
 It must remain observable, bounded, and local-first:
 
-- no hidden background service;
+- no hidden or dashboard-owned background service;
 - no hosted scheduler or dashboard assumption;
 - no trading execution, account access, position sizing, or order placement;
 - no Codex execution unless a command explicitly asks for a full report path;
@@ -18,6 +18,29 @@ The current command surface validates monitor configuration, runs one bounded
 local monitor cycle or finite local loop, writes local alert archive and
 cooldown state from generated alert decisions, and exposes read-only monitor
 health inspection.
+
+The target resident Monitor service is planned but not implemented yet. It is
+one of exactly three supported resident Halpha process roles: `dashboard`,
+`monitor`, and `schedule`. It must be explicit, unique within one runtime root,
+and managed through the shared lifecycle contract in
+`docs/dashboard-contracts.md` and `docs/artifact-governance.md`.
+
+Target Monitor responsibility:
+
+- remain the single continuous information-refresh and alert-reassessment
+  service for one runtime root;
+- keep running through ordinary source, network, and collection failures by
+  recording warnings or errors and retrying on the next cadence;
+- avoid Codex, report generation, report-facing materials, and complete
+  experiments on fast-path refreshes unless an explicit full product job is
+  requested;
+- update source groups by configured cadence and pass changed scope to
+  downstream work after that behavior is implemented;
+- never trade, access accounts, access wallets, place orders, or compute
+  position sizing.
+
+The target resident Monitor must not be owned by Dashboard, Schedule, a hidden
+supervisor, a broker, a worker pool, or a fourth resident Halpha process.
 
 ## Configuration
 
@@ -67,6 +90,9 @@ python -m halpha monitor run --config config.example.yaml --max-cycles 3 --inter
 This command runs a finite local loop. It stops after the requested maximum
 cycle count or after the first failed cycle. It is not a daemon, service, cron
 job, scheduler, or notification worker.
+
+This finite loop is current implemented behavior. It is not the target
+continuous resident Monitor service.
 
 Current implemented read-only health command:
 
@@ -169,6 +195,12 @@ It records aggregate cycle, alert archive, cooldown, warning, error, and latest
 finite-loop metadata. It must not store raw alert records, raw user-state files,
 private notes, account identifiers, holdings, balances, allocations, position
 sizes, or private endpoints.
+
+Current monitor state files are local operational artifacts. After the unified
+runtime state store is implemented, mutable monitor-cycle indexes, alert
+archive indexes, cooldown state, suppression state, and service health belong
+to `.halpha/state.sqlite`. Cycle manifests and alert archive records remain
+inspectable local artifacts referenced by that state store.
 
 ## Codex Boundary
 
