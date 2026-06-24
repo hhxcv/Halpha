@@ -282,6 +282,14 @@ CONFIG_PROFILE_FIELDS = (
     },
     {
         "section": "Monitor",
+        "label": "Failure backoff cap",
+        "path": "monitor.failure_backoff_max_seconds",
+        "control": "number",
+        "value_type": "positive_int",
+        "description": "Maximum retry delay for the resident Monitor after recoverable cycle failures.",
+    },
+    {
+        "section": "Monitor",
         "label": "Cooldown seconds",
         "path": "monitor.cooldown_seconds",
         "control": "number",

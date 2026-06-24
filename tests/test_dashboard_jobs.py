@@ -335,7 +335,6 @@ def test_command_job_manager_accepts_monitor_command_intents(tmp_path: Path, mon
     outputs = [
         "Halpha monitor dry run succeeded.\ncycle_execution: not_run",
         "Halpha monitor cycle succeeded.\nmonitor_manifest: runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json",
-        "Halpha monitor loop succeeded.\nhealth_state: runs/monitor/monitor_health_state.json",
     ]
 
     def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
@@ -357,24 +356,6 @@ def test_command_job_manager_accepts_monitor_command_intents(tmp_path: Path, mon
             {},
             ["python", "-m", "halpha", "monitor", "run", "--config", "<external-config>", "--once"],
             {"monitor_manifest": "runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json"},
-        ),
-        (
-            "monitor_loop",
-            {"max_cycles": 2, "interval_seconds": 1},
-            [
-                "python",
-                "-m",
-                "halpha",
-                "monitor",
-                "run",
-                "--config",
-                "<external-config>",
-                "--max-cycles",
-                "2",
-                "--interval-seconds",
-                "1",
-            ],
-            {"health_state": "runs/monitor/monitor_health_state.json"},
         ),
     ]
 
@@ -788,7 +769,7 @@ def test_command_job_manager_rejects_unsafe_strategy_text_paths_before_process(
         assert error in job["errors"][0]
 
 
-def test_command_job_manager_rejects_invalid_monitor_loop_params_before_process(
+def test_command_job_manager_rejects_monitor_loop_intent_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -800,19 +781,10 @@ def test_command_job_manager_rejects_invalid_monitor_loop_params_before_process(
 
     monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
     manager = CommandJobManager(config, config_path=config_path)
-    cases = [
-        ({"intent": "monitor_loop", "params": {}}, "max_cycles must be a positive integer"),
-        ({"intent": "monitor_loop", "params": {"max_cycles": 0}}, "max_cycles must be a positive integer"),
-        (
-            {"intent": "monitor_loop", "params": {"max_cycles": 1, "interval_seconds": "1"}},
-            "interval_seconds must be a positive integer",
-        ),
-    ]
+    job = manager.create_job({"intent": "monitor_loop", "params": {"max_cycles": 1, "interval_seconds": 1}})
 
-    for request, error in cases:
-        job = manager.create_job(request)
-        assert job["status"] == "blocked"
-        assert error in job["errors"][0]
+    assert job["status"] == "unsupported"
+    assert "unsupported command job intent: monitor_loop" in job["errors"][0]
 
 
 def test_command_job_manager_requires_codex_confirmation_before_process(tmp_path: Path, monkeypatch) -> None:

@@ -124,13 +124,6 @@ SUPPORTED_COMMANDS = {
         cli_parts=("monitor", "run"),
         extra_cli_parts=("--once",),
     ),
-    "monitor_loop": CommandSpec(
-        intent="monitor_loop",
-        kind="monitor_loop",
-        cancellable=True,
-        cli_parts=("monitor", "run"),
-        param_mode="monitor_loop",
-    ),
     "backtest": CommandSpec(
         intent="backtest",
         kind="strategy_backtest",
@@ -217,8 +210,6 @@ class CommandJobBuilder:
             return {"output_dir"}
         if param_mode == "text_intel":
             return {"input_path", "output_dir"}
-        if param_mode == "monitor_loop":
-            return {"max_cycles", "interval_seconds"}
         return set()
 
     def _extend_param_mode_args(
@@ -252,15 +243,6 @@ class CommandJobBuilder:
                 command.extend(["--input", str(path)])
                 preview.extend(["--input", _safe_ref(path, base=self.base)])
             self._extend_optional_output_dir(params, command, preview)
-        elif param_mode == "monitor_loop":
-            max_cycles = self._validated_positive_int(params.get("max_cycles"), param_name="max_cycles")
-            command.extend(["--max-cycles", str(max_cycles)])
-            preview.extend(["--max-cycles", str(max_cycles)])
-            interval_seconds = params.get("interval_seconds")
-            if interval_seconds is not None:
-                interval = self._validated_positive_int(interval_seconds, param_name="interval_seconds")
-                command.extend(["--interval-seconds", str(interval)])
-                preview.extend(["--interval-seconds", str(interval)])
 
     def _extend_optional_output_dir(
         self,

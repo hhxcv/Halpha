@@ -44,6 +44,7 @@ def dashboard_monitor_summary(config: dict[str, Any], *, config_path: Path) -> d
         "settings": {
             "interval_seconds": settings.interval_seconds,
             "max_cycles": settings.max_cycles,
+            "failure_backoff_max_seconds": settings.failure_backoff_max_seconds,
             "cooldown_seconds": settings.cooldown_seconds,
             "output_dir": output_ref,
             "target_stage": settings.target_stage,
@@ -126,6 +127,7 @@ def _health_summary(repository: MonitorStateRepository, *, output_ref: str, base
         "warning_count": _int(data.get("warning_count")),
         "error_count": _int(data.get("error_count")),
         "latest_loop": _bounded_mapping(data.get("latest_loop")),
+        "service": _bounded_mapping(data.get("service")),
     }
     return _component(
         "monitor_health",

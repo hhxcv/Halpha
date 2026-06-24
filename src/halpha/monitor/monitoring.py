@@ -27,6 +27,7 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_MONITOR_ENABLED = False
 DEFAULT_MONITOR_INTERVAL_SECONDS = 300
 DEFAULT_MONITOR_MAX_CYCLES = 1
+DEFAULT_MONITOR_FAILURE_BACKOFF_MAX_SECONDS = 3600
 DEFAULT_MONITOR_COOLDOWN_SECONDS = 3600
 DEFAULT_MONITOR_OUTPUT_DIR = "runs/monitor"
 DEFAULT_MONITOR_TARGET_STAGE = "build_materials"
@@ -35,6 +36,7 @@ ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 SUPPORTED_MONITOR_FIELDS = {
     "cooldown_seconds",
     "enabled",
+    "failure_backoff_max_seconds",
     "interval_seconds",
     "max_cycles",
     "no_codex",
@@ -48,6 +50,7 @@ class MonitorConfig:
     enabled: bool
     interval_seconds: int
     max_cycles: int
+    failure_backoff_max_seconds: int
     cooldown_seconds: int
     output_dir: Path
     target_stage: str
@@ -103,6 +106,10 @@ def load_monitor_config(config: dict[str, Any]) -> MonitorConfig:
         enabled=section.get("enabled", DEFAULT_MONITOR_ENABLED),
         interval_seconds=section.get("interval_seconds", DEFAULT_MONITOR_INTERVAL_SECONDS),
         max_cycles=section.get("max_cycles", DEFAULT_MONITOR_MAX_CYCLES),
+        failure_backoff_max_seconds=section.get(
+            "failure_backoff_max_seconds",
+            DEFAULT_MONITOR_FAILURE_BACKOFF_MAX_SECONDS,
+        ),
         cooldown_seconds=section.get("cooldown_seconds", DEFAULT_MONITOR_COOLDOWN_SECONDS),
         output_dir=Path(str(section.get("output_dir", DEFAULT_MONITOR_OUTPUT_DIR))),
         target_stage=section.get("target_stage", DEFAULT_MONITOR_TARGET_STAGE),
@@ -119,11 +126,13 @@ def run_monitor_cycle(
     cycle_mode: str = "once",
     loop_id: str | None = None,
     cycle_sequence: int | None = None,
+    cycle_id: str | None = None,
+    trigger_source: str = "cli",
 ) -> MonitorCycleResult:
     settings = load_monitor_config(config)
     fixed_time = now is not None
     started_at = _coerce_utc(now or datetime.now(timezone.utc))
-    cycle_id = _cycle_id(started_at)
+    cycle_id = cycle_id or _cycle_id(started_at)
     output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
     cycle_dir = _unique_cycle_dir(output_dir / "cycles", cycle_id)
     cycle_id = cycle_dir.name
@@ -137,7 +146,7 @@ def run_monitor_cycle(
         "cycle_mode": cycle_mode,
         "loop_id": loop_id,
         "cycle_sequence": cycle_sequence,
-        "trigger_source": "cli",
+        "trigger_source": trigger_source,
         "status": "running",
         "started_at": _utc_timestamp(started_at),
         "finished_at": None,
@@ -385,6 +394,11 @@ def inspect_monitor_health(config: dict[str, Any], *, config_path: Path) -> Moni
     lines = [
         "Halpha monitor inspection succeeded.",
         f"monitor_output_dir: {_portable_path(output_dir, base=base)}",
+        f"service_status: {health_state.get('service', {}).get('status', 'missing')}",
+        f"service_instance_id: {health_state.get('service', {}).get('service_instance_id') or 'none'}",
+        f"service_current_cycle_id: {health_state.get('service', {}).get('current_cycle_id') or 'none'}",
+        f"service_consecutive_failures: {health_state.get('service', {}).get('consecutive_failures', 0)}",
+        f"service_next_retry_at: {health_state.get('service', {}).get('next_retry_at') or 'none'}",
         f"latest_cycle_id: {health_state['latest_cycle_id']}",
         f"latest_cycle_status: {health_state['latest_cycle_status']}",
         f"latest_run_id: {health_state['latest_run_id']}",
@@ -421,6 +435,7 @@ def monitor_config_lines(settings: MonitorConfig) -> list[str]:
         f"enabled: {str(settings.enabled).lower()}",
         f"interval_seconds: {settings.interval_seconds}",
         f"max_cycles: {settings.max_cycles}",
+        f"failure_backoff_max_seconds: {settings.failure_backoff_max_seconds}",
         f"cooldown_seconds: {settings.cooldown_seconds}",
         f"output_dir: {settings.output_dir.as_posix()}",
         f"target_stage: {settings.target_stage}",

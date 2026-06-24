@@ -15,14 +15,14 @@ It must remain observable, bounded, and local-first:
 - no private user-state values in public artifacts, logs, issues, PRs, or docs.
 
 The current command surface validates monitor configuration, runs one bounded
-local monitor cycle or finite local loop, writes immutable cycle manifests,
-persists alert archive and cooldown state in `.halpha/state.sqlite`, and
-exposes read-only monitor health inspection.
+local monitor cycle or finite diagnostic loop, starts one resident Monitor
+service, writes immutable cycle manifests, persists alert archive, cooldown,
+cycle, and service-health state in `.halpha/state.sqlite`, and exposes
+read-only monitor health inspection.
 
-The target resident Monitor service is planned but not implemented yet. It is
-one of exactly three supported resident Halpha process roles: `dashboard`,
-`monitor`, and `schedule`. It must be explicit, unique within one runtime root,
-and managed through the shared lifecycle contract in
+The resident Monitor service is one of exactly three supported resident Halpha
+process roles: `dashboard`, `monitor`, and `schedule`. It is explicit, unique
+within one runtime root, and managed through the shared lifecycle contract in
 `docs/dashboard-contracts.md` and `docs/artifact-governance.md`.
 
 Target Monitor responsibility:
@@ -31,15 +31,15 @@ Target Monitor responsibility:
   service for one runtime root;
 - keep running through ordinary source, network, and collection failures by
   recording warnings or errors and retrying on the next cadence;
-- avoid Codex, report generation, report-facing materials, and complete
-  experiments on fast-path refreshes unless an explicit full product job is
-  requested;
+- avoid Codex and report generation during resident cycles;
+- temporarily run whole monitor cycles through the configured target stage until
+  the source-cadence fast path replaces that bridge;
 - update source groups by configured cadence and pass changed scope to
-  downstream work after that behavior is implemented;
+  downstream work after that planned behavior is implemented;
 - never trade, access accounts, access wallets, place orders, or compute
   position sizing.
 
-The target resident Monitor must not be owned by Dashboard, Schedule, a hidden
+The resident Monitor must not be owned by Dashboard, Schedule, a hidden
 supervisor, a broker, a worker pool, or a fourth resident Halpha process.
 
 ## Configuration
@@ -49,8 +49,9 @@ The optional `monitor` config section supports these fields:
 | Field | Default | Contract |
 | --- | --- | --- |
 | `enabled` | `false` | Local monitor feature gate. It does not start a hidden process by itself. |
-| `interval_seconds` | `300` | Positive integer interval between finite-loop cycles. |
-| `max_cycles` | `1` | Positive integer cycle limit. Monitor loops must stop after this limit. |
+| `interval_seconds` | `300` | Positive integer interval between successful resident cycles and finite-loop diagnostic cycles. |
+| `max_cycles` | `1` | Positive integer cycle limit for the diagnostic finite-loop command only. It is not a resident-service termination rule. |
+| `failure_backoff_max_seconds` | `3600` | Positive integer cap for resident Monitor retry backoff after recoverable cycle failures. |
 | `cooldown_seconds` | `3600` | Positive integer duplicate-alert cooldown window. |
 | `output_dir` | `runs/monitor` | Local monitor artifact directory. |
 | `target_stage` | `build_materials` | Pipeline stage boundary for default monitor reassessment. |
@@ -82,18 +83,30 @@ When generated `analysis/alert_decisions.json` exists, the cycle commits alert
 archive records, suppression results, cooldown updates, and the monitor cycle
 index to `.halpha/state.sqlite`.
 
-Current implemented finite-loop command:
+Current implemented resident-service commands:
+
+```bash
+python -m halpha monitor start --config config.example.yaml
+python -m halpha monitor status --config config.example.yaml
+python -m halpha monitor stop --config config.example.yaml
+python -m halpha monitor restart --config config.example.yaml
+```
+
+The resident Monitor service is unique per runtime root through the shared
+service lifecycle controller. It runs no-Codex monitor cycles continuously
+until explicit stop, records heartbeat and terminal lifecycle state, persists
+current service health in `.halpha/state.sqlite`, and retries recoverable cycle
+failures with bounded exponential backoff.
+
+Current implemented diagnostic finite-loop command:
 
 ```bash
 python -m halpha monitor run --config config.example.yaml --max-cycles 3 --interval-seconds 300
 ```
 
 This command runs a finite local loop. It stops after the requested maximum
-cycle count or after the first failed cycle. It is not a daemon, service, cron
-job, scheduler, or notification worker.
-
-This finite loop is current implemented behavior. It is not the target
-continuous resident Monitor service.
+cycle count or after the first failed cycle. It is a diagnostic path, not the
+resident Monitor service, daemon, cron job, scheduler, or notification worker.
 
 Current implemented read-only health command:
 
@@ -101,10 +114,10 @@ Current implemented read-only health command:
 python -m halpha monitor inspect --config config.example.yaml
 ```
 
-This command reads local monitor state from `.halpha/state.sqlite` and cycle
-manifest refs only. It must not collect network data, run processors, run
-pipeline stages, invoke Codex CLI, repair archives, export raw alert records,
-deliver notifications, trade, or access accounts.
+This command reads local monitor state, resident service health, and cycle
+manifest refs only from `.halpha/state.sqlite`. It must not collect network
+data, run processors, run pipeline stages, invoke Codex CLI, repair archives,
+export raw alert records, deliver notifications, trade, or access accounts.
 
 ## Cycle Manifest
 
@@ -230,6 +243,9 @@ behavior:
 
 ```bash
 python -m pytest
+python -m halpha monitor status --config config.example.yaml
+python -m halpha monitor start --config config.example.yaml
+python -m halpha monitor stop --config config.example.yaml
 python -m halpha monitor run --config config.example.yaml --dry-run
 python -m halpha monitor run --config config.example.yaml --once
 python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>

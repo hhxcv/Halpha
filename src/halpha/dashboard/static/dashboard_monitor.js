@@ -15,7 +15,6 @@
         const detailRow = deps.detailRow;
         const table = deps.table;
         const durationBetween = deps.durationBetween;
-        const terminalJobStatus = deps.terminalJobStatus;
 
         async function refreshMonitor() {
           await loadMonitorPayload();
@@ -25,6 +24,7 @@
         function renderMonitor() {
           const health = state.monitor?.health?.fields || {};
           const monitorSettings = state.monitor?.settings || {};
+          const service = health.service || {};
           const latest = state.monitor?.latest_cycle || {};
           const alerts = alertCount(state.monitorAlerts);
           const schedule = state.schedule || {};
@@ -43,7 +43,9 @@
           }).join("") || `<li class="empty-state">No monitor cycles yet.</li>`;
           document.querySelector("#monitor-config").innerHTML = [
             detailRow("Monitor interval", text(monitorSettings.interval_seconds, "n/a")),
-            detailRow("Max cycles before restart", text(monitorSettings.max_cycles, "n/a")),
+            detailRow("Retry backoff cap", text(monitorSettings.failure_backoff_max_seconds, "n/a")),
+            detailRow("Service status", label(service.status || "missing")),
+            detailRow("Consecutive failures", text(service.consecutive_failures, "0")),
             detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
             detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
             detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
@@ -81,42 +83,10 @@
           ])) : `<div class="message">No monitor jobs yet.</div>`;
         }
 
-        async function cancelRunningMonitorJobs() {
-          try {
-            await loadMonitorPayload();
-            const jobs = state.jobs.filter((job) => {
-              const kind = String(job.kind || job.intent || "");
-              return kind.includes("monitor") && job.cancellable !== false && !terminalJobStatus(job.status);
-            });
-            if (!jobs.length) {
-              document.querySelector("#monitor-control-result").innerHTML = `<div class="message">No running monitor job is attached to this dashboard runtime.</div>`;
-              return;
-            }
-            const results = [];
-            for (const job of jobs) {
-              results.push(await postJson(`${endpoints.jobs}/${encodeURIComponent(job.job_id)}/cancel`, {}));
-            }
-            await loadMonitorPayload();
-            renderMonitorJobsTable();
-            document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Cancel requested for ${results.length} monitor job(s).</div>`;
-            showToast(`Monitor stop requested for ${results.length} job(s).`);
-          } catch (error) {
-            document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-          }
-        }
-
         async function startMonitorJob(intent) {
           await loadMonitorPayload();
-          const settings = state.monitor?.settings || {};
-          const maxCycles = Number(settings.max_cycles);
-          const intervalSeconds = Number(settings.interval_seconds);
-          const params = intent === "monitor_loop" ? {max_cycles: maxCycles, interval_seconds: intervalSeconds} : {};
-          if (intent === "monitor_loop" && (!Number.isInteger(maxCycles) || maxCycles <= 0 || !Number.isInteger(intervalSeconds) || intervalSeconds <= 0)) {
-            document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">Monitor loop settings are missing or invalid. Check Settings before starting the monitor.</div>`;
-            return;
-          }
           try {
-            const job = await postJob(intent, params);
+            const job = await postJob(intent, {});
             document.querySelector("#monitor-control-result").innerHTML = `<div class="message">Job ${escapeHtml(job.job_id || "")}: ${escapeHtml(job.status || "created")}</div>`;
           } catch (error) {
             document.querySelector("#monitor-control-result").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
@@ -144,14 +114,12 @@
 
         function wire() {
           document.querySelectorAll("[data-monitor-job]").forEach((button) => button.addEventListener("click", () => startMonitorJob(button.dataset.monitorJob)));
-          document.querySelector("#stop-monitor-button").addEventListener("click", cancelRunningMonitorJobs);
           document.querySelector("#enable-daily-report").addEventListener("click", enableDailyReport);
           document.querySelector("#schedule-monitor-button").addEventListener("click", showMonitorSchedule);
         }
 
         return {
           alertCount,
-          cancelRunningMonitorJobs,
           enableDailyReport,
           refreshMonitor,
           renderMonitor,

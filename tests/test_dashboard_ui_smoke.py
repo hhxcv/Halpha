@@ -224,8 +224,8 @@ def test_dashboard_interaction_hooks_cover_redesigned_workflows(tmp_path: Path) 
     assert "selectReport(button.dataset.reportRunId)" in script
     assert "postJob(button.dataset.jobIntent" in script
     assert "startMonitorJob(button.dataset.monitorJob)" in script
-    assert "cancelRunningMonitorJobs" in script
-    assert "encodeURIComponent(job.job_id)" in script
+    assert "cancelRunningMonitorJobs" not in script
+    assert "stop-monitor-button" not in html
     assert "deleteSelectedReport" in script
     assert "cleanup(\"runs\")" in script
     assert "cleanup(\"shared\")" in script
@@ -374,6 +374,8 @@ def test_dashboard_shell_has_no_unwired_dashboard_controls_or_fabricated_sources
     assert '"Report artifact"' not in script
     assert '["BTC", "ETH", "USDT", "SOL", "XRP", "ADA"]' not in script
     assert "{max_cycles: 72, interval_seconds: 360}" not in script
+    assert "monitor_loop" not in html
+    assert "monitor_loop" not in script
     assert "state.monitor?.settings" in script
     assert '"#intel-asset", "#intel-range", "#intel-severity", "#intel-source", "#intel-sort"' in script
 

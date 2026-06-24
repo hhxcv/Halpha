@@ -24,6 +24,11 @@ def test_monitor_help_mentions_run_and_inspect(capsys) -> None:
     output = capsys.readouterr().out
     assert exc.value.code == 0
     assert "Manage local monitoring runs." in output
+    assert "start" in output
+    assert "status" in output
+    assert "stop" in output
+    assert "restart" in output
+    assert "service" in output
     assert "run" in output
     assert "inspect" in output
 
@@ -52,6 +57,30 @@ def test_monitor_inspect_help_does_not_require_state(capsys) -> None:
     assert "--config" in output
 
 
+def test_monitor_status_does_not_require_loadable_config(tmp_path: Path, capsys) -> None:
+    config_path = tmp_path / "broken.yaml"
+    config_path.write_text("run: [", encoding="utf-8")
+
+    exit_code = main(["monitor", "status", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Halpha monitor status." in output
+    assert "status: not_found" in output
+
+
+def test_monitor_start_rejects_invalid_config(tmp_path: Path, capsys) -> None:
+    config_path = tmp_path / "broken.yaml"
+    config_path.write_text("run: [", encoding="utf-8")
+
+    exit_code = main(["monitor", "start", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 2
+    assert "Halpha monitor failed." in output
+    assert "stage: config" in output
+
+
 def test_monitor_run_dry_run_uses_defaults_without_running_pipeline(
     tmp_path: Path,
     capsys,
@@ -73,6 +102,7 @@ def test_monitor_run_dry_run_uses_defaults_without_running_pipeline(
     assert "enabled: false" in output
     assert "interval_seconds: 300" in output
     assert "max_cycles: 1" in output
+    assert "failure_backoff_max_seconds: 3600" in output
     assert "cooldown_seconds: 3600" in output
     assert "output_dir: runs/monitor" in output
     assert "target_stage: build_materials" in output
@@ -87,6 +117,7 @@ monitor:
   enabled: true
   interval_seconds: 60
   max_cycles: 2
+  failure_backoff_max_seconds: 1200
   cooldown_seconds: 900
   output_dir: local-monitor
   target_stage: build_materials
@@ -101,6 +132,7 @@ monitor:
     assert "enabled: true" in output
     assert "interval_seconds: 60" in output
     assert "max_cycles: 2" in output
+    assert "failure_backoff_max_seconds: 1200" in output
     assert "cooldown_seconds: 900" in output
     assert "output_dir: local-monitor" in output
     assert "target_stage: build_materials" in output
