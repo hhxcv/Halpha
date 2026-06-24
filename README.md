@@ -136,6 +136,9 @@ that behavior so duplicate start returns the existing matching instance and
 restart is explicit. If the port is occupied by a non-Halpha or unresponsive
 local service, startup fails with an actionable error instead of killing an
 unrelated process.
+The shared lifecycle controller and `.halpha/state.sqlite` schema for
+`dashboard`, `monitor`, and `schedule` exist, but Dashboard adopts that
+controller in a later service-specific change.
 
 Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
 roots. Private values such as proxy URLs, credentials, tokens, private notes,
@@ -159,10 +162,10 @@ The target runtime contract defines one runtime root and exactly three
 resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
 runtime state keeps the run index, dashboard command-job lifecycle, and daily
 report schedule dispatch state, monitor cycle indexes, alert archive records,
-cooldown state, and monitor health query state in `.halpha/state.sqlite`;
-selected dashboard config remains local JSON. Dashboard read models, health
-summaries, workbench outputs, and latest selections are derived views, not
-parallel authorities.
+cooldown state, monitor health query state, and shared resident-service
+lifecycle state in `.halpha/state.sqlite`; selected dashboard config remains
+local JSON. Dashboard read models, health summaries, workbench outputs, and
+latest selections are derived views, not parallel authorities.
 
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:

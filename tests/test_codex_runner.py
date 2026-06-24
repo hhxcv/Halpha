@@ -4,12 +4,19 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
 
 
 REPORT_STDOUT = "# 每日市场简报\n\n## 风险提示\n- 数据窗口较短，结论需要结合后续公开事件验证。\n"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_test_cwd(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> None:

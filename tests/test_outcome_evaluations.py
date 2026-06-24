@@ -5,11 +5,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
 from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_test_cwd(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_outcome_evaluations_use_no_lookahead_window_and_directional_alignment(tmp_path: Path) -> None:

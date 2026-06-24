@@ -66,9 +66,10 @@ validation must preserve that separation:
 - run artifacts stay authoritative for research evidence;
 - reusable stores stay authoritative in their physical local stores and
   store-local metadata;
-- the runtime SQLite state store is implemented at `.halpha/state.sqlite`, and
-  the run-index projection lives there; other domain-specific mutable state and
-  rebuildable indexes move there only after their migrations;
+- the runtime SQLite state store is implemented at `.halpha/state.sqlite`; the
+  run-index projection and shared resident-service lifecycle controller live
+  there, while other domain-specific mutable state and rebuildable indexes move
+  there only after their migrations;
 - workbench summaries, dashboard views, health summaries, and latest selections
   are derived views.
 
