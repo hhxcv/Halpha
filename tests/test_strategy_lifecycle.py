@@ -75,7 +75,7 @@ def test_strategy_lifecycle_state_records_degradation_and_versions(tmp_path: Pat
             ],
             "warnings": [],
             "errors": [],
-            "source_artifacts": ["data/research/index.sqlite"],
+            "source_artifacts": [".halpha/state.sqlite"],
         },
     )
     write_json(

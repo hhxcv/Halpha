@@ -452,14 +452,12 @@ def _record_terminal_local_data_state(
     _record_run_index(run, clock=clock)
     _record_outcome_history(config, run, clock=clock)
     _record_research_data_catalog(config, run, clock=clock)
-    _record_run_index(run, clock=clock)
     _write_manifest(run)
 
 
 def _record_run_index(run: RunContext, *, clock: Callable[[], datetime]) -> None:
     from halpha.data.run_index import RUN_INDEX_ARTIFACT, write_run_index
 
-    run.manifest.setdefault("artifacts", {})["run_index"] = RUN_INDEX_ARTIFACT
     try:
         summary = write_run_index(run, now=clock())
     except Exception as exc:

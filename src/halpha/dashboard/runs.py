@@ -9,7 +9,14 @@ from halpha.dashboard.common import dashboard_read_json as _read_json
 from halpha.dashboard.common import dashboard_resolve_ref as _resolve_ref
 from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.dashboard.run_aggregation import manifest_report_state, run_list_record as _run_list_record
-from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.data.run_index import (
+    RUN_INDEX_ARTIFACT,
+    run_index_latest_refs,
+    run_index_path,
+    run_index_selection_label,
+    select_latest_run_record,
+    select_report_run_records,
+)
 from halpha.storage import artifact_base as _artifact_base
 from halpha.utils.value_helpers import (
     as_dict as _dict,
@@ -282,16 +289,10 @@ def dashboard_latest_run_section(
 
 
 def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str, str] | None:
-    for key in ("latest_successful_run", "latest_run"):
-        row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
-        if not row or not isinstance(row[0], str) or not row[0]:
-            continue
-        run = connection.execute(
-            "SELECT run_id, run_dir, manifest_path FROM runs WHERE run_id = ?",
-            (row[0],),
-        ).fetchone()
-        if run and all(isinstance(value, str) and value for value in run):
-            return key, run[0], run[1], run[2]
+    selected = select_latest_run_record(connection)
+    if selected:
+        run = selected.run
+        return selected.selection_key, run.run_id, run.run_dir, run.manifest_path
     fallback = _fallback_latest_run(connection, succeeded_only=True)
     if fallback:
         return ("fallback_latest_successful_run", *fallback)
@@ -302,19 +303,7 @@ def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str, str]
 
 
 def _run_latest_refs(connection: sqlite3.Connection) -> dict[str, str | None]:
-    refs: dict[str, str | None] = {"latest_run_id": None, "latest_successful_run_id": None}
-    rows = connection.execute(
-        "SELECT key, run_id FROM run_latest WHERE key IN (?, ?)",
-        ("latest_run", "latest_successful_run"),
-    ).fetchall()
-    for key, run_id in rows:
-        if not isinstance(run_id, str) or not run_id:
-            continue
-        if key == "latest_run":
-            refs["latest_run_id"] = run_id
-        elif key == "latest_successful_run":
-            refs["latest_successful_run_id"] = run_id
-    return refs
+    return run_index_latest_refs(connection)
 
 
 def _dashboard_run_rows(connection: sqlite3.Connection, *, limit: int, report_limit: int) -> list[Any]:
@@ -337,33 +326,7 @@ def _dashboard_run_rows(connection: sqlite3.Connection, *, limit: int, report_li
         """,
         (max(0, limit),),
     ).fetchall()
-    report_rows: list[Any] = []
-    if report_limit > 0:
-        report_rows = connection.execute(
-            """
-            SELECT
-              r.run_id,
-              r.run_dir,
-              r.started_at,
-              r.finished_at,
-              r.status,
-              r.failed_stage,
-              r.codex_status,
-              r.warning_count,
-              r.error_count,
-              r.manifest_path
-            FROM runs r
-            WHERE EXISTS (
-              SELECT 1
-              FROM run_artifacts a
-              WHERE a.run_id = r.run_id
-                AND a.artifact_key = 'report'
-            )
-            ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC
-            LIMIT ?
-            """,
-            (report_limit,),
-        ).fetchall()
+    report_rows = [record.as_row() for record in select_report_run_records(connection, limit=report_limit)]
     rows_by_id: dict[str, Any] = {}
     for row in [*latest_rows, *report_rows]:
         run_id = str(row[0])
@@ -377,13 +340,7 @@ def _run_row_sort_key(row: Any) -> tuple[str, str]:
 
 
 def _latest_selection_label(selection_key: str) -> str:
-    labels = {
-        "latest_successful_run": "latest successful run",
-        "latest_run": "latest indexed run",
-        "fallback_latest_successful_run": "fallback latest successful run",
-        "fallback_latest_run": "fallback latest indexed run",
-    }
-    return labels.get(selection_key, selection_key)
+    return run_index_selection_label(selection_key)
 
 
 def _run_artifact_index(connection: sqlite3.Connection) -> dict[str, dict[str, list[str]]]:

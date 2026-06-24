@@ -5,7 +5,12 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
-from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.data.run_index import (
+    RUN_INDEX_ARTIFACT,
+    fetch_run_index_record,
+    run_index_path,
+    select_latest_run_record,
+)
 from halpha.storage import (
     artifact_base as _artifact_base,
     read_json_object,
@@ -128,7 +133,10 @@ def _selected_run(config_path: Path, *, base: Path, run_id: str | None) -> dict[
         )
     try:
         with closing(sqlite3.connect(index_path)) as connection:
-            row = _run_row(connection, run_id) if run_id else _latest_run_row(connection)
+            record = fetch_run_index_record(connection, run_id) if run_id else None
+            if run_id is None:
+                selected = select_latest_run_record(connection)
+                record = selected.run if selected else None
     except sqlite3.Error as exc:
         return _section(
             "selected_run",
@@ -137,7 +145,7 @@ def _selected_run(config_path: Path, *, base: Path, run_id: str | None) -> dict[
             source_artifacts=[RUN_INDEX_ARTIFACT],
             errors=[f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"],
         )
-    if row is None:
+    if record is None:
         warning = "run id was not found in the local run index." if run_id else "local run index does not contain a latest run."
         return _section(
             "selected_run",
@@ -147,11 +155,11 @@ def _selected_run(config_path: Path, *, base: Path, run_id: str | None) -> dict[
             warnings=[warning],
         )
 
-    manifest_path = _resolve_ref(str(row[2]), base=base)
+    manifest_path = _resolve_ref(record.manifest_path, base=base)
     manifest, error = _read_json(manifest_path)
-    run_dir = _resolve_ref(str(row[1]), base=base)
+    run_dir = _resolve_ref(record.run_dir, base=base)
     fields = {
-        "run_id": str(row[0]),
+        "run_id": record.run_id,
         "run_dir": _safe_ref(run_dir, base=base),
         "manifest": _safe_ref(manifest_path, base=base),
     }
@@ -177,27 +185,6 @@ def _selected_run(config_path: Path, *, base: Path, run_id: str | None) -> dict[
         source_artifacts=[RUN_INDEX_ARTIFACT, fields["manifest"]],
         extra={"run_dir_path": run_dir, "manifest": manifest},
     )
-
-
-def _run_row(connection: sqlite3.Connection, run_id: str) -> tuple[str, str, str] | None:
-    row = connection.execute(
-        "SELECT run_id, run_dir, manifest_path FROM runs WHERE run_id = ?",
-        (run_id,),
-    ).fetchone()
-    if row and all(isinstance(value, str) and value for value in row):
-        return row[0], row[1], row[2]
-    return None
-
-
-def _latest_run_row(connection: sqlite3.Connection) -> tuple[str, str, str] | None:
-    for key in ("latest_successful_run", "latest_run"):
-        row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
-        if not row or not isinstance(row[0], str) or not row[0]:
-            continue
-        run = _run_row(connection, row[0])
-        if run:
-            return run
-    return None
 
 
 def _pipeline_strategy_section(selected_run: dict[str, Any], *, base: Path) -> dict[str, Any]:

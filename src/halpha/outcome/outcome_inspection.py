@@ -10,7 +10,7 @@ from halpha.inspection_artifacts import inspection_error_is_missing as _was_not_
 from halpha.inspection_artifacts import inspection_overall_status as _overall_status
 from halpha.inspection_artifacts import read_inspection_json_object
 from halpha.outcome.outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
-from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path, select_latest_run_record
 
 
 OUTCOME_TARGETS_ARTIFACT = "analysis/outcome_targets.json"
@@ -260,26 +260,15 @@ def _latest_run_from_index(config_path: Path) -> Path | None:
         return None
     try:
         with closing(sqlite3.connect(path)) as connection:
-            run_id = _latest_run_id(connection)
-            if not run_id:
+            selected = select_latest_run_record(connection)
+            if not selected:
                 return None
-            row = connection.execute("SELECT run_dir FROM runs WHERE run_id = ?", (run_id,)).fetchone()
     except sqlite3.Error as exc:
         raise OutcomeInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
-    if row is None or not isinstance(row[0], str) or not row[0]:
-        return None
-    run_dir = Path(row[0])
+    run_dir = Path(selected.run.run_dir)
     if not run_dir.is_absolute():
         run_dir = config_path.parent / run_dir
     return _project_local_path(run_dir, base=config_path.parent)
-
-
-def _latest_run_id(connection: sqlite3.Connection) -> str | None:
-    for key in ("latest_successful_run", "latest_run"):
-        row = connection.execute("SELECT run_id FROM run_latest WHERE key = ?", (key,)).fetchone()
-        if row and isinstance(row[0], str) and row[0]:
-            return row[0]
-    return None
 
 
 def _resolve_run_dir(run_dir: Path, *, base: Path) -> Path:

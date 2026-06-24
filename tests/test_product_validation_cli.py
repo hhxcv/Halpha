@@ -7,7 +7,7 @@ import pytest
 
 from halpha.cli import main
 from halpha.pipeline import RunContext
-from halpha.data.run_index import write_run_index
+from halpha.data.run_index import run_index_path, write_run_index
 from halpha.storage import write_json
 
 
@@ -88,7 +88,7 @@ def test_validate_missing_run_index_is_bounded_failure(tmp_path: Path, capsys) -
     assert "Halpha product validation failed." in output
     assert "status: missing" in output
     assert "selection: latest_run_index" in output
-    assert "source_artifact: data/research/index.sqlite" in output
+    assert "source_artifact: .halpha/state.sqlite" in output
     assert "local run index was not found" in output
     assert "pipeline: not_run" in output
     assert str(tmp_path) not in output
@@ -109,7 +109,7 @@ def test_validate_rejects_latest_run_index_outside_project_root(tmp_path: Path, 
             "private_note": "outside validation manifest was read",
         },
     )
-    with sqlite3.connect(tmp_path / "data" / "research" / "index.sqlite") as connection:
+    with sqlite3.connect(run_index_path(config_path)) as connection:
         connection.execute("UPDATE runs SET run_dir = ? WHERE run_id = ?", (str(outside_dir), run.run_id))
         connection.commit()
 

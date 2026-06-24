@@ -165,6 +165,10 @@ Rules:
 
 Current implemented index path:
 
+- `.halpha/state.sqlite`
+
+Legacy index path:
+
 - `data/research/index.sqlite`
 
 Purpose:
@@ -179,20 +183,23 @@ Authority boundary:
   completed run.
 - Per-run artifacts remain the authoritative research evidence.
 - The index stores references and searchable metadata only.
-- `run_latest` is current implemented mutable selection state. The target
-  runtime-state model derives latest selections from authoritative run records
-  or stores them as rebuildable runtime indexes, not as a second run authority.
-- The unified runtime state-store foundation exists at `.halpha/state.sqlite`.
-  Mutable run and artifact indexes move there only after their migration. Until
-  that migration is implemented, `data/research/index.sqlite` remains the
-  current implemented index and must not be silently bypassed.
+- `run_latest` is now a derived SQLite view, not a mutable pointer table.
+- The unified runtime state store at `.halpha/state.sqlite` owns the current
+  mutable run and artifact index projection.
+- Query helpers derive latest run, latest successful run, latest report-bearing
+  run, and latest previous successful run from indexed records. A report-bearing
+  selection requires the recorded report artifact to exist in the local project
+  boundary.
+- `data/research/index.sqlite` is legacy storage. It must not be written by new
+  run completions or stage reruns outside explicit legacy migration or cleanup
+  work.
 
 Required tables:
 
 - `runs`
 - `run_stages`
 - `run_artifacts`
-- `run_latest`
+- `run_latest` view
 
 Required `runs` fields:
 

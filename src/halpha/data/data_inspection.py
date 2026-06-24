@@ -13,7 +13,13 @@ from halpha.data.data_quality_groups import (
     named_quality_check_counts,
 )
 from halpha.data.research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
-from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path
+from halpha.data.run_index import (
+    RUN_INDEX_ARTIFACT,
+    run_index_latest_refs,
+    run_index_path,
+    run_index_table_counts,
+    select_latest_run_record,
+)
 from halpha.inspection_artifacts import inspection_json_artifact_status as _artifact_file_status
 from halpha.inspection_artifacts import inspection_overall_status as _overall_status
 from halpha.inspection_artifacts import inspection_plain_artifact_status as _plain_artifact_status
@@ -176,23 +182,18 @@ def _run_index_section(config_path: Path, *, base: Path) -> dict[str, Any]:
         )
     try:
         with closing(sqlite3.connect(path)) as connection:
-            counts = {
-                "runs": _table_count(connection, "runs"),
-                "run_stages": _table_count(connection, "run_stages"),
-                "run_artifacts": _table_count(connection, "run_artifacts"),
-                "run_latest": _table_count(connection, "run_latest"),
-            }
-            latest_refs = _latest_run_refs(connection)
-            selected_source, selected_run_id = _latest_run_selection(latest_refs)
+            counts = run_index_table_counts(connection)
+            latest_refs = run_index_latest_refs(connection)
+            selected = select_latest_run_record(connection)
     except sqlite3.Error as exc:
         raise DataInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
     fields: dict[str, Any] = dict(counts)
     for key, value in latest_refs.items():
         if value:
             fields[key] = value
-    if selected_run_id:
-        fields["selected_run_id"] = selected_run_id
-        fields["selected_run_source"] = selected_source
+    if selected:
+        fields["selected_run_id"] = selected.run.run_id
+        fields["selected_run_source"] = selected.selection_key
     return _section("run_index", "ok", artifact=RUN_INDEX_ARTIFACT, fields=fields)
 
 
@@ -1032,15 +1033,12 @@ def _latest_run_from_index(config_path: Path) -> Path | None:
         return None
     try:
         with closing(sqlite3.connect(path)) as connection:
-            run_id = _latest_run_id(connection)
-            if not run_id:
+            selected = select_latest_run_record(connection)
+            if not selected:
                 return None
-            row = connection.execute("SELECT run_dir FROM runs WHERE run_id = ?", (run_id,)).fetchone()
     except sqlite3.Error as exc:
         raise DataInspectionError(f"{RUN_INDEX_ARTIFACT} is not readable: {exc}") from exc
-    if row is None or not isinstance(row[0], str) or not row[0]:
-        return None
-    run_dir = Path(row[0])
+    run_dir = Path(selected.run.run_dir)
     if not run_dir.is_absolute():
         run_dir = artifact_base(config_path) / run_dir
     return _project_local_path(run_dir, base=artifact_base(config_path))
@@ -1105,40 +1103,6 @@ def _field_text(fields: dict[str, Any]) -> str:
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
     result = read_inspection_json_object(path)
     return result.data, result.error
-
-
-def _table_count(connection: sqlite3.Connection, table: str) -> int:
-    return int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
-
-
-def _latest_run_id(connection: sqlite3.Connection) -> str | None:
-    return _latest_run_selection(_latest_run_refs(connection))[1]
-
-
-def _latest_run_refs(connection: sqlite3.Connection) -> dict[str, str | None]:
-    refs: dict[str, str | None] = {"latest_run_id": None, "latest_successful_run_id": None}
-    rows = connection.execute(
-        "SELECT key, run_id FROM run_latest WHERE key IN (?, ?)",
-        ("latest_run", "latest_successful_run"),
-    ).fetchall()
-    for key, run_id in rows:
-        if not isinstance(run_id, str) or not run_id:
-            continue
-        if key == "latest_run":
-            refs["latest_run_id"] = run_id
-        elif key == "latest_successful_run":
-            refs["latest_successful_run_id"] = run_id
-    return refs
-
-
-def _latest_run_selection(refs: dict[str, str | None]) -> tuple[str | None, str | None]:
-    latest_success = refs.get("latest_successful_run_id")
-    if latest_success:
-        return "latest_successful_run", latest_success
-    latest = refs.get("latest_run_id")
-    if latest:
-        return "latest_run", latest
-    return None, None
 
 
 def _store_statuses(catalog: dict[str, Any]) -> str | None:

@@ -47,7 +47,7 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
                     "summary": "run index status: ok.",
                     "warning_count": 1,
                     "error_count": 0,
-                    "source_artifacts": ["data/research/index.sqlite"],
+                    "source_artifacts": [".halpha/state.sqlite"],
                     "details": {
                         "runs": 1,
                         "run_stages": 31,
@@ -100,7 +100,7 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
                 "analysis/data_quality_summary.json",
                 "raw/market.json",
                 "raw/derivatives_market_views.json",
-                "data/research/index.sqlite",
+                ".halpha/state.sqlite",
                 "data/market/metadata/derivatives_market_state.json",
                 "data/research/metadata/research_data_catalog.json",
             ],
@@ -125,7 +125,7 @@ def test_data_quality_material_summarizes_quality_without_embedding_full_stores(
     assert "full_run_index_embedded: false" in material
     assert "run_index_lifecycle:" in material
     assert "report_stage_time_skip_as_final_missing: false" in material
-    assert "data/research/index.sqlite" in material
+    assert ".halpha/state.sqlite" in material
     assert "data/market/metadata/derivatives_market_state.json" in material
     assert "derivatives_market_views" in material
     assert "insufficient_views: 1" in material

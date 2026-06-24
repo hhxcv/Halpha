@@ -423,8 +423,7 @@ A successful configured run can write:
 - `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
 - `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `data/research/index.sqlite`: current local run index with run, stage, artifact, and latest-run metadata.
-- `.halpha/state.sqlite`: local runtime-state foundation for schema migrations and future migrated operational state.
+- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, and future migrated operational state.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
 - `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.

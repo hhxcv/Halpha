@@ -183,8 +183,8 @@ Current bias:
 * No hidden supervisor, broker, worker pool, or fourth resident Halpha process.
 * `.halpha/state.sqlite` records the implemented runtime-state foundation and future migrated mutable operational state; it is not research evidence or Codex input.
 * `.halpha/state.sqlite-wal` and `.halpha/state.sqlite-shm` are SQLite side files; back them up with `state.sqlite` when present.
-* Current `data/research/index.sqlite` records run, stage, artifact, and latest-run metadata; it stores references, not artifact contents.
-* Current `data/research/index.sqlite` is current implemented index storage until explicit migration.
+* `.halpha/state.sqlite` records current run, stage, artifact, and derived latest-run index metadata; it stores references, not artifact contents.
+* `data/research/index.sqlite` is legacy run-index storage; do not write it outside explicit legacy migration or cleanup work.
 * Latest selections are derived or rebuildable views, not parallel authorities.
 * `data/research/metadata/text_event_history_state.json` records shared text-event history state, counts, duplicates, conflicts, warnings, and source refs.
 * `data/research/text_events/` stores reusable text-event history; it is input data, not AI context.

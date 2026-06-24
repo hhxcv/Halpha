@@ -111,7 +111,7 @@ def _write_targets(run: RunContext) -> None:
             "targets": [{"target_id": "target-contradicted"}, {"target_id": "target-confirmed"}],
             "skipped_records": [],
             "counts": {"targets": 2, "skipped_records": 0},
-            "source_artifacts": ["data/research/index.sqlite"],
+            "source_artifacts": [".halpha/state.sqlite"],
             "warnings": [],
             "errors": [],
         },
