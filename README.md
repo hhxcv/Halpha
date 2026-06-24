@@ -150,6 +150,10 @@ monitor, and schedule trigger actions run through shared command jobs. Codex-cap
 report jobs require explicit confirmation before they can start. The dashboard
 does not expose arbitrary shell execution.
 
+Dashboard Monitor controls start, stop, restart, and inspect the same Monitor
+and Schedule resident service instances as the CLI. One-cycle monitor
+validation and manual schedule triggers remain bounded command jobs.
+
 Daily report schedule configuration and dispatch history are explicit local
 runtime state in `.halpha/state.sqlite`. The implemented schedule API can
 inspect, enable, disable, update, and manually trigger daily report jobs

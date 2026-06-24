@@ -22,6 +22,7 @@
     data-monitor-alerts-endpoint="/api/monitor/alerts"
     data-jobs-endpoint="/api/jobs"
     data-schedule-endpoint="/api/schedule/daily-report"
+    data-services-endpoint="/api/services"
     data-settings-endpoint="/api/config/profile"
     data-config-select-endpoint="/api/config/select"
     data-text-intelligence-endpoint="/api/text-intelligence"
@@ -255,6 +256,12 @@
             <section class="panel panel-pad">
               <h2 class="panel-title">Controls</h2>
               <div class="control-grid">
+                <button class="primary-button" type="button" data-service-role="monitor" data-service-action="start">Start Monitor</button>
+                <button class="ghost-button" type="button" data-service-role="monitor" data-service-action="stop">Stop Monitor</button>
+                <button class="ghost-button" type="button" data-service-role="monitor" data-service-action="restart">Restart Monitor</button>
+                <button class="ghost-button" type="button" data-service-role="schedule" data-service-action="start">Start Schedule</button>
+                <button class="ghost-button" type="button" data-service-role="schedule" data-service-action="stop">Stop Schedule</button>
+                <button class="ghost-button" type="button" data-service-role="schedule" data-service-action="restart">Restart Schedule</button>
                 <button class="primary-button" type="button" data-monitor-job="monitor_once">Run one cycle</button>
                 <button class="ghost-button" type="button" data-monitor-job="monitor_dry_run">Dry run</button>
                 <button class="ghost-button" type="button" id="enable-daily-report">Enable no-Codex daily run</button>

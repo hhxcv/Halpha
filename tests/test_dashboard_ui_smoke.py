@@ -215,14 +215,18 @@ def test_dashboard_interaction_hooks_cover_redesigned_workflows(tmp_path: Path) 
 
     assert "data-job-intent" in parser.data_attrs
     assert "data-monitor-job" in parser.data_attrs
+    assert "data-service-role" in parser.data_attrs
+    assert "data-service-action" in parser.data_attrs
     assert "data-view-target" in parser.data_attrs
     assert "data-preview-endpoint" in parser.data_attrs
     assert "data-delete-endpoint" in parser.data_attrs
+    assert "data-services-endpoint" in parser.data_attrs
     assert "data-settings-endpoint" in parser.data_attrs
     assert 'document.querySelectorAll("[data-view-target]")' in script
     assert "setHashView(node.dataset.viewTarget)" in script
     assert "selectReport(button.dataset.reportRunId)" in script
     assert "postJob(button.dataset.jobIntent" in script
+    assert "serviceAction(button.dataset.serviceRole, button.dataset.serviceAction)" in dashboard_monitor_script()
     assert "startMonitorJob(button.dataset.monitorJob)" in script
     assert "cancelRunningMonitorJobs" not in script
     assert "stop-monitor-button" not in html
@@ -335,6 +339,14 @@ def test_dashboard_preview_job_and_monitor_contracts_are_present(tmp_path: Path)
     assert "renderMonitor()" in dashboard_monitor_script()
     assert "renderMonitorAlertsTable" in dashboard_monitor_script()
     assert "renderMonitorJobsTable" in dashboard_monitor_script()
+    assert "serviceAction(role, action)" in dashboard_monitor_script()
+    assert "Monitor last error" in dashboard_monitor_script()
+    assert "Schedule last error" in dashboard_monitor_script()
+    assert "Latest schedule dispatch" in dashboard_monitor_script()
+    assert "Daily report authorization" in dashboard_monitor_script()
+    assert 'data-service-role="monitor"' in html
+    assert 'data-service-role="schedule"' in html
+    assert 'data-service-action="restart"' in html
 
 
 def test_dashboard_strategy_backtest_chart_shell_contracts_are_present(tmp_path: Path) -> None:

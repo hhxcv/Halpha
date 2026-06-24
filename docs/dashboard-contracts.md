@@ -149,6 +149,12 @@ Monitor view. It must not create a resident Monitor loop as a command job.
 Other command actions are available through the dashboard jobs API and remain
 explicit allowlisted jobs.
 
+The dashboard services API exposes one bounded read model for exactly
+`dashboard`, `monitor`, and `schedule`. Monitor and Schedule service controls
+delegate start, stop, restart, and status actions to the same shared lifecycle
+controller used by the CLI. Repeated starts return the existing matching
+instance. Config conflicts are visible and do not replace the running service.
+
 Implemented schedule controls are API-backed runtime state for the daily report
 schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
 disable, update, and manually trigger daily report jobs. Automatic due dispatch
@@ -471,11 +477,11 @@ Dashboard monitor controls must preserve `docs/monitoring-contracts.md`:
 - no Codex execution by default.
 
 The Monitor service is an independent resident role addressed through the
-shared lifecycle contract. Current Dashboard monitor controls are limited to
-short validation jobs and read-only monitor state. Future Dashboard service
-controls must start, stop, inspect, or restart the shared Monitor instance.
-They must not create duplicate Monitor processes, and they must not run the
-monitor loop inside the Dashboard process.
+shared lifecycle contract. Dashboard service controls start, stop, inspect, or
+restart the shared Monitor and Schedule instances. Short validation jobs remain
+bounded command jobs. Dashboard controls must not create duplicate Monitor or
+Schedule processes, and they must not run the monitor loop inside the Dashboard
+process.
 
 ## Privacy Boundary
 

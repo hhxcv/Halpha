@@ -30,6 +30,7 @@ from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor
 from halpha.dashboard.overview import dashboard_overview
 from halpha.dashboard.runs import dashboard_run_detail, dashboard_runs
 from halpha.dashboard.schedule import DashboardScheduleManager
+from halpha.dashboard.services import dashboard_service_action, dashboard_services_summary
 from halpha.dashboard.settings import (
     dashboard_backup_config,
     dashboard_config_profile,
@@ -257,6 +258,29 @@ def create_dashboard_app(
             return dashboard_health(None, config_path=None, host=host, port=port, lifecycle=lifecycle)
         active_config, active_config_path = active
         return dashboard_health(active_config, config_path=active_config_path, host=host, port=port, lifecycle=lifecycle)
+
+    @app.get("/api/services")
+    def services_endpoint() -> dict[str, Any]:
+        active = context.active()
+        lifecycle = service_lifecycle() if service_lifecycle is not None else _unmanaged_dashboard_lifecycle()
+        if active is None:
+            return dashboard_services_summary(None, config_path=None, dashboard_lifecycle=lifecycle)
+        active_config, active_config_path = active
+        return dashboard_services_summary(active_config, config_path=active_config_path, dashboard_lifecycle=lifecycle)
+
+    @app.post("/api/services/{role}/{action}")
+    def service_action_endpoint(role: str, action: str) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload(
+                "dashboard_service_action",
+                status="blocked",
+                role=role,
+                action=action,
+                service=None,
+            )
+        active_config, active_config_path = active
+        return dashboard_service_action(active_config, config_path=active_config_path, role=role, action=action)
 
     @app.get("/api/config/profile")
     def config_profile_endpoint() -> dict[str, Any]:
