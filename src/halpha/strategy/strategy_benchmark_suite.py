@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from halpha.market.ohlcv_quality import ohlcv_series_quality, quality_warning_messages
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
@@ -32,6 +34,7 @@ def build_strategy_benchmark_suite(
         config_path=run.config_path,
         run_output_dir=run.run_dir.parent,
         manifest_artifacts=run.manifest.get("artifacts"),
+        market_data_views=_read_market_data_views(run),
         now=now,
     )
     records = artifact["benchmarks"]
@@ -50,6 +53,7 @@ def create_strategy_benchmark_suite_artifact(
     config_path: Path,
     run_output_dir: Path,
     manifest_artifacts: dict[str, Any] | None = None,
+    market_data_views: dict[str, Any] | None = None,
     now: datetime | str | None = None,
 ) -> dict[str, Any]:
     quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
@@ -66,6 +70,7 @@ def create_strategy_benchmark_suite_artifact(
     )
     windows = _window_specs(suite_config)
     store = OHLCVParquetStore(storage_dir, run_output_dir=run_output_dir)
+    view_quality = _view_quality_by_key(market_data_views)
 
     records = []
     base = runtime_root(config_path)
@@ -84,6 +89,8 @@ def create_strategy_benchmark_suite_artifact(
                             lookback=_configured_lookback(ohlcv, timeframe),
                             window=window,
                             source_artifact=source_artifact,
+                            quality_reference_time=None,
+                            view_quality=view_quality,
                         )
                     )
     except OHLCVStoreError as exc:
@@ -149,6 +156,8 @@ def _benchmark_record(
     lookback: int,
     window: dict[str, Any],
     source_artifact: str,
+    quality_reference_time: str | None,
+    view_quality: dict[tuple[str, str, str], dict[str, Any]],
 ) -> dict[str, Any]:
     records = store.read_records(source=source, symbol=symbol, timeframe=timeframe)
     selected_rows = _select_rows(records, timeframe=timeframe, configured_lookback=lookback, window=window)
@@ -161,6 +170,13 @@ def _benchmark_record(
     end = selected_rows[-1]["open_time"] if selected_rows else None
     latest = end
     insufficient = row_count < minimum_rows
+    quality = view_quality.get((source, symbol, timeframe)) or ohlcv_series_quality(
+        selected_rows,
+        timeframe=timeframe,
+        now=quality_reference_time,
+    )
+    quality_status = str(quality.get("status") or "ok")
+    quality_warnings = quality_warning_messages(source=source, symbol=symbol, timeframe=timeframe, quality=quality)
     warnings = _record_warnings(
         source=source,
         symbol=symbol,
@@ -170,7 +186,15 @@ def _benchmark_record(
         row_count=row_count,
         minimum_rows=minimum_rows,
     )
-    status = "insufficient_data" if insufficient else "succeeded"
+    warnings.extend(_quality_warning_items(quality_warnings))
+    if quality_status == "degraded" and not insufficient:
+        warnings.append(
+            _warning(
+                "degraded_ohlcv_quality",
+                f"{source} {symbol} {timeframe} benchmark window {window['name']} uses degraded OHLCV input.",
+            )
+        )
+    status = "insufficient_data" if insufficient or quality_status == "degraded" else "succeeded"
     return {
         "benchmark_id": _benchmark_id(source, symbol, timeframe, str(window["name"]), start, end),
         "status": status,
@@ -189,6 +213,8 @@ def _benchmark_record(
         "storage_ref": _storage_ref(storage_dir, source, symbol, timeframe, config_base),
         "included_columns": VIEW_INCLUDED_COLUMNS,
         "source_artifacts": [source_artifact],
+        "quality_status": quality_status,
+        "quality": quality,
         "warnings": warnings,
         "errors": [],
     }
@@ -431,6 +457,33 @@ def _sync_state_artifact(
     return display_path(storage_dir.parent / "metadata" / "ohlcv_sync_state.json", base=runtime_root(config_path))
 
 
+def _read_market_data_views(run: RunContext) -> dict[str, Any] | None:
+    path = run.raw_dir / "market_data_views.json"
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    if not isinstance(artifact, dict) or not isinstance(artifact.get("views"), list):
+        return None
+    return artifact
+
+
+def _view_quality_by_key(market_data_views: dict[str, Any] | None) -> dict[tuple[str, str, str], dict[str, Any]]:
+    if not isinstance(market_data_views, dict):
+        return {}
+    result: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for view in market_data_views.get("views", []):
+        if not isinstance(view, dict) or not isinstance(view.get("quality"), dict):
+            continue
+        source = view.get("source")
+        symbol = view.get("symbol")
+        timeframe = view.get("timeframe")
+        if not all(isinstance(item, str) and item for item in (source, symbol, timeframe)):
+            continue
+        result[(source, symbol, timeframe)] = dict(view["quality"])
+    return result
+
+
 def _benchmark_id(
     source: str,
     symbol: str,
@@ -466,6 +519,10 @@ def _warning_summary(item: dict[str, Any]) -> dict[str, Any]:
         "message": item.get("message"),
         "source": item.get("source"),
     }
+
+
+def _quality_warning_items(messages: list[str]) -> list[dict[str, Any]]:
+    return [_warning("degraded_ohlcv_quality", message) for message in messages]
 
 
 def _unique_items(items: Any) -> list[dict[str, Any]]:

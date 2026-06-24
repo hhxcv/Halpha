@@ -38,14 +38,21 @@ def insufficient_strategy_run(
     minimum_rows: int,
     uncertainty: str,
 ) -> dict[str, Any]:
-    item = warning(
-        "insufficient_ohlcv_rows",
-        (
-            f"{view.get('source')} {view.get('symbol')} {view.get('timeframe')} has "
-            f"{len(rows)} OHLCV rows; {strategy_name} requires at least {minimum_rows} rows."
-        ),
-        source="data_quality",
-    )
+    if len(rows) < minimum_rows:
+        item = warning(
+            "insufficient_ohlcv_rows",
+            (
+                f"{view.get('source')} {view.get('symbol')} {view.get('timeframe')} has "
+                f"{len(rows)} OHLCV rows; {strategy_name} requires at least {minimum_rows} rows."
+            ),
+            source="data_quality",
+        )
+    else:
+        item = warning(
+            "degraded_ohlcv_quality",
+            _view_quality_message(view),
+            source="data_quality",
+        )
     return strategy_run_record(
         strategy=strategy,
         view=view,
@@ -68,4 +75,16 @@ def insufficient_strategy_run(
         },
         warnings=[item],
         error=None,
+    )
+
+
+def _view_quality_message(view: dict[str, Any]) -> str:
+    warnings = view.get("warnings")
+    if isinstance(warnings, list):
+        for item in warnings:
+            if isinstance(item, str) and item:
+                return item
+    return (
+        f"{view.get('source')} {view.get('symbol')} {view.get('timeframe')} "
+        "OHLCV input view has degraded continuity or freshness."
     )

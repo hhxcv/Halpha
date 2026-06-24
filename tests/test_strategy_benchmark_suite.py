@@ -115,6 +115,21 @@ def test_strategy_benchmark_suite_expands_configured_history_with_stable_order(t
         "storage_ref": "data/market/ohlcv/source=binance/symbol=BTCUSDT/timeframe=1d",
         "included_columns": ["open_time", "open", "high", "low", "close", "volume"],
         "source_artifacts": ["data/market/metadata/ohlcv_sync_state.json"],
+        "quality_status": "ok",
+        "quality": {
+            "status": "ok",
+            "timeframe_duration_seconds": 86400,
+            "range_start": "2026-06-02T00:00:00Z",
+            "range_end": "2026-06-03T00:00:00Z",
+            "duplicate_open_time_count": 0,
+            "duplicate_open_time_samples": [],
+            "missing_interval_count": 0,
+            "missing_interval_samples": [],
+            "stale_latest_candle": False,
+            "freshness_reference_time": None,
+            "stale_after_open_time": None,
+            "stale_tolerance_seconds": None,
+        },
         "warnings": [],
         "errors": [],
     }
@@ -177,6 +192,36 @@ def test_strategy_benchmark_suite_supports_explicit_date_window(tmp_path: Path) 
     assert record["warnings"] == []
 
 
+def test_strategy_benchmark_suite_does_not_succeed_on_degraded_ohlcv_view(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=101),
+        ]
+    )
+
+    result = _run_until_benchmark_suite(
+        config,
+        config_path,
+        build_market_data_views_handler=_write_degraded_market_data_views,
+    )
+
+    record = _benchmark_suite(result)["benchmarks"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert record["status"] == "insufficient_data"
+    assert record["quality_status"] == "degraded"
+    assert "degraded_ohlcv_quality" in {item["code"] for item in record["warnings"]}
+    assert manifest["counts"]["strategy_benchmark_succeeded"] == 0
+    assert manifest["counts"]["strategy_benchmark_insufficient_data"] == 1
+
+
 def test_strategy_benchmark_suite_skips_when_quant_is_disabled(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, quant_enabled=False)
     config = load_config(config_path)
@@ -197,7 +242,12 @@ def test_strategy_benchmark_suite_skips_when_quant_is_disabled(tmp_path: Path) -
     assert _stage(manifest, "build_strategy_benchmark_suite")["artifacts"] == []
 
 
-def _run_until_benchmark_suite(config: dict[str, Any], config_path: Path):
+def _run_until_benchmark_suite(
+    config: dict[str, Any],
+    config_path: Path,
+    *,
+    build_market_data_views_handler=None,
+):
     return run_pipeline(
         config,
         config_path=config_path,
@@ -206,7 +256,7 @@ def _run_until_benchmark_suite(config: dict[str, Any], config_path: Path):
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
             "sync_ohlcv": _noop_stage,
-            "build_market_data_views": _noop_stage,
+            "build_market_data_views": build_market_data_views_handler or _noop_stage,
             "evaluate_quant_strategies": _noop_stage,
             "evaluate_strategy_evaluation": _noop_stage,
             "build_strategy_experiment": _noop_stage,
@@ -297,6 +347,41 @@ def _stage(manifest: dict[str, Any], name: str) -> dict[str, Any]:
 
 def _noop_stage(config, run) -> list[str]:
     return []
+
+
+def _write_degraded_market_data_views(config, run) -> list[str]:
+    payload = {
+        "artifact_type": "market_data_views",
+        "views": [
+            {
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+                "quality_status": "degraded",
+                "quality": {
+                    "status": "degraded",
+                    "timeframe_duration_seconds": 86400,
+                    "range_start": "2026-06-01T00:00:00Z",
+                    "range_end": "2026-06-02T00:00:00Z",
+                    "duplicate_open_time_count": 0,
+                    "duplicate_open_time_samples": [],
+                    "missing_interval_count": 0,
+                    "missing_interval_samples": [],
+                    "stale_latest_candle": True,
+                    "freshness_reference_time": "2026-06-05T00:00:00Z",
+                    "stale_after_open_time": "2026-06-04T00:00:00Z",
+                    "stale_tolerance_seconds": 172800,
+                },
+                "warnings": [
+                    "binance BTCUSDT 1d latest OHLCV candle is stale: "
+                    "2026-06-02T00:00:00Z at 2026-06-05T00:00:00Z."
+                ],
+            }
+        ],
+    }
+    (run.raw_dir / "market_data_views.json").write_text(json.dumps(payload), encoding="utf-8")
+    run.manifest["artifacts"]["market_data_views"] = "raw/market_data_views.json"
+    return ["raw/market_data_views.json"]
 
 
 def _record(

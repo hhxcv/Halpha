@@ -131,16 +131,25 @@ def test_cli_experiment_runs_candidates_against_benchmark_suite(
 def test_cli_experiment_records_failed_evaluation_without_stopping(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config_path = _write_config(tmp_path, symbols=["BTCUSDT"], lookback=2)
     store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
     store.write_records(
         [
             _record(symbol="BTCUSDT", open_time="2026-06-01T00:00:00Z", close=100),
-            _record(symbol="BTCUSDT", open_time="2026-06-02T00:00:00Z", close=0),
+            _record(symbol="BTCUSDT", open_time="2026-06-02T00:00:00Z", close=102),
         ]
     )
     output_dir = tmp_path / "experiments"
+
+    def fail_single_window(*args, **kwargs):
+        raise ValueError("forced strategy evaluation failure.")
+
+    monkeypatch.setattr(
+        "halpha.strategy.strategy_experiment.evaluate_single_window_backtest",
+        fail_single_window,
+    )
 
     exit_code = main(["experiment", "--config", str(config_path), "--output-dir", str(output_dir)])
 
@@ -154,17 +163,18 @@ def test_cli_experiment_records_failed_evaluation_without_stopping(
     assert experiment["coverage"]["evaluations_failed"] == 1
     assert experiment["candidates"][0]["status"] == "failed"
     assert evaluation["status"] == "failed"
-    assert evaluation["single_window"]["errors"][0] == {
+    assert evaluation["single_window"] == {}
+    assert evaluation["errors"][0] == {
         "error_type": "ValueError",
-        "message": "close must be a positive number for strategy evaluation.",
-        "stage": "strategy_evaluation.single_window",
+        "message": "forced strategy evaluation failure.",
+        "stage": "strategy_experiment",
     }
     assert manifest["failures"] == [
         {
             "strategy_name": "tsmom_vol_scaled",
             "benchmark_id": evaluation["benchmark_id"],
             "error_type": "ValueError",
-            "message": "close must be a positive number for strategy evaluation.",
+            "message": "forced strategy evaluation failure.",
         }
     ]
 

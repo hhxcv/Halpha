@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from halpha.market.ohlcv_quality import ohlcv_series_quality, quality_warning_messages
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
@@ -26,11 +27,18 @@ def build_market_data_views(
     if not market.get("enabled") or not isinstance(ohlcv, dict):
         run.manifest["counts"]["market_data_views"] = 0
         run.manifest["counts"]["market_data_views_insufficient_data"] = 0
+        run.manifest["counts"]["market_data_views_degraded"] = 0
+        run.manifest["counts"]["market_data_views_stale"] = 0
+        run.manifest["counts"]["market_data_view_missing_intervals"] = 0
         return []
 
     source = str(market["source"])
     storage_dir = _storage_dir(ohlcv, run.config_path)
     base = runtime_root(run.config_path)
+    created_at = _format_utc(now)
+    quality_reference_time = (
+        created_at if now is not None or isinstance(run.manifest.get("ohlcv_sync"), dict) else None
+    )
     store = OHLCVParquetStore(storage_dir, run_output_dir=run.run_dir.parent)
     views = []
     try:
@@ -45,6 +53,7 @@ def build_market_data_views(
                         timeframe=timeframe,
                         lookback=_configured_lookback(ohlcv, timeframe),
                         config_base=base,
+                        quality_reference_time=quality_reference_time,
                     )
                 )
     except OHLCVStoreError as exc:
@@ -53,7 +62,7 @@ def build_market_data_views(
     artifact = {
         "schema_version": VIEW_SCHEMA_VERSION,
         "artifact_type": "market_data_views",
-        "created_at": _format_utc(now),
+        "created_at": created_at,
         "source_artifacts": [_sync_state_artifact(storage_dir, run)],
         "views": views,
     }
@@ -62,6 +71,19 @@ def build_market_data_views(
     run.manifest["counts"]["market_data_views"] = len(views)
     run.manifest["counts"]["market_data_views_insufficient_data"] = sum(
         1 for view in views if view["insufficient_data"]
+    )
+    run.manifest["counts"]["market_data_views_degraded"] = sum(
+        1 for view in views if view.get("quality_status") == "degraded"
+    )
+    run.manifest["counts"]["market_data_views_stale"] = sum(
+        1
+        for view in views
+        if isinstance(view.get("quality"), dict) and view["quality"].get("stale_latest_candle")
+    )
+    run.manifest["counts"]["market_data_view_missing_intervals"] = sum(
+        int(view.get("quality", {}).get("missing_interval_count") or 0)
+        for view in views
+        if isinstance(view.get("quality"), dict)
     )
     return [MARKET_DATA_VIEWS_ARTIFACT]
 
@@ -103,21 +125,40 @@ def _view_record(
     timeframe: str,
     lookback: int,
     config_base: Path,
+    quality_reference_time: str | None,
 ) -> dict[str, Any]:
     records = store.read_records(source=source, symbol=symbol, timeframe=timeframe)
     window = records[-lookback:] if records else []
     row_count = len(window)
     latest = window[-1]["open_time"] if window else None
-    insufficient = row_count < lookback
+    quality_window = _quality_window(
+        store.read_records(source=source, symbol=symbol, timeframe=timeframe, deduplicate=False),
+        start=window[0]["open_time"] if window else None,
+        end=latest,
+    )
+    quality = ohlcv_series_quality(quality_window, timeframe=timeframe, now=quality_reference_time)
+    quality_status = str(quality["status"])
+    insufficient_row_count = row_count < lookback
+    insufficient = insufficient_row_count or quality_status == "degraded"
     warnings = []
-    if insufficient:
+    if insufficient_row_count:
         warnings.append(
             f"{source} {symbol} {timeframe} has {row_count} OHLCV rows, "
             f"below configured lookback {lookback}."
         )
+    warnings.extend(
+        quality_warning_messages(source=source, symbol=symbol, timeframe=timeframe, quality=quality)
+    )
+    if insufficient_row_count:
+        status = "insufficient_data"
+    elif quality_status == "degraded":
+        status = "degraded"
+    else:
+        status = "succeeded"
 
     return {
         "view_id": _view_id(source, symbol, timeframe, latest),
+        "status": status,
         "source": source,
         "symbol": symbol,
         "timeframe": timeframe,
@@ -129,8 +170,21 @@ def _view_record(
         "storage_ref": _storage_ref(storage_dir, source, symbol, timeframe, config_base),
         "included_columns": list(VIEW_INCLUDED_COLUMNS),
         "insufficient_data": insufficient,
+        "quality_status": quality_status,
+        "quality": quality,
         "warnings": warnings,
     }
+
+
+def _quality_window(
+    records: list[dict[str, Any]],
+    *,
+    start: str | None,
+    end: str | None,
+) -> list[dict[str, Any]]:
+    if not start or not end:
+        return []
+    return [record for record in records if start <= record["open_time"] <= end]
 
 
 def _view_id(source: str, symbol: str, timeframe: str, latest: str | None) -> str:

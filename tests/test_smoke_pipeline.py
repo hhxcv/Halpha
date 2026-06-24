@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -928,6 +928,7 @@ def _market_payload(symbol: str) -> dict:
 def _ohlcv_records(*, symbol: str, timeframe: str, limit: int) -> list[dict]:
     base_close = 100.0 if symbol == "BTCUSDT" else 50.0
     base_volume = 10.0 if timeframe == "1d" else 20.0
+    open_times = _ohlcv_open_times(timeframe, limit)
     records = []
     for index in range(limit):
         close = base_close + index
@@ -936,7 +937,7 @@ def _ohlcv_records(*, symbol: str, timeframe: str, limit: int) -> list[dict]:
                 "source": "binance",
                 "symbol": symbol,
                 "timeframe": timeframe,
-                "open_time": _ohlcv_open_time(timeframe, index),
+                "open_time": open_times[index],
                 "open": close - 1,
                 "high": close + 2,
                 "low": close - 2,
@@ -948,12 +949,25 @@ def _ohlcv_records(*, symbol: str, timeframe: str, limit: int) -> list[dict]:
     return records
 
 
-def _ohlcv_open_time(timeframe: str, index: int) -> str:
+def _ohlcv_open_times(timeframe: str, limit: int) -> list[str]:
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     if timeframe == "1d":
-        day = 1 + index
-        return f"2026-06-{day:02d}T00:00:00Z"
-    hour = index
-    return f"2026-06-05T{hour:02d}:00:00Z"
+        latest = datetime.combine(
+            (now - timedelta(days=1)).date(),
+            datetime.min.time(),
+            tzinfo=timezone.utc,
+        )
+        start = latest - timedelta(days=limit - 1)
+        return [
+            (start + timedelta(days=index)).isoformat().replace("+00:00", "Z")
+            for index in range(limit)
+        ]
+    latest = now - timedelta(hours=1)
+    start = latest - timedelta(hours=limit - 1)
+    return [
+        (start + timedelta(hours=index)).isoformat().replace("+00:00", "Z")
+        for index in range(limit)
+    ]
 
 
 def _rss_payload() -> bytes:

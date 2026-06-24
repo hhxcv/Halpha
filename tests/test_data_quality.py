@@ -166,6 +166,62 @@ def test_data_quality_summary_records_partial_collection_and_optional_skips(tmp_
     assert _check(summary, "partial_collection")["status"] == "degraded"
 
 
+def test_data_quality_summary_reports_ohlcv_view_continuity_and_freshness(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    run = _run_context(tmp_path, config_path)
+    _write_market_raw({}, run)
+    run.manifest["ohlcv_sync"] = {"status": "succeeded", "warnings": [], "errors": []}
+    run.manifest["counts"]["market_data_views_insufficient_data"] = 1
+    write_json(
+        run.raw_dir / "market_data_views.json",
+        {
+            "artifact_type": "market_data_views",
+            "views": [
+                {
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "status": "degraded",
+                    "quality_status": "degraded",
+                    "warnings": ["binance BTCUSDT 1d is missing 1 expected OHLCV interval(s)."],
+                    "quality": {
+                        "status": "degraded",
+                        "stale_latest_candle": True,
+                        "duplicate_open_time_count": 1,
+                        "duplicate_open_time_samples": [
+                            {"open_time": "2026-06-03T00:00:00Z", "duplicate_count": 1}
+                        ],
+                        "missing_interval_count": 1,
+                        "missing_interval_samples": [
+                            {
+                                "after_open_time": "2026-06-01T00:00:00Z",
+                                "before_open_time": "2026-06-03T00:00:00Z",
+                                "expected_next_open_time": "2026-06-02T00:00:00Z",
+                                "missing_intervals": 1,
+                            }
+                        ],
+                    },
+                }
+            ],
+        },
+    )
+
+    build_data_quality_summary(_config(text_enabled=False), run, now="2026-06-05T00:00:00Z")
+
+    ohlcv = _check(_summary(run.analysis_dir), "ohlcv_store")
+    assert ohlcv["status"] == "degraded"
+    assert ohlcv["details"]["insufficient_views"] == 1
+    assert ohlcv["details"]["degraded_views"] == 1
+    assert ohlcv["details"]["stale_views"] == 1
+    assert ohlcv["details"]["duplicate_open_times"] == 1
+    assert ohlcv["details"]["missing_intervals"] == 1
+    assert ohlcv["details"]["quality_samples"]["missing_intervals"][0]["expected_next_open_time"] == (
+        "2026-06-02T00:00:00Z"
+    )
+
+
 def test_data_quality_summary_includes_final_structured_artifact_checks_ok(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     run = _run_context(tmp_path, config_path)

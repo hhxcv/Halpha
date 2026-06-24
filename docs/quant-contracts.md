@@ -531,6 +531,7 @@ View record contract:
 ```json
 {
   "view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+  "status": "succeeded",
   "source": "binance",
   "symbol": "BTCUSDT",
   "timeframe": "1d",
@@ -549,6 +550,21 @@ View record contract:
     "volume"
   ],
   "insufficient_data": false,
+  "quality_status": "ok",
+  "quality": {
+    "status": "ok",
+    "timeframe_duration_seconds": 86400,
+    "range_start": "2025-01-22T00:00:00Z",
+    "range_end": "2026-06-05T00:00:00Z",
+    "duplicate_open_time_count": 0,
+    "duplicate_open_time_samples": [],
+    "missing_interval_count": 0,
+    "missing_interval_samples": [],
+    "stale_latest_candle": false,
+    "freshness_reference_time": "2026-06-06T00:00:00Z",
+    "stale_after_open_time": "2026-06-07T00:00:00Z",
+    "stale_tolerance_seconds": 172800
+  },
   "warnings": []
 }
 ```
@@ -561,6 +577,10 @@ Rules:
 - Configured lookback defines the current-run data view window, not the shared storage retention policy.
 - Shared storage may retain more historical rows than the configured lookback so later runs can reuse history.
 - If data is insufficient, record `insufficient_data: true` and an actionable warning.
+- Views validate supported OHLCV timeframe continuity and freshness for `1h` and `1d`.
+- Missing intervals, duplicate `open_time` values, or stale latest candles set `quality_status: degraded`.
+- Degraded OHLCV quality must keep `insufficient_data: true` so downstream strategy runs do not report ordinary success from degraded input.
+- Quality samples are bounded and diagnostic; views must not fill missing candles or rewrite raw evidence.
 
 ## Strategy Benchmark Suite Contract
 
@@ -628,6 +648,21 @@ Benchmark record contract:
   "source_artifacts": [
     "data/market/metadata/ohlcv_sync_state.json"
   ],
+  "quality_status": "ok",
+  "quality": {
+    "status": "ok",
+    "timeframe_duration_seconds": 86400,
+    "range_start": "2025-01-22T00:00:00Z",
+    "range_end": "2026-06-05T00:00:00Z",
+    "duplicate_open_time_count": 0,
+    "duplicate_open_time_samples": [],
+    "missing_interval_count": 0,
+    "missing_interval_samples": [],
+    "stale_latest_candle": false,
+    "freshness_reference_time": null,
+    "stale_after_open_time": null,
+    "stale_tolerance_seconds": null
+  },
   "warnings": [],
   "errors": []
 }
@@ -639,6 +674,7 @@ Rules:
 - Ordering must be deterministic by source, symbol, timeframe, and window identity.
 - Supported window selections are configured lookback, explicit latest lookback, and explicit date window.
 - Missing or too-short local history must produce `insufficient_data` with warnings, not fake success.
+- Degraded OHLCV quality from `raw/market_data_views.json` must produce `insufficient_data` with warnings, not fake success.
 - Benchmark output remains Halpha-owned JSON. Strategy experiments may consume it later without exposing third-party portfolio objects.
 
 ## Strategy Research Run Artifact Contract

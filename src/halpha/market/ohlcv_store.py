@@ -9,6 +9,7 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from halpha.market.ohlcv_quality import ohlcv_record_invariant_errors
 from halpha.storage import write_json
 
 
@@ -72,7 +73,14 @@ class OHLCVParquetStore:
 
         return self._write_metadata()
 
-    def read_records(self, *, source: str, symbol: str, timeframe: str) -> list[dict[str, Any]]:
+    def read_records(
+        self,
+        *,
+        source: str,
+        symbol: str,
+        timeframe: str,
+        deduplicate: bool = True,
+    ) -> list[dict[str, Any]]:
         group_dir = self._group_dir(source, symbol, timeframe)
         if not group_dir.exists():
             return []
@@ -80,7 +88,9 @@ class OHLCVParquetStore:
         records: list[dict[str, Any]] = []
         for parquet_file in sorted(group_dir.rglob("*.parquet")):
             records.extend(_read_parquet_records(parquet_file))
-        return _sort_records(_deduplicate_records(records))
+        if deduplicate:
+            return _sort_records(_deduplicate_records(records))
+        return _sort_records(records)
 
     def summarize(self) -> dict[str, Any]:
         records = []
@@ -148,6 +158,9 @@ def _normalize_record(record: dict[str, Any]) -> dict[str, Any]:
     for field in ("open", "high", "low", "close", "volume"):
         normalized[field] = _require_number(record[field], field)
     normalized["fetched_at"] = _format_iso8601_utc(record["fetched_at"], "fetched_at")
+    invariant_errors = ohlcv_record_invariant_errors(normalized)
+    if invariant_errors:
+        raise OHLCVStoreError(invariant_errors[0])
     return normalized
 
 
