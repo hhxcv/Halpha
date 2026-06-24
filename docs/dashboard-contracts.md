@@ -36,8 +36,9 @@ Primary sources:
 
 - `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
   foundation, current run-index projection, and dashboard command-job
-  lifecycle plus daily report schedule configuration and dispatch history.
-  Monitor consumers are not migrated to their own state domain yet.
+  lifecycle plus daily report schedule configuration, dispatch history,
+  Dashboard service lifecycle, and Dashboard UI preferences. Monitor consumers
+  are not migrated to their own state domain yet.
 - `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
   Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run
@@ -52,17 +53,19 @@ Primary sources:
   reusable local stores and metadata.
 - `runs/monitor/`: immutable monitor cycle manifests.
 - `.halpha/state.sqlite`: run index, dashboard jobs, daily report schedule
-  dispatches, monitor cycle indexes, alert archive records, cooldown state, and
-  monitor health query state.
+  dispatches, monitor cycle indexes, alert archive records, cooldown state,
+  monitor health query state, Dashboard service lifecycle, and Dashboard UI
+  preference state.
 - `runs/workbench/latest/`: bounded delivery snapshot summaries and local
   indexes for inspection and recovery fallback, not replacements for dashboard
   views.
 - `runs/strategy_backtests/`, `runs/strategy_experiments/`, and
   `runs/text_intelligence/`: standalone command outputs.
 
-Dashboard runtime state may record UI-triggered job and schedule state. That
-state is control and delivery state only. It must not override or mutate
-product artifacts as research evidence.
+Dashboard runtime state may record service lifecycle, selected-config
+preference, UI-triggered job, and schedule state. That state is control and
+delivery state only. It must not override or mutate product artifacts as
+research evidence.
 
 Dashboard read models, overview cards, health summaries, and latest-run
 selections are derived views. They must be rebuilt from authoritative run
@@ -75,6 +78,10 @@ Start the dashboard with:
 
 ```bash
 python -m halpha dashboard
+python -m halpha dashboard start
+python -m halpha dashboard status
+python -m halpha dashboard stop
+python -m halpha dashboard restart
 python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 ```
@@ -83,32 +90,23 @@ The dashboard service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
 `--config` is optional for dashboard startup. If omitted, startup loads the
-last selected dashboard config from local dashboard state when that config is
+last selected dashboard config from `.halpha/state.sqlite` when that config is
 available and valid. If no config is selected or the persisted selection no
 longer validates, the dashboard starts in an explicit `unconfigured` state.
 Unconfigured data APIs must return no-data payloads instead of guessing a
 runtime directory. The Settings view can load or switch the active config; a
 successful selection updates the in-process dashboard config and records the
-last selected config locally.
+last selected config in runtime UI preference state.
 
-Dashboard startup writes local service state:
-
-```text
-.halpha/dashboard/service_state.json
-.halpha/dashboard/selected_config.json
-```
-
-Before binding, current dashboard startup checks the requested local endpoint.
-Current implemented duplicate-start behavior can stop a matching Halpha
-dashboard backend for the same local port before starting a new service. This
-is current legacy behavior, not the target lifecycle contract. Target duplicate
-start must return the existing matching dashboard instance. Restart must be an
-explicit action. If the port is occupied by a non-Halpha or unresponsive local
-service, startup must fail with an actionable error and must not kill the
-unrelated process.
-The shared resident-service lifecycle controller and runtime-state schema are
-implemented for `dashboard`, `monitor`, and `schedule`; this dashboard startup
-path has not adopted that controller yet.
+Dashboard startup uses the shared resident-service lifecycle controller in
+`.halpha/state.sqlite`; it does not write
+`.halpha/dashboard/service_state.json` or `.halpha/dashboard/selected_config.json`.
+Before binding, startup checks the requested local endpoint. Duplicate start for
+the same endpoint returns the existing matching dashboard instance. A
+conflicting endpoint/runtime setting returns an explicit conflict and does not
+alter the running service. Restart is an explicit stop plus start. If the port
+is occupied by a non-Halpha or unresponsive local service, startup fails with an
+actionable error and must not kill the unrelated process.
 
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,

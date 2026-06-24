@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
+from hashlib import sha256
 import json
-import os
 from pathlib import Path
-import signal
 import socket
 import subprocess
 import sys
-from threading import RLock
+from threading import Event, RLock, Thread
 import time
-from typing import Any
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -30,7 +29,6 @@ from halpha.dashboard.jobs import DashboardJobManager
 from halpha.dashboard.intelligence import dashboard_text_intelligence
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
-from halpha.dashboard.paths import dashboard_control_path
 from halpha.dashboard.runs import dashboard_run_detail, dashboard_runs
 from halpha.dashboard.schedule import DashboardScheduleManager
 from halpha.dashboard.settings import (
@@ -40,20 +38,23 @@ from halpha.dashboard.settings import (
     dashboard_save_config_profile,
     sanitize_dashboard_message,
 )
+from halpha.dashboard.state import read_dashboard_selected_config_state, write_dashboard_selected_config_state
 from halpha.dashboard.strategy import dashboard_strategy_research
-from halpha.dashboard.time import utc_now_timestamp
 from halpha.dashboard.ui import dashboard_index_html
-from halpha.storage import read_json_object, write_json
+from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
+from halpha.storage import artifact_base
 
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
 DASHBOARD_SERVICE_NAME = "halpha_dashboard"
-DASHBOARD_SERVICE_SCHEMA_VERSION = 1
+DASHBOARD_SERVICE_ROLE = "dashboard"
 DASHBOARD_HEALTH_TIMEOUT_SECONDS = 0.75
 DASHBOARD_RESTART_WAIT_SECONDS = 5.0
 DASHBOARD_RESTART_POLL_SECONDS = 0.1
+DASHBOARD_START_WAIT_SECONDS = 10.0
+DASHBOARD_HEARTBEAT_SECONDS = 2.0
 NO_STORE_HEADERS = {
     "Cache-Control": "no-store, max-age=0",
     "Pragma": "no-cache",
@@ -125,7 +126,7 @@ def load_dashboard_startup_config(config_arg: str | None) -> DashboardStartupCon
         write_dashboard_selected_config_state(config_path)
         return DashboardStartupConfig(config=config, config_path=config_path, source="explicit", warnings=[])
 
-    state, error = read_json_object(_dashboard_selected_config_state_path())
+    state, error = read_dashboard_selected_config_state()
     if error:
         return DashboardStartupConfig(config=None, config_path=None, source="none", warnings=[])
     raw_path = state.get("config_path")
@@ -147,24 +148,6 @@ def load_dashboard_startup_config(config_arg: str | None) -> DashboardStartupCon
             warnings=[f"last selected dashboard config could not be loaded: {sanitize_dashboard_message(str(exc), config_path=config_path)}"],
         )
     return DashboardStartupConfig(config=config, config_path=config_path, source="persisted", warnings=[])
-
-
-def write_dashboard_selected_config_state(config_path: Path) -> None:
-    write_json(
-        _dashboard_selected_config_state_path(),
-        {
-            "schema_version": 1,
-            "artifact_type": "dashboard_selected_config_state",
-            "status": "selected",
-            "config_path": str(config_path),
-            "config": _dashboard_config_status(config_path),
-            "updated_at": utc_now_timestamp(),
-        },
-    )
-
-
-def _dashboard_selected_config_state_path() -> Path:
-    return dashboard_control_path("selected_config.json")
 
 
 def _select_dashboard_config(context: DashboardConfigContext, *, request: dict[str, Any]) -> dict[str, Any]:
@@ -237,6 +220,7 @@ def create_dashboard_app(
     config_path: Path | None = None,
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
+    service_lifecycle: Callable[[], dict[str, Any]] | None = None,
 ) -> Any:
     try:
         from fastapi import Body, FastAPI, Response
@@ -288,10 +272,11 @@ def create_dashboard_app(
     @app.get("/api/health")
     def health_endpoint() -> dict[str, Any]:
         active = context.active()
+        lifecycle = service_lifecycle() if service_lifecycle is not None else _unmanaged_dashboard_lifecycle()
         if active is None:
-            return dashboard_health(None, config_path=None, host=host, port=port)
+            return dashboard_health(None, config_path=None, host=host, port=port, lifecycle=lifecycle)
         active_config, active_config_path = active
-        return dashboard_health(active_config, config_path=active_config_path, host=host, port=port)
+        return dashboard_health(active_config, config_path=active_config_path, host=host, port=port, lifecycle=lifecycle)
 
     @app.get("/api/config/profile")
     def config_profile_endpoint() -> dict[str, Any]:
@@ -496,57 +481,450 @@ def run_dashboard_service(
     config_path: Path | None = None,
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
+    restart_from_instance_id: str | None = None,
 ) -> None:
     try:
         import uvicorn
     except ModuleNotFoundError as exc:
         raise DashboardError("Uvicorn is required to run the dashboard.") from exc
 
-    app = create_dashboard_app(config, config_path=config_path, host=host, port=port)
-    _prepare_dashboard_service_endpoint(config_path=config_path, host=host, port=port)
-    _write_dashboard_service_state(config_path=config_path, host=host, port=port)
+    validate_dashboard_host(host)
+    validate_dashboard_port(port)
+    repository = _dashboard_lifecycle_repository(config_path)
+    config_digest = _dashboard_service_config_digest(host=host, port=port)
+    config_ref = _dashboard_service_config_ref(config_path)
+    if restart_from_instance_id:
+        result, ownership = repository.attempt_restart_ownership(
+            DASHBOARD_SERVICE_ROLE,
+            previous_instance_id=restart_from_instance_id,
+            config_ref=config_ref,
+            config_digest=config_digest,
+            endpoint=_dashboard_endpoint_metadata(host, port),
+        )
+    else:
+        result, ownership = repository.attempt_start_ownership(
+            DASHBOARD_SERVICE_ROLE,
+            config_ref=config_ref,
+            config_digest=config_digest,
+            endpoint=_dashboard_endpoint_metadata(host, port),
+        )
+    if ownership is None or result.instance_id is None:
+        raise DashboardError(_dashboard_lifecycle_start_message(result))
+
+    app = create_dashboard_app(
+        config,
+        config_path=config_path,
+        host=host,
+        port=port,
+        service_lifecycle=lambda: _dashboard_lifecycle_payload(
+            repository.inspect(DASHBOARD_SERVICE_ROLE),
+            expected_instance_id=result.instance_id,
+        ),
+    )
+    server = uvicorn.Server(uvicorn.Config(app, host=host, port=port))
+    stop_event = Event()
+    terminal_status = "stopped"
+    terminal_error: str | None = None
     try:
-        uvicorn.run(app, host=host, port=port)
+        repository.register_started(
+            DASHBOARD_SERVICE_ROLE,
+            instance_id=result.instance_id,
+            endpoint=_dashboard_endpoint_metadata(host, port),
+        )
+        heartbeat_thread = Thread(
+            target=_run_dashboard_heartbeat_loop,
+            args=(repository, result.instance_id, server, stop_event),
+            name="halpha-dashboard-heartbeat",
+            daemon=True,
+        )
+        heartbeat_thread.start()
+        server.run()
+    except BaseException as exc:
+        terminal_status = "failed"
+        terminal_error = str(exc)
+        raise
     finally:
-        _clear_dashboard_service_state(config_path=config_path, host=host, port=port, pid=os.getpid())
+        stop_event.set()
+        if "heartbeat_thread" in locals():
+            heartbeat_thread.join(timeout=3)
+        with suppress(Exception):
+            repository.record_terminal_exit(
+                DASHBOARD_SERVICE_ROLE,
+                instance_id=result.instance_id,
+                status=terminal_status,
+                exit_code=0 if terminal_status == "stopped" else 1,
+                error=terminal_error,
+            )
+        ownership.release()
 
 
-def _prepare_dashboard_service_endpoint(*, config_path: Path | None, host: str, port: int) -> None:
-    if _dashboard_endpoint_can_bind(host, port):
-        _discard_stale_dashboard_service_state(config_path=config_path, host=host, port=port)
-        return
+def start_dashboard_service(
+    config_arg: str | None,
+    *,
+    host: str = DEFAULT_DASHBOARD_HOST,
+    port: int = DEFAULT_DASHBOARD_PORT,
+    restart_from_instance_id: str | None = None,
+) -> dict[str, Any]:
+    startup = load_dashboard_startup_config(config_arg)
+    validate_dashboard_host(host)
+    validate_dashboard_port(port)
+    repository = _dashboard_lifecycle_repository(startup.config_path)
+    config_digest = _dashboard_service_config_digest(host=host, port=port)
+    endpoint_can_bind = _dashboard_endpoint_can_bind(host, port)
+    lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+    terminal_restart_instance_id = restart_from_instance_id or _terminal_dashboard_instance_id(lifecycle)
+    blocking = _dashboard_start_blocking_result(
+        lifecycle,
+        host=host,
+        port=port,
+        config_digest=config_digest,
+        endpoint_can_bind=endpoint_can_bind,
+    )
+    if blocking is not None:
+        if blocking["status"] == "existing":
+            return blocking
+        if blocking["status"] == "starting":
+            return _wait_for_existing_dashboard_service(
+                repository,
+                host=host,
+                port=port,
+                timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
+            )
+        raise DashboardError(str(blocking["reason"]))
 
-    health = _read_dashboard_endpoint_health(host, port)
-    if not _is_halpha_dashboard_health(health):
+    if not endpoint_can_bind:
+        health = _read_dashboard_endpoint_health(host, port)
+        if _is_halpha_dashboard_health(health):
+            existing = _dashboard_existing_result_from_health(health, repository=repository, host=host, port=port)
+            if existing is not None:
+                return existing
+            raise DashboardError(
+                f"a Halpha dashboard already responds on {host}:{port}, but shared lifecycle state does not match; "
+                "use dashboard status or stop before starting another service."
+            )
         raise DashboardError(
             f"dashboard port {port} on {host} is already in use by a non-Halpha or unresponsive local service; "
             "stop that service or choose a different --port."
         )
 
-    state_path = _dashboard_service_state_path(config_path)
-    state, error = read_json_object(state_path)
-    pid = _dashboard_service_state_pid(state)
-    if error or not _dashboard_service_state_matches_endpoint(state, host=host, port=port) or pid is None:
-        raise DashboardError(
-            f"a Halpha dashboard already responds on {host}:{port}, but its local service state is missing or "
-            "does not match this endpoint; stop the existing dashboard manually or choose a different --port."
-        )
-    if pid == os.getpid():
-        return
-    if not _dashboard_process_is_alive(pid):
-        with suppress(OSError):
-            state_path.unlink()
-        raise DashboardError(
-            f"a Halpha dashboard responds on {host}:{port}, but recorded process {pid} is not running; "
-            "stop the process using that port or choose a different --port."
-        )
+    process = _launch_dashboard_service_process(
+        config_arg,
+        host=host,
+        port=port,
+        restart_from_instance_id=terminal_restart_instance_id,
+    )
+    return _wait_for_dashboard_service_start(
+        process,
+        repository=repository,
+        host=host,
+        port=port,
+        timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
+    )
 
-    _terminate_dashboard_process(pid)
-    if not _wait_for_dashboard_endpoint_release(host, port):
-        raise DashboardError(
-            f"existing Halpha dashboard process {pid} did not release {host}:{port}; "
-            "stop it manually or choose a different --port."
-        )
+
+def dashboard_service_status(
+    config_arg: str | None,
+    *,
+    host: str = DEFAULT_DASHBOARD_HOST,
+    port: int = DEFAULT_DASHBOARD_PORT,
+) -> dict[str, Any]:
+    validate_dashboard_host(host)
+    validate_dashboard_port(port)
+    config_path = Path(config_arg) if config_arg else None
+    repository = _dashboard_lifecycle_repository(config_path)
+    lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+    health = _read_dashboard_endpoint_health(host, port)
+    return {
+        "status": lifecycle.status,
+        "instance_id": lifecycle.instance_id,
+        "pid": _dashboard_lifecycle_pid(lifecycle),
+        "endpoint": _dashboard_endpoint_metadata(host, port),
+        "health": "ok" if _is_halpha_dashboard_health(health) else "unavailable",
+        "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+    }
+
+
+def stop_dashboard_service(
+    config_arg: str | None,
+    *,
+    host: str = DEFAULT_DASHBOARD_HOST,
+    port: int = DEFAULT_DASHBOARD_PORT,
+) -> dict[str, Any]:
+    validate_dashboard_host(host)
+    validate_dashboard_port(port)
+    config_path = Path(config_arg) if config_arg else None
+    repository = _dashboard_lifecycle_repository(config_path)
+    lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+    if lifecycle.instance_id is None or lifecycle.status in {"not_found", "stale", "stopped", "failed", "crashed"}:
+        return {
+            "status": lifecycle.status,
+            "instance_id": lifecycle.instance_id,
+            "pid": _dashboard_lifecycle_pid(lifecycle),
+            "endpoint": _dashboard_endpoint_metadata(host, port),
+            "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        }
+    requested = repository.request_graceful_stop(DASHBOARD_SERVICE_ROLE, instance_id=lifecycle.instance_id)
+    stopped = _wait_for_dashboard_service_stop(
+        repository,
+        previous_instance_id=lifecycle.instance_id,
+        host=host,
+        port=port,
+        timeout_seconds=DASHBOARD_RESTART_WAIT_SECONDS,
+    )
+    if stopped is not None:
+        return stopped
+    return {
+        "status": "stop_requested",
+        "instance_id": lifecycle.instance_id,
+        "pid": _dashboard_lifecycle_pid(lifecycle),
+        "endpoint": _dashboard_endpoint_metadata(host, port),
+        "lifecycle": _dashboard_lifecycle_payload(requested),
+        "warnings": ["dashboard stop was requested, but the service has not exited yet."],
+    }
+
+
+def restart_dashboard_service(
+    config_arg: str | None,
+    *,
+    host: str = DEFAULT_DASHBOARD_HOST,
+    port: int = DEFAULT_DASHBOARD_PORT,
+) -> dict[str, Any]:
+    validate_dashboard_host(host)
+    validate_dashboard_port(port)
+    config_path = Path(config_arg) if config_arg else None
+    repository = _dashboard_lifecycle_repository(config_path)
+    lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+    restart_from_instance_id = lifecycle.instance_id
+    if lifecycle.status in {"running", "starting", "stop_requested", "unresponsive"} and lifecycle.instance_id:
+        stopped = stop_dashboard_service(config_arg, host=host, port=port)
+        if stopped.get("status") not in {"stopped", "failed", "crashed", "stale", "not_found"}:
+            return stopped
+    return start_dashboard_service(
+        config_arg,
+        host=host,
+        port=port,
+        restart_from_instance_id=restart_from_instance_id,
+    )
+
+
+def _run_dashboard_heartbeat_loop(
+    repository: ServiceLifecycleRepository,
+    instance_id: str,
+    server: Any,
+    stop_event: Event,
+) -> None:
+    while not stop_event.wait(DASHBOARD_HEARTBEAT_SECONDS):
+        with suppress(Exception):
+            repository.update_heartbeat(DASHBOARD_SERVICE_ROLE, instance_id=instance_id)
+        with suppress(Exception):
+            stop_request = repository.observe_stop_request(DASHBOARD_SERVICE_ROLE, instance_id=instance_id)
+            if stop_request.requested:
+                server.should_exit = True
+
+
+def _dashboard_lifecycle_repository(config_path: Path | None) -> ServiceLifecycleRepository:
+    return ServiceLifecycleRepository(runtime_root=artifact_base(config_path))
+
+
+def _dashboard_service_config_ref(config_path: Path | None) -> str:
+    return dashboard_config_ref(config_path) if config_path is not None else "dashboard-service-unconfigured"
+
+
+def _dashboard_service_config_digest(*, host: str, port: int) -> str:
+    material = f"dashboard-service-v1|host={host}|port={int(port)}"
+    return sha256(material.encode("utf-8")).hexdigest()
+
+
+def _dashboard_endpoint_metadata(host: str, port: int) -> dict[str, Any]:
+    return {"host": host, "port": int(port), "health_url": _dashboard_health_url(host, port)}
+
+
+def _terminal_dashboard_instance_id(lifecycle: ServiceLifecycleResult) -> str | None:
+    if lifecycle.status in {"stopped", "failed", "crashed"}:
+        return lifecycle.instance_id
+    return None
+
+
+def _dashboard_start_blocking_result(
+    lifecycle: ServiceLifecycleResult,
+    *,
+    host: str,
+    port: int,
+    config_digest: str,
+    endpoint_can_bind: bool,
+) -> dict[str, Any] | None:
+    if lifecycle.status in {"not_found", "stale", "stopped", "failed", "crashed"}:
+        return None
+    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
+    if lifecycle.status == "unresponsive":
+        return {
+            "status": "unresponsive",
+            "reason": "dashboard service lock is held but heartbeat is stale; stop or inspect it before starting another service.",
+            "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        }
+    if lifecycle.status not in {"running", "starting", "stop_requested"}:
+        return None
+    if not _dashboard_lifecycle_endpoint_matches(lifecycle, host=host, port=port) or state.get("config_digest") != config_digest:
+        return {
+            "status": "conflict",
+            "reason": "dashboard service is already active for a different endpoint or service configuration.",
+            "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        }
+    if lifecycle.status == "running" and endpoint_can_bind:
+        return {
+            "status": "unresponsive",
+            "reason": "dashboard lifecycle is running, but the configured endpoint is not responding.",
+            "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        }
+    if lifecycle.status == "starting":
+        return {
+            "status": "starting",
+            "reason": "dashboard service is already starting.",
+            "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        }
+    if lifecycle.status == "stop_requested":
+        return {
+            "status": "stop_requested",
+            "reason": "dashboard service is stopping; wait for it to exit before starting another service.",
+            "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        }
+    return _dashboard_service_result("existing", lifecycle=lifecycle, host=host, port=port)
+
+
+def _dashboard_lifecycle_endpoint_matches(lifecycle: ServiceLifecycleResult, *, host: str, port: int) -> bool:
+    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
+    endpoint = state.get("endpoint") if isinstance(state.get("endpoint"), dict) else {}
+    return endpoint.get("host") == host and endpoint.get("port") == int(port)
+
+
+def _dashboard_existing_result_from_health(
+    health: dict[str, Any] | None,
+    *,
+    repository: ServiceLifecycleRepository,
+    host: str,
+    port: int,
+) -> dict[str, Any] | None:
+    if not _is_halpha_dashboard_health(health):
+        return None
+    lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+    if lifecycle.instance_id is None or not _dashboard_lifecycle_endpoint_matches(lifecycle, host=host, port=port):
+        return None
+    return _dashboard_service_result("existing", lifecycle=lifecycle, host=host, port=port)
+
+
+def _launch_dashboard_service_process(
+    config_arg: str | None,
+    *,
+    host: str,
+    port: int,
+    restart_from_instance_id: str | None,
+) -> subprocess.Popen[Any]:
+    command = [sys.executable, "-m", "halpha", "dashboard", "service", "--host", host, "--port", str(port)]
+    if config_arg:
+        command.extend(["--config", config_arg])
+    if restart_from_instance_id:
+        command.extend(["--restart-from-instance-id", restart_from_instance_id])
+    kwargs: dict[str, Any] = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "cwd": Path.cwd(),
+    }
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+    else:
+        kwargs["start_new_session"] = True
+    return subprocess.Popen(command, **kwargs)
+
+
+def _wait_for_dashboard_service_start(
+    process: subprocess.Popen[Any],
+    *,
+    repository: ServiceLifecycleRepository,
+    host: str,
+    port: int,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        health = _read_dashboard_endpoint_health(host, port)
+        if _is_halpha_dashboard_health(health):
+            lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+            return _dashboard_service_result("started", lifecycle=lifecycle, host=host, port=port)
+        if process.poll() is not None:
+            raise DashboardError("dashboard service exited before the health endpoint became available.")
+        time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
+    raise DashboardError("dashboard service did not become healthy before the startup timeout.")
+
+
+def _wait_for_existing_dashboard_service(
+    repository: ServiceLifecycleRepository,
+    *,
+    host: str,
+    port: int,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        health = _read_dashboard_endpoint_health(host, port)
+        if _is_halpha_dashboard_health(health):
+            lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+            return _dashboard_service_result("existing", lifecycle=lifecycle, host=host, port=port)
+        time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
+    raise DashboardError("dashboard service is starting, but the health endpoint is not available yet.")
+
+
+def _wait_for_dashboard_service_stop(
+    repository: ServiceLifecycleRepository,
+    *,
+    previous_instance_id: str,
+    host: str,
+    port: int,
+    timeout_seconds: float,
+) -> dict[str, Any] | None:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+        if lifecycle.instance_id == previous_instance_id and lifecycle.status in {"stopped", "failed", "crashed", "stale"}:
+            return _dashboard_service_result(lifecycle.status, lifecycle=lifecycle, host=host, port=port)
+        if lifecycle.status == "stale" or _dashboard_endpoint_can_bind(host, port):
+            return _dashboard_service_result("stale", lifecycle=lifecycle, host=host, port=port)
+        time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
+    return None
+
+
+def _dashboard_service_result(
+    status: str,
+    *,
+    lifecycle: ServiceLifecycleResult,
+    host: str,
+    port: int,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "instance_id": lifecycle.instance_id,
+        "pid": _dashboard_lifecycle_pid(lifecycle),
+        "endpoint": _dashboard_endpoint_metadata(host, port),
+        "lifecycle": _dashboard_lifecycle_payload(lifecycle),
+        "warnings": [],
+        "errors": [],
+    }
+
+
+def _dashboard_lifecycle_pid(lifecycle: ServiceLifecycleResult) -> int | None:
+    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
+    pid = state.get("pid")
+    if isinstance(pid, bool):
+        return None
+    if isinstance(pid, int) and pid > 0:
+        return pid
+    return None
+
+
+def _dashboard_lifecycle_start_message(result: ServiceLifecycleResult) -> str:
+    if result.reason:
+        return result.reason
+    return f"dashboard service could not start because lifecycle status is {result.status}."
 
 
 def _dashboard_endpoint_can_bind(host: str, port: int) -> bool:
@@ -588,133 +966,13 @@ def _dashboard_health_url(host: str, port: int) -> str:
     return f"http://{url_host}:{port}/api/health"
 
 
-def _dashboard_service_state_path(config_path: Path | None) -> Path:
-    return dashboard_control_path("service_state.json")
-
-
-def _write_dashboard_service_state(*, config_path: Path | None, host: str, port: int) -> None:
-    now = utc_now_timestamp()
-    write_json(
-        _dashboard_service_state_path(config_path),
-        {
-            "artifact_type": "dashboard_service_state",
-            "schema_version": DASHBOARD_SERVICE_SCHEMA_VERSION,
-            "service": DASHBOARD_SERVICE_NAME,
-            "status": "running",
-            "pid": os.getpid(),
-            "host": host,
-            "port": port,
-            "started_at": now,
-            "updated_at": now,
-            "config": _dashboard_config_status(config_path),
-            "health_endpoint": _dashboard_health_url(host, port),
-        },
-    )
-
-
-def _clear_dashboard_service_state(*, config_path: Path | None, host: str, port: int, pid: int) -> None:
-    state_path = _dashboard_service_state_path(config_path)
-    state, error = read_json_object(state_path)
-    if error:
-        return
-    if _dashboard_service_state_pid(state) != pid:
-        return
-    if not _dashboard_service_state_matches_endpoint(state, host=host, port=port):
-        return
-    with suppress(OSError):
-        state_path.unlink()
-
-
-def _discard_stale_dashboard_service_state(*, config_path: Path | None, host: str, port: int) -> None:
-    state_path = _dashboard_service_state_path(config_path)
-    state, error = read_json_object(state_path)
-    if error or not _dashboard_service_state_matches_endpoint(state, host=host, port=port):
-        return
-    pid = _dashboard_service_state_pid(state)
-    if pid is None or _dashboard_process_is_alive(pid):
-        return
-    with suppress(OSError):
-        state_path.unlink()
-
-
-def _dashboard_service_state_matches_endpoint(state: dict[str, Any], *, host: str, port: int) -> bool:
-    state_host = str(state.get("host") or "")
-    return (
-        state.get("artifact_type") == "dashboard_service_state"
-        and state.get("service") == DASHBOARD_SERVICE_NAME
-        and state.get("port") == port
-        and state_host in LOCAL_DASHBOARD_HOSTS
-        and host in LOCAL_DASHBOARD_HOSTS
-    )
-
-
-def _dashboard_service_state_pid(state: dict[str, Any]) -> int | None:
-    pid = state.get("pid")
-    if isinstance(pid, bool):
-        return None
-    if isinstance(pid, int) and pid > 0:
-        return pid
-    return None
-
-
-def _dashboard_process_is_alive(pid: int) -> bool:
-    if sys.platform == "win32":
-        try:
-            result = subprocess.run(
-                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
-                capture_output=True,
-                text=True,
-                timeout=2,
-                check=False,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return False
-        stdout = (result.stdout or "").strip()
-        return result.returncode == 0 and str(pid) in stdout and "No tasks" not in stdout
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
-def _terminate_dashboard_process(pid: int) -> None:
-    if sys.platform == "win32":
-        try:
-            result = subprocess.run(
-                ["taskkill", "/PID", str(pid), "/T", "/F"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            raise DashboardError(f"existing Halpha dashboard process {pid} could not be stopped: {exc}.") from exc
-        if result.returncode != 0:
-            reason = (result.stderr or result.stdout or "taskkill failed").strip()
-            raise DashboardError(f"existing Halpha dashboard process {pid} could not be stopped: {reason}.")
-        return
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except OSError as exc:
-        raise DashboardError(f"existing Halpha dashboard process {pid} could not be stopped: {exc}.") from exc
-
-
-def _wait_for_dashboard_endpoint_release(host: str, port: int) -> bool:
-    deadline = time.monotonic() + DASHBOARD_RESTART_WAIT_SECONDS
-    while time.monotonic() < deadline:
-        if _dashboard_endpoint_can_bind(host, port):
-            return True
-        time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
-    return _dashboard_endpoint_can_bind(host, port)
-
-
 def dashboard_health(
     config: dict[str, Any] | None,
     *,
     config_path: Path | None,
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
+    lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     validate_dashboard_host(host)
     validate_dashboard_port(port)
@@ -726,6 +984,7 @@ def dashboard_health(
         "host": host,
         "port": port,
         "config": _dashboard_config_status(config_path),
+        "lifecycle": lifecycle if lifecycle is not None else _unmanaged_dashboard_lifecycle(),
         "features": {
             "overview_api": "available",
             "run_history_api": "available",
@@ -740,6 +999,32 @@ def dashboard_health(
             "job_runner": "available",
             "frontend_ui": "available",
         },
+    }
+
+
+def _unmanaged_dashboard_lifecycle() -> dict[str, Any]:
+    return {
+        "role": DASHBOARD_SERVICE_ROLE,
+        "status": "unmanaged",
+        "instance_id": None,
+        "owns_lock": False,
+        "heartbeat_at": None,
+    }
+
+
+def _dashboard_lifecycle_payload(result: ServiceLifecycleResult, *, expected_instance_id: str | None = None) -> dict[str, Any]:
+    state = result.state if isinstance(result.state, dict) else {}
+    instance_id = result.instance_id
+    return {
+        "role": DASHBOARD_SERVICE_ROLE,
+        "status": result.status,
+        "instance_id": instance_id,
+        "owns_lock": bool(result.owns_lock),
+        "expected_instance_match": expected_instance_id is None or instance_id == expected_instance_id,
+        "heartbeat_at": state.get("heartbeat_at") if isinstance(state.get("heartbeat_at"), str) else None,
+        "started_at": state.get("started_at") if isinstance(state.get("started_at"), str) else None,
+        "updated_at": state.get("updated_at") if isinstance(state.get("updated_at"), str) else None,
+        "stop_requested_at": state.get("stop_requested_at") if isinstance(state.get("stop_requested_at"), str) else None,
     }
 
 

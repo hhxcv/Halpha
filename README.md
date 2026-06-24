@@ -114,6 +114,9 @@ Run the local web dashboard:
 python -m halpha dashboard
 python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
+python -m halpha dashboard status
+python -m halpha dashboard stop
+python -m halpha dashboard restart
 ```
 
 The dashboard is the primary local user entry point and is local-only by
@@ -128,17 +131,13 @@ so a config can be loaded. A valid `--config` argument or Settings load records
 the last selected config under local dashboard state and later dashboard
 startups reuse it when it still validates.
 
-Dashboard startup records local service state under
-`.halpha/dashboard/service_state.json`. Current duplicate startup behavior can
-stop a matching existing Halpha dashboard backend for the same local port
-before starting the new service. The target shared lifecycle contract changes
-that behavior so duplicate start returns the existing matching instance and
-restart is explicit. If the port is occupied by a non-Halpha or unresponsive
-local service, startup fails with an actionable error instead of killing an
-unrelated process.
-The shared lifecycle controller and `.halpha/state.sqlite` schema for
-`dashboard`, `monitor`, and `schedule` exist, but Dashboard adopts that
-controller in a later service-specific change.
+Dashboard startup is managed through the shared resident-service lifecycle
+controller in `.halpha/state.sqlite`. Duplicate start for the same endpoint
+returns the existing matching Dashboard instance. A conflicting endpoint returns
+an explicit conflict, and restart is an explicit stop plus start. If the port is
+occupied by a non-Halpha or unresponsive local service, startup fails with an
+actionable error instead of killing an unrelated process. Dashboard no longer
+writes `.halpha/dashboard/service_state.json`.
 
 Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
 roots. Private values such as proxy URLs, credentials, tokens, private notes,
@@ -163,9 +162,10 @@ resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
 runtime state keeps the run index, dashboard command-job lifecycle, and daily
 report schedule dispatch state, monitor cycle indexes, alert archive records,
 cooldown state, monitor health query state, and shared resident-service
-lifecycle state in `.halpha/state.sqlite`; selected dashboard config remains
-local JSON. Dashboard read models, health summaries, workbench outputs, and
-latest selections are derived views, not parallel authorities.
+lifecycle state in `.halpha/state.sqlite`; selected dashboard config preference
+also lives in the runtime state store. Dashboard read models, health summaries,
+workbench outputs, and latest selections are derived views, not parallel
+authorities.
 
 Inspect the monitor command surface and validate local monitor configuration
 without running collection, pipeline stages, or Codex:
@@ -389,7 +389,7 @@ A successful configured run can write:
 - `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
 - `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
 - `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, dashboard command-job lifecycle metadata, daily report schedule dispatch metadata, and future migrated operational state.
+- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, dashboard command-job lifecycle metadata, daily report schedule dispatch metadata, dashboard UI preferences, resident-service lifecycle state, and future migrated operational state.
 - `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
 - `data/research/text_events/`: shared deduplicated text-event history.
 - `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.

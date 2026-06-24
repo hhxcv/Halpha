@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import sqlite3
 
@@ -12,6 +11,7 @@ from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, dashboard_health
 from halpha.dashboard.app import write_dashboard_selected_config_state
 from halpha.dashboard.runs import dashboard_runs
+from halpha.dashboard.state import read_dashboard_selected_config_state
 from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
 from halpha.monitor.state_store import MonitorArchivePersistence, MonitorStateRepository
@@ -24,6 +24,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture(autouse=True)
 def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
+
+
+def _dashboard_service_result(*, host: str, port: int, status: str = "started") -> dict[str, object]:
+    return {
+        "status": status,
+        "instance_id": "dashboard-test-instance",
+        "pid": 12345,
+        "endpoint": {"host": host, "port": port},
+        "warnings": [],
+        "errors": [],
+    }
 
 
 def test_dashboard_help_mentions_local_server(capsys) -> None:
@@ -45,16 +56,17 @@ def test_dashboard_command_starts_without_config(
 ) -> None:
     calls: list[dict] = []
 
-    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
-        calls.append({"config": config, "config_path": config_path, "host": host, "port": port})
+    def fake_start_dashboard_service(config_arg, *, host, port):  # noqa: ANN001
+        calls.append({"config_arg": config_arg, "host": host, "port": port})
+        return _dashboard_service_result(host=host, port=port)
 
-    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+    monkeypatch.setattr("halpha.cli.start_dashboard_service", fake_start_dashboard_service)
 
     exit_code = main(["dashboard", "--port", "8765"])
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert calls == [{"config": None, "config_path": None, "host": "127.0.0.1", "port": 8765}]
+    assert calls == [{"config_arg": None, "host": "127.0.0.1", "port": 8765}]
     assert "config: not configured" in output
     assert "Settings view" in output
 
@@ -67,16 +79,16 @@ def test_dashboard_command_loads_persisted_config(
     write_dashboard_selected_config_state(config_path)
     calls: list[dict] = []
 
-    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
-        calls.append({"config": config, "config_path": config_path, "host": host, "port": port})
+    def fake_start_dashboard_service(config_arg, *, host, port):  # noqa: ANN001
+        calls.append({"config_arg": config_arg, "host": host, "port": port})
+        return _dashboard_service_result(host=host, port=port)
 
-    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+    monkeypatch.setattr("halpha.cli.start_dashboard_service", fake_start_dashboard_service)
 
     exit_code = main(["dashboard"])
 
     assert exit_code == 0
-    assert calls[0]["config"]["run"]["output_dir"] == "runs"
-    assert calls[0]["config_path"] == config_path
+    assert calls == [{"config_arg": None, "host": "127.0.0.1", "port": 8765}]
 
 
 def test_dashboard_command_explicit_config_persists_selection(
@@ -86,18 +98,21 @@ def test_dashboard_command_explicit_config_persists_selection(
     config_path = _write_config(tmp_path)
     calls: list[dict] = []
 
-    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
-        calls.append({"config": config, "config_path": config_path, "host": host, "port": port})
+    def fake_start_dashboard_service(config_arg, *, host, port):  # noqa: ANN001
+        calls.append({"config_arg": config_arg, "host": host, "port": port})
+        return _dashboard_service_result(host=host, port=port)
 
-    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+    monkeypatch.setattr("halpha.cli.start_dashboard_service", fake_start_dashboard_service)
 
     exit_code = main(["dashboard", "--config", str(config_path)])
 
-    state = json.loads((tmp_path / ".halpha" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
+    state, error = read_dashboard_selected_config_state()
     assert exit_code == 0
-    assert calls[0]["config_path"] == config_path
+    assert error is None
+    assert calls[0]["config_arg"] == str(config_path)
     assert state["artifact_type"] == "dashboard_selected_config_state"
     assert state["config_path"] == str(config_path)
+    assert not (tmp_path / ".halpha" / "dashboard" / "selected_config.json").exists()
     assert not (tmp_path / "runs" / "dashboard").exists()
 
 
@@ -162,14 +177,16 @@ def test_dashboard_settings_can_select_active_config(tmp_path: Path) -> None:
     runs_response = client.get("/api/runs")
 
     selected = select_response.json()
-    persisted = json.loads((tmp_path / ".halpha" / "dashboard" / "selected_config.json").read_text(encoding="utf-8"))
+    persisted, error = read_dashboard_selected_config_state()
     assert select_response.status_code == 200
     assert selected["status"] == "succeeded"
+    assert error is None
     assert selected["profile"]["status"] == "available"
     assert health_response.json()["config"] == {"loaded": True, "ref": "<external-config>"}
     assert profile_response.json()["status"] == "available"
     assert runs_response.json()["status"] != "unconfigured"
     assert persisted["config_path"] == str(config_path)
+    assert not (tmp_path / ".halpha" / "dashboard" / "selected_config.json").exists()
     assert not (tmp_path / "runs" / "dashboard").exists()
 
 
@@ -1683,17 +1700,17 @@ def test_dashboard_command_loads_config_and_invokes_service(
     config_path = _write_config(tmp_path)
     calls: list[dict[str, object]] = []
 
-    def fake_run_dashboard_service(config, *, config_path, host, port):  # noqa: ANN001
+    def fake_start_dashboard_service(config_arg, *, host, port):  # noqa: ANN001
         calls.append(
             {
-                "config": config,
-                "config_path": config_path,
+                "config_arg": config_arg,
                 "host": host,
                 "port": port,
             }
         )
+        return _dashboard_service_result(host=host, port=port)
 
-    monkeypatch.setattr("halpha.cli.run_dashboard_service", fake_run_dashboard_service)
+    monkeypatch.setattr("halpha.cli.start_dashboard_service", fake_start_dashboard_service)
 
     exit_code = main(
         [
@@ -1714,7 +1731,7 @@ def test_dashboard_command_loads_config_and_invokes_service(
     assert "config: <external-config>" in output
     assert str(tmp_path) not in output
     assert len(calls) == 1
-    assert calls[0]["config_path"] == config_path
+    assert calls[0]["config_arg"] == str(config_path)
     assert calls[0]["host"] == "localhost"
     assert calls[0]["port"] == 9001
 
@@ -1729,7 +1746,7 @@ def test_dashboard_rejects_non_local_host_before_service_start(
     def fail_service(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid dashboard host must not start the service")
 
-    monkeypatch.setattr("halpha.cli.run_dashboard_service", fail_service)
+    monkeypatch.setattr("halpha.cli.start_dashboard_service", fail_service)
 
     exit_code = main(["dashboard", "--config", str(config_path), "--host", "0.0.0.0"])
 

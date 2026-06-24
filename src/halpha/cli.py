@@ -10,10 +10,14 @@ from halpha.dashboard import (
     DEFAULT_DASHBOARD_HOST,
     DEFAULT_DASHBOARD_PORT,
     DashboardError,
+    dashboard_service_status,
     dashboard_config_ref,
     load_dashboard_startup_config,
+    restart_dashboard_service,
     run_dashboard_service,
     sanitize_dashboard_message,
+    start_dashboard_service,
+    stop_dashboard_service,
     validate_dashboard_host,
     validate_dashboard_port,
 )
@@ -74,6 +78,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dashboard_parser.add_argument("--config", help="Optional path to a Halpha YAML config file.")
     dashboard_parser.add_argument(
+        "dashboard_action",
+        nargs="?",
+        choices=("start", "status", "stop", "restart", "service"),
+        default="start",
+        help="Dashboard lifecycle action. Defaults to start.",
+    )
+    dashboard_parser.add_argument(
         "--host",
         default=DEFAULT_DASHBOARD_HOST,
         help=f"Local dashboard host. Defaults to {DEFAULT_DASHBOARD_HOST}.",
@@ -83,6 +94,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=_positive_int_arg,
         default=DEFAULT_DASHBOARD_PORT,
         help=f"Local dashboard port. Defaults to {DEFAULT_DASHBOARD_PORT}.",
+    )
+    dashboard_parser.add_argument(
+        "--restart-from-instance-id",
+        help=argparse.SUPPRESS,
     )
 
     backtest_parser = subparsers.add_parser("backtest", help="Run one standalone strategy backtest.")
@@ -212,7 +227,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _validate(args.config, run_dir=args.run_dir)
 
     if args.command == "dashboard":
-        return _dashboard(args.config, host=args.host, port=args.port)
+        return _dashboard(
+            args.config,
+            action=args.dashboard_action,
+            host=args.host,
+            port=args.port,
+            restart_from_instance_id=args.restart_from_instance_id,
+        )
 
     if args.command == "backtest":
         return _backtest(
@@ -439,12 +460,19 @@ def _validate(config_arg: str, *, run_dir: str | None) -> int:
     return result.exit_code
 
 
-def _dashboard(config_arg: str | None, *, host: str, port: int) -> int:
+def _dashboard(
+    config_arg: str | None,
+    *,
+    action: str,
+    host: str,
+    port: int,
+    restart_from_instance_id: str | None = None,
+) -> int:
     log_config_path = Path(config_arg) if config_arg else Path("dashboard")
     _configure_logging(config_path=log_config_path)
     LOGGER.info(
         "Halpha command started.",
-        extra={"event": "cli.command.start", "command": "dashboard", "host": host, "port": port},
+        extra={"event": "cli.command.start", "command": "dashboard", "dashboard_action": action, "host": host, "port": port},
     )
 
     try:
@@ -465,22 +493,51 @@ def _dashboard(config_arg: str | None, *, host: str, port: int) -> int:
     try:
         validate_dashboard_host(host)
         validate_dashboard_port(port)
-        print("Halpha dashboard starting.")
-        print(f"url: {_dashboard_url(host, port)}")
-        if config_path is None:
-            print("config: not configured")
-            print("settings: open the dashboard Settings view to load a config file.")
-        else:
-            print(f"config: {dashboard_config_ref(config_path)}")
-        LOGGER.info(
-            "Halpha dashboard service starting.",
-            extra={"event": "dashboard.service.start", "host": host, "port": port},
-        )
-        run_dashboard_service(config, config_path=config_path, host=host, port=port)
+        if action == "service":
+            LOGGER.info(
+                "Halpha dashboard service foreground starting.",
+                extra={"event": "dashboard.service.foreground.start", "host": host, "port": port},
+            )
+            run_dashboard_service(
+                config,
+                config_path=config_path,
+                host=host,
+                port=port,
+                restart_from_instance_id=restart_from_instance_id,
+            )
+            LOGGER.info(
+                "Halpha dashboard service foreground stopped.",
+                extra={"event": "dashboard.service.foreground.stopped", "host": host, "port": port},
+            )
+            return 0
+        if action == "start":
+            print("Halpha dashboard starting.")
+            print(f"url: {_dashboard_url(host, port)}")
+            if config_path is None:
+                print("config: not configured")
+                print("settings: open the dashboard Settings view to load a config file.")
+            else:
+                print(f"config: {dashboard_config_ref(config_path)}")
+            result = start_dashboard_service(config_arg, host=host, port=port)
+            _print_dashboard_service_result("Halpha dashboard started.", result)
+            return 0
+        if action == "status":
+            result = dashboard_service_status(config_arg, host=host, port=port)
+            _print_dashboard_service_result("Halpha dashboard status.", result)
+            return 0
+        if action == "stop":
+            result = stop_dashboard_service(config_arg, host=host, port=port)
+            _print_dashboard_service_result("Halpha dashboard stop requested.", result)
+            return 0
+        if action == "restart":
+            result = restart_dashboard_service(config_arg, host=host, port=port)
+            _print_dashboard_service_result("Halpha dashboard restarted.", result)
+            return 0
+        raise DashboardError(f"unsupported dashboard action: {action}.")
     except DashboardError as exc:
         LOGGER.error(
             "Halpha dashboard service failed.",
-            extra={"event": "dashboard.service.failed", "host": host, "port": port, "reason": str(exc)},
+            extra={"event": "dashboard.service.failed", "dashboard_action": action, "host": host, "port": port, "reason": str(exc)},
         )
         print("Halpha dashboard failed.")
         print("stage: dashboard")
@@ -493,11 +550,28 @@ def _dashboard(config_arg: str | None, *, host: str, port: int) -> int:
         )
         print("Halpha dashboard stopped.")
         return 0
-    LOGGER.info(
-        "Halpha dashboard service stopped.",
-        extra={"event": "dashboard.service.stopped", "host": host, "port": port},
-    )
     return 0
+
+
+def _print_dashboard_service_result(title: str, result: dict) -> None:
+    print(title)
+    print(f"status: {result.get('status')}")
+    endpoint = result.get("endpoint") if isinstance(result.get("endpoint"), dict) else {}
+    host = endpoint.get("host")
+    port = endpoint.get("port")
+    if isinstance(host, str) and isinstance(port, int):
+        print(f"url: {_dashboard_url(host, port)}")
+    instance_id = result.get("instance_id")
+    if isinstance(instance_id, str) and instance_id:
+        print(f"instance_id: {instance_id}")
+    pid = result.get("pid")
+    if isinstance(pid, int):
+        print(f"pid: {pid}")
+    health = result.get("health")
+    if isinstance(health, str):
+        print(f"health: {health}")
+    for warning in result.get("warnings") or []:
+        print(f"warning: {warning}")
 
 
 def _backtest(
