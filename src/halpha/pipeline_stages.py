@@ -264,6 +264,252 @@ STAGE_ENABLED_CONDITIONS = {
     "evaluate_quant_strategies": "quant.enabled",
     "run_codex_report": "codex.enabled and not --no-codex",
 }
+OPERATION_DEPENDENCIES = {
+    "collect_market_data": (),
+    "collect_derivatives_market_data": (),
+    "sync_derivatives_market_history": ("collect_derivatives_market_data",),
+    "collect_macro_calendar_data": (),
+    "sync_macro_calendar_history": ("collect_macro_calendar_data",),
+    "collect_onchain_flow_data": (),
+    "sync_onchain_flow_history": ("collect_onchain_flow_data",),
+    "collect_text_events": (),
+    "sync_ohlcv": (),
+    "build_derivatives_market_views": (
+        "collect_derivatives_market_data",
+        "sync_derivatives_market_history",
+    ),
+    "build_derivatives_market_context": ("build_derivatives_market_views",),
+    "build_macro_calendar_views": (
+        "collect_macro_calendar_data",
+        "sync_macro_calendar_history",
+    ),
+    "build_macro_calendar_context": ("build_macro_calendar_views",),
+    "build_onchain_flow_views": (
+        "collect_onchain_flow_data",
+        "sync_onchain_flow_history",
+    ),
+    "build_onchain_flow_context": ("build_onchain_flow_views",),
+    "build_text_event_records": ("collect_text_events",),
+    "build_text_entity_evidence": ("build_text_event_records",),
+    "build_text_event_classification_evidence": (
+        "build_text_event_records",
+        "build_text_entity_evidence",
+    ),
+    "build_text_event_topics": (
+        "build_text_event_records",
+        "build_text_entity_evidence",
+    ),
+    "build_text_event_signals": (
+        "build_text_event_records",
+        "build_text_event_classification_evidence",
+        "build_text_event_topics",
+    ),
+    "build_market_data_views": (
+        "collect_market_data",
+        "sync_ohlcv",
+    ),
+    "build_strategy_benchmark_suite": ("build_market_data_views",),
+    "evaluate_quant_strategies": ("build_market_data_views",),
+    "evaluate_strategy_evaluation": (
+        "evaluate_quant_strategies",
+        "build_market_data_views",
+    ),
+    "build_strategy_experiment": (
+        "build_strategy_benchmark_suite",
+        "evaluate_strategy_evaluation",
+    ),
+    "build_market_signals": ("evaluate_quant_strategies",),
+    "build_market_regime_assessment": (
+        "build_market_signals",
+        "build_derivatives_market_context",
+    ),
+    "build_risk_assessment": (
+        "build_market_regime_assessment",
+        "build_market_signals",
+        "build_derivatives_market_context",
+        "build_macro_calendar_context",
+        "build_onchain_flow_context",
+    ),
+    "build_event_market_confluence": (
+        "build_text_event_signals",
+        "build_market_signals",
+        "build_strategy_experiment",
+        "build_risk_assessment",
+    ),
+    "build_event_intelligence_assessment": (
+        "build_text_event_records",
+        "build_text_event_topics",
+        "build_text_event_signals",
+        "build_event_market_confluence",
+        "build_market_signals",
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+        "build_macro_calendar_context",
+        "build_onchain_flow_context",
+    ),
+    "build_strategy_lifecycle_state": (
+        "evaluate_quant_strategies",
+        "evaluate_strategy_evaluation",
+        "build_strategy_experiment",
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+    ),
+    "build_feature_snapshots": (
+        "collect_market_data",
+        "build_market_data_views",
+        "build_market_signals",
+        "build_derivatives_market_context",
+        "build_macro_calendar_context",
+        "build_onchain_flow_context",
+        "build_event_intelligence_assessment",
+    ),
+    "build_factor_states": ("build_feature_snapshots",),
+    "build_multi_source_signals": ("build_factor_states",),
+    "build_intelligence_fusion": (
+        "build_market_signals",
+        "evaluate_strategy_evaluation",
+        "build_strategy_experiment",
+        "build_strategy_lifecycle_state",
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+        "build_factor_states",
+        "build_multi_source_signals",
+        "build_event_intelligence_assessment",
+    ),
+    "build_user_state_context": (),
+    "build_personalized_risk_constraints": (
+        "build_user_state_context",
+        "build_intelligence_fusion",
+    ),
+    "build_decision_recommendations": (
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+        "build_intelligence_fusion",
+        "build_personalized_risk_constraints",
+    ),
+    "build_watch_triggers": (
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+        "build_decision_recommendations",
+        "build_intelligence_fusion",
+        "build_personalized_risk_constraints",
+    ),
+    "build_alert_decisions": (
+        "build_event_intelligence_assessment",
+        "build_risk_assessment",
+        "build_decision_recommendations",
+        "build_watch_triggers",
+        "build_intelligence_fusion",
+        "build_derivatives_market_context",
+        "build_macro_calendar_context",
+        "build_onchain_flow_context",
+    ),
+    "build_decision_intelligence_delta": (
+        "build_market_regime_assessment",
+        "build_risk_assessment",
+        "build_decision_recommendations",
+        "build_watch_triggers",
+    ),
+    "build_outcome_targets": (
+        "build_market_signals",
+        "build_strategy_experiment",
+        "build_event_intelligence_assessment",
+        "build_alert_decisions",
+        "build_decision_recommendations",
+        "build_watch_triggers",
+    ),
+    "evaluate_outcomes": (
+        "build_outcome_targets",
+        "build_event_intelligence_assessment",
+        "build_alert_decisions",
+        "build_decision_recommendations",
+        "build_watch_triggers",
+    ),
+    "build_data_quality_summary": (
+        "collect_market_data",
+        "collect_derivatives_market_data",
+        "sync_derivatives_market_history",
+        "collect_macro_calendar_data",
+        "sync_macro_calendar_history",
+        "collect_onchain_flow_data",
+        "sync_onchain_flow_history",
+        "collect_text_events",
+        "sync_ohlcv",
+        "build_derivatives_market_views",
+        "build_derivatives_market_context",
+        "build_macro_calendar_views",
+        "build_macro_calendar_context",
+        "build_onchain_flow_views",
+        "build_onchain_flow_context",
+        "build_text_event_signals",
+        "build_market_data_views",
+        "build_strategy_experiment",
+        "build_market_signals",
+        "build_strategy_lifecycle_state",
+        "build_feature_snapshots",
+        "build_factor_states",
+        "build_multi_source_signals",
+        "build_intelligence_fusion",
+        "build_alert_decisions",
+        "evaluate_outcomes",
+    ),
+    "build_macro_calendar_material": ("build_macro_calendar_context",),
+    "build_onchain_flow_material": ("build_onchain_flow_context",),
+    "build_strategy_experiment_material": ("build_strategy_experiment",),
+    "build_market_signal_material": ("build_market_signals",),
+    "build_strategy_lifecycle_material": ("build_strategy_lifecycle_state",),
+    "build_alert_decision_material": (
+        "build_alert_decisions",
+        "build_event_intelligence_assessment",
+    ),
+    "build_event_intelligence_material": (
+        "build_text_event_records",
+        "build_text_event_classification_evidence",
+        "build_text_event_topics",
+        "build_text_event_signals",
+        "build_event_market_confluence",
+        "build_event_intelligence_assessment",
+    ),
+    "build_decision_intelligence_material": ("build_decision_intelligence_delta",),
+    "build_personalized_risk_material": (
+        "build_user_state_context",
+        "build_personalized_risk_constraints",
+    ),
+    "build_analysis_materials": (
+        "collect_market_data",
+        "collect_text_events",
+        "build_data_quality_summary",
+        "build_derivatives_market_context",
+        "build_market_signals",
+        "build_text_event_signals",
+        "build_feature_snapshots",
+        "build_factor_states",
+        "build_multi_source_signals",
+        "build_intelligence_fusion",
+        "evaluate_outcomes",
+    ),
+    "build_research_context": (
+        "evaluate_strategy_evaluation",
+        "build_macro_calendar_material",
+        "build_onchain_flow_material",
+        "build_strategy_experiment_material",
+        "build_market_signal_material",
+        "build_strategy_lifecycle_material",
+        "build_alert_decision_material",
+        "build_event_intelligence_material",
+        "build_decision_intelligence_material",
+        "build_personalized_risk_material",
+        "build_analysis_materials",
+    ),
+    "build_codex_context": ("build_research_context",),
+    "run_codex_report": ("build_codex_context",),
+    "write_outcome_history": (
+        "evaluate_outcomes",
+        "run_codex_report",
+    ),
+    "write_research_data_catalog": ("write_outcome_history",),
+    "validate_product_contracts": ("write_research_data_catalog",),
+}
 
 
 @dataclass(frozen=True)
@@ -277,11 +523,11 @@ class StageOperation:
 STAGE_OPERATIONS = tuple(
     StageOperation(
         operation_id=operation,
-        dependencies=() if index == 0 else (OPERATION_ORDER[index - 1],),
+        dependencies=OPERATION_DEPENDENCIES.get(operation, ()),
         outputs=STAGE_OUTPUTS.get(operation, ()),
         enabled_condition=STAGE_ENABLED_CONDITIONS.get(operation),
     )
-    for index, operation in enumerate(OPERATION_ORDER)
+    for operation in OPERATION_ORDER
 )
 STAGE_OPERATION_MAP = {operation.operation_id: operation for operation in STAGE_OPERATIONS}
 
@@ -391,28 +637,113 @@ def validate_stage_graph() -> None:
     operation_ids = [operation.operation_id for operation in STAGE_OPERATIONS]
     if operation_ids != list(OPERATION_ORDER):
         raise ValueError("pipeline operation metadata must register every stage exactly once in canonical order.")
-    unknown_output_stages = set(STAGE_OUTPUTS) - set(OPERATION_ORDER)
-    if unknown_output_stages:
-        raise ValueError(f"pipeline operation outputs reference unknown stages: {sorted(unknown_output_stages)}.")
-    unknown_enabled_stages = set(STAGE_ENABLED_CONDITIONS) - set(OPERATION_ORDER)
-    if unknown_enabled_stages:
+    dependency_declarations = set(OPERATION_DEPENDENCIES)
+    missing_dependency_declarations = set(OPERATION_ORDER) - dependency_declarations
+    if missing_dependency_declarations:
         raise ValueError(
-            f"pipeline operation enabled conditions reference unknown stages: {sorted(unknown_enabled_stages)}."
+            "pipeline operation graph is missing dependency declarations: "
+            f"{sorted(missing_dependency_declarations)}."
+        )
+    unknown_dependency_declarations = dependency_declarations - set(OPERATION_ORDER)
+    if unknown_dependency_declarations:
+        raise ValueError(
+            "pipeline operation graph has unknown dependency declarations: "
+            f"{sorted(unknown_dependency_declarations)}."
+        )
+    output_declarations = set(STAGE_OUTPUTS)
+    missing_output_declarations = set(OPERATION_ORDER) - output_declarations
+    if missing_output_declarations:
+        raise ValueError(
+            "pipeline operation outputs are missing output declarations: "
+            f"{sorted(missing_output_declarations)}."
+        )
+    unknown_output_declarations = output_declarations - set(OPERATION_ORDER)
+    if unknown_output_declarations:
+        raise ValueError(
+            "pipeline operation outputs have unknown output declarations: "
+            f"{sorted(unknown_output_declarations)}."
+        )
+    duplicate_outputs = _duplicate_outputs()
+    if duplicate_outputs:
+        raise ValueError(f"pipeline operation outputs contain duplicate output producers: {duplicate_outputs}.")
+    unknown_enabled_operations = set(STAGE_ENABLED_CONDITIONS) - set(OPERATION_ORDER)
+    if unknown_enabled_operations:
+        raise ValueError(
+            "pipeline operation enabled conditions reference unknown stages: "
+            f"{sorted(unknown_enabled_operations)}."
         )
 
-    seen: set[str] = set()
+    operation_map = {operation.operation_id: operation for operation in STAGE_OPERATIONS}
+    order_index = {operation: index for index, operation in enumerate(OPERATION_ORDER)}
     for operation in STAGE_OPERATIONS:
+        declared_dependencies = OPERATION_DEPENDENCIES.get(operation.operation_id, ())
+        if tuple(operation.dependencies) != tuple(declared_dependencies):
+            raise ValueError(
+                "pipeline operation metadata does not match dependency declarations for "
+                f"{operation.operation_id}."
+            )
+        if len(operation.dependencies) != len(set(operation.dependencies)):
+            raise ValueError(
+                f"pipeline operation {operation.operation_id} declares duplicate dependencies: "
+                f"{list(operation.dependencies)}."
+            )
         for dependency in operation.dependencies:
-            if dependency not in STAGE_OPERATION_MAP:
+            if dependency not in operation_map:
                 raise ValueError(
                     f"pipeline operation {operation.operation_id} depends on unknown operation {dependency}."
                 )
-            if dependency not in seen:
-                raise ValueError(
-                    f"pipeline operation graph must be acyclic; {operation.operation_id} depends on {dependency}."
-                )
-            if STAGE_ORDER.index(TASK_STAGE_MAP[dependency]) > STAGE_ORDER.index(TASK_STAGE_MAP[operation.operation_id]):
+            if dependency == operation.operation_id:
+                raise ValueError(f"pipeline operation {operation.operation_id} depends on itself.")
+    _validate_acyclic(operation_map)
+    for operation in STAGE_OPERATIONS:
+        for dependency in operation.dependencies:
+            if _stage_index(dependency) > _stage_index(operation.operation_id):
                 raise ValueError(
                     f"pipeline operation {operation.operation_id} depends on later-stage task {dependency}."
                 )
-        seen.add(operation.operation_id)
+    for operation in STAGE_OPERATIONS:
+        for dependency in operation.dependencies:
+            if order_index[dependency] > order_index[operation.operation_id]:
+                raise ValueError(
+                    "pipeline operation graph must be executable in canonical order; "
+                    f"{operation.operation_id} depends on later operation {dependency}."
+                )
+
+
+def _stage_index(operation_id: str) -> int:
+    return STAGE_ORDER.index(TASK_STAGE_MAP[operation_id])
+
+
+def _duplicate_outputs() -> dict[str, list[str]]:
+    producers: dict[str, str] = {}
+    duplicates: dict[str, list[str]] = {}
+    for operation_id, outputs in STAGE_OUTPUTS.items():
+        for output in outputs:
+            producer = producers.get(output)
+            if producer is None:
+                producers[output] = operation_id
+                continue
+            duplicates.setdefault(output, [producer]).append(operation_id)
+    return duplicates
+
+
+def _validate_acyclic(operation_map: dict[str, StageOperation]) -> None:
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(operation_id: str, path: tuple[str, ...]) -> None:
+        if operation_id in visited:
+            return
+        if operation_id in visiting:
+            start = path.index(operation_id)
+            cycle = " -> ".join(path[start:])
+            raise ValueError(f"pipeline operation graph contains a cycle: {cycle}.")
+        visiting.add(operation_id)
+        operation = operation_map[operation_id]
+        for dependency in operation.dependencies:
+            visit(dependency, (*path, dependency))
+        visiting.remove(operation_id)
+        visited.add(operation_id)
+
+    for operation_id in OPERATION_ORDER:
+        visit(operation_id, (operation_id,))

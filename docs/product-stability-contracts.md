@@ -98,6 +98,19 @@ The stable product stages are:
 Fine-grained implementation work remains inspectable as nested tasks, not as a
 long list of top-level product stages.
 
+Nested task metadata uses an explicit direct-dependency graph:
+
+- every registered task declares its direct dependencies;
+- no task receives an implicit dependency on the previous task in canonical
+  order;
+- optional source tasks still have explicit metadata, including disabled-source
+  cases;
+- `operation_downstream_closure` follows the task graph, so unrelated source
+  branches do not become downstream work merely because they are later in the
+  list;
+- the public `halpha stage <product-stage>` command remains a product-stage
+  rerun surface, not a public task-level rerun command.
+
 Completed-run and rerun rules:
 
 - a completed run is an immutable product record;
