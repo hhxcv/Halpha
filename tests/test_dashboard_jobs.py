@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import threading
 import time
@@ -11,7 +12,9 @@ from fastapi.testclient import TestClient
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.dashboard.job_commands import DashboardJobCommandBuilder, DashboardJobError
+from halpha.dashboard.job_store import DashboardJobRepository, DashboardJobStoreError
 from halpha.dashboard.jobs import DashboardJobManager, MAX_JOB_LOG_CHARS
+from halpha.runtime.state_store import runtime_state_path
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +71,8 @@ def test_dashboard_job_api_rejects_unsupported_intent_before_process(
     assert payload["pid"] is None
     assert payload["exit_code"] is None
     assert "unsupported dashboard job intent" in payload["errors"][0]
-    assert (tmp_path / ".halpha" / "dashboard" / "jobs" / payload["job_id"] / "job.json").is_file()
+    assert runtime_state_path(config_path=config_path).is_file()
+    assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / payload["job_id"] / "job.json").exists()
     assert not (tmp_path / "runs" / "dashboard").exists()
     assert str(tmp_path) not in response.text
 
@@ -94,16 +98,17 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     assert completed["logs"]["stdout_truncated"] is True
     assert completed["logs"]["stderr_truncated"] is False
     assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "<external-config>"]
+    assert completed["job_dir"].startswith(".halpha/dashboard/job_logs/")
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     stderr_log = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
-    job_json = (tmp_path / ".halpha" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
-        encoding="utf-8"
-    )
+    state_bytes = runtime_state_path(config_path=config_path).read_bytes()
     assert len(stdout_log) == MAX_JOB_LOG_CHARS
     assert secret not in stdout_log
     assert str(config_path) not in stdout_log
     assert secret not in stderr_log
-    assert str(config_path) not in job_json
+    assert secret.encode() not in state_bytes
+    assert str(config_path).encode() not in state_bytes
+    assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / completed["job_id"] / "job.json").exists()
 
 
 def test_dashboard_job_logging_includes_context_without_private_values(tmp_path: Path, monkeypatch) -> None:
@@ -117,7 +122,7 @@ def test_dashboard_job_logging_includes_context_without_private_values(tmp_path:
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
 
-    log_text = (tmp_path / "logs" / "halpha.log").read_text(encoding="utf-8")
+    log_text = _wait_for_log_event(tmp_path / "logs" / "halpha.log", completed["job_id"], "dashboard.job.finished")
     events = [json.loads(line) for line in log_text.splitlines() if line.strip()]
     assert completed["job_id"] in log_text
     assert "dashboard.job.start" in {event.get("event") for event in events}
@@ -140,9 +145,7 @@ def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, 
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
-    job_text = (tmp_path / ".halpha" / "dashboard" / "jobs" / completed["job_id"] / "job.json").read_text(
-        encoding="utf-8"
-    )
+    state_bytes = runtime_state_path(config_path=config_path).read_bytes()
 
     assert completed["status"] == "failed"
     assert completed["diagnostic"] == {
@@ -151,9 +154,9 @@ def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, 
         "context": {"phase": "process_start"},
     }
     assert "<redacted>" in completed["errors"][0]
-    assert secret not in job_text
-    assert str(config_path) not in job_text
-    assert str(tmp_path) not in job_text
+    assert secret.encode() not in state_bytes
+    assert str(config_path).encode() not in state_bytes
+    assert str(tmp_path).encode() not in state_bytes
 
 
 def test_dashboard_job_manager_preserves_relative_config_ref(
@@ -208,7 +211,7 @@ def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
     assert Path(commands[0][-1]).resolve() == (tmp_path / config_path).resolve()
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     assert str((tmp_path / config_path).resolve()) not in stdout_log
-    assert completed["job_dir"].startswith(".halpha/dashboard/jobs/")
+    assert completed["job_dir"].startswith(".halpha/dashboard/job_logs/")
     assert not (config_dir / "runs").exists()
 
 
@@ -980,43 +983,56 @@ def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) 
     assert "cancelled" in completed["warnings"][0]
 
 
-def test_dashboard_job_manager_marks_stale_running_job_blocked(tmp_path: Path) -> None:
+def test_dashboard_job_manager_marks_stale_running_job_failed_on_restart(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     job_id = "20260622T000000Z_deadbeef"
-    job_dir = tmp_path / ".halpha" / "dashboard" / "jobs" / job_id
-    job_dir.mkdir(parents=True)
-    (job_dir / "job.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "artifact_type": "dashboard_job",
-                "job_id": job_id,
-                "intent": "monitor_loop",
-                "kind": "monitor_loop",
-                "status": "running",
-                "pid": 99999999,
-                "created_at": "2026-06-22T00:00:00Z",
-                "updated_at": "2026-06-22T00:00:00Z",
-                "warnings": [],
-                "errors": [],
-            }
-        ),
-        encoding="utf-8",
-    )
+    _seed_state_job(config_path, job_id=job_id, status="running", pid=99999999)
     manager = DashboardJobManager(config, config_path=config_path)
 
     detail = manager.get_job(job_id)
     listed = manager.list_jobs()["jobs"][0]
-    index = json.loads((tmp_path / ".halpha" / "dashboard" / "jobs" / "index.json").read_text(encoding="utf-8"))
 
     assert detail is not None
-    assert detail["status"] == "blocked"
-    assert detail["runtime_attached"] is False
-    assert detail["process_alive"] is False
-    assert "recorded process is not running" in detail["errors"][0]
-    assert listed["status"] == "blocked"
-    assert index["jobs"][0]["status"] == "blocked"
+    assert detail["status"] == "failed"
+    assert "recorded PID was not treated as proof" in detail["errors"][0]
+    assert listed["status"] == "failed"
+    assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / "index.json").exists()
+
+
+def test_dashboard_job_manager_rejects_unattached_live_pid_as_process_identity(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    job_id = "20260622T000001Z_deadbeef"
+    _seed_state_job(config_path, job_id=job_id, status="running", pid=os.getpid())
+    manager = DashboardJobManager(config, config_path=config_path)
+
+    detail = manager.get_job(job_id)
+
+    assert detail is not None
+    assert detail["status"] == "failed"
+    assert detail["pid"] == os.getpid()
+    assert "recorded PID was not treated as proof" in detail["errors"][0]
+
+
+def test_dashboard_job_repository_rejects_terminal_transition_transactionally(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    job_id = "20260622T000002Z_deadbeef"
+    _seed_state_job(config_path, job_id=job_id, status="succeeded")
+    repository = DashboardJobRepository(config_path=config_path)
+    job = repository.get_job(job_id)
+    assert job is not None
+    job["status"] = "running"
+    job["updated_at"] = "2026-06-22T00:05:00Z"
+
+    with pytest.raises(DashboardJobStoreError, match="terminal status succeeded"):
+        repository.save_job(job, event_type="invalid")
+
+    persisted = repository.get_job(job_id)
+    events = repository.job_events(job_id)
+    assert persisted is not None
+    assert persisted["status"] == "succeeded"
+    assert [event["event_type"] for event in events] == ["seed"]
 
 
 def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> None:
@@ -1122,6 +1138,57 @@ def _wait_for_api_terminal(client: TestClient, job_id: str) -> dict:
             return payload
         time.sleep(0.05)
     raise AssertionError(f"job did not finish: {job_id}")
+
+
+def _wait_for_log_event(path: Path, job_id: str, event_name: str) -> str:
+    for _ in range(50):
+        if path.exists():
+            text = path.read_text(encoding="utf-8")
+            events = [json.loads(line) for line in text.splitlines() if line.strip()]
+            if any(event.get("job_id") == job_id and event.get("event") == event_name for event in events):
+                return text
+        time.sleep(0.05)
+    raise AssertionError(f"log event was not written: {event_name}")
+
+
+def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | None = None) -> None:
+    repository = DashboardJobRepository(config_path=config_path)
+    repository.save_job(
+        {
+            "schema_version": 1,
+            "artifact_type": "dashboard_job",
+            "job_id": job_id,
+            "intent": "monitor_loop",
+            "kind": "monitor_loop",
+            "requested_by": "Dashboard",
+            "params": {},
+            "config_ref": "config.yaml",
+            "status": status,
+            "created_at": "2026-06-22T00:00:00Z",
+            "updated_at": "2026-06-22T00:00:00Z",
+            "started_at": "2026-06-22T00:00:00Z",
+            "finished_at": None,
+            "pid": pid,
+            "exit_code": None,
+            "cancellable": True,
+            "command": ["python", "-m", "halpha", "monitor", "run"],
+            "job_dir": f".halpha/dashboard/job_logs/{job_id}",
+            "logs": {
+                "stdout_ref": f".halpha/dashboard/job_logs/{job_id}/stdout.log",
+                "stderr_ref": f".halpha/dashboard/job_logs/{job_id}/stderr.log",
+                "stdout_chars": 0,
+                "stderr_chars": 0,
+                "stdout_truncated": False,
+                "stderr_truncated": False,
+                "max_chars": MAX_JOB_LOG_CHARS,
+            },
+            "result_refs": {},
+            "source_artifacts": [],
+            "warnings": [],
+            "errors": [],
+        },
+        event_type="seed",
+    )
 
 
 def _write_config(tmp_path: Path, *, name: str = "config.yaml") -> Path:

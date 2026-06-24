@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.dashboard.jobs import MAX_JOB_LOG_CHARS
+from halpha.runtime.state_store import runtime_state_path
 from halpha.storage import write_json
 
 
@@ -116,8 +117,9 @@ def test_dashboard_job_api_redacts_private_values_from_response_and_logs(
     detail_response = client.get(f"/api/jobs/{job_id}")
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     stderr_log = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
-    job_json = (tmp_path / ".halpha" / "dashboard" / "jobs" / job_id / "job.json").read_text(encoding="utf-8")
+    state_bytes = runtime_state_path(config_path=config_path).read_bytes()
     assert not (tmp_path / "runs" / "dashboard").exists()
+    assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / job_id / "job.json").exists()
 
     assert completed["status"] == "succeeded"
     assert completed["logs"]["stdout_truncated"] is True
@@ -128,7 +130,7 @@ def test_dashboard_job_api_redacts_private_values_from_response_and_logs(
         assert private_value not in detail_response.text
         assert private_value not in stdout_log
         assert private_value not in stderr_log
-        assert private_value not in job_json
+        assert private_value.encode() not in state_bytes
 
 
 def test_dashboard_command_safety_rejects_unsupported_args_and_codex_without_confirmation(
