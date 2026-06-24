@@ -168,7 +168,12 @@ Legacy no-new-write state files are:
 runs/monitor/alert_archive.jsonl
 runs/monitor/alert_cooldown_state.json
 runs/monitor/alert_archive_state.json
+runs/monitor/monitor_health_state.json
 ```
+
+Only explicit legacy migration may read these files for import diagnostics.
+Normal monitor runtime and inspection paths must not use them as fallback
+authorities.
 
 Each alert archive record must include:
 

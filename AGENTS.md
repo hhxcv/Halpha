@@ -389,6 +389,10 @@ python -m halpha text-intel --config config.example.yaml
 python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
 python -m halpha data inspect --config config.example.yaml
 python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
+python -m halpha data migrate-state --config config.example.yaml --dry-run
+python -m halpha data migrate-state --config config.example.yaml --apply
+python -m halpha data migrate-state --config config.example.yaml --apply --replace-schedule
+python -m halpha data rebuild-index --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha workbench build --config config.example.yaml
@@ -452,6 +456,16 @@ The resident Monitor service is unique per runtime root. It runs no-Codex monito
 
 `data inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
 
+`data migrate-state --dry-run` scans documented legacy local state and prints a bounded import plan without creating or updating runtime state.
+
+`data migrate-state --apply` explicitly imports supported legacy local state into `.halpha/state.sqlite`, records source fingerprints, creates bounded local backups, and leaves legacy files unchanged.
+
+`data migrate-state --apply --replace-schedule` is required to replace an existing unified daily report schedule with a legacy schedule.
+
+`data migrate-state` must not auto-migrate, dual-write, delete legacy files, resurrect running service state, or keep legacy files as runtime fallback authorities.
+
+`data rebuild-index` rebuilds the current run-index projection from current run manifests only. It does not import mutable legacy service, job, schedule, alert, cooldown, or dashboard state.
+
 `outcomes inspect` summarizes outcome targets, outcome evaluations, outcome material, and shared outcome history state.
 
 `outcomes inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
@@ -498,6 +512,9 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
 * Use `python -m halpha data inspect --config <local-config.yaml>` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
 * Use `python -m halpha data inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect data-quality and strategy-lifecycle state for a specific run.
+* Use `python -m halpha data migrate-state --config <local-config.yaml> --dry-run` to inspect legacy local state before import without mutating files.
+* Use `python -m halpha data migrate-state --config <local-config.yaml> --apply` only after dry-run review to import supported legacy state explicitly.
+* Use `python -m halpha data rebuild-index --config <local-config.yaml>` to rebuild the current run-index projection from run manifests without importing mutable legacy state.
 * Use `python -m halpha outcomes inspect --config <local-config.yaml>` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
 * Use `python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect outcome state for a specific run.
 * Use `python -m halpha workbench build --config <local-config.yaml>` to generate local delivery summary and index outputs from existing artifacts without running collection, pipeline stages, or Codex CLI.

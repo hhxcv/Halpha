@@ -241,6 +241,49 @@ class MonitorStateRepository:
         except sqlite3.Error as exc:
             raise MonitorStateStoreError("monitor state store could not persist cycle state.") from exc
 
+    def import_alert_records(
+        self,
+        records: list[dict[str, Any]],
+        *,
+        monitor_output_dir: str,
+        updated_at: str,
+    ) -> dict[str, int]:
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_monitor_state_migrations(connection, now=updated_at)
+                before = _count_alert_records(connection, monitor_output_dir)
+                with runtime_state_transaction(connection):
+                    self._insert_alert_records(connection, records, monitor_output_dir=monitor_output_dir)
+                after = _count_alert_records(connection, monitor_output_dir)
+        except sqlite3.Error as exc:
+            raise MonitorStateStoreError("monitor alert records could not be imported.") from exc
+        inserted = max(0, after - before)
+        return {"records": len(records), "inserted": inserted, "duplicates": max(0, len(records) - inserted)}
+
+    def import_cooldown_records(
+        self,
+        records: dict[str, dict[str, Any]],
+        *,
+        monitor_output_dir: str,
+        updated_at: str,
+    ) -> dict[str, int]:
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                apply_monitor_state_migrations(connection, now=updated_at)
+                before = _cooldown_count(connection, monitor_output_dir)
+                with runtime_state_transaction(connection):
+                    self._insert_cooldowns_if_missing(
+                        connection,
+                        records,
+                        monitor_output_dir=monitor_output_dir,
+                        updated_at=updated_at,
+                    )
+                after = _cooldown_count(connection, monitor_output_dir)
+        except sqlite3.Error as exc:
+            raise MonitorStateStoreError("monitor cooldown records could not be imported.") from exc
+        inserted = max(0, after - before)
+        return {"records": len(records), "inserted": inserted, "duplicates": max(0, len(records) - inserted)}
+
     def save_cycle(self, cycle: dict[str, Any], *, updated_at: str) -> dict[str, Any]:
         cycle_id = _required_str(cycle.get("cycle_id"), "monitor cycle_id is required.")
         try:
@@ -928,6 +971,48 @@ class MonitorStateRepository:
                 ),
             )
 
+    def _insert_cooldowns_if_missing(
+        self,
+        connection: sqlite3.Connection,
+        records: dict[str, dict[str, Any]],
+        *,
+        monitor_output_dir: str,
+        updated_at: str,
+    ) -> None:
+        for alert_key, record in sorted(records.items()):
+            cooldown_until = _optional_str(record.get("cooldown_until"))
+            if not alert_key or cooldown_until is None:
+                continue
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO monitor_alert_cooldowns (
+                  monitor_output_dir,
+                  alert_key,
+                  cooldown_until,
+                  last_emitted_at,
+                  last_record_id,
+                  decision_id,
+                  priority,
+                  attention_decision,
+                  source_artifacts_json,
+                  updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    monitor_output_dir,
+                    alert_key,
+                    cooldown_until,
+                    _optional_str(record.get("last_emitted_at")),
+                    _optional_str(record.get("last_record_id")),
+                    _optional_str(record.get("decision_id")),
+                    _optional_str(record.get("priority")),
+                    _optional_str(record.get("attention_decision")),
+                    _dumps_list(record.get("source_artifacts")),
+                    updated_at,
+                ),
+            )
+
 
 def apply_monitor_state_migrations(connection: sqlite3.Connection, *, now: datetime | str | None = None) -> None:
     apply_runtime_state_migrations(
@@ -1101,6 +1186,15 @@ def _count_failed_cycles(connection: sqlite3.Connection, monitor_output_dir: str
             WHERE monitor_output_dir = ? AND status IN (?, ?)
             """,
             (monitor_output_dir, *tuple(sorted(FAILED_MONITOR_STATUSES))),
+        ).fetchone()[0]
+    )
+
+
+def _count_alert_records(connection: sqlite3.Connection, monitor_output_dir: str) -> int:
+    return int(
+        connection.execute(
+            "SELECT COUNT(*) FROM monitor_alert_records WHERE monitor_output_dir = ?",
+            (monitor_output_dir,),
         ).fetchone()[0]
     )
 

@@ -37,8 +37,8 @@ Primary sources:
 - `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
   foundation, current run-index projection, and local command-job
   lifecycle plus daily report schedule configuration, dispatch history,
-  Dashboard service lifecycle, and Dashboard UI preferences. Monitor consumers
-  are not migrated to their own state domain yet.
+  Dashboard service lifecycle, Dashboard UI preferences, monitor cycle indexes,
+  alert archive records, cooldown state, and monitor service health query state.
 - `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
   Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run
@@ -398,7 +398,9 @@ Current command-job lifecycle records are written to `.halpha/state.sqlite`.
 They include bounded metadata, safe relative log refs, result refs, warnings,
 errors, and transition events. New jobs must not write
 `.halpha/dashboard/jobs/index.json` or per-job `job.json`; those files are
-legacy storage until explicit import or cleanup work.
+legacy storage for `data migrate-state` import or separate cleanup work only.
+Normal Dashboard, Schedule, and CLI job readers must not use them as fallback
+authorities.
 
 Bounded stdout and stderr logs are written under
 `.halpha/command_jobs/job_logs/<job_id>/` below the current working directory by
@@ -435,7 +437,8 @@ Implemented daily report schedule state lives in:
 
 The legacy `.halpha/dashboard/schedules/daily_report_schedule.json` path is no
 longer written for new schedule state. It remains legacy storage until explicit
-import or cleanup work.
+`data migrate-state` import or separate cleanup work. Normal Dashboard and
+Schedule readers must not use it as a fallback authority.
 
 The schedule API supports:
 
