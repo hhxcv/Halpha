@@ -198,6 +198,7 @@ Required tables:
 
 - `runs`
 - `run_stages`
+- `run_tasks`
 - `run_artifacts`
 - `run_latest` view
 
@@ -340,7 +341,7 @@ Required check coverage:
 - stale source observations where timestamps are available;
 - duplicate or conflicting text records where detectable;
 - local catalog status when implemented;
-- run index status when implemented;
+- run-index stage-time projection boundary;
 - text event history status when implemented.
 
 Rules:
@@ -359,8 +360,9 @@ Rules:
 When implemented, product runs should record:
 
 - catalog artifact path and store counts;
-- run index write status;
 - text event history write status and duplicate counts;
+- outcome history state path and write status when outcome evaluation evidence
+  exists;
 - data quality summary path, status, warning count, and error count;
 - Codex input budget metadata for any data-quality material.
 
@@ -370,8 +372,10 @@ indexes do not replace it.
 After the runtime-state migration, run manifests remain immutable product
 records and the runtime state store remains an operational index. Validation,
 dashboard, workbench, and inspection paths may query the runtime index for
-discovery, but source refs must still point back to the authoritative run
-manifest and artifacts.
+latest-run selection, recovery diagnostics, and discovery, but the run index is
+committed after the terminal manifest and is not a manifest authority or
+required manifest field. Source refs must still point back to the authoritative
+run manifest and artifacts.
 
 ## Outcome History
 

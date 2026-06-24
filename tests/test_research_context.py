@@ -3,10 +3,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from halpha.codex.input_budget import DEFAULT_MATERIAL_MAX_CHARS
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: Path) -> None:

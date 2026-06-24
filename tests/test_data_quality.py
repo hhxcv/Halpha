@@ -61,7 +61,9 @@ def test_data_quality_summary_records_clean_current_run_state(tmp_path: Path) ->
     assert _check(summary, "text_event_history")["status"] == "ok"
     run_index = _check(summary, "run_index")
     assert run_index["status"] == "skipped"
-    assert "terminal artifact written after the data-quality stage" in run_index["summary"]
+    assert "terminal state projection committed after the final manifest" in run_index["summary"]
+    assert run_index["details"]["terminal_state_projection"] is True
+    assert run_index["details"]["committed_after_final_manifest"] is True
     assert run_index["details"]["stage_time_skip_is_expected"] is True
     assert run_index["details"]["report_as_final_missing"] is False
 

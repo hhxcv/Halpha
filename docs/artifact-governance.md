@@ -153,6 +153,11 @@ files as deterministic readers. A stage rerun against an existing run must be no
 artifacts are either recomputed, explicitly marked stale or not complete, or the
 work is done in a new run. A rerun must not leave stale downstream artifacts
 marked as successful.
+The `finalize_run` stage owns terminal shared-state publication for outcome
+history, research data catalog refresh, product-contract validation, and the
+terminal manifest. After that manifest is durable, `.halpha/state.sqlite`
+records the rebuildable run, stage, task, and artifact projection; the
+projection is operational state, not an authority over run artifact contents.
 
 Implemented `python -m halpha stage` behavior:
 

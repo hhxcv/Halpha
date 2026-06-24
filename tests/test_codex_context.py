@@ -4,9 +4,16 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -> None:

@@ -38,7 +38,11 @@ def test_pipeline_operation_graph_covers_stage_order_and_is_acyclic() -> None:
         "build_codex_context",
         "run_codex_report",
     ]
-    assert STAGE_TASKS["finalize_run"] == ("validate_product_contracts",)
+    assert STAGE_TASKS["finalize_run"] == (
+        "write_outcome_history",
+        "write_research_data_catalog",
+        "validate_product_contracts",
+    )
 
     metadata = operation_metadata()
     assert [operation["operation_id"] for operation in metadata] == list(OPERATION_ORDER)
@@ -60,6 +64,8 @@ def test_downstream_closure_uses_canonical_order_and_terminal_boundary() -> None
         "build_research_context",
         "build_codex_context",
         "run_codex_report",
+        "write_outcome_history",
+        "write_research_data_catalog",
         "validate_product_contracts",
     ]
     assert operation_downstream_closure("build_research_context", through_operation="build_codex_context") == [

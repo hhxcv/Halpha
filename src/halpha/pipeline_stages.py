@@ -82,7 +82,11 @@ STAGE_TASKS = {
         "build_codex_context",
         "run_codex_report",
     ),
-    "finalize_run": ("validate_product_contracts",),
+    "finalize_run": (
+        "write_outcome_history",
+        "write_research_data_catalog",
+        "validate_product_contracts",
+    ),
 }
 TASK_STAGE_MAP = {
     task: stage
@@ -152,6 +156,8 @@ LEGACY_OPERATION_ORDER = (
     "build_research_context",
     "build_codex_context",
     "run_codex_report",
+    "write_outcome_history",
+    "write_research_data_catalog",
     "validate_product_contracts",
 )
 DECISION_INTELLIGENCE_STAGES = {
@@ -246,6 +252,8 @@ STAGE_OUTPUTS = {
     "build_research_context": ("analysis/research_context.md",),
     "build_codex_context": ("codex_context/context.md", "codex_context/prompt.md"),
     "run_codex_report": ("report/report.md",),
+    "write_outcome_history": ("data/research/metadata/outcome_history_state.json",),
+    "write_research_data_catalog": ("data/research/metadata/research_data_catalog.json",),
     "validate_product_contracts": ("analysis/product_contract_validation.json",),
 }
 STAGE_ENABLED_CONDITIONS = {

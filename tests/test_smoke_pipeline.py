@@ -169,7 +169,11 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert task_statuses == [(task_name, "succeeded") for task_name in manifest["task_order"]]
     assert task_statuses[0] == ("collect_market_data", "succeeded")
     assert task_statuses[-1] == ("validate_product_contracts", "succeeded")
-    assert manifest["stages"][-1]["artifacts"] == ["analysis/product_contract_validation.json"]
+    assert manifest["stages"][-1]["artifacts"] == [
+        "data/research/metadata/outcome_history_state.json",
+        "data/research/metadata/research_data_catalog.json",
+        "analysis/product_contract_validation.json",
+    ]
     assert manifest["artifacts"]["product_contract_validation"] == "analysis/product_contract_validation.json"
 
     market_raw = json.loads((run_dir / "raw/market.json").read_text(encoding="utf-8"))

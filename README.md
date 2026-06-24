@@ -306,6 +306,10 @@ stages.
 
 `build_materials` first writes the final structured data-quality summary, then
 writes report-facing material files from completed upstream evidence.
+`finalize_run` writes shared outcome history state, refreshes the research data
+catalog, writes product contract validation, then publishes the terminal
+manifest before committing the runtime-state run, stage, task, and artifact
+projection.
 
 ## Configuration
 

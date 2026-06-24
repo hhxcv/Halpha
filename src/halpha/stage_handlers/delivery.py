@@ -15,6 +15,11 @@ def stage_handlers() -> dict[str, StageHandler]:
         "build_research_context": lazy_stage_handler("halpha.analysis.research_context", "build_research_context"),
         "build_codex_context": lazy_stage_handler("halpha.codex.context_builder", "build_codex_context"),
         "run_codex_report": lazy_stage_handler("halpha.codex.runner", "run_codex_report"),
+        "write_outcome_history": lazy_stage_handler("halpha.outcome.outcome_history", "write_outcome_history"),
+        "write_research_data_catalog": lazy_stage_handler(
+            "halpha.data.research_data_catalog",
+            "write_research_data_catalog",
+        ),
         "validate_product_contracts": lazy_stage_handler(
             "halpha.product.product_validation",
             "build_product_contract_validation",

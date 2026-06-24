@@ -9,15 +9,17 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
+from halpha.dashboard.job_store import apply_dashboard_job_migrations
 from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
 from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.product.product_validation_inspection import inspect_product_validation
 from halpha.runtime.pipeline_contracts import RunContext
+from halpha.runtime.state_store import open_runtime_state_connection
 from halpha.data.run_index import (
     LATEST_REPORT_RUN_KEY,
     LATEST_RUN_KEY,
     LATEST_SUCCESSFUL_RUN_KEY,
-    RUN_INDEX_ARTIFACT,
+    apply_run_index_migrations,
     inspect_indexed_manifest,
     run_index_latest_refs,
     run_index_path,
@@ -49,8 +51,11 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
     manifest = _manifest(result.run.manifest_path)
     assert index_path.is_file()
     assert not (tmp_path / "data" / "research" / "index.sqlite").exists()
-    assert manifest["run_index"]["artifact"] == RUN_INDEX_ARTIFACT
-    assert manifest["run_index"]["status"] == "ok"
+    assert "run_index" not in manifest
+    assert "research_data_catalog" not in manifest
+    assert "outcome_history" not in manifest
+    assert not (tmp_path / "data" / "research" / "metadata" / "research_data_catalog.json").exists()
+    assert not (tmp_path / "data" / "research" / "metadata" / "outcome_history_state.json").exists()
 
     with closing(sqlite3.connect(index_path)) as connection:
         run_row = connection.execute(
@@ -62,6 +67,10 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
             (result.run.run_id,),
         ).fetchone()
         latest = dict(connection.execute("SELECT key, run_id FROM run_latest").fetchall())
+        task_count = connection.execute(
+            "SELECT COUNT(*) FROM run_tasks WHERE run_id = ?",
+            (result.run.run_id,),
+        ).fetchone()[0]
         artifacts = connection.execute(
             "SELECT artifact_key, path, kind FROM run_artifacts WHERE run_id = ? ORDER BY artifact_key",
             (result.run.run_id,),
@@ -77,6 +86,7 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
     )
     assert latest["latest_run"] == result.run.run_id
     assert latest["latest_successful_run"] == result.run.run_id
+    assert task_count == len(manifest["task_order"])
     assert ("market", "raw/market.json", "raw") in artifacts
     assert not any(artifact[0] == "run_index" for artifact in artifacts)
 
@@ -97,9 +107,14 @@ def test_run_index_records_failed_runs(tmp_path: Path) -> None:
             "SELECT status, failed_stage, error_count FROM runs WHERE run_id = ?",
             (result.run.run_id,),
         ).fetchone()
+        task_row = connection.execute(
+            "SELECT status, error_count FROM run_tasks WHERE run_id = ? AND task_name = ?",
+            (result.run.run_id, "collect_market_data"),
+        ).fetchone()
         latest = dict(connection.execute("SELECT key, run_id FROM run_latest").fetchall())
 
     assert row == ("failed", "collect_market_data", 1)
+    assert task_row == ("failed", 1)
     assert latest["latest_run"] == result.run.run_id
     assert "latest_successful_run" not in latest
 
@@ -136,6 +151,10 @@ def test_run_index_records_derived_stage_rerun_without_duplicate_rows(tmp_path: 
             "SELECT COUNT(*) FROM run_stages WHERE run_id = ?",
             (result.run.run_id,),
         ).fetchone()[0]
+        task_count = connection.execute(
+            "SELECT COUNT(*) FROM run_tasks WHERE run_id = ?",
+            (result.run.run_id,),
+        ).fetchone()[0]
         text_artifact = connection.execute(
             """
             SELECT kind FROM run_artifacts
@@ -146,6 +165,7 @@ def test_run_index_records_derived_stage_rerun_without_duplicate_rows(tmp_path: 
 
     assert run_count == 2
     assert stage_count == len(manifest["stages"])
+    assert task_count == sum(len(stage["tasks"]) for stage in manifest["stages"])
     assert text_artifact == ("raw",)
 
     write_run_index(result.run, now="2026-06-05T00:00:00Z")
@@ -157,6 +177,13 @@ def test_run_index_records_derived_stage_rerun_without_duplicate_rows(tmp_path: 
                 (result.run.run_id,),
             ).fetchone()[0]
             == len(manifest["stages"])
+        )
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) FROM run_tasks WHERE run_id = ?",
+                (result.run.run_id,),
+            ).fetchone()[0]
+            == sum(len(stage["tasks"]) for stage in manifest["stages"])
         )
 
 
@@ -289,6 +316,24 @@ def test_run_index_releases_sqlite_file_after_write_and_read_access(tmp_path: Pa
     assert moved_path.is_file()
     moved_path.unlink()
     assert not moved_path.exists()
+
+
+def test_run_index_task_migration_uses_distinct_runtime_version(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+
+    with closing(open_runtime_state_connection(config_path=config_path)) as connection:
+        apply_dashboard_job_migrations(connection, now="2026-06-05T00:00:00Z")
+        apply_run_index_migrations(connection, now="2026-06-05T00:01:00Z")
+        versions = [
+            row[0]
+            for row in connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
+        ]
+        run_tasks = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'run_tasks'"
+        ).fetchone()
+
+    assert versions == [1, 2, 3, 6]
+    assert run_tasks == ("run_tasks",)
 
 
 def _write_config(tmp_path: Path) -> Path:
