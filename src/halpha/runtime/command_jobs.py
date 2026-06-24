@@ -24,6 +24,10 @@ from halpha.runtime.command_job_store import (
 )
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
+from halpha.runtime.command_job_process import CommandJobProcess
+from halpha.runtime.command_job_process import CommandJobProcessError
+from halpha.runtime.command_job_process import launch_command_job_process
+from halpha.runtime.command_job_process import process_identity_alive
 from halpha.runtime.mutation_lease import MutationLease
 from halpha.runtime.mutation_lease import MutationLeaseBlocked
 from halpha.runtime.mutation_lease import acquire_mutation_lease
@@ -98,7 +102,7 @@ class CommandJobManager:
         self._repository = CommandJobRepository(config_path=self.config_path)
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
-        self._processes: dict[str, subprocess.Popen[str]] = {}
+        self._processes: dict[str, CommandJobProcess] = {}
         self._cancel_requested: set[str] = set()
         self._reconcile_unattached_jobs()
 
@@ -211,8 +215,18 @@ class CommandJobManager:
             if status in JOB_TERMINAL_STATUSES:
                 job.setdefault("warnings", []).append(f"job is already {status}.")
                 return job
-            process = self._processes.get(job_id)
-            if process is None:
+            job_process = self._processes.get(job_id)
+            if job_process is None:
+                if self._persisted_process_identity_alive(job):
+                    job["runtime_attached"] = False
+                    job["process_alive"] = True
+                    warnings = job.setdefault("warnings", [])
+                    if isinstance(warnings, list):
+                        warnings.append(
+                            "job process is still alive but is not attached to this runtime; "
+                            "it will not be cancelled without verified local ownership."
+                        )
+                    return job
                 return self._mark_process_lost(job)
             self._cancel_requested.add(job_id)
             job["status"] = "cancel_requested"
@@ -220,8 +234,7 @@ class CommandJobManager:
             job["cancellation_requested_at"] = job["updated_at"]
             job["cancel_reason"] = "caller_request"
             job = self._save_job(job, event_type="cancel_requested")
-            with suppress(OSError):
-                process.terminate()
+            job_process.request_cancel()
             return job
 
     def _run_job(self, job_id: str, command: list[str], spec: CommandSpec) -> None:
@@ -251,29 +264,28 @@ class CommandJobManager:
         lease_context = lease if lease is not None else nullcontext()
         try:
             with lease_context:
-                process = subprocess.Popen(
+                job_process = launch_command_job_process(
                     command,
                     cwd=self.base,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    shell=False,
                     env=lease.subprocess_env(os.environ) if lease is not None else None,
+                    popen_factory=subprocess.Popen,
                 )
                 with self._lock:
-                    self._processes[job_id] = process
+                    self._processes[job_id] = job_process
                     job.update(
                         {
                             "status": "running",
                             "started_at": started_at,
                             "updated_at": started_at,
-                            "pid": process.pid,
+                            "pid": job_process.pid,
+                            "process_identity": job_process.identity,
+                            "process_termination": job_process.termination,
                         }
                     )
                     self._save_job(job, event_type="started")
 
-                stdout, stderr = process.communicate()
-        except OSError as exc:
+                stdout, stderr = job_process.communicate()
+        except (CommandJobProcessError, OSError) as exc:
             reason = self._redact_text(f"job process could not start: {exc}")
             job.update(
                 {
@@ -316,14 +328,30 @@ class CommandJobManager:
                 and artifact_ref not in source_artifacts
             ):
                 source_artifacts.append(artifact_ref)
-        exit_code = int(process.returncode or 0)
-        status = "cancelled" if was_cancelled else "succeeded" if exit_code == 0 else "failed"
+        process_termination = dict(job_process.termination)
+        exit_code = int(job_process.returncode or 0)
+        cancellation_unconfirmed = was_cancelled and process_termination.get("confirmed_exit") is not True
+        cleanup_unconfirmed = (
+            process_termination.get("cleanup_after_root_exit") is True
+            and process_termination.get("confirmed_exit") is not True
+        )
+        status = (
+            "failed"
+            if cancellation_unconfirmed or cleanup_unconfirmed
+            else "cancelled"
+            if was_cancelled
+            else "succeeded"
+            if exit_code == 0
+            else "failed"
+        )
         job.update(
             {
                 "status": status,
                 "updated_at": finished_at,
                 "finished_at": finished_at,
                 "exit_code": exit_code,
+                "process_identity": job_process.identity,
+                "process_termination": process_termination,
                 "logs": {
                     "stdout_ref": stdout_ref,
                     "stderr_ref": stderr_ref,
@@ -339,6 +367,10 @@ class CommandJobManager:
         )
         if status == "cancelled":
             job.setdefault("warnings", []).append("job was cancelled by caller request.")
+        elif cancellation_unconfirmed:
+            job.setdefault("errors", []).append("job cancellation could not confirm complete process-tree termination.")
+        elif cleanup_unconfirmed:
+            job.setdefault("errors", []).append("job process tree cleanup could not confirm descendant termination.")
         elif status == "failed":
             job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
         self._save_job(job, event_type=status)
@@ -540,7 +572,25 @@ class CommandJobManager:
         latest = self._repository.get_job(job_id)
         if latest is not None and str(latest.get("status") or "").lower() != status:
             return self._normalize_runtime_job_state(latest)
+        if self._persisted_process_identity_alive(job):
+            job["runtime_attached"] = False
+            job["process_alive"] = True
+            warnings = job.setdefault("warnings", [])
+            if isinstance(warnings, list):
+                message = (
+                    "job process identity is still alive after the owning runtime restarted; "
+                    "status is preserved until the process exits."
+                )
+                if message not in warnings:
+                    warnings.append(message)
+            return job
         return self._mark_process_lost(job)
+
+    def _persisted_process_identity_alive(self, job: dict[str, Any]) -> bool:
+        identity = job.get("process_identity")
+        if not isinstance(identity, dict):
+            return False
+        return process_identity_alive(identity)
 
     def _mark_process_lost(self, job: dict[str, Any]) -> dict[str, Any]:
         status = str(job.get("status") or "").lower()

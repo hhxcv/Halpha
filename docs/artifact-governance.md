@@ -503,12 +503,13 @@ Runtime state-store foundation:
 - `.halpha/state.sqlite-shm`
 
 The SQLite file stores schema migrations, current run-index projections,
-local command-job lifecycle records, transition events, daily report
-schedule configuration, due dispatch claims, dispatch history refs, Dashboard
-service lifecycle state, Dashboard UI preferences, monitor cycle indexes,
-alert archive records, cooldown state, monitor service health query state, and
-shared resident-service lifecycle rows. WAL and SHM side files are SQLite
-runtime companions and should be backed up with the database when they exist.
+local command-job lifecycle records, process identity and termination
+metadata, transition events, daily report schedule configuration, due dispatch
+claims, dispatch history refs, Dashboard service lifecycle state, Dashboard UI
+preferences, monitor cycle indexes, alert archive records, cooldown state,
+monitor service health query state, and shared resident-service lifecycle rows.
+WAL and SHM side files are SQLite runtime companions and should be backed up
+with the database when they exist.
 Runtime state is local operational state. It is not research evidence, not a
 report source, not an upstream analysis input, and not Codex input by default.
 
