@@ -163,7 +163,14 @@ in a new run. A rerun must not leave stale downstream artifacts marked as
 successful.
 The `finalize_run` stage owns terminal shared-state publication for outcome
 history, research data catalog refresh, product-contract validation, and the
-terminal manifest. After that manifest is durable, `.halpha/state.sqlite`
+terminal manifest. Outcome history and research data catalog tasks prepare
+candidate payloads first. Official shared files are replaced only after
+`analysis/product_contract_validation.json` reports `ok`, `warning`, or
+`degraded`; `failed`, `skipped`, missing, malformed, or unknown validation
+results block publication. If replacement fails, prior official shared bytes
+or prior absent state must be restored where possible, and rollback failures
+must be recorded as manifest diagnostics. After the terminal manifest is
+durable, `.halpha/state.sqlite`
 records the rebuildable run, stage, task, and artifact projection; the
 projection is operational state, not an authority over run artifact contents.
 
@@ -450,7 +457,8 @@ Outcome tracking artifacts:
 These artifacts record prior research targets, later outcome evaluations, and
 reusable outcome history. They are not Codex context by themselves. Codex should
 consume bounded `analysis/outcome_tracking_material.md` instead of full target,
-evaluation, or history records.
+evaluation, or history records. Product runs publish the reusable outcome
+history and state only through the final product-validation gate.
 
 ### Local Monitor And Workbench Outputs
 

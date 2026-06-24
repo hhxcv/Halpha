@@ -5,6 +5,7 @@ import json
 from json import JSONDecodeError
 import os
 from pathlib import Path
+import time
 from typing import Any
 from uuid import uuid4
 
@@ -26,11 +27,23 @@ def _atomic_write_text(path: Path, text: str) -> None:
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temp_path, path)
+        _replace_with_retry(temp_path, path)
     finally:
         with suppress(OSError):
             if temp_path.exists():
                 temp_path.unlink()
+
+
+def _replace_with_retry(source: Path, target: Path) -> None:
+    delays = (0.01, 0.05, 0.1)
+    for delay in (*delays, None):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if delay is None:
+                raise
+            time.sleep(delay)
 
 
 def display_path(path: Path, *, base: Path | None = None) -> str:

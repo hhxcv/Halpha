@@ -136,6 +136,7 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
         "raw_text_events": "raw/text_events.json",
         "report": "report/report.md",
         "research_context": "analysis/research_context.md",
+        "outcome_history_state": "data/research/metadata/outcome_history_state.json",
         "research_data_catalog": "data/research/metadata/research_data_catalog.json",
         "event_intelligence_assessment": "analysis/event_intelligence_assessment.json",
         "alert_decisions": "analysis/alert_decisions.json",
@@ -170,9 +171,10 @@ def test_m0_smoke_pipeline_uses_mocks_without_product_fixtures(
     assert task_statuses[0] == ("collect_market_data", "succeeded")
     assert task_statuses[-1] == ("validate_product_contracts", "succeeded")
     assert manifest["stages"][-1]["artifacts"] == [
+        "analysis/product_contract_validation.json",
+        "data/research/outcomes/outcome_history.json",
         "data/research/metadata/outcome_history_state.json",
         "data/research/metadata/research_data_catalog.json",
-        "analysis/product_contract_validation.json",
     ]
     assert manifest["artifacts"]["product_contract_validation"] == "analysis/product_contract_validation.json"
 

@@ -6,14 +6,27 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.runtime.pipeline_contracts import RunContext
+from halpha.data.research_data_catalog import record_research_data_catalog_manifest_summary
+from halpha.outcome.outcome_history import record_outcome_history_manifest_summary
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext
+from halpha.shared_publication import (
+    OUTCOME_HISTORY_STATE_ARTIFACT,
+    PUBLICATION_ARTIFACTS,
+    RESEARCH_DATA_CATALOG_ARTIFACT,
+    cleanup_staged_publication,
+    has_staged_publication,
+    mark_shared_publication_not_published,
+    publish_prepared_shared_state,
+)
 from halpha.storage import write_json
 
 
 PRODUCT_CONTRACT_VALIDATION_ARTIFACT = "analysis/product_contract_validation.json"
 PRODUCT_CONTRACT_VALIDATION_TYPE = "product_contract_validation"
 CURRENT_STAGE_NAME = "finalize_run"
+PUBLICATION_STAGE_NAME = "validate_product_contracts"
 VALID_STATUSES = {"ok", "warning", "degraded", "failed", "skipped"}
+PUBLISHABLE_VALIDATION_STATUSES = {"ok", "warning", "degraded"}
 
 
 def build_product_contract_validation(
@@ -23,10 +36,57 @@ def build_product_contract_validation(
     now: datetime | None = None,
 ) -> list[str]:
     _ = config
-    artifact = validate_product_contracts(run, mode="product_run", now=now)
+    staged_publication = has_staged_publication(run)
+    try:
+        artifact = validate_product_contracts(run, mode="product_run", now=now)
+    except Exception:
+        if staged_publication:
+            mark_shared_publication_not_published(
+                run,
+                reason="product validation raised before shared publication.",
+            )
+            cleanup_staged_publication(run)
+        raise
+    if not isinstance(artifact, dict):
+        if staged_publication:
+            mark_shared_publication_not_published(
+                run,
+                reason="product validation did not return a JSON object.",
+            )
+            cleanup_staged_publication(run)
+        raise PipelineError(
+            "product validation did not return a JSON object.",
+            stage=PUBLICATION_STAGE_NAME,
+            exit_code=3,
+        )
     write_json(run.analysis_dir / "product_contract_validation.json", artifact)
     _record_manifest(run, artifact)
-    return [PRODUCT_CONTRACT_VALIDATION_ARTIFACT]
+    if not staged_publication:
+        return [PRODUCT_CONTRACT_VALIDATION_ARTIFACT]
+
+    status = _text(artifact.get("status")) or "missing"
+    if status not in PUBLISHABLE_VALIDATION_STATUSES:
+        reason = f"product validation status {status} blocks shared publication."
+        mark_shared_publication_not_published(run, reason=reason)
+        cleanup_staged_publication(run)
+        raise PipelineError(
+            reason,
+            stage=PUBLICATION_STAGE_NAME,
+            exit_code=3,
+            artifacts=[PRODUCT_CONTRACT_VALIDATION_ARTIFACT],
+        )
+
+    try:
+        payloads = publish_prepared_shared_state(run)
+    except PipelineError as exc:
+        cleanup_staged_publication(run)
+        if not exc.artifacts:
+            exc.artifacts = [PRODUCT_CONTRACT_VALIDATION_ARTIFACT]
+        raise
+    record_outcome_history_manifest_summary(run, payloads[OUTCOME_HISTORY_STATE_ARTIFACT])
+    record_research_data_catalog_manifest_summary(run, payloads[RESEARCH_DATA_CATALOG_ARTIFACT])
+    cleanup_staged_publication(run)
+    return [PRODUCT_CONTRACT_VALIDATION_ARTIFACT, *PUBLICATION_ARTIFACTS]
 
 
 def validate_product_contracts(

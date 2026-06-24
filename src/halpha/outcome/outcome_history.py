@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from halpha.runtime.pipeline_contracts import RunContext
+from halpha.shared_publication import stage_shared_payloads
 from halpha.storage import display_path, write_json
 
 
@@ -24,16 +25,41 @@ def write_outcome_history(
     *,
     now: datetime | str | None = None,
 ) -> list[str]:
+    candidate = build_outcome_history_publication(config, run, now=now)
+    for ref, payload in candidate["payloads"].items():
+        write_json(run.config_path.parent / ref, payload)
+    record_outcome_history_manifest_summary(run, candidate["state"])
+    return [OUTCOME_HISTORY_STATE_ARTIFACT]
+
+
+def prepare_outcome_history_publication(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> list[str]:
+    candidate = build_outcome_history_publication(config, run, now=now)
+    stage_shared_payloads(run, group="outcome_history", payloads=candidate["payloads"])
+    return []
+
+
+def build_outcome_history_publication(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    now: datetime | str | None = None,
+) -> dict[str, Any]:
     del config
     evaluations_artifact = _read_outcome_evaluations(run)
-    if evaluations_artifact is None:
-        _record_manifest_summary(run, _skipped_state(run, reason="analysis/outcome_evaluations.json was not found.", now=now))
-        return []
-
-    incoming_records = _history_records(evaluations_artifact, run)
+    incoming_records = [] if evaluations_artifact is None else _history_records(evaluations_artifact, run)
     existing_records = _read_history_records(outcome_history_path(run.config_path))
     merged_records, merge_summary = _merge_history(existing_records, incoming_records)
-    warnings = _unique_sorted(merge_summary["warnings"])
+    warnings = _unique_sorted(
+        [
+            *merge_summary["warnings"],
+            *(["analysis/outcome_evaluations.json was not found."] if evaluations_artifact is None else []),
+        ]
+    )
     errors: list[dict[str, Any]] = []
     status = _status(record_count=len(merged_records), warnings=warnings, errors=errors)
 
@@ -45,8 +71,6 @@ def write_outcome_history(
         "record_count": len(merged_records),
         "records": sorted(merged_records, key=lambda item: item["stable_outcome_key"]),
     }
-    write_json(outcome_history_path(run.config_path), history)
-
     state = {
         "schema_version": OUTCOME_HISTORY_SCHEMA_VERSION,
         "artifact_type": "outcome_history_state",
@@ -71,13 +95,21 @@ def write_outcome_history(
         "evaluation_statuses": _value_summaries(merged_records, "evaluation_status"),
         "warnings": warnings,
         "errors": errors,
-        "source_artifacts": [
-            display_path(run.analysis_dir / "outcome_evaluations.json", base=run.config_path.parent)
-        ],
+        "source_artifacts": (
+            [display_path(run.analysis_dir / "outcome_evaluations.json", base=run.config_path.parent)]
+            if evaluations_artifact is not None
+            else []
+        ),
     }
-    write_json(outcome_history_state_path(run.config_path), state)
-    _record_manifest_summary(run, state)
-    return [OUTCOME_HISTORY_STATE_ARTIFACT]
+    return {
+        "status": state["status"],
+        "artifacts": [OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT],
+        "payloads": {
+            OUTCOME_HISTORY_ARTIFACT: history,
+            OUTCOME_HISTORY_STATE_ARTIFACT: state,
+        },
+        "state": state,
+    }
 
 
 def outcome_history_storage_path(config_path: Path) -> Path:
@@ -187,9 +219,12 @@ def _merge_history(
             inserted += 1
             continue
 
-        duplicate += 1
         same_content = existing.get("content_hash") == incoming.get("content_hash")
         same_evaluation_run = incoming["latest_evaluation_run_id"] in _string_list(existing.get("evaluation_run_ids"))
+        if same_content and same_evaluation_run:
+            continue
+
+        duplicate += 1
         if not same_content:
             updated += 1
             if same_evaluation_run:
@@ -289,39 +324,9 @@ def _normalize_existing(record: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _skipped_state(run: RunContext, *, reason: str, now: datetime | str | None) -> dict[str, Any]:
-    return {
-        "schema_version": OUTCOME_HISTORY_SCHEMA_VERSION,
-        "artifact_type": "outcome_history_state",
-        "updated_at": _format_utc(now),
-        "status": "skipped",
-        "storage_path": display_path(outcome_history_storage_path(run.config_path), base=run.config_path.parent),
-        "history_path": display_path(outcome_history_path(run.config_path), base=run.config_path.parent),
-        "state_path": display_path(outcome_history_state_path(run.config_path), base=run.config_path.parent),
-        "totals": {
-            "records": 0,
-            "incoming_records": 0,
-            "inserted_records": 0,
-            "updated_records": 0,
-            "duplicate_records": 0,
-            "conflicting_duplicates": 0,
-            "warning_count": 1,
-            "error_count": 0,
-        },
-        "sources": [],
-        "target_kinds": [],
-        "outcome_states": [],
-        "evaluation_statuses": [],
-        "warnings": [reason],
-        "errors": [],
-        "source_artifacts": [],
-    }
-
-
-def _record_manifest_summary(run: RunContext, state: dict[str, Any]) -> None:
+def record_outcome_history_manifest_summary(run: RunContext, state: dict[str, Any]) -> None:
     totals = state["totals"]
-    if state["status"] != "skipped":
-        run.manifest["artifacts"]["outcome_history_state"] = OUTCOME_HISTORY_STATE_ARTIFACT
+    run.manifest["artifacts"]["outcome_history_state"] = OUTCOME_HISTORY_STATE_ARTIFACT
     run.manifest["outcome_history"] = {
         "status": state["status"],
         "storage_path": state["storage_path"],
