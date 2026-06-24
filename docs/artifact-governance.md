@@ -94,12 +94,12 @@ port, monitor output directory, or schedule file location.
 | --- | --- | --- |
 | Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |
 | Reusable market and research history | Physical local store plus store-local schema and state metadata | Examples include `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/` history stores. |
-| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, current run-index projection, dashboard command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, monitor health query state, shared resident-service lifecycle controller state, Dashboard service adoption, and Dashboard UI preferences are implemented. Later domain migrations own Monitor and Schedule service adoption and searchable run or artifact indexes. |
+| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, current run-index projection, local command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, monitor health query state, shared resident-service lifecycle controller state, Dashboard service adoption, and Dashboard UI preferences are implemented. Later domain migrations own Monitor and Schedule service adoption and searchable run or artifact indexes. |
 | Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
 | Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
 
 Current implemented mutable operational state is centered on
-`.halpha/state.sqlite`. The run-index projection, dashboard command-job
+`.halpha/state.sqlite`. The run-index projection, local command-job
 lifecycle, daily report schedule dispatch state, monitor cycle index, alert
 archive records, cooldown state, monitor health query state, shared
 resident-service lifecycle state, Dashboard service state, and Dashboard UI
@@ -488,7 +488,7 @@ Runtime state-store foundation:
 - `.halpha/state.sqlite-shm`
 
 The SQLite file stores schema migrations, current run-index projections,
-dashboard command-job lifecycle records, transition events, daily report
+local command-job lifecycle records, transition events, daily report
 schedule configuration, due dispatch claims, dispatch history refs, Dashboard
 service lifecycle state, Dashboard UI preferences, and, after later domain
 migrations, additional mutable operational state and rebuildable indexes. WAL
@@ -501,8 +501,8 @@ analysis input, and not Codex input by default.
 
 Dashboard contracts are defined in `docs/dashboard-contracts.md`. Dashboard
 state records local web UI control metadata such as dashboard service state,
-selected product-config preference, dashboard-triggered jobs, bounded logs,
-schedule state, and linked source refs.
+selected product-config preference, UI-submitted command job refs, bounded
+logs, schedule state, and linked source refs.
 It is control and delivery state, not upstream research evidence, validation
 authority, decision input, alert-priority source, strategy-gate input, or Codex
 context by default.
@@ -511,8 +511,8 @@ Implemented dashboard control artifacts include:
 
 - `.halpha/state.sqlite` Dashboard service lifecycle rows
 - `.halpha/state.sqlite` Dashboard UI preference rows
-- `.halpha/dashboard/job_logs/<job_id>/stdout.log`
-- `.halpha/dashboard/job_logs/<job_id>/stderr.log`
+- `.halpha/command_jobs/job_logs/<job_id>/stdout.log`
+- `.halpha/command_jobs/job_logs/<job_id>/stderr.log`
 - `.halpha/dashboard/config_backups/<config-stem>-<timestamp>.yaml.bak`
 
 Legacy dashboard job artifacts:

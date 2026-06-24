@@ -1,18 +1,18 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 import sys
 from typing import Any
 
-from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.pipeline_stages import STAGE_ORDER
+from halpha.storage import safe_local_ref as _safe_ref
 
 
 CODEX_STAGE = "generate_report"
 
 
-class DashboardJobError(Exception):
+class CommandJobError(Exception):
     def __init__(self, message: str, *, status: str = "blocked") -> None:
         super().__init__(message)
         self.status = status
@@ -32,7 +32,7 @@ class CommandSpec:
 
 
 @dataclass(frozen=True)
-class DashboardJobCommand:
+class CommandJobCommand:
     spec: CommandSpec
     command: list[str]
     preview: list[str]
@@ -162,19 +162,19 @@ SUPPORTED_COMMANDS = {
 }
 
 
-class DashboardJobCommandBuilder:
+class CommandJobBuilder:
     def __init__(self, config: dict[str, Any], *, config_path: Path, base: Path) -> None:
         self.config = config
         self.config_path = Path(config_path)
         self.resolved_config_path = self.config_path.resolve()
         self.base = base
 
-    def build(self, intent: str, params: dict[str, Any]) -> DashboardJobCommand:
+    def build(self, intent: str, params: dict[str, Any]) -> CommandJobCommand:
         spec = SUPPORTED_COMMANDS.get(intent)
         if spec is None:
-            raise DashboardJobError(f"unsupported dashboard job intent: {intent or 'missing'}", status="unsupported")
+            raise CommandJobError(f"unsupported command job intent: {intent or 'missing'}", status="unsupported")
         command, preview = self._command_for_spec(spec, params)
-        return DashboardJobCommand(spec=spec, command=command, preview=preview)
+        return CommandJobCommand(spec=spec, command=command, preview=preview)
 
     def _command_for_spec(self, spec: CommandSpec, params: dict[str, Any]) -> tuple[list[str], list[str]]:
         supported_params = {"run_dir"} if spec.allow_run_dir else set()
@@ -185,15 +185,15 @@ class DashboardJobCommandBuilder:
         supported_params.update(self._param_mode_supported_params(spec.param_mode))
         extra = sorted(set(params) - supported_params)
         if extra:
-            raise DashboardJobError(f"unsupported {spec.intent} job parameter(s): {', '.join(extra)}")
+            raise CommandJobError(f"unsupported {spec.intent} job parameter(s): {', '.join(extra)}")
         stage_name = self._validated_stage_name(params.get("stage_name")) if spec.stage_param else None
         if self._requires_codex_confirmation(spec, stage_name) and params.get("confirm_codex") is not True:
-            raise DashboardJobError("confirm_codex must be true for dashboard jobs that may invoke Codex.")
+            raise CommandJobError("confirm_codex must be true for command jobs that may invoke Codex.")
         cli_parts = list(spec.cli_parts)
         if spec.stage_param == "positional" and stage_name:
             cli_parts.append(stage_name)
         command = [sys.executable, "-m", "halpha", *cli_parts, "--config", str(self.resolved_config_path)]
-        preview = ["python", "-m", "halpha", *cli_parts, "--config", dashboard_config_ref(self.config_path)]
+        preview = ["python", "-m", "halpha", *cli_parts, "--config", command_config_ref(self.config_path)]
         if spec.stage_param == "until" and stage_name:
             command.extend(["--until", stage_name])
             preview.extend(["--until", stage_name])
@@ -247,7 +247,7 @@ class DashboardJobCommandBuilder:
             input_path = params.get("input_path")
             if input_path is not None:
                 if not isinstance(input_path, str):
-                    raise DashboardJobError("input_path must be a string.")
+                    raise CommandJobError("input_path must be a string.")
                 path = self._validated_input_path(str(input_path))
                 command.extend(["--input", str(path)])
                 preview.extend(["--input", _safe_ref(path, base=self.base)])
@@ -272,45 +272,45 @@ class DashboardJobCommandBuilder:
         if output_dir is None:
             return
         if not isinstance(output_dir, str):
-            raise DashboardJobError("output_dir must be a string.")
+            raise CommandJobError("output_dir must be a string.")
         path = self._validated_local_path(str(output_dir), param_name="output_dir")
         command.extend(["--output-dir", str(path)])
         preview.extend(["--output-dir", _safe_ref(path, base=self.base)])
 
     def _validated_strategy_name(self, value: Any, *, param_name: str) -> str:
         if not isinstance(value, str) or not value.strip():
-            raise DashboardJobError(f"{param_name} must not be empty.")
+            raise CommandJobError(f"{param_name} must not be empty.")
         strategy_name = value.strip()
         if strategy_name not in self._configured_strategy_names():
-            raise DashboardJobError(f"{param_name} is not configured or enabled: {strategy_name}.")
+            raise CommandJobError(f"{param_name} is not configured or enabled: {strategy_name}.")
         return strategy_name
 
     def _validated_strategy_names(self, value: Any) -> list[str]:
         if value is None:
             return []
         if not isinstance(value, list) or not value:
-            raise DashboardJobError("strategy_names must be a non-empty list when provided.")
+            raise CommandJobError("strategy_names must be a non-empty list when provided.")
         return [self._validated_strategy_name(item, param_name="strategy_names") for item in value]
 
     def _validated_symbol(self, value: Any) -> str:
         if not isinstance(value, str) or not value.strip():
-            raise DashboardJobError("symbol must not be empty.")
+            raise CommandJobError("symbol must not be empty.")
         symbol = value.strip()
         if symbol not in self._configured_symbols():
-            raise DashboardJobError(f"symbol is not configured: {symbol}.")
+            raise CommandJobError(f"symbol is not configured: {symbol}.")
         return symbol
 
     def _validated_timeframe(self, value: Any) -> str:
         if not isinstance(value, str) or not value.strip():
-            raise DashboardJobError("timeframe must not be empty.")
+            raise CommandJobError("timeframe must not be empty.")
         timeframe = value.strip()
         if timeframe not in self._configured_timeframes():
-            raise DashboardJobError(f"timeframe is not configured: {timeframe}.")
+            raise CommandJobError(f"timeframe is not configured: {timeframe}.")
         return timeframe
 
     def _validated_positive_int(self, value: Any, *, param_name: str) -> int:
         if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-            raise DashboardJobError(f"{param_name} must be a positive integer.")
+            raise CommandJobError(f"{param_name} must be a positive integer.")
         return value
 
     def _configured_strategy_names(self) -> set[str]:
@@ -335,11 +335,11 @@ class DashboardJobCommandBuilder:
 
     def _validated_stage_name(self, value: Any) -> str:
         if not isinstance(value, str) or not value.strip():
-            raise DashboardJobError("stage_name must not be empty.")
+            raise CommandJobError("stage_name must not be empty.")
         stage_name = value.strip()
         if stage_name not in STAGE_ORDER:
             supported = ", ".join(STAGE_ORDER)
-            raise DashboardJobError(f"stage_name must be one of: {supported}.")
+            raise CommandJobError(f"stage_name must be one of: {supported}.")
         return stage_name
 
     def _requires_codex_confirmation(self, spec: CommandSpec, stage_name: str | None) -> bool:
@@ -353,31 +353,31 @@ class DashboardJobCommandBuilder:
 
     def _validated_run_dir(self, value: str) -> Path:
         if not value or not value.strip():
-            raise DashboardJobError("run_dir must not be empty.")
+            raise CommandJobError("run_dir must not be empty.")
         path = Path(value)
         resolved = path if path.is_absolute() else self.base / path
         runs_root = self._run_output_root().resolve()
         try:
             resolved.resolve().relative_to(runs_root)
         except ValueError as exc:
-            raise DashboardJobError("run_dir must stay within the configured run output directory.") from exc
+            raise CommandJobError("run_dir must stay within the configured run output directory.") from exc
         return resolved
 
     def _validated_input_path(self, value: str) -> Path:
         path = self._validated_local_path(value, param_name="input_path")
         if not path.is_file():
-            raise DashboardJobError("input_path must reference an existing file.")
+            raise CommandJobError("input_path must reference an existing file.")
         return path
 
     def _validated_local_path(self, value: str, *, param_name: str) -> Path:
         if not value or not value.strip():
-            raise DashboardJobError(f"{param_name} must not be empty.")
+            raise CommandJobError(f"{param_name} must not be empty.")
         path = Path(value)
         resolved = path if path.is_absolute() else self.base / path
         try:
             resolved.resolve().relative_to(self.base.resolve())
         except ValueError as exc:
-            raise DashboardJobError(f"{param_name} must stay within the dashboard config directory.") from exc
+            raise CommandJobError(f"{param_name} must stay within the config directory.") from exc
         return resolved
 
     def _run_output_root(self) -> Path:
@@ -386,7 +386,7 @@ class DashboardJobCommandBuilder:
         return output_dir if output_dir.is_absolute() else self.base / output_dir
 
 
-def dashboard_config_ref(config_path: Path) -> str:
+def command_config_ref(config_path: Path) -> str:
     path = Path(config_path)
     if not path.is_absolute():
         return path.as_posix()

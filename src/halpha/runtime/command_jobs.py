@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -10,32 +10,31 @@ import threading
 from typing import Any
 from uuid import uuid4
 
-from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
-from halpha.dashboard.job_commands import CommandSpec
-from halpha.dashboard.job_commands import DashboardJobCommandBuilder
-from halpha.dashboard.job_commands import DashboardJobError
-from halpha.dashboard.job_commands import dashboard_config_ref
-from halpha.dashboard.job_store import (
-    DASHBOARD_JOB_LOG_ROOT_REF,
-    DASHBOARD_JOB_STORE_ARTIFACT,
-    DashboardJobRepository,
-    DashboardJobStoreError,
+from halpha.runtime.command_job_commands import CommandSpec
+from halpha.runtime.command_job_commands import CommandJobBuilder
+from halpha.runtime.command_job_commands import CommandJobError
+from halpha.runtime.command_job_commands import command_config_ref
+from halpha.runtime.command_job_store import (
+    COMMAND_JOB_LOG_ROOT_REF,
+    COMMAND_JOB_STORE_ARTIFACT,
+    CommandJobRepository,
+    CommandJobStoreError,
     JOB_TERMINAL_STATUSES,
 )
-from halpha.dashboard.time import utc_now_timestamp
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
 from halpha.storage import artifact_base as _artifact_base
+from halpha.storage import safe_local_ref as _safe_ref
 
 
-DASHBOARD_JOB_INDEX = DASHBOARD_JOB_STORE_ARTIFACT
+COMMAND_JOB_INDEX = COMMAND_JOB_STORE_ARTIFACT
 MAX_JOB_LOG_CHARS = 20_000
 EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REDACTED_ARTIFACT_REF = "<redacted-artifact>"
 RESULT_REF_PLACEHOLDERS = {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}
 JOB_PROCESS_STATUSES = {"running", "cancel_requested"}
 JOB_REQUESTED_BY_VALUES = {"CLI", "Dashboard", "Monitor", "Schedule"}
-DASHBOARD_JOB_ID_RE = re.compile(r"^\d{8}T\d{6}Z_[0-9a-f]{8}$")
+COMMAND_JOB_ID_RE = re.compile(r"^\d{8}T\d{6}Z_[0-9a-f]{8}$")
 RESULT_ARTIFACT_KEYS = {
     "event_intelligence_material",
     "manifest",
@@ -70,18 +69,27 @@ PRIVATE_KEY_PARTS = (
 )
 
 
-class DashboardJobManager:
-    def __init__(self, config: dict[str, Any], *, config_path: Path) -> None:
+class CommandJobManager:
+    def __init__(
+        self,
+        config: dict[str, Any],
+        *,
+        config_path: Path,
+        requested_by: str = "CLI",
+        requester: dict[str, Any] | None = None,
+    ) -> None:
         self.config = config
         self.config_path = Path(config_path)
         self.resolved_config_path = self.config_path.resolve()
         self.base = _artifact_base(self.config_path)
         self.control_base = Path.cwd()
-        self.jobs_root = Path.cwd() / DASHBOARD_JOB_LOG_ROOT_REF
+        self.jobs_root = Path.cwd() / COMMAND_JOB_LOG_ROOT_REF
+        self.default_requested_by = _requested_by(requested_by, default="CLI")
+        self.default_requester = _requester_metadata(requester)
         with suppress(OSError):
             configure_local_logging(config_path=self.config_path, config=config)
-        self._command_builder = DashboardJobCommandBuilder(config, config_path=self.config_path, base=self.base)
-        self._repository = DashboardJobRepository(config_path=self.config_path)
+        self._command_builder = CommandJobBuilder(config, config_path=self.config_path, base=self.base)
+        self._repository = CommandJobRepository(config_path=self.config_path)
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
         self._processes: dict[str, subprocess.Popen[str]] = {}
@@ -92,11 +100,12 @@ class DashboardJobManager:
         now = _utc_now()
         intent = str(request.get("intent") or "").strip()
         params = request.get("params") if isinstance(request.get("params"), dict) else {}
-        requested_by = _requested_by(request.get("requested_by"))
-        job = self._new_job(intent=intent, params=params, requested_by=requested_by, now=now)
+        requested_by = _requested_by(request.get("requested_by"), default=self.default_requested_by)
+        requester = self._requester_for_request(request)
+        job = self._new_job(intent=intent, params=params, requested_by=requested_by, requester=requester, now=now)
         try:
             job_command = self._command_builder.build(intent, params)
-        except DashboardJobError as exc:
+        except CommandJobError as exc:
             job.update(
                 {
                     "status": exc.status,
@@ -108,9 +117,9 @@ class DashboardJobManager:
             job = self._save_job(job, event_type=exc.status)
             if exc.status == "unsupported":
                 self._logger.warning(
-                    "Dashboard job was rejected.",
+                    "command job was rejected.",
                     extra={
-                        "event": "dashboard.job.rejected",
+                        "event": "command_job.rejected",
                         "job_id": job["job_id"],
                         "intent": intent,
                         "status": job["status"],
@@ -119,9 +128,9 @@ class DashboardJobManager:
                 )
             else:
                 self._logger.warning(
-                    "Dashboard job was blocked.",
+                    "command job was blocked.",
                     extra={
-                        "event": "dashboard.job.blocked",
+                        "event": "command_job.blocked",
                         "job_id": job["job_id"],
                         "intent": intent,
                         "status": job["status"],
@@ -138,9 +147,9 @@ class DashboardJobManager:
         job["cancellable"] = spec.cancellable
         job = self._save_job(job, event_type="queued")
         self._logger.info(
-            "Dashboard job queued.",
+            "command job queued.",
             extra={
-                "event": "dashboard.job.queued",
+                "event": "command_job.queued",
                 "job_id": job["job_id"],
                 "intent": intent,
                 "kind": spec.kind,
@@ -150,7 +159,7 @@ class DashboardJobManager:
         thread = threading.Thread(
             target=self._run_job,
             args=(job["job_id"], command, spec),
-            name=f"dashboard-job-{job['job_id']}",
+            name=f"command-job-{job['job_id']}",
             daemon=True,
         )
         thread.start()
@@ -164,16 +173,16 @@ class DashboardJobManager:
         )[:limit]
         return {
             "schema_version": 1,
-            "artifact_type": "dashboard_job_list",
+            "artifact_type": "command_job_list",
             "status": "available" if jobs else "missing",
-            "source_artifacts": [DASHBOARD_JOB_INDEX],
+            "source_artifacts": [COMMAND_JOB_INDEX],
             "jobs": jobs,
-            "warnings": [] if jobs else ["dashboard job history is empty."],
+            "warnings": [] if jobs else ["command job history is empty."],
             "errors": [],
         }
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
-        if not _is_dashboard_job_id(job_id):
+        if not _is_command_job_id(job_id):
             return None
         data = self._repository.get_job(job_id)
         if data is None:
@@ -186,10 +195,10 @@ class DashboardJobManager:
             if job is None:
                 return {
                     "schema_version": 1,
-                    "artifact_type": "dashboard_job",
+                    "artifact_type": "command_job",
                     "job_id": job_id,
                     "status": "missing",
-                    "warnings": ["dashboard job was not found."],
+                    "warnings": ["command job was not found."],
                     "errors": [],
                 }
             status = str(job.get("status") or "unknown")
@@ -203,7 +212,7 @@ class DashboardJobManager:
             job["status"] = "cancel_requested"
             job["updated_at"] = _utc_now()
             job["cancellation_requested_at"] = job["updated_at"]
-            job["cancel_reason"] = "dashboard_request"
+            job["cancel_reason"] = "caller_request"
             job = self._save_job(job, event_type="cancel_requested")
             with suppress(OSError):
                 process.terminate()
@@ -215,9 +224,9 @@ class DashboardJobManager:
             return
         started_at = _utc_now()
         self._logger.info(
-            "Dashboard job starting.",
+            "command job starting.",
             extra={
-                "event": "dashboard.job.start",
+                "event": "command_job.start",
                 "job_id": job_id,
                 "intent": job.get("intent"),
                 "kind": spec.kind,
@@ -247,9 +256,9 @@ class DashboardJobManager:
             )
             self._save_job(job, event_type="start_failed")
             self._logger.error(
-                "Dashboard job process could not start.",
+                "command job process could not start.",
                 extra={
-                    "event": "dashboard.job.start_failed",
+                    "event": "command_job.start_failed",
                     "job_id": job_id,
                     "intent": job.get("intent"),
                     "kind": spec.kind,
@@ -311,7 +320,7 @@ class DashboardJobManager:
             }
         )
         if status == "cancelled":
-            job.setdefault("warnings", []).append("job was cancelled by dashboard request.")
+            job.setdefault("warnings", []).append("job was cancelled by caller request.")
         elif status == "failed":
             job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
         self._save_job(job, event_type=status)
@@ -319,9 +328,9 @@ class DashboardJobManager:
             self._processes.pop(job_id, None)
         self._logger.log(
             logging.INFO if status == "succeeded" else logging.WARNING,
-            "Dashboard job finished.",
+            "command job finished.",
             extra={
-                "event": "dashboard.job.finished",
+                "event": "command_job.finished",
                 "job_id": job_id,
                 "intent": job.get("intent"),
                 "kind": spec.kind,
@@ -330,18 +339,27 @@ class DashboardJobManager:
             },
         )
 
-    def _new_job(self, *, intent: str, params: dict[str, Any], requested_by: str, now: str) -> dict[str, Any]:
+    def _new_job(
+        self,
+        *,
+        intent: str,
+        params: dict[str, Any],
+        requested_by: str,
+        requester: dict[str, Any],
+        now: str,
+    ) -> dict[str, Any]:
         job_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid4().hex[:8]}"
         job_dir = self.jobs_root / job_id
         return {
             "schema_version": 1,
-            "artifact_type": "dashboard_job",
+            "artifact_type": "command_job",
             "job_id": job_id,
             "kind": "command",
             "intent": intent,
             "requested_by": requested_by,
+            "requester": self._redact_value(requester),
             "params": self._redact_value(params),
-            "config_ref": dashboard_config_ref(self.config_path),
+            "config_ref": command_config_ref(self.config_path),
             "status": "queued",
             "created_at": now,
             "updated_at": now,
@@ -447,7 +465,7 @@ class DashboardJobManager:
         job["finished_at"] = job["updated_at"]
         job["cancellable"] = False
         message = (
-            "job process identity was lost after dashboard restart; "
+            "job process identity was lost after the owning runtime restarted; "
             "the recorded PID was not treated as proof of the original job."
         )
         if job["status"] == "cancelled":
@@ -460,7 +478,7 @@ class DashboardJobManager:
                 errors.append(message)
         try:
             return self._save_job(job, event_type="process_lost")
-        except DashboardJobStoreError:
+        except CommandJobStoreError:
             latest = self._repository.get_job(str(job.get("job_id") or ""))
             if latest is not None and str(latest.get("status") or "").lower() in JOB_TERMINAL_STATUSES:
                 return latest
@@ -469,6 +487,13 @@ class DashboardJobManager:
     def _reconcile_unattached_jobs(self) -> None:
         for job in self._repository.list_transient_jobs():
             self._normalize_runtime_job_state(job)
+
+    def _requester_for_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        requester = dict(self.default_requester)
+        request_value = request.get("requester")
+        if isinstance(request_value, dict):
+            requester.update(_requester_metadata(request_value))
+        return requester
 
     def _redact_value(self, value: Any) -> Any:
         if isinstance(value, dict):
@@ -500,9 +525,25 @@ class DashboardJobManager:
         return sorted(values, key=len, reverse=True)
 
 
-def _requested_by(value: Any) -> str:
+def _requested_by(value: Any, *, default: str) -> str:
     requested_by = str(value or "").strip()
-    return requested_by if requested_by in JOB_REQUESTED_BY_VALUES else "Dashboard"
+    if requested_by in JOB_REQUESTED_BY_VALUES:
+        return requested_by
+    return default if default in JOB_REQUESTED_BY_VALUES else "CLI"
+
+
+def _requester_metadata(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    metadata: dict[str, Any] = {}
+    for key, item in sorted(value.items()):
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                metadata[str(key)] = text[:200]
+        elif isinstance(item, (int, float, bool)) or item is None:
+            metadata[str(key)] = item
+    return metadata
 
 
 def _config_private_values(config: dict[str, Any]) -> set[str]:
@@ -533,9 +574,9 @@ def _is_private_key(key: str) -> bool:
     return any(part in lowered for part in PRIVATE_KEY_PARTS)
 
 
-def _is_dashboard_job_id(value: str) -> bool:
-    return DASHBOARD_JOB_ID_RE.fullmatch(str(value or "")) is not None
+def _is_command_job_id(value: str) -> bool:
+    return COMMAND_JOB_ID_RE.fullmatch(str(value or "")) is not None
 
 
 def _utc_now() -> str:
-    return utc_now_timestamp()
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")

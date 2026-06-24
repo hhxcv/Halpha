@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from contextlib import closing
 from dataclasses import dataclass
@@ -18,11 +18,11 @@ from halpha.runtime.state_store import (
 )
 
 
-DASHBOARD_JOB_STORE_ARTIFACT = STATE_STORE_REF
-DASHBOARD_JOB_LOG_ROOT_REF = ".halpha/dashboard/job_logs"
-DASHBOARD_JOB_SCHEMA_VERSION = 1
-DASHBOARD_JOB_MIGRATION_VERSION = 3
-DASHBOARD_JOB_EVENT_LIMIT = 200
+COMMAND_JOB_STORE_ARTIFACT = STATE_STORE_REF
+COMMAND_JOB_LOG_ROOT_REF = ".halpha/command_jobs/job_logs"
+COMMAND_JOB_SCHEMA_VERSION = 1
+COMMAND_JOB_MIGRATION_VERSION = 9
+COMMAND_JOB_EVENT_LIMIT = 200
 JOB_TRANSIENT_STATUSES = {"queued", "running", "cancel_requested"}
 JOB_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "unsupported", "blocked", "not_started"}
 ALLOWED_JOB_TRANSITIONS = {
@@ -32,12 +32,12 @@ ALLOWED_JOB_TRANSITIONS = {
 }
 
 
-class DashboardJobStoreError(Exception):
+class CommandJobStoreError(Exception):
     pass
 
 
 @dataclass(frozen=True)
-class DashboardJobEvent:
+class CommandJobEvent:
     job_id: str
     event_type: str
     from_status: str | None
@@ -47,17 +47,18 @@ class DashboardJobEvent:
     details: dict[str, Any] | None = None
 
 
-DASHBOARD_JOB_MIGRATIONS = (
+COMMAND_JOB_MIGRATIONS = (
     StateStoreMigration(
-        version=DASHBOARD_JOB_MIGRATION_VERSION,
-        name="dashboard_command_jobs",
+        version=COMMAND_JOB_MIGRATION_VERSION,
+        name="local_command_jobs",
         statements=(
             """
-            CREATE TABLE IF NOT EXISTS dashboard_command_jobs (
+            CREATE TABLE IF NOT EXISTS local_command_jobs (
               job_id TEXT PRIMARY KEY,
               intent TEXT NOT NULL,
               kind TEXT NOT NULL,
               requested_by TEXT NOT NULL,
+              requester_json TEXT NOT NULL,
               config_ref TEXT NOT NULL,
               status TEXT NOT NULL,
               created_at TEXT NOT NULL,
@@ -87,7 +88,7 @@ DASHBOARD_JOB_MIGRATIONS = (
             )
             """,
             """
-            CREATE TABLE IF NOT EXISTS dashboard_command_job_events (
+            CREATE TABLE IF NOT EXISTS local_command_job_events (
               event_id INTEGER PRIMARY KEY AUTOINCREMENT,
               job_id TEXT NOT NULL,
               event_type TEXT NOT NULL,
@@ -96,18 +97,18 @@ DASHBOARD_JOB_MIGRATIONS = (
               created_at TEXT NOT NULL,
               message TEXT,
               details_json TEXT NOT NULL,
-              FOREIGN KEY (job_id) REFERENCES dashboard_command_jobs(job_id) ON DELETE CASCADE
+              FOREIGN KEY (job_id) REFERENCES local_command_jobs(job_id) ON DELETE CASCADE
             )
             """,
-            "CREATE INDEX IF NOT EXISTS idx_dashboard_command_jobs_created ON dashboard_command_jobs(created_at, job_id)",
-            "CREATE INDEX IF NOT EXISTS idx_dashboard_command_jobs_status ON dashboard_command_jobs(status, updated_at)",
-            "CREATE INDEX IF NOT EXISTS idx_dashboard_command_job_events_job ON dashboard_command_job_events(job_id, event_id)",
+            "CREATE INDEX IF NOT EXISTS idx_local_command_jobs_created ON local_command_jobs(created_at, job_id)",
+            "CREATE INDEX IF NOT EXISTS idx_local_command_jobs_status ON local_command_jobs(status, updated_at)",
+            "CREATE INDEX IF NOT EXISTS idx_local_command_job_events_job ON local_command_job_events(job_id, event_id)",
         ),
     ),
 )
 
 
-class DashboardJobRepository:
+class CommandJobRepository:
     def __init__(self, *, config_path: Path) -> None:
         self.config_path = Path(config_path)
         self.database_path = runtime_state_path(config_path=self.config_path)
@@ -117,17 +118,17 @@ class DashboardJobRepository:
         status = _status(job)
         now = str(job.get("updated_at") or job.get("created_at") or "")
         if not now:
-            raise DashboardJobStoreError("dashboard job updated_at is required.")
+            raise CommandJobStoreError("command job updated_at is required.")
         try:
             with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_dashboard_job_migrations(connection, now=now)
+                apply_command_job_migrations(connection, now=now)
                 with runtime_state_transaction(connection):
                     previous = self._status_for_update(connection, job_id)
                     _validate_transition(previous, status)
                     self._replace_job(connection, job)
                     self._record_event(
                         connection,
-                        DashboardJobEvent(
+                        CommandJobEvent(
                             job_id=job_id,
                             event_type=event_type,
                             from_status=previous,
@@ -137,7 +138,7 @@ class DashboardJobRepository:
                         ),
                     )
         except sqlite3.Error as exc:
-            raise DashboardJobStoreError("dashboard job state store could not be written.") from exc
+            raise CommandJobStoreError("command job state store could not be written.") from exc
         return self.get_job(job_id) or dict(job)
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
@@ -145,11 +146,11 @@ class DashboardJobRepository:
             return None
         try:
             with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_dashboard_job_migrations(connection)
+                apply_command_job_migrations(connection)
                 row = connection.execute(
                     """
                     SELECT *
-                    FROM dashboard_command_jobs
+                    FROM local_command_jobs
                     WHERE job_id = ?
                     """,
                     (job_id,),
@@ -163,11 +164,11 @@ class DashboardJobRepository:
             return []
         try:
             with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_dashboard_job_migrations(connection)
+                apply_command_job_migrations(connection)
                 rows = connection.execute(
                     """
                     SELECT *
-                    FROM dashboard_command_jobs
+                    FROM local_command_jobs
                     ORDER BY created_at DESC, job_id DESC
                     LIMIT ?
                     """,
@@ -182,11 +183,11 @@ class DashboardJobRepository:
             return []
         try:
             with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_dashboard_job_migrations(connection)
+                apply_command_job_migrations(connection)
                 rows = connection.execute(
                     """
                     SELECT *
-                    FROM dashboard_command_jobs
+                    FROM local_command_jobs
                     WHERE status IN (?, ?, ?)
                     ORDER BY created_at DESC, job_id DESC
                     """,
@@ -196,16 +197,16 @@ class DashboardJobRepository:
             return []
         return [_row_to_job(row) for row in rows]
 
-    def job_events(self, job_id: str, *, limit: int = DASHBOARD_JOB_EVENT_LIMIT) -> list[dict[str, Any]]:
+    def job_events(self, job_id: str, *, limit: int = COMMAND_JOB_EVENT_LIMIT) -> list[dict[str, Any]]:
         if not self.database_path.exists():
             return []
         try:
             with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
-                apply_dashboard_job_migrations(connection)
+                apply_command_job_migrations(connection)
                 rows = connection.execute(
                     """
                     SELECT event_type, from_status, to_status, created_at, message, details_json
-                    FROM dashboard_command_job_events
+                    FROM local_command_job_events
                     WHERE job_id = ?
                     ORDER BY event_id DESC
                     LIMIT ?
@@ -230,7 +231,7 @@ class DashboardJobRepository:
 
     def _status_for_update(self, connection: sqlite3.Connection, job_id: str) -> str | None:
         row = connection.execute(
-            "SELECT status FROM dashboard_command_jobs WHERE job_id = ?",
+            "SELECT status FROM local_command_jobs WHERE job_id = ?",
             (job_id,),
         ).fetchone()
         return str(row[0]) if row and isinstance(row[0], str) else None
@@ -239,11 +240,12 @@ class DashboardJobRepository:
         logs = job.get("logs") if isinstance(job.get("logs"), dict) else {}
         connection.execute(
             """
-            INSERT OR REPLACE INTO dashboard_command_jobs (
+            INSERT OR REPLACE INTO local_command_jobs (
               job_id,
               intent,
               kind,
               requested_by,
+              requester_json,
               config_ref,
               status,
               created_at,
@@ -271,13 +273,14 @@ class DashboardJobRepository:
               errors_json,
               diagnostic_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 _job_id(job),
                 str(job.get("intent") or ""),
                 str(job.get("kind") or "command"),
-                str(job.get("requested_by") or "Dashboard"),
+                str(job.get("requested_by") or "CLI"),
+                _dumps_mapping(job.get("requester")),
                 str(job.get("config_ref") or ""),
                 _status(job),
                 str(job.get("created_at") or ""),
@@ -307,10 +310,10 @@ class DashboardJobRepository:
             ),
         )
 
-    def _record_event(self, connection: sqlite3.Connection, event: DashboardJobEvent) -> None:
+    def _record_event(self, connection: sqlite3.Connection, event: CommandJobEvent) -> None:
         connection.execute(
             """
-            INSERT INTO dashboard_command_job_events (
+            INSERT INTO local_command_job_events (
               job_id,
               event_type,
               from_status,
@@ -333,8 +336,8 @@ class DashboardJobRepository:
         )
 
 
-def apply_dashboard_job_migrations(connection: sqlite3.Connection, *, now: str | None = None) -> None:
-    apply_runtime_state_migrations(connection, migrations=RUNTIME_STATE_MIGRATIONS + DASHBOARD_JOB_MIGRATIONS, now=now)
+def apply_command_job_migrations(connection: sqlite3.Connection, *, now: str | None = None) -> None:
+    apply_runtime_state_migrations(connection, migrations=RUNTIME_STATE_MIGRATIONS + COMMAND_JOB_MIGRATIONS, now=now)
 
 
 def _validate_transition(previous: str | None, status: str) -> None:
@@ -343,50 +346,51 @@ def _validate_transition(previous: str | None, status: str) -> None:
     if previous == status:
         return
     if previous in JOB_TERMINAL_STATUSES:
-        raise DashboardJobStoreError(f"dashboard job cannot transition from terminal status {previous} to {status}.")
+        raise CommandJobStoreError(f"command job cannot transition from terminal status {previous} to {status}.")
     allowed = ALLOWED_JOB_TRANSITIONS.get(previous, set())
     if status not in allowed:
-        raise DashboardJobStoreError(f"dashboard job cannot transition from {previous} to {status}.")
+        raise CommandJobStoreError(f"command job cannot transition from {previous} to {status}.")
 
 
 def _row_to_job(row: Any) -> dict[str, Any]:
     logs = {
-        "stdout_ref": row[18],
-        "stderr_ref": row[19],
-        "stdout_chars": int(row[20] or 0),
-        "stderr_chars": int(row[21] or 0),
-        "stdout_truncated": bool(row[22]),
-        "stderr_truncated": bool(row[23]),
-        "max_chars": int(row[24] or 0),
+        "stdout_ref": row[19],
+        "stderr_ref": row[20],
+        "stdout_chars": int(row[21] or 0),
+        "stderr_chars": int(row[22] or 0),
+        "stdout_truncated": bool(row[23]),
+        "stderr_truncated": bool(row[24]),
+        "max_chars": int(row[25] or 0),
     }
     job = {
-        "schema_version": DASHBOARD_JOB_SCHEMA_VERSION,
-        "artifact_type": "dashboard_job",
+        "schema_version": COMMAND_JOB_SCHEMA_VERSION,
+        "artifact_type": "command_job",
         "job_id": row[0],
         "kind": row[2],
         "intent": row[1],
         "requested_by": row[3],
-        "params": _loads_mapping(row[15]),
-        "config_ref": row[4],
-        "status": row[5],
-        "created_at": row[6],
-        "updated_at": row[7],
-        "started_at": row[8],
-        "finished_at": row[9],
-        "pid": row[10],
-        "exit_code": row[11],
-        "cancellable": bool(row[12]),
-        "cancellation_requested_at": row[13],
-        "cancel_reason": row[14],
-        "command": _loads_list(row[16]),
-        "job_dir": row[17],
+        "requester": _loads_mapping(row[4]),
+        "params": _loads_mapping(row[16]),
+        "config_ref": row[5],
+        "status": row[6],
+        "created_at": row[7],
+        "updated_at": row[8],
+        "started_at": row[9],
+        "finished_at": row[10],
+        "pid": row[11],
+        "exit_code": row[12],
+        "cancellable": bool(row[13]),
+        "cancellation_requested_at": row[14],
+        "cancel_reason": row[15],
+        "command": _loads_list(row[17]),
+        "job_dir": row[18],
         "logs": logs,
-        "result_refs": _loads_mapping(row[25]),
-        "source_artifacts": _loads_list(row[26]),
-        "warnings": _loads_list(row[27]),
-        "errors": _loads_list(row[28]),
+        "result_refs": _loads_mapping(row[26]),
+        "source_artifacts": _loads_list(row[27]),
+        "warnings": _loads_list(row[28]),
+        "errors": _loads_list(row[29]),
     }
-    diagnostic = _loads_optional_mapping(row[29])
+    diagnostic = _loads_optional_mapping(row[30])
     if diagnostic:
         job["diagnostic"] = diagnostic
     return job
@@ -395,14 +399,14 @@ def _row_to_job(row: Any) -> dict[str, Any]:
 def _job_id(job: dict[str, Any]) -> str:
     job_id = job.get("job_id")
     if not isinstance(job_id, str) or not job_id:
-        raise DashboardJobStoreError("dashboard job_id is required.")
+        raise CommandJobStoreError("command job_id is required.")
     return job_id
 
 
 def _status(job: dict[str, Any]) -> str:
     status = job.get("status")
     if not isinstance(status, str) or not status:
-        raise DashboardJobStoreError("dashboard job status is required.")
+        raise CommandJobStoreError("command job status is required.")
     return status
 
 

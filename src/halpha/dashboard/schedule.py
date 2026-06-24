@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from halpha.dashboard.jobs import DashboardJobManager
 from halpha.dashboard.schedule_store import (
     DAILY_REPORT_SCHEDULE_ID,
     DASHBOARD_SCHEDULE_HISTORY_LIMIT,
@@ -17,6 +16,7 @@ from halpha.dashboard.schedule_store import (
     DashboardScheduleStoreError,
 )
 from halpha.dashboard.time import parse_utc_timestamp
+from halpha.runtime.command_jobs import CommandJobManager
 
 
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
@@ -35,7 +35,7 @@ class DashboardScheduleManager:
         config: dict[str, Any],
         *,
         config_path: Path,
-        job_manager: DashboardJobManager,
+        job_manager: CommandJobManager,
     ) -> None:
         self.config = config
         self.config_path = Path(config_path)
@@ -139,7 +139,18 @@ class DashboardScheduleManager:
         if claim.status == "duplicate":
             return self._blocked_trigger_response(current, "daily report schedule occurrence was already claimed.")
         try:
-            job = self.job_manager.create_job({"intent": intent, "params": params, "requested_by": "Schedule"})
+            job = self.job_manager.create_job(
+                {
+                    "intent": intent,
+                    "params": params,
+                    "requested_by": "Schedule",
+                    "requester": {
+                        "source": "daily_report_schedule",
+                        "dispatch_kind": "manual",
+                        "schedule_id": DAILY_REPORT_SCHEDULE_ID,
+                    },
+                }
+            )
         except Exception:
             error = "daily report job could not be created."
             self._repository.record_dispatch_error(
@@ -225,7 +236,18 @@ class DashboardScheduleManager:
                     warnings=claim.warnings,
                 )
             try:
-                job = self.job_manager.create_job({"intent": intent, "params": {}, "requested_by": "Schedule"})
+                job = self.job_manager.create_job(
+                    {
+                        "intent": intent,
+                        "params": {},
+                        "requested_by": "Schedule",
+                        "requester": {
+                            "source": "daily_report_schedule",
+                            "dispatch_kind": "automatic",
+                            "schedule_id": DAILY_REPORT_SCHEDULE_ID,
+                        },
+                    }
+                )
             except Exception:
                 error = "daily report job could not be created."
                 self._repository.record_dispatch_error(

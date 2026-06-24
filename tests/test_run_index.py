@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from contextlib import closing
 import json
@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
-from halpha.dashboard.job_store import apply_dashboard_job_migrations
+from halpha.runtime.command_job_store import apply_command_job_migrations
 from halpha.pipeline import PipelineError, run_pipeline, run_pipeline_stage
 from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.product.product_validation_inspection import inspect_product_validation
@@ -322,7 +322,7 @@ def test_run_index_task_migration_uses_distinct_runtime_version(tmp_path: Path) 
     config_path = _write_config(tmp_path)
 
     with closing(open_runtime_state_connection(config_path=config_path)) as connection:
-        apply_dashboard_job_migrations(connection, now="2026-06-05T00:00:00Z")
+        apply_command_job_migrations(connection, now="2026-06-05T00:00:00Z")
         apply_run_index_migrations(connection, now="2026-06-05T00:01:00Z")
         versions = [
             row[0]
@@ -332,7 +332,7 @@ def test_run_index_task_migration_uses_distinct_runtime_version(tmp_path: Path) 
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'run_tasks'"
         ).fetchone()
 
-    assert versions == [1, 2, 3, 6]
+    assert versions == [1, 2, 6, 9]
     assert run_tasks == ("run_tasks",)
 
 

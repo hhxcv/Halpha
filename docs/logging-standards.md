@@ -2,7 +2,7 @@
 
 Halpha writes local JSON-lines logs for operational diagnosis. Logs support
 daily validation, bug reproduction, and local issue investigation. They do not
-replace run manifests, dashboard job records, monitor artifacts, product
+replace run manifests, command job records, monitor artifacts, product
 validation, or source artifacts.
 
 Default runtime logs are written to `logs/halpha.log` under the current working
@@ -55,7 +55,7 @@ Use `INFO` for normal user-visible lifecycle events:
 - CLI command start and success;
 - pipeline run start and success;
 - explicit single-stage pipeline start and success;
-- dashboard job queued, start, and success;
+- command job queued, start, and success;
 - monitor cycle or finite loop start and success;
 - explicit skip or not-run summaries caused by user options such as
   `--no-codex` or `--until`;
@@ -65,7 +65,7 @@ Use `WARNING` for bounded recoverable or expected failure states:
 
 - CLI command failure caused by config, validation, unsupported input, or
   completed command result with non-zero exit code;
-- dashboard job rejection, blocked state, cancellation, or process exit with a
+- command job rejection, blocked state, cancellation, or process exit with a
   non-zero code;
 - monitor cycle or loop failure where the product still wrote monitor
   artifacts;
@@ -76,7 +76,7 @@ Use `ERROR` for unexpected or terminal failures that need investigation:
 
 - pipeline stage failure;
 - unhandled exception boundaries after redaction and bounded diagnostics;
-- dashboard job process start failure;
+- command job process start failure;
 - local service startup/runtime failure.
 
 Do not use `ERROR` for ordinary unavailable public data when the artifact
@@ -108,9 +108,9 @@ Common event names:
 - `collector.<name>.finished`;
 - `collector.<name>.skipped`;
 - `collector.<name>.failed`;
-- `dashboard.job.queued`;
-- `dashboard.job.start`;
-- `dashboard.job.finished`;
+- `command_job.queued`;
+- `command_job.start`;
+- `command_job.finished`;
 - `monitor.cycle.start`;
 - `monitor.cycle.finished`;
 - `monitor.loop.start`;
@@ -123,7 +123,7 @@ Common context fields:
   `until_stage`;
 - collectors: `stage`, `source`, `status`, `symbol_count`, `item_count`,
   `error_count`, `artifact`;
-- dashboard jobs: `job_id`, `intent`, `kind`, `status`, `exit_code`;
+- command jobs: `job_id`, `intent`, `kind`, `status`, `exit_code`;
 - monitor: `cycle_id`, `loop_id`, `run_id`, `target_stage`, `no_codex`,
   `completed_cycles`, `stop_reason`;
 - validation and inspection commands: `status`, `explicit_run`.

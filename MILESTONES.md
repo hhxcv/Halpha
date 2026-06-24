@@ -38,7 +38,7 @@ The loop is complete when Halpha can:
 * list reports only when report artifacts are available, and mark missing or dangling report references as diagnostics instead of user-readable reports;
 * make dashboard-triggered report generation, command jobs, finite monitor jobs, and daily report schedules visibly interactive, traceable, and tied to concrete job or run identifiers;
 * keep daily report scheduling semantics aligned with actual report generation behavior, including explicit Codex execution boundaries and user confirmation where needed;
-* persist dashboard job lifecycle corrections so stale `running` records do not survive after process-loss detection;
+* persist local command-job lifecycle corrections so stale `running` records do not survive after process-loss detection;
 * keep monitor, workbench, product-validation, data-quality, reusable-store, and selected-run states source-aware, timestamped, and stale or failed when their underlying artifacts are stale or failed;
 * distinguish reusable shared-store state from per-run snapshots in CLI and dashboard outputs;
 * reduce duplicated status, timestamp, JSON, and source-ref handling where it directly improves correctness, diagnostics, or testability;

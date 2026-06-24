@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -11,9 +11,9 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.dashboard.job_commands import DashboardJobCommandBuilder, DashboardJobError
-from halpha.dashboard.job_store import DashboardJobRepository, DashboardJobStoreError
-from halpha.dashboard.jobs import DashboardJobManager, MAX_JOB_LOG_CHARS
+from halpha.runtime.command_job_commands import CommandJobBuilder, CommandJobError
+from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError
+from halpha.runtime.command_jobs import CommandJobManager, MAX_JOB_LOG_CHARS
 from halpha.runtime.state_store import runtime_state_path
 
 
@@ -22,10 +22,10 @@ def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.chdir(tmp_path)
 
 
-def test_dashboard_job_command_builder_builds_command_preview(tmp_path: Path) -> None:
+def test_command_job_command_builder_builds_command_preview(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    builder = DashboardJobCommandBuilder(config, config_path=config_path, base=tmp_path)
+    builder = CommandJobBuilder(config, config_path=config_path, base=tmp_path)
 
     command = builder.build("validate", {})
 
@@ -34,21 +34,21 @@ def test_dashboard_job_command_builder_builds_command_preview(tmp_path: Path) ->
     assert command.command[1:] == ["-m", "halpha", "validate", "--config", str(config_path.resolve())]
 
 
-def test_dashboard_job_command_builder_rejects_unsupported_intent(tmp_path: Path) -> None:
+def test_command_job_command_builder_rejects_unsupported_intent(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    builder = DashboardJobCommandBuilder(config, config_path=config_path, base=tmp_path)
+    builder = CommandJobBuilder(config, config_path=config_path, base=tmp_path)
 
     try:
         builder.build("shell", {"command": "echo no"})
-    except DashboardJobError as exc:
+    except CommandJobError as exc:
         assert exc.status == "unsupported"
-        assert str(exc) == "unsupported dashboard job intent: shell"
+        assert str(exc) == "unsupported command job intent: shell"
     else:
         raise AssertionError("unsupported intent must be rejected by command builder")
 
 
-def test_dashboard_job_api_rejects_unsupported_intent_before_process(
+def test_command_job_api_rejects_unsupported_intent_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -58,26 +58,26 @@ def test_dashboard_job_api_rejects_unsupported_intent_before_process(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsupported intent must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     response = client.post("/api/jobs", json={"intent": "shell", "params": {"command": "echo no"}})
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["artifact_type"] == "dashboard_job"
+    assert payload["artifact_type"] == "command_job"
     assert payload["status"] == "unsupported"
     assert payload["intent"] == "shell"
     assert payload["pid"] is None
     assert payload["exit_code"] is None
-    assert "unsupported dashboard job intent" in payload["errors"][0]
+    assert "unsupported command job intent" in payload["errors"][0]
     assert runtime_state_path(config_path=config_path).is_file()
     assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / payload["job_id"] / "job.json").exists()
     assert not (tmp_path / "runs" / "dashboard").exists()
     assert str(tmp_path) not in response.text
 
 
-def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
+def test_command_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -86,8 +86,8 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     secret = "http://private-proxy.example:7890"
     stdout = f"{secret}\n{config_path}\n" + ("x" * (MAX_JOB_LOG_CHARS + 12))
     fake_process = _FakeProcess(stdout=stdout, stderr=f"stderr {secret}", returncode=0)
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
@@ -95,10 +95,12 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     assert completed["status"] == "succeeded"
     assert completed["exit_code"] == 0
     assert completed["pid"] == fake_process.pid
+    assert completed["requested_by"] == "CLI"
+    assert completed["requester"] == {}
     assert completed["logs"]["stdout_truncated"] is True
     assert completed["logs"]["stderr_truncated"] is False
     assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "<external-config>"]
-    assert completed["job_dir"].startswith(".halpha/dashboard/job_logs/")
+    assert completed["job_dir"].startswith(".halpha/command_jobs/job_logs/")
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     stderr_log = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
     state_bytes = runtime_state_path(config_path=config_path).read_bytes()
@@ -111,28 +113,57 @@ def test_dashboard_job_manager_runs_allowlisted_job_with_bounded_redacted_logs(
     assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / completed["job_id"] / "job.json").exists()
 
 
-def test_dashboard_job_logging_includes_context_without_private_values(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_records_explicit_requester_metadata(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    monkeypatch.setattr(
+        "halpha.runtime.command_jobs.subprocess.Popen",
+        lambda *args, **kwargs: _FakeProcess(stdout="ok", stderr="", returncode=0),
+    )
+    manager = CommandJobManager(
+        config,
+        config_path=config_path,
+        requested_by="Monitor",
+        requester={"source": "monitor_service", "service_instance_id": "monitor-1"},
+    )
+
+    job = manager.create_job(
+        {
+            "intent": "validate",
+            "params": {},
+            "requested_by": "CLI",
+            "requester": {"source": "manual_cli"},
+        }
+    )
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "succeeded"
+    assert completed["requested_by"] == "CLI"
+    assert completed["requester"] == {"service_instance_id": "monitor-1", "source": "manual_cli"}
+
+
+def test_command_job_logging_includes_context_without_private_values(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_private_config(tmp_path)
     config = load_config(config_path)
     secret = "http://private-proxy.example:7890"
     fake_process = _FakeProcess(stdout=f"stdout {secret}", stderr="", returncode=0)
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
 
-    log_text = _wait_for_log_event(tmp_path / "logs" / "halpha.log", completed["job_id"], "dashboard.job.finished")
+    log_text = _wait_for_log_event(tmp_path / "logs" / "halpha.log", completed["job_id"], "command_job.finished")
     events = [json.loads(line) for line in log_text.splitlines() if line.strip()]
     assert completed["job_id"] in log_text
-    assert "dashboard.job.start" in {event.get("event") for event in events}
-    assert "dashboard.job.finished" in {event.get("event") for event in events}
+    assert "command_job.start" in {event.get("event") for event in events}
+    assert "command_job.finished" in {event.get("event") for event in events}
     assert secret not in log_text
     assert str(config_path) not in log_text
     assert str(tmp_path) not in log_text
 
 
-def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_start_failure_records_bounded_diagnostic(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_private_config(tmp_path)
     config = load_config(config_path)
     secret = "http://private-proxy.example:7890"
@@ -140,8 +171,8 @@ def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, 
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise OSError(f"cannot start with {secret} at {config_path}")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
@@ -159,7 +190,7 @@ def test_dashboard_job_start_failure_records_bounded_diagnostic(tmp_path: Path, 
     assert str(tmp_path).encode() not in state_bytes
 
 
-def test_dashboard_job_manager_preserves_relative_config_ref(
+def test_command_job_manager_preserves_relative_config_ref(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -168,10 +199,10 @@ def test_dashboard_job_manager_preserves_relative_config_ref(
     _write_config(tmp_path)
     config = load_config(config_path)
     monkeypatch.setattr(
-        "halpha.dashboard.jobs.subprocess.Popen",
+        "halpha.runtime.command_jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout="config.yaml", stderr="", returncode=0),
     )
-    manager = DashboardJobManager(config, config_path=config_path)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
@@ -181,7 +212,7 @@ def test_dashboard_job_manager_preserves_relative_config_ref(
     assert "config.yaml" in stdout_log
 
 
-def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
+def test_command_job_manager_passes_valid_subdirectory_config_path(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -199,8 +230,8 @@ def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
         cwd_values.append(Path(kwargs["cwd"]))
         return _FakeProcess(stdout=str((tmp_path / config_path).resolve()), stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
@@ -211,11 +242,11 @@ def test_dashboard_job_manager_passes_valid_subdirectory_config_path(
     assert Path(commands[0][-1]).resolve() == (tmp_path / config_path).resolve()
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     assert str((tmp_path / config_path).resolve()) not in stdout_log
-    assert completed["job_dir"].startswith(".halpha/dashboard/job_logs/")
+    assert completed["job_dir"].startswith(".halpha/command_jobs/job_logs/")
     assert not (config_dir / "runs").exists()
 
 
-def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_accepts_readonly_command_intents(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     (tmp_path / "runs" / "run-1").mkdir(parents=True)
@@ -225,8 +256,8 @@ def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, 
         commands.append(command)
         return _FakeProcess(stdout="ok", stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         ("validate", {}, ["python", "-m", "halpha", "validate", "--config", "<external-config>"]),
         (
@@ -297,7 +328,7 @@ def test_dashboard_job_manager_accepts_readonly_command_intents(tmp_path: Path, 
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
-def test_dashboard_job_manager_accepts_monitor_command_intents(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_accepts_monitor_command_intents(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     commands: list[list[str]] = []
@@ -312,8 +343,8 @@ def test_dashboard_job_manager_accepts_monitor_command_intents(tmp_path: Path, m
         commands.append(command)
         return _FakeProcess(stdout=outputs[index], stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         (
             "monitor_dry_run",
@@ -361,7 +392,7 @@ def test_dashboard_job_manager_accepts_monitor_command_intents(tmp_path: Path, m
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
-def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_accepts_product_run_command_intents(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     (tmp_path / "runs" / "run-1").mkdir(parents=True)
@@ -379,8 +410,8 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
         commands.append(command)
         return _FakeProcess(stdout=stdout, stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         ("run", {"confirm_codex": True}, ["python", "-m", "halpha", "run", "--config", "<external-config>"]),
         (
@@ -451,7 +482,7 @@ def test_dashboard_job_manager_accepts_product_run_command_intents(tmp_path: Pat
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
-def test_dashboard_job_manager_accepts_strategy_and_text_command_intents(
+def test_command_job_manager_accepts_strategy_and_text_command_intents(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -498,8 +529,8 @@ def test_dashboard_job_manager_accepts_strategy_and_text_command_intents(
         commands.append(command)
         return _FakeProcess(stdout=outputs[index], stderr="", returncode=0)
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fake_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         (
             "backtest",
@@ -615,15 +646,15 @@ def test_dashboard_job_manager_accepts_strategy_and_text_command_intents(
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
 
 
-def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsafe run_dir must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "data_inspect", "params": {"run_dir": "../outside"}})
 
@@ -631,7 +662,7 @@ def test_dashboard_job_manager_rejects_unsafe_run_dir_before_process(tmp_path: P
     assert "run_dir must stay within" in job["errors"][0]
 
 
-def test_dashboard_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process(
+def test_command_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -641,8 +672,8 @@ def test_dashboard_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsafe run_dir must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job(
         {
@@ -655,15 +686,15 @@ def test_dashboard_job_manager_rejects_stage_rerun_unsafe_run_dir_before_process
     assert "run_dir must stay within" in job["errors"][0]
 
 
-def test_dashboard_job_manager_rejects_invalid_stage_name_before_process(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_rejects_invalid_stage_name_before_process(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid stage_name must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "run_until", "params": {"stage_name": "not_a_stage"}})
 
@@ -671,7 +702,7 @@ def test_dashboard_job_manager_rejects_invalid_stage_name_before_process(tmp_pat
     assert "stage_name must be one of:" in job["errors"][0]
 
 
-def test_dashboard_job_manager_rejects_unconfigured_strategy_values_before_process(
+def test_command_job_manager_rejects_unconfigured_strategy_values_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -681,8 +712,8 @@ def test_dashboard_job_manager_rejects_unconfigured_strategy_values_before_proce
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid configured values must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         (
             {"intent": "backtest", "params": {"strategy_name": "missing", "symbol": "BTCUSDT", "timeframe": "1d"}},
@@ -712,7 +743,7 @@ def test_dashboard_job_manager_rejects_unconfigured_strategy_values_before_proce
         assert error in job["errors"][0]
 
 
-def test_dashboard_job_manager_rejects_unsafe_strategy_text_paths_before_process(
+def test_command_job_manager_rejects_unsafe_strategy_text_paths_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -722,8 +753,8 @@ def test_dashboard_job_manager_rejects_unsafe_strategy_text_paths_before_process
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsafe paths must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         (
             {
@@ -757,7 +788,7 @@ def test_dashboard_job_manager_rejects_unsafe_strategy_text_paths_before_process
         assert error in job["errors"][0]
 
 
-def test_dashboard_job_manager_rejects_invalid_monitor_loop_params_before_process(
+def test_command_job_manager_rejects_invalid_monitor_loop_params_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -767,8 +798,8 @@ def test_dashboard_job_manager_rejects_invalid_monitor_loop_params_before_proces
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("invalid monitor loop params must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         ({"intent": "monitor_loop", "params": {}}, "max_cycles must be a positive integer"),
         ({"intent": "monitor_loop", "params": {"max_cycles": 0}}, "max_cycles must be a positive integer"),
@@ -784,7 +815,7 @@ def test_dashboard_job_manager_rejects_invalid_monitor_loop_params_before_proces
         assert error in job["errors"][0]
 
 
-def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_requires_codex_confirmation_before_process(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     (tmp_path / "runs" / "run-1").mkdir(parents=True)
@@ -792,8 +823,8 @@ def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_pa
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("Codex-capable jobs must not start without confirmation")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
     cases = [
         {"intent": "run", "params": {}},
         {"intent": "run_until", "params": {"stage_name": "generate_report"}},
@@ -806,7 +837,7 @@ def test_dashboard_job_manager_requires_codex_confirmation_before_process(tmp_pa
         assert "confirm_codex must be true" in job["errors"][0]
 
 
-def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
+def test_command_job_manager_rejects_unsupported_intent_params_before_process(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -816,8 +847,8 @@ def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
     def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("unsupported params must not start a process")
 
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", fail_popen)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "monitor_inspect", "params": {"run_dir": "runs/run-1"}})
 
@@ -825,7 +856,7 @@ def test_dashboard_job_manager_rejects_unsupported_intent_params_before_process(
     assert "unsupported monitor_inspect job parameter(s): run_dir" in job["errors"][0]
 
 
-def test_dashboard_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     stdout = "\n".join(
@@ -836,7 +867,7 @@ def test_dashboard_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard.jobs.subprocess.Popen",
+        "halpha.runtime.command_jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -848,11 +879,13 @@ def test_dashboard_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch
     assert create_response.status_code == 200
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
+    assert completed["requested_by"] == "Dashboard"
+    assert completed["requester"] == {"source": "dashboard_api"}
     assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
     assert str(tmp_path) not in create_response.text
 
 
-def test_dashboard_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_strategy_text_config(tmp_path)
     config = load_config(config_path)
     stdout = "\n".join(
@@ -863,7 +896,7 @@ def test_dashboard_job_api_starts_strategy_command_intent(tmp_path: Path, monkey
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard.jobs.subprocess.Popen",
+        "halpha.runtime.command_jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -890,7 +923,7 @@ def test_dashboard_job_api_starts_strategy_command_intent(tmp_path: Path, monkey
     assert str(tmp_path) not in create_response.text
 
 
-def test_dashboard_job_manager_normalizes_result_refs_without_external_path_leakage(
+def test_command_job_manager_normalizes_result_refs_without_external_path_leakage(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -905,10 +938,10 @@ def test_dashboard_job_manager_normalizes_result_refs_without_external_path_leak
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard.jobs.subprocess.Popen",
+        "halpha.runtime.command_jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
-    manager = DashboardJobManager(config, config_path=config_path)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "run_no_codex", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
@@ -922,7 +955,7 @@ def test_dashboard_job_manager_normalizes_result_refs_without_external_path_leak
     assert str(outside_manifest) not in str(completed)
 
 
-def test_dashboard_job_manager_marks_relative_artifacts_external_when_output_dir_is_external(
+def test_command_job_manager_marks_relative_artifacts_external_when_output_dir_is_external(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -940,10 +973,10 @@ def test_dashboard_job_manager_marks_relative_artifacts_external_when_output_dir
         ]
     )
     monkeypatch.setattr(
-        "halpha.dashboard.jobs.subprocess.Popen",
+        "halpha.runtime.command_jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
     )
-    manager = DashboardJobManager(config, config_path=config_path)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job(
         {
@@ -964,12 +997,12 @@ def test_dashboard_job_manager_marks_relative_artifacts_external_when_output_dir
     assert str(outside_dir) not in str(completed)
 
 
-def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     fake_process = _BlockingProcess()
-    monkeypatch.setattr("halpha.dashboard.jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
-    manager = DashboardJobManager(config, config_path=config_path)
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", lambda *args, **kwargs: fake_process)
+    manager = CommandJobManager(config, config_path=config_path)
 
     job = manager.create_job({"intent": "validate", "params": {}})
     _wait_for_status(manager, job["job_id"], "running")
@@ -983,12 +1016,12 @@ def test_dashboard_job_manager_cancels_running_job(tmp_path: Path, monkeypatch) 
     assert "cancelled" in completed["warnings"][0]
 
 
-def test_dashboard_job_manager_marks_stale_running_job_failed_on_restart(tmp_path: Path) -> None:
+def test_command_job_manager_marks_stale_running_job_failed_on_restart(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     job_id = "20260622T000000Z_deadbeef"
     _seed_state_job(config_path, job_id=job_id, status="running", pid=99999999)
-    manager = DashboardJobManager(config, config_path=config_path)
+    manager = CommandJobManager(config, config_path=config_path)
 
     detail = manager.get_job(job_id)
     listed = manager.list_jobs()["jobs"][0]
@@ -1000,12 +1033,12 @@ def test_dashboard_job_manager_marks_stale_running_job_failed_on_restart(tmp_pat
     assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / "index.json").exists()
 
 
-def test_dashboard_job_manager_rejects_unattached_live_pid_as_process_identity(tmp_path: Path) -> None:
+def test_command_job_manager_rejects_unattached_live_pid_as_process_identity(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     job_id = "20260622T000001Z_deadbeef"
     _seed_state_job(config_path, job_id=job_id, status="running", pid=os.getpid())
-    manager = DashboardJobManager(config, config_path=config_path)
+    manager = CommandJobManager(config, config_path=config_path)
 
     detail = manager.get_job(job_id)
 
@@ -1015,17 +1048,17 @@ def test_dashboard_job_manager_rejects_unattached_live_pid_as_process_identity(t
     assert "recorded PID was not treated as proof" in detail["errors"][0]
 
 
-def test_dashboard_job_repository_rejects_terminal_transition_transactionally(tmp_path: Path) -> None:
+def test_command_job_repository_rejects_terminal_transition_transactionally(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     job_id = "20260622T000002Z_deadbeef"
     _seed_state_job(config_path, job_id=job_id, status="succeeded")
-    repository = DashboardJobRepository(config_path=config_path)
+    repository = CommandJobRepository(config_path=config_path)
     job = repository.get_job(job_id)
     assert job is not None
     job["status"] = "running"
     job["updated_at"] = "2026-06-22T00:05:00Z"
 
-    with pytest.raises(DashboardJobStoreError, match="terminal status succeeded"):
+    with pytest.raises(CommandJobStoreError, match="terminal status succeeded"):
         repository.save_job(job, event_type="invalid")
 
     persisted = repository.get_job(job_id)
@@ -1035,11 +1068,11 @@ def test_dashboard_job_repository_rejects_terminal_transition_transactionally(tm
     assert [event["event_type"] for event in events] == ["seed"]
 
 
-def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> None:
+def test_command_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     monkeypatch.setattr(
-        "halpha.dashboard.jobs.subprocess.Popen",
+        "halpha.runtime.command_jobs.subprocess.Popen",
         lambda *args, **kwargs: _FakeProcess(stdout="ok", stderr="", returncode=0),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -1052,20 +1085,20 @@ def test_dashboard_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> 
 
     assert list_response.status_code == 200
     assert detail_response.status_code == 200
-    assert list_response.json()["artifact_type"] == "dashboard_job_list"
+    assert list_response.json()["artifact_type"] == "command_job_list"
     assert list_response.json()["jobs"][0]["job_id"] == job_id
     assert detail_response.json()["status"] == "succeeded"
     assert str(tmp_path) not in list_response.text
     assert str(tmp_path) not in detail_response.text
 
 
-def test_dashboard_job_api_rejects_path_shaped_job_ids(tmp_path: Path) -> None:
+def test_command_job_api_rejects_path_shaped_job_ids(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     outside = tmp_path / ".halpha" / "dashboard" / "outside_jobs"
     outside.mkdir(parents=True)
     (outside / "job.json").write_text(
-        json.dumps({"schema_version": 1, "artifact_type": "dashboard_job", "job_id": "outside", "status": "leaked"}),
+        json.dumps({"schema_version": 1, "artifact_type": "command_job", "job_id": "outside", "status": "leaked"}),
         encoding="utf-8",
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -1112,7 +1145,7 @@ class _BlockingProcess:
         self._done.set()
 
 
-def _wait_for_terminal(manager: DashboardJobManager, job_id: str) -> dict:
+def _wait_for_terminal(manager: CommandJobManager, job_id: str) -> dict:
     for _ in range(50):
         job = manager.get_job(job_id)
         if job and job["status"] in {"succeeded", "failed", "cancelled", "unsupported", "blocked"}:
@@ -1121,7 +1154,7 @@ def _wait_for_terminal(manager: DashboardJobManager, job_id: str) -> dict:
     raise AssertionError(f"job did not finish: {job_id}")
 
 
-def _wait_for_status(manager: DashboardJobManager, job_id: str, status: str) -> dict:
+def _wait_for_status(manager: CommandJobManager, job_id: str, status: str) -> dict:
     for _ in range(50):
         job = manager.get_job(job_id)
         if job and job["status"] == status:
@@ -1152,11 +1185,11 @@ def _wait_for_log_event(path: Path, job_id: str, event_name: str) -> str:
 
 
 def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | None = None) -> None:
-    repository = DashboardJobRepository(config_path=config_path)
+    repository = CommandJobRepository(config_path=config_path)
     repository.save_job(
         {
             "schema_version": 1,
-            "artifact_type": "dashboard_job",
+            "artifact_type": "command_job",
             "job_id": job_id,
             "intent": "monitor_loop",
             "kind": "monitor_loop",
@@ -1172,10 +1205,10 @@ def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | N
             "exit_code": None,
             "cancellable": True,
             "command": ["python", "-m", "halpha", "monitor", "run"],
-            "job_dir": f".halpha/dashboard/job_logs/{job_id}",
+            "job_dir": f".halpha/command_jobs/job_logs/{job_id}",
             "logs": {
-                "stdout_ref": f".halpha/dashboard/job_logs/{job_id}/stdout.log",
-                "stderr_ref": f".halpha/dashboard/job_logs/{job_id}/stderr.log",
+                "stdout_ref": f".halpha/command_jobs/job_logs/{job_id}/stdout.log",
+                "stderr_ref": f".halpha/command_jobs/job_logs/{job_id}/stderr.log",
                 "stdout_chars": 0,
                 "stderr_chars": 0,
                 "stdout_truncated": False,
