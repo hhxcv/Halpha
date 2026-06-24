@@ -4,16 +4,10 @@ import math
 from statistics import mean, median, pstdev
 from typing import Any
 
-from .strategy_records import warning
+from .strategy_records import CANONICAL_EXECUTION_MODEL, SUPPORTED_BACKTEST_MODES, warning
 
 
-DEFAULT_EXECUTION_MODEL = {
-    "price_source": "close",
-    "signal_timing": "signal_at_bar_close",
-    "position_timing": "next_bar",
-    "lookahead_policy": "no_same_bar_execution",
-    "execution_timing": "research_close_to_close",
-}
+DEFAULT_EXECUTION_MODEL = dict(CANONICAL_EXECUTION_MODEL)
 DEFAULT_COST_ASSUMPTIONS = {
     "fees_bps": 0.0,
     "slippage_bps": 0.0,
@@ -81,7 +75,7 @@ def evaluate_single_window_backtest(
             )
 
         closes = [_positive_close(row) for row in rows]
-        targets = _aligned_target_exposures(rows, records)
+        targets = _aligned_target_exposures(rows, records, mode=_backtest_mode(strategy))
         if targets is None:
             return _insufficient_record(
                 strategy,
@@ -952,6 +946,8 @@ def _aligned_signal_record_map(
 def _aligned_target_exposures(
     rows: list[dict[str, Any]],
     signal_records: list[dict[str, Any]],
+    *,
+    mode: str,
 ) -> list[float] | None:
     by_time = {_open_time(record): _target_exposure(record) for record in signal_records}
     targets = []
@@ -960,7 +956,18 @@ def _aligned_target_exposures(
         if key not in by_time:
             return None
         targets.append(by_time[key])
+    if mode == "long_only":
+        targets = _long_only_targets(targets)
     return targets
+
+
+def _long_only_targets(targets: list[float]) -> list[float]:
+    active_target = 0.0
+    result = []
+    for target in targets:
+        active_target = max(active_target, target)
+        result.append(active_target)
+    return result
 
 
 def _target_exposure(record: dict[str, Any]) -> float:
@@ -973,6 +980,14 @@ def _target_exposure(record: dict[str, Any]) -> float:
     if target < 0 or target > 1:
         raise ValueError("signal record target_exposure must be between 0 and 1.")
     return target
+
+
+def _backtest_mode(strategy: dict[str, Any]) -> str:
+    backtest = strategy.get("backtest") if isinstance(strategy.get("backtest"), dict) else {}
+    mode = backtest.get("mode", "long_flat")
+    if not isinstance(mode, str) or mode not in SUPPORTED_BACKTEST_MODES:
+        return "long_flat"
+    return mode
 
 
 def _cost_assumptions(raw: dict[str, Any] | None) -> dict[str, float]:

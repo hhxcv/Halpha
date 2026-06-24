@@ -1565,7 +1565,11 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
 
     pipeline = {item["name"]: item for item in payload["pipeline"]["artifacts"]}
     assert pipeline["strategy_benchmark_suite"]["status"] == "available"
-    assert pipeline["quant_strategy_runs"]["records"]["runs"][0]["strategy_name"] == "tsmom_vol_scaled"
+    quant_run = pipeline["quant_strategy_runs"]["records"]["runs"][0]
+    assert quant_run["strategy_name"] == "tsmom_vol_scaled"
+    assert quant_run["backtest_diagnostic"]["metrics"]["execution_model_id"] == "close_to_close_next_bar_v1"
+    assert quant_run["backtest_diagnostic"]["metrics"]["position_timing"] == "next_bar"
+    assert quant_run["parameter_diagnostic"]["assumptions"]["execution_model_id"] == "close_to_close_next_bar_v1"
     evaluation = pipeline["strategy_evaluation_summary"]["records"]["records"][0]
     assert evaluation["strategy_metrics"]["net_return_pct"] == 4.2
     assert evaluation["walk_forward"]["window_count"] == 1
@@ -2147,6 +2151,37 @@ def _write_dashboard_strategy_artifacts(run: RunContext) -> None:
                     "symbol": "BTCUSDT",
                     "timeframe": "1d",
                     "summary": {"records": 5},
+                    "backtest_diagnostic": {
+                        "enabled": True,
+                        "status": "succeeded",
+                        "assumptions": {
+                            "execution_model_id": "close_to_close_next_bar_v1",
+                            "signal_timing": "signal_at_bar_close",
+                            "position_timing": "next_bar",
+                            "lookahead_policy": "no_same_bar_execution",
+                        },
+                        "metrics": {
+                            "execution_model_id": "close_to_close_next_bar_v1",
+                            "position_timing": "next_bar",
+                            "lookahead_policy": "no_same_bar_execution",
+                            "total_return_pct": 4.2,
+                            "max_drawdown_pct": -1.0,
+                        },
+                    },
+                    "parameter_diagnostic": {
+                        "enabled": True,
+                        "status": "succeeded",
+                        "assumptions": {
+                            "metric_scope": "latest_state_and_canonical_next_bar_backtest_summary",
+                            "execution_model_id": "close_to_close_next_bar_v1",
+                            "position_timing": "next_bar",
+                            "lookahead_policy": "no_same_bar_execution",
+                        },
+                        "summary_metrics": {
+                            "backtest_total_return_pct_min": 3.0,
+                            "backtest_total_return_pct_max": 4.2,
+                        },
+                    },
                     "warnings": [],
                     "errors": [],
                 }
