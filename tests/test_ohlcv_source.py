@@ -211,6 +211,19 @@ def test_ccxt_ohlcv_source_rejects_malformed_rows() -> None:
         source.fetch_records(symbol="BTCUSDT", timeframe="1d", now="2026-06-03T00:00:00Z")
 
 
+def test_ccxt_ohlcv_source_rejects_impossible_candle_values() -> None:
+    timestamp = int(datetime.fromisoformat("2026-06-01T00:00:00+00:00").timestamp() * 1000)
+    source = CCXTOHLCVSource(
+        "binance",
+        exchange_factory=lambda options: _FakeExchange(
+            {("BTCUSDT", "1d"): [[timestamp, 100, 99, 98, 101, 10]]}
+        ),
+    )
+
+    with pytest.raises(OHLCVSourceError, match="high must be greater than or equal"):
+        source.fetch_records(symbol="BTCUSDT", timeframe="1d", now="2026-06-03T00:00:00Z")
+
+
 def _row(open_time: str, close: float) -> list[float | int]:
     timestamp = int(datetime.fromisoformat(open_time.replace("Z", "+00:00")).timestamp() * 1000)
     return [timestamp, close - 1, close + 1, close - 2, close, 10]

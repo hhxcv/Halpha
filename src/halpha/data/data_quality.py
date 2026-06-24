@@ -131,7 +131,17 @@ def _ohlcv_store_check(config: dict[str, Any], run: RunContext) -> dict[str, Any
     insufficient_views = _int(run.manifest.get("counts", {}).get("market_data_views_insufficient_data"))
     if insufficient_views:
         warnings.append(f"{insufficient_views} market data view(s) have insufficient OHLCV history.")
-    status = "failed" if errors else "warning" if warnings else "ok"
+    view_quality = _ohlcv_view_quality_details(run)
+    warnings.extend(view_quality["warnings"])
+    status = (
+        "failed"
+        if errors
+        else "degraded"
+        if view_quality["degraded_views"]
+        else "warning"
+        if warnings
+        else "ok"
+    )
     return _check(
         "ohlcv_store",
         "shared_data",
@@ -140,8 +150,113 @@ def _ohlcv_store_check(config: dict[str, Any], run: RunContext) -> dict[str, Any
         artifacts,
         warnings=warnings,
         errors=errors,
-        details={"insufficient_views": insufficient_views},
+        details={
+            "insufficient_views": insufficient_views,
+            **view_quality["details"],
+        },
     )
+
+
+def _ohlcv_view_quality_details(run: RunContext) -> dict[str, Any]:
+    path = run.raw_dir / "market_data_views.json"
+    if not path.exists():
+        return {
+            "warnings": [],
+            "degraded_views": 0,
+            "details": {
+                "degraded_views": 0,
+                "stale_views": 0,
+                "duplicate_open_times": 0,
+                "missing_intervals": 0,
+                "quality_samples": {
+                    "stale_views": [],
+                    "duplicate_open_times": [],
+                    "missing_intervals": [],
+                },
+            },
+        }
+
+    views_artifact, error = _read_json(path)
+    if error:
+        return {
+            "warnings": [error],
+            "degraded_views": 0,
+            "details": {
+                "degraded_views": 0,
+                "stale_views": 0,
+                "duplicate_open_times": 0,
+                "missing_intervals": 0,
+                "quality_samples": {
+                    "stale_views": [],
+                    "duplicate_open_times": [],
+                    "missing_intervals": [],
+                },
+            },
+        }
+
+    views = _list(views_artifact.get("views"))
+    warnings = _unique_sorted(
+        [
+            warning
+            for view in views
+            if isinstance(view, dict)
+            for warning in _string_list(view.get("warnings"))
+        ]
+    )
+    stale_samples = []
+    duplicate_samples = []
+    missing_samples = []
+    degraded_views = 0
+    stale_views = 0
+    duplicate_open_times = 0
+    missing_intervals = 0
+    for view in views:
+        if not isinstance(view, dict):
+            continue
+        quality = _dict(view.get("quality"))
+        if view.get("quality_status") == "degraded" or quality.get("status") == "degraded":
+            degraded_views += 1
+        if quality.get("stale_latest_candle") is True:
+            stale_views += 1
+            stale_samples.append(_ohlcv_view_quality_sample(view, quality, reason="stale_latest_candle"))
+        duplicate_open_times += _int(quality.get("duplicate_open_time_count"))
+        missing_intervals += _int(quality.get("missing_interval_count"))
+        duplicate_samples.extend(
+            _ohlcv_view_quality_sample(view, sample, reason="duplicate_open_time")
+            for sample in _list(quality.get("duplicate_open_time_samples"))
+            if isinstance(sample, dict)
+        )
+        missing_samples.extend(
+            _ohlcv_view_quality_sample(view, sample, reason="missing_interval")
+            for sample in _list(quality.get("missing_interval_samples"))
+            if isinstance(sample, dict)
+        )
+
+    return {
+        "warnings": warnings,
+        "degraded_views": degraded_views,
+        "details": {
+            "degraded_views": degraded_views,
+            "stale_views": stale_views,
+            "duplicate_open_times": duplicate_open_times,
+            "missing_intervals": missing_intervals,
+            "quality_samples": {
+                "stale_views": _bounded_quality_samples(stale_samples),
+                "duplicate_open_times": _bounded_quality_samples(duplicate_samples),
+                "missing_intervals": _bounded_quality_samples(missing_samples),
+            },
+        },
+    }
+
+
+def _ohlcv_view_quality_sample(view: dict[str, Any], sample: dict[str, Any], *, reason: str) -> dict[str, Any]:
+    return {
+        "reason": reason,
+        "source": view.get("source"),
+        "symbol": view.get("symbol"),
+        "timeframe": view.get("timeframe"),
+        **sample,
+    }
 
 
 def _derivatives_history_check(config: dict[str, Any], run: RunContext) -> dict[str, Any]:
@@ -882,6 +997,12 @@ def _string_list(value: Any) -> list[str]:
 
 def _list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _bounded_quality_samples(values: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if len(values) <= 5:
+        return values
+    return [*values[:4], values[-1]]
 
 
 def _derivatives_config(config: dict[str, Any]) -> dict[str, Any]:

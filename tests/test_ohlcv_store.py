@@ -139,6 +139,49 @@ def test_ohlcv_store_rejects_invalid_schema_records(tmp_path: Path) -> None:
         store.write_records([record])
 
 
+@pytest.mark.parametrize(
+    ("updates", "match"),
+    [
+        ({"open": 0}, "open must be positive"),
+        ({"high": 0}, "high must be positive"),
+        ({"low": 0}, "low must be positive"),
+        ({"close": 0}, "close must be positive"),
+        ({"volume": -1}, "volume must be zero or positive"),
+        ({"high": 97}, "high must be greater than or equal"),
+        ({"low": 101}, "low must be less than or equal"),
+    ],
+)
+def test_ohlcv_store_rejects_impossible_candle_values(
+    tmp_path: Path,
+    updates: dict[str, object],
+    match: str,
+) -> None:
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    record = _record()
+    record.update(updates)
+
+    with pytest.raises(OHLCVStoreError, match=match):
+        store.write_records([record])
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "open_time"),
+    [
+        ("1d", "2026-06-01T01:00:00Z"),
+        ("1h", "2026-06-01T00:30:00Z"),
+    ],
+)
+def test_ohlcv_store_rejects_misaligned_timeframe_boundaries(
+    tmp_path: Path,
+    timeframe: str,
+    open_time: str,
+) -> None:
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+
+    with pytest.raises(OHLCVStoreError, match=f"{timeframe} UTC timeframe boundary"):
+        store.write_records([_record(timeframe=timeframe, open_time=open_time)])
+
+
 def test_ohlcv_store_rejects_conflicting_duplicate_candles(tmp_path: Path) -> None:
     store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
 

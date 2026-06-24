@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from math import isfinite
 from typing import Any
 
 import ccxt
 
+from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS, ohlcv_record_invariant_errors
 from halpha.runtime.public_http import market_proxy_url_from_market, normalize_public_proxy_url
 
 
 SUPPORTED_OHLCV_SOURCES = {"binance"}
 BINANCE_SPOT_PUBLIC_API_URL = "https://data-api.binance.vision/api/v3"
-TIMEFRAME_DURATIONS = {
-    "1d": timedelta(days=1),
-    "1h": timedelta(hours=1),
-}
+TIMEFRAME_DURATIONS = OHLCV_TIMEFRAME_DURATIONS
 
 
 class OHLCVSourceError(Exception):
@@ -193,7 +191,7 @@ def _normalize_row(
             f"{row_path} must contain timestamp, open, high, low, close, volume."
         )
 
-    return {
+    record = {
         "source": source,
         "symbol": symbol,
         "timeframe": timeframe,
@@ -205,6 +203,10 @@ def _normalize_row(
         "volume": _require_number(row[5], f"{row_path}.volume"),
         "fetched_at": _format_utc(fetched_at),
     }
+    invariant_errors = ohlcv_record_invariant_errors(record)
+    if invariant_errors:
+        raise OHLCVSourceError(f"{row_path}: {invariant_errors[0]}")
+    return record
 
 
 def _sort_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -44,6 +44,7 @@ def test_market_data_views_select_latest_lookback_window(tmp_path: Path) -> None
     assert len(artifact["views"]) == 1
     assert view == {
         "view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+        "status": "succeeded",
         "source": "binance",
         "symbol": "BTCUSDT",
         "timeframe": "1d",
@@ -55,6 +56,21 @@ def test_market_data_views_select_latest_lookback_window(tmp_path: Path) -> None
         "storage_ref": "data/market/ohlcv/source=binance/symbol=BTCUSDT/timeframe=1d",
         "included_columns": ["open_time", "open", "high", "low", "close", "volume"],
         "insufficient_data": False,
+        "quality_status": "ok",
+        "quality": {
+            "status": "ok",
+            "timeframe_duration_seconds": 86400,
+            "range_start": "2026-06-02T00:00:00Z",
+            "range_end": "2026-06-03T00:00:00Z",
+            "duplicate_open_time_count": 0,
+            "duplicate_open_time_samples": [],
+            "missing_interval_count": 0,
+            "missing_interval_samples": [],
+            "stale_latest_candle": False,
+            "freshness_reference_time": "2026-06-05T00:00:00Z",
+            "stale_after_open_time": "2026-06-05T00:00:00Z",
+            "stale_tolerance_seconds": 172800,
+        },
         "warnings": [],
     }
     assert rows == [
@@ -79,6 +95,9 @@ def test_market_data_views_select_latest_lookback_window(tmp_path: Path) -> None
     assert manifest["artifacts"]["market_data_views"] == "raw/market_data_views.json"
     assert manifest["counts"]["market_data_views"] == 1
     assert manifest["counts"]["market_data_views_insufficient_data"] == 0
+    assert manifest["counts"]["market_data_views_degraded"] == 0
+    assert manifest["counts"]["market_data_views_stale"] == 0
+    assert manifest["counts"]["market_data_view_missing_intervals"] == 0
     assert _stage(manifest, "build_market_data_views")["artifacts"] == [
         "raw/market_data_views.json"
     ]
@@ -103,7 +122,9 @@ def test_market_data_views_record_insufficient_data_state(tmp_path: Path) -> Non
     assert view["latest_candle_time"] == "2026-06-01T00:00:00Z"
     assert view["insufficient_data"] is True
     assert view["warnings"] == [
-        "binance BTCUSDT 1d has 1 OHLCV rows, below configured lookback 3."
+        "binance BTCUSDT 1d has 1 OHLCV rows, below configured lookback 3.",
+        "binance BTCUSDT 1d latest OHLCV candle is stale: 2026-06-01T00:00:00Z "
+        "at 2026-06-05T00:00:00Z.",
     ]
     assert manifest["counts"]["market_data_views_insufficient_data"] == 1
 
@@ -131,6 +152,93 @@ def test_market_data_views_record_missing_history_as_insufficient(tmp_path: Path
     assert rows == []
 
 
+def test_market_data_views_degrade_missing_intervals_without_filling(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, lookback=3)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=101),
+            _record(open_time="2026-06-03T00:00:00Z", close=103),
+            _record(open_time="2026-06-04T00:00:00Z", close=104),
+        ]
+    )
+
+    result = _run_pipeline_with_views(config, config_path)
+
+    view = _market_data_views(result)["views"][0]
+    rows = load_market_data_view_records(
+        view,
+        storage_dir=tmp_path / "data" / "market" / "ohlcv",
+    )
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert view["status"] == "degraded"
+    assert view["quality_status"] == "degraded"
+    assert view["insufficient_data"] is True
+    assert view["quality"]["missing_interval_count"] == 1
+    assert view["quality"]["missing_interval_samples"] == [
+        {
+            "after_open_time": "2026-06-01T00:00:00Z",
+            "before_open_time": "2026-06-03T00:00:00Z",
+            "expected_next_open_time": "2026-06-02T00:00:00Z",
+            "missing_intervals": 1,
+        }
+    ]
+    assert [row["open_time"] for row in rows] == [
+        "2026-06-01T00:00:00Z",
+        "2026-06-03T00:00:00Z",
+        "2026-06-04T00:00:00Z",
+    ]
+    assert manifest["counts"]["market_data_views_degraded"] == 1
+    assert manifest["counts"]["market_data_view_missing_intervals"] == 1
+
+
+def test_market_data_views_degrade_duplicate_open_times(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, lookback=1)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    duplicate = _record(open_time="2026-06-04T00:00:00Z", close=104)
+    store._rewrite_group("binance", "BTCUSDT", "1d", [duplicate, dict(duplicate)])
+
+    result = _run_pipeline_with_views(config, config_path)
+
+    view = _market_data_views(result)["views"][0]
+
+    assert result.succeeded is True
+    assert view["status"] == "degraded"
+    assert view["quality"]["duplicate_open_time_count"] == 1
+    assert view["quality"]["duplicate_open_time_samples"] == [
+        {"open_time": "2026-06-04T00:00:00Z", "duplicate_count": 1}
+    ]
+    assert "duplicate OHLCV open_time" in view["warnings"][0]
+
+
+def test_market_data_views_degrade_stale_latest_candle(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, lookback=2)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=101),
+            _record(open_time="2026-06-02T00:00:00Z", close=102),
+        ]
+    )
+
+    result = _run_pipeline_with_views(config, config_path)
+
+    view = _market_data_views(result)["views"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert view["status"] == "degraded"
+    assert view["quality"]["stale_latest_candle"] is True
+    assert view["quality"]["stale_after_open_time"] == "2026-06-04T00:00:00Z"
+    assert "latest OHLCV candle is stale" in view["warnings"][0]
+    assert manifest["counts"]["market_data_views_stale"] == 1
+
+
 def test_market_data_views_skip_when_ohlcv_is_not_configured(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, include_ohlcv=False)
     config = load_config(config_path)
@@ -142,6 +250,7 @@ def test_market_data_views_skip_when_ohlcv_is_not_configured(tmp_path: Path) -> 
     assert not (result.run.raw_dir / "market_data_views.json").exists()
     assert "market_data_views" not in manifest["artifacts"]
     assert manifest["counts"]["market_data_views"] == 0
+    assert manifest["counts"]["market_data_views_degraded"] == 0
     assert _stage(manifest, "build_market_data_views")["artifacts"] == []
 
 

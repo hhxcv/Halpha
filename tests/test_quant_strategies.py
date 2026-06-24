@@ -221,6 +221,35 @@ def test_quant_strategy_runner_records_insufficient_data_without_fabrication(tmp
     assert manifest["quant_strategies"]["insufficient_data"][0]["row_count"] == 1
 
 
+def test_quant_strategy_runner_blocks_degraded_ohlcv_view_without_fabrication(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_strategy_config(tmp_path, lookback=4)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=106, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=109, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_run = _strategy_runs(result)["runs"][0]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert strategy_run["status"] == "insufficient_data"
+    assert strategy_run["data_quality"]["row_count"] == 4
+    assert strategy_run["warnings"][0]["code"] == "degraded_ohlcv_quality"
+    assert strategy_run["indicators"] == {}
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 0
+    assert manifest["counts"]["quant_strategy_runs_insufficient_data"] == 1
+
+
 def test_quant_strategy_runner_records_disabled_backtest_diagnostic(tmp_path: Path) -> None:
     config_path = _write_strategy_config(tmp_path, lookback=5, backtest_enabled=False)
     config = load_config(config_path)
