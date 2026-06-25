@@ -273,6 +273,31 @@ importing mutable legacy service, job, schedule, or alert state:
 python -m halpha data rebuild-index --config config.example.yaml
 ```
 
+Plan explicit local run archive cleanup without deleting files:
+
+```bash
+python -m halpha data cleanup-runs --config config.example.yaml
+```
+
+Apply cleanup only to selected approved disposable run archives:
+
+```bash
+python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id>
+```
+
+Report-bearing archives are protected unless explicitly included with stronger
+confirmation:
+
+```bash
+python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id> --include-report-runs --confirm-report-runs "DELETE REPORT RUNS"
+```
+
+Run archive cleanup deletes only selected `runs/<run_id>/` directories. It does
+not delete shared data under `data/`, runtime state under `.halpha/state.sqlite`,
+or config files. After a deletion, Halpha rebuilds the run-index projection from
+remaining run manifests so deleted archives no longer appear as healthy latest
+or report-bearing runs.
+
 Inspect outcome tracking artifacts and shared outcome history state without
 collection or Codex:
 

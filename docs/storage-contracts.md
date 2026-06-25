@@ -293,9 +293,28 @@ Cleanup planning may classify run archives by `run_kind`, `trigger`,
 and source refs. Cleanup planning must be dry-run first unless a user invokes
 an explicit apply command with selected candidates.
 
+The implemented CLI path is:
+
+```bash
+python -m halpha data cleanup-runs --config <config>
+python -m halpha data cleanup-runs --config <config> --apply --run-id <run_id>
+```
+
+The dry-run plan reports candidate counts, approximate deletable size, run IDs,
+run kinds, bounded trigger summaries, report presence, latest-index references,
+and deletion reasons. Apply mode deletes only explicitly selected candidates
+from the approved plan, then rebuilds the run-index projection from remaining
+run manifests so deleted archives do not remain healthy latest or report
+selections.
+
 Report-bearing archives require stronger confirmation than disposable
-reassessment or validation archives. Shared data and runtime state remain out
-of scope for run archive cleanup.
+reassessment or validation archives:
+
+```bash
+python -m halpha data cleanup-runs --config <config> --apply --run-id <run_id> --include-report-runs --confirm-report-runs "DELETE REPORT RUNS"
+```
+
+Shared data and runtime state remain out of scope for run archive cleanup.
 
 ## Current Implementation Follow-Ups
 

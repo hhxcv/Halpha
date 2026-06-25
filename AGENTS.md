@@ -394,6 +394,9 @@ python -m halpha data migrate-state --config config.example.yaml --dry-run
 python -m halpha data migrate-state --config config.example.yaml --apply
 python -m halpha data migrate-state --config config.example.yaml --apply --replace-schedule
 python -m halpha data rebuild-index --config config.example.yaml
+python -m halpha data cleanup-runs --config config.example.yaml
+python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id>
+python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id> --include-report-runs --confirm-report-runs "DELETE REPORT RUNS"
 python -m halpha outcomes inspect --config config.example.yaml
 python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
 python -m halpha workbench build --config config.example.yaml
@@ -467,6 +470,12 @@ The resident Monitor service is unique per runtime root. It runs no-Codex monito
 
 `data rebuild-index` rebuilds the current run-index projection from current run manifests only. It does not import mutable legacy service, job, schedule, alert, cooldown, or dashboard state.
 
+`data cleanup-runs` plans explicit local run archive cleanup. Dry-run is default.
+
+`data cleanup-runs --apply --run-id <run_id>` deletes only selected approved run archive directories, then rebuilds the run-index projection. It does not delete `data/`, `.halpha/state.sqlite`, config files, or files outside the selected run archive.
+
+Report-bearing run archive deletion requires `--include-report-runs --confirm-report-runs "DELETE REPORT RUNS"`.
+
 `outcomes inspect` summarizes outcome targets, outcome evaluations, outcome material, and shared outcome history state.
 
 `outcomes inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
@@ -516,6 +525,8 @@ Do not claim success without running the relevant command.
 * Use `python -m halpha data migrate-state --config <local-config.yaml> --dry-run` to inspect legacy local state before import without mutating files.
 * Use `python -m halpha data migrate-state --config <local-config.yaml> --apply` only after dry-run review to import supported legacy state explicitly.
 * Use `python -m halpha data rebuild-index --config <local-config.yaml>` to rebuild the current run-index projection from run manifests without importing mutable legacy state.
+* Use `python -m halpha data cleanup-runs --config <local-config.yaml>` to review disposable run archive cleanup candidates without deleting files.
+* Use `python -m halpha data cleanup-runs --config <local-config.yaml> --apply --run-id <run_id>` only after dry-run review to delete selected approved run archives.
 * Use `python -m halpha outcomes inspect --config <local-config.yaml>` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
 * Use `python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect outcome state for a specific run.
 * Use `python -m halpha workbench build --config <local-config.yaml>` to generate local delivery summary and index outputs from existing artifacts without running collection, pipeline stages, or Codex CLI.
