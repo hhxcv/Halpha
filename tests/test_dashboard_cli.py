@@ -1242,7 +1242,15 @@ def test_dashboard_data_stores_endpoint_reads_available_metadata(tmp_path: Path)
     catalog = stores["research_data_catalog"]
     assert catalog["status"] == "ok"
     assert catalog["fields"]["stores"] == 7
+    assert catalog["fields"]["validation_status"] == "ok"
     assert catalog["preview_path"] == "data/research/metadata/research_data_catalog.json"
+    catalog_groups = {group["name"]: group for group in catalog["drilldown"]["groups"]}
+    assert catalog_groups["ohlcv_history"]["domain"] == "market"
+    assert catalog_groups["ohlcv_history"]["storage_path"] == "data/market/ohlcv"
+    assert catalog_groups["ohlcv_history"]["time_field"] == "open_time"
+    assert catalog_groups["ohlcv_history"]["partition_fields"] == "source, symbol, timeframe, year, month"
+    assert catalog_groups["ohlcv_history"]["unique_key_fields"] == "source, symbol, timeframe, open_time"
+    assert catalog_groups["ohlcv_history"]["migration_status"] == "current"
 
     run_index = stores["run_index"]
     assert run_index["status"] == "ok"
@@ -1943,13 +1951,75 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
             "generated_at": "2026-06-20T00:10:00Z",
             "status": "ok",
             "stores": [
-                {"name": "ohlcv_history", "status": "ok"},
-                {"name": "run_index", "status": "ok"},
-                {"name": "text_event_history", "status": "ok"},
-                {"name": "derivatives_market_history", "status": "ok"},
-                {"name": "macro_calendar_history", "status": "ok"},
-                {"name": "onchain_flow_history", "status": "ok"},
-                {"name": "outcome_history", "status": "ok"},
+                _dashboard_catalog_store(
+                    "ohlcv_history",
+                    domain="market",
+                    storage_path="data/market/ohlcv",
+                    schema_path="data/market/metadata/ohlcv_schema.json",
+                    state_path="data/market/metadata/ohlcv_sync_state.json",
+                    time_field="open_time",
+                    partition_fields=["source", "symbol", "timeframe", "year", "month"],
+                    unique_key_fields=["source", "symbol", "timeframe", "open_time"],
+                ),
+                _dashboard_catalog_store(
+                    "run_index",
+                    domain="run_audit",
+                    storage_path=".halpha/state.sqlite",
+                    schema_path=".halpha/state.sqlite",
+                    state_path=".halpha/state.sqlite",
+                    time_field="started_at",
+                    format="sqlite",
+                    unique_key_fields=["run_id"],
+                ),
+                _dashboard_catalog_store(
+                    "text_event_history",
+                    domain="text",
+                    storage_path="data/research/text_events",
+                    schema_path="data/research/metadata/text_event_history_state.json",
+                    state_path="data/research/metadata/text_event_history_state.json",
+                    time_field="published_at",
+                    partition_fields=["source", "year", "month"],
+                    unique_key_fields=["stable_event_key"],
+                ),
+                _dashboard_catalog_store(
+                    "derivatives_market_history",
+                    domain="derivatives",
+                    storage_path="data/market/derivatives",
+                    schema_path="data/market/metadata/derivatives_market_schema.json",
+                    state_path="data/market/metadata/derivatives_market_state.json",
+                    time_field="as_of",
+                    partition_fields=["source", "data_class", "symbol", "period"],
+                    unique_key_fields=["source", "market_type", "data_class", "symbol", "period", "as_of"],
+                ),
+                _dashboard_catalog_store(
+                    "macro_calendar_history",
+                    domain="macro_calendar",
+                    storage_path="data/macro/calendar",
+                    schema_path="data/macro/metadata/macro_calendar_schema.json",
+                    state_path="data/macro/metadata/macro_calendar_state.json",
+                    time_field="scheduled_at",
+                    partition_fields=["source", "data_class", "region"],
+                    unique_key_fields=["source", "data_class", "region", "event_name", "scheduled_at"],
+                ),
+                _dashboard_catalog_store(
+                    "onchain_flow_history",
+                    domain="onchain_flow",
+                    storage_path="data/onchain/flow",
+                    schema_path="data/onchain/metadata/onchain_flow_schema.json",
+                    state_path="data/onchain/metadata/onchain_flow_state.json",
+                    time_field="as_of",
+                    partition_fields=["source", "data_class", "asset", "chain"],
+                    unique_key_fields=["source", "data_class", "asset", "chain", "as_of"],
+                ),
+                _dashboard_catalog_store(
+                    "outcome_history",
+                    domain="outcome",
+                    storage_path="data/research/outcomes",
+                    schema_path="data/research/metadata/outcome_history_state.json",
+                    state_path="data/research/metadata/outcome_history_state.json",
+                    time_field="latest_evaluated_at",
+                    unique_key_fields=["stable_outcome_key"],
+                ),
             ],
             "counts": {"stores": 7, "records": 20, "warnings": 0, "errors": 0},
             "warnings": [],
@@ -1969,6 +2039,7 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
             "errors": [],
         },
     )
+
     write_json(
         tmp_path / "data" / "market" / "metadata" / "ohlcv_schema.json",
         {"schema_version": 1, "unique_key": ["source", "symbol", "timeframe", "open_time"]},
@@ -2099,6 +2170,55 @@ def _write_dashboard_data_store_metadata(tmp_path: Path) -> None:
             "errors": [],
         },
     )
+
+
+def _dashboard_catalog_store(
+    name: str,
+    *,
+    domain: str,
+    storage_path: str,
+    schema_path: str,
+    state_path: str,
+    time_field: str,
+    format: str = "json",
+    partition_fields: list[str] | None = None,
+    unique_key_fields: list[str] | None = None,
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "domain": domain,
+        "kind": name,
+        "status": "ok",
+        "format": format,
+        "storage_path": storage_path,
+        "schema_path": schema_path,
+        "state_path": state_path,
+        "schema_version": 1,
+        "schema_metadata_kind": "sqlite_schema_migrations" if format == "sqlite" else "file",
+        "partition_fields": partition_fields or [],
+        "unique_key_fields": unique_key_fields or ["stable_key"],
+        "source_fields": [],
+        "time_field": time_field,
+        "latest_update_at": "2026-06-20T00:10:00Z",
+        "latest_completed_revision": "2026-06-20T00:10:00Z",
+        "record_count": 1,
+        "warning_count": 0,
+        "error_count": 0,
+        "consumers": ["dashboard"],
+        "source_artifacts": [schema_path, state_path],
+        "migration_status": "current",
+        "migration": {
+            "status": "current",
+            "applied_schema_version": 1,
+            "available_migrators": [],
+            "compatibility_readers": ["current_reader"],
+            "last_migration_at": "2026-06-20T00:10:00Z",
+            "warnings": [],
+            "errors": [],
+        },
+        "warnings": [],
+        "errors": [],
+    }
 
 
 def _write_dashboard_strategy_artifacts(run: RunContext) -> None:

@@ -193,6 +193,11 @@ Implemented shared stores follow these layout rules:
 The current shared data catalog must describe implemented stores only. It must
 not invent store entries for unimplemented future storage systems.
 
+Cataloged shared store `storage_path` values must be runtime-root-relative
+shared-data paths or safe external refs. They must not point under `runs/`.
+Run archives may appear only as source artifact refs or current-run views, not
+as durable shared store roots.
+
 Run archives may reference shared data through bounded refs and current-run
 views. Run archives must not become the durable store required to query shared
 data.

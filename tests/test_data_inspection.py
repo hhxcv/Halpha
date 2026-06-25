@@ -68,6 +68,7 @@ def test_data_inspect_reports_local_stores_and_degraded_quality_summary(
     assert "status: degraded" in output
     assert "research_data_catalog: ok" in output
     assert "stores=3" in output
+    assert "validation_status=ok" in output
     assert "store_statuses: ohlcv_history=ok, run_index=ok, text_event_history=ok" in output
     assert "run_index: ok" in output
     assert "latest_run_id=run-1" in output
@@ -1367,9 +1368,27 @@ def _write_store_metadata(tmp_path: Path, run: RunContext) -> None:
             "generated_at": "2026-06-05T00:10:00Z",
             "status": "ok",
             "stores": [
-                {"name": "ohlcv_history", "status": "ok"},
-                {"name": "run_index", "status": "ok"},
-                {"name": "text_event_history", "status": "ok"},
+                _catalog_store(
+                    "ohlcv_history",
+                    storage_path="data/market/ohlcv",
+                    schema_path="data/market/metadata/ohlcv_schema.json",
+                    state_path="data/market/metadata/ohlcv_sync_state.json",
+                    time_field="open_time",
+                ),
+                _catalog_store(
+                    "run_index",
+                    storage_path=".halpha/state.sqlite",
+                    schema_path=".halpha/state.sqlite",
+                    state_path=".halpha/state.sqlite",
+                    time_field="started_at",
+                ),
+                _catalog_store(
+                    "text_event_history",
+                    storage_path="data/research/text_events",
+                    schema_path="data/research/metadata/text_event_history_state.json",
+                    state_path="data/research/metadata/text_event_history_state.json",
+                    time_field="published_at",
+                ),
             ],
             "counts": {"stores": 3, "records": 5, "warnings": 0, "errors": 0},
             "warnings": [],
@@ -1406,4 +1425,48 @@ def _write_store_metadata(tmp_path: Path, run: RunContext) -> None:
             "errors": [],
         },
     )
+
+
+def _catalog_store(
+    name: str,
+    *,
+    storage_path: str,
+    schema_path: str,
+    state_path: str,
+    time_field: str,
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "domain": "system" if name == "run_index" else "research",
+        "kind": name,
+        "status": "ok",
+        "format": "sqlite" if name == "run_index" else "json",
+        "storage_path": storage_path,
+        "schema_path": schema_path,
+        "state_path": state_path,
+        "schema_version": 1,
+        "partition_fields": [],
+        "unique_key_fields": ["run_id"] if name == "run_index" else ["stable_key"],
+        "source_fields": [],
+        "time_field": time_field,
+        "latest_update_at": "2026-06-05T00:10:00Z",
+        "latest_completed_revision": "2026-06-05T00:10:00Z",
+        "record_count": 1,
+        "warning_count": 0,
+        "error_count": 0,
+        "consumers": ["data_inspection"],
+        "source_artifacts": [schema_path, state_path],
+        "migration_status": "current",
+        "migration": {
+            "status": "current",
+            "applied_schema_version": 1,
+            "available_migrators": [],
+            "compatibility_readers": ["current_reader"],
+            "last_migration_at": "2026-06-05T00:10:00Z",
+            "warnings": [],
+            "errors": [],
+        },
+        "warnings": [],
+        "errors": [],
+    }
 
