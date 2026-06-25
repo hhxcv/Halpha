@@ -33,6 +33,7 @@ from halpha.runtime.mutation_lease import MutationLeaseBlocked
 from halpha.runtime.mutation_lease import acquire_mutation_lease
 from halpha.runtime.mutation_lease import is_mutating_workflow_kind
 from halpha.runtime.pipeline_contracts import PipelineError
+from halpha.runtime.run_classification import run_trigger_env
 from halpha.storage import artifact_base as _artifact_base
 from halpha.storage import safe_local_ref as _safe_ref
 
@@ -283,10 +284,12 @@ class CommandJobManager:
         lease_context = lease if lease is not None else nullcontext()
         try:
             with lease_context:
+                process_env = lease.subprocess_env(os.environ) if lease is not None else dict(os.environ)
+                process_env = run_trigger_env(process_env, _job_run_trigger(job))
                 job_process = launch_command_job_process(
                     command,
                     cwd=self.base,
-                    env=lease.subprocess_env(os.environ) if lease is not None else None,
+                    env=process_env,
                     popen_factory=subprocess.Popen,
                 )
                 with self._lock:
@@ -726,6 +729,25 @@ def _requested_by(value: Any, *, default: str) -> str:
     if requested_by in JOB_REQUESTED_BY_VALUES:
         return requested_by
     return default if default in JOB_REQUESTED_BY_VALUES else "CLI"
+
+
+def _job_run_trigger(job: dict[str, Any]) -> dict[str, Any]:
+    trigger: dict[str, Any] = {
+        "source": _requested_by(job.get("requested_by"), default="CLI"),
+        "intent": str(job.get("intent") or "command_job"),
+        "job_id": str(job.get("job_id") or ""),
+    }
+    requester = job.get("requester")
+    if isinstance(requester, dict):
+        for source_key, trigger_key in (
+            ("schedule_id", "schedule_id"),
+            ("dispatch_kind", "dispatch_kind"),
+            ("monitor_cycle_id", "monitor_cycle_id"),
+            ("source_keys", "source_keys"),
+        ):
+            if source_key in requester:
+                trigger[trigger_key] = requester[source_key]
+    return trigger
 
 
 def _is_store_read_failure(job: dict[str, Any] | None) -> bool:

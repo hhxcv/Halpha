@@ -76,8 +76,7 @@ Only these operations may create a top-level product run archive:
 
 - explicit user product run, such as `python -m halpha run ...`;
 - Dashboard command job that explicitly starts a product run;
-- scheduled report dispatch that actually starts a report-producing product
-  run;
+- scheduled daily report dispatch that actually starts a product run;
 - decision-producing Monitor reassessment after source evidence actually
   changed;
 - derived stage rerun from a completed successful parent run;
@@ -107,24 +106,24 @@ New run archives are expected to record these minimum fields in
 `run_manifest.json`:
 
 - `run_kind`: finite run kind, such as `product_report`,
-  `monitor_reassessment`, `stage_rerun`, `failed_run_resume`,
+  `scheduled_report`, `monitor_reassessment`, `stage_rerun`,
   `validation_run`, `standalone_backtest`, `standalone_experiment`, or
   `unknown`.
 - `trigger`: bounded trigger object with `source` and `intent`.
-- `created_by`: bounded local actor label, such as `CLI`, `Dashboard`,
-  `Schedule`, `Monitor`, or `unknown`.
 - `trigger.job_id`: command job id when a Dashboard command job created the
   run.
 - `trigger.schedule_id`: schedule id when Schedule dispatched the run.
-- `trigger.source_cycle_id`: Monitor cycle id when a Monitor reassessment
+- `trigger.monitor_cycle_id`: Monitor cycle id when a Monitor reassessment
   created the run.
 - `trigger.source_keys`: bounded changed source keys for Monitor
   reassessments.
-- `parent_run_id`: parent run id when a derived stage rerun creates a new
+- `trigger.parent_run_id`: parent run id when a derived stage rerun creates a new
   archive.
+- `trigger.requested_stage`: requested stage for derived stage reruns and
+  failed-run resume-in-place requests.
 - `disposal_class`: cleanup classification, such as `report_archive`,
-  `reassessment_archive`, `derived_archive`, `validation_archive`,
-  `standalone_archive`, or `transient_legacy`.
+  `monitor_reassessment_archive`, `derived_archive`, `validation_archive`,
+  `standalone_archive`, or `legacy_archive`.
 
 Trigger metadata must be source-aware and bounded. It must not embed raw config
 contents, absolute machine-local paths, proxy URLs, credentials, account ids,
@@ -300,8 +299,7 @@ of scope for run archive cleanup.
 
 ## Current Implementation Follow-Ups
 
-This contract intentionally sets the storage boundary before changing
-producers. The implementation issues that enforce it are:
+The implementation issues tied to this storage boundary are:
 
 - #691 stops no-change Monitor source refreshes from creating product run
   archives.

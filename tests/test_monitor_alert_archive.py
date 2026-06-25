@@ -275,7 +275,7 @@ monitor:
 
 
 def _pipeline_with_alerts(tmp_path: Path, run_id: str, records: list[Any]):
-    def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+    def pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
         run_dir = tmp_path / "runs" / run_id
         analysis_dir = run_dir / "analysis"
         analysis_dir.mkdir(parents=True, exist_ok=True)

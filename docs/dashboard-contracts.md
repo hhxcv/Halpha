@@ -39,8 +39,8 @@ Primary sources:
   lifecycle plus daily report schedule configuration, dispatch history,
   Dashboard service lifecycle, Dashboard UI preferences, monitor cycle indexes,
   alert archive records, cooldown state, and monitor service health query state.
-- `runs/<run_id>/run_manifest.json`: per-run lifecycle, stage, artifact, count,
-  Codex, warning, and error state.
+- `runs/<run_id>/run_manifest.json`: per-run classification, trigger,
+  lifecycle, stage, artifact, count, Codex, warning, and error state.
 - `runs/<run_id>/raw/`: current-run public observations and bounded current-run
   views.
 - `runs/<run_id>/analysis/`: deterministic evidence, materials, validation,
@@ -72,6 +72,9 @@ Dashboard read models, overview cards, health summaries, and latest-run
 selections are derived views. They must be rebuilt from authoritative run
 artifacts, reusable stores, and runtime state. They must not become parallel
 authorities for facts already owned elsewhere.
+Run list and run detail read models expose `run_kind`, bounded `trigger`, and
+`disposal_class`; legacy rows without classification must display
+`unknown`/`legacy` values instead of crashing.
 
 ## Implemented Operation
 

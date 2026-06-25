@@ -17,13 +17,15 @@ from halpha.runtime.state_store import (
     runtime_state_path,
     runtime_state_transaction,
 )
+from halpha.runtime.run_classification import classification_from_manifest
 from halpha.storage import artifact_base, display_path
 
 if TYPE_CHECKING:
     from halpha.runtime.pipeline_contracts import RunContext
 
 
-RUN_INDEX_SCHEMA_VERSION = 3
+RUN_INDEX_SCHEMA_VERSION = 4
+RUN_INDEX_CLASSIFICATION_MIGRATION_VERSION = 16
 RUN_INDEX_ARTIFACT = STATE_STORE_REF
 LEGACY_RUN_INDEX_ARTIFACT = "data/research/index.sqlite"
 LATEST_RUN_KEY = "latest_run"
@@ -39,9 +41,53 @@ failed_stage,
 codex_status,
 warning_count,
 error_count,
-manifest_path
+manifest_path,
+run_kind,
+trigger_source,
+trigger_intent,
+disposal_class,
+trigger_job_id,
+trigger_schedule_id,
+trigger_monitor_cycle_id,
+trigger_source_keys,
+trigger_parent_run_id,
+trigger_requested_stage
 """
 RUN_INDEX_RUN_COLUMNS_R = """
+r.run_id,
+r.run_dir,
+r.started_at,
+r.finished_at,
+r.status,
+r.failed_stage,
+r.codex_status,
+r.warning_count,
+r.error_count,
+r.manifest_path,
+r.run_kind,
+r.trigger_source,
+r.trigger_intent,
+r.disposal_class,
+r.trigger_job_id,
+r.trigger_schedule_id,
+r.trigger_monitor_cycle_id,
+r.trigger_source_keys,
+r.trigger_parent_run_id,
+r.trigger_requested_stage
+"""
+RUN_INDEX_BASE_RUN_COLUMNS = """
+run_id,
+run_dir,
+started_at,
+finished_at,
+status,
+failed_stage,
+codex_status,
+warning_count,
+error_count,
+manifest_path
+"""
+RUN_INDEX_BASE_RUN_COLUMNS_R = """
 r.run_id,
 r.run_dir,
 r.started_at,
@@ -153,6 +199,24 @@ RUN_INDEX_MIGRATIONS = (
             "CREATE INDEX IF NOT EXISTS idx_run_tasks_lookup ON run_tasks(run_id, task_name)",
         ),
     ),
+    StateStoreMigration(
+        version=RUN_INDEX_CLASSIFICATION_MIGRATION_VERSION,
+        name="run_index_classification",
+        statements=(
+            "ALTER TABLE runs ADD COLUMN run_kind TEXT NOT NULL DEFAULT 'unknown'",
+            "ALTER TABLE runs ADD COLUMN trigger_source TEXT NOT NULL DEFAULT 'unknown'",
+            "ALTER TABLE runs ADD COLUMN trigger_intent TEXT NOT NULL DEFAULT 'unknown'",
+            "ALTER TABLE runs ADD COLUMN disposal_class TEXT NOT NULL DEFAULT 'legacy_archive'",
+            "ALTER TABLE runs ADD COLUMN trigger_job_id TEXT",
+            "ALTER TABLE runs ADD COLUMN trigger_schedule_id TEXT",
+            "ALTER TABLE runs ADD COLUMN trigger_monitor_cycle_id TEXT",
+            "ALTER TABLE runs ADD COLUMN trigger_source_keys TEXT",
+            "ALTER TABLE runs ADD COLUMN trigger_parent_run_id TEXT",
+            "ALTER TABLE runs ADD COLUMN trigger_requested_stage TEXT",
+            "CREATE INDEX IF NOT EXISTS idx_runs_kind_started_at ON runs(run_kind, started_at, run_id)",
+            "CREATE INDEX IF NOT EXISTS idx_runs_trigger_source_started_at ON runs(trigger_source, started_at, run_id)",
+        ),
+    ),
 )
 
 
@@ -168,6 +232,16 @@ class RunIndexRecord:
     warning_count: int
     error_count: int
     manifest_path: str
+    run_kind: str = "unknown"
+    trigger_source: str = "unknown"
+    trigger_intent: str = "unknown"
+    disposal_class: str = "legacy_archive"
+    trigger_job_id: str | None = None
+    trigger_schedule_id: str | None = None
+    trigger_monitor_cycle_id: str | None = None
+    trigger_source_keys: str | None = None
+    trigger_parent_run_id: str | None = None
+    trigger_requested_stage: str | None = None
 
     @classmethod
     def from_row(cls, row: Any) -> RunIndexRecord | None:
@@ -186,6 +260,16 @@ class RunIndexRecord:
             warning_count=_int(row[7]),
             error_count=_int(row[8]),
             manifest_path=str(row[9]),
+            run_kind=(_optional_string(row[10]) if len(row) > 10 else None) or "unknown",
+            trigger_source=(_optional_string(row[11]) if len(row) > 11 else None) or "unknown",
+            trigger_intent=(_optional_string(row[12]) if len(row) > 12 else None) or "unknown",
+            disposal_class=(_optional_string(row[13]) if len(row) > 13 else None) or "legacy_archive",
+            trigger_job_id=_optional_string(row[14]) if len(row) > 14 else None,
+            trigger_schedule_id=_optional_string(row[15]) if len(row) > 15 else None,
+            trigger_monitor_cycle_id=_optional_string(row[16]) if len(row) > 16 else None,
+            trigger_source_keys=_optional_string(row[17]) if len(row) > 17 else None,
+            trigger_parent_run_id=_optional_string(row[18]) if len(row) > 18 else None,
+            trigger_requested_stage=_optional_string(row[19]) if len(row) > 19 else None,
         )
 
     def as_row(self) -> tuple[Any, ...]:
@@ -200,6 +284,16 @@ class RunIndexRecord:
             self.warning_count,
             self.error_count,
             self.manifest_path,
+            self.run_kind,
+            self.trigger_source,
+            self.trigger_intent,
+            self.disposal_class,
+            self.trigger_job_id,
+            self.trigger_schedule_id,
+            self.trigger_monitor_cycle_id,
+            self.trigger_source_keys,
+            self.trigger_parent_run_id,
+            self.trigger_requested_stage,
         )
 
 
@@ -286,14 +380,26 @@ def run_index_selection_label(selection_key: str) -> str:
 
 
 def fetch_run_index_record(connection: sqlite3.Connection, run_id: str) -> RunIndexRecord | None:
-    row = connection.execute(
-        f"""
-        SELECT {RUN_INDEX_RUN_COLUMNS}
-        FROM runs
-        WHERE run_id = ?
-        """,
-        (run_id,),
-    ).fetchone()
+    try:
+        row = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_RUN_COLUMNS}
+            FROM runs
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if not _is_missing_classification_column_error(exc):
+            raise
+        row = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_BASE_RUN_COLUMNS}
+            FROM runs
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        ).fetchone()
     return RunIndexRecord.from_row(row)
 
 
@@ -331,19 +437,34 @@ def select_available_report_run_records(
 ) -> list[RunIndexSelection]:
     if limit <= 0:
         return []
-    rows = connection.execute(
-        f"""
-        SELECT {RUN_INDEX_RUN_COLUMNS_R}, a.path
-        FROM runs r
-        JOIN run_artifacts a ON a.run_id = r.run_id
-        WHERE a.artifact_key = 'report'
-        ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC, a.path
-        """
-    ).fetchall()
+    row_width = 20
+    try:
+        rows = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_RUN_COLUMNS_R}, a.path
+            FROM runs r
+            JOIN run_artifacts a ON a.run_id = r.run_id
+            WHERE a.artifact_key = 'report'
+            ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC, a.path
+            """
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if not _is_missing_classification_column_error(exc):
+            raise
+        row_width = 10
+        rows = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_BASE_RUN_COLUMNS_R}, a.path
+            FROM runs r
+            JOIN run_artifacts a ON a.run_id = r.run_id
+            WHERE a.artifact_key = 'report'
+            ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC, a.path
+            """
+        ).fetchall()
     selections: list[RunIndexSelection] = []
     for row in rows:
-        record = RunIndexRecord.from_row(row[:10])
-        report_ref = row[10] if len(row) > 10 and isinstance(row[10], str) else None
+        record = RunIndexRecord.from_row(row[:row_width])
+        report_ref = row[row_width] if len(row) > row_width and isinstance(row[row_width], str) else None
         if record is None or not report_ref:
             continue
         report_path = _available_report_path(record, report_ref, base=base)
@@ -364,21 +485,40 @@ def select_available_report_run_records(
 def select_report_run_records(connection: sqlite3.Connection, *, limit: int) -> list[RunIndexRecord]:
     if limit <= 0:
         return []
-    rows = connection.execute(
-        f"""
-        SELECT {RUN_INDEX_RUN_COLUMNS_R}
-        FROM runs r
-        WHERE EXISTS (
-          SELECT 1
-          FROM run_artifacts a
-          WHERE a.run_id = r.run_id
-            AND a.artifact_key = 'report'
-        )
-        ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC
-        LIMIT ?
-        """,
-        (limit,),
-    ).fetchall()
+    try:
+        rows = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_RUN_COLUMNS_R}
+            FROM runs r
+            WHERE EXISTS (
+              SELECT 1
+              FROM run_artifacts a
+              WHERE a.run_id = r.run_id
+                AND a.artifact_key = 'report'
+            )
+            ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if not _is_missing_classification_column_error(exc):
+            raise
+        rows = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_BASE_RUN_COLUMNS_R}
+            FROM runs r
+            WHERE EXISTS (
+              SELECT 1
+              FROM run_artifacts a
+              WHERE a.run_id = r.run_id
+                AND a.artifact_key = 'report'
+            )
+            ORDER BY COALESCE(r.started_at, '') DESC, r.run_id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
     return [record for row in rows if (record := RunIndexRecord.from_row(row)) is not None]
 
 
@@ -388,16 +528,30 @@ def select_previous_successful_run_record(
     current_run_id: str,
     artifact_keys: set[str] | frozenset[str] | None = None,
 ) -> RunIndexSelection | None:
-    row = connection.execute(
-        f"""
-        SELECT {RUN_INDEX_RUN_COLUMNS}
-        FROM runs
-        WHERE status = 'succeeded' AND run_id <> ?
-        ORDER BY COALESCE(finished_at, started_at, run_id) DESC, run_id DESC
-        LIMIT 1
-        """,
-        (current_run_id,),
-    ).fetchone()
+    try:
+        row = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_RUN_COLUMNS}
+            FROM runs
+            WHERE status = 'succeeded' AND run_id <> ?
+            ORDER BY COALESCE(finished_at, started_at, run_id) DESC, run_id DESC
+            LIMIT 1
+            """,
+            (current_run_id,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if not _is_missing_classification_column_error(exc):
+            raise
+        row = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_BASE_RUN_COLUMNS}
+            FROM runs
+            WHERE status = 'succeeded' AND run_id <> ?
+            ORDER BY COALESCE(finished_at, started_at, run_id) DESC, run_id DESC
+            LIMIT 1
+            """,
+            (current_run_id,),
+        ).fetchone()
     record = RunIndexRecord.from_row(row)
     if record is None:
         return None
@@ -489,6 +643,8 @@ def inspect_indexed_manifest(connection: sqlite3.Connection, *, run_id: str, bas
 
 def _replace_run(connection: sqlite3.Connection, run: RunContext) -> None:
     manifest = run.manifest
+    classification = classification_from_manifest(manifest)
+    trigger = classification["trigger"]
     connection.execute(
         """
         INSERT OR REPLACE INTO runs (
@@ -502,9 +658,19 @@ def _replace_run(connection: sqlite3.Connection, run: RunContext) -> None:
           codex_status,
           warning_count,
           error_count,
-          manifest_path
+          manifest_path,
+          run_kind,
+          trigger_source,
+          trigger_intent,
+          disposal_class,
+          trigger_job_id,
+          trigger_schedule_id,
+          trigger_monitor_cycle_id,
+          trigger_source_keys,
+          trigger_parent_run_id,
+          trigger_requested_stage
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             run.run_id,
@@ -520,6 +686,16 @@ def _replace_run(connection: sqlite3.Connection, run: RunContext) -> None:
             _warning_count(manifest),
             _error_count(manifest),
             display_path(run.manifest_path, base=artifact_base(run.config_path)),
+            classification["run_kind"],
+            trigger["source"],
+            trigger["intent"],
+            classification["disposal_class"],
+            _optional_string(trigger.get("job_id")),
+            _optional_string(trigger.get("schedule_id")),
+            _optional_string(trigger.get("monitor_cycle_id")),
+            _source_keys_string(trigger.get("source_keys")),
+            _optional_string(trigger.get("parent_run_id")),
+            _optional_string(trigger.get("requested_stage")),
         ),
     )
 
@@ -693,6 +869,25 @@ def _manifest_consistency_warnings(record: RunIndexRecord, manifest: dict[str, A
     return warnings
 
 
+def _is_missing_classification_column_error(exc: sqlite3.OperationalError) -> bool:
+    text = str(exc).lower()
+    return "no such column" in text and any(
+        column in text
+        for column in (
+            "run_kind",
+            "trigger_source",
+            "trigger_intent",
+            "disposal_class",
+            "trigger_job_id",
+            "trigger_schedule_id",
+            "trigger_monitor_cycle_id",
+            "trigger_source_keys",
+            "trigger_parent_run_id",
+            "trigger_requested_stage",
+        )
+    )
+
+
 def _failed_stage(manifest: dict[str, Any]) -> str | None:
     errors = manifest.get("errors")
     if isinstance(errors, list) and errors:
@@ -759,6 +954,13 @@ def _artifact_kind(path: str) -> str:
 
 def _optional_string(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _source_keys_string(value: Any) -> str | None:
+    if not isinstance(value, list):
+        return None
+    keys = [item for item in value if isinstance(item, str) and item]
+    return ",".join(keys) if keys else None
 
 
 def _int(value: Any) -> int:

@@ -17,6 +17,13 @@ from halpha.runtime.pipeline_contracts import (
     RunResult,
     StageHandler,
 )
+from halpha.runtime.run_classification import (
+    classification_from_manifest,
+    product_run_classification,
+    run_trigger_requested_by,
+    stage_rerun_classification,
+    stage_resume_trigger,
+)
 from halpha.pipeline_stage_handlers import default_stage_handlers
 from halpha.pipeline_stages import (
     DECISION_INTELLIGENCE_STAGES,
@@ -47,8 +54,14 @@ def run_pipeline(
     now: datetime | None = None,
     until_stage: str | None = None,
     skip_codex: bool = False,
+    run_trigger: dict[str, Any] | None = None,
 ) -> RunResult:
-    with mutation_lease(config_path=config_path, owner_kind="pipeline", workflow="product_run", requested_by="CLI"):
+    with mutation_lease(
+        config_path=config_path,
+        owner_kind="pipeline",
+        workflow="product_run",
+        requested_by=run_trigger_requested_by(run_trigger),
+    ):
         return _run_pipeline_unlocked(
             config,
             config_path=config_path,
@@ -56,6 +69,7 @@ def run_pipeline(
             now=now,
             until_stage=until_stage,
             skip_codex=skip_codex,
+            run_trigger=run_trigger,
         )
 
 
@@ -67,11 +81,17 @@ def _run_pipeline_unlocked(
     now: datetime | None = None,
     until_stage: str | None = None,
     skip_codex: bool = False,
+    run_trigger: dict[str, Any] | None = None,
 ) -> RunResult:
     _validate_optional_stage(until_stage, option_name="--until")
     _validate_stage_graph()
     clock = _clock(now)
-    run = _create_run_context(config, config_path=config_path, now=clock())
+    classification = product_run_classification(
+        trigger=run_trigger,
+        until_stage=until_stage,
+        skip_codex=skip_codex,
+    )
+    run = _create_run_context(config, config_path=config_path, now=clock(), classification=classification)
     _record_validation_mode(run, until_stage=until_stage, skip_codex=skip_codex)
     _write_manifest(run)
     LOGGER.info(
@@ -138,8 +158,14 @@ def run_pipeline_stage(
     stage: str,
     stage_handlers: dict[str, StageHandler] | None = None,
     now: datetime | None = None,
+    run_trigger: dict[str, Any] | None = None,
 ) -> RunResult:
-    with mutation_lease(config_path=config_path, owner_kind="pipeline", workflow="stage_rerun", requested_by="CLI"):
+    with mutation_lease(
+        config_path=config_path,
+        owner_kind="pipeline",
+        workflow="stage_rerun",
+        requested_by=run_trigger_requested_by(run_trigger),
+    ):
         return _run_pipeline_stage_unlocked(
             config,
             config_path=config_path,
@@ -147,6 +173,7 @@ def run_pipeline_stage(
             stage=stage,
             stage_handlers=stage_handlers,
             now=now,
+            run_trigger=run_trigger,
         )
 
 
@@ -158,6 +185,7 @@ def _run_pipeline_stage_unlocked(
     stage: str,
     stage_handlers: dict[str, StageHandler] | None = None,
     now: datetime | None = None,
+    run_trigger: dict[str, Any] | None = None,
 ) -> RunResult:
     _validate_stage(stage, option_name="stage")
     _validate_stage_graph()
@@ -176,6 +204,7 @@ def _run_pipeline_stage_unlocked(
             stage=stage,
             handlers=handlers,
             clock=clock,
+            run_trigger=run_trigger,
         )
     return _resume_pipeline_stage(
         config,
@@ -183,6 +212,7 @@ def _run_pipeline_stage_unlocked(
         stage=stage,
         handlers=handlers,
         clock=clock,
+        run_trigger=run_trigger,
     )
 
 
@@ -194,6 +224,7 @@ def _run_derived_stage_rerun(
     stage: str,
     handlers: dict[str, StageHandler],
     clock: Callable[[], datetime],
+    run_trigger: dict[str, Any] | None,
 ) -> RunResult:
     terminal_stage = _rerun_terminal_stage(parent, stage=stage)
     closure = _downstream_closure(stage, through_stage=terminal_stage)
@@ -202,7 +233,12 @@ def _run_derived_stage_rerun(
     reusable_refs = _stage_artifact_refs(reusable_records)
     _validate_reusable_artifacts(parent, reusable_records)
 
-    run = _create_run_context(config, config_path=config_path, now=clock())
+    classification = stage_rerun_classification(
+        trigger=run_trigger,
+        parent_run_id=parent.run_id,
+        requested_stage=stage,
+    )
+    run = _create_run_context(config, config_path=config_path, now=clock(), classification=classification)
     skip_codex = _inherits_no_codex(parent)
     _prepare_derived_manifest(
         run,
@@ -260,6 +296,7 @@ def _resume_pipeline_stage(
     stage: str,
     handlers: dict[str, StageHandler],
     clock: Callable[[], datetime],
+    run_trigger: dict[str, Any] | None,
 ) -> RunResult:
     terminal_stage = _resume_terminal_stage(run, stage=stage)
     closure = _downstream_closure(stage, through_stage=terminal_stage)
@@ -275,6 +312,7 @@ def _resume_pipeline_stage(
         "terminal_stage": terminal_stage,
         "downstream_closure": list(closure),
         "requested_at": _utc_timestamp(clock()),
+        "trigger": stage_resume_trigger(trigger=run_trigger, run_id=run.run_id, requested_stage=stage),
     }
     _truncate_manifest_for_resume(run, stage=stage)
     _write_manifest(run)
@@ -309,7 +347,13 @@ def _resume_pipeline_stage(
     return RunResult(True, run, 0, None, None)
 
 
-def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datetime | None) -> RunContext:
+def _create_run_context(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    now: datetime | None,
+    classification: dict[str, Any],
+) -> RunContext:
     output_dir = Path(config["run"]["output_dir"])
     if not output_dir.is_absolute():
         output_dir = artifact_base(config_path) / output_dir
@@ -329,6 +373,9 @@ def _create_run_context(config: dict[str, Any], *, config_path: Path, now: datet
     manifest = {
         "schema_version": 1,
         "run_id": run_id,
+        "run_kind": classification["run_kind"],
+        "trigger": classification["trigger"],
+        "disposal_class": classification["disposal_class"],
         "status": "running",
         "started_at": _utc_timestamp(now),
         "finished_at": None,
@@ -387,6 +434,10 @@ def _load_run_context(config: dict[str, Any], *, config_path: Path, run_dir: Pat
         ensure_directory(directory)
     manifest.setdefault("schema_version", 1)
     manifest.setdefault("run_id", run_dir.name)
+    classification = classification_from_manifest(manifest)
+    manifest.setdefault("run_kind", classification["run_kind"])
+    manifest.setdefault("trigger", classification["trigger"])
+    manifest.setdefault("disposal_class", classification["disposal_class"])
     manifest.setdefault("config_path", _path_for_manifest(config_path))
     manifest.setdefault("sources", _source_summary(config))
     manifest.setdefault("artifacts", {})

@@ -210,7 +210,7 @@ def _pipeline_factory(
 ):
     calls = {"count": 0}
 
-    def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+    def pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
         calls["count"] += 1
         status = statuses[calls["count"] - 1]
         run_id = f"run-{calls['count']}"

@@ -10,7 +10,9 @@ from halpha.dashboard.common import dashboard_resolve_ref as _resolve_ref
 from halpha.dashboard.common import dashboard_safe_ref as _safe_ref
 from halpha.dashboard.run_aggregation import manifest_report_state, run_list_record as _run_list_record
 from halpha.data.run_index import (
+    RUN_INDEX_BASE_RUN_COLUMNS,
     RUN_INDEX_ARTIFACT,
+    RUN_INDEX_RUN_COLUMNS,
     run_index_latest_refs,
     run_index_path,
     run_index_selection_label,
@@ -117,24 +119,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
         return _run_detail_missing(run_id, warning="local run index was not found.")
     try:
         with closing(sqlite3.connect(index_path)) as connection:
-            row = connection.execute(
-                """
-                SELECT
-                  run_id,
-                  run_dir,
-                  started_at,
-                  finished_at,
-                  status,
-                  failed_stage,
-                  codex_status,
-                  warning_count,
-                  error_count,
-                  manifest_path
-                FROM runs
-                WHERE run_id = ?
-                """,
-                (run_id,),
-            ).fetchone()
+            row = _dashboard_run_row(connection, run_id=run_id)
             latest = _run_latest_refs(connection)
     except sqlite3.Error as exc:
         return {
@@ -307,25 +292,28 @@ def _run_latest_refs(connection: sqlite3.Connection) -> dict[str, str | None]:
 
 
 def _dashboard_run_rows(connection: sqlite3.Connection, *, limit: int, report_limit: int) -> list[Any]:
-    latest_rows = connection.execute(
-        """
-        SELECT
-          run_id,
-          run_dir,
-          started_at,
-          finished_at,
-          status,
-          failed_stage,
-          codex_status,
-          warning_count,
-          error_count,
-          manifest_path
-        FROM runs
-        ORDER BY COALESCE(started_at, '') DESC, run_id DESC
-        LIMIT ?
-        """,
-        (max(0, limit),),
-    ).fetchall()
+    try:
+        latest_rows = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_RUN_COLUMNS}
+            FROM runs
+            ORDER BY COALESCE(started_at, '') DESC, run_id DESC
+            LIMIT ?
+            """,
+            (max(0, limit),),
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if not _missing_run_classification_columns(exc):
+            raise
+        latest_rows = connection.execute(
+            f"""
+            SELECT {RUN_INDEX_BASE_RUN_COLUMNS}
+            FROM runs
+            ORDER BY COALESCE(started_at, '') DESC, run_id DESC
+            LIMIT ?
+            """,
+            (max(0, limit),),
+        ).fetchall()
     report_rows = [record.as_row() for record in select_report_run_records(connection, limit=report_limit)]
     rows_by_id: dict[str, Any] = {}
     for row in [*latest_rows, *report_rows]:
@@ -335,8 +323,50 @@ def _dashboard_run_rows(connection: sqlite3.Connection, *, limit: int, report_li
     return sorted(rows_by_id.values(), key=_run_row_sort_key, reverse=True)
 
 
+def _dashboard_run_row(connection: sqlite3.Connection, *, run_id: str) -> Any:
+    try:
+        return connection.execute(
+            f"""
+            SELECT {RUN_INDEX_RUN_COLUMNS}
+            FROM runs
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if not _missing_run_classification_columns(exc):
+            raise
+        return connection.execute(
+            f"""
+            SELECT {RUN_INDEX_BASE_RUN_COLUMNS}
+            FROM runs
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        ).fetchone()
+
+
 def _run_row_sort_key(row: Any) -> tuple[str, str]:
     return (str(row[2] or ""), str(row[0] or ""))
+
+
+def _missing_run_classification_columns(exc: sqlite3.OperationalError) -> bool:
+    text = str(exc).lower()
+    return "no such column" in text and any(
+        column in text
+        for column in (
+            "run_kind",
+            "trigger_source",
+            "trigger_intent",
+            "disposal_class",
+            "trigger_job_id",
+            "trigger_schedule_id",
+            "trigger_monitor_cycle_id",
+            "trigger_source_keys",
+            "trigger_parent_run_id",
+            "trigger_requested_stage",
+        )
+    )
 
 
 def _latest_selection_label(selection_key: str) -> str:

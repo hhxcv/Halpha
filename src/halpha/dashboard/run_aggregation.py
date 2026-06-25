@@ -34,6 +34,9 @@ def run_list_record(
         "status": row[4],
         "failed_stage": row[5],
         "codex_status": row[6],
+        "run_kind": _run_kind(row),
+        "trigger": _run_trigger(row),
+        "disposal_class": _disposal_class(row),
         "warning_count": int(row[7] or 0),
         "error_count": int(row[8] or 0),
         "manifest": _safe_ref(manifest_path, base=base),
@@ -45,6 +48,43 @@ def run_list_record(
             "is_latest_successful_run": run_id == latest.get("latest_successful_run_id"),
         },
     }
+
+
+def _run_kind(row: Any) -> str:
+    return _row_string(row, 10, default="unknown")
+
+
+def _disposal_class(row: Any) -> str:
+    return _row_string(row, 13, default="legacy_archive")
+
+
+def _run_trigger(row: Any) -> dict[str, Any]:
+    trigger = {
+        "source": _row_string(row, 11, default="unknown"),
+        "intent": _row_string(row, 12, default="unknown"),
+    }
+    optional = (
+        ("job_id", 14),
+        ("schedule_id", 15),
+        ("monitor_cycle_id", 16),
+        ("parent_run_id", 18),
+        ("requested_stage", 19),
+    )
+    for key, index in optional:
+        value = _row_string(row, index, default="")
+        if value:
+            trigger[key] = value
+    source_keys = _row_string(row, 17, default="")
+    if source_keys:
+        trigger["source_keys"] = [value for value in source_keys.split(",") if value]
+    return trigger
+
+
+def _row_string(row: Any, index: int, *, default: str) -> str:
+    if len(row) <= index:
+        return default
+    value = row[index]
+    return value if isinstance(value, str) and value else default
 
 
 def run_integrity_state(run_dir: Path, manifest_path: Path, *, base: Path) -> dict[str, Any]:
