@@ -39,6 +39,8 @@ milestone plan.
   Codex-boundary contracts.
 - `docs/research-data-contracts.md`: shared local research data, current run
   index, text-event history, and data-quality contracts.
+- `docs/storage-contracts.md`: run archive, shared data, runtime state,
+  derived/cache, and deletion boundary contracts.
 - `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic,
   event signal, confluence, assessment, and event-material contracts.
 - `docs/decision-intelligence-contracts.md`: regime, risk, recommendation,
@@ -73,8 +75,9 @@ such as reading or backing up that config.
 | Manifest | Record lifecycle, artifacts, counts, warnings, errors, and Codex input budget. | Not embedded in full. Used for audit. |
 
 Shared reusable data contracts are defined in
-`docs/research-data-contracts.md`. This document owns Codex input admission
-rules for those contracts.
+`docs/research-data-contracts.md`. Storage category ownership and deletion
+boundaries are defined in `docs/storage-contracts.md`. This document owns Codex
+input admission rules for those contracts.
 
 ## Runtime State Authority
 
