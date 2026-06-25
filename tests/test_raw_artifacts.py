@@ -14,6 +14,9 @@ from halpha.data.raw_artifacts import (
 )
 
 
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
+
+
 def test_market_raw_validation_failure_records_manifest_error(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)

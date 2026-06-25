@@ -4,10 +4,15 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.decision.feature_snapshots import build_feature_snapshots
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_feature_snapshots_pipeline_writes_market_and_onchain_records(tmp_path: Path) -> None:

@@ -4,9 +4,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline, run_pipeline_stage
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_event_intelligence_assessment_records_supported_event(tmp_path: Path) -> None:
