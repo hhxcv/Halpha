@@ -5,9 +5,14 @@ import math
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"

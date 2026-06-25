@@ -4,11 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.decision.intelligence_fusion import build_intelligence_fusion
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.pipeline_stages import OPERATION_ORDER
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_intelligence_fusion_pipeline_writes_records_and_manifest(tmp_path: Path) -> None:

@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
 from halpha.pipeline_stages import OPERATION_ORDER
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_pipeline_writes_strategy_experiment_gate_material(tmp_path: Path) -> None:

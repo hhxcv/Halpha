@@ -5,9 +5,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import URLError
 
+import pytest
+
 from halpha.collectors.macro_calendar import collect_macro_calendar_raw
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_pipeline_collects_macro_calendar_raw_artifact(tmp_path: Path, monkeypatch) -> None:

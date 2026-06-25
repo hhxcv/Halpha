@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.decision.decision_material import (
     decision_material_record_count,
@@ -13,6 +15,9 @@ from halpha.decision.decision_material import (
 )
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_decision_intelligence_material_summarizes_m3_artifacts(tmp_path: Path) -> None:

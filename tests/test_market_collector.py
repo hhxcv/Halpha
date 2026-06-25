@@ -5,8 +5,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import URLError
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, run_pipeline
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_pipeline_collects_binance_market_data_and_writes_raw_artifact(tmp_path: Path, monkeypatch) -> None:

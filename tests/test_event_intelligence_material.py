@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_event_intelligence_material_bounds_report_facing_event_evidence(tmp_path: Path) -> None:

@@ -11,6 +11,9 @@ from halpha.pipeline import PipelineError, RunContext, run_pipeline
 from halpha.storage import write_json
 
 
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
+
+
 def test_derivatives_market_material_summarizes_context_without_full_stores(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
     _write_context(run, records=_many_context_records())

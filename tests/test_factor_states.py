@@ -4,10 +4,15 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.decision.factor_states import build_factor_states
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_factor_states_pipeline_writes_agreement_records_and_manifest(tmp_path: Path) -> None:

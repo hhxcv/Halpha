@@ -4,9 +4,14 @@ import json
 import math
 from pathlib import Path
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
 
 
 def test_text_event_topics_groups_exact_duplicate_url_and_title(tmp_path: Path, monkeypatch) -> None:
