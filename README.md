@@ -783,6 +783,7 @@ they are not proof of a real-source product run.
 - `data/`: shared local market history area; generated contents are ignored by git.
 - `docs/`: durable project documentation and implementation contracts.
   - `docs/artifact-governance.md`: artifact map, runtime state authority, layer rules, Codex input policy, and documentation index.
+  - `docs/storage-contracts.md`: run archive, shared data, runtime state, derived/cache, and deletion boundary contracts.
   - `docs/research-data-contracts.md`: shared local research data, current run index, text-event history, and data-quality contracts.
   - `docs/quant-contracts.md`: quantitative research contracts.
   - `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.

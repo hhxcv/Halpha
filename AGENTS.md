@@ -313,6 +313,7 @@ Current bias:
 * `docs/` is for durable project documentation and reusable implementation contracts.
 * Documentation index:
 * `docs/artifact-governance.md`: artifact map, runtime state authority, artifact layer rules, Codex input policy, and doc index.
+* `docs/storage-contracts.md`: run archive, shared data, runtime state, derived/cache, and deletion boundary contracts.
 * `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
 * `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.
 * `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
