@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
-from halpha.monitor.monitoring import run_monitor_source_cycle
+from halpha.monitor.monitoring import MonitorSourceRefreshResult, run_monitor_source_cycle
 from halpha.monitor.state_store import MonitorStateRepository
 
 
@@ -50,6 +50,7 @@ def test_monitor_source_cycle_skips_pipeline_when_no_source_is_due(tmp_path: Pat
     assert result.succeeded is True
     assert result.status == "no_due_sources"
     assert result.run_id is None
+    assert _product_run_dirs(tmp_path) == []
     states = {state["source_key"]: state for state in health["source_states"]}
     assert states["text"]["next_attempt_at"] == "2026-01-01T00:10:00Z"
     assert states["text"]["status"] == "no_change"
@@ -65,7 +66,8 @@ def test_monitor_source_cycle_isolates_source_failure_and_refreshes_other_due_so
         config,
         config_path=config_path,
         now=_time(),
-        pipeline_runner=_source_pipeline(tmp_path, calls=calls, failed_sources={"text"}),
+        pipeline_runner=_decision_pipeline(tmp_path),
+        source_refresher=_source_refresher(calls=calls, failed_sources={"text"}),
     )
 
     health = MonitorStateRepository(config_path=config_path).health_state(monitor_output_dir="monitor", base=tmp_path)
@@ -91,13 +93,16 @@ def test_monitor_source_cycle_records_no_change_revision_without_broad_workflow(
         config,
         config_path=config_path,
         now=_time(),
-        pipeline_runner=_source_pipeline(tmp_path, calls=calls, revision="same-revision"),
+        pipeline_runner=_decision_pipeline(tmp_path),
+        source_refresher=_source_refresher(calls=calls, revision="same-revision"),
     )
+    runs_after_first = _product_run_dirs(tmp_path)
     second = run_monitor_source_cycle(
         config,
         config_path=config_path,
         now=datetime(2026, 1, 1, 0, 2, tzinfo=timezone.utc),
-        pipeline_runner=_source_pipeline(tmp_path, calls=calls, revision="same-revision"),
+        pipeline_runner=_decision_pipeline(tmp_path),
+        source_refresher=_source_refresher(calls=calls, revision="same-revision"),
     )
 
     health = MonitorStateRepository(config_path=config_path).health_state(monitor_output_dir="monitor", base=tmp_path)
@@ -105,12 +110,99 @@ def test_monitor_source_cycle_records_no_change_revision_without_broad_workflow(
     state = states["text"]
 
     assert first.status == "changed"
+    assert runs_after_first == ["run-reassessment-1"]
     assert second.status == "no_change"
+    assert second.run_id is None
+    assert _product_run_dirs(tmp_path) == runs_after_first
     assert calls == ["text", "text"]
     assert state["source_key"] == "text"
     assert state["status"] == "no_change"
     assert state["changed_scope"] == {}
     assert state["latest_published_data_revision"] == "same-revision"
+
+
+def test_monitor_source_cycle_keeps_multiple_no_change_sources_out_of_runs(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, text_enabled=True, macro_enabled=True)
+    config = load_config(config_path)
+    repository = MonitorStateRepository(config_path=config_path)
+    repository.save_source_states(
+        [
+            {
+                "source_key": "text",
+                "enabled": True,
+                "cadence_seconds": 60,
+                "status": "changed",
+                "next_attempt_at": "2026-01-01T00:00:00Z",
+                "latest_published_data_revision": "text-revision",
+            },
+            {
+                "source_key": "macro_calendar",
+                "enabled": True,
+                "cadence_seconds": 3600,
+                "status": "changed",
+                "next_attempt_at": "2026-01-01T00:00:00Z",
+                "latest_published_data_revision": "macro-revision",
+            },
+        ],
+        monitor_output_dir="monitor",
+        updated_at="2026-01-01T00:00:00Z",
+    )
+    calls: list[str] = []
+
+    def fail_pipeline(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("all-source no_change must not create a reassessment run")
+
+    result = run_monitor_source_cycle(
+        config,
+        config_path=config_path,
+        now=_time(),
+        pipeline_runner=fail_pipeline,
+        source_refresher=_source_refresher(
+            calls=calls,
+            revisions={
+                "macro_calendar": "macro-revision",
+                "text": "text-revision",
+            },
+        ),
+    )
+
+    health = repository.health_state(monitor_output_dir="monitor", base=tmp_path)
+    states = {state["source_key"]: state for state in health["source_states"]}
+
+    assert result.status == "no_change"
+    assert result.run_id is None
+    assert calls == ["macro_calendar", "text"]
+    assert _product_run_dirs(tmp_path) == []
+    assert states["macro_calendar"]["status"] == "no_change"
+    assert states["text"]["status"] == "no_change"
+    assert states["macro_calendar"]["latest_published_data_revision"] == "macro-revision"
+    assert states["text"]["latest_published_data_revision"] == "text-revision"
+
+
+def test_monitor_source_cycle_batches_multiple_changed_sources_into_one_run(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, text_enabled=True, macro_enabled=True)
+    config = load_config(config_path)
+    calls: list[str] = []
+
+    result = run_monitor_source_cycle(
+        config,
+        config_path=config_path,
+        now=_time(),
+        pipeline_runner=_decision_pipeline(tmp_path),
+        source_refresher=_source_refresher(calls=calls),
+    )
+
+    health = MonitorStateRepository(config_path=config_path).health_state(monitor_output_dir="monitor", base=tmp_path)
+    states = {state["source_key"]: state for state in health["source_states"]}
+
+    assert result.status == "changed"
+    assert result.run_id == "run-reassessment-1"
+    assert calls == ["macro_calendar", "text"]
+    assert _product_run_dirs(tmp_path) == ["run-reassessment-1"]
+    assert states["macro_calendar"]["status"] == "changed"
+    assert states["text"]["status"] == "changed"
+    assert states["macro_calendar"]["latest_run_id"] == "run-reassessment-1"
+    assert states["text"]["latest_run_id"] == "run-reassessment-1"
 
 
 def test_monitor_source_cycle_caps_per_source_failure_backoff(tmp_path: Path) -> None:
@@ -138,13 +230,15 @@ def test_monitor_source_cycle_caps_per_source_failure_backoff(tmp_path: Path) ->
         config,
         config_path=config_path,
         now=_time(),
-        pipeline_runner=_source_pipeline(tmp_path, calls=[], failed_sources={"text"}),
+        pipeline_runner=_decision_pipeline(tmp_path),
+        source_refresher=_source_refresher(calls=[], failed_sources={"text"}),
     )
 
     health = repository.health_state(monitor_output_dir="monitor", base=tmp_path)
     states = {state["source_key"]: state for state in health["source_states"]}
 
     assert result.status == "partial"
+    assert _product_run_dirs(tmp_path) == []
     assert states["text"]["status"] == "failed"
     assert states["text"]["consecutive_failures"] == 4
     assert states["text"]["backoff_seconds"] == 300
@@ -195,29 +289,49 @@ monitor:
     return path
 
 
-def _source_pipeline(
-    tmp_path: Path,
-    *,
+def _source_refresher(
     calls: list[str],
     failed_sources: set[str] | None = None,
     revision: str | None = None,
+    revisions: dict[str, str] | None = None,
 ):
     counts: dict[str, int] = {}
 
-    def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
-        assert until_stage == "refresh_data"
-        assert skip_codex is True
+    def refresh(config, *, config_path, group, started_at):  # noqa: ANN001
         source_key = _enabled_source(config)
+        assert group.source_key == source_key
         calls.append(source_key)
         counts[source_key] = counts.get(source_key, 0) + 1
         if source_key in (failed_sources or set()):
-            return _run_result(tmp_path, source_key=source_key, succeeded=False, reason=f"simulated {source_key} failure")
-        return _run_result(
-            tmp_path,
-            source_key=source_key,
+            return MonitorSourceRefreshResult(
+                succeeded=False,
+                exit_code=3,
+                failed_stage="refresh_data",
+                reason=f"simulated {source_key} failure",
+                revision=None,
+                source_artifacts={},
+                counts={},
+                warnings=[],
+            )
+        return MonitorSourceRefreshResult(
             succeeded=True,
-            revision=revision or f"{source_key}-revision-{counts[source_key]}",
+            exit_code=0,
+            failed_stage=None,
+            reason=None,
+            revision=(revisions or {}).get(source_key) or revision or f"{source_key}-revision-{counts[source_key]}",
+            source_artifacts={},
+            counts={f"{source_key}_items": 1},
+            warnings=[],
         )
+
+    return refresh
+
+
+def _decision_pipeline(tmp_path: Path):
+    def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+        assert until_stage == "build_materials"
+        assert skip_codex is True
+        return _run_result(tmp_path, source_key="reassessment", succeeded=True)
 
     return pipeline
 
@@ -267,6 +381,13 @@ def _run_result(
             },
         ),
     )
+
+
+def _product_run_dirs(tmp_path: Path) -> list[str]:
+    runs_dir = tmp_path / "runs"
+    if not runs_dir.exists():
+        return []
+    return sorted(path.name for path in runs_dir.iterdir() if path.is_dir())
 
 
 def _time() -> datetime:

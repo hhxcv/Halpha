@@ -13,7 +13,13 @@ from typing import Any
 
 from halpha.config import load_config
 from halpha.dashboard.settings import dashboard_config_ref, sanitize_dashboard_message
-from halpha.monitor.monitoring import PipelineRunner, Sleeper, load_monitor_config, run_monitor_source_cycle
+from halpha.monitor.monitoring import (
+    PipelineRunner,
+    Sleeper,
+    SourceRefresher,
+    load_monitor_config,
+    run_monitor_source_cycle,
+)
 from halpha.monitor.state_store import MonitorStateRepository
 from halpha.pipeline import run_pipeline
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
@@ -51,6 +57,7 @@ def run_monitor_service(
     restart_from_instance_id: str | None = None,
     max_cycles: int | None = None,
     pipeline_runner: PipelineRunner = run_pipeline,
+    source_refresher: SourceRefresher | None = None,
     sleeper: Sleeper = time.sleep,
 ) -> None:
     repository = _monitor_lifecycle_repository(config_path)
@@ -116,6 +123,7 @@ def run_monitor_service(
                 service_config,
                 config_path=config_path,
                 pipeline_runner=pipeline_runner,
+                source_refresher=source_refresher,
                 loop_id=instance_id,
                 cycle_sequence=cycle_sequence,
                 cycle_id=cycle_id,
