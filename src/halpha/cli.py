@@ -22,6 +22,12 @@ from halpha.dashboard import (
     validate_dashboard_port,
 )
 from halpha.data.data_inspection import DataInspectionError, inspect_local_data
+from halpha.data.run_archive_cleanup import (
+    REPORT_ARCHIVE_DELETE_CONFIRMATION,
+    RunArchiveCleanupError,
+    apply_run_archive_cleanup,
+    plan_run_archive_cleanup,
+)
 from halpha.runtime.legacy_state_migration import (
     apply_legacy_state_migration,
     legacy_state_migration_dry_run,
@@ -211,6 +217,38 @@ def build_parser() -> argparse.ArgumentParser:
         description="Rebuild the unified run index from current run manifests.",
     )
     rebuild_index_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    cleanup_runs_parser = data_subparsers.add_parser(
+        "cleanup-runs",
+        help="Plan or apply explicit cleanup for local run archives.",
+        description="Plan or apply explicit cleanup for local run archives.",
+    )
+    cleanup_runs_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    cleanup_mode = cleanup_runs_parser.add_mutually_exclusive_group()
+    cleanup_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print a cleanup plan without deleting files. This is the default.",
+    )
+    cleanup_mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Delete only the selected approved run archive directories.",
+    )
+    cleanup_runs_parser.add_argument(
+        "--run-id",
+        action="append",
+        default=[],
+        help="Run id to delete in apply mode. May be repeated.",
+    )
+    cleanup_runs_parser.add_argument(
+        "--include-report-runs",
+        action="store_true",
+        help="Allow explicitly selected report-bearing archives to become deletable with stronger confirmation.",
+    )
+    cleanup_runs_parser.add_argument(
+        "--confirm-report-runs",
+        help=f"Required text for report-bearing archive deletion: {REPORT_ARCHIVE_DELETE_CONFIRMATION}",
+    )
 
     outcomes_parser = subparsers.add_parser("outcomes", help="Inspect local outcome tracking state.")
     outcomes_subparsers = outcomes_parser.add_subparsers(dest="outcomes_command", required=True)
@@ -360,6 +398,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "data" and args.data_command == "rebuild-index":
         return _data_rebuild_index(args.config)
+
+    if args.command == "data" and args.data_command == "cleanup-runs":
+        return _data_cleanup_runs(
+            args.config,
+            apply=args.apply,
+            run_ids=args.run_id,
+            include_report_archives=args.include_report_runs,
+            confirm_report_deletion=args.confirm_report_runs,
+        )
 
     if args.command == "outcomes" and args.outcomes_command == "inspect":
         return _outcomes_inspect(args.config, run_dir=args.run_dir)
@@ -1174,6 +1221,137 @@ def _data_rebuild_index(config_arg: str) -> int:
         print(f"warning: {warning}")
     _log_command_succeeded(command, status=str(result.get("status") or "unknown"))
     return 0
+
+
+def _data_cleanup_runs(
+    config_arg: str,
+    *,
+    apply: bool,
+    run_ids: list[str],
+    include_report_archives: bool,
+    confirm_report_deletion: str | None,
+) -> int:
+    config_path = Path(config_arg)
+    command = "data cleanup-runs"
+    mode = "apply" if apply else "dry_run"
+    _configure_logging(config_path=config_path)
+    _log_command_start(command, mode=mode, selected_runs=len(run_ids), include_report_archives=include_report_archives)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        _log_command_failed(command, stage="config", reason=str(exc), exit_code=2)
+        print("Halpha run archive cleanup failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    _configure_logging(config_path=config_path, config=config)
+    try:
+        if apply:
+            result = apply_run_archive_cleanup(
+                config,
+                config_path=config_path,
+                run_ids=run_ids,
+                include_report_archives=include_report_archives,
+                confirm_report_deletion=confirm_report_deletion,
+            )
+        else:
+            result = plan_run_archive_cleanup(
+                config,
+                config_path=config_path,
+                include_report_archives=include_report_archives,
+                confirm_report_deletion=confirm_report_deletion,
+            )
+    except RunArchiveCleanupError as exc:
+        _log_command_failed(command, stage="run_archive_cleanup", reason=str(exc), exit_code=exc.exit_code)
+        print("Halpha run archive cleanup failed.")
+        print("stage: run_archive_cleanup")
+        print(f"reason: {exc}")
+        return exc.exit_code
+    except Exception as exc:  # pragma: no cover - CLI boundary
+        _log_command_failed(command, stage="run_archive_cleanup", reason=type(exc).__name__, exit_code=1)
+        print("Halpha run archive cleanup failed.")
+        print("stage: run_archive_cleanup")
+        print("reason: run archive cleanup failed; inspect local logs.")
+        return 1
+
+    title = "Halpha run archive cleanup apply succeeded." if apply else "Halpha run archive cleanup dry run succeeded."
+    _print_run_archive_cleanup_result(title, result)
+    exit_code = 1 if result.get("status") in {"blocked", "failed"} else 0
+    if exit_code == 0:
+        _log_command_succeeded(command, status=str(result.get("status") or "unknown"), mode=mode)
+    else:
+        _log_command_failed(
+            command,
+            stage="run_archive_cleanup",
+            reason=str(result.get("status") or "failed"),
+            exit_code=exit_code,
+        )
+    return exit_code
+
+
+def _print_run_archive_cleanup_result(title: str, result: dict) -> None:
+    print(title)
+    print(f"status: {result.get('status')}")
+    print(f"mode: {result.get('mode')}")
+    print(f"run_root: {result.get('run_root')}")
+    _print_counts(
+        result.get("counts"),
+        keys=(
+            "candidates",
+            "safe_to_delete",
+            "report_bearing",
+            "review_required",
+            "diagnostics",
+            "deletable",
+            "approximate_deletable_size_bytes",
+        ),
+    )
+    if result.get("mode") == "apply":
+        for item in (result.get("deleted") or [])[:20]:
+            if isinstance(item, dict):
+                print(f"deleted: {item.get('run_id')} ref={item.get('run_dir')}")
+        for item in (result.get("blocked") or [])[:20]:
+            if isinstance(item, dict):
+                print(f"blocked: {item.get('run_id')} reason={item.get('reason')}")
+        index = result.get("index_rebuild")
+        if isinstance(index, dict):
+            print(f"run_index_rebuild: {index.get('status')}")
+        for warning in (result.get("warnings") or [])[:10]:
+            print(f"warning: {warning}")
+        for error in (result.get("errors") or [])[:10]:
+            print(f"error: {error}")
+        return
+    latest_refs = result.get("latest_index_refs")
+    if isinstance(latest_refs, dict):
+        for key, value in sorted(latest_refs.items()):
+            if value:
+                print(f"latest_index_ref: {key}={value}")
+    for item in (result.get("candidates") or [])[:40]:
+        if not isinstance(item, dict):
+            continue
+        trigger = item.get("trigger") if isinstance(item.get("trigger"), dict) else {}
+        trigger_text = f"{trigger.get('source', 'unknown')}/{trigger.get('intent', 'unknown')}"
+        latest = ",".join(item.get("latest_index_refs") or []) or "none"
+        print(
+            "candidate: "
+            f"{item.get('run_id')} "
+            f"category={item.get('category')} "
+            f"deletable={str(bool(item.get('deletable'))).lower()} "
+            f"run_kind={item.get('run_kind')} "
+            f"disposal_class={item.get('disposal_class')} "
+            f"trigger={trigger_text} "
+            f"report={item.get('report', {}).get('status') if isinstance(item.get('report'), dict) else 'unknown'} "
+            f"latest={latest} "
+            f"size_bytes={item.get('size_bytes')} "
+            f"reason={item.get('deletion_reason')}"
+        )
+    for item in (result.get("diagnostics") or [])[:40]:
+        if isinstance(item, dict):
+            print(f"diagnostic: {item.get('run_id', item.get('ref', 'unknown'))} reason={item.get('reason')}")
+    for warning in (result.get("warnings") or [])[:10]:
+        print(f"warning: {warning}")
 
 
 def _print_legacy_state_migration_result(title: str, result: dict) -> None:
