@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import time
 from typing import Any, Callable
 
@@ -16,8 +17,9 @@ from halpha.monitor.state_store import (
     MonitorStateRepository,
 )
 from halpha.runtime.mutation_lease import mutation_lease
-from halpha.runtime.pipeline_contracts import RunResult
+from halpha.runtime.pipeline_contracts import PipelineError, RunContext, RunResult
 from halpha.runtime.state_store import runtime_state_path
+from halpha.pipeline_stage_handlers import default_stage_handlers
 from halpha.pipeline_stages import StageSelectionError
 from halpha.pipeline import run_pipeline
 from halpha.storage import artifact_base, write_json
@@ -38,6 +40,13 @@ DEFAULT_MONITOR_SLOW_SOURCE_CADENCE_SECONDS = 3600
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 MONITOR_SOURCE_KEYS = ("derivatives", "macro_calendar", "market", "onchain_flow", "text")
 SLOW_MONITOR_SOURCE_KEYS = {"macro_calendar", "onchain_flow"}
+SOURCE_REFRESH_TASKS = {
+    "derivatives": ("collect_derivatives_market_data", "sync_derivatives_market_history"),
+    "macro_calendar": ("collect_macro_calendar_data", "sync_macro_calendar_history"),
+    "market": ("collect_market_data", "sync_ohlcv"),
+    "onchain_flow": ("collect_onchain_flow_data", "sync_onchain_flow_history"),
+    "text": ("collect_text_events",),
+}
 SOURCE_CADENCE_EXCLUDED_TASKS = (
     "build_source_evidence",
     "run_strategy_research",
@@ -117,6 +126,21 @@ class MonitorSourceGroup:
     source_key: str
     enabled: bool
     cadence_seconds: int
+
+
+@dataclass(frozen=True)
+class MonitorSourceRefreshResult:
+    succeeded: bool
+    exit_code: int
+    failed_stage: str | None
+    reason: str | None
+    revision: str | None
+    source_artifacts: dict[str, str]
+    counts: dict[str, Any]
+    warnings: list[str]
+
+
+SourceRefresher = Callable[..., MonitorSourceRefreshResult]
 
 
 def load_monitor_config(config: dict[str, Any]) -> MonitorConfig:
@@ -338,6 +362,7 @@ def run_monitor_source_cycle(
     config_path: Path,
     now: datetime | None = None,
     pipeline_runner: PipelineRunner = run_pipeline,
+    source_refresher: SourceRefresher | None = None,
     cycle_id: str | None = None,
     loop_id: str | None = None,
     cycle_sequence: int | None = None,
@@ -349,6 +374,7 @@ def run_monitor_source_cycle(
             config_path=config_path,
             now=now,
             pipeline_runner=pipeline_runner,
+            source_refresher=source_refresher,
             cycle_id=cycle_id,
             loop_id=loop_id,
             cycle_sequence=cycle_sequence,
@@ -362,6 +388,7 @@ def _run_monitor_source_cycle_unlocked(
     config_path: Path,
     now: datetime | None = None,
     pipeline_runner: PipelineRunner = run_pipeline,
+    source_refresher: SourceRefresher | None = None,
     cycle_id: str | None = None,
     loop_id: str | None = None,
     cycle_sequence: int | None = None,
@@ -379,6 +406,7 @@ def _run_monitor_source_cycle_unlocked(
     output_ref = _portable_path(output_dir, base=base)
     repository = MonitorStateRepository(config_path=config_path)
     source_groups = _monitor_source_groups(config, settings)
+    source_refresher = source_refresher or refresh_monitor_source
     previous_states = {state["source_key"]: state for state in repository.source_states(monitor_output_dir=output_ref)}
     due_groups = [
         group
@@ -395,6 +423,7 @@ def _run_monitor_source_cycle_unlocked(
     states_by_key: dict[str, dict[str, Any]] = {}
     warnings: list[str] = []
     errors: list[dict[str, str]] = []
+    partial_reason: str | None = None
 
     manifest: dict[str, Any] = {
         "schema_version": 1,
@@ -452,46 +481,47 @@ def _run_monitor_source_cycle_unlocked(
 
         source_config = _source_scoped_config(config, group.source_key)
         try:
-            pipeline_result = pipeline_runner(
+            refresh_result = source_refresher(
                 source_config,
                 config_path=config_path,
-                until_stage="refresh_data",
-                skip_codex=True,
+                group=group,
+                started_at=started_at,
             )
         except Exception as exc:  # noqa: BLE001
             failure = _source_exception_result(group, previous, started_at=started_at, settings=settings, exc=exc)
             states_by_key[group.source_key] = failure["state"]
             source_results.append(failure["result"])
             errors.append({"stage": group.source_key, "message": failure["result"]["reason"]})
+            partial_reason = "one or more monitor source groups failed"
             continue
 
-        latest_run_id = pipeline_result.run.run_id
-        latest_run_dir = pipeline_result.run.run_dir
-        latest_run_manifest_path = pipeline_result.run.manifest_path
-        latest_run_manifest_ref = _portable_path(pipeline_result.run.manifest_path, base=base)
-        latest_product_run = _product_run_summary(pipeline_result, base=base)
-        source_artifacts.update({f"{group.source_key}:{key}": value for key, value in _artifact_refs(pipeline_result.run.manifest).items()})
-
-        if not pipeline_result.succeeded:
-            failure = _failed_source_state(
+        if not refresh_result.succeeded:
+            failure = _failed_source_refresh_state(
                 group,
                 previous,
-                result=pipeline_result,
+                result=refresh_result,
                 started_at=started_at,
                 settings=settings,
-                base=base,
             )
             states_by_key[group.source_key] = failure["state"]
             source_results.append(failure["result"])
             errors.append(
                 {
-                    "stage": pipeline_result.failed_stage or group.source_key,
+                    "stage": refresh_result.failed_stage or group.source_key,
                     "message": str(failure["result"]["reason"] or "source refresh failed"),
                 }
             )
+            partial_reason = "one or more monitor source groups failed"
             continue
 
-        revision = _source_revision(pipeline_result, source_key=group.source_key)
+        warnings.extend(f"{group.source_key}: {warning}" for warning in refresh_result.warnings)
+        revision = refresh_result.revision or _stable_hash(
+            {
+                "source_key": group.source_key,
+                "counts": refresh_result.counts,
+                "source_artifacts": refresh_result.source_artifacts,
+            }
+        )
         changed = revision != previous.get("latest_published_data_revision")
         status = "changed" if changed else "no_change"
         state = _successful_source_state(
@@ -500,18 +530,17 @@ def _run_monitor_source_cycle_unlocked(
             status=status,
             revision=revision,
             changed_scope=_source_changed_scope(config, group.source_key) if changed else {},
-            result=pipeline_result,
             started_at=started_at,
-            base=base,
         )
         states_by_key[group.source_key] = state
+        source_artifacts.update({f"{group.source_key}:{key}": value for key, value in refresh_result.source_artifacts.items()})
         source_results.append(
             {
                 "source_key": group.source_key,
                 "status": status,
                 "changed": changed,
-                "run_id": pipeline_result.run.run_id,
-                "run_manifest": _portable_path(pipeline_result.run.manifest_path, base=base),
+                "run_id": None,
+                "run_manifest": None,
                 "latest_published_data_revision": revision,
                 "changed_scope": state["changed_scope"],
                 "reason": None,
@@ -529,13 +558,46 @@ def _run_monitor_source_cycle_unlocked(
 
     finished_at = started_at if fixed_time else datetime.now(timezone.utc)
     updated_at = _utc_timestamp(finished_at)
+    changed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "changed"]
+    failed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "failed"]
+
+    if changed_sources:
+        try:
+            pipeline_result = pipeline_runner(
+                config,
+                config_path=config_path,
+                until_stage=settings.target_stage,
+                skip_codex=settings.no_codex,
+            )
+        except Exception as exc:  # noqa: BLE001
+            status = "partial"
+            reason = _source_error_message(str(exc) or "monitor reassessment failed")
+            errors.append({"stage": settings.target_stage, "message": reason})
+            partial_reason = "monitor reassessment failed"
+        else:
+            latest_run_id = pipeline_result.run.run_id
+            latest_run_dir = pipeline_result.run.run_dir
+            latest_run_manifest_path = pipeline_result.run.manifest_path
+            latest_run_manifest_ref = _portable_path(pipeline_result.run.manifest_path, base=base)
+            latest_product_run = _product_run_summary(pipeline_result, base=base)
+            source_artifacts.update(_artifact_refs(pipeline_result.run.manifest))
+            for source_key in changed_sources:
+                states_by_key[source_key]["latest_run_id"] = latest_run_id
+                states_by_key[source_key]["latest_run_manifest"] = latest_run_manifest_ref
+            for result in source_results:
+                if result.get("status") == "changed":
+                    result["run_id"] = latest_run_id
+                    result["run_manifest"] = latest_run_manifest_ref
+            if not pipeline_result.succeeded:
+                status = "partial"
+                partial_reason = "monitor reassessment failed"
+                errors.extend(_result_errors(pipeline_result))
+
     repository.save_source_states(
         [states_by_key[group.source_key] for group in source_groups],
         monitor_output_dir=output_ref,
         updated_at=updated_at,
     )
-    changed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "changed"]
-    failed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "failed"]
     manifest.update(
         {
             "status": status,
@@ -581,8 +643,85 @@ def _run_monitor_source_cycle_unlocked(
         run_id=latest_run_id,
         run_dir=latest_run_dir,
         run_manifest_path=latest_run_manifest_path,
-        reason=None if status != "partial" else "one or more monitor source groups failed",
+        reason=None if status != "partial" else partial_reason or "one or more monitor source groups failed",
     )
+
+
+def refresh_monitor_source(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    group: MonitorSourceGroup,
+    started_at: datetime,
+) -> MonitorSourceRefreshResult:
+    tasks = SOURCE_REFRESH_TASKS.get(group.source_key)
+    if not tasks:
+        return MonitorSourceRefreshResult(
+            succeeded=False,
+            exit_code=3,
+            failed_stage=group.source_key,
+            reason=f"unsupported monitor source group {group.source_key}",
+            revision=None,
+            source_artifacts={},
+            counts={},
+            warnings=[],
+        )
+
+    with TemporaryDirectory(prefix="halpha-monitor-source-") as temp_dir:
+        run_dir = Path(temp_dir)
+        raw_dir = run_dir / "raw"
+        analysis_dir = run_dir / "analysis"
+        codex_context_dir = run_dir / "codex_context"
+        report_dir = run_dir / "report"
+        for directory in (raw_dir, analysis_dir, codex_context_dir, report_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+        run = RunContext(
+            run_id=f"monitor-source-{group.source_key}-{started_at.strftime('%Y%m%dT%H%M%SZ')}",
+            run_dir=run_dir,
+            raw_dir=raw_dir,
+            analysis_dir=analysis_dir,
+            codex_context_dir=codex_context_dir,
+            report_dir=report_dir,
+            manifest_path=run_dir / "monitor_source_refresh_manifest.json",
+            config_path=config_path,
+            manifest={
+                "schema_version": 1,
+                "run_id": f"monitor-source-{group.source_key}",
+                "status": "running",
+                "artifacts": {},
+                "counts": {},
+                "warnings": [],
+                "errors": [],
+            },
+        )
+        handlers = default_stage_handlers()
+        try:
+            for task in tasks:
+                handlers[task](config, run)
+        except PipelineError as exc:
+            return MonitorSourceRefreshResult(
+                succeeded=False,
+                exit_code=exc.exit_code,
+                failed_stage=exc.stage or group.source_key,
+                reason=str(exc),
+                revision=None,
+                source_artifacts=_persistent_source_artifacts(run.manifest),
+                counts=dict(run.manifest.get("counts")) if isinstance(run.manifest.get("counts"), dict) else {},
+                warnings=_manifest_warnings(run.manifest),
+            )
+
+        run.manifest["status"] = "succeeded"
+        revision = _source_revision(RunResult(True, run, 0, None, None), source_key=group.source_key)
+        return MonitorSourceRefreshResult(
+            succeeded=True,
+            exit_code=0,
+            failed_stage=None,
+            reason=None,
+            revision=revision,
+            source_artifacts=_persistent_source_artifacts(run.manifest),
+            counts=dict(run.manifest.get("counts")) if isinstance(run.manifest.get("counts"), dict) else {},
+            warnings=_manifest_warnings(run.manifest),
+        )
 
 
 def run_monitor_loop(
@@ -939,9 +1078,7 @@ def _successful_source_state(
     status: str,
     revision: str,
     changed_scope: dict[str, Any],
-    result: RunResult,
     started_at: datetime,
-    base: Path,
 ) -> dict[str, Any]:
     return {
         "source_key": group.source_key,
@@ -956,19 +1093,18 @@ def _successful_source_state(
         "last_error": {},
         "latest_published_data_revision": revision,
         "changed_scope": changed_scope,
-        "latest_run_id": result.run.run_id,
-        "latest_run_manifest": _portable_path(result.run.manifest_path, base=base),
+        "latest_run_id": previous.get("latest_run_id") if isinstance(previous.get("latest_run_id"), str) else None,
+        "latest_run_manifest": previous.get("latest_run_manifest") if isinstance(previous.get("latest_run_manifest"), str) else None,
     }
 
 
-def _failed_source_state(
+def _failed_source_refresh_state(
     group: MonitorSourceGroup,
     previous: dict[str, Any],
     *,
-    result: RunResult,
+    result: MonitorSourceRefreshResult,
     started_at: datetime,
     settings: MonitorConfig,
-    base: Path,
 ) -> dict[str, Any]:
     consecutive_failures = _positive_int(previous.get("consecutive_failures")) + 1
     backoff_seconds = _source_backoff_seconds(group.cadence_seconds, settings.failure_backoff_max_seconds, consecutive_failures)
@@ -992,8 +1128,8 @@ def _failed_source_state(
         if isinstance(previous.get("latest_published_data_revision"), str)
         else None,
         "changed_scope": {},
-        "latest_run_id": result.run.run_id,
-        "latest_run_manifest": _portable_path(result.run.manifest_path, base=base),
+        "latest_run_id": previous.get("latest_run_id") if isinstance(previous.get("latest_run_id"), str) else None,
+        "latest_run_manifest": previous.get("latest_run_manifest") if isinstance(previous.get("latest_run_manifest"), str) else None,
     }
     return {
         "state": state,
@@ -1001,8 +1137,8 @@ def _failed_source_state(
             "source_key": group.source_key,
             "status": "failed",
             "changed": False,
-            "run_id": result.run.run_id,
-            "run_manifest": _portable_path(result.run.manifest_path, base=base),
+            "run_id": None,
+            "run_manifest": None,
             "latest_published_data_revision": state["latest_published_data_revision"],
             "changed_scope": {},
             "reason": reason,
@@ -1229,6 +1365,14 @@ def _artifact_refs(manifest: dict[str, Any]) -> dict[str, str]:
     if not isinstance(artifacts, dict):
         return {}
     return {str(key): str(value) for key, value in sorted(artifacts.items()) if isinstance(value, str)}
+
+
+def _persistent_source_artifacts(manifest: dict[str, Any]) -> dict[str, str]:
+    return {
+        key: value
+        for key, value in _artifact_refs(manifest).items()
+        if not value.startswith(("raw/", "analysis/", "codex_context/", "report/"))
+    }
 
 
 def _manifest_warnings(manifest: dict[str, Any]) -> list[str]:

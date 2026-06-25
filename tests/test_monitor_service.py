@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from halpha.config import load_config
+from halpha.monitor.monitoring import MonitorSourceRefreshResult
 from halpha.monitor.state_store import MonitorStateRepository
 from halpha.runtime.monitor_service import (
     MonitorServiceError,
@@ -131,13 +132,15 @@ def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_pat
     config_path = _write_config(tmp_path, no_codex=False, text_enabled=True)
     config = load_config(config_path)
     pipeline_calls: list[dict[str, Any]] = []
+    source_calls: list[str] = []
     sleeps: list[float] = []
 
     run_monitor_service(
         config,
         config_path=config_path,
         max_cycles=2,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=["failed"], calls=pipeline_calls),
+        pipeline_runner=_pipeline_factory(tmp_path, statuses=[], calls=pipeline_calls),
+        source_refresher=_source_refresher_factory(statuses=["failed"], calls=source_calls),
         sleeper=lambda seconds: sleeps.append(seconds),
     )
 
@@ -149,9 +152,8 @@ def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_pat
     assert [manifest["status"] for manifest in manifests] == ["partial", "no_due_sources"]
     assert {manifest["cycle_mode"] for manifest in manifests} == {"source_cadence"}
     assert {manifest["trigger_source"] for manifest in manifests} == {"monitor_service"}
-    assert all(call["skip_codex"] is True for call in pipeline_calls)
-    assert all(call["until_stage"] == "refresh_data" for call in pipeline_calls)
-    assert [call["source_key"] for call in pipeline_calls] == ["text"]
+    assert pipeline_calls == []
+    assert source_calls == ["text"]
     assert health_state["cycle_count"] == 2
     assert health_state["failed_cycle_count"] == 0
     assert health_state["service"]["status"] == "stopped"
@@ -174,7 +176,8 @@ def test_monitor_service_backs_off_recoverable_failures_with_configured_cap(tmp_
         config,
         config_path=config_path,
         max_cycles=1,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=["failed"]),
+        pipeline_runner=_pipeline_factory(tmp_path, statuses=[]),
+        source_refresher=_source_refresher_factory(statuses=["failed"]),
         sleeper=lambda seconds: sleeps.append(seconds),
     )
 
@@ -205,7 +208,8 @@ def test_monitor_service_observes_graceful_stop_during_wait(tmp_path: Path) -> N
     run_monitor_service(
         config,
         config_path=config_path,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=["succeeded", "succeeded"]),
+        pipeline_runner=_pipeline_factory(tmp_path, statuses=["succeeded"]),
+        source_refresher=_source_refresher_factory(statuses=["succeeded"]),
         sleeper=request_stop,
     )
 
@@ -315,6 +319,45 @@ def _pipeline_factory(
         )
 
     return pipeline
+
+
+def _source_refresher_factory(
+    *,
+    statuses: list[str],
+    calls: list[str] | None = None,
+):
+    state = {"count": 0}
+
+    def refresh(config, *, config_path, group, started_at):  # noqa: ANN001
+        state["count"] += 1
+        source_key = _enabled_source(config)
+        assert group.source_key == source_key
+        if calls is not None:
+            calls.append(source_key)
+        status = statuses[state["count"] - 1]
+        if status != "succeeded":
+            return MonitorSourceRefreshResult(
+                succeeded=False,
+                exit_code=3,
+                failed_stage="refresh_data",
+                reason="simulated source failure",
+                revision=None,
+                source_artifacts={},
+                counts={},
+                warnings=[],
+            )
+        return MonitorSourceRefreshResult(
+            succeeded=True,
+            exit_code=0,
+            failed_stage=None,
+            reason=None,
+            revision=f"{source_key}-revision-{state['count']}",
+            source_artifacts={},
+            counts={f"{source_key}_items": 1},
+            warnings=[],
+        )
+
+    return refresh
 
 
 def _enabled_source(config: dict[str, Any]) -> str:
