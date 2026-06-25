@@ -32,7 +32,7 @@ must stay marked until their producers are added.
 | Contract | Status | Producer | Consumer |
 | --- | --- | --- | --- |
 | Shared OHLCV history | Implemented | OHLCV sync stage | market views, strategy evaluation, standalone backtest, experiments |
-| Research data catalog | Implemented | local data catalog writer | manifest, data inspection, data quality summary |
+| Research data catalog | Implemented | local data catalog writer | manifest, data inspection, Dashboard data-store view, data quality summary |
 | Current local run index | Implemented | pipeline completion and stage rerun paths | previous-run lookup, data inspection, audit |
 | Text event history | Implemented | text event history writer | data quality summary, future event/outcome workflows |
 | Data quality summary | Implemented | data quality stage | research context, Codex context, report, manifest |
@@ -40,6 +40,7 @@ must stay marked until their producers are added.
 | Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
 | Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
 | Macro calendar history | Initial adoption | macro calendar history writer | macro calendar views, data inspection, data quality |
+| On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
 
 ## Layer Boundary
 
@@ -64,7 +65,8 @@ Artifacts and stores must use stable references:
 - prefer runtime-root-relative paths for files under the runtime root;
 - resolve relative configured reusable data roots from the runtime root, not
   from the config file location;
-- preserve absolute configured data roots as explicit local overrides;
+- preserve absolute configured data roots as explicit local overrides while
+  exposing them in public-facing metadata only through safe external refs;
 - do not write machine-local absolute paths into public docs, examples, PRs, or
   issue text;
 - do not print proxy URLs, hostnames, ports, credentials, tokens, cookies,
@@ -92,7 +94,7 @@ Required record identity:
 - `source`
 - `symbol`
 - `timeframe`
-- `timestamp`
+- `open_time`
 
 Required behavior:
 
@@ -119,16 +121,19 @@ Purpose:
 Required top-level fields:
 
 - `schema_version`
+- `artifact_type`
 - `generated_at`
 - `status`
 - `stores`
 - `counts`
 - `warnings`
 - `errors`
+- `validation`
 
 Required store fields:
 
 - `name`
+- `domain`
 - `kind`
 - `status`
 - `format`
@@ -136,15 +141,32 @@ Required store fields:
 - `schema_path`
 - `state_path`
 - `schema_version`
+- `schema_metadata_kind`
 - `partition_fields`
 - `unique_key_fields`
 - `source_fields`
+- `time_field`
 - `latest_update_at`
+- `latest_completed_revision`
 - `record_count`
 - `warning_count`
+- `error_count`
 - `consumers`
 - `source_artifacts`
+- `migration_status`
+- `migration`
 - `warnings`
+- `errors`
+
+Required migration fields:
+
+- `status`
+- `applied_schema_version`
+- `available_migrators`
+- `compatibility_readers`
+- `last_migration_at`
+- `warnings`
+- `errors`
 
 Status values:
 
@@ -158,8 +180,17 @@ Rules:
 
 - include only implemented stores;
 - preserve deterministic store ordering by `name`;
-- use relative path references;
+- use runtime-root-relative path references, or safe external refs when a
+  configured shared-data root is outside the runtime root;
+- fail catalog validation when a store `storage_path` points under `runs/`;
+- allow `runs/` paths only as bounded source artifact refs, not as shared store
+  storage paths;
+- validate missing schema metadata, schema version, time field, and migration
+  metadata as warnings unless the storage path violates the run-archive
+  boundary;
 - summarize large stores by metadata, not row dumps;
+- expose catalog field summaries through data inspection and Dashboard
+  data-store views without embedding raw shared histories;
 - in product runs, build the catalog from prepared shared-state candidates and
   publish the official catalog only after product validation is publishable;
 - record missing optional stores as `skipped`, not fabricated data.

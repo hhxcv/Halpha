@@ -355,6 +355,8 @@ def _bounded_store_group(record: dict[str, Any]) -> dict[str, Any]:
     bounded: dict[str, Any] = {}
     preferred = (
         "name",
+        "domain",
+        "kind",
         "source",
         "source_name",
         "symbol",
@@ -366,6 +368,18 @@ def _bounded_store_group(record: dict[str, Any]) -> dict[str, Any]:
         "chain",
         "network",
         "status",
+        "format",
+        "storage_path",
+        "schema_path",
+        "state_path",
+        "schema_version",
+        "schema_metadata_kind",
+        "partition_fields",
+        "unique_key_fields",
+        "time_field",
+        "latest_update_at",
+        "latest_completed_revision",
+        "migration_status",
         "value",
         "outcome_state",
         "row_count",
@@ -382,6 +396,8 @@ def _bounded_store_group(record: dict[str, Any]) -> dict[str, Any]:
         value = record.get(key)
         if isinstance(value, (str, int, float, bool)) or value is None:
             bounded[key] = value
+        elif isinstance(value, list):
+            bounded[key] = _bounded_list_text(value)
     return _bounded_mapping(bounded)
 
 
@@ -471,3 +487,12 @@ def _bounded_mapping(value: Any) -> dict[str, Any]:
         if isinstance(item, (str, int, float, bool)) or item is None
     }
     return bounded
+
+
+def _bounded_list_text(value: list[Any], *, limit: int = 8) -> str | None:
+    strings = [str(item) for item in value if isinstance(item, (str, int, float)) and not isinstance(item, bool)]
+    if not strings:
+        return None
+    shown = strings[:limit]
+    suffix = "" if len(strings) <= limit else f", +{len(strings) - limit} more"
+    return ", ".join(shown) + suffix

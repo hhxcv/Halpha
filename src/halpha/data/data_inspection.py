@@ -12,7 +12,7 @@ from halpha.data.data_quality_groups import (
     PERSONALIZED_RISK_CHECK_NAMES,
     named_quality_check_counts,
 )
-from halpha.data.research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path
+from halpha.data.research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path, validate_research_data_catalog
 from halpha.data.run_index import (
     RUN_INDEX_ARTIFACT,
     run_index_latest_refs,
@@ -157,17 +157,24 @@ def _catalog_section(config_path: Path, *, base: Path) -> dict[str, Any]:
             reason=error,
         )
     counts = _dict(data.get("counts"))
+    validation = validate_research_data_catalog(data)
     return _section(
         "research_data_catalog",
-        str(data.get("status") or "unknown"),
+        _catalog_status(str(data.get("status") or "unknown"), validation),
         artifact=CATALOG_ARTIFACT,
         fields={
             "stores": _int(counts.get("stores")),
             "records": _int(counts.get("records")),
             "warnings": _int(counts.get("warnings")),
             "errors": _int(counts.get("errors")),
+            "validation_status": validation["status"],
+            "validation_warnings": _int(validation.get("warning_count")),
+            "validation_errors": _int(validation.get("error_count")),
         },
-        extra={"store_statuses": _store_statuses(data)},
+        extra={
+            "store_statuses": _store_statuses(data),
+            "catalog_validation": _validation_statuses(validation),
+        },
     )
 
 
@@ -1071,6 +1078,9 @@ def _section_lines(section: dict[str, Any]) -> list[str]:
     store_statuses = section.get("extra", {}).get("store_statuses")
     if store_statuses:
         lines.append(f"    store_statuses: {store_statuses}")
+    catalog_validation = section.get("extra", {}).get("catalog_validation")
+    if catalog_validation:
+        lines.append(f"    catalog_validation: {catalog_validation}")
     return lines
 
 
@@ -1100,6 +1110,28 @@ def _store_statuses(catalog: dict[str, Any]) -> str | None:
         if isinstance(name, str) and name and isinstance(status, str) and status:
             statuses.append(f"{name}={status}")
     return ", ".join(sorted(statuses)) if statuses else None
+
+
+def _validation_statuses(validation: dict[str, Any]) -> str | None:
+    diagnostics = []
+    for key in ("errors", "warnings"):
+        for item in _list(validation.get(key)):
+            if not isinstance(item, dict):
+                continue
+            store = item.get("store")
+            field = item.get("field")
+            if isinstance(store, str) and store and isinstance(field, str) and field:
+                diagnostics.append(f"{store}.{field}")
+    return ", ".join(sorted(diagnostics)) if diagnostics else None
+
+
+def _catalog_status(status: str, validation: dict[str, Any]) -> str:
+    validation_status = str(validation.get("status") or "ok")
+    if validation_status == "failed":
+        return "failed"
+    if validation_status == "warning" and status == "ok":
+        return "warning"
+    return status
 
 
 def _feature_factor_quality_check_counts(quality: dict[str, Any]) -> dict[str, int]:
