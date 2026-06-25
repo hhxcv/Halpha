@@ -21,9 +21,16 @@ def test_validate_uses_latest_run_without_running_pipeline(
     capsys,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = _write_config(tmp_path)
+    config_path = _write_config(tmp_path, proxy="http://local-proxy.internal:7890")
     run = _write_run(tmp_path, config_path)
-    _write_analysis_artifact(run, "risk_assessment", {"private_note": "private-host.local:9000"})
+    _write_analysis_artifact(
+        run,
+        "risk_assessment",
+        {
+            "private_note": "private-host.local:9000",
+            "raw_secret": "account-identifier-12345",
+        },
+    )
     run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
     write_json(run.manifest_path, run.manifest)
     write_run_index(run, now="2026-06-20T00:05:00Z")
@@ -50,7 +57,10 @@ def test_validate_uses_latest_run_without_running_pipeline(
     assert "pipeline: not_run" in output
     assert "codex: not_run" in output
     assert "artifact_written: false" in output
+    assert "local-proxy.internal" not in output
     assert "private-host.local" not in output
+    assert "account-identifier-12345" not in output
+    assert str(tmp_path) not in output
     assert not (run.analysis_dir / "product_contract_validation.json").exists()
 
 
@@ -140,30 +150,6 @@ def test_validate_failed_contract_outputs_bounded_diagnostics(tmp_path: Path, ca
     assert "source_artifacts: run_manifest.json, analysis/risk_assessment.json" in output
     assert "next_steps: Rerun the producer stage" in output
     assert "artifact_written: false" in output
-
-
-def test_validate_privacy_boundary_excludes_config_and_raw_values(tmp_path: Path, capsys) -> None:
-    config_path = _write_config(tmp_path, proxy="http://local-proxy.internal:7890")
-    run = _write_run(tmp_path, config_path)
-    _write_analysis_artifact(
-        run,
-        "risk_assessment",
-        {
-            "status": "ok",
-            "raw_secret": "account-identifier-12345",
-        },
-    )
-    run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
-    write_json(run.manifest_path, run.manifest)
-    write_run_index(run, now="2026-06-20T00:05:00Z")
-
-    exit_code = main(["validate", "--config", str(config_path)])
-
-    output = capsys.readouterr().out
-    assert exit_code == 0
-    assert "local-proxy.internal" not in output
-    assert "account-identifier-12345" not in output
-    assert str(tmp_path) not in output
 
 
 def _write_config(tmp_path: Path, *, proxy: str | None = None) -> Path:

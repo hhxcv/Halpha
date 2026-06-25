@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,62 +32,65 @@ def test_dashboard_services_endpoint_reports_exact_service_roles_without_config(
     assert payload["services"]["schedule"]["status"] == "unconfigured"
 
 
-def test_dashboard_service_action_delegates_monitor_start_to_shared_lifecycle(
+@pytest.mark.parametrize(
+    (
+        "role",
+        "digest_function",
+        "launch_patch_target",
+        "endpoint_service",
+        "api_path",
+    ),
+    [
+        pytest.param(
+            "monitor",
+            _monitor_service_config_digest,
+            "halpha.runtime.monitor_service._launch_monitor_service_process",
+            "halpha_monitor",
+            "/api/services/monitor/start",
+            id="monitor",
+        ),
+        pytest.param(
+            "schedule",
+            _schedule_service_config_digest,
+            "halpha.runtime.schedule_service._launch_schedule_service_process",
+            "halpha_schedule",
+            "/api/services/schedule/start",
+            id="schedule",
+        ),
+    ],
+)
+def test_dashboard_service_action_delegates_start_to_shared_lifecycle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    role: str,
+    digest_function: Callable[..., str],
+    launch_patch_target: str,
+    endpoint_service: str,
+    api_path: str,
 ) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "monitor",
+        role,
         config_ref="<external-config>",
-        config_digest=_monitor_service_config_digest(config, config_path=config_path),
-        endpoint={"service": "halpha_monitor"},
+        config_digest=digest_function(config, config_path=config_path),
+        endpoint={"service": endpoint_service},
     )
     assert ownership is not None
     try:
-        repository.register_started("monitor", instance_id=result.instance_id or "")
-        monkeypatch.setattr("halpha.runtime.monitor_service._launch_monitor_service_process", _fail_launch)
+        repository.register_started(role, instance_id=result.instance_id or "")
+        monkeypatch.setattr(launch_patch_target, _fail_launch)
         client = TestClient(create_dashboard_app(config, config_path=config_path))
 
-        payload = client.post("/api/services/monitor/start").json()
+        payload = client.post(api_path).json()
     finally:
         ownership.release()
 
     assert payload["artifact_type"] == "dashboard_service_action"
     assert payload["status"] == "existing"
-    assert payload["role"] == "monitor"
+    assert payload["role"] == role
     assert payload["action"] == "start"
-    assert payload["service"]["instance_id"] == result.instance_id
-    assert payload["service"]["config_conflict"] is False
-
-
-def test_dashboard_service_action_delegates_schedule_start_to_shared_lifecycle(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    repository = ServiceLifecycleRepository(runtime_root=tmp_path)
-    result, ownership = repository.attempt_start_ownership(
-        "schedule",
-        config_ref="<external-config>",
-        config_digest=_schedule_service_config_digest(config, config_path=config_path),
-        endpoint={"service": "halpha_schedule"},
-    )
-    assert ownership is not None
-    try:
-        repository.register_started("schedule", instance_id=result.instance_id or "")
-        monkeypatch.setattr("halpha.runtime.schedule_service._launch_schedule_service_process", _fail_launch)
-        client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-        payload = client.post("/api/services/schedule/start").json()
-    finally:
-        ownership.release()
-
-    assert payload["status"] == "existing"
-    assert payload["role"] == "schedule"
     assert payload["service"]["instance_id"] == result.instance_id
     assert payload["service"]["config_conflict"] is False
 

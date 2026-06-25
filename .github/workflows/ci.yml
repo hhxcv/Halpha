@@ -38,4 +38,13 @@ jobs:
           node --check src/halpha/dashboard/static/dashboard.js
 
       - name: Run tests
-        run: python -m pytest
+        run: |
+          mkdir -p .pytest-reports
+          python -m pytest --durations=50 --junitxml=.pytest-reports/junit.xml
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: .pytest-reports/junit.xml

@@ -22,6 +22,7 @@ def test_pipeline_generates_ai_readable_text_material(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_text_events": _write_complete_text_raw,
             "run_codex_report": _skip_codex_report,
@@ -71,6 +72,7 @@ def test_text_material_marks_missing_optional_source_values_explicitly(tmp_path:
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_text_events": _write_minimum_text_raw,
             "run_codex_report": _skip_codex_report,
@@ -99,6 +101,7 @@ def test_text_material_uses_artifact_source_url_when_item_url_is_missing(tmp_pat
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_text_events": _write_text_raw_with_artifact_source_url,
             "run_codex_report": _skip_codex_report,
@@ -120,6 +123,7 @@ def test_text_material_skips_when_text_disabled(tmp_path: Path) -> None:
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={"run_codex_report": _skip_codex_report},
     )
 
@@ -150,6 +154,7 @@ def test_text_material_rejects_invalid_raw_text_artifact(tmp_path: Path) -> None
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_text_events": _write_invalid_text_raw,
             "build_text_event_records": _skip_text_event_records,
@@ -181,6 +186,7 @@ def test_analysis_stage_records_market_artifact_before_text_material_failure(tmp
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_market_data": _write_market_raw,
             "collect_text_events": _write_invalid_text_raw,

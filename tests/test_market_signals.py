@@ -4,16 +4,23 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_market_signals_normalize_strategy_outputs_and_write_material(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    result = _run_pipeline_with_strategy_outputs(config, config_path)
+    result = _run_pipeline_with_strategy_outputs(config, config_path, until_stage="build_materials")
 
     market_signals = _market_signals(result)
     material = (result.run.analysis_dir / "market_signal_material.md").read_text(encoding="utf-8")
@@ -156,6 +163,7 @@ def test_market_signal_artifacts_skip_when_quant_is_not_enabled(tmp_path: Path) 
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -216,10 +224,12 @@ def _run_pipeline_with_strategy_outputs(
     config_path: Path,
     *,
     insufficient: bool = False,
+    until_stage: str = "run_strategy_research",
 ):
     return run_pipeline(
         config,
         config_path=config_path,
+        until_stage=until_stage,
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -244,6 +254,7 @@ def _run_pipeline_with_representative_strategy_runs(config: dict[str, Any], conf
     return run_pipeline(
         config,
         config_path=config_path,
+        until_stage="build_materials",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,

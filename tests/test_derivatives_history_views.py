@@ -11,6 +11,7 @@ from halpha.market.derivatives_history import sync_derivatives_market_history
 from halpha.market.derivatives_market_views import build_derivatives_market_views, load_derivatives_market_view_records
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+from history_traceability_helpers import assert_history_traceability
 
 
 @pytest.fixture(autouse=True)
@@ -59,28 +60,31 @@ def test_derivatives_history_and_views_use_bounded_current_windows(tmp_path: Pat
     assert stored_records[0]["origin_run_ids"] == [result.run.run_id]
     assert views["source_artifacts"] == ["data/market/metadata/derivatives_market_state.json"]
     assert len(views["views"]) == 1
-    assert view == {
-        "view_id": "derivatives_view:funding_rate:binance_usdm:BTCUSDT:8h:2026-06-18T00:00:00Z",
-        "data_class": "funding_rate",
-        "source": "binance_usdm",
-        "market_type": "usd_m_futures",
-        "symbol": "BTCUSDT",
-        "period": "8h",
-        "requested_lookback": 2,
-        "input_window_start": "2026-06-17T16:00:00Z",
-        "input_window_end": "2026-06-18T00:00:00Z",
-        "latest_observation_time": "2026-06-18T00:00:00Z",
-        "row_count": 2,
-        "status": "succeeded",
-        "storage_ref": (
-            "data/market/derivatives/source=binance_usdm/data_class=funding_rate/symbol=BTCUSDT/period=8h"
-        ),
-        "included_columns": ["as_of", "endpoint", "metrics", "units", "warnings", "errors"],
-        "insufficient_data": False,
-        "warnings": [],
-        "errors": [],
-        "source_artifacts": ["data/market/metadata/derivatives_market_state.json"],
-    }
+    _assert_view_contract(
+        view,
+        {
+            "view_id": "derivatives_view:funding_rate:binance_usdm:BTCUSDT:8h:2026-06-18T00:00:00Z",
+            "data_class": "funding_rate",
+            "source": "binance_usdm",
+            "symbol": "BTCUSDT",
+            "period": "8h",
+            "input_window_start": "2026-06-17T16:00:00Z",
+            "input_window_end": "2026-06-18T00:00:00Z",
+            "row_count": 2,
+            "status": "succeeded",
+            "storage_ref": (
+                "data/market/derivatives/source=binance_usdm/data_class=funding_rate/symbol=BTCUSDT/period=8h"
+            ),
+            "insufficient_data": False,
+            "source_artifacts": ["data/market/metadata/derivatives_market_state.json"],
+        },
+    )
+    assert view["market_type"] == "usd_m_futures"
+    assert view["requested_lookback"] == 2
+    assert view["latest_observation_time"] == "2026-06-18T00:00:00Z"
+    assert view["included_columns"] == ["as_of", "endpoint", "metrics", "units", "warnings", "errors"]
+    assert view["warnings"] == []
+    assert view["errors"] == []
     assert "records" not in view
     assert [record["as_of"] for record in loaded_window] == [
         "2026-06-17T16:00:00Z",
@@ -114,13 +118,16 @@ def test_derivatives_history_deduplicates_repeated_records_with_run_traceability
     assert state["totals"]["records"] == 1
     assert state["totals"]["duplicate_records"] == 1
     assert state["totals"]["updated_records"] == 1
-    assert records[0]["origin_run_ids"] == ["run-1", "run-2"]
-    assert records[0]["first_seen_run_id"] == "run-1"
-    assert records[0]["last_seen_run_id"] == "run-2"
-    assert records[0]["source_artifacts"] == [
-        "runs/run-1/raw/derivatives_market.json",
-        "runs/run-2/raw/derivatives_market.json",
-    ]
+    assert_history_traceability(
+        records[0],
+        origin_run_ids=["run-1", "run-2"],
+        first_seen_run_id="run-1",
+        last_seen_run_id="run-2",
+        source_artifacts=[
+            "runs/run-1/raw/derivatives_market.json",
+            "runs/run-2/raw/derivatives_market.json",
+        ],
+    )
 
 
 def test_derivatives_views_record_missing_history_state(tmp_path: Path) -> None:
@@ -169,6 +176,10 @@ def test_disabled_derivatives_config_skips_history_and_views(tmp_path: Path) -> 
     assert "derivatives_market_views" not in manifest["artifacts"]
     assert manifest["counts"]["derivatives_market_history_records"] == 0
     assert manifest["counts"]["derivatives_market_views"] == 0
+
+
+def _assert_view_contract(view: dict[str, Any], expected: dict[str, Any]) -> None:
+    assert {key: view.get(key) for key in expected} == expected
 
 
 def _write_config(
