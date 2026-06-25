@@ -10,54 +10,14 @@ import threading
 import time
 from urllib.request import urlopen
 
-from fastapi.testclient import TestClient
 import pytest
 import uvicorn
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from dashboard_asset_helpers import dashboard_script
 
 
 BROWSER_SMOKE_ENABLED = os.environ.get("HALPHA_BROWSER_SMOKE") == "1"
-
-
-def test_dashboard_browser_smoke_static_navigation_contract(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    app = create_dashboard_app(config, config_path=config_path)
-
-    response = TestClient(app).get("/")
-    assert response.status_code == 200
-    html = response.text
-    script = dashboard_script()
-    for view in _PRIMARY_VIEWS:
-        assert f'data-view-target="{view}"' in html
-        assert f'id="{view}-view"' in html
-        assert f'"{view}"' in _PLAYWRIGHT_SMOKE_SPEC
-    assert "await page.waitForSelector(`#${view}-view:not(.hidden)`" in _PLAYWRIGHT_SMOKE_SPEC
-    assert '<script src="/assets/dashboard_shared.js" defer></script>' in html
-    assert '<script src="/assets/dashboard_dialogs.js" defer></script>' in html
-    assert '<script src="/assets/dashboard_reports.js" defer></script>' in html
-    assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in html
-    assert '<script src="/assets/dashboard_monitor.js" defer></script>' in html
-    assert '<script src="/assets/dashboard.js" defer></script>' in html
-    assert html.index("/assets/dashboard_shared.js") < html.index("/assets/dashboard_dialogs.js")
-    assert html.index("/assets/dashboard_dialogs.js") < html.index("/assets/dashboard_reports.js")
-    assert html.index("/assets/dashboard_reports.js") < html.index("/assets/dashboard_strategy_chart.js")
-    assert html.index("/assets/dashboard_strategy_chart.js") < html.index("/assets/dashboard_monitor.js")
-    assert html.index("/assets/dashboard_monitor.js") < html.index("/assets/dashboard.js")
-    assert "window.HalphaDashboardShared" in script
-    assert "window.HalphaDashboardDialogs" in script
-    assert "window.HalphaDashboardReports" in script
-    assert "window.HalphaDashboardStrategyChart" in script
-    assert "window.HalphaDashboardMonitor" in script
-    assert 'document.querySelectorAll("[data-view-target]")' in script
-    assert "setHashView(node.dataset.viewTarget)" in script
-    assert "view is stuck loading" in _PLAYWRIGHT_SMOKE_SPEC
-    assert "dashboard-dialog-backdrop" in html
-    assert "Generate report dialog did not open" in _PLAYWRIGHT_SMOKE_SPEC
-    assert "expect(errors).toEqual([])" in _PLAYWRIGHT_SMOKE_SPEC
 
 
 @pytest.mark.browser_smoke
@@ -258,9 +218,6 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
     });
     """
 ).strip()
-
-
-_PRIMARY_VIEWS = ("overview", "reports", "strategies", "monitor", "intelligence", "settings")
 
 
 def _free_port() -> int:

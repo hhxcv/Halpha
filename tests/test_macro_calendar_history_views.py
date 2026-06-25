@@ -11,6 +11,7 @@ from halpha.macro.macro_calendar_history import sync_macro_calendar_history
 from halpha.macro.macro_calendar_views import _load_macro_calendar_view_records, build_macro_calendar_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+from history_traceability_helpers import assert_history_traceability
 
 
 @pytest.fixture(autouse=True)
@@ -120,13 +121,16 @@ def test_macro_calendar_history_deduplicates_repeated_records_with_run_traceabil
     assert state["totals"]["records"] == 1
     assert state["totals"]["duplicate_records"] == 1
     assert state["totals"]["updated_records"] == 1
-    assert records[0]["origin_run_ids"] == ["run-1", "run-2"]
-    assert records[0]["first_seen_run_id"] == "run-1"
-    assert records[0]["last_seen_run_id"] == "run-2"
-    assert records[0]["source_artifacts"] == [
-        "runs/run-1/raw/macro_calendar.json",
-        "runs/run-2/raw/macro_calendar.json",
-    ]
+    assert_history_traceability(
+        records[0],
+        origin_run_ids=["run-1", "run-2"],
+        first_seen_run_id="run-1",
+        last_seen_run_id="run-2",
+        source_artifacts=[
+            "runs/run-1/raw/macro_calendar.json",
+            "runs/run-2/raw/macro_calendar.json",
+        ],
+    )
 
 
 def test_macro_calendar_views_record_stale_current_window(tmp_path: Path) -> None:

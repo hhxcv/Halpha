@@ -129,21 +129,13 @@ def test_product_validation_does_not_publish_staged_shared_state_when_validation
         build_product_contract_validation({}, run)
 
     assert _validation_artifact(run)["status"] == "failed"
-    assert not _history_path(tmp_path).exists()
-    assert not _state_path(tmp_path).exists()
-    assert not _catalog_path(tmp_path).exists()
-    assert "outcome_history_state" not in run.manifest["artifacts"]
-    assert "research_data_catalog" not in run.manifest["artifacts"]
-    assert run.manifest["shared_state_publication"]["status"] == "not_published"
+    assert_shared_state_not_published(run, tmp_path)
     assert "artifacts" not in run.manifest["shared_state_publication"]
-    assert not _staging_dir(run).exists()
 
 
 def test_product_validation_publishes_staged_shared_state_after_validation_passes(tmp_path: Path) -> None:
     run = _run(tmp_path, codex_status="skipped")
-    _write_analysis_artifact(run, "risk_assessment", {"status": "ok"})
-    run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
-    _prepare_shared_publication(run)
+    prepare_valid_shared_publication(run)
 
     artifacts = build_product_contract_validation({}, run)
 
@@ -153,12 +145,7 @@ def test_product_validation_publishes_staged_shared_state_after_validation_passe
         "data/research/metadata/outcome_history_state.json",
         "data/research/metadata/research_data_catalog.json",
     ]
-    assert _history_path(tmp_path).is_file()
-    assert _state_path(tmp_path).is_file()
-    assert _catalog_path(tmp_path).is_file()
-    assert _read_json(_history_path(tmp_path))["records"][0]["target_id"] == "target-1"
-    assert _read_json(_state_path(tmp_path))["totals"]["records"] == 1
-    assert _read_json(_catalog_path(tmp_path))["stores"][0]["name"] == "outcome_history"
+    assert_shared_state_published(run, tmp_path)
     assert run.manifest["shared_state_publication"]["status"] == "published"
     assert run.manifest["artifacts"]["outcome_history_state"] == (
         "data/research/metadata/outcome_history_state.json"
@@ -166,7 +153,7 @@ def test_product_validation_publishes_staged_shared_state_after_validation_passe
     assert run.manifest["artifacts"]["research_data_catalog"] == (
         "data/research/metadata/research_data_catalog.json"
     )
-    assert not _staging_dir(run).exists()
+    assert_staging_removed(run)
 
 
 @pytest.mark.parametrize("status", ["skipped", "unknown", None])
@@ -194,13 +181,7 @@ def test_product_validation_blocks_non_publishable_validation_statuses(
     with pytest.raises(PipelineError, match="blocks shared publication"):
         build_product_contract_validation({}, run)
 
-    assert not _history_path(tmp_path).exists()
-    assert not _state_path(tmp_path).exists()
-    assert not _catalog_path(tmp_path).exists()
-    assert "outcome_history_state" not in run.manifest["artifacts"]
-    assert "research_data_catalog" not in run.manifest["artifacts"]
-    assert run.manifest["shared_state_publication"]["status"] == "not_published"
-    assert not _staging_dir(run).exists()
+    assert_shared_state_not_published(run, tmp_path)
 
 
 def test_product_validation_blocks_malformed_validation_artifact(
@@ -218,9 +199,7 @@ def test_product_validation_blocks_malformed_validation_artifact(
         build_product_contract_validation({}, run)
 
     assert not (run.analysis_dir / "product_contract_validation.json").exists()
-    assert not _history_path(tmp_path).exists()
-    assert run.manifest["shared_state_publication"]["status"] == "not_published"
-    assert not _staging_dir(run).exists()
+    assert_shared_state_not_published(run, tmp_path)
 
 
 def test_validator_exception_leaves_existing_shared_files_unchanged(
@@ -243,13 +222,11 @@ def test_validator_exception_leaves_existing_shared_files_unchanged(
     with pytest.raises(RuntimeError, match="validator unavailable"):
         build_product_contract_validation({}, run)
 
-    assert _read_json(_history_path(tmp_path)) == previous["history"]
-    assert _read_json(_state_path(tmp_path)) == previous["state"]
-    assert _read_json(_catalog_path(tmp_path)) == previous["catalog"]
+    assert_shared_state_matches_previous(tmp_path, previous)
     assert "outcome_history_state" not in run.manifest["artifacts"]
     assert "research_data_catalog" not in run.manifest["artifacts"]
     assert run.manifest["shared_state_publication"]["status"] == "not_published"
-    assert not _staging_dir(run).exists()
+    assert_staging_removed(run)
 
 
 @pytest.mark.parametrize("failed_name", ["outcome_history_state.json", "research_data_catalog.json"])
@@ -275,13 +252,11 @@ def test_shared_state_publication_rolls_back_written_files_when_replacement_fail
     with pytest.raises(PipelineError, match="rolled back"):
         build_product_contract_validation({}, run)
 
-    assert _read_json(_history_path(tmp_path)) == previous["history"]
-    assert _read_json(_state_path(tmp_path)) == previous["state"]
-    assert _read_json(_catalog_path(tmp_path)) == previous["catalog"]
+    assert_shared_state_matches_previous(tmp_path, previous)
     assert "outcome_history_state" not in run.manifest["artifacts"]
     assert "research_data_catalog" not in run.manifest["artifacts"]
     assert run.manifest["shared_state_publication"]["status"] == "rolled_back"
-    assert not _staging_dir(run).exists()
+    assert_staging_removed(run)
 
 
 def test_shared_state_publication_reports_rollback_failure(
@@ -318,9 +293,7 @@ def test_shared_state_publication_reports_rollback_failure(
 
 def test_shared_state_publication_retry_is_idempotent(tmp_path: Path) -> None:
     run = _run(tmp_path, codex_status="skipped")
-    _write_analysis_artifact(run, "risk_assessment", {"status": "ok"})
-    run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
-    _prepare_shared_publication(run)
+    prepare_valid_shared_publication(run)
     build_product_contract_validation({}, run)
 
     _prepare_shared_publication(run)
@@ -419,6 +392,41 @@ def _write_analysis_artifact(run: RunContext, name: str, overrides: dict[str, ob
     }
     payload.update(overrides)
     write_json(run.analysis_dir / f"{name}.json", payload)
+
+
+def prepare_valid_shared_publication(run: RunContext) -> None:
+    _write_analysis_artifact(run, "risk_assessment", {"status": "ok"})
+    run.manifest["artifacts"]["risk_assessment"] = "analysis/risk_assessment.json"
+    _prepare_shared_publication(run)
+
+
+def assert_shared_state_not_published(run: RunContext, tmp_path: Path) -> None:
+    assert not _history_path(tmp_path).exists()
+    assert not _state_path(tmp_path).exists()
+    assert not _catalog_path(tmp_path).exists()
+    assert "outcome_history_state" not in run.manifest["artifacts"]
+    assert "research_data_catalog" not in run.manifest["artifacts"]
+    assert run.manifest["shared_state_publication"]["status"] == "not_published"
+    assert_staging_removed(run)
+
+
+def assert_shared_state_published(run: RunContext, tmp_path: Path) -> None:
+    assert _history_path(tmp_path).is_file()
+    assert _state_path(tmp_path).is_file()
+    assert _catalog_path(tmp_path).is_file()
+    assert _read_json(_history_path(tmp_path))["records"][0]["target_id"] == "target-1"
+    assert _read_json(_state_path(tmp_path))["totals"]["records"] == 1
+    assert _read_json(_catalog_path(tmp_path))["stores"][0]["name"] == "outcome_history"
+
+
+def assert_shared_state_matches_previous(tmp_path: Path, previous: dict[str, dict[str, Any]]) -> None:
+    assert _read_json(_history_path(tmp_path)) == previous["history"]
+    assert _read_json(_state_path(tmp_path)) == previous["state"]
+    assert _read_json(_catalog_path(tmp_path)) == previous["catalog"]
+
+
+def assert_staging_removed(run: RunContext) -> None:
+    assert not _staging_dir(run).exists()
 
 
 def _prepare_shared_publication(run: RunContext) -> None:

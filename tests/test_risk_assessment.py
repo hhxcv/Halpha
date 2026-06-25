@@ -4,9 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from halpha.config import load_config
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
+
+
+@pytest.fixture(autouse=True)
+def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
 
 
 def test_risk_assessment_classifies_taxonomy_and_gating_fields(tmp_path: Path) -> None:
@@ -16,6 +23,7 @@ def test_risk_assessment_classifies_taxonomy_and_gating_fields(tmp_path: Path) -
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -269,6 +277,7 @@ def test_risk_assessment_writes_warning_without_fake_low_risk_when_upstream_is_e
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -304,6 +313,7 @@ def test_risk_assessment_skips_when_quant_is_not_enabled(tmp_path: Path) -> None
     result = run_pipeline(
         config,
         config_path=config_path,
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -382,6 +392,7 @@ def _run_risk_with_derivatives(config: dict[str, Any], config_path: Path, deriva
     return run_pipeline(
         config,
         config_path=config_path,
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -402,6 +413,7 @@ def _run_risk_with_macro_calendar(config: dict[str, Any], config_path: Path, mac
     return run_pipeline(
         config,
         config_path=config_path,
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,
@@ -422,6 +434,7 @@ def _run_risk_with_onchain_flow(config: dict[str, Any], config_path: Path, oncha
     return run_pipeline(
         config,
         config_path=config_path,
+        until_stage="synthesize_intelligence",
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,

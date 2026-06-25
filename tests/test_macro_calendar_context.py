@@ -53,13 +53,22 @@ def test_macro_context_builds_upcoming_and_recent_catalysts(tmp_path: Path) -> N
 def test_macro_context_records_no_event_window(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
+    run = _run_context(tmp_path, config_path, "run-no-event")
+    _write_raw(
+        run,
+        [],
+        window_start="2026-06-10T00:00:00Z",
+        window_end="2026-07-31T00:00:00Z",
+        availability_status="no_event",
+    )
+    _write_views(run, [], status="no_event")
 
-    result = _run_until_context(config, config_path, _write_no_event_macro_raw_stage)
+    artifacts = build_macro_calendar_context(config, run, now="2026-06-18T01:00:00Z")
 
-    assert result.succeeded is True
-    context = _context(result)
+    context = _context_from_run(run)
     no_event = _context_record(context, "no_event_window")
 
+    assert artifacts == ["analysis/macro_calendar_context.json"]
     assert context["status"] == "ok"
     assert no_event["status"] == "no_event"
     assert no_event["state"] == "no_event"
@@ -72,21 +81,22 @@ def test_macro_context_records_no_event_window(tmp_path: Path) -> None:
 def test_macro_context_records_stale_calendar(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    old_run = _run_context(tmp_path, config_path, "run-old")
+    run = _run_context(tmp_path, config_path, "run-stale")
     _write_raw(
-        old_run,
-        [_macro_item("2025-01-29T00:00:00Z")],
-        window_start="2025-01-01T00:00:00Z",
-        window_end="2025-02-28T00:00:00Z",
+        run,
+        [],
+        window_start="2026-06-10T00:00:00Z",
+        window_end="2026-07-31T00:00:00Z",
+        availability_status="stale",
     )
-    sync_macro_calendar_history(config, old_run, now="2025-01-29T01:00:00Z")
+    _write_views(run, [], status="stale")
 
-    result = _run_until_context(config, config_path, _write_stale_macro_raw_stage)
+    artifacts = build_macro_calendar_context(config, run, now="2026-06-18T01:00:00Z")
 
-    assert result.succeeded is True
-    context = _context(result)
+    context = _context_from_run(run)
     stale = _context_record(context, "source_availability")
 
+    assert artifacts == ["analysis/macro_calendar_context.json"]
     assert context["status"] == "warning"
     assert stale["status"] == "stale"
     assert stale["state"] == "stale"
@@ -113,13 +123,22 @@ def test_macro_context_omits_duplicate_view_records(tmp_path: Path) -> None:
 def test_macro_context_marks_partial_source_with_low_confidence(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
+    run = _run_context(tmp_path, config_path, "run-partial")
+    _write_raw(
+        run,
+        [_macro_item("2026-07-29T00:00:00Z")],
+        window_start="2026-06-10T00:00:00Z",
+        window_end="2026-07-31T00:00:00Z",
+        availability_status="partial",
+    )
+    _write_views(run, [_view_record("2026-07-29T00:00:00Z")], status="partial")
 
-    result = _run_until_context(config, config_path, _write_partial_macro_raw_stage)
+    artifacts = build_macro_calendar_context(config, run, now="2026-06-18T01:00:00Z")
 
-    assert result.succeeded is True
-    context = _context(result)
+    context = _context_from_run(run)
     catalyst = _context_record(context, "scheduled_catalyst")
 
+    assert artifacts == ["analysis/macro_calendar_context.json"]
     assert context["status"] == "warning"
     assert catalyst["status"] == "partial"
     assert catalyst["state"] == "upcoming"
@@ -202,42 +221,6 @@ def _write_current_macro_raw_stage(config: dict[str, Any], run: RunContext) -> l
     return ["raw/macro_calendar.json"]
 
 
-def _write_no_event_macro_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
-    _write_raw(
-        run,
-        [],
-        window_start="2026-06-10T00:00:00Z",
-        window_end="2026-07-31T00:00:00Z",
-        availability_status="no_event",
-    )
-    run.manifest["artifacts"]["raw_macro_calendar"] = "raw/macro_calendar.json"
-    return ["raw/macro_calendar.json"]
-
-
-def _write_stale_macro_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
-    _write_raw(
-        run,
-        [],
-        window_start="2026-06-10T00:00:00Z",
-        window_end="2026-07-31T00:00:00Z",
-        availability_status="stale",
-    )
-    run.manifest["artifacts"]["raw_macro_calendar"] = "raw/macro_calendar.json"
-    return ["raw/macro_calendar.json"]
-
-
-def _write_partial_macro_raw_stage(config: dict[str, Any], run: RunContext) -> list[str]:
-    _write_raw(
-        run,
-        [_macro_item("2026-07-29T00:00:00Z")],
-        window_start="2026-06-10T00:00:00Z",
-        window_end="2026-07-31T00:00:00Z",
-        availability_status="partial",
-    )
-    run.manifest["artifacts"]["raw_macro_calendar"] = "raw/macro_calendar.json"
-    return ["raw/macro_calendar.json"]
-
-
 def _write_raw(
     run: RunContext,
     items: list[dict[str, Any]],
@@ -280,7 +263,7 @@ def _write_raw(
     )
 
 
-def _write_views(run: RunContext, records: list[dict[str, Any]]) -> None:
+def _write_views(run: RunContext, records: list[dict[str, Any]], *, status: str = "succeeded") -> None:
     write_json(
         run.raw_dir / "macro_calendar_views.json",
         {
@@ -304,7 +287,7 @@ def _write_views(run: RunContext, records: list[dict[str, Any]]) -> None:
                     "event_count": len(records),
                     "included_record_count": len(records),
                     "omitted_record_count": 0,
-                    "status": "succeeded",
+                    "status": status,
                     "storage_ref": "data/macro/calendar/source=federal_reserve_fomc/data_class=central_bank_event/region=US",
                     "included_columns": [
                         "scheduled_at",

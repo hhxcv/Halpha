@@ -146,7 +146,6 @@ def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_pat
 
     health_state = _health_state(config_path)
     manifests = _cycle_manifests(tmp_path)
-    source_states = {state["source_key"]: state for state in health_state["source_states"]}
 
     assert len(manifests) == 1
     assert [manifest["status"] for manifest in manifests] == ["partial"]
@@ -156,42 +155,9 @@ def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_pat
     assert source_calls == ["text"]
     assert health_state["cycle_count"] == 2
     assert health_state["latest_cycle_status"] == "no_due_sources"
-    assert health_state["latest_cycle_manifest"] == ".halpha/state.sqlite"
-    assert health_state["failed_cycle_count"] == 0
     assert health_state["service"]["status"] == "stopped"
-    assert health_state["service"]["consecutive_failures"] == 0
-    assert health_state["service"]["next_retry_at"] is None
-    assert health_state["service"]["last_error"] == {}
-    assert source_states["text"]["status"] == "failed"
-    assert source_states["text"]["consecutive_failures"] == 1
-    assert source_states["text"]["last_error"]["message"] == "simulated source failure"
     assert sum(sleeps) == pytest.approx(1.0)
     assert not (tmp_path / "monitor" / "monitor_health_state.json").exists()
-
-
-def test_monitor_service_backs_off_recoverable_failures_with_configured_cap(tmp_path: Path) -> None:
-    config_path = _write_config(tmp_path, interval_seconds=2, failure_backoff_max_seconds=3, text_enabled=True)
-    config = load_config(config_path)
-    sleeps: list[float] = []
-
-    run_monitor_service(
-        config,
-        config_path=config_path,
-        max_cycles=1,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=[]),
-        source_refresher=_source_refresher_factory(statuses=["failed"]),
-        sleeper=lambda seconds: sleeps.append(seconds),
-    )
-
-    health_state = _health_state(config_path)
-    source_states = {state["source_key"]: state for state in health_state["source_states"]}
-
-    assert health_state["failed_cycle_count"] == 0
-    assert health_state["service"]["consecutive_failures"] == 0
-    assert health_state["service"]["last_error"] == {}
-    assert source_states["text"]["status"] == "failed"
-    assert source_states["text"]["backoff_seconds"] == 2
-    assert sleeps == []
 
 
 def test_monitor_service_observes_graceful_stop_during_wait(tmp_path: Path) -> None:

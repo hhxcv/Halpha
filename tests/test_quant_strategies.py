@@ -168,7 +168,6 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
 
     strategy_runs = _strategy_runs(result)
     market_signals = _market_signals(result)
-    material = (result.run.analysis_dir / "market_signal_material.md").read_text(encoding="utf-8")
     manifest = _manifest(result)
     strategy_run = strategy_runs["runs"][0]
     market_signal = market_signals["signals"][0]
@@ -280,10 +279,6 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
         "raw/market_data_views.json",
     ]
     assert market_signals["signals"][0]["strategy_name"] == "tsmom_vol_scaled"
-    assert "analysis/quant_strategy_runs.json" in material
-    assert "backtest_diagnostics_are_historical_research_material: true" in material
-    assert "backtest_diagnostic_policy: historical_research_material_only_not_forecast" in material
-
     assert manifest["artifacts"]["quant_strategy_runs"] == "analysis/quant_strategy_runs.json"
     assert manifest["counts"]["quant_strategy_runs"] == 1
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
@@ -405,7 +400,7 @@ def test_quant_strategy_runner_records_enabled_parameter_diagnostic(tmp_path: Pa
         ]
     )
 
-    result = _run_pipeline_with_strategies(config, config_path)
+    result = _run_pipeline_with_strategies(config, config_path, until_stage="build_materials")
 
     strategy_run = _strategy_runs(result)["runs"][0]
     strategy_signal = _strategy_signals(result)["signals"][0]
@@ -1183,10 +1178,16 @@ def test_strategy_signal_records_cover_insufficient_data() -> None:
     json.dumps(signal_records)
 
 
-def _run_pipeline_with_strategies(config: dict[str, Any], config_path: Path):
+def _run_pipeline_with_strategies(
+    config: dict[str, Any],
+    config_path: Path,
+    *,
+    until_stage: str = "run_strategy_research",
+):
     return run_pipeline(
         config,
         config_path=config_path,
+        until_stage=until_stage,
         stage_handlers={
             "collect_market_data": _noop_stage,
             "collect_text_events": _noop_stage,

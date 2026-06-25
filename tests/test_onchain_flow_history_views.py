@@ -12,6 +12,7 @@ from halpha.onchain.onchain_flow_history import sync_onchain_flow_history
 from halpha.onchain.onchain_flow_views import _load_onchain_flow_view_records, build_onchain_flow_views
 from halpha.pipeline import RunContext, run_pipeline
 from halpha.storage import write_json
+from history_traceability_helpers import assert_history_traceability
 
 
 @pytest.fixture(autouse=True)
@@ -118,13 +119,16 @@ def test_onchain_flow_history_tracks_duplicate_conflicts(tmp_path: Path) -> None
     assert state["totals"]["records"] == 1
     assert state["totals"]["duplicate_records"] == 1
     assert state["totals"]["conflicting_duplicates"] == 1
-    assert records[0]["origin_run_ids"] == ["run-1", "run-2"]
-    assert records[0]["first_seen_run_id"] == "run-1"
-    assert records[0]["last_seen_run_id"] == "run-2"
-    assert records[0]["source_artifacts"] == [
-        "runs/run-1/raw/onchain_flow.json",
-        "runs/run-2/raw/onchain_flow.json",
-    ]
+    assert_history_traceability(
+        records[0],
+        origin_run_ids=["run-1", "run-2"],
+        first_seen_run_id="run-1",
+        last_seen_run_id="run-2",
+        source_artifacts=[
+            "runs/run-1/raw/onchain_flow.json",
+            "runs/run-2/raw/onchain_flow.json",
+        ],
+    )
     assert records[0]["status"] == "warning"
     assert "conflicting duplicate on-chain flow record" in records[0]["warnings"][0]
 
