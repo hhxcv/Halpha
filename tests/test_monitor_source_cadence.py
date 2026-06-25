@@ -9,7 +9,7 @@ import pytest
 
 from halpha.config import load_config
 from halpha.monitor.monitoring import MonitorSourceRefreshResult, run_monitor_source_cycle
-from halpha.monitor.state_store import MonitorStateRepository
+from halpha.monitor.state_store import MONITOR_STATE_STORE_ARTIFACT, MonitorStateRepository
 
 
 @pytest.fixture(autouse=True)
@@ -51,6 +51,10 @@ def test_monitor_source_cycle_skips_pipeline_when_no_source_is_due(tmp_path: Pat
     assert result.status == "no_due_sources"
     assert result.run_id is None
     assert _product_run_dirs(tmp_path) == []
+    assert _monitor_cycle_dirs(tmp_path) == []
+    assert health["latest_cycle_id"] == result.cycle_id
+    assert health["latest_cycle_status"] == "no_due_sources"
+    assert health["latest_cycle_manifest"] == MONITOR_STATE_STORE_ARTIFACT
     states = {state["source_key"]: state for state in health["source_states"]}
     assert states["text"]["next_attempt_at"] == "2026-01-01T00:10:00Z"
     assert states["text"]["status"] == "no_change"
@@ -97,6 +101,7 @@ def test_monitor_source_cycle_records_no_change_revision_without_broad_workflow(
         source_refresher=_source_refresher(calls=calls, revision="same-revision"),
     )
     runs_after_first = _product_run_dirs(tmp_path)
+    cycle_dirs_after_first = _monitor_cycle_dirs(tmp_path)
     second = run_monitor_source_cycle(
         config,
         config_path=config_path,
@@ -111,9 +116,14 @@ def test_monitor_source_cycle_records_no_change_revision_without_broad_workflow(
 
     assert first.status == "changed"
     assert runs_after_first == ["run-reassessment-1"]
+    assert len(cycle_dirs_after_first) == 1
     assert second.status == "no_change"
     assert second.run_id is None
     assert _product_run_dirs(tmp_path) == runs_after_first
+    assert _monitor_cycle_dirs(tmp_path) == cycle_dirs_after_first
+    assert health["latest_cycle_id"] == second.cycle_id
+    assert health["latest_cycle_status"] == "no_change"
+    assert health["latest_cycle_manifest"] == MONITOR_STATE_STORE_ARTIFACT
     assert calls == ["text", "text"]
     assert state["source_key"] == "text"
     assert state["status"] == "no_change"
@@ -173,6 +183,10 @@ def test_monitor_source_cycle_keeps_multiple_no_change_sources_out_of_runs(tmp_p
     assert result.run_id is None
     assert calls == ["macro_calendar", "text"]
     assert _product_run_dirs(tmp_path) == []
+    assert _monitor_cycle_dirs(tmp_path) == []
+    assert health["latest_cycle_id"] == result.cycle_id
+    assert health["latest_cycle_status"] == "no_change"
+    assert health["latest_cycle_manifest"] == MONITOR_STATE_STORE_ARTIFACT
     assert states["macro_calendar"]["status"] == "no_change"
     assert states["text"]["status"] == "no_change"
     assert states["macro_calendar"]["latest_published_data_revision"] == "macro-revision"
@@ -199,6 +213,8 @@ def test_monitor_source_cycle_batches_multiple_changed_sources_into_one_run(tmp_
     assert result.run_id == "run-reassessment-1"
     assert calls == ["macro_calendar", "text"]
     assert _product_run_dirs(tmp_path) == ["run-reassessment-1"]
+    assert len(_monitor_cycle_dirs(tmp_path)) == 1
+    assert health["latest_cycle_manifest"].startswith("monitor/cycles/")
     assert states["macro_calendar"]["status"] == "changed"
     assert states["text"]["status"] == "changed"
     assert states["macro_calendar"]["latest_run_id"] == "run-reassessment-1"
@@ -239,10 +255,33 @@ def test_monitor_source_cycle_caps_per_source_failure_backoff(tmp_path: Path) ->
 
     assert result.status == "partial"
     assert _product_run_dirs(tmp_path) == []
+    assert len(_monitor_cycle_dirs(tmp_path)) == 1
     assert states["text"]["status"] == "failed"
     assert states["text"]["consecutive_failures"] == 4
     assert states["text"]["backoff_seconds"] == 300
     assert states["text"]["latest_published_data_revision"] == "previous-revision"
+
+
+def test_monitor_source_cycle_prunes_file_backed_diagnostics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config_path = _write_config(tmp_path, text_enabled=True)
+    config = load_config(config_path)
+    calls: list[str] = []
+    source_refresher = _source_refresher(calls=calls)
+    monkeypatch.setattr("halpha.monitor.monitoring.MONITOR_DIAGNOSTIC_CYCLE_DIR_LIMIT", 2)
+
+    for index in range(3):
+        run_monitor_source_cycle(
+            config,
+            config_path=config_path,
+            now=datetime(2026, 1, 1, 0, index, tzinfo=timezone.utc),
+            pipeline_runner=_decision_pipeline(tmp_path),
+            source_refresher=source_refresher,
+        )
+
+    cycle_dirs = _monitor_cycle_dirs(tmp_path)
+
+    assert len(cycle_dirs) == 2
+    assert cycle_dirs == ["cycle-20260101T000100000000Z", "cycle-20260101T000200000000Z"]
 
 
 def _write_config(
@@ -388,6 +427,13 @@ def _product_run_dirs(tmp_path: Path) -> list[str]:
     if not runs_dir.exists():
         return []
     return sorted(path.name for path in runs_dir.iterdir() if path.is_dir())
+
+
+def _monitor_cycle_dirs(tmp_path: Path) -> list[str]:
+    cycles_dir = tmp_path / "monitor" / "cycles"
+    if not cycles_dir.exists():
+        return []
+    return sorted(path.name for path in cycles_dir.iterdir() if path.is_dir())
 
 
 def _time() -> datetime:

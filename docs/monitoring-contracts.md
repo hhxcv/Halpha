@@ -16,9 +16,10 @@ It must remain observable, bounded, and local-first:
 
 The current command surface validates monitor configuration, runs one bounded
 local monitor cycle or finite diagnostic loop, starts one resident Monitor
-service, writes immutable cycle manifests, persists alert archive, cooldown,
-cycle, service-health, and source-cadence state in `.halpha/state.sqlite`, and exposes
-read-only monitor health inspection.
+service, writes immutable cycle manifests for explicit or diagnostic cycles,
+persists alert archive, cooldown, cycle, service-health, and source-cadence
+state in `.halpha/state.sqlite`, and exposes read-only monitor health
+inspection.
 
 The resident Monitor service is one of exactly three supported resident Halpha
 process roles: `dashboard`, `monitor`, and `schedule`. It is explicit, unique
@@ -101,8 +102,10 @@ python -m halpha monitor restart --config config.example.yaml
 The resident Monitor service is unique per runtime root through the shared
 service lifecycle controller. It runs no-Codex source-cadence refresh cycles
 continuously until explicit stop, records heartbeat and terminal lifecycle
-state, persists current service health in `.halpha/state.sqlite`, and isolates
-recoverable source failures with per-source bounded exponential backoff.
+state, persists current service health in `.halpha/state.sqlite`, stores
+routine no-due and all-source no-change polling cycles in runtime state only,
+and isolates recoverable source failures with per-source bounded exponential
+backoff.
 
 Current implemented diagnostic finite-loop command:
 
@@ -127,8 +130,14 @@ export raw alert records, deliver notifications, trade, or access accounts.
 
 ## Cycle Manifest
 
-Monitor runtime writes one manifest per cycle under the configured monitor
-output directory. The path shape is:
+Explicit one-cycle and finite-loop diagnostic monitor paths write manifests
+under the configured monitor output directory. Resident source-cadence cycles
+write file manifests only when source evidence changed or when bounded failure
+diagnostics are needed. Routine no-due and all-source no-change source-cadence
+cycles persist to `.halpha/state.sqlite` only; their cycle index uses
+`.halpha/state.sqlite` as the `cycle_manifest` ref.
+
+The file-backed path shape is:
 
 ```text
 runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json
@@ -151,13 +160,17 @@ Required manifest fields:
 - `source_artifacts`: linked product-run artifact refs when available.
 - `warnings`, `errors`: bounded actionable strings.
 
-Resident source-cadence manifests also include `source_cadence` with due
+Resident source-cadence file manifests also include `source_cadence` with due
 sources, changed sources, failed sources, per-source results, and the broad
 material/report/Codex tasks excluded from the fast path.
 
 The cycle manifest stores references and counts. It must not embed full raw
 streams, full reusable stores, full Codex context, raw user-state files, or
 private local values.
+
+File-backed source-cadence diagnostic cycle directories are retained as a
+bounded local window. Current retention keeps the latest 20 cycle directories
+under `runs/monitor/cycles/`.
 
 ## Alert Archive
 
