@@ -153,9 +153,11 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     commands: list[list[str]] = []
+    captured_env: list[dict[str, str]] = []
 
     def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
         commands.append(command)
+        captured_env.append(dict(kwargs.get("env") or {}))
         return _FakeProcess(
             stdout="\n".join(
                 [
@@ -198,6 +200,12 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
         "source": "daily_report_schedule",
     }
     assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>", "--no-codex"]
+    assert captured_env
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_SOURCE"] == "Schedule"
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_INTENT"] == "run_no_codex"
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_JOB_ID"] == job_id
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_SCHEDULE_ID"] == "daily_report"
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_DISPATCH_KIND"] == "manual"
     assert schedule_response.json()["last_job_id"] == job_id
     assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path), "--no-codex"]]
     assert str(tmp_path) not in trigger_response.text

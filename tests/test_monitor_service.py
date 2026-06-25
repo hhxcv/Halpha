@@ -285,7 +285,7 @@ def _pipeline_factory(
 ):
     state = {"count": 0}
 
-    def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+    def pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
         state["count"] += 1
         source_key = _enabled_source(config)
         if calls is not None:

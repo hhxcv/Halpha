@@ -57,6 +57,7 @@ from halpha.runtime.monitor_service import (
 )
 from halpha.outcome.outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
 from halpha.runtime.pipeline_contracts import PipelineError
+from halpha.runtime.run_classification import run_trigger_from_env
 from halpha.pipeline_stages import StageSelectionError
 from halpha.pipeline import run_pipeline, run_pipeline_stage
 from halpha.product.product_validation_inspection import inspect_product_validation
@@ -419,6 +420,10 @@ def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = N
             config_path=config_path,
             until_stage=until_stage,
             skip_codex=no_codex,
+            run_trigger=run_trigger_from_env(
+                default_source="CLI",
+                default_intent=_run_command_intent(no_codex=no_codex, until_stage=until_stage),
+            ),
         )
     except StageSelectionError as exc:
         LOGGER.warning(
@@ -480,6 +485,14 @@ def _run(config_arg: str, *, no_codex: bool = False, until_stage: str | None = N
     return result.exit_code
 
 
+def _run_command_intent(*, no_codex: bool, until_stage: str | None) -> str:
+    if until_stage is not None:
+        return "run_until"
+    if no_codex:
+        return "run_no_codex"
+    return "run"
+
+
 def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
     config_path = Path(config_arg)
     run_dir = Path(run_dir_arg)
@@ -502,6 +515,11 @@ def _stage(stage_name: str, config_arg: str, run_dir_arg: str) -> int:
             config_path=config_path,
             run_dir=run_dir,
             stage=stage_name,
+            run_trigger=run_trigger_from_env(
+                default_source="CLI",
+                default_intent="stage_rerun",
+                extra={"requested_stage": stage_name},
+            ),
         )
     except StageSelectionError as exc:
         _log_command_failed("stage", stage="cli", reason=str(exc), stage_name=stage_name, exit_code=2)

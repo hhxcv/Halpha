@@ -881,9 +881,15 @@ def test_command_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) 
             "manifest: runs/run-api/run_manifest.json",
         ]
     )
+    captured_env: list[dict[str, str]] = []
+
+    def fake_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_env.append(dict(kwargs.get("env") or {}))
+        return _FakeProcess(stdout=stdout, stderr="", returncode=0)
+
     monkeypatch.setattr(
         "halpha.runtime.command_jobs.subprocess.Popen",
-        lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
+        fake_popen,
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -897,6 +903,10 @@ def test_command_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) 
     assert completed["requested_by"] == "Dashboard"
     assert completed["requester"] == {"source": "dashboard_api"}
     assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
+    assert captured_env
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_SOURCE"] == "Dashboard"
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_INTENT"] == "run_no_codex"
+    assert captured_env[0]["HALPHA_RUN_TRIGGER_JOB_ID"] == completed["job_id"]
     assert str(tmp_path) not in create_response.text
 
 

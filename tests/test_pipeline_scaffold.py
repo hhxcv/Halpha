@@ -74,6 +74,55 @@ def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) ->
     _assert_manifest_timeline(manifest)
 
 
+def test_pipeline_manifest_records_default_product_run_classification(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers(),
+        now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
+    )
+
+    assert result.succeeded is True
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["run_kind"] == "product_report"
+    assert manifest["trigger"] == {"source": "CLI", "intent": "run"}
+    assert manifest["disposal_class"] == "report_archive"
+
+
+def test_pipeline_manifest_records_monitor_reassessment_classification(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="refresh_data",
+        skip_codex=True,
+        stage_handlers=_noop_handlers(),
+        now=datetime(2026, 6, 5, 0, 0, tzinfo=timezone.utc),
+        run_trigger={
+            "source": "Monitor",
+            "intent": "monitor_reassessment",
+            "monitor_cycle_id": "cycle-1",
+            "source_keys": ["macro_calendar", "text"],
+        },
+    )
+
+    assert result.succeeded is True
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["run_kind"] == "monitor_reassessment"
+    assert manifest["trigger"] == {
+        "source": "Monitor",
+        "intent": "monitor_reassessment",
+        "monitor_cycle_id": "cycle-1",
+        "source_keys": ["macro_calendar", "text"],
+    }
+    assert manifest["disposal_class"] == "monitor_reassessment_archive"
+
+
 def test_pipeline_stage_registry_selection_helpers_match_stage_order() -> None:
     assert stages_after("generate_report") == ["finalize_run"]
 
@@ -315,6 +364,14 @@ def test_stage_rerun_creates_derived_run_and_reuses_only_upstream_artifacts(tmp_
     assert (child.run.analysis_dir / "text_event_records.json").read_text(encoding="utf-8") == "child records"
 
     manifest = _manifest(child.run.run_dir)
+    assert manifest["run_kind"] == "stage_rerun"
+    assert manifest["trigger"] == {
+        "source": "CLI",
+        "intent": "stage_rerun",
+        "parent_run_id": parent.run.run_id,
+        "requested_stage": "build_source_evidence",
+    }
+    assert manifest["disposal_class"] == "derived_archive"
     assert manifest["parent_run_id"] == parent.run.run_id
     assert manifest["lineage"]["parent_run_id"] == parent.run.run_id
     assert manifest["stage_rerun"]["requested_stage"] == "build_source_evidence"
@@ -382,6 +439,12 @@ def test_failed_run_resumes_in_place_from_failed_operation(tmp_path: Path) -> No
     assert result.run.run_dir == failed.run.run_dir
     manifest = _manifest(result.run.run_dir)
     assert manifest["errors"] == []
+    assert manifest["stage_rerun"]["trigger"] == {
+        "source": "CLI",
+        "intent": "stage_resume",
+        "parent_run_id": failed.run.run_id,
+        "requested_stage": "refresh_data",
+    }
     assert _stage(manifest, "refresh_data")["mode"] == "resume"
     assert _stage(manifest, "refresh_data")["status"] == "succeeded"
     assert _task(manifest, "collect_text_events")["mode"] == "resume"
@@ -563,6 +626,9 @@ def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsy
     run_dir = _single_run_dir(tmp_path)
     manifest = _manifest(run_dir)
     assert manifest["status"] == "succeeded"
+    assert manifest["run_kind"] == "validation_run"
+    assert manifest["trigger"] == {"source": "CLI", "intent": "run_no_codex"}
+    assert manifest["disposal_class"] == "validation_archive"
     assert manifest["validation"] == {
         "mode": "run",
         "skip_codex": True,
@@ -586,6 +652,29 @@ def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsy
     assert (run_dir / "analysis" / "product_contract_validation.json").is_file()
     assert not (run_dir / "report" / "report.md").exists()
     assert "report" not in manifest["artifacts"]
+
+
+def test_cli_run_manifest_uses_command_job_trigger_environment(tmp_path: Path, capsys, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    monkeypatch.setattr("halpha.collectors.market.urlopen", _fake_urlopen)
+    monkeypatch.setattr("halpha.collectors.text.urlopen", _fake_rss_urlopen)
+    monkeypatch.setenv("HALPHA_RUN_TRIGGER_SOURCE", "Dashboard")
+    monkeypatch.setenv("HALPHA_RUN_TRIGGER_INTENT", "run_until")
+    monkeypatch.setenv("HALPHA_RUN_TRIGGER_JOB_ID", "20260620T000000Z_deadbeef")
+
+    exit_code = main(["run", "--config", str(config_path), "--until", "refresh_data"])
+
+    assert exit_code == 0
+    capsys.readouterr()
+    run_dir = _single_run_dir(tmp_path)
+    manifest = _manifest(run_dir)
+    assert manifest["run_kind"] == "validation_run"
+    assert manifest["trigger"] == {
+        "source": "Dashboard",
+        "intent": "run_until",
+        "job_id": "20260620T000000Z_deadbeef",
+    }
+    assert manifest["disposal_class"] == "validation_archive"
 
 
 def test_cli_run_until_marks_later_stages_not_run(tmp_path: Path, capsys, monkeypatch) -> None:

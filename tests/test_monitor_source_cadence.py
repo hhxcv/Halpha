@@ -197,12 +197,13 @@ def test_monitor_source_cycle_batches_multiple_changed_sources_into_one_run(tmp_
     config_path = _write_config(tmp_path, text_enabled=True, macro_enabled=True)
     config = load_config(config_path)
     calls: list[str] = []
+    run_triggers: list[dict[str, Any]] = []
 
     result = run_monitor_source_cycle(
         config,
         config_path=config_path,
         now=_time(),
-        pipeline_runner=_decision_pipeline(tmp_path),
+        pipeline_runner=_decision_pipeline(tmp_path, run_triggers=run_triggers),
         source_refresher=_source_refresher(calls=calls),
     )
 
@@ -219,6 +220,14 @@ def test_monitor_source_cycle_batches_multiple_changed_sources_into_one_run(tmp_
     assert states["text"]["status"] == "changed"
     assert states["macro_calendar"]["latest_run_id"] == "run-reassessment-1"
     assert states["text"]["latest_run_id"] == "run-reassessment-1"
+    assert run_triggers == [
+        {
+            "source": "Monitor",
+            "intent": "monitor_reassessment",
+            "monitor_cycle_id": result.cycle_id,
+            "source_keys": ["macro_calendar", "text"],
+        }
+    ]
 
 
 def test_monitor_source_cycle_caps_per_source_failure_backoff(tmp_path: Path) -> None:
@@ -366,10 +375,12 @@ def _source_refresher(
     return refresh
 
 
-def _decision_pipeline(tmp_path: Path):
-    def pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+def _decision_pipeline(tmp_path: Path, *, run_triggers: list[dict[str, Any]] | None = None):
+    def pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
         assert until_stage == "build_materials"
         assert skip_codex is True
+        if run_triggers is not None:
+            run_triggers.append(dict(run_trigger or {}))
         return _run_result(tmp_path, source_key="reassessment", succeeded=True)
 
     return pipeline

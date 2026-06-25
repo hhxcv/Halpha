@@ -229,7 +229,7 @@ def test_monitor_cycle_uses_default_personalized_stage_and_no_codex(tmp_path: Pa
     config = load_config(config_path)
     calls: list[dict[str, object]] = []
 
-    def fake_pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+    def fake_pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
         calls.append({"until_stage": until_stage, "skip_codex": skip_codex})
         return _pipeline_result(
             tmp_path,
@@ -255,7 +255,7 @@ def test_monitor_run_once_records_pipeline_failure(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
 
-    def failed_pipeline(config, *, config_path, until_stage, skip_codex):  # noqa: ANN001
+    def failed_pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
         return _pipeline_result(
             tmp_path,
             status="failed",

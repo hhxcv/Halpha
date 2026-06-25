@@ -228,6 +228,16 @@ Required `runs` fields:
 - `warning_count`
 - `error_count`
 - `manifest_path`
+- `run_kind`
+- `trigger_source`
+- `trigger_intent`
+- `disposal_class`
+- `trigger_job_id`
+- `trigger_schedule_id`
+- `trigger_monitor_cycle_id`
+- `trigger_source_keys`
+- `trigger_parent_run_id`
+- `trigger_requested_stage`
 
 Required `run_stages` fields:
 

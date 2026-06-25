@@ -259,6 +259,11 @@ def _run_monitor_cycle_unlocked(
             config_path=config_path,
             until_stage=settings.target_stage,
             skip_codex=settings.no_codex,
+            run_trigger={
+                "source": "Monitor",
+                "intent": "monitor_cycle",
+                "monitor_cycle_id": cycle_id,
+            },
         )
     except StageSelectionError as exc:
         reason = str(exc)
@@ -567,6 +572,12 @@ def _run_monitor_source_cycle_unlocked(
                 config_path=config_path,
                 until_stage=settings.target_stage,
                 skip_codex=settings.no_codex,
+                run_trigger={
+                    "source": "Monitor",
+                    "intent": "monitor_reassessment",
+                    "monitor_cycle_id": cycle_id,
+                    "source_keys": changed_sources,
+                },
             )
         except Exception as exc:  # noqa: BLE001
             status = "partial"

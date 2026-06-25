@@ -774,6 +774,9 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     assert listed["run_dir"] == "runs/run-1"
     assert listed["status"] == "succeeded"
     assert listed["codex_status"] == "skipped"
+    assert listed["run_kind"] == "unknown"
+    assert listed["trigger"] == {"source": "unknown", "intent": "unknown"}
+    assert listed["disposal_class"] == "legacy_archive"
     assert listed["manifest"] == "runs/run-1/run_manifest.json"
     assert listed["integrity_state"] == {
         "status": "available",
@@ -791,6 +794,9 @@ def test_dashboard_runs_and_detail_endpoint_read_index_and_manifest(tmp_path: Pa
     assert detail["status"] == "available"
     assert detail["run_id"] == "run-1"
     assert detail["fields"]["manifest_status"] == "succeeded"
+    assert detail["fields"]["run_kind"] == "unknown"
+    assert detail["fields"]["trigger"] == {"source": "unknown", "intent": "unknown"}
+    assert detail["fields"]["disposal_class"] == "legacy_archive"
     assert detail["fields"]["report"] == "report/report.md"
     assert detail["fields"]["report_state"] == {"status": "available", "artifact": "report/report.md"}
     assert detail["fields"]["codex"]["status"] == "skipped"

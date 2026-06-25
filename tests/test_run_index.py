@@ -60,7 +60,8 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
     with closing(sqlite3.connect(index_path)) as connection:
         run_row = connection.execute(
             """
-            SELECT run_id, run_dir, config_path, status, codex_status, manifest_path
+            SELECT run_id, run_dir, config_path, status, codex_status, manifest_path, run_kind, trigger_source,
+                   trigger_intent, disposal_class
             FROM runs
             WHERE run_id = ?
             """,
@@ -83,6 +84,10 @@ def test_run_index_records_successful_run_metadata(tmp_path: Path) -> None:
         "succeeded",
         "not_run",
         f"runs/{result.run.run_id}/run_manifest.json",
+        "validation_run",
+        "CLI",
+        "run_until",
+        "validation_archive",
     )
     assert latest["latest_run"] == result.run.run_id
     assert latest["latest_successful_run"] == result.run.run_id
@@ -332,7 +337,7 @@ def test_run_index_task_migration_uses_distinct_runtime_version(tmp_path: Path) 
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'run_tasks'"
         ).fetchone()
 
-    assert versions == [1, 2, 6, 9, 14, 15]
+    assert versions == [1, 2, 6, 9, 14, 15, 16]
     assert run_tasks == ("run_tasks",)
 
 
