@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+import shutil
 from tempfile import TemporaryDirectory
 import time
 from typing import Any, Callable
@@ -40,6 +41,7 @@ DEFAULT_MONITOR_SLOW_SOURCE_CADENCE_SECONDS = 3600
 ALERT_DECISIONS_ARTIFACT = "analysis/alert_decisions.json"
 MONITOR_SOURCE_KEYS = ("derivatives", "macro_calendar", "market", "onchain_flow", "text")
 SLOW_MONITOR_SOURCE_KEYS = {"macro_calendar", "onchain_flow"}
+MONITOR_DIAGNOSTIC_CYCLE_DIR_LIMIT = 20
 SOURCE_REFRESH_TASKS = {
     "derivatives": ("collect_derivatives_market_data", "sync_derivatives_market_history"),
     "macro_calendar": ("collect_macro_calendar_data", "sync_macro_calendar_history"),
@@ -89,7 +91,7 @@ class MonitorCycleResult:
     status: str
     target_stage: str
     no_codex: bool
-    manifest_path: Path
+    manifest_path: Path | None
     run_id: str | None
     run_dir: Path | None
     run_manifest_path: Path | None
@@ -399,9 +401,7 @@ def _run_monitor_source_cycle_unlocked(
     started_at = _coerce_utc(now or datetime.now(timezone.utc))
     cycle_id = cycle_id or _cycle_id(started_at)
     output_dir = _resolve_output_dir(settings.output_dir, config_path=config_path)
-    cycle_dir = _unique_cycle_dir(output_dir / "cycles", cycle_id)
-    cycle_id = cycle_dir.name
-    manifest_path = cycle_dir / "monitor_cycle_manifest.json"
+    manifest_path: Path | None = None
     base = artifact_base(config_path)
     output_ref = _portable_path(output_dir, base=base)
     repository = MonitorStateRepository(config_path=config_path)
@@ -458,7 +458,6 @@ def _run_monitor_source_cycle_unlocked(
         "warnings": [],
         "errors": [],
     }
-    write_json(manifest_path, manifest)
     LOGGER.info(
         "Monitor source cycle started.",
         extra={
@@ -619,7 +618,13 @@ def _run_monitor_source_cycle_unlocked(
             "source_results": source_results,
         }
     )
-    write_json(manifest_path, manifest)
+    if _source_cycle_needs_manifest(status):
+        cycle_dir = _unique_cycle_dir(output_dir / "cycles", cycle_id)
+        cycle_id = cycle_dir.name
+        manifest["cycle_id"] = cycle_id
+        manifest_path = cycle_dir / "monitor_cycle_manifest.json"
+        write_json(manifest_path, manifest)
+        _prune_monitor_cycle_dirs(output_dir / "cycles")
     _persist_monitor_cycle(config_path=config_path, manifest=manifest, manifest_path=manifest_path, output_dir=output_dir, base=base)
     LOGGER.info(
         "Monitor source cycle finished.",
@@ -1325,6 +1330,35 @@ def _unique_cycle_dir(parent: Path, cycle_id: str) -> Path:
     return candidate
 
 
+def _source_cycle_needs_manifest(status: str) -> bool:
+    return status not in {"no_due_sources", "no_change"}
+
+
+def _prune_monitor_cycle_dirs(cycles_dir: Path) -> None:
+    limit = max(0, int(MONITOR_DIAGNOSTIC_CYCLE_DIR_LIMIT))
+    if not cycles_dir.exists():
+        return
+    cycle_dirs = sorted((path for path in cycles_dir.iterdir() if path.is_dir()), key=_cycle_dir_sort_key)
+    stale = cycle_dirs[:-limit] if limit else cycle_dirs
+    try:
+        resolved_root = cycles_dir.resolve()
+    except OSError:
+        return
+    for path in stale:
+        try:
+            path.resolve().relative_to(resolved_root)
+        except (OSError, ValueError):
+            continue
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def _cycle_dir_sort_key(path: Path) -> tuple[int, str]:
+    try:
+        return path.stat().st_mtime_ns, path.name
+    except OSError:
+        return 0, path.name
+
+
 def _cycle_id(now: datetime) -> str:
     return f"cycle-{now.strftime('%Y%m%dT%H%M%S%fZ')}"
 
@@ -1419,7 +1453,7 @@ def _persist_monitor_cycle(
     *,
     config_path: Path,
     manifest: dict[str, Any],
-    manifest_path: Path,
+    manifest_path: Path | None,
     output_dir: Path,
     base: Path,
 ) -> None:
@@ -1459,14 +1493,15 @@ def _persist_monitor_archive(
 def _monitor_cycle_state_record(
     manifest: dict[str, Any],
     *,
-    manifest_path: Path,
+    manifest_path: Path | None,
     output_dir: Path,
     base: Path,
 ) -> dict[str, Any]:
+    cycle_manifest_ref = _portable_path(manifest_path, base=base) if manifest_path is not None else MONITOR_STATE_STORE_ARTIFACT
     return {
         "cycle_id": _clean_text(manifest.get("cycle_id")),
         "monitor_output_dir": _portable_path(output_dir, base=base),
-        "cycle_manifest": _portable_path(manifest_path, base=base),
+        "cycle_manifest": cycle_manifest_ref,
         "cycle_mode": _clean_text(manifest.get("cycle_mode")),
         "loop_id": manifest.get("loop_id") if isinstance(manifest.get("loop_id"), str) else None,
         "cycle_sequence": manifest.get("cycle_sequence"),

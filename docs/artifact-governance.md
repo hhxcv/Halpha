@@ -470,7 +470,9 @@ Monitor artifacts:
 - `runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json`
 - `.halpha/state.sqlite`
 
-Monitor cycle manifests are immutable local evidence. Monitor indexes, alert
+File-backed monitor cycle manifests are immutable local evidence for explicit,
+diagnostic, changed, or failed cycles. Routine no-due and all-source no-change
+resident polling cycles are runtime-state records only. Monitor indexes, alert
 archive records, cooldown state, and health query state are mutable local
 operational state in `.halpha/state.sqlite`. They are not Codex input by
 default.

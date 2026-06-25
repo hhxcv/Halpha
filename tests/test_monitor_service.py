@@ -148,13 +148,15 @@ def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_pat
     manifests = _cycle_manifests(tmp_path)
     source_states = {state["source_key"]: state for state in health_state["source_states"]}
 
-    assert len(manifests) == 2
-    assert [manifest["status"] for manifest in manifests] == ["partial", "no_due_sources"]
+    assert len(manifests) == 1
+    assert [manifest["status"] for manifest in manifests] == ["partial"]
     assert {manifest["cycle_mode"] for manifest in manifests} == {"source_cadence"}
     assert {manifest["trigger_source"] for manifest in manifests} == {"monitor_service"}
     assert pipeline_calls == []
     assert source_calls == ["text"]
     assert health_state["cycle_count"] == 2
+    assert health_state["latest_cycle_status"] == "no_due_sources"
+    assert health_state["latest_cycle_manifest"] == ".halpha/state.sqlite"
     assert health_state["failed_cycle_count"] == 0
     assert health_state["service"]["status"] == "stopped"
     assert health_state["service"]["consecutive_failures"] == 0

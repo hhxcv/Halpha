@@ -51,7 +51,8 @@ Primary sources:
   stdout plus deterministic post-processing.
 - `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/`:
   reusable local stores and metadata.
-- `runs/monitor/`: immutable monitor cycle manifests.
+- `runs/monitor/`: bounded file-backed monitor cycle diagnostics; routine
+  no-due and all-source no-change polling state lives in `.halpha/state.sqlite`.
 - `.halpha/state.sqlite`: run index, local command jobs, daily report schedule
   dispatches, monitor cycle indexes, alert archive records, cooldown state,
   monitor service health query state, Dashboard service lifecycle, and Dashboard UI
