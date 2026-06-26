@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
 
 from halpha.codex.input_budget import (
@@ -10,6 +10,7 @@ from halpha.codex.input_budget import (
     update_codex_input_manifest,
 )
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
+from halpha.time_display import format_display_timestamp
 
 
 STAGE_NAME = "build_codex_context"
@@ -25,7 +26,7 @@ def build_codex_context(config: dict[str, Any], run: RunContext) -> list[str]:
     prompt = render_prompt(
         context,
         report_title=_report_title(config),
-        generated_at=_report_generated_at(run),
+        generated_at=_report_generated_at(config, run),
     )
 
     context_path = run.codex_context_dir / "context.md"
@@ -462,7 +463,7 @@ def _report_title(config: dict[str, Any]) -> str:
     return "每日市场情报简报"
 
 
-def _report_generated_at(run: RunContext) -> str:
+def _report_generated_at(config: dict[str, Any], run: RunContext) -> str:
     value = run.manifest.get("started_at")
     if not isinstance(value, str) or not value.strip():
         raise PipelineError(
@@ -484,8 +485,14 @@ def _report_generated_at(run: RunContext) -> str:
             stage=STAGE_NAME,
             exit_code=3,
         )
-    timestamp = parsed.astimezone(timezone(timedelta(hours=8)))
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S UTC+08:00")
+    try:
+        return format_display_timestamp(parsed, config)
+    except (TypeError, ValueError) as exc:
+        raise PipelineError(
+            "run_manifest.started_at must be a datetime or ISO 8601 timestamp with an offset.",
+            stage=STAGE_NAME,
+            exit_code=3,
+        ) from exc
 
 
 def _yaml_block(data: dict[str, Any]) -> str:

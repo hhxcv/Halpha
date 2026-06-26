@@ -508,7 +508,9 @@ def test_stage_rerun_rejects_missing_upstream_artifact(tmp_path: Path) -> None:
         )
 
 
-def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_path: Path) -> None:
+def test_pipeline_uses_configured_display_timezone_run_id_and_does_not_overwrite_existing_run_dir(
+    tmp_path: Path,
+) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     now = datetime(2026, 6, 5, 8, 30, tzinfo=timezone(timedelta(hours=8)))
@@ -517,8 +519,8 @@ def test_pipeline_uses_utc_run_id_and_does_not_overwrite_existing_run_dir(tmp_pa
     first = run_pipeline(config, config_path=config_path, stage_handlers=stage_handlers, now=now)
     second = run_pipeline(config, config_path=config_path, stage_handlers=stage_handlers, now=now)
 
-    assert first.run.run_id == "20260605T003000Z"
-    assert second.run.run_id == "20260605T003000Z-01"
+    assert first.run.run_id == "20260605T083000+0800"
+    assert second.run.run_id == "20260605T083000+0800-01"
     assert first.run.run_dir != second.run.run_dir
     assert first.run.manifest_path.exists()
     assert second.run.manifest_path.exists()

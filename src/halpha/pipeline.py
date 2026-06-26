@@ -40,6 +40,7 @@ from halpha.pipeline_stages import (
     validate_stage_graph as _validate_stage_graph,
 )
 from halpha.storage import artifact_base, config_base, display_path, ensure_directory, write_json
+from halpha.time_display import display_run_id
 
 
 LOGGER = logging.getLogger(__name__)
@@ -358,7 +359,7 @@ def _create_run_context(
     if not output_dir.is_absolute():
         output_dir = artifact_base(config_path) / output_dir
 
-    run_id = _run_id(now)
+    run_id = _run_id(now, config)
     run_dir = _unique_run_dir(output_dir, run_id)
     run_id = run_dir.name
 
@@ -1255,9 +1256,8 @@ def _clock(now: datetime | None) -> Callable[[], datetime]:
     return lambda: datetime.now(timezone.utc)
 
 
-def _run_id(now: datetime | None) -> str:
-    value = now or datetime.now(timezone.utc)
-    return value.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+def _run_id(now: datetime | None, config: dict[str, Any]) -> str:
+    return display_run_id(now, config)
 
 
 def _utc_timestamp(now: datetime | None = None) -> str:

@@ -103,7 +103,7 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Distinguish facts, assumptions, uncertainties, and judgment." in prompt
     assert "Use cautious language for market interpretation." in prompt
     assert "The first line must be a single H1 title" in prompt
-    assert "# Daily Market Brief（生成时间：2026-06-05 08:30:00 UTC+08:00）" in prompt
+    assert "# Daily Market Brief（生成时间：2026-06-05 08:30:00 Asia/Shanghai (UTC+08:00)）" in prompt
     assert "Do not create a separate title section." in prompt
     assert "Do not calculate or rewrite the generation time" in prompt
     assert "Avoid filler, generic disclaimers" in prompt

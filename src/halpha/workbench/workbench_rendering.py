@@ -13,7 +13,7 @@ def render_workbench_markdown(summary: dict[str, Any]) -> str:
         "# Halpha Workbench",
         "",
         f"- Status: `{summary.get('status') or 'unknown'}`",
-        f"- Generated at: `{summary.get('generated_at') or 'unknown'}`",
+        f"- Generated at: `{_display_generated_at(summary)}`",
         f"- Latest run: `{latest_fields.get('run_id') or 'none'}`",
         f"- Latest run status: `{latest_fields.get('run_status') or 'unknown'}`",
         f"- Report: {_markdown_artifact_link(summary, report.get('artifact'))} ({report.get('status') or 'unknown'})",
@@ -215,7 +215,7 @@ def render_workbench_html(summary: dict[str, Any]) -> str:
 <body>
   <h1>Halpha Workbench</h1>
   <p class="meta">Status: <code>{escape(str(summary.get("status") or "unknown"))}</code></p>
-  <p class="meta">Generated at: <code>{escape(str(summary.get("generated_at") or "unknown"))}</code></p>
+  <p class="meta">Generated at: <code>{escape(_display_generated_at(summary))}</code></p>
   <section>
     <h2>Latest Run</h2>
     <ul>
@@ -252,6 +252,17 @@ def render_workbench_html(summary: dict[str, Any]) -> str:
 
 def _section_fields(summary: dict[str, Any], key: str) -> dict[str, Any]:
     return _dict(_dict(summary.get(key)).get("fields"))
+
+
+def _display_generated_at(summary: dict[str, Any]) -> str:
+    display = _dict(summary.get("display"))
+    value = display.get("generated_at")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    value = summary.get("generated_at")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return "unknown"
 
 
 def _markdown_state_row(

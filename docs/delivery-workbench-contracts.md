@@ -70,6 +70,9 @@ Required top-level fields:
 
 - `artifact_type`: stable type identifier.
 - `generated_at`: UTC timestamp measured when the workbench artifact is built.
+- `display`: configured display timezone and user-visible generated time used
+  by `index.md` and `index.html`; this must not replace `generated_at` as the
+  stored timestamp.
 - `source_selection`: latest-run or explicit-run selection metadata.
 - `latest_run`: bounded run id, status, manifest ref, and report ref when
   available.

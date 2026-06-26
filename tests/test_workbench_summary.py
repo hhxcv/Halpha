@@ -39,6 +39,11 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     assert (tmp_path / "runs" / "workbench" / "latest" / "index.md").is_file()
     assert (tmp_path / "runs" / "workbench" / "latest" / "index.html").is_file()
     assert summary["status"] == "available"
+    assert summary["generated_at"] == "2026-06-20T00:06:00Z"
+    assert summary["display"] == {
+        "timezone": "Asia/Shanghai",
+        "generated_at": "2026-06-20 08:06:00 Asia/Shanghai (UTC+08:00)",
+    }
     assert summary["index_outputs"] == {
         "status": "available",
         "markdown": "runs/workbench/latest/index.md",
@@ -80,12 +85,14 @@ def test_workbench_summary_records_complete_local_state(tmp_path: Path) -> None:
     markdown = (tmp_path / "runs" / "workbench" / "latest" / "index.md").read_text(encoding="utf-8")
     html = (tmp_path / "runs" / "workbench" / "latest" / "index.html").read_text(encoding="utf-8")
     assert "# Halpha Workbench" in markdown
+    assert "Generated at: `2026-06-20 08:06:00 Asia/Shanghai (UTC+08:00)`" in markdown
     assert "../../run-1/report/report.md" in markdown
     assert "Decision and watch" in markdown
     assert "Product validation" in markdown
     assert "failed checks: 0" in markdown
     assert "degraded lifecycle: 1" in markdown
     assert "<table>" in html
+    assert "Generated at: <code>2026-06-20 08:06:00 Asia/Shanghai (UTC+08:00)</code>" in html
     assert "../../run-1/report/report.md" in html
     assert "Product validation" in html
     assert "retired lifecycle: 1" in html

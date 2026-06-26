@@ -118,10 +118,11 @@ frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
 `/assets/dashboard_strategy_chart.js`, `/assets/dashboard_monitor.js`, and
 `/assets/dashboard.js`.
 
-Dashboard timestamp display uses `dashboard.display_timezone` when configured,
-falls back to `run.timezone`, and defaults to `Asia/Shanghai`. This display
-setting changes the local UI rendering of ISO timestamps; it must not rewrite
-source artifacts or stored UTC timestamps.
+User-visible timestamp display uses `dashboard.display_timezone` when
+configured, falls back to `run.timezone`, and defaults to `Asia/Shanghai`.
+This display setting changes local UI rendering, report prompt timestamps, and
+other human-facing labels; it must not rewrite source artifacts or stored UTC
+timestamps.
 
 Implemented dashboard views expose:
 

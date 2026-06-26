@@ -247,6 +247,20 @@ def test_load_config_accepts_dashboard_display_timezone(tmp_path: Path) -> None:
     assert config["dashboard"] == {"display_timezone": "UTC"}
 
 
+def test_load_config_rejects_invalid_run_timezone(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "  output_dir: runs",
+            "  output_dir: runs\n  timezone: Invalid/Zone",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="run.timezone is not an available IANA timezone"):
+        load_config(config_path)
+
+
 def test_load_config_accepts_logging_output_dir(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
 
