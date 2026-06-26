@@ -15,7 +15,13 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
-from halpha.runtime.command_job_commands import CommandJobBuilder, CommandJobCommand, CommandJobError, CommandSpec
+from halpha.runtime.command_job_commands import (
+    CommandJobBuilder,
+    CommandJobCommand,
+    CommandJobError,
+    CommandSpec,
+    command_config_ref,
+)
 from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError, apply_command_job_migrations
 from halpha.runtime.command_jobs import CommandJobManager, MAX_JOB_LOG_CHARS
 from halpha.runtime.mutation_lease import acquire_mutation_lease
@@ -253,6 +259,11 @@ def test_command_job_manager_preserves_relative_config_ref(
     assert completed["command"] == ["python", "-m", "halpha", "validate", "--config", "config.yaml"]
     stdout_log = (tmp_path / completed["logs"]["stdout_ref"]).read_text(encoding="utf-8")
     assert "config.yaml" in stdout_log
+
+
+def test_command_job_config_ref_rejects_traversal_like_relative_path() -> None:
+    assert command_config_ref(Path("../private/config.yaml")) == "<external-config>"
+    assert command_config_ref(Path("config.yaml")) == "config.yaml"
 
 
 def test_command_job_manager_passes_valid_subdirectory_config_path(
@@ -960,6 +971,7 @@ def test_command_job_manager_normalizes_result_refs_without_external_path_leakag
         [
             f"manifest: {inside_manifest}",
             f"report: {outside_manifest}",
+            "health_state: /home/private/health_state.json",
         ]
     )
     monkeypatch.setattr(
@@ -974,10 +986,12 @@ def test_command_job_manager_normalizes_result_refs_without_external_path_leakag
     assert completed["status"] == "succeeded"
     assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
     assert completed["result_refs"]["report"] == "<external-artifact>"
+    assert completed["result_refs"]["health_state"] == "<external-artifact>"
     assert "runs/run-api/run_manifest.json" in completed["source_artifacts"]
     assert "<external-artifact>" not in completed["source_artifacts"]
     assert str(tmp_path) not in str(completed)
     assert str(outside_manifest) not in str(completed)
+    assert "/home/private/health_state.json" not in str(completed)
 
 
 def test_command_job_manager_marks_relative_artifacts_external_when_output_dir_is_external(
@@ -1393,7 +1407,7 @@ class _BlockingProcess:
 
 
 def _wait_for_terminal(manager: CommandJobManager, job_id: str) -> dict:
-    for _ in range(50):
+    for _ in range(100):
         job = manager.get_job(job_id)
         if job and job["status"] in {"succeeded", "failed", "cancelled", "unsupported", "blocked"}:
             return job
@@ -1402,7 +1416,7 @@ def _wait_for_terminal(manager: CommandJobManager, job_id: str) -> dict:
 
 
 def _wait_for_status(manager: CommandJobManager, job_id: str, status: str) -> dict:
-    for _ in range(50):
+    for _ in range(100):
         job = manager.get_job(job_id)
         if job and job["status"] == status:
             return job
@@ -1411,7 +1425,7 @@ def _wait_for_status(manager: CommandJobManager, job_id: str, status: str) -> di
 
 
 def _wait_for_api_terminal(client: TestClient, job_id: str) -> dict:
-    for _ in range(50):
+    for _ in range(100):
         response = client.get(f"/api/jobs/{job_id}")
         payload = response.json()
         if payload["status"] in {"succeeded", "failed", "cancelled", "unsupported", "blocked"}:

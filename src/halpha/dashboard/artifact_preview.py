@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from halpha.storage import artifact_base
+from halpha.storage import EXTERNAL_ARTIFACT_REF, artifact_base, display_path
 
 
 MAX_PREVIEW_CHARS = 20_000
@@ -51,18 +51,21 @@ def _resolve_preview_path(artifact_path: str, *, base: Path) -> tuple[Path, str]
         return _artifact_preview_error("", "rejected", "artifact path is required.")
     raw_path = artifact_path.replace("\\", "/").strip()
     path = Path(raw_path)
+    safe_input_ref = display_path(path)
     if path.is_absolute():
-        return _artifact_preview_error(raw_path, "rejected", "artifact path must be repo-relative.")
+        return _artifact_preview_error(EXTERNAL_ARTIFACT_REF, "rejected", "artifact path must be repo-relative.")
     parts = path.parts
     if any(part in {"", ".", ".."} for part in parts):
-        return _artifact_preview_error(raw_path, "rejected", "artifact path must not contain traversal segments.")
+        return _artifact_preview_error(safe_input_ref, "rejected", "artifact path must not contain traversal segments.")
+    if safe_input_ref == EXTERNAL_ARTIFACT_REF:
+        return _artifact_preview_error(EXTERNAL_ARTIFACT_REF, "rejected", "artifact path must be repo-relative.")
     if not parts or parts[0] not in {"runs", "data"}:
-        return _artifact_preview_error(raw_path, "rejected", "artifact path must start with runs/ or data/.")
+        return _artifact_preview_error(safe_input_ref, "rejected", "artifact path must start with runs/ or data/.")
     resolved = (base / path).resolve()
     try:
         resolved.relative_to(base.resolve())
     except ValueError:
-        return _artifact_preview_error(raw_path, "rejected", "artifact path must stay under the configured project root.")
+        return _artifact_preview_error(EXTERNAL_ARTIFACT_REF, "rejected", "artifact path must stay under the configured project root.")
     return resolved, path.as_posix()
 
 

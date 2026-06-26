@@ -307,6 +307,21 @@ def test_service_lifecycle_redacts_private_error_values(tmp_path: Path) -> None:
     }
 
 
+def test_service_lifecycle_rejects_traversal_like_config_ref(tmp_path: Path) -> None:
+    repository = ServiceLifecycleRepository(runtime_root=tmp_path)
+    result, ownership = repository.attempt_start_ownership(
+        "dashboard",
+        config_ref="../private/config.yaml",
+        config_digest="digest-a",
+        now="2026-06-05T00:00:00Z",
+    )
+    assert ownership is not None
+    ownership.release()
+
+    assert result.state is not None
+    assert result.state["config_ref"] == "<local-config>"
+
+
 def test_service_lifecycle_migration_uses_distinct_runtime_version(tmp_path: Path) -> None:
     with closing(open_runtime_state_connection(runtime_root=tmp_path)) as connection:
         apply_command_job_migrations(connection, now="2026-06-05T00:00:00Z")

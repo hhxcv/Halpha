@@ -23,7 +23,7 @@ from halpha.monitor.monitoring import (
 from halpha.monitor.state_store import MonitorStateRepository
 from halpha.pipeline import run_pipeline
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
-from halpha.storage import artifact_base
+from halpha.storage import artifact_base, display_path
 
 
 MONITOR_SERVICE_ROLE = "monitor"
@@ -570,20 +570,14 @@ def _monitor_service_cycle_id(instance_id: str, cycle_sequence: int) -> str:
 def _monitor_output_ref(output_dir: Path, *, config_path: Path) -> str:
     base = artifact_base(config_path)
     resolved = output_dir if output_dir.is_absolute() else base / output_dir
-    try:
-        return resolved.resolve().relative_to(base.resolve()).as_posix()
-    except ValueError:
-        return resolved.name
+    return display_path(resolved, base=base)
 
 
 def _monitor_run_manifest_ref(path: Path | None, *, config_path: Path) -> str | None:
     if path is None:
         return None
     base = artifact_base(config_path)
-    try:
-        return path.resolve().relative_to(base.resolve()).as_posix()
-    except ValueError:
-        return path.name
+    return display_path(path, base=base)
 
 
 def _future_timestamp(seconds: float) -> str:

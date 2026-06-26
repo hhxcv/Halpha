@@ -11,7 +11,7 @@ from halpha.inspection_artifacts import inspection_overall_status as _overall_st
 from halpha.inspection_artifacts import read_inspection_json_object
 from halpha.outcome.outcome_history import OUTCOME_HISTORY_ARTIFACT, OUTCOME_HISTORY_STATE_ARTIFACT
 from halpha.data.run_index import RUN_INDEX_ARTIFACT, run_index_path, select_latest_run_record
-from halpha.storage import resolve_runtime_path, runtime_root
+from halpha.storage import display_path, resolve_runtime_path, runtime_root
 
 
 OUTCOME_TARGETS_ARTIFACT = "analysis/outcome_targets.json"
@@ -330,10 +330,7 @@ def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
 
 
 def _safe_path(path: Path, *, base: Path) -> str:
-    try:
-        return path.resolve().relative_to(base.resolve()).as_posix()
-    except (OSError, ValueError):
-        return path.name
+    return display_path(path, base=base)
 
 
 def _project_local_path(path: Path, *, base: Path) -> Path | None:

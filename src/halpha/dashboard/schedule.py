@@ -20,6 +20,7 @@ from halpha.dashboard.schedule_store import (
 from halpha.dashboard.time import parse_utc_timestamp
 from halpha.runtime.command_jobs import CommandJobManager
 from halpha.runtime.command_job_store import JOB_TERMINAL_STATUSES, CommandJobRepository, CommandJobStoreError
+from halpha.storage import display_path
 
 
 DAILY_REPORT_SCHEDULE_FILENAME = "daily_report_schedule.json"
@@ -719,7 +720,7 @@ def _config_digest(config: dict[str, Any], *, config_path: Path) -> str:
 
 def _config_ref(config_path: Path) -> str:
     path = Path(config_path)
-    return path.as_posix() if not path.is_absolute() else "<external-config>"
+    return display_path(path, external_ref="<external-config>") if not path.is_absolute() else "<external-config>"
 
 
 def _int_or_none(value: Any) -> int | None:

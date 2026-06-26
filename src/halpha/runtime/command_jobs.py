@@ -602,10 +602,8 @@ class CommandJobManager:
 
     def _safe_output_ref(self, value: str) -> str:
         path = Path(value.strip())
-        target = path if path.is_absolute() else self.base / path
-        try:
-            ref = target.resolve().relative_to(self.base.resolve()).as_posix()
-        except (OSError, ValueError):
+        ref = _safe_ref(path, base=self.base)
+        if ref == EXTERNAL_ARTIFACT_REF:
             return EXTERNAL_ARTIFACT_REF
         return REDACTED_ARTIFACT_REF if self._redact_text(ref) != ref else ref
 

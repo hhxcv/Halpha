@@ -414,12 +414,7 @@ def _unique_output_dir(output_dir: Path, run_id: str) -> Path:
 def _safe_path(path: Path | None) -> str | None:
     if path is None:
         return None
-    if not path.is_absolute():
-        return path.as_posix()
-    try:
-        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
-    except ValueError:
-        return path.name
+    return display_path(path)
 
 
 def _run_id(value: datetime) -> str:

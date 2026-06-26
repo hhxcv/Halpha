@@ -23,7 +23,7 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
 from halpha.dashboard.paths import dashboard_control_path
-from halpha.storage import config_base, safe_local_ref
+from halpha.storage import config_base, display_path, safe_local_ref
 
 
 DERIVATIVES_PERIOD_OPTIONS = tuple(
@@ -687,7 +687,7 @@ def dashboard_save_config_profile(
 def dashboard_config_ref(config_path: Path) -> str:
     path = Path(config_path)
     if not path.is_absolute():
-        return path.as_posix()
+        return display_path(path, external_ref="<external-config>")
     return "<external-config>"
 
 

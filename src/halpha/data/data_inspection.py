@@ -24,7 +24,7 @@ from halpha.inspection_artifacts import inspection_json_artifact_status as _arti
 from halpha.inspection_artifacts import inspection_overall_status as _overall_status
 from halpha.inspection_artifacts import inspection_plain_artifact_status as _plain_artifact_status
 from halpha.inspection_artifacts import read_inspection_json_object
-from halpha.storage import artifact_base
+from halpha.storage import artifact_base, display_path
 from halpha.utils.value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 from halpha.workbench.workbench import (
     DEFAULT_WORKBENCH_OUTPUT_DIR,
@@ -1229,10 +1229,7 @@ def _status_from_values(statuses: list[str]) -> str:
 
 
 def _safe_path(path: Path, *, base: Path) -> str:
-    try:
-        return path.resolve().relative_to(base.resolve()).as_posix()
-    except (OSError, ValueError):
-        return path.name
+    return display_path(path, base=base)
 
 
 def _project_local_path(path: Path, *, base: Path) -> Path | None:

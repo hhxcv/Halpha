@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from halpha.storage import read_json_object, resolve_local_ref, safe_local_ref
+from halpha.storage import EXTERNAL_ARTIFACT_REF, read_json_object, resolve_local_ref, safe_local_ref
 
 
-EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 
 

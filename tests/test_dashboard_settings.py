@@ -11,6 +11,7 @@ from halpha.dashboard.settings import (
     CONFIG_PROFILE_FIELDS,
     CONFIG_PROFILE_SECTIONS,
     _dashboard_config_temp_path,
+    dashboard_config_ref,
     dashboard_config_profile,
     dashboard_save_config_profile,
 )
@@ -172,6 +173,11 @@ def test_dashboard_settings_profile_does_not_expose_local_private_config_values(
     assert "https://cointelegraph.com/rss" not in profile_text
     assert "https://www.coindesk.com/arc/outboundfeeds/rss/" not in profile_text
     assert "user_state.local.yaml" not in profile_text
+
+
+def test_dashboard_config_ref_rejects_traversal_like_relative_path() -> None:
+    assert dashboard_config_ref(Path("../private/config.yaml")) == "<external-config>"
+    assert dashboard_config_ref(Path("config.yaml")) == "config.yaml"
 
 
 def test_dashboard_settings_save_requires_confirmation(tmp_path: Path) -> None:

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from halpha.storage import write_json
+from halpha.storage import EXTERNAL_ARTIFACT_REF, display_path, resolve_local_ref, safe_local_ref, write_json
 
 
 def test_write_json_preserves_stable_format(tmp_path: Path) -> None:
@@ -57,3 +57,34 @@ def test_write_json_keeps_existing_file_and_cleans_temp_on_replace_failure(
 
     assert path.read_text(encoding="utf-8") == '{"old": true}\n'
     assert list(tmp_path.glob(".artifact.json.*.tmp")) == []
+
+
+def test_display_path_keeps_runtime_local_refs(tmp_path: Path) -> None:
+    artifact = tmp_path / "runs" / "run-1" / "run_manifest.json"
+
+    assert display_path(artifact, base=tmp_path) == "runs/run-1/run_manifest.json"
+    assert display_path(Path("runs/run-1/run_manifest.json"), base=tmp_path) == "runs/run-1/run_manifest.json"
+
+
+def test_display_path_bounds_external_absolute_refs(tmp_path: Path) -> None:
+    outside = tmp_path.parent / "outside" / "private.txt"
+
+    assert display_path(outside, base=tmp_path) == EXTERNAL_ARTIFACT_REF
+    assert safe_local_ref(outside, base=tmp_path) == EXTERNAL_ARTIFACT_REF
+
+
+def test_display_path_bounds_windows_shaped_external_refs(tmp_path: Path) -> None:
+    windows_path = Path("C:/Users/private/project/config.yaml")
+
+    assert display_path(windows_path, base=tmp_path) == EXTERNAL_ARTIFACT_REF
+    assert safe_local_ref(windows_path, base=tmp_path) == EXTERNAL_ARTIFACT_REF
+
+
+def test_local_ref_helpers_reject_traversal_like_refs(tmp_path: Path) -> None:
+    rejected = resolve_local_ref("../private/config.yaml", base=tmp_path, rejected_name=".rejected")
+
+    assert rejected == tmp_path / ".rejected"
+    assert display_path(Path("."), base=tmp_path) == EXTERNAL_ARTIFACT_REF
+    assert safe_local_ref(Path("."), base=tmp_path) == EXTERNAL_ARTIFACT_REF
+    assert display_path(Path("../private/config.yaml"), base=tmp_path) == EXTERNAL_ARTIFACT_REF
+    assert safe_local_ref(Path("../private/config.yaml"), base=tmp_path) == EXTERNAL_ARTIFACT_REF
