@@ -629,6 +629,11 @@ Run automated tests:
 python -m pytest
 ```
 
+Each pytest invocation writes temporary test output under
+`test-output/pytest/<timestamp>/`. The test harness keeps the latest 10 pytest
+output directories and prunes older timestamped directories when a new pytest
+session starts.
+
 Run the local lint gate used by CI:
 
 ```bash
