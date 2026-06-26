@@ -93,6 +93,12 @@ directory unless an implemented config field explicitly selects another root.
 It must not be inferred separately from the config-file directory, dashboard
 port, monitor output directory, or schedule file location.
 
+Public refs are not raw filesystem paths. Refs under the runtime root remain
+relative. Refs outside that boundary, Windows-shaped absolute refs, and
+traversal-like refs are represented with bounded placeholders such as
+`<external-artifact>` or `<external-config>` while internal path resolution may
+still use the real configured `Path`.
+
 | Fact class | Authoritative owner | Current or derived refs |
 | --- | --- | --- |
 | Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |

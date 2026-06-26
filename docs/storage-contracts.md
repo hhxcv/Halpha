@@ -135,6 +135,22 @@ Legacy manifests without these fields are not classified archives. Readers
 must show them as `unknown` or `legacy`, not crash and not silently treat them
 as safe cleanup candidates.
 
+## Public Path References
+
+Public artifacts, Dashboard payloads, Workbench output, command-job records,
+report-visible evidence, and user-facing diagnostics use bounded local refs.
+Runtime-root-local files serialize as stable relative refs such as
+`runs/<run_id>/run_manifest.json` or `analysis/risk_assessment.json`.
+Absolute external paths, Windows-shaped absolute paths, traversal-like refs,
+and unrelated paths serialize as `<external-artifact>` unless the field has a
+more specific placeholder such as `<external-config>`.
+
+This contract applies only to public serialization. Internal `Path` values may
+still point at configured external stores when Halpha must read or write those
+stores. The public ref must not include drive letters, usernames, home
+directories, hostnames, private endpoint details, or absolute machine-local
+directory names.
+
 ## Shared Data
 
 Shared data is durable reusable input data. It lives outside per-run report

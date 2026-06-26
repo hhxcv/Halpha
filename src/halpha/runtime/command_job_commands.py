@@ -6,7 +6,7 @@ import sys
 from typing import Any
 
 from halpha.pipeline_stages import STAGE_ORDER
-from halpha.storage import safe_local_ref as _safe_ref
+from halpha.storage import display_path, safe_local_ref as _safe_ref
 
 
 CODEX_STAGE = "generate_report"
@@ -371,5 +371,5 @@ class CommandJobBuilder:
 def command_config_ref(config_path: Path) -> str:
     path = Path(config_path)
     if not path.is_absolute():
-        return path.as_posix()
+        return display_path(path, external_ref="<external-config>")
     return "<external-config>"

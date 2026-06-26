@@ -1158,6 +1158,24 @@ def test_dashboard_artifact_preview_rejects_unsafe_paths(tmp_path: Path) -> None
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_artifact_preview_bounds_absolute_path_rejections(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    absolute_path = tmp_path / "private" / "report.md"
+
+    absolute_response = client.get("/api/artifacts/preview", params={"path": str(absolute_path)})
+    windows_response = client.get("/api/artifacts/preview", params={"path": "C:/Users/private/report.md"})
+
+    for response in (absolute_response, windows_response):
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["status"] == "rejected"
+        assert payload["path"] == "<external-artifact>"
+    assert str(absolute_path) not in absolute_response.text
+    assert "C:/Users/private/report.md" not in windows_response.text
+
+
 def test_dashboard_artifact_preview_returns_malformed_json_error(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)

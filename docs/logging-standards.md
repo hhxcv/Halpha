@@ -34,6 +34,8 @@ Use stable references instead:
 - `intent`;
 - `status`;
 - bounded artifact refs such as `analysis/risk_assessment.json`;
+- bounded external placeholders such as `<external-artifact>` or
+  `<external-config>` when a local path is outside the runtime root;
 - counts, booleans, configured option names, and enum-like state values.
 
 Logging configuration redacts configured private values and config-local paths.

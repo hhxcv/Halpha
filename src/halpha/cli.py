@@ -1830,10 +1830,6 @@ def _workbench_inspect(config_arg: str) -> int:
 
 
 def _safe_local_display_path(path: Path) -> str:
-    try:
-        path.resolve().relative_to(Path.cwd().resolve())
-    except ValueError:
-        return path.name
     return display_path(path)
 
 

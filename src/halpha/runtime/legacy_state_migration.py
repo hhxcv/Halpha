@@ -31,7 +31,7 @@ from halpha.runtime.state_store import (
     runtime_state_path,
     runtime_state_transaction,
 )
-from halpha.storage import artifact_base, safe_local_ref
+from halpha.storage import artifact_base, display_path, safe_local_ref
 
 
 LEGACY_STATE_MIGRATION_SCHEMA_VERSION = 1
@@ -1252,7 +1252,7 @@ def _safe_config_ref(value: Any) -> str:
     path = Path(value)
     if path.is_absolute() or "://" in value:
         return "<external-config>"
-    return path.as_posix()
+    return display_path(path, external_ref="<external-config>")
 
 
 def _safe_error(exc: Exception) -> str:

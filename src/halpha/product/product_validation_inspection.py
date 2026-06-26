@@ -342,10 +342,6 @@ def _recovery_hints(checks: list[Any]) -> str:
 
 
 def _safe_display_path(path: Path, *, base: Path) -> str:
-    try:
-        path.resolve().relative_to(base.resolve())
-    except (OSError, ValueError):
-        return path.name
     return display_path(path, base=base)
 
 

@@ -23,7 +23,7 @@ from halpha.runtime.state_store import runtime_state_path
 from halpha.pipeline_stage_handlers import default_stage_handlers
 from halpha.pipeline_stages import StageSelectionError
 from halpha.pipeline import run_pipeline
-from halpha.storage import artifact_base, write_json
+from halpha.storage import artifact_base, display_path, write_json
 
 
 LOGGER = logging.getLogger(__name__)
@@ -1385,12 +1385,7 @@ def _coerce_utc(value: datetime) -> datetime:
 
 
 def _portable_path(path: Path, *, base: Path) -> str:
-    resolved_base = base.resolve()
-    resolved_path = path.resolve()
-    try:
-        return resolved_path.relative_to(resolved_base).as_posix()
-    except ValueError:
-        return path.name
+    return display_path(path, base=base)
 
 
 def _product_run_summary(result: RunResult, *, base: Path) -> dict[str, Any]:

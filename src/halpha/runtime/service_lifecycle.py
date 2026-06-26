@@ -21,6 +21,7 @@ from halpha.runtime.state_store import (
     runtime_state_path,
     runtime_state_transaction,
 )
+from halpha.storage import display_path
 
 
 SERVICE_LIFECYCLE_ARTIFACT = STATE_STORE_REF
@@ -871,9 +872,10 @@ def _safe_config_ref(value: str) -> str:
     if not text:
         return "unknown"
     lowered = text.lower()
-    if "\\" in text or ":/" in lowered or text.startswith(("/", "~")):
+    if "://" in lowered or text.startswith("~"):
         return "<local-config>"
-    return text[:200]
+    safe_ref = display_path(Path(text), external_ref="<local-config>")
+    return safe_ref[:200]
 
 
 def _last_error(error: str | None) -> dict[str, Any]:
