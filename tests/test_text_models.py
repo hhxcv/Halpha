@@ -104,7 +104,8 @@ def test_text_models_prepare_cli_writes_manifest_without_optional_nlp_dependenci
     assert exit_code == 0
     assert "Halpha text model preparation completed." in stdout
     assert "status: skipped" in stdout
-    assert "manifest: model_prepare_manifest.json" in stdout
+    expected_manifest = manifest_path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    assert f"manifest: {expected_manifest}" in stdout
     assert manifest_path.exists()
 
 

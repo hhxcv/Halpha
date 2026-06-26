@@ -44,7 +44,7 @@ def test_text_intel_processes_existing_raw_text_artifact(tmp_path: Path, capsys)
     assert manifest["artifact_type"] == "text_intelligence_manifest"
     assert manifest["status"] == "succeeded"
     assert manifest["inputs"]["mode"] == "existing_raw_artifact"
-    assert manifest["inputs"]["input"] == "raw_text_events.json"
+    assert manifest["inputs"]["input"] == input_path.resolve().relative_to(Path.cwd().resolve()).as_posix()
     assert manifest["artifacts"] == {
         "manifest": "manifest.json",
         "raw_text_events": "raw/text_events.json",

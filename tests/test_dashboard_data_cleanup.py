@@ -30,9 +30,11 @@ def test_dashboard_data_cleanup_requires_run_artifact_confirmation(tmp_path: Pat
 
 
 def test_dashboard_data_cleanup_blocks_external_shared_refs(tmp_path: Path) -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    external_storage_dir = project_root.parent / "external_ohlcv"
     config = {
         "run": {"output_dir": "runs"},
-        "market": {"ohlcv": {"storage_dir": str(tmp_path.parent / "external_ohlcv")}},
+        "market": {"ohlcv": {"storage_dir": str(external_storage_dir)}},
     }
     runs_payload = {"status": "available", "runs": [], "warnings": [], "errors": []}
     stores_payload = {
@@ -62,4 +64,4 @@ def test_dashboard_data_cleanup_blocks_external_shared_refs(tmp_path: Path) -> N
     assert shared["deletable"] is False
     assert shared["blocked_reason"] == "one or more refs are outside the shared-data deletion boundary."
     assert any(record["ref"] == "<external-artifact>" for record in shared["delete_refs"])
-    assert str(tmp_path.parent) not in str(plan)
+    assert str(external_storage_dir) not in str(plan)
