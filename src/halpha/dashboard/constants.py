@@ -1,4 +1,5 @@
 from __future__ import annotations
 
+from halpha.time_display import DEFAULT_DISPLAY_TIMEZONE
 
-DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = "Asia/Shanghai"
+DEFAULT_DASHBOARD_DISPLAY_TIMEZONE = DEFAULT_DISPLAY_TIMEZONE

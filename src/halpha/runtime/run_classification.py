@@ -219,7 +219,7 @@ def _safe_label(value: Any, *, fallback: str | None) -> str | None:
     lowered = text.lower()
     if any(marker in lowered for marker in _PRIVATE_MARKERS):
         return fallback
-    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-+")
     if any(char not in allowed for char in text):
         return fallback
     return text[:_LABEL_MAX_CHARS]

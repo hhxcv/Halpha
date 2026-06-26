@@ -66,9 +66,11 @@ Run archives must not contain:
   identifiers, or raw local user-state files;
 - durable cleanup approval state.
 
-Run archive names may remain timestamp-based. Directory names are not the
-authority for why a run exists. `run_manifest.json` must carry the bounded
-classification metadata described below.
+Run archive names may remain timestamp-based. New product run directory names
+use the configured display timezone because they are user-visible report
+archive labels. Directory names are not the authority for the run timestamp or
+why a run exists. `run_manifest.json` must carry UTC lifecycle timestamps and
+the bounded classification metadata described below.
 
 ### Allowed Run Archive Creators
 

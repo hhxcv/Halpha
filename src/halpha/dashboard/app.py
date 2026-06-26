@@ -13,12 +13,10 @@ import time
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from halpha.config import ConfigError, load_config
 from halpha.dashboard.artifact_preview import dashboard_artifact_preview
 from halpha.dashboard.assets import dashboard_asset_media_type, dashboard_asset_text
-from halpha.dashboard.constants import DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
 from halpha.dashboard.data_cleanup import (
     MAX_DELETION_RUN_ITEMS,
     dashboard_data_deletion_plan as build_dashboard_data_deletion_plan,
@@ -44,6 +42,7 @@ from halpha.dashboard.ui import dashboard_index_html
 from halpha.runtime.command_jobs import CommandJobManager
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
 from halpha.storage import artifact_base
+from halpha.time_display import configured_display_timezone
 
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
@@ -1033,19 +1032,7 @@ def _dashboard_lifecycle_payload(result: ServiceLifecycleResult, *, expected_ins
 
 
 def dashboard_display_timezone(config: dict[str, Any]) -> str:
-    dashboard = config.get("dashboard") if isinstance(config.get("dashboard"), dict) else {}
-    run = config.get("run") if isinstance(config.get("run"), dict) else {}
-    candidates = (dashboard.get("display_timezone"), run.get("timezone"), DEFAULT_DASHBOARD_DISPLAY_TIMEZONE)
-    for candidate in candidates:
-        if not isinstance(candidate, str) or not candidate.strip():
-            continue
-        timezone_name = candidate.strip()
-        try:
-            ZoneInfo(timezone_name)
-        except ZoneInfoNotFoundError:
-            continue
-        return timezone_name
-    return DEFAULT_DASHBOARD_DISPLAY_TIMEZONE
+    return configured_display_timezone(config)
 
 
 def dashboard_data_deletion_plan(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:

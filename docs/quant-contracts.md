@@ -2185,7 +2185,7 @@ market_data_views: raw/market_data_views.json
 Codex prompt rules:
 
 - Require a Simplified Chinese Markdown report.
-- Require the first report line to be a single H1 title with the run timestamp rendered as UTC+08:00 by Halpha.
+- Require the first report line to be a single H1 title with the run timestamp rendered in Halpha's configured display timezone.
 - Do not require or allow a separate title section.
 - Prefer Markdown tables for market data, event calendars, and comparable non-strategy data.
 - When multiple symbols or coins appear, organize main sections with symbol-level subheadings.

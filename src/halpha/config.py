@@ -174,7 +174,11 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
     run = _require_mapping(config, "run")
     _require_non_empty_string(run, "output_dir", "run.output_dir")
     if "timezone" in run:
-        _require_non_empty_string(run, "timezone", "run.timezone")
+        timezone_name = _require_non_empty_string(run, "timezone", "run.timezone")
+        try:
+            ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError as exc:
+            raise ConfigError(f"run.timezone is not an available IANA timezone: {timezone_name}.") from exc
 
     market = _require_mapping(config, "market")
     market_enabled = _require_bool(market, "enabled", "market.enabled")

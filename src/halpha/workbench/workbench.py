@@ -20,6 +20,7 @@ from halpha.data.run_index import (
 )
 from halpha.workbench.workbench_rendering import render_workbench_html, render_workbench_markdown
 from halpha.storage import artifact_base, display_path, ensure_directory, write_json
+from halpha.time_display import configured_display_timezone, format_display_timestamp
 from halpha.utils.value_helpers import as_dict as _dict, as_list as _list, strict_int as _int
 
 
@@ -70,6 +71,8 @@ def build_workbench_summary(
     output_dir = _workbench_output_dir(config, config_path=config_path)
     ensure_directory(output_dir)
     generated_at = _utc_timestamp(now)
+    display_timezone = configured_display_timezone(config)
+    display_generated_at = format_display_timestamp(generated_at, config)
     selection = _select_run(config_path, run_dir=run_dir, base=base)
 
     warnings: list[str] = []
@@ -114,6 +117,10 @@ def build_workbench_summary(
         "schema_version": 1,
         "artifact_type": "workbench_summary",
         "generated_at": generated_at,
+        "display": {
+            "timezone": display_timezone,
+            "generated_at": display_generated_at,
+        },
         "status": _overall_status([str(section.get("status") or "missing") for section in sections]),
         "source_selection": {
             "mode": selection.mode,
