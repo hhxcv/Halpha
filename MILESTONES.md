@@ -20,9 +20,65 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M21 - Technical Debt and Product Reliability Cleanup v1
+### M22 - Data Collection, Retrieval, and Storage Foundation v1
 
 Status: active.
+
+Goal:
+
+```text
+Make reusable local data stores auditable, backfillable, no-lookahead queryable, and usable by dashboard and quantitative research workflows before adding deeper strategy capability.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M21 reliability, dashboard, command-job, monitor, workbench, product-validation, data-quality, and shared-store fixes instead of replacing them;
+* record reusable data collection coverage for implemented OHLCV, text-event, derivatives, macro/calendar, and on-chain flow stores with explicit collected, partial, failed, not-collected, no-data, stale, warning, and error states where the source can support them;
+* distinguish an empty collected interval from an uncollected or failed interval so humans, dashboard views, and backtests do not treat missing evidence as evidence of no events;
+* plan collection for a requested data type, source or identity, and time range from coverage state before fetching data;
+* support incremental collection plans that skip complete intervals and choose merged windows, widened windows, or full-range collection when fragmented gaps make gap-only fetching less efficient;
+* expose implemented collection through CLI and dashboard job entry points that share the same command or service boundary, including data type, configured source or identity, start time, end time, dry-run, and apply behavior;
+* allow data collection to run without report generation, monitor cycles, daily schedules, or Codex execution;
+* update reusable local stores, coverage state, schema state, catalog metadata, warnings, and errors from collection runs without hiding failed or partial work;
+* provide no-lookahead retrieval for quantitative backtests and research material by respecting event time, published time, collected time, first-seen time, and an explicit as-of boundary where applicable;
+* make OHLCV and event-like records queryable by time range and relevant dimensions through stable local read APIs instead of ad hoc full-history scans in product code;
+* provide bounded exports for selected data type, identity, time range, and as-of boundary in formats usable by quantitative research tools, including CSV or Parquet where the current store supports them;
+* preserve raw source refs, source names, source timestamps, collection timestamps, normalized timestamps, schema version, duplicate status, and conflict warnings where practical;
+* improve text-event duplicate handling by preserving exact key and content-hash deduplication while adding best-effort near-duplicate or same-event grouping for similar reports from different sources;
+* keep near-duplicate text records source-preserving by grouping or annotating records instead of silently deleting source material;
+* surface shared-store counts, ranges, coverage timelines, gaps, partial intervals, failed intervals, warnings, bounded content previews, and download actions in dashboard data views;
+* keep text and intelligence-style reusable data visible from the Intelligence area, and OHLCV and quantitative reusable data visible from Strategy Lab where those dashboard views already own the workflow;
+* extend data inspection and research data catalog output so humans and AI agents can see store coverage, query capability, schema state, migration state, warnings, errors, and downstream consumers;
+* update durable storage, research-data, dashboard, quant, and event-intelligence contracts only where implemented behavior or artifact semantics changed;
+* add focused tests for coverage state, no-data versus not-collected distinctions, collection planning, fragmented-gap planning, no-lookahead retrieval, text duplicate grouping, export boundaries, catalog surfacing, CLI collection behavior, dashboard job wiring, and dashboard data-view read APIs.
+
+M22 favors:
+
+* collection coverage and retrieval correctness over new intelligence depth;
+* no-lookahead query safety over convenient latest-data reads;
+* efficient collection plans over blindly fetching every missing fragment;
+* source-preserving deduplication over destructive cleanup;
+* stable local read APIs over scattered file reads in product code;
+* dashboard and CLI parity over duplicated entry points;
+* plain local artifacts, Parquet where already appropriate, and explicit state files over hidden services;
+* small end-to-end slices that keep existing report, monitor, dashboard, and strategy workflows executable.
+
+M22 does not require:
+
+* new public data-source expansion beyond the implemented or configured source types needed to exercise collection, coverage, retrieval, and dashboard flows;
+* a full quantitative framework, strategy marketplace, feature store, vector database, data warehouse, or hosted database service;
+* real-time streaming collection, websocket feeds, external workflow engines, Redis, Celery, Prefect, Airflow, Kafka, or hidden resident processes beyond the existing product process roles;
+* automatic repair, destructive cleanup, or bulk migration of historical local data without explicit user action and clear diagnostics;
+* perfect semantic deduplication, mandatory model-backed text clustering, or hiding source disagreements behind one canonical story;
+* replacing existing shared stores, run artifacts, report artifacts, dashboard views, or CLI commands when a narrow extension preserves the current contract;
+* exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
+* making Codex or another LLM the source of collection coverage state, query results, duplicate decisions, data-quality decisions, forecasts, or trading advice.
+
+## Completed Milestones
+
+### M21 - Technical Debt and Product Reliability Cleanup v1
+
+Status: completed.
 
 Goal:
 
@@ -65,8 +121,6 @@ M21 does not require:
 * complete module decomposition for every large source file before concrete defects are fixed;
 * automatic migration or destructive cleanup of local artifacts without explicit user action and clear diagnostics;
 * making Codex or another LLM the source of product state, validation results, cleanup decisions, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M20 - Local Web Dashboard and Operations Console v1
 
