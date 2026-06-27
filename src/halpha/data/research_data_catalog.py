@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,12 @@ CATALOG_SCHEMA_VERSION = 1
 CATALOG_ARTIFACT = "data/research/metadata/research_data_catalog.json"
 
 
+@dataclass(frozen=True)
+class _StandaloneCatalogContext:
+    config_path: Path
+    manifest: dict[str, Any]
+
+
 def write_research_data_catalog(
     config: dict[str, Any],
     run: RunContext,
@@ -36,6 +43,24 @@ def write_research_data_catalog(
     write_json(catalog_path, catalog)
     record_research_data_catalog_manifest_summary(run, catalog)
     return [CATALOG_ARTIFACT]
+
+
+def write_research_data_catalog_snapshot(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    manifest: dict[str, Any] | None = None,
+    now: datetime | str | None = None,
+) -> str:
+    snapshot_manifest: dict[str, Any] = {"artifacts": {}, "counts": {}}
+    if isinstance(manifest, dict):
+        snapshot_manifest.update(manifest)
+        snapshot_manifest["artifacts"] = dict(manifest.get("artifacts") if isinstance(manifest.get("artifacts"), dict) else {})
+        snapshot_manifest["counts"] = dict(manifest.get("counts") if isinstance(manifest.get("counts"), dict) else {})
+    context = _StandaloneCatalogContext(config_path=config_path, manifest=snapshot_manifest)
+    catalog = build_research_data_catalog(config, context, now=now)
+    write_json(research_data_catalog_path(config_path), catalog)
+    return CATALOG_ARTIFACT
 
 
 def prepare_research_data_catalog_publication(

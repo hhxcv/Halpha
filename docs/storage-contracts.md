@@ -90,6 +90,8 @@ Only these operations may create a top-level product run archive:
 These operations must not create a product run archive:
 
 - source polling by itself;
+- explicit shared-data collection or backfill by itself, such as
+  `python -m halpha data collect --data-type ohlcv ...`;
 - no-due Monitor cycle;
 - no-change source refresh;
 - all-source no-change Monitor cycle;
@@ -174,6 +176,7 @@ Shared data may contain:
 - durable public-source records or normalized reusable records;
 - store-local schema metadata;
 - store-local state metadata;
+- collection coverage state and bounded collection diagnostics;
 - storage refs, counts, warnings, errors, and consumer metadata;
 - migration metadata for the implemented store.
 
@@ -263,6 +266,9 @@ Rules:
   interval. It must not be inferred from missing records.
 - `not_collected`, `failed`, `partial`, and unknown coverage must not be
   displayed or consumed as proof that no event occurred.
+- The implemented OHLCV `data collect` path must dry-run through coverage
+  planning by default, and must write shared OHLCV records, coverage state, and
+  catalog metadata only when explicitly invoked with `--apply`.
 - Coverage state may be summarized by Dashboard, data inspection, manifests, or
   catalog metadata, but full reusable histories remain outside those summaries
   by default.
