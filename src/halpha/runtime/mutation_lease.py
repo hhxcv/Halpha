@@ -25,7 +25,7 @@ from halpha.runtime.state_store import (
 MUTATION_LEASE_STAGE = "runtime_mutation_lease"
 MUTATION_LEASE_NAME = "runtime-root-mutation"
 MUTATION_LEASE_MIGRATION_VERSION = 14
-MUTATING_WORKFLOW_KINDS = frozenset({"product_run", "stage_rerun", "monitor_cycle"})
+MUTATING_WORKFLOW_KINDS = frozenset({"product_run", "stage_rerun", "monitor_cycle", "data_collection"})
 LEASE_OWNER_ID_ENV = "HALPHA_MUTATION_LEASE_OWNER_ID"
 LEASE_REQUESTED_BY_ENV = "HALPHA_MUTATION_LEASE_REQUESTED_BY"
 LEASE_OWNER_KIND_ENV = "HALPHA_MUTATION_LEASE_OWNER_KIND"
