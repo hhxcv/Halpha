@@ -7,6 +7,12 @@
       preview: app.dataset.previewEndpoint,
       stores: app.dataset.storesEndpoint,
       deletion: app.dataset.deleteEndpoint,
+      dataViewerSummary: app.dataset.dataViewerSummaryEndpoint,
+      dataViewerTimeline: app.dataset.dataViewerTimelineEndpoint,
+      dataViewerPreview: app.dataset.dataViewerPreviewEndpoint,
+      dataViewerExport: app.dataset.dataViewerExportEndpoint,
+      dataViewerCollectPlan: app.dataset.dataViewerCollectPlanEndpoint,
+      dataViewerCollectJobs: app.dataset.dataViewerCollectJobsEndpoint,
       strategies: app.dataset.strategiesEndpoint,
       monitor: app.dataset.monitorEndpoint,
       monitorCycles: app.dataset.monitorCyclesEndpoint,
@@ -37,6 +43,10 @@
     const monitorWorkflowModule = window.HalphaDashboardMonitor;
     if (!monitorWorkflowModule) {
       throw new Error("Halpha dashboard monitor helpers did not load.");
+    }
+    const dataViewerWorkflowModule = window.HalphaDashboardDataViewer;
+    if (!dataViewerWorkflowModule) {
+      throw new Error("Halpha dashboard data viewer helpers did not load.");
     }
     const {
       escapeHtml,
@@ -72,6 +82,17 @@
       services: null,
       jobs: [],
       intelligence: null,
+      dataViewerSummary: null,
+      dataViewerStrategyTimeline: null,
+      dataViewerStrategyPreview: null,
+      dataViewerStrategyPlan: null,
+      dataViewerStrategyJob: null,
+      dataViewerStrategyExport: null,
+      dataViewerIntelTimeline: null,
+      dataViewerIntelPreview: null,
+      dataViewerIntelPlan: null,
+      dataViewerIntelJob: null,
+      dataViewerIntelExport: null,
       selectedIntelTab: "text",
       selectedIntelItem: null,
       settingsProfile: null,
@@ -97,6 +118,22 @@
       detailRow,
       table,
       durationBetween,
+      terminalJobStatus,
+    });
+    const dataViewerWorkflow = dataViewerWorkflowModule.createDataViewerWorkflow({
+      state,
+      endpoints,
+      fetchJson,
+      postJson,
+      showToast,
+      escapeHtml,
+      text,
+      statusClass,
+      formatNumber,
+      formatTimestamp,
+      label,
+      metricCell,
+      table,
       terminalJobStatus,
     });
 
@@ -612,12 +649,18 @@
 
     async function refreshStrategies() {
       try {
-        state.strategies = await fetchJson(endpoints.strategies);
+        const [strategies] = await Promise.all([
+          fetchJson(endpoints.strategies),
+          dataViewerWorkflow.loadDataViewerSummary(),
+        ]);
+        state.strategies = strategies;
       } catch (error) {
         state.strategies = {status: "failed", errors: [error.message], standalone: {backtests: [], experiments: []}, commands: {options: {}}};
+        await dataViewerWorkflow.loadDataViewerSummary();
       }
       renderStrategyControls();
       renderStrategies();
+      dataViewerWorkflow.renderStrategyViewer();
     }
 
     function strategyOutputs() {
@@ -937,10 +980,15 @@
 
     async function refreshIntelligence() {
       try {
-        const [textIntel] = await Promise.all([fetchJson(endpoints.textIntel), loadStores().catch(() => null)]);
+        const [textIntel] = await Promise.all([
+          fetchJson(endpoints.textIntel),
+          loadStores().catch(() => null),
+          dataViewerWorkflow.loadDataViewerSummary().catch(() => null),
+        ]);
         state.intelligence = textIntel;
       } catch (error) {
         state.intelligence = {status: "failed", warnings: [error.message], artifacts: []};
+        await dataViewerWorkflow.loadDataViewerSummary();
       }
       renderIntelligence();
     }
@@ -956,6 +1004,7 @@
       renderIntelEvents(items);
       renderIntelCharts(items);
       renderIntelDetail(state.selectedIntelItem);
+      dataViewerWorkflow.renderIntelligenceViewer();
     }
 
     function renderIntelFilterOptions(items) {
@@ -1881,6 +1930,7 @@
       document.querySelectorAll("[data-strategy-window]").forEach((button) => button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow)));
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
       monitorWorkflow.wire();
+      dataViewerWorkflow.wire();
       document.querySelectorAll("[data-report-job]").forEach((button) => button.addEventListener("click", startReportJob));
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {

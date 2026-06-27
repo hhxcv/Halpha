@@ -304,8 +304,10 @@ Implemented backend endpoints:
 - `POST /api/data/viewer/collect/jobs`: allowlisted `data collect --apply`
   command-job submission for implemented OHLCV and text-event collection paths.
 
-Visible Dashboard controls for these endpoints are implemented separately from
-the backend API contract.
+Visible Dashboard controls for these endpoints are implemented in the Strategy
+Lab and Intelligence views. The controls call the backend APIs above and remain
+operators over shared contracts; they do not own collection coverage, query
+results, export contents, or data-quality truth.
 
 Dashboard data-view state vocabulary must preserve these distinctions:
 
