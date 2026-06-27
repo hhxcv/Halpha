@@ -68,6 +68,11 @@ def test_text_event_collect_apply_updates_history_coverage_and_catalog(tmp_path:
     assert coverage["records"][0]["identity"] == {"source_name": "coindesk"}
     assert catalog["stores"][0]["name"] == "text_event_history"
     assert catalog["stores"][0]["coverage_state"]["status_counts"] == {"collected": 1}
+    assert catalog["stores"][0]["query_capability"] == {
+        "status": "implemented",
+        "time_field": "published_at",
+        "coverage_diagnostics": True,
+    }
 
 
 def test_text_event_collect_records_empty_success_as_no_data(tmp_path: Path) -> None:
