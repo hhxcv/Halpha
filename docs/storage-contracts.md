@@ -266,9 +266,10 @@ Rules:
   interval. It must not be inferred from missing records.
 - `not_collected`, `failed`, `partial`, and unknown coverage must not be
   displayed or consumed as proof that no event occurred.
-- The implemented OHLCV `data collect` path must dry-run through coverage
-  planning by default, and must write shared OHLCV records, coverage state, and
-  catalog metadata only when explicitly invoked with `--apply`.
+- The implemented OHLCV and text-event `data collect` paths must dry-run
+  through coverage planning by default. They must write shared records,
+  coverage state, and catalog metadata only when explicitly invoked with
+  `--apply`.
 - Coverage state may be summarized by Dashboard, data inspection, manifests, or
   catalog metadata, but full reusable histories remain outside those summaries
   by default.

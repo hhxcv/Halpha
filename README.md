@@ -245,6 +245,20 @@ on-chain flow, text-event, run-index, intelligence-fusion, strategy-lifecycle,
 product-validation, and data-quality state, plus workbench output refs when
 available, without dumping full reusable histories or raw records.
 
+Plan local data collection without report generation or Codex:
+
+```bash
+python -m halpha data collect --config config.example.yaml --data-type ohlcv --source binance --symbol BTCUSDT --timeframe 1d --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --dry-run
+python -m halpha data collect --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --dry-run
+```
+
+Apply mode updates the implemented shared store, collection coverage state, and
+research data catalog snapshot without creating a report run:
+
+```bash
+python -m halpha data collect --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --apply
+```
+
 Inspect legacy local state without mutating files:
 
 ```bash

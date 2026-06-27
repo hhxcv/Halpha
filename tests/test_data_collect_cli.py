@@ -136,6 +136,105 @@ def test_data_collect_apply_uses_shared_service_boundary(
     assert "collection_coverage: data/research/metadata/collection_coverage_state.json" in output
 
 
+def test_data_collect_text_event_apply_uses_shared_service_boundary(
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_text_config(tmp_path)
+    calls: list[dict[str, Any]] = []
+
+    def fake_collect(config: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        calls.append(kwargs)
+        return {
+            "schema_version": 1,
+            "artifact_type": "text_event_collection_result",
+            "mode": "apply",
+            "status": "warning",
+            "data_type": "text_event",
+            "source": kwargs["source"],
+            "symbol": None,
+            "timeframe": None,
+            "identity": {"source_name": kwargs["source"]},
+            "requested_start": kwargs["requested_start"],
+            "requested_end": kwargs["requested_end"],
+            "plan": {"strategy": "gap_only", "planned_fetch_windows": []},
+            "fetches": [],
+            "coverage_updates": [],
+            "counts": {
+                "skipped_ranges": 0,
+                "gap_ranges": 1,
+                "retry_ranges": 0,
+                "planned_fetch_windows": 1,
+                "raw_items": 1,
+                "raw_errors": 1,
+                "window_records": 1,
+                "stored_records": 1,
+                "coverage_records_written": 1,
+                "coverage_state_records": 1,
+            },
+            "artifacts": {"collection_coverage": "data/research/metadata/collection_coverage_state.json"},
+            "warnings": ["partial source failure"],
+            "errors": [],
+        }
+
+    monkeypatch.setattr("halpha.cli.collect_text_event_data", fake_collect)
+
+    exit_code = main(
+        [
+            "data",
+            "collect",
+            "--config",
+            str(config_path),
+            "--data-type",
+            "text_event",
+            "--source",
+            "coindesk",
+            "--start",
+            "2026-06-01T00:00:00Z",
+            "--end",
+            "2026-06-03T00:00:00Z",
+            "--apply",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert calls[0]["dry_run"] is False
+    assert calls[0]["source"] == "coindesk"
+    assert "Halpha data collection apply succeeded." in output
+    assert "data_type: text_event" in output
+    assert "identity: {'source_name': 'coindesk'}" in output
+    assert "raw_items: 1" in output
+    assert "raw_errors: 1" in output
+
+
+def test_data_collect_ohlcv_requires_symbol_and_timeframe(tmp_path: Path, capsys) -> None:
+    config_path = _write_config(tmp_path)
+
+    exit_code = main(
+        [
+            "data",
+            "collect",
+            "--config",
+            str(config_path),
+            "--data-type",
+            "ohlcv",
+            "--source",
+            "binance",
+            "--start",
+            "2026-06-01T00:00:00Z",
+            "--end",
+            "2026-06-03T00:00:00Z",
+            "--dry-run",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 2
+    assert "data collect --data-type ohlcv requires --symbol and --timeframe." in output
+
+
 def _write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -156,6 +255,32 @@ market:
       1d: 2
 text:
   enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_text_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: false
+text:
+  enabled: true
+  sources:
+    - name: coindesk
+      type: rss
+      url: https://example.com/rss.xml
 report:
   title: Daily Market Brief
   language: zh-CN
