@@ -7,7 +7,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
-from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
+from halpha.market.ohlcv_query import OHLCVQueryError, query_ohlcv_records
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest, evaluate_walk_forward_backtest
@@ -574,7 +574,7 @@ def _evaluation_record(
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
         )
-    except (OHLCVStoreError, KeyError, TypeError, ValueError) as exc:
+    except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
         return _failed_record(identity, type(exc).__name__, str(exc))
 
     return {
@@ -598,14 +598,15 @@ def _evaluation_record(
 
 
 def _benchmark_rows(benchmark: dict[str, Any], *, storage_dir: Path) -> list[dict[str, Any]]:
-    store = OHLCVParquetStore(storage_dir)
-    records = store.read_records(
+    query = query_ohlcv_records(
+        storage_dir,
         source=str(benchmark["source"]),
         symbol=str(benchmark["symbol"]),
         timeframe=str(benchmark["timeframe"]),
+        start=str(benchmark["input_window_start"]),
+        end=str(benchmark["input_window_end"]),
+        end_inclusive=True,
     )
-    start = str(benchmark["input_window_start"])
-    end = str(benchmark["input_window_end"])
     columns = [str(column) for column in benchmark.get("included_columns", [])] or [
         "open_time",
         "open",
@@ -616,8 +617,7 @@ def _benchmark_rows(benchmark: dict[str, Any], *, storage_dir: Path) -> list[dic
     ]
     return [
         {column: record[column] for column in columns}
-        for record in records
-        if start <= str(record["open_time"]) <= end
+        for record in query["records"]
     ]
 
 

@@ -844,9 +844,9 @@ def _apply_coverage_metadata(stores: list[dict[str, Any]], coverage_state: dict[
             "not_collected_ranges": summary["not_collected_ranges"],
         }
         store["query_capability"] = {
-            "status": "not_implemented",
+            "status": "implemented" if store.get("name") == "ohlcv_history" else "not_implemented",
             "time_field": store.get("time_field"),
-            "coverage_diagnostics": status in {"available", "empty"},
+            "coverage_diagnostics": store.get("name") == "ohlcv_history" or status in {"available", "empty"},
         }
 
 
