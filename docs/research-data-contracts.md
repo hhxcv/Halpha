@@ -43,8 +43,8 @@ must stay marked until their producers are added.
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
 | Collection coverage state | Initial adoption | OHLCV and text-event data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
 | Collection plan | Implemented | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
-| Shared data query | Initial adoption | OHLCV and event-like query adapters | benchmark backtests; Dashboard previews and exports planned |
-| Bounded data export | Planned | shared query/export service | CLI export, Dashboard download, external quant tools |
+| Shared data query | Initial adoption | OHLCV and event-like query adapters | benchmark backtests; CLI export; Dashboard previews and exports planned |
+| Bounded data export | Initial adoption | shared query/export service and CLI export command | external quant tools; Dashboard download planned |
 
 ## Layer Boundary
 
@@ -325,6 +325,20 @@ Export rules:
 - Export metadata must include request parameters, row count, truncation state,
   coverage diagnostics, warnings, errors, and source refs.
 - Full reusable history export is not the default behavior.
+
+Implemented export boundary:
+
+- Service: `halpha.data.data_export.export_data`.
+- CLI command: `halpha data export`.
+- Required CLI range inputs: `--start` and `--end`.
+- OHLCV identity inputs: `--source`, `--symbol`, and `--timeframe`.
+- Event-like identity inputs: optional `--source` plus repeated
+  `--identity KEY=VALUE` filters.
+- Optional no-lookahead input: `--as-of`.
+- Optional query bound: `--limit`.
+- CSV and Parquet exports write sidecar metadata to
+  `<output>.metadata.json`.
+- JSON exports embed `metadata` and `records` in the export artifact.
 
 ## Shared OHLCV History
 

@@ -259,6 +259,19 @@ research data catalog snapshot without creating a report run:
 python -m halpha data collect --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --apply
 ```
 
+Export bounded reusable data through the same no-lookahead query boundary used
+by quantitative consumers:
+
+```bash
+python -m halpha data export --config config.example.yaml --data-type ohlcv --source binance --symbol BTCUSDT --timeframe 1d --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --as-of 2026-06-03T00:00:00Z --format csv --output exports/ohlcv.csv
+python -m halpha data export --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --format json --output exports/text_events.json
+```
+
+CSV and Parquet exports write sidecar metadata next to the data file. JSON
+exports embed metadata and records in one bounded artifact. Export metadata
+includes query parameters, `as_of`, row counts, truncation state, coverage
+diagnostics, warnings, errors, and source refs.
+
 Inspect legacy local state without mutating files:
 
 ```bash
