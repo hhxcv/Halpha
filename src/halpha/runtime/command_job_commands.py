@@ -152,6 +152,14 @@ SUPPORTED_COMMANDS = {
         cli_parts=("text-intel",),
         param_mode="text_intel",
     ),
+    "data_collect": CommandSpec(
+        intent="data_collect",
+        kind="data_collection",
+        cancellable=True,
+        cli_parts=("data", "collect"),
+        extra_cli_parts=("--apply",),
+        param_mode="data_collect",
+    ),
 }
 
 
@@ -210,6 +218,18 @@ class CommandJobBuilder:
             return {"output_dir"}
         if param_mode == "text_intel":
             return {"input_path", "output_dir"}
+        if param_mode == "data_collect":
+            return {
+                "data_type",
+                "source",
+                "symbol",
+                "timeframe",
+                "start",
+                "end",
+                "max_exact_windows",
+                "merge_gap_threshold_seconds",
+                "min_fetch_window_seconds",
+            }
         return set()
 
     def _extend_param_mode_args(
@@ -243,6 +263,41 @@ class CommandJobBuilder:
                 command.extend(["--input", str(path)])
                 preview.extend(["--input", _safe_ref(path, base=self.base)])
             self._extend_optional_output_dir(params, command, preview)
+        elif param_mode == "data_collect":
+            data_type = self._validated_data_collect_type(params.get("data_type"))
+            source = self._validated_data_collect_source(data_type, params.get("source"))
+            start = self._validated_non_empty_text(params.get("start"), param_name="start")
+            end = self._validated_non_empty_text(params.get("end"), param_name="end")
+            command.extend(["--data-type", data_type, "--source", source])
+            preview.extend(["--data-type", data_type, "--source", source])
+            if data_type == "ohlcv":
+                symbol = self._validated_symbol(params.get("symbol"))
+                timeframe = self._validated_timeframe(params.get("timeframe"))
+                command.extend(["--symbol", symbol, "--timeframe", timeframe])
+                preview.extend(["--symbol", symbol, "--timeframe", timeframe])
+            command.extend(["--start", start, "--end", end])
+            preview.extend(["--start", start, "--end", end])
+            self._extend_optional_positive_int(
+                params,
+                command,
+                preview,
+                param_name="max_exact_windows",
+                cli_name="--max-exact-windows",
+            )
+            self._extend_optional_non_negative_int(
+                params,
+                command,
+                preview,
+                param_name="merge_gap_threshold_seconds",
+                cli_name="--merge-gap-threshold-seconds",
+            )
+            self._extend_optional_non_negative_int(
+                params,
+                command,
+                preview,
+                param_name="min_fetch_window_seconds",
+                cli_name="--min-fetch-window-seconds",
+            )
 
     def _extend_optional_output_dir(
         self,
@@ -258,6 +313,38 @@ class CommandJobBuilder:
         path = self._validated_local_path(str(output_dir), param_name="output_dir")
         command.extend(["--output-dir", str(path)])
         preview.extend(["--output-dir", _safe_ref(path, base=self.base)])
+
+    def _extend_optional_positive_int(
+        self,
+        params: dict[str, Any],
+        command: list[str],
+        preview: list[str],
+        *,
+        param_name: str,
+        cli_name: str,
+    ) -> None:
+        value = params.get(param_name)
+        if value is None:
+            return
+        parsed = self._validated_positive_int(value, param_name=param_name)
+        command.extend([cli_name, str(parsed)])
+        preview.extend([cli_name, str(parsed)])
+
+    def _extend_optional_non_negative_int(
+        self,
+        params: dict[str, Any],
+        command: list[str],
+        preview: list[str],
+        *,
+        param_name: str,
+        cli_name: str,
+    ) -> None:
+        value = params.get(param_name)
+        if value is None:
+            return
+        parsed = self._validated_non_negative_int(value, param_name=param_name)
+        command.extend([cli_name, str(parsed)])
+        preview.extend([cli_name, str(parsed)])
 
     def _validated_strategy_name(self, value: Any, *, param_name: str) -> str:
         if not isinstance(value, str) or not value.strip():
@@ -290,10 +377,52 @@ class CommandJobBuilder:
             raise CommandJobError(f"timeframe is not configured: {timeframe}.")
         return timeframe
 
+    def _validated_non_empty_text(self, value: Any, *, param_name: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise CommandJobError(f"{param_name} must not be empty.")
+        return value.strip()
+
     def _validated_positive_int(self, value: Any, *, param_name: str) -> int:
         if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
             raise CommandJobError(f"{param_name} must be a positive integer.")
         return value
+
+    def _validated_non_negative_int(self, value: Any, *, param_name: str) -> int:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise CommandJobError(f"{param_name} must be a non-negative integer.")
+        return value
+
+    def _validated_data_collect_type(self, value: Any) -> str:
+        data_type = self._validated_non_empty_text(value, param_name="data_type")
+        if data_type not in {"ohlcv", "text_event"}:
+            raise CommandJobError("data_type must be ohlcv or text_event for data collection jobs.")
+        return data_type
+
+    def _validated_data_collect_source(self, data_type: str, value: Any) -> str:
+        source = self._validated_non_empty_text(value, param_name="source")
+        if data_type == "ohlcv":
+            configured = self._configured_market_source()
+            if source != configured:
+                raise CommandJobError(f"source is not configured: {source}.")
+        elif source != "all" and source not in self._configured_text_sources():
+            raise CommandJobError(f"source is not configured: {source}.")
+        return source
+
+    def _configured_market_source(self) -> str:
+        market = self.config.get("market") if isinstance(self.config.get("market"), dict) else {}
+        source = str(market.get("source") or "")
+        if not source:
+            raise CommandJobError("market.source must be configured for OHLCV collection.")
+        return source
+
+    def _configured_text_sources(self) -> set[str]:
+        text = self.config.get("text") if isinstance(self.config.get("text"), dict) else {}
+        sources = text.get("sources") if isinstance(text.get("sources"), list) else []
+        return {
+            str(source.get("name"))
+            for source in sources
+            if isinstance(source, dict) and source.get("name")
+        }
 
     def _configured_strategy_names(self) -> set[str]:
         quant = self.config.get("quant") if isinstance(self.config.get("quant"), dict) else {}

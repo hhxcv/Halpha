@@ -278,8 +278,8 @@ Dashboard data views are operator surfaces over shared data contracts. They are
 not the source of collection coverage, query results, exports, or data-quality
 truth.
 
-When data-viewer APIs and controls are implemented, they should use the shared
-contracts in `docs/research-data-contracts.md`:
+Implemented data-viewer backend APIs use the shared contracts in
+`docs/research-data-contracts.md`:
 
 - coverage state for store counts, ranges, timeline intervals, gaps, partial
   intervals, failed intervals, stale intervals, and warnings;
@@ -287,6 +287,25 @@ contracts in `docs/research-data-contracts.md`:
   job;
 - query adapters for bounded record previews;
 - export services for bounded downloads.
+
+Implemented backend endpoints:
+
+- `GET /api/data/viewer/summary`: reusable store summaries with coverage,
+  query, export, and collection capabilities.
+- `POST /api/data/viewer/timeline`: bounded coverage intervals for a selected
+  data type, source, identity, and time range.
+- `POST /api/data/viewer/preview`: bounded records from the shared OHLCV and
+  event-like query adapters.
+- `POST /api/data/viewer/export`: bounded export handoff through
+  `halpha.data.data_export.export_data`; Dashboard-managed output paths stay
+  under `data/exports/`.
+- `POST /api/data/viewer/collect/plan`: dry-run collection plan from coverage
+  state.
+- `POST /api/data/viewer/collect/jobs`: allowlisted `data collect --apply`
+  command-job submission for implemented OHLCV and text-event collection paths.
+
+Visible Dashboard controls for these endpoints are implemented separately from
+the backend API contract.
 
 Dashboard data-view state vocabulary must preserve these distinctions:
 

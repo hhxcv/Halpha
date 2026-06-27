@@ -23,6 +23,14 @@ from halpha.dashboard.data_cleanup import (
     dashboard_delete_data as execute_dashboard_delete_data,
 )
 from halpha.dashboard.data_stores import dashboard_data_stores
+from halpha.dashboard.data_viewer import (
+    dashboard_data_viewer_collection_job,
+    dashboard_data_viewer_collection_plan,
+    dashboard_data_viewer_export,
+    dashboard_data_viewer_preview,
+    dashboard_data_viewer_summary,
+    dashboard_data_viewer_timeline,
+)
 from halpha.dashboard.intelligence import dashboard_text_intelligence
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
@@ -356,6 +364,59 @@ def create_dashboard_app(
             return _unconfigured_payload("dashboard_data_stores", stores=[])
         active_config, active_config_path = active
         return dashboard_data_stores(active_config, config_path=active_config_path)
+
+    @app.get("/api/data/viewer/summary")
+    def data_viewer_summary_endpoint() -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_viewer_summary", stores=[])
+        active_config, active_config_path = active
+        return dashboard_data_viewer_summary(active_config, config_path=active_config_path)
+
+    @app.post("/api/data/viewer/timeline")
+    def data_viewer_timeline_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_coverage_timeline", intervals=[])
+        active_config, active_config_path = active
+        return dashboard_data_viewer_timeline(active_config, config_path=active_config_path, request=request)
+
+    @app.post("/api/data/viewer/preview")
+    def data_viewer_preview_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_preview", records=[])
+        active_config, active_config_path = active
+        return dashboard_data_viewer_preview(active_config, config_path=active_config_path, request=request)
+
+    @app.post("/api/data/viewer/export")
+    def data_viewer_export_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_export", export=None)
+        active_config, active_config_path = active
+        return dashboard_data_viewer_export(active_config, config_path=active_config_path, request=request)
+
+    @app.post("/api/data/viewer/collect/plan")
+    def data_viewer_collection_plan_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_collection_plan", plan=None)
+        active_config, active_config_path = active
+        return dashboard_data_viewer_collection_plan(active_config, config_path=active_config_path, request=request)
+
+    @app.post("/api/data/viewer/collect/jobs")
+    def data_viewer_collection_job_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_data_collection_job", job=None)
+        active_config, active_config_path = active
+        return dashboard_data_viewer_collection_job(
+            active_config,
+            config_path=active_config_path,
+            job_manager=context.job_manager,
+            request=request,
+        )
 
     @app.get("/api/data/deletion")
     def data_deletion_plan_endpoint() -> dict[str, Any]:

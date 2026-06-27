@@ -47,12 +47,14 @@ JOB_PROCESS_STATUSES = {"running", "cancel_requested"}
 JOB_REQUESTED_BY_VALUES = {"CLI", "Dashboard", "Monitor", "Schedule"}
 COMMAND_JOB_ID_RE = re.compile(r"^\d{8}T\d{6}Z_[0-9a-f]{8}$")
 RESULT_ARTIFACT_KEYS = {
+    "collection_coverage",
     "event_intelligence_material",
     "manifest",
     "model_prepare_manifest",
     "health_state",
     "monitor_manifest",
     "report",
+    "research_data_catalog",
     "strategy_backtest",
     "strategy_benchmark_suite",
     "strategy_effectiveness_gates",
