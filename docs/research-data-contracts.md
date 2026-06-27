@@ -596,6 +596,9 @@ Required history fields:
 - `first_seen_at`
 - `last_seen_at`
 - `duplicate_group_key`
+- `same_event_group_id`
+- `same_event_group_method`
+- `same_event_group_score_bucket`
 - `status`
 - `warnings`
 - `source_artifacts`
@@ -606,6 +609,10 @@ Required behavior:
 - deduplicate by deterministic event identity;
 - preserve all run ids that observed a repeated item;
 - warn on conflicting duplicates instead of silently overwriting;
+- annotate source-preserving same-event groups where exact duplicate keys or
+  deterministic near-duplicate rules identify repeated public coverage;
+- keep low-confidence or gate-failed near-duplicate candidates separate in
+  state metadata with reasons where practical;
 - keep full history out of Codex input.
 
 ## Data Quality Summary

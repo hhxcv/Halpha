@@ -303,6 +303,9 @@ def _data_store_summary(fields: dict[str, Any], data: dict[str, Any]) -> dict[st
         "updated_records",
         "duplicate_records",
         "conflicting_duplicates",
+        "same_event_groups",
+        "same_event_grouped_records",
+        "same_event_candidate_pairs",
         "warning_count",
         "error_count",
     ):

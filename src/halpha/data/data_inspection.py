@@ -261,6 +261,9 @@ def _text_event_history_section(config_path: Path, *, base: Path) -> dict[str, A
         fields={
             "records": _int(totals.get("records")),
             "sources": len(_list(data.get("sources"))),
+            "same_event_groups": _int(totals.get("same_event_groups")),
+            "same_event_grouped_records": _int(totals.get("same_event_grouped_records")),
+            "same_event_candidate_pairs": _int(totals.get("same_event_candidate_pairs")),
             "warnings": len(_list(data.get("warnings"))),
             "errors": len(_list(data.get("errors"))),
         },

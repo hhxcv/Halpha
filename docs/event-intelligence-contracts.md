@@ -620,6 +620,10 @@ Duplicate boundary rules:
 - Near-duplicate or same-event grouping should preserve a group id, method,
   confidence or score bucket, grouped record ids, source count, timestamps,
   warnings, and conflicts where implemented.
+- Implemented shared text-event history records include
+  `same_event_group_id`, `same_event_group_method`, and
+  `same_event_group_score_bucket` annotations; the state file records bounded
+  group summaries and low-confidence separate candidates.
 - Original title, link, canonical URL, normalized text, source name,
   `published_at`, `collected_at`, `first_seen_at`, and source refs must remain
   inspectable.
