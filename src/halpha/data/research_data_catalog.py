@@ -633,10 +633,24 @@ def _text_event_history_store_record(run: RunContext) -> dict[str, Any] | None:
         "error_count": len(errors),
         "consumers": [
             "data_quality_summary",
+            "data_inspection",
+            "dashboard_data_stores",
             "future_event_workflows",
             "future_outcome_workflows",
         ],
         "source_artifacts": [_catalog_ref(state_path, run)],
+        "details": {
+            "incoming_records": _int(totals.get("incoming_records")) if isinstance(totals, dict) else 0,
+            "duplicate_records": _int(totals.get("duplicate_records")) if isinstance(totals, dict) else 0,
+            "conflicting_duplicates": _int(totals.get("conflicting_duplicates")) if isinstance(totals, dict) else 0,
+            "same_event_groups": _int(totals.get("same_event_groups")) if isinstance(totals, dict) else 0,
+            "same_event_grouped_records": (
+                _int(totals.get("same_event_grouped_records")) if isinstance(totals, dict) else 0
+            ),
+            "same_event_candidate_pairs": (
+                _int(totals.get("same_event_candidate_pairs")) if isinstance(totals, dict) else 0
+            ),
+        },
         "warnings": warnings,
         "errors": errors,
         },

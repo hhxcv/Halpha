@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -13,7 +14,7 @@ from halpha.runtime.pipeline_contracts import RunContext
 from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
-TEXT_EVENT_HISTORY_SCHEMA_VERSION = 1
+TEXT_EVENT_HISTORY_SCHEMA_VERSION = 2
 TEXT_EVENT_HISTORY_STATE_ARTIFACT = "data/research/metadata/text_event_history_state.json"
 TEXT_EVENT_HISTORY_STORAGE_ARTIFACT = "data/research/text_events"
 TEXT_EVENT_RECORDS_ARTIFACT = "analysis/text_event_records.json"
@@ -37,10 +38,27 @@ TEXT_EVENT_HISTORY_SCHEMA = pa.schema(
         pa.field("first_seen_at", pa.string()),
         pa.field("last_seen_at", pa.string()),
         pa.field("duplicate_group_key", pa.string()),
+        pa.field("same_event_group_id", pa.string()),
+        pa.field("same_event_group_method", pa.string()),
+        pa.field("same_event_group_score_bucket", pa.string()),
         pa.field("status", pa.string()),
         pa.field("warnings", pa.list_(pa.string())),
         pa.field("source_artifacts", pa.list_(pa.string())),
     ]
+)
+
+SAME_EVENT_MAX_WINDOW_HOURS = 48.0
+SAME_EVENT_TITLE_HIGH_MIN = 0.72
+SAME_EVENT_TEXT_HIGH_MIN = 0.68
+SAME_EVENT_TITLE_MEDIUM_MIN = 0.52
+SAME_EVENT_TEXT_MEDIUM_MIN = 0.52
+SAME_EVENT_CANDIDATE_MIN = 0.35
+SAME_EVENT_CANDIDATE_LIMIT = 25
+SAME_EVENT_DIRECTIONAL_CONFLICTS = (
+    ({"inflow", "inflows"}, {"outflow", "outflows"}),
+    ({"rise", "rises", "rose", "rising", "gain", "gains", "rally", "rallies"}, {"fall", "falls", "fell", "falling", "drop", "drops", "loss", "losses"}),
+    ({"increase", "increases", "increased", "expansion", "expanded"}, {"decrease", "decreases", "decreased", "contraction", "contracted"}),
+    ({"approve", "approves", "approved", "approval"}, {"reject", "rejects", "rejected", "rejection"}),
 )
 
 
@@ -114,10 +132,11 @@ def _write_text_event_history_state(
     incoming_records, incoming_warnings = _history_records(records, origin, now=now)
     existing_records = _read_history_records(storage_root)
     merged_records, merge_summary = _merge_history(existing_records, incoming_records)
-    warnings = _unique_sorted([*incoming_warnings, *merge_summary["warnings"]])
-    status = _status(record_count=len(merged_records), warnings=warnings)
+    annotated_records, group_summary = _annotate_same_event_groups(merged_records)
+    warnings = _unique_sorted([*incoming_warnings, *merge_summary["warnings"], *group_summary["warnings"]])
+    status = _status(record_count=len(annotated_records), warnings=warnings)
 
-    _rewrite_history(storage_root, merged_records)
+    _rewrite_history(storage_root, annotated_records)
     base = runtime_root(origin.config_path)
     state = {
         "schema_version": TEXT_EVENT_HISTORY_SCHEMA_VERSION,
@@ -127,16 +146,23 @@ def _write_text_event_history_state(
         "storage_path": display_path(storage_root, base=base),
         "state_path": display_path(state_path, base=base),
         "totals": {
-            "records": len(merged_records),
+            "records": len(annotated_records),
             "incoming_records": len(incoming_records),
             "inserted_records": merge_summary["inserted_records"],
             "updated_records": merge_summary["updated_records"],
             "duplicate_records": merge_summary["duplicate_records"],
             "conflicting_duplicates": merge_summary["conflicting_duplicates"],
+            "same_event_groups": len(group_summary["groups"]),
+            "same_event_grouped_records": sum(len(group["record_ids"]) for group in group_summary["groups"]),
+            "same_event_candidate_pairs": len(group_summary["candidate_pairs"])
+            + group_summary["candidate_pair_omitted_count"],
+            "same_event_candidate_pair_omitted_count": group_summary["candidate_pair_omitted_count"],
             "warning_count": len(warnings),
             "error_count": 0,
         },
-        "sources": _source_summaries(merged_records),
+        "sources": _source_summaries(annotated_records),
+        "same_event_groups": group_summary["groups"],
+        "same_event_group_candidates": group_summary["candidate_pairs"],
         "warnings": warnings,
         "errors": [],
         "source_artifacts": [origin.state_source_artifact_ref],
@@ -212,6 +238,9 @@ def _history_record(
         "first_seen_at": first_seen_at,
         "last_seen_at": first_seen_at,
         "duplicate_group_key": canonical_url or content_hash,
+        "same_event_group_id": None,
+        "same_event_group_method": None,
+        "same_event_group_score_bucket": None,
         "status": "warning" if warnings else "active",
         "warnings": _unique_sorted(warnings),
         "source_artifacts": _source_artifacts(record, origin),
@@ -266,6 +295,338 @@ def _merge_history(
             "warnings": _unique_sorted(warnings),
         },
     )
+
+
+def _annotate_same_event_groups(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    annotated = []
+    for record in records:
+        annotated.append(
+            {
+                **record,
+                "same_event_group_id": None,
+                "same_event_group_method": None,
+                "same_event_group_score_bucket": None,
+            }
+        )
+
+    decisions = _same_event_pair_decisions(annotated)
+    parent = {str(record["stable_event_key"]): str(record["stable_event_key"]) for record in annotated}
+    for decision in decisions:
+        if decision["relationship"] == "same_event":
+            _union(parent, decision["left_record_id"], decision["right_record_id"])
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for record in annotated:
+        grouped.setdefault(_find(parent, str(record["stable_event_key"])), []).append(record)
+
+    decision_index = {
+        frozenset({decision["left_record_id"], decision["right_record_id"]}): decision for decision in decisions
+    }
+    groups = []
+    for members in grouped.values():
+        if len(members) < 2:
+            continue
+        members = sorted(members, key=lambda record: str(record["stable_event_key"]))
+        member_ids = [str(member["stable_event_key"]) for member in members]
+        group_decisions = _group_decisions(member_ids, decision_index)
+        group_id = _same_event_group_id(member_ids)
+        method = _same_event_group_method(group_decisions)
+        score_bucket = _same_event_group_score_bucket(group_decisions)
+        for member in members:
+            member["same_event_group_id"] = group_id
+            member["same_event_group_method"] = method
+            member["same_event_group_score_bucket"] = score_bucket
+        groups.append(_same_event_group_record(group_id, members, group_decisions, method, score_bucket))
+
+    candidate_pairs = [
+        decision
+        for decision in decisions
+        if decision["relationship"] == "separate" and decision["score_bucket"] in {"low", "medium", "high"}
+    ]
+    candidate_pairs = sorted(candidate_pairs, key=lambda decision: (decision["left_record_id"], decision["right_record_id"]))
+    omitted = max(0, len(candidate_pairs) - SAME_EVENT_CANDIDATE_LIMIT)
+    return (
+        sorted(annotated, key=lambda record: (record["source"], record["stable_event_key"])),
+        {
+            "groups": sorted(groups, key=lambda group: (group["first_seen_at"] or "", group["same_event_group_id"])),
+            "candidate_pairs": candidate_pairs[:SAME_EVENT_CANDIDATE_LIMIT],
+            "candidate_pair_omitted_count": omitted,
+            "warnings": [],
+        },
+    )
+
+
+def _same_event_pair_decisions(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    decisions = []
+    for left_index, left in enumerate(records):
+        for right in records[left_index + 1 :]:
+            decisions.append(_same_event_pair_decision(left, right))
+    return decisions
+
+
+def _same_event_pair_decision(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    left_id = str(left["stable_event_key"])
+    right_id = str(right["stable_event_key"])
+    reasons: list[str] = []
+    methods: list[str] = []
+    left_title_tokens = _tokens(str(left.get("title") or ""))
+    right_title_tokens = _tokens(str(right.get("title") or ""))
+    left_text_tokens = _tokens(str(left.get("normalized_text") or ""))
+    right_text_tokens = _tokens(str(right.get("normalized_text") or ""))
+    title_similarity = _jaccard(left_title_tokens, right_title_tokens)
+    text_similarity = _jaccard(left_text_tokens, right_text_tokens)
+    url_path_similarity = _jaccard(_url_tokens(left), _url_tokens(right))
+    duplicate_key_match = _same_duplicate_group_key(left, right)
+    time_window = _same_event_time_window(left, right)
+    source_diverse = _source_diverse(left, right)
+    directional_conflict = _has_directional_conflict(
+        left_title_tokens | left_text_tokens,
+        right_title_tokens | right_text_tokens,
+    )
+
+    if duplicate_key_match:
+        reasons.append("duplicate_group_key_match")
+        methods.append("duplicate_group_key_rule")
+    if directional_conflict:
+        reasons.append("directional_term_conflict")
+    if source_diverse:
+        reasons.append("source_diversity_met")
+    else:
+        reasons.append("source_diversity_not_met")
+    if time_window["met"]:
+        reasons.append("time_window_met")
+    else:
+        reasons.append(time_window["reason"])
+    score_bucket = _same_event_score_bucket(
+        duplicate_key_match=duplicate_key_match,
+        title_similarity=title_similarity,
+        text_similarity=text_similarity,
+    )
+    if title_similarity >= SAME_EVENT_TITLE_MEDIUM_MIN:
+        reasons.append("title_similarity_met")
+        methods.append("title_similarity_rule")
+    if text_similarity >= SAME_EVENT_TEXT_MEDIUM_MIN:
+        reasons.append("text_similarity_met")
+        methods.append("text_similarity_rule")
+    if url_path_similarity >= SAME_EVENT_CANDIDATE_MIN:
+        reasons.append("url_path_similarity_observed")
+        methods.append("url_path_similarity_rule")
+
+    relationship = "separate"
+    if duplicate_key_match:
+        relationship = "same_event"
+    elif source_diverse and time_window["met"] and score_bucket in {"high", "medium"} and not directional_conflict:
+        relationship = "same_event"
+    elif score_bucket == "none" and max(title_similarity, text_similarity, url_path_similarity) >= SAME_EVENT_CANDIDATE_MIN:
+        score_bucket = "low"
+        reasons.append("insufficient_same_event_similarity")
+
+    return {
+        "left_record_id": left_id,
+        "right_record_id": right_id,
+        "relationship": relationship,
+        "status": "accepted" if relationship == "same_event" else "low_confidence_separate",
+        "method": "exact_duplicate_key_rule" if duplicate_key_match else "near_duplicate_rule",
+        "score_bucket": score_bucket,
+        "similarity_evidence": {
+            "title": _round_score(title_similarity),
+            "text": _round_score(text_similarity),
+            "url_path": _round_score(url_path_similarity),
+        },
+        "time_window_hours": time_window["hours"],
+        "reasons": _unique_sorted(reasons),
+        "methods": _unique_sorted(methods),
+    }
+
+
+def _same_event_group_record(
+    group_id: str,
+    members: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    method: str,
+    score_bucket: str,
+) -> dict[str, Any]:
+    warnings = _unique_sorted(
+        [warning for member in members for warning in member.get("warnings", []) if isinstance(warning, str)]
+    )
+    return {
+        "same_event_group_id": group_id,
+        "method": method,
+        "score_bucket": score_bucket,
+        "record_ids": [str(member["stable_event_key"]) for member in members],
+        "source_count": len({str(member.get("source") or "unknown_source") for member in members}),
+        "sources": sorted({str(member.get("source") or "unknown_source") for member in members}),
+        "first_seen_at": _earliest_timestamp(member.get("first_seen_at") for member in members),
+        "last_seen_at": _latest_timestamp_many(member.get("last_seen_at") for member in members),
+        "published_start_at": _earliest_timestamp(member.get("published_at") for member in members),
+        "published_end_at": _latest_timestamp_many(member.get("published_at") for member in members),
+        "source_artifacts": _unique_sorted(
+            [artifact for member in members for artifact in member.get("source_artifacts", []) if isinstance(artifact, str)]
+        ),
+        "decisions": decisions,
+        "warnings": warnings,
+        "conflicts": [warning for warning in warnings if "conflicting duplicate text event:" in warning],
+    }
+
+
+def _group_decisions(
+    member_ids: list[str],
+    decision_index: dict[frozenset[str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    decisions = []
+    for left_index, left_id in enumerate(member_ids):
+        for right_id in member_ids[left_index + 1 :]:
+            decision = decision_index.get(frozenset({left_id, right_id}))
+            if decision is None or decision["relationship"] != "same_event":
+                continue
+            decisions.append(decision)
+    return sorted(decisions, key=lambda decision: (decision["left_record_id"], decision["right_record_id"]))
+
+
+def _same_event_group_method(decisions: list[dict[str, Any]]) -> str:
+    if any(decision["method"] == "exact_duplicate_key_rule" for decision in decisions):
+        return "exact_duplicate_key_rule"
+    return "near_duplicate_rule"
+
+
+def _same_event_group_score_bucket(decisions: list[dict[str, Any]]) -> str:
+    ordered = {"exact": 3, "high": 2, "medium": 1, "low": 0, "none": -1}
+    best = "none"
+    for decision in decisions:
+        bucket = str(decision.get("score_bucket") or "none")
+        if ordered.get(bucket, -1) > ordered.get(best, -1):
+            best = bucket
+    return best
+
+
+def _same_event_group_id(member_ids: list[str]) -> str:
+    digest = hashlib.sha256("|".join(sorted(member_ids)).encode("utf-8")).hexdigest()[:24]
+    return f"text_event_same_event:{digest}"
+
+
+def _same_event_score_bucket(
+    *,
+    duplicate_key_match: bool,
+    title_similarity: float,
+    text_similarity: float,
+) -> str:
+    if duplicate_key_match:
+        return "exact"
+    if title_similarity >= SAME_EVENT_TITLE_HIGH_MIN or text_similarity >= SAME_EVENT_TEXT_HIGH_MIN:
+        return "high"
+    if title_similarity >= SAME_EVENT_TITLE_MEDIUM_MIN and text_similarity >= SAME_EVENT_TEXT_MEDIUM_MIN:
+        return "medium"
+    return "none"
+
+
+def _has_directional_conflict(left_tokens: set[str], right_tokens: set[str]) -> bool:
+    for positive_tokens, negative_tokens in SAME_EVENT_DIRECTIONAL_CONFLICTS:
+        if left_tokens & positive_tokens and right_tokens & negative_tokens:
+            return True
+        if left_tokens & negative_tokens and right_tokens & positive_tokens:
+            return True
+    return False
+
+
+def _same_duplicate_group_key(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    left_key = _optional_text(left.get("duplicate_group_key"))
+    right_key = _optional_text(right.get("duplicate_group_key"))
+    return left_key is not None and right_key is not None and left_key == right_key
+
+
+def _same_event_time_window(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    left_time = _event_time(left)
+    right_time = _event_time(right)
+    if left_time is None or right_time is None:
+        return {"met": False, "hours": None, "reason": "missing_same_event_time_window"}
+    hours = abs((left_time - right_time).total_seconds()) / 3600
+    return {
+        "met": hours <= SAME_EVENT_MAX_WINDOW_HOURS,
+        "hours": _round_score(hours),
+        "reason": "outside_same_event_time_window" if hours > SAME_EVENT_MAX_WINDOW_HOURS else None,
+    }
+
+
+def _event_time(record: dict[str, Any]) -> datetime | None:
+    for field in ("published_at", "collected_at", "first_seen_at"):
+        value = record.get(field)
+        if isinstance(value, str) and value.strip():
+            parsed = _parse_utc(value)
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def _parse_utc(value: str) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _source_diverse(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    left_source = _optional_text(left.get("source"))
+    right_source = _optional_text(right.get("source"))
+    return left_source is not None and right_source is not None and left_source != right_source
+
+
+def _url_tokens(record: dict[str, Any]) -> set[str]:
+    value = _optional_text(record.get("canonical_url")) or _optional_text(record.get("url")) or ""
+    parsed = urlparse(value)
+    return _tokens(f"{parsed.netloc} {parsed.path}")
+
+
+def _tokens(value: str) -> set[str]:
+    return {token for token in "".join(character.lower() if character.isalnum() else " " for character in value).split() if len(token) > 2}
+
+
+def _jaccard(left: set[str], right: set[str]) -> float:
+    if not left or not right:
+        return 0.0
+    return len(left & right) / len(left | right)
+
+
+def _round_score(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return round(float(value), 6)
+
+
+def _earliest_timestamp(values: Any) -> str | None:
+    parsed = sorted(timestamp for value in values if (timestamp := _timestamp_text(value)) is not None)
+    return parsed[0] if parsed else None
+
+
+def _latest_timestamp_many(values: Any) -> str | None:
+    parsed = sorted(timestamp for value in values if (timestamp := _timestamp_text(value)) is not None)
+    return parsed[-1] if parsed else None
+
+
+def _timestamp_text(value: Any) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    parsed = _parse_utc(value)
+    if parsed is None:
+        return None
+    return parsed.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _find(parent: dict[str, str], value: str) -> str:
+    root = parent[value]
+    if root != value:
+        parent[value] = _find(parent, root)
+    return parent[value]
+
+
+def _union(parent: dict[str, str], left: str, right: str) -> None:
+    left_root = _find(parent, left)
+    right_root = _find(parent, right)
+    if left_root == right_root:
+        return
+    parent[max(left_root, right_root)] = min(left_root, right_root)
 
 
 def _read_history_records(storage_root: Path) -> list[dict[str, Any]]:
@@ -325,10 +686,16 @@ def _skipped_state(config_path: Path, *, reason: str, now: datetime | str | None
             "updated_records": 0,
             "duplicate_records": 0,
             "conflicting_duplicates": 0,
+            "same_event_groups": 0,
+            "same_event_grouped_records": 0,
+            "same_event_candidate_pairs": 0,
+            "same_event_candidate_pair_omitted_count": 0,
             "warning_count": 1,
             "error_count": 0,
         },
         "sources": [],
+        "same_event_groups": [],
+        "same_event_group_candidates": [],
         "warnings": [reason],
         "errors": [],
         "source_artifacts": [],
@@ -351,6 +718,8 @@ def _apply_manifest_summary(manifest: dict[str, Any], state: dict[str, Any]) -> 
         "incoming_records": totals["incoming_records"],
         "duplicate_records": totals["duplicate_records"],
         "conflicting_duplicates": totals["conflicting_duplicates"],
+        "same_event_groups": totals["same_event_groups"],
+        "same_event_grouped_records": totals["same_event_grouped_records"],
         "warnings": totals["warning_count"],
         "errors": totals["error_count"],
     }
@@ -359,6 +728,8 @@ def _apply_manifest_summary(manifest: dict[str, Any], state: dict[str, Any]) -> 
     counts["text_event_history_incoming_records"] = totals["incoming_records"]
     counts["text_event_history_duplicate_records"] = totals["duplicate_records"]
     counts["text_event_history_conflicting_duplicates"] = totals["conflicting_duplicates"]
+    counts["text_event_history_same_event_groups"] = totals["same_event_groups"]
+    counts["text_event_history_same_event_grouped_records"] = totals["same_event_grouped_records"]
     counts["text_event_history_warnings"] = totals["warning_count"]
     counts["text_event_history_errors"] = totals["error_count"]
 

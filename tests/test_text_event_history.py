@@ -27,6 +27,7 @@ def test_text_event_history_appends_records_and_updates_manifest(tmp_path: Path)
     record = records[0]
 
     assert artifacts == ["data/research/metadata/text_event_history_state.json"]
+    assert state["schema_version"] == 2
     assert state["status"] == "ok"
     assert state["totals"]["records"] == 1
     assert record["raw_item_id"] == "text:coindesk:event-1"
@@ -77,6 +78,148 @@ def test_text_event_history_warns_on_conflicting_duplicate_content(tmp_path: Pat
     assert "conflicting duplicate text event:" in state["warnings"][0]
     assert record["status"] == "warning"
     assert record["origin_run_ids"] == ["run-1", "run-2"]
+    assert record["same_event_group_id"] is None
+    assert state["totals"]["same_event_groups"] == 0
+
+
+def test_text_event_history_groups_source_preserving_near_duplicates(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    first_run = _run_context(tmp_path, config_path, "run-1")
+    second_run = _run_context(tmp_path, config_path, "run-2")
+    first_records = [
+        _event_record(
+            "btc-1",
+            source_name="coindesk",
+            title="Bitcoin ETF inflows accelerate",
+            text="Bitcoin ETF inflows accelerated after issuers reported strong demand.",
+            link="https://example.com/coindesk/btc-etf-inflows",
+            published_at="2026-06-05T00:30:00Z",
+        ),
+        _event_record(
+            "btc-2",
+            source_name="the-block",
+            title="BTC ETF inflows accelerate as demand rises",
+            text="BTC ETF inflows accelerated after issuers reported strong demand.",
+            link="https://example.com/the-block/btc-etf-demand",
+            published_at="2026-06-05T02:00:00Z",
+            collected_at="2026-06-05T02:01:00Z",
+        ),
+    ]
+
+    write_text_event_history(_config(), first_run, first_records, now="2026-06-05T03:00:00Z")
+    first_group_id = _state(tmp_path)["same_event_groups"][0]["same_event_group_id"]
+    write_text_event_history(_config(), second_run, list(reversed(first_records)), now="2026-06-06T00:00:00Z")
+
+    state = _state(tmp_path)
+    records = _history_records(tmp_path)
+    group = state["same_event_groups"][0]
+
+    assert state["totals"]["records"] == 2
+    assert state["totals"]["duplicate_records"] == 2
+    assert state["totals"]["same_event_groups"] == 1
+    assert state["totals"]["same_event_grouped_records"] == 2
+    assert state["totals"]["same_event_candidate_pairs"] == 0
+    assert group["same_event_group_id"] == first_group_id
+    assert group["method"] == "near_duplicate_rule"
+    assert group["score_bucket"] == "high"
+    assert group["source_count"] == 2
+    assert group["sources"] == ["coindesk", "the-block"]
+    assert group["first_seen_at"] == "2026-06-05T00:31:00Z"
+    assert group["last_seen_at"] == "2026-06-05T02:01:00Z"
+    assert group["record_ids"] == sorted(record["stable_event_key"] for record in records)
+    assert group["decisions"][0]["relationship"] == "same_event"
+    assert "source_diversity_met" in group["decisions"][0]["reasons"]
+    assert "time_window_met" in group["decisions"][0]["reasons"]
+    assert sorted(record["source"] for record in records) == ["coindesk", "the-block"]
+    assert {record["canonical_url"] for record in records} == {
+        "https://example.com/coindesk/btc-etf-inflows",
+        "https://example.com/the-block/btc-etf-demand",
+    }
+    assert {record["same_event_group_id"] for record in records} == {group["same_event_group_id"]}
+    assert {record["same_event_group_method"] for record in records} == {"near_duplicate_rule"}
+    assert {record["same_event_group_score_bucket"] for record in records} == {"high"}
+    assert all(record["origin_run_ids"] == ["run-1", "run-2"] for record in records)
+
+
+def test_text_event_history_keeps_similar_events_separate_outside_time_window(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    run = _run_context(tmp_path, config_path, "run-1")
+
+    write_text_event_history(
+        _config(),
+        run,
+        [
+            _event_record(
+                "btc-1",
+                source_name="coindesk",
+                title="Bitcoin ETF inflows accelerate",
+                text="Bitcoin ETF inflows accelerated after issuers reported strong demand.",
+                link="https://example.com/coindesk/btc-etf-inflows",
+                published_at="2026-06-05T00:30:00Z",
+            ),
+            _event_record(
+                "btc-2",
+                source_name="the-block",
+                title="BTC ETF inflows accelerate as demand rises",
+                text="BTC ETF inflows accelerated after issuers reported strong demand.",
+                link="https://example.com/the-block/btc-etf-demand",
+                published_at="2026-06-12T02:00:00Z",
+                collected_at="2026-06-12T02:01:00Z",
+            ),
+        ],
+        now="2026-06-12T03:00:00Z",
+    )
+
+    state = _state(tmp_path)
+    records = _history_records(tmp_path)
+    candidate = state["same_event_group_candidates"][0]
+
+    assert state["totals"]["same_event_groups"] == 0
+    assert state["totals"]["same_event_grouped_records"] == 0
+    assert state["totals"]["same_event_candidate_pairs"] == 1
+    assert candidate["relationship"] == "separate"
+    assert candidate["score_bucket"] == "high"
+    assert "outside_same_event_time_window" in candidate["reasons"]
+    assert {record["same_event_group_id"] for record in records} == {None}
+
+
+def test_text_event_history_keeps_directional_conflict_separate(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    run = _run_context(tmp_path, config_path, "run-1")
+
+    write_text_event_history(
+        _config(),
+        run,
+        [
+            _event_record(
+                "btc-1",
+                source_name="coindesk",
+                title="Bitcoin ETF inflows accelerate",
+                text="Bitcoin ETF inflows accelerated after issuers reported strong demand.",
+                link="https://example.com/coindesk/btc-etf-inflows",
+                published_at="2026-06-05T00:30:00Z",
+            ),
+            _event_record(
+                "btc-2",
+                source_name="the-block",
+                title="Bitcoin ETF outflows accelerate",
+                text="Bitcoin ETF outflows accelerated after issuers reported weak demand.",
+                link="https://example.com/the-block/btc-etf-outflows",
+                published_at="2026-06-05T02:00:00Z",
+                collected_at="2026-06-05T02:01:00Z",
+            ),
+        ],
+        now="2026-06-05T03:00:00Z",
+    )
+
+    state = _state(tmp_path)
+    candidate = state["same_event_group_candidates"][0]
+
+    assert state["same_event_groups"] == []
+    assert state["totals"]["same_event_grouped_records"] == 0
+    assert candidate["relationship"] == "separate"
+    assert candidate["score_bucket"] == "medium"
+    assert "directional_term_conflict" in candidate["reasons"]
 
 
 def test_text_event_history_records_malformed_timestamps_and_no_record_state(
@@ -141,23 +284,28 @@ def _run_context(tmp_path: Path, config_path: Path, run_id: str) -> RunContext:
 def _event_record(
     raw_id: str,
     *,
+    source_name: str = "coindesk",
+    title: str = "Bitcoin market event",
     text: str = "Bitcoin ETF inflows rise",
+    link: str = "https://example.com/bitcoin-etf",
+    canonical_url: str | None = None,
     published_at: str | None = "2026-06-05T00:30:00Z",
     collected_at: str | None = "2026-06-05T00:31:00Z",
 ) -> dict[str, Any]:
+    canonical_url = canonical_url or link
     return {
-        "event_id": f"text_event:coindesk:{raw_id}",
-        "raw_item_id": f"text:coindesk:{raw_id}",
+        "event_id": f"text_event:{source_name}:{raw_id}",
+        "raw_item_id": f"text:{source_name}:{raw_id}",
         "input_type": "rss_item",
-        "source": {"name": "coindesk", "url": "https://example.com/rss"},
-        "title": "Bitcoin market event",
+        "source": {"name": source_name, "url": f"https://example.com/{source_name}/rss"},
+        "title": title,
         "content_text": text,
-        "link": "https://example.com/bitcoin-etf",
-        "canonical_url": "https://example.com/bitcoin-etf",
+        "link": link,
+        "canonical_url": canonical_url,
         "published_at": published_at,
         "collected_at": collected_at,
         "language": "en",
-        "normalized_title": "bitcoin market event",
+        "normalized_title": title.lower(),
         "normalized_text": text.lower(),
         "warnings": [],
         "source_artifacts": ["raw/text_events.json"],
