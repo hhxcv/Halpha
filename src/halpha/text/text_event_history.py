@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,15 @@ TEXT_EVENT_HISTORY_SCHEMA = pa.schema(
 )
 
 
+@dataclass(frozen=True)
+class _TextEventHistoryOrigin:
+    run_id: str
+    config_path: Path
+    records_artifact_ref: str
+    state_source_artifact_ref: str
+    source_artifact_base: Path | None
+
+
 def write_text_event_history(
     config: dict[str, Any],
     run: RunContext,
@@ -51,19 +61,64 @@ def write_text_event_history(
     now: datetime | str | None = None,
 ) -> list[str]:
     if not config.get("text", {}).get("enabled"):
-        _record_manifest_summary(run, _skipped_state(run, reason="text.enabled is false.", now=now))
+        _record_manifest_summary(run, _skipped_state(run.config_path, reason="text.enabled is false.", now=now))
         return []
 
-    storage_root = text_event_history_storage_path(run.config_path)
-    state_path = text_event_history_state_path(run.config_path)
-    incoming_records, incoming_warnings = _history_records(records, run, now=now)
+    origin = _TextEventHistoryOrigin(
+        run_id=run.run_id,
+        config_path=run.config_path,
+        records_artifact_ref=display_path(run.analysis_dir / "text_event_records.json", base=runtime_root(run.config_path)),
+        state_source_artifact_ref=TEXT_EVENT_RECORDS_ARTIFACT,
+        source_artifact_base=run.run_dir,
+    )
+    state = _write_text_event_history_state(records, origin=origin, now=now)
+    _record_manifest_summary(run, state)
+    return [TEXT_EVENT_HISTORY_STATE_ARTIFACT]
+
+
+def write_text_event_history_records(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    run_id: str,
+    records: list[dict[str, Any]],
+    records_artifact_ref: str,
+    source_artifact_base: Path | None = None,
+    manifest: dict[str, Any] | None = None,
+    now: datetime | str | None = None,
+) -> list[str]:
+    if not config.get("text", {}).get("enabled"):
+        state = _skipped_state(config_path, reason="text.enabled is false.", now=now)
+    else:
+        origin = _TextEventHistoryOrigin(
+            run_id=run_id,
+            config_path=config_path,
+            records_artifact_ref=records_artifact_ref,
+            state_source_artifact_ref=records_artifact_ref,
+            source_artifact_base=source_artifact_base,
+        )
+        state = _write_text_event_history_state(records, origin=origin, now=now)
+    if manifest is not None:
+        _apply_manifest_summary(manifest, state)
+    return [] if state["status"] == "skipped" and not records else [TEXT_EVENT_HISTORY_STATE_ARTIFACT]
+
+
+def _write_text_event_history_state(
+    records: list[dict[str, Any]],
+    *,
+    origin: _TextEventHistoryOrigin,
+    now: datetime | str | None,
+) -> dict[str, Any]:
+    storage_root = text_event_history_storage_path(origin.config_path)
+    state_path = text_event_history_state_path(origin.config_path)
+    incoming_records, incoming_warnings = _history_records(records, origin, now=now)
     existing_records = _read_history_records(storage_root)
     merged_records, merge_summary = _merge_history(existing_records, incoming_records)
     warnings = _unique_sorted([*incoming_warnings, *merge_summary["warnings"]])
     status = _status(record_count=len(merged_records), warnings=warnings)
 
     _rewrite_history(storage_root, merged_records)
-    base = runtime_root(run.config_path)
+    base = runtime_root(origin.config_path)
     state = {
         "schema_version": TEXT_EVENT_HISTORY_SCHEMA_VERSION,
         "artifact_type": "text_event_history_state",
@@ -84,11 +139,10 @@ def write_text_event_history(
         "sources": _source_summaries(merged_records),
         "warnings": warnings,
         "errors": [],
-        "source_artifacts": [TEXT_EVENT_RECORDS_ARTIFACT],
+        "source_artifacts": [origin.state_source_artifact_ref],
     }
     write_json(state_path, state)
-    _record_manifest_summary(run, state)
-    return [TEXT_EVENT_HISTORY_STATE_ARTIFACT]
+    return state
 
 
 def text_event_history_storage_path(config_path: Path) -> Path:
@@ -101,7 +155,7 @@ def text_event_history_state_path(config_path: Path) -> Path:
 
 def _history_records(
     records: list[dict[str, Any]],
-    run: RunContext,
+    origin: _TextEventHistoryOrigin,
     *,
     now: datetime | str | None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -109,7 +163,7 @@ def _history_records(
     warnings = []
     observed_at = _format_utc(now)
     for record in records:
-        item, item_warnings = _history_record(record, run, observed_at=observed_at)
+        item, item_warnings = _history_record(record, origin, observed_at=observed_at)
         normalized.append(item)
         warnings.extend(item_warnings)
     return sorted(normalized, key=lambda item: item["stable_event_key"]), _unique_sorted(warnings)
@@ -117,7 +171,7 @@ def _history_records(
 
 def _history_record(
     record: dict[str, Any],
-    run: RunContext,
+    origin: _TextEventHistoryOrigin,
     *,
     observed_at: str,
 ) -> tuple[dict[str, Any], list[str]]:
@@ -152,15 +206,15 @@ def _history_record(
         "collected_at": collected_at,
         "normalized_text": normalized_text,
         "content_hash": content_hash,
-        "origin_run_ids": [run.run_id],
-        "first_seen_run_id": run.run_id,
-        "last_seen_run_id": run.run_id,
+        "origin_run_ids": [origin.run_id],
+        "first_seen_run_id": origin.run_id,
+        "last_seen_run_id": origin.run_id,
         "first_seen_at": first_seen_at,
         "last_seen_at": first_seen_at,
         "duplicate_group_key": canonical_url or content_hash,
         "status": "warning" if warnings else "active",
         "warnings": _unique_sorted(warnings),
-        "source_artifacts": _source_artifacts(record, run),
+        "source_artifacts": _source_artifacts(record, origin),
     }, warnings
 
 
@@ -253,17 +307,17 @@ def _normalize_existing(record: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _skipped_state(run: RunContext, *, reason: str, now: datetime | str | None) -> dict[str, Any]:
+def _skipped_state(config_path: Path, *, reason: str, now: datetime | str | None) -> dict[str, Any]:
     return {
         "schema_version": TEXT_EVENT_HISTORY_SCHEMA_VERSION,
         "artifact_type": "text_event_history_state",
         "updated_at": _format_utc(now),
         "status": "skipped",
         "storage_path": display_path(
-            text_event_history_storage_path(run.config_path),
-            base=runtime_root(run.config_path),
+            text_event_history_storage_path(config_path),
+            base=runtime_root(config_path),
         ),
-        "state_path": display_path(text_event_history_state_path(run.config_path), base=runtime_root(run.config_path)),
+        "state_path": display_path(text_event_history_state_path(config_path), base=runtime_root(config_path)),
         "totals": {
             "records": 0,
             "incoming_records": 0,
@@ -282,10 +336,14 @@ def _skipped_state(run: RunContext, *, reason: str, now: datetime | str | None) 
 
 
 def _record_manifest_summary(run: RunContext, state: dict[str, Any]) -> None:
+    _apply_manifest_summary(run.manifest, state)
+
+
+def _apply_manifest_summary(manifest: dict[str, Any], state: dict[str, Any]) -> None:
     totals = state["totals"]
     if state["status"] != "skipped":
-        run.manifest["artifacts"]["text_event_history_state"] = TEXT_EVENT_HISTORY_STATE_ARTIFACT
-    run.manifest["text_event_history"] = {
+        manifest.setdefault("artifacts", {})["text_event_history_state"] = TEXT_EVENT_HISTORY_STATE_ARTIFACT
+    manifest["text_event_history"] = {
         "status": state["status"],
         "storage_path": state["storage_path"],
         "state_path": state["state_path"],
@@ -296,12 +354,13 @@ def _record_manifest_summary(run: RunContext, state: dict[str, Any]) -> None:
         "warnings": totals["warning_count"],
         "errors": totals["error_count"],
     }
-    run.manifest["counts"]["text_event_history_records"] = totals["records"]
-    run.manifest["counts"]["text_event_history_incoming_records"] = totals["incoming_records"]
-    run.manifest["counts"]["text_event_history_duplicate_records"] = totals["duplicate_records"]
-    run.manifest["counts"]["text_event_history_conflicting_duplicates"] = totals["conflicting_duplicates"]
-    run.manifest["counts"]["text_event_history_warnings"] = totals["warning_count"]
-    run.manifest["counts"]["text_event_history_errors"] = totals["error_count"]
+    counts = manifest.setdefault("counts", {})
+    counts["text_event_history_records"] = totals["records"]
+    counts["text_event_history_incoming_records"] = totals["incoming_records"]
+    counts["text_event_history_duplicate_records"] = totals["duplicate_records"]
+    counts["text_event_history_conflicting_duplicates"] = totals["conflicting_duplicates"]
+    counts["text_event_history_warnings"] = totals["warning_count"]
+    counts["text_event_history_errors"] = totals["error_count"]
 
 
 def _source_summaries(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -311,12 +370,15 @@ def _source_summaries(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{"source": source, "record_count": count} for source, count in sorted(by_source.items())]
 
 
-def _source_artifacts(record: dict[str, Any], run: RunContext) -> list[str]:
-    artifacts = [display_path(run.analysis_dir / "text_event_records.json", base=runtime_root(run.config_path))]
+def _source_artifacts(record: dict[str, Any], origin: _TextEventHistoryOrigin) -> list[str]:
+    artifacts = [origin.records_artifact_ref]
     for artifact in record.get("source_artifacts") or []:
         if not isinstance(artifact, str) or not artifact:
             continue
-        artifacts.append(display_path(run.run_dir / artifact, base=runtime_root(run.config_path)))
+        if origin.source_artifact_base is None:
+            artifacts.append(artifact)
+        else:
+            artifacts.append(display_path(origin.source_artifact_base / artifact, base=runtime_root(origin.config_path)))
     return _unique_sorted(artifacts)
 
 

@@ -41,9 +41,7 @@ def build_text_event_records(config: dict[str, Any], run: RunContext) -> list[st
         return []
 
     raw = _read_raw_text_events(run)
-    source_index = _source_index(raw.get("sources"))
-    records = [_record_from_item(item, raw=raw, source_index=source_index) for item in raw["items"]]
-    warnings = _artifact_warnings(records, raw)
+    records, warnings = normalize_text_event_records(raw)
     errors: list[dict[str, Any]] = []
     artifact = {
         "schema_version": 1,
@@ -65,6 +63,19 @@ def build_text_event_records(config: dict[str, Any], run: RunContext) -> list[st
     history_artifacts = write_text_event_history(config, run, records)
     catalog_artifacts = write_research_data_catalog(config, run)
     return [TEXT_EVENT_RECORDS_ARTIFACT, *history_artifacts, *catalog_artifacts]
+
+
+def normalize_text_event_records(
+    raw: dict[str, Any],
+    *,
+    source_artifact_ref: str = TEXT_RAW_ARTIFACT,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    source_index = _source_index(raw.get("sources"))
+    records = [
+        _record_from_item(item, raw=raw, source_index=source_index, source_artifact_ref=source_artifact_ref)
+        for item in raw["items"]
+    ]
+    return records, _artifact_warnings(records, raw)
 
 
 def _read_raw_text_events(run: RunContext) -> dict[str, Any]:
@@ -96,6 +107,7 @@ def _record_from_item(
     *,
     raw: dict[str, Any],
     source_index: dict[str, str],
+    source_artifact_ref: str,
 ) -> dict[str, Any]:
     warnings: list[str] = []
     raw_item_id = _clean_string(item.get("id"))
@@ -126,7 +138,7 @@ def _record_from_item(
         "normalized_title": normalized_title,
         "normalized_text": normalized_text,
         "warnings": warnings,
-        "source_artifacts": [TEXT_RAW_ARTIFACT],
+        "source_artifacts": [source_artifact_ref],
     }
 
 

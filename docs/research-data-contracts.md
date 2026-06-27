@@ -41,7 +41,7 @@ must stay marked until their producers are added.
 | Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
 | Macro calendar history | Initial adoption | macro calendar history writer | macro calendar views, data inspection, data quality |
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
-| Collection coverage state | Initial adoption | OHLCV data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
+| Collection coverage state | Initial adoption | OHLCV and text-event data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
 | Collection plan | Implemented | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
 | Shared data query | Initial adoption | OHLCV query adapter | benchmark backtests; event queries, Dashboard previews, and exports planned |
 | Bounded data export | Planned | shared query/export service | CLI export, Dashboard download, external quant tools |
@@ -219,6 +219,19 @@ Rules:
 - OHLCV `data collect --apply` executes planned fetch windows, writes finalized
   candles to the shared OHLCV store, updates collection coverage, and refreshes
   the shared research data catalog snapshot without creating a product run.
+- Text-event `data collect` dry-run reads coverage state and returns a bounded
+  plan without source fetches, history writes, coverage writes, catalog writes,
+  run archives, monitor cycles, schedules, report generation, or Codex
+  execution.
+- Text-event `data collect --apply` runs the configured text source collection
+  path for the selected source name or `all`, normalizes records through the
+  same text-event record builder used by the pipeline, writes shared
+  text-event history, records `collected`, `no_data`, `partial`, `failed`, or
+  `not_collected` coverage, and refreshes the shared research data catalog
+  snapshot without creating a product run.
+- Current text-event RSS collection is best-effort for configured feeds. A
+  source that cannot support the requested historical range must surface a
+  blocked plan or incomplete coverage instead of fake success.
 
 ## Shared Data Query Contract
 

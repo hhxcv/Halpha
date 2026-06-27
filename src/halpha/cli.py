@@ -76,6 +76,7 @@ from halpha.strategy.standalone_backtest import StandaloneBacktestError, run_sta
 from halpha.text.standalone_text_intelligence import run_standalone_text_intelligence
 from halpha.storage import display_path
 from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
+from halpha.text.text_event_collection import TextEventCollectionError, collect_text_event_data
 from halpha.text.text_models import prepare_text_models
 from halpha.workbench.workbench import build_workbench_summary, inspect_workbench_summary
 
@@ -203,12 +204,12 @@ def build_parser() -> argparse.ArgumentParser:
     collect_parser.add_argument(
         "--data-type",
         required=True,
-        choices=("ohlcv",),
-        help="Data type to collect. Currently only ohlcv is implemented.",
+        choices=("ohlcv", "text_event"),
+        help="Data type to collect.",
     )
     collect_parser.add_argument("--source", required=True, help="Configured data source to collect.")
-    collect_parser.add_argument("--symbol", required=True, help="Configured OHLCV symbol to collect.")
-    collect_parser.add_argument("--timeframe", required=True, help="Configured OHLCV timeframe to collect.")
+    collect_parser.add_argument("--symbol", help="Configured OHLCV symbol to collect.")
+    collect_parser.add_argument("--timeframe", help="Configured OHLCV timeframe to collect.")
     collect_parser.add_argument("--start", required=True, help="Inclusive ISO 8601 UTC range start.")
     collect_parser.add_argument("--end", required=True, help="Exclusive ISO 8601 UTC range end.")
     collect_mode = collect_parser.add_mutually_exclusive_group()
@@ -1204,8 +1205,8 @@ def _data_collect(
     *,
     data_type: str,
     source: str,
-    symbol: str,
-    timeframe: str,
+    symbol: str | None,
+    timeframe: str | None,
     requested_start: str,
     requested_end: str,
     apply: bool,
@@ -1229,8 +1230,8 @@ def _data_collect(
         return 2
 
     _configure_logging(config_path=config_path, config=config)
-    if data_type != "ohlcv":
-        reason = f"data collect does not support data_type={data_type}."
+    if data_type == "ohlcv" and (not symbol or not timeframe):
+        reason = "data collect --data-type ohlcv requires --symbol and --timeframe."
         _log_command_failed(command, stage="data_collect", reason=reason, exit_code=2)
         print("Halpha data collection failed.")
         print("stage: data_collect")
@@ -1238,20 +1239,33 @@ def _data_collect(
         return 2
 
     try:
-        result = collect_ohlcv_data(
-            config,
-            config_path=config_path,
-            source=source,
-            symbol=symbol,
-            timeframe=timeframe,
-            requested_start=requested_start,
-            requested_end=requested_end,
-            dry_run=not apply,
-            max_exact_windows=max_exact_windows,
-            merge_gap_threshold_seconds=merge_gap_threshold_seconds,
-            min_fetch_window_seconds=min_fetch_window_seconds,
-        )
-    except OHLCVCollectionError as exc:
+        if data_type == "ohlcv":
+            result = collect_ohlcv_data(
+                config,
+                config_path=config_path,
+                source=source,
+                symbol=str(symbol),
+                timeframe=str(timeframe),
+                requested_start=requested_start,
+                requested_end=requested_end,
+                dry_run=not apply,
+                max_exact_windows=max_exact_windows,
+                merge_gap_threshold_seconds=merge_gap_threshold_seconds,
+                min_fetch_window_seconds=min_fetch_window_seconds,
+            )
+        else:
+            result = collect_text_event_data(
+                config,
+                config_path=config_path,
+                source=source,
+                requested_start=requested_start,
+                requested_end=requested_end,
+                dry_run=not apply,
+                max_exact_windows=max_exact_windows,
+                merge_gap_threshold_seconds=merge_gap_threshold_seconds,
+                min_fetch_window_seconds=min_fetch_window_seconds,
+            )
+    except (OHLCVCollectionError, TextEventCollectionError) as exc:
         _log_command_failed(command, stage="data_collect", reason=str(exc), exit_code=exc.exit_code)
         print("Halpha data collection failed.")
         print("stage: data_collect")
@@ -1290,6 +1304,8 @@ def _print_data_collection_result(result: dict, *, config_path: Path) -> None:
     print(f"source: {result.get('source')}")
     print(f"symbol: {result.get('symbol')}")
     print(f"timeframe: {result.get('timeframe')}")
+    if isinstance(result.get("identity"), dict):
+        print(f"identity: {result.get('identity')}")
     print(f"requested_start: {result.get('requested_start')}")
     print(f"requested_end: {result.get('requested_end')}")
     print(f"strategy: {plan.get('strategy')}")
@@ -1300,6 +1316,8 @@ def _print_data_collection_result(result: dict, *, config_path: Path) -> None:
             "gap_ranges",
             "retry_ranges",
             "planned_fetch_windows",
+            "raw_items",
+            "raw_errors",
             "fetched_records",
             "window_records",
             "stored_records",
