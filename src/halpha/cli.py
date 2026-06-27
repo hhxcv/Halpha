@@ -21,6 +21,7 @@ from halpha.dashboard import (
     validate_dashboard_host,
     validate_dashboard_port,
 )
+from halpha.data.data_export import DataExportError, export_data
 from halpha.data.data_inspection import DataInspectionError, inspect_local_data
 from halpha.data.run_archive_cleanup import (
     REPORT_ARCHIVE_DELETE_CONFIRMATION,
@@ -241,6 +242,49 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         help="Widen smaller fetch windows to at least this many seconds when possible.",
     )
+    export_parser = data_subparsers.add_parser(
+        "export",
+        help="Export bounded local research data without bypassing query filters.",
+        description="Export bounded local research data without bypassing query filters.",
+    )
+    export_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    export_parser.add_argument(
+        "--data-type",
+        required=True,
+        choices=("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"),
+        help="Data type to export.",
+    )
+    export_parser.add_argument("--source", help="Configured source or source filter to export.")
+    export_parser.add_argument("--symbol", help="Configured OHLCV symbol to export.")
+    export_parser.add_argument("--timeframe", help="Configured OHLCV timeframe to export.")
+    export_parser.add_argument(
+        "--identity",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Additional event-like identity filter. May be repeated.",
+    )
+    export_parser.add_argument("--start", required=True, help="Inclusive ISO 8601 UTC range start.")
+    export_parser.add_argument("--end", required=True, help="Exclusive ISO 8601 UTC range end.")
+    export_parser.add_argument("--as-of", help="Optional ISO 8601 UTC no-lookahead boundary.")
+    export_parser.add_argument(
+        "--format",
+        required=True,
+        choices=("csv", "json", "parquet"),
+        help="Output format. OHLCV supports csv or parquet; event-like data supports json or csv.",
+    )
+    export_parser.add_argument("--output", required=True, help="Local output path for the bounded export.")
+    export_parser.add_argument(
+        "--limit",
+        type=_positive_int_arg,
+        help="Optional positive record limit applied by the query layer.",
+    )
+    export_parser.add_argument(
+        "--sort-order",
+        choices=("asc", "desc"),
+        default="asc",
+        help="Event-like record sort order. Defaults to asc.",
+    )
     migrate_state_parser = data_subparsers.add_parser(
         "migrate-state",
         help="Inspect or apply explicit legacy local state migration.",
@@ -454,6 +498,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_exact_windows=args.max_exact_windows,
             merge_gap_threshold_seconds=args.merge_gap_threshold_seconds,
             min_fetch_window_seconds=args.min_fetch_window_seconds,
+        )
+
+    if args.command == "data" and args.data_command == "export":
+        return _data_export(
+            args.config,
+            data_type=args.data_type,
+            source=args.source,
+            symbol=args.symbol,
+            timeframe=args.timeframe,
+            identity_args=args.identity,
+            requested_start=args.start,
+            requested_end=args.end,
+            as_of=args.as_of,
+            output_format=args.format,
+            output_path=args.output,
+            limit=args.limit,
+            sort_order=args.sort_order,
         )
 
     if args.command == "data" and args.data_command == "migrate-state":
@@ -1348,6 +1409,118 @@ def _print_data_collection_result(result: dict, *, config_path: Path) -> None:
     for error in (result.get("errors") or [])[:10]:
         if isinstance(error, dict):
             print(f"error: {error.get('message')}")
+
+
+def _data_export(
+    config_arg: str,
+    *,
+    data_type: str,
+    source: str | None,
+    symbol: str | None,
+    timeframe: str | None,
+    identity_args: Sequence[str],
+    requested_start: str,
+    requested_end: str,
+    as_of: str | None,
+    output_format: str,
+    output_path: str,
+    limit: int | None,
+    sort_order: str,
+) -> int:
+    config_path = Path(config_arg)
+    command = "data export"
+    _configure_logging(config_path=config_path)
+    _log_command_start(
+        command,
+        data_type=data_type,
+        source=source,
+        symbol=symbol,
+        timeframe=timeframe,
+        format=output_format,
+    )
+
+    try:
+        identity = _parse_identity_args(identity_args)
+        config = load_config(config_path)
+    except ConfigError as exc:
+        _log_command_failed(command, stage="config", reason=str(exc), exit_code=2)
+        print("Halpha data export failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+    except ValueError as exc:
+        _log_command_failed(command, stage="data_export", reason=str(exc), exit_code=2)
+        print("Halpha data export failed.")
+        print("stage: data_export")
+        print(f"reason: {exc}")
+        return 2
+
+    _configure_logging(config_path=config_path, config=config)
+    try:
+        result = export_data(
+            config,
+            config_path=config_path,
+            data_type=data_type,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+            identity=identity,
+            start=requested_start,
+            end=requested_end,
+            as_of=as_of,
+            output_format=output_format,
+            output_path=output_path,
+            limit=limit,
+            sort_order=sort_order,
+        )
+    except DataExportError as exc:
+        _log_command_failed(command, stage="data_export", reason=str(exc), exit_code=exc.exit_code)
+        print("Halpha data export failed.")
+        print("stage: data_export")
+        print(f"reason: {exc}")
+        return exc.exit_code
+
+    _print_data_export_result(result)
+    _log_command_succeeded(command, status=str(result.get("status") or "unknown"))
+    return 0
+
+
+def _print_data_export_result(result: dict) -> None:
+    print("Halpha data export succeeded.")
+    print(f"status: {result.get('status')}")
+    print(f"data_type: {result.get('data_type')}")
+    print(f"format: {result.get('format')}")
+    print(f"output: {result.get('output_path')}")
+    print(f"metadata: {result.get('metadata_path') or 'embedded'}")
+    print(f"record_count: {result.get('record_count')}")
+    print(f"matched_record_count: {result.get('matched_record_count')}")
+    print(f"truncated: {result.get('truncated')}")
+    query_parameters = result.get("query_parameters") if isinstance(result.get("query_parameters"), dict) else {}
+    print(f"requested_start: {query_parameters.get('start')}")
+    print(f"requested_end: {query_parameters.get('end')}")
+    print(f"as_of: {query_parameters.get('as_of')}")
+    coverage = result.get("coverage_diagnostics") if isinstance(result.get("coverage_diagnostics"), dict) else {}
+    print(f"coverage_status: {coverage.get('status')}")
+    print(f"coverage_record_count: {coverage.get('record_count')}")
+    for warning in (result.get("warnings") or [])[:10]:
+        print(f"warning: {warning}")
+    for error in (result.get("errors") or [])[:10]:
+        if isinstance(error, dict):
+            print(f"error: {error.get('message')}")
+
+
+def _parse_identity_args(values: Sequence[str]) -> dict[str, str]:
+    identity: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError("--identity must use KEY=VALUE.")
+        key, raw = value.split("=", 1)
+        key = key.strip()
+        raw = raw.strip()
+        if not key or raw == "":
+            raise ValueError("--identity must use non-empty KEY=VALUE.")
+        identity[key] = raw
+    return identity
 
 
 def _data_migrate_state(config_arg: str, *, apply: bool, replace_schedule: bool) -> int:
