@@ -17,19 +17,19 @@
 
       function statusClass(status) {
         const normalized = String(status || "unknown").toLowerCase();
-        if (["ok", "available", "succeeded", "success", "completed", "running"].includes(normalized)) {
+        if (["ok", "available", "succeeded", "success", "completed", "running", "collected", "no_data"].includes(normalized)) {
           return normalized;
         }
         if (["failed", "error", "degraded", "blocked"].includes(normalized)) {
           return normalized;
         }
-        if (["disabled", "not_generated", "not_run"].includes(normalized)) {
+        if (["disabled", "not_generated", "not_run", "unsupported"].includes(normalized)) {
           return "skipped";
         }
         if (["insufficient_data", "unavailable"].includes(normalized)) {
           return "partial";
         }
-        if (["warning", "partial", "missing", "skipped", "pending"].includes(normalized)) {
+        if (["warning", "partial", "missing", "skipped", "pending", "not_collected", "stale"].includes(normalized)) {
           return normalized;
         }
         return "unknown";

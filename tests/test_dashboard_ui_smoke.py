@@ -31,6 +31,7 @@ REQUIRED_SCRIPT_ASSETS = (
     "/assets/dashboard_reports.js",
     "/assets/dashboard_strategy_chart.js",
     "/assets/dashboard_monitor.js",
+    "/assets/dashboard_data_viewer.js",
     "/assets/dashboard.js",
 )
 
@@ -172,6 +173,96 @@ def test_dashboard_report_job_controls_expose_dom_contracts(tmp_path: Path) -> N
     assert 'data-report-job="generate"' in html
     assert 'id="overview-report-job-status"' in html
     assert 'id="reports-report-job-status"' in html
+
+
+def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    parser = DashboardShellParser()
+    parser.feed(html)
+
+    for data_attr in (
+        "data-data-viewer-summary-endpoint",
+        "data-data-viewer-timeline-endpoint",
+        "data-data-viewer-preview-endpoint",
+        "data-data-viewer-export-endpoint",
+        "data-data-viewer-collect-plan-endpoint",
+        "data-data-viewer-collect-jobs-endpoint",
+    ):
+        assert data_attr in parser.data_attrs
+    for selector_id in (
+        "strategy-data-viewer",
+        "strategy-data-source",
+        "strategy-data-symbol",
+        "strategy-data-timeframe",
+        "strategy-data-start",
+        "strategy-data-end",
+        "strategy-data-as-of",
+        "strategy-data-format",
+        "strategy-data-coverage",
+        "strategy-data-preview-panel",
+        "strategy-data-plan-panel",
+        "strategy-data-job-panel",
+        "intel-data-viewer",
+        "intel-data-type",
+        "intel-data-source",
+        "intel-data-identity-key",
+        "intel-data-identity-value",
+        "intel-data-start",
+        "intel-data-end",
+        "intel-data-as-of",
+        "intel-data-format",
+        "intel-data-coverage",
+        "intel-data-preview-panel",
+        "intel-data-plan-panel",
+        "intel-data-job-panel",
+    ):
+        assert f'id="{selector_id}"' in html
+    for action in (
+        "strategy-timeline",
+        "strategy-preview",
+        "strategy-plan",
+        "strategy-collect",
+        "strategy-export",
+        "intel-timeline",
+        "intel-preview",
+        "intel-plan",
+        "intel-collect",
+        "intel-export",
+    ):
+        assert f'data-data-viewer-action="{action}"' in html
+
+
+def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Path) -> None:
+    script = _script_block(_dashboard_html(tmp_path))
+
+    assert "HalphaDashboardDataViewer" in script
+    assert "dataViewerSummary: app.dataset.dataViewerSummaryEndpoint" in script
+    assert "dataViewerTimeline: app.dataset.dataViewerTimelineEndpoint" in script
+    assert "dataViewerPreview: app.dataset.dataViewerPreviewEndpoint" in script
+    assert "dataViewerExport: app.dataset.dataViewerExportEndpoint" in script
+    assert "dataViewerCollectPlan: app.dataset.dataViewerCollectPlanEndpoint" in script
+    assert "dataViewerCollectJobs: app.dataset.dataViewerCollectJobsEndpoint" in script
+    assert "postJson(endpoints.dataViewerTimeline" in script
+    assert "postJson(endpoints.dataViewerPreview" in script
+    assert "postJson(endpoints.dataViewerCollectPlan" in script
+    assert "postJson(endpoints.dataViewerCollectJobs" in script
+    assert "postJson(endpoints.dataViewerExport" in script
+    for status in (
+        "collected",
+        "no_data",
+        "partial",
+        "failed",
+        "not_collected",
+        "stale",
+        "warning",
+        "error",
+        "unsupported",
+        "unavailable",
+        "unknown",
+    ):
+        assert f'"{status}"' in script
+    assert "Check the timeline to distinguish no_data from not_collected, partial, failed, stale, or unknown coverage." in script
+    assert "Creating bounded export under data/exports." in script
 
 
 def test_dashboard_monitor_and_schedule_service_controls_expose_dom_contracts(tmp_path: Path) -> None:

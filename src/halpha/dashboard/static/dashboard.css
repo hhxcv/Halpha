@@ -346,6 +346,8 @@
 
     .status-pill.ok,
     .status-pill.available,
+    .status-pill.collected,
+    .status-pill.no_data,
     .status-pill.succeeded,
     .status-pill.success,
     .status-pill.completed,
@@ -358,6 +360,8 @@
     .status-pill.warning,
     .status-pill.partial,
     .status-pill.missing,
+    .status-pill.not_collected,
+    .status-pill.stale,
     .status-pill.skipped,
     .status-pill.unknown,
     .status-pill.pending {
@@ -1084,6 +1088,121 @@
       padding: 0 16px 16px;
     }
 
+    .data-viewer-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .data-viewer-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      min-width: 0;
+    }
+
+    .data-viewer-header .panel-title {
+      margin-bottom: 0;
+    }
+
+    .data-viewer-header .toolbar-actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .data-viewer-controls {
+      display: grid;
+      grid-template-columns: 140px 150px 110px repeat(2, minmax(190px, 1fr)) minmax(180px, 1fr) 110px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .intel-data-controls {
+      grid-template-columns: 170px 150px 150px 160px repeat(2, minmax(190px, 1fr)) minmax(180px, 1fr) 100px;
+    }
+
+    .data-viewer-summary {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .data-viewer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .data-viewer-grid > section {
+      min-width: 0;
+    }
+
+    .subsection-title {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 780;
+    }
+
+    .data-viewer-timeline,
+    .data-viewer-preview,
+    .data-viewer-plan,
+    .data-viewer-job {
+      min-height: 92px;
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .data-coverage-row {
+      display: grid;
+      grid-template-columns: 104px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-coverage-row:last-child {
+      border-bottom: 0;
+    }
+
+    .data-coverage-range {
+      min-width: 0;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .data-coverage-meta {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .data-plan-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-plan-row:last-child {
+      border-bottom: 0;
+    }
+
+    .data-viewer-job .compact-list {
+      margin-top: 10px;
+    }
+
+    .data-viewer-preview .table-wrap,
+    .data-viewer-plan .table-wrap,
+    .data-viewer-job .table-wrap {
+      max-height: 260px;
+    }
+
     .table-wrap {
       overflow: auto;
     }
@@ -1631,6 +1750,9 @@
       }
 
       .strategy-controls,
+      .data-viewer-controls,
+      .intel-data-controls,
+      .data-viewer-grid,
       .filter-grid,
       .settings-top {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1691,10 +1813,17 @@
       }
 
       .strategy-controls,
+      .data-viewer-controls,
+      .intel-data-controls,
+      .data-viewer-grid,
       .filter-grid,
       .settings-top,
       .form-row {
         grid-template-columns: 1fr;
+      }
+
+      .data-viewer-header {
+        display: grid;
       }
 
       .settings-top {

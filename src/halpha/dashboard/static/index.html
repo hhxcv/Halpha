@@ -16,6 +16,12 @@
     data-preview-endpoint="/api/artifacts/preview"
     data-stores-endpoint="/api/data/stores"
     data-delete-endpoint="/api/data/deletion"
+    data-data-viewer-summary-endpoint="/api/data/viewer/summary"
+    data-data-viewer-timeline-endpoint="/api/data/viewer/timeline"
+    data-data-viewer-preview-endpoint="/api/data/viewer/preview"
+    data-data-viewer-export-endpoint="/api/data/viewer/export"
+    data-data-viewer-collect-plan-endpoint="/api/data/viewer/collect/plan"
+    data-data-viewer-collect-jobs-endpoint="/api/data/viewer/collect/jobs"
     data-strategies-endpoint="/api/strategies"
     data-monitor-endpoint="/api/monitor"
     data-monitor-cycles-endpoint="/api/monitor/cycles"
@@ -196,6 +202,48 @@
             <button class="ghost-button" type="button" id="download-ohlcv-button">Download OHLCV</button>
           </section>
           <section class="panel metric-strip" id="strategy-metrics"></section>
+          <section class="panel panel-pad data-viewer-panel" id="strategy-data-viewer">
+            <div class="data-viewer-header">
+              <h2 class="panel-title">OHLCV shared store <span id="strategy-data-status" class="status-pill pending">loading</span></h2>
+              <div class="toolbar-actions">
+                <button class="ghost-button" type="button" id="strategy-data-timeline" data-data-viewer-action="strategy-timeline">Timeline</button>
+                <button class="ghost-button" type="button" id="strategy-data-preview" data-data-viewer-action="strategy-preview">Preview</button>
+                <button class="ghost-button" type="button" id="strategy-data-plan" data-data-viewer-action="strategy-plan">Dry run</button>
+                <button class="primary-button" type="button" id="strategy-data-collect" data-data-viewer-action="strategy-collect">Collect</button>
+                <button class="ghost-button" type="button" id="strategy-data-export" data-data-viewer-action="strategy-export">Export</button>
+              </div>
+            </div>
+            <div class="data-viewer-controls">
+              <div class="field"><label for="strategy-data-source">Source</label><input id="strategy-data-source" class="text-input" type="text" placeholder="binance"></div>
+              <div class="field"><label for="strategy-data-symbol">Symbol</label><input id="strategy-data-symbol" class="text-input" type="text" placeholder="BTCUSDT"></div>
+              <div class="field"><label for="strategy-data-timeframe">Timeframe</label><input id="strategy-data-timeframe" class="text-input" type="text" placeholder="1d"></div>
+              <div class="field"><label for="strategy-data-start">Start</label><input id="strategy-data-start" class="text-input" type="text" placeholder="2026-06-01T00:00:00Z"></div>
+              <div class="field"><label for="strategy-data-end">End</label><input id="strategy-data-end" class="text-input" type="text" placeholder="2026-06-02T00:00:00Z"></div>
+              <div class="field"><label for="strategy-data-as-of">As of</label><input id="strategy-data-as-of" class="text-input" type="text" placeholder="optional"></div>
+              <div class="field"><label for="strategy-data-format">Format</label><select id="strategy-data-format" class="select-input"><option value="csv">CSV</option><option value="parquet">Parquet</option></select></div>
+            </div>
+            <div id="strategy-data-summary" class="summary-strip data-viewer-summary"></div>
+            <div class="data-viewer-grid">
+              <section>
+                <h3 class="subsection-title">Coverage timeline</h3>
+                <div id="strategy-data-coverage" class="data-viewer-timeline"><div class="message">Choose a time range, then load the timeline.</div></div>
+              </section>
+              <section>
+                <h3 class="subsection-title">Bounded preview</h3>
+                <div id="strategy-data-preview-panel" class="data-viewer-preview"><div class="message">Preview uses the shared query boundary and a small record limit.</div></div>
+              </section>
+            </div>
+            <div class="data-viewer-grid">
+              <section>
+                <h3 class="subsection-title">Collection plan</h3>
+                <div id="strategy-data-plan-panel" class="data-viewer-plan"><div class="message">Dry run shows the efficient collection window plan before submitting a job.</div></div>
+              </section>
+              <section>
+                <h3 class="subsection-title">Job and export</h3>
+                <div id="strategy-data-job-panel" class="data-viewer-job"><div class="message">Collection jobs and exports will appear here.</div></div>
+              </section>
+            </div>
+          </section>
           <section class="panel kline-panel">
             <div class="chart-header">
               <div>
@@ -308,6 +356,49 @@
             </div>
           </section>
           <section class="summary-strip" id="intel-kpis"></section>
+          <section class="panel panel-pad data-viewer-panel" id="intel-data-viewer">
+            <div class="data-viewer-header">
+              <h2 class="panel-title">Intelligence shared stores <span id="intel-data-status" class="status-pill pending">loading</span></h2>
+              <div class="toolbar-actions">
+                <button class="ghost-button" type="button" id="intel-data-timeline" data-data-viewer-action="intel-timeline">Timeline</button>
+                <button class="ghost-button" type="button" id="intel-data-preview" data-data-viewer-action="intel-preview">Preview</button>
+                <button class="ghost-button" type="button" id="intel-data-plan" data-data-viewer-action="intel-plan">Dry run</button>
+                <button class="primary-button" type="button" id="intel-data-collect" data-data-viewer-action="intel-collect">Collect</button>
+                <button class="ghost-button" type="button" id="intel-data-export" data-data-viewer-action="intel-export">Export</button>
+              </div>
+            </div>
+            <div class="data-viewer-controls intel-data-controls">
+              <div class="field"><label for="intel-data-type">Data type</label><select id="intel-data-type" class="select-input"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option></select></div>
+              <div class="field"><label for="intel-data-source">Source</label><input id="intel-data-source" class="text-input" type="text" placeholder="coindesk or all"></div>
+              <div class="field"><label for="intel-data-identity-key">Identity key</label><input id="intel-data-identity-key" class="text-input" type="text" placeholder="source_name"></div>
+              <div class="field"><label for="intel-data-identity-value">Identity value</label><input id="intel-data-identity-value" class="text-input" type="text" placeholder="optional"></div>
+              <div class="field"><label for="intel-data-start">Start</label><input id="intel-data-start" class="text-input" type="text" placeholder="2026-06-01T00:00:00Z"></div>
+              <div class="field"><label for="intel-data-end">End</label><input id="intel-data-end" class="text-input" type="text" placeholder="2026-06-02T00:00:00Z"></div>
+              <div class="field"><label for="intel-data-as-of">As of</label><input id="intel-data-as-of" class="text-input" type="text" placeholder="optional"></div>
+              <div class="field"><label for="intel-data-format">Format</label><select id="intel-data-format" class="select-input"><option value="json">JSON</option><option value="csv">CSV</option></select></div>
+            </div>
+            <div id="intel-data-summary" class="summary-strip data-viewer-summary"></div>
+            <div class="data-viewer-grid">
+              <section>
+                <h3 class="subsection-title">Coverage timeline</h3>
+                <div id="intel-data-coverage" class="data-viewer-timeline"><div class="message">Choose a data type and time range, then load the timeline.</div></div>
+              </section>
+              <section>
+                <h3 class="subsection-title">Bounded content preview</h3>
+                <div id="intel-data-preview-panel" class="data-viewer-preview"><div class="message">Preview keeps text and event-like records bounded.</div></div>
+              </section>
+            </div>
+            <div class="data-viewer-grid">
+              <section>
+                <h3 class="subsection-title">Collection plan</h3>
+                <div id="intel-data-plan-panel" class="data-viewer-plan"><div class="message">Text-event dry runs use the shared collection planner. Other stores show unsupported collection state.</div></div>
+              </section>
+              <section>
+                <h3 class="subsection-title">Job and export</h3>
+                <div id="intel-data-job-panel" class="data-viewer-job"><div class="message">Collection jobs and exports will appear here.</div></div>
+              </section>
+            </div>
+          </section>
           <div class="intel-grid">
             <section class="panel">
               <div class="library-header">
@@ -399,6 +490,7 @@
   <script src="/assets/dashboard_reports.js" defer></script>
   <script src="/assets/dashboard_strategy_chart.js" defer></script>
   <script src="/assets/dashboard_monitor.js" defer></script>
+  <script src="/assets/dashboard_data_viewer.js" defer></script>
   <script src="/assets/dashboard.js" defer></script>
 </body>
 </html>
