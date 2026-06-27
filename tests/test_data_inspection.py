@@ -7,6 +7,7 @@ import sqlite3
 import pytest
 
 from halpha.cli import main
+from halpha.data.collection_coverage import write_collection_coverage_state
 from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
 from halpha.storage import write_json
@@ -34,6 +35,7 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "Halpha data inspection succeeded." in output
     assert "status: ok" in output
     assert "research_data_catalog: skipped" in output
+    assert "collection_coverage: skipped" in output
     assert "run_index: skipped" in output
     assert "text_event_history: skipped" in output
     assert "ohlcv_history: skipped" in output
@@ -49,6 +51,62 @@ def test_data_inspect_reports_missing_optional_stores_without_private_config_val
     assert "data_quality_summary: skipped" in output
     assert "private-host" not in output
     assert "18080" not in output
+    assert str(tmp_path) not in output
+
+
+def test_data_inspect_reports_collection_coverage_summary(tmp_path: Path, capsys) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False)
+    write_collection_coverage_state(
+        config_path,
+        [
+            {
+                "data_type": "ohlcv",
+                "source": "binance",
+                "identity": {"symbol": "BTCUSDT", "timeframe": "1h"},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-02T00:00:00Z",
+                "status": "collected",
+                "record_count": 24,
+                "latest_attempt_at": "2026-06-02T00:00:00Z",
+                "latest_success_at": "2026-06-02T00:00:00Z",
+                "updated_at": "2026-06-02T00:00:00Z",
+            },
+            {
+                "data_type": "ohlcv",
+                "source": "binance",
+                "identity": {"symbol": "BTCUSDT", "timeframe": "1h"},
+                "range_start": "2026-06-02T00:00:00Z",
+                "range_end": "2026-06-03T00:00:00Z",
+                "status": "partial",
+                "warnings": ["one source page failed"],
+            },
+            {
+                "data_type": "text_event",
+                "source": "rss",
+                "identity": {"feed": "coindesk"},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-02T00:00:00Z",
+                "status": "failed",
+                "errors": [{"message": "feed timeout"}],
+            },
+        ],
+        now="2026-06-05T00:00:00Z",
+    )
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "collection_coverage: failed" in output
+    assert "records=3" in output
+    assert "range_start=2026-06-01T00:00:00Z" in output
+    assert "range_end=2026-06-03T00:00:00Z" in output
+    assert "status_collected=1" in output
+    assert "status_partial=1" in output
+    assert "status_failed=1" in output
+    assert "partial_ranges=1" in output
+    assert "failed_ranges=1" in output
+    assert "feed timeout" not in output
     assert str(tmp_path) not in output
 
 

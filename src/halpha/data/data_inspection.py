@@ -12,6 +12,12 @@ from halpha.data.data_quality_groups import (
     PERSONALIZED_RISK_CHECK_NAMES,
     named_quality_check_counts,
 )
+from halpha.data.collection_coverage import (
+    COVERAGE_STATE_ARTIFACT,
+    collection_coverage_path,
+    read_collection_coverage_state,
+    summarize_collection_coverage,
+)
 from halpha.data.research_data_catalog import CATALOG_ARTIFACT, research_data_catalog_path, validate_research_data_catalog
 from halpha.data.run_index import (
     RUN_INDEX_ARTIFACT,
@@ -137,6 +143,7 @@ def _local_store_sections(
 ) -> list[dict[str, Any]]:
     return [
         _catalog_section(config_path, base=base),
+        _collection_coverage_section(config_path, base=base),
         _run_index_section(config_path, base=base),
         _text_event_history_section(config_path, base=base),
         _ohlcv_section(config, config_path, base=base),
@@ -175,6 +182,38 @@ def _catalog_section(config_path: Path, *, base: Path) -> dict[str, Any]:
             "store_statuses": _store_statuses(data),
             "catalog_validation": _validation_statuses(validation),
         },
+    )
+
+
+def _collection_coverage_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    path = collection_coverage_path(config_path)
+    if not path.exists():
+        return _section(
+            "collection_coverage",
+            "skipped",
+            artifact=COVERAGE_STATE_ARTIFACT,
+            reason="collection coverage state was not found.",
+        )
+    state = read_collection_coverage_state(config_path)
+    summary = summarize_collection_coverage(state)
+    status_counts = summary["status_counts"]
+    fields = {
+        "records": summary["record_count"],
+        "range_start": summary["range_start"],
+        "range_end": summary["range_end"],
+        "partial_ranges": len(summary["partial_ranges"]),
+        "failed_ranges": len(summary["failed_ranges"]),
+        "not_collected_ranges": len(summary["not_collected_ranges"]),
+        "warnings": len(_list(state.get("warnings"))),
+        "errors": len(_list(state.get("errors"))),
+    }
+    for status, count in status_counts.items():
+        fields[f"status_{status}"] = count
+    return _section(
+        "collection_coverage",
+        str(state.get("status") or "unknown"),
+        artifact=COVERAGE_STATE_ARTIFACT,
+        fields=fields,
     )
 
 

@@ -83,6 +83,10 @@ Collection coverage state records whether a reusable data interval was
 collected, empty, partial, failed, stale, or not collected. It is metadata about
 collection coverage, not the raw records themselves.
 
+Target state path:
+
+- `data/research/metadata/collection_coverage_state.json`
+
 Coverage applies to implemented reusable stores:
 
 - OHLCV history;

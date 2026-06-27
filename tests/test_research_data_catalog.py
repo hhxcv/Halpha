@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from halpha.data.collection_coverage import write_collection_coverage_state
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import RunContext
 from halpha.data.research_data_catalog import (
@@ -58,6 +59,23 @@ def test_research_data_catalog_registers_shared_ohlcv_store(tmp_path: Path) -> N
     assert store_record["latest_completed_revision"] == store_record["latest_update_at"]
     assert store_record["unique_key_fields"] == ["source", "symbol", "timeframe", "open_time"]
     assert store_record["sources"] == ["binance"]
+    assert store_record["coverage_state"] == {
+        "status": "not_available",
+        "state_path": "data/research/metadata/collection_coverage_state.json",
+        "data_type": "ohlcv",
+        "record_count": 0,
+        "status_counts": {},
+        "range_start": None,
+        "range_end": None,
+        "partial_ranges": [],
+        "failed_ranges": [],
+        "not_collected_ranges": [],
+    }
+    assert store_record["query_capability"] == {
+        "status": "not_implemented",
+        "time_field": "open_time",
+        "coverage_diagnostics": False,
+    }
     assert store_record["migration_status"] == "current"
     assert store_record["migration"] == {
         "status": "current",
@@ -74,6 +92,57 @@ def test_research_data_catalog_registers_shared_ohlcv_store(tmp_path: Path) -> N
     )
     assert run.manifest["research_data_catalog"]["status"] == "ok"
     assert run.manifest["counts"]["research_data_catalog_records"] == 2
+
+
+def test_research_data_catalog_summarizes_collection_coverage_state(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = _config()
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records([_ohlcv_record(symbol="BTCUSDT", open_time="2026-06-01T00:00:00Z", close=100)])
+    write_collection_coverage_state(
+        config_path,
+        [
+            {
+                "data_type": "ohlcv",
+                "source": "binance",
+                "identity": {"symbol": "BTCUSDT", "timeframe": "1d"},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-02T00:00:00Z",
+                "status": "collected",
+                "record_count": 1,
+                "latest_attempt_at": "2026-06-02T00:00:00Z",
+                "latest_success_at": "2026-06-02T00:00:00Z",
+                "updated_at": "2026-06-02T00:00:00Z",
+                "source_artifacts": ["raw/market_data_views.json"],
+            },
+            {
+                "data_type": "ohlcv",
+                "source": "binance",
+                "identity": {"symbol": "BTCUSDT", "timeframe": "1d"},
+                "range_start": "2026-06-03T00:00:00Z",
+                "range_end": "2026-06-04T00:00:00Z",
+                "status": "failed",
+                "errors": [{"message": "source timeout"}],
+            },
+        ],
+        now="2026-06-05T00:00:00Z",
+    )
+    run = _run_context(tmp_path, config_path)
+    run.manifest["ohlcv_sync"] = {"status": "succeeded", "warnings": [], "errors": []}
+
+    catalog = build_research_data_catalog(config, run, now="2026-06-05T00:00:00Z")
+    store_record = catalog["stores"][0]
+
+    assert store_record["coverage_state"]["status"] == "available"
+    assert store_record["coverage_state"]["data_type"] == "ohlcv"
+    assert store_record["coverage_state"]["record_count"] == 2
+    assert store_record["coverage_state"]["status_counts"] == {"collected": 1, "failed": 1}
+    assert store_record["coverage_state"]["range_start"] == "2026-06-01T00:00:00Z"
+    assert store_record["coverage_state"]["range_end"] == "2026-06-04T00:00:00Z"
+    assert store_record["coverage_state"]["failed_ranges"] == [
+        {"range_start": "2026-06-03T00:00:00Z", "range_end": "2026-06-04T00:00:00Z"}
+    ]
+    assert store_record["query_capability"]["coverage_diagnostics"] is True
 
 
 def test_research_data_catalog_records_missing_metadata_without_absolute_paths(tmp_path: Path) -> None:
