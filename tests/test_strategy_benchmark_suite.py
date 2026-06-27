@@ -130,6 +130,53 @@ def test_strategy_benchmark_suite_expands_configured_history_with_stable_order(t
             "stale_after_open_time": None,
             "stale_tolerance_seconds": None,
         },
+        "query_diagnostics": {
+            "status": "ok",
+            "query_mode": "latest_lookback",
+            "requested_start": "2026-06-02T00:00:00Z",
+            "requested_end": "2026-06-03T00:00:00Z",
+            "requested_lookback": 2,
+            "as_of": None,
+            "time_fields": {
+                "range_field": "open_time",
+                "start_inclusive": True,
+                "end_inclusive": True,
+                "closed_candle_rule": "open_time + timeframe_duration <= as_of when as_of is provided",
+            },
+            "truncated": False,
+            "missing_diagnostics": {
+                "status": "ok",
+                "timeframe": "1d",
+                "timeframe_duration_seconds": 86400,
+                "expected_interval_count": 2,
+                "returned_interval_count": 2,
+                "missing_interval_count": 0,
+                "missing_open_time_samples": [],
+            },
+            "coverage_diagnostics": {
+                "status": "not_available",
+                "state_path": "data/research/metadata/collection_coverage_state.json",
+                "data_type": "ohlcv",
+                "source": "binance",
+                "identity": {"symbol": "BTCUSDT", "timeframe": "1d"},
+                "record_count": 0,
+                "status_counts": {},
+                "range_start": None,
+                "range_end": None,
+                "partial_ranges": [],
+                "failed_ranges": [],
+                "not_collected_ranges": [],
+                "unknown_ranges": [
+                    {"range_start": "2026-06-02T00:00:00Z", "range_end": "2026-06-03T00:00:00Z"}
+                ],
+                "warnings": ["collection coverage state was not found."],
+                "errors": [],
+            },
+            "source_artifacts": [
+                "data/market/metadata/ohlcv_sync_state.json",
+                "data/research/metadata/collection_coverage_state.json",
+            ],
+        },
         "warnings": [],
         "errors": [],
     }
@@ -189,6 +236,9 @@ def test_strategy_benchmark_suite_supports_explicit_date_window(tmp_path: Path) 
     assert record["input_window_end"] == "2026-06-03T00:00:00Z"
     assert record["row_count"] == 2
     assert record["history_row_count"] == 3
+    assert record["query_diagnostics"]["query_mode"] == "range"
+    assert record["query_diagnostics"]["time_fields"]["end_inclusive"] is True
+    assert record["query_diagnostics"]["missing_diagnostics"]["missing_interval_count"] == 0
     assert record["warnings"] == []
 
 

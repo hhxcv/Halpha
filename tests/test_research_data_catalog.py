@@ -72,9 +72,9 @@ def test_research_data_catalog_registers_shared_ohlcv_store(tmp_path: Path) -> N
         "not_collected_ranges": [],
     }
     assert store_record["query_capability"] == {
-        "status": "not_implemented",
+        "status": "implemented",
         "time_field": "open_time",
-        "coverage_diagnostics": False,
+        "coverage_diagnostics": True,
     }
     assert store_record["migration_status"] == "current"
     assert store_record["migration"] == {

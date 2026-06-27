@@ -518,14 +518,25 @@ OHLCV query inputs:
 - `end`;
 - optional `as_of`.
 
+Implemented adapter:
+
+- `halpha.market.ohlcv_query.query_ohlcv_records` for explicit ranges.
+- `halpha.market.ohlcv_query.query_latest_ohlcv_records` for configured or
+  explicit latest-lookback windows.
+
 OHLCV query rules:
 
 - Filter by `open_time` and closed-candle eligibility.
 - Do not return rows after the requested `end`.
-- Do not return rows that violate the requested `as_of` boundary.
+- Do not return rows that violate the requested `as_of` boundary. A candle is
+  eligible at `as_of` only when `open_time + timeframe_duration <= as_of`.
 - Preserve deterministic ordering by `open_time`.
 - Return missing-candle and coverage diagnostics when the store can derive
   them.
+- The default explicit range is half-open (`start <= open_time < end`).
+  Existing benchmark windows may request an inclusive `open_time` end to keep
+  the established `input_window_end` meaning as the latest returned candle
+  `open_time`.
 
 Event-like query rules for future quant consumers:
 
@@ -540,9 +551,11 @@ Event-like query rules for future quant consumers:
   research tools, but that conversion must not drop coverage warnings or source
   refs.
 
-Exports for quantitative research must use the same query boundary. They must
-not read full reusable store files directly to bypass range, `as_of`, or
-coverage rules.
+Strategy benchmark suite and strategy experiment benchmark-row loading use the
+OHLCV query adapter instead of independently slicing full reusable OHLCV
+history. Exports for quantitative research must use the same query boundary.
+They must not read full reusable store files directly to bypass range, `as_of`,
+or coverage rules.
 
 ## Strategy Data View Contract
 

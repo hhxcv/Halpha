@@ -43,7 +43,7 @@ must stay marked until their producers are added.
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
 | Collection coverage state | Initial adoption | OHLCV data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
 | Collection plan | Implemented | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
-| Shared data query | Planned | store query adapters | backtests, event queries, Dashboard previews, exports |
+| Shared data query | Initial adoption | OHLCV query adapter | benchmark backtests; event queries, Dashboard previews, and exports planned |
 | Bounded data export | Planned | shared query/export service | CLI export, Dashboard download, external quant tools |
 
 ## Layer Boundary
@@ -225,6 +225,19 @@ Rules:
 Shared data queries provide the common read path for backtests, Dashboard
 previews, report-facing material builders, and exports.
 
+Implemented query adapters:
+
+- OHLCV range query: `halpha.market.ohlcv_query.query_ohlcv_records`.
+- OHLCV latest-lookback query:
+  `halpha.market.ohlcv_query.query_latest_ohlcv_records`.
+
+Planned query adapters:
+
+- text events;
+- derivatives market history;
+- macro/calendar history;
+- on-chain flow history.
+
 Required query inputs:
 
 - `data_type`
@@ -255,6 +268,12 @@ Rules:
 - Query adapters must preserve source names, source refs, schema version,
   timestamps, duplicate status, conflict warnings, and errors where available.
 - Query APIs are product data access boundaries, not Codex context.
+- OHLCV queries use `open_time` for range filtering. The default range is
+  half-open (`start <= open_time < end`), while existing benchmark windows may
+  request an inclusive `open_time` end to preserve their current
+  `input_window_end` contract.
+- OHLCV queries with `as_of` return only candles whose close boundary is at or
+  before `as_of`.
 
 ## Bounded Data Export Contract
 
@@ -318,6 +337,9 @@ Required behavior:
   `python -m halpha data collect --data-type ohlcv ...`, with dry-run as the
   safe default and `--apply` required for source fetches and shared-store
   writes;
+- expose no-lookahead OHLCV range and latest-lookback reads through the shared
+  OHLCV query adapter, including missing-candle and collection-coverage
+  diagnostics;
 - avoid embedding full OHLCV history into Codex input.
 
 ## Research Data Catalog

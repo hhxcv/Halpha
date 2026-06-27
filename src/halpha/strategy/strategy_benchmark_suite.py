@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from halpha.market.ohlcv_quality import ohlcv_series_quality, quality_warning_messages
-from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
+from halpha.market.ohlcv_quality import quality_warning_messages
+from halpha.market.ohlcv_query import OHLCVQueryError, query_latest_ohlcv_records, query_ohlcv_records
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
@@ -69,7 +69,6 @@ def create_strategy_benchmark_suite_artifact(
         manifest_artifacts=manifest_artifacts,
     )
     windows = _window_specs(suite_config)
-    store = OHLCVParquetStore(storage_dir, run_output_dir=run_output_dir)
     view_quality = _view_quality_by_key(market_data_views)
 
     records = []
@@ -80,8 +79,9 @@ def create_strategy_benchmark_suite_artifact(
                 for window in windows:
                     records.append(
                         _benchmark_record(
-                            store=store,
                             storage_dir=storage_dir,
+                            config_path=config_path,
+                            run_output_dir=run_output_dir,
                             config_base=base,
                             source=source,
                             symbol=symbol,
@@ -93,8 +93,8 @@ def create_strategy_benchmark_suite_artifact(
                             view_quality=view_quality,
                         )
                     )
-    except OHLCVStoreError as exc:
-        raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=3) from exc
+    except OHLCVQueryError as exc:
+        raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=exc.exit_code) from exc
 
     coverage = _coverage(
         records,
@@ -147,8 +147,9 @@ def _benchmark_suite_enabled(config: dict[str, Any]) -> bool:
 
 def _benchmark_record(
     *,
-    store: OHLCVParquetStore,
     storage_dir: Path,
+    config_path: Path,
+    run_output_dir: Path,
     config_base: Path,
     source: str,
     symbol: str,
@@ -159,22 +160,28 @@ def _benchmark_record(
     quality_reference_time: str | None,
     view_quality: dict[tuple[str, str, str], dict[str, Any]],
 ) -> dict[str, Any]:
-    records = store.read_records(source=source, symbol=symbol, timeframe=timeframe)
-    selected_rows = _select_rows(records, timeframe=timeframe, configured_lookback=lookback, window=window)
     selection = str(window["selection"])
     requested_lookback = _requested_lookback(selection, configured_lookback=lookback, window=window)
+    query = _query_window(
+        storage_dir=storage_dir,
+        config_path=config_path,
+        run_output_dir=run_output_dir,
+        source=source,
+        symbol=symbol,
+        timeframe=timeframe,
+        requested_lookback=requested_lookback,
+        window=window,
+        quality_reference_time=quality_reference_time,
+    )
+    selected_rows = query["records"]
     minimum_rows = _minimum_rows(selection, requested_lookback=requested_lookback, window=window)
     row_count = len(selected_rows)
-    history_row_count = len(records)
+    history_row_count = int(query.get("history_row_count") or 0)
     start = selected_rows[0]["open_time"] if selected_rows else None
     end = selected_rows[-1]["open_time"] if selected_rows else None
     latest = end
     insufficient = row_count < minimum_rows
-    quality = view_quality.get((source, symbol, timeframe)) or ohlcv_series_quality(
-        selected_rows,
-        timeframe=timeframe,
-        now=quality_reference_time,
-    )
+    quality = view_quality.get((source, symbol, timeframe)) or query["quality"]
     quality_status = str(quality.get("status") or "ok")
     quality_warnings = quality_warning_messages(source=source, symbol=symbol, timeframe=timeframe, quality=quality)
     warnings = _record_warnings(
@@ -215,33 +222,70 @@ def _benchmark_record(
         "source_artifacts": [source_artifact],
         "quality_status": quality_status,
         "quality": quality,
+        "query_diagnostics": _query_diagnostics(query),
         "warnings": warnings,
         "errors": [],
     }
 
 
-def _select_rows(
-    records: list[dict[str, Any]],
+def _query_window(
     *,
+    storage_dir: Path,
+    config_path: Path,
+    run_output_dir: Path,
+    source: str,
+    symbol: str,
     timeframe: str,
-    configured_lookback: int,
+    requested_lookback: int | None,
     window: dict[str, Any],
-) -> list[dict[str, Any]]:
+    quality_reference_time: str | None,
+) -> dict[str, Any]:
     selection = str(window["selection"])
-    if selection == "configured_lookback":
-        return records[-configured_lookback:] if records else []
-    if selection == "latest_lookback":
-        lookback = int(window["lookback"])
-        return records[-lookback:] if records else []
+    if selection in {"configured_lookback", "latest_lookback"} and requested_lookback is not None:
+        return query_latest_ohlcv_records(
+            storage_dir,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+            lookback=requested_lookback,
+            config_path=config_path,
+            run_output_dir=run_output_dir,
+            now=quality_reference_time,
+        )
     if selection == "date_window":
-        start = str(window["start"])
-        end = str(window["end"])
-        return [record for record in records if start <= str(record["open_time"]) <= end]
+        return query_ohlcv_records(
+            storage_dir,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+            start=str(window["start"]),
+            end=str(window["end"]),
+            config_path=config_path,
+            run_output_dir=run_output_dir,
+            end_inclusive=True,
+            now=quality_reference_time,
+        )
     raise PipelineError(
         f"unsupported benchmark window selection for {timeframe}: {selection}",
         stage=STAGE_NAME,
         exit_code=3,
     )
+
+
+def _query_diagnostics(query: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": query.get("status"),
+        "query_mode": query.get("query_mode"),
+        "requested_start": query.get("requested_start"),
+        "requested_end": query.get("requested_end"),
+        "requested_lookback": query.get("requested_lookback"),
+        "as_of": query.get("as_of"),
+        "time_fields": query.get("time_fields"),
+        "truncated": query.get("truncated"),
+        "missing_diagnostics": query.get("missing_diagnostics"),
+        "coverage_diagnostics": query.get("coverage_diagnostics"),
+        "source_artifacts": query.get("source_artifacts"),
+    }
 
 
 def _record_warnings(
