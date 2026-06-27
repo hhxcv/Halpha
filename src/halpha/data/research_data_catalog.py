@@ -5,6 +5,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from halpha.data.collection_coverage import (
+    COVERAGE_STATE_ARTIFACT,
+    read_collection_coverage_state,
+    summarize_collection_coverage,
+)
 from halpha.data.run_index import run_index_path
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.shared_publication import (
@@ -97,6 +102,7 @@ def build_research_data_catalog(
 
     validation = validate_research_data_catalog({"stores": stores})
     _apply_validation_diagnostics(stores, validation)
+    _apply_coverage_metadata(stores, read_collection_coverage_state(run.config_path))
     warnings.extend(_diagnostic_message(item) for item in validation["warnings"])
     errors.extend(validation["errors"])
     status = _overall_status(stores=stores, warnings=warnings, errors=errors)
@@ -759,9 +765,64 @@ def _with_catalog_contract(
             "latest_completed_revision": latest_update_at,
             "migration_status": migration["status"],
             "migration": migration,
+            "coverage_state": {
+                "status": "not_applicable",
+                "state_path": None,
+                "data_type": None,
+                "record_count": 0,
+                "status_counts": {},
+                "range_start": None,
+                "range_end": None,
+            },
+            "query_capability": {
+                "status": "not_implemented",
+                "time_field": time_field,
+                "coverage_diagnostics": False,
+            },
         }
     )
     return record
+
+
+def _apply_coverage_metadata(stores: list[dict[str, Any]], coverage_state: dict[str, Any]) -> None:
+    data_type_by_store = {
+        "ohlcv_history": "ohlcv",
+        "text_event_history": "text_event",
+        "derivatives_market_history": "derivatives_market",
+        "macro_calendar_history": "macro_calendar",
+        "onchain_flow_history": "onchain_flow",
+    }
+    for store in stores:
+        data_type = data_type_by_store.get(str(store.get("name") or ""))
+        if data_type is None:
+            continue
+        summary = summarize_collection_coverage(coverage_state, data_type=data_type)
+        coverage_status = str(coverage_state.get("status") or "skipped")
+        if summary["record_count"] > 0:
+            status = "available"
+        elif coverage_status in {"error", "failed"}:
+            status = "error"
+        elif coverage_status == "skipped":
+            status = "not_available"
+        else:
+            status = "empty"
+        store["coverage_state"] = {
+            "status": status,
+            "state_path": COVERAGE_STATE_ARTIFACT,
+            "data_type": data_type,
+            "record_count": summary["record_count"],
+            "status_counts": summary["status_counts"],
+            "range_start": summary["range_start"],
+            "range_end": summary["range_end"],
+            "partial_ranges": summary["partial_ranges"],
+            "failed_ranges": summary["failed_ranges"],
+            "not_collected_ranges": summary["not_collected_ranges"],
+        }
+        store["query_capability"] = {
+            "status": "not_implemented",
+            "time_field": store.get("time_field"),
+            "coverage_diagnostics": status in {"available", "empty"},
+        }
 
 
 def _migration_metadata(*, schema_version: Any, last_migration_at: Any) -> dict[str, Any]:
