@@ -179,6 +179,10 @@ def text_event_history_state_path(config_path: Path) -> Path:
     return resolve_runtime_path(TEXT_EVENT_HISTORY_STATE_ARTIFACT, config_path=config_path)
 
 
+def read_text_event_history_records(config_path: Path) -> list[dict[str, Any]]:
+    return _read_history_records(text_event_history_storage_path(config_path))
+
+
 def _history_records(
     records: list[dict[str, Any]],
     origin: _TextEventHistoryOrigin,

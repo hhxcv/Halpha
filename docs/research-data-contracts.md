@@ -43,7 +43,7 @@ must stay marked until their producers are added.
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
 | Collection coverage state | Initial adoption | OHLCV and text-event data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
 | Collection plan | Implemented | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
-| Shared data query | Initial adoption | OHLCV query adapter | benchmark backtests; event queries, Dashboard previews, and exports planned |
+| Shared data query | Initial adoption | OHLCV and event-like query adapters | benchmark backtests; Dashboard previews and exports planned |
 | Bounded data export | Planned | shared query/export service | CLI export, Dashboard download, external quant tools |
 
 ## Layer Boundary
@@ -243,13 +243,14 @@ Implemented query adapters:
 - OHLCV range query: `halpha.market.ohlcv_query.query_ohlcv_records`.
 - OHLCV latest-lookback query:
   `halpha.market.ohlcv_query.query_latest_ohlcv_records`.
-
-Planned query adapters:
-
-- text events;
-- derivatives market history;
-- macro/calendar history;
-- on-chain flow history.
+- Text-event range query:
+  `halpha.data.event_like_query.query_text_event_records`.
+- Macro/calendar range query:
+  `halpha.data.event_like_query.query_macro_calendar_records`.
+- On-chain flow range query:
+  `halpha.data.event_like_query.query_onchain_flow_records`.
+- Derivatives market range query:
+  `halpha.data.event_like_query.query_derivatives_market_records`.
 
 Required query inputs:
 
@@ -287,6 +288,16 @@ Rules:
   `input_window_end` contract.
 - OHLCV queries with `as_of` return only candles whose close boundary is at or
   before `as_of`.
+- Text-event queries use `published_at` for range filtering, with
+  `collected_at` and `first_seen_at` as range fallbacks. With `as_of`, text
+  queries exclude records whose `published_at`, `collected_at`, or
+  `first_seen_at` is after the boundary.
+- Macro/calendar queries use `scheduled_at` for range filtering. With `as_of`,
+  they use `source_published_at` and `first_seen_at` as knowledge-boundary
+  fields so future scheduled events may be returned only when the source or
+  local history had made them visible by the boundary.
+- On-chain flow and derivatives market queries use record `as_of` for both
+  range filtering and no-lookahead eligibility.
 
 ## Bounded Data Export Contract
 

@@ -857,10 +857,17 @@ def _apply_coverage_metadata(stores: list[dict[str, Any]], coverage_state: dict[
             "failed_ranges": summary["failed_ranges"],
             "not_collected_ranges": summary["not_collected_ranges"],
         }
+        query_enabled = store.get("name") in {
+            "ohlcv_history",
+            "text_event_history",
+            "derivatives_market_history",
+            "macro_calendar_history",
+            "onchain_flow_history",
+        }
         store["query_capability"] = {
-            "status": "implemented" if store.get("name") == "ohlcv_history" else "not_implemented",
+            "status": "implemented" if query_enabled else "not_implemented",
             "time_field": store.get("time_field"),
-            "coverage_diagnostics": store.get("name") == "ohlcv_history" or status in {"available", "empty"},
+            "coverage_diagnostics": query_enabled,
         }
 
 
