@@ -1,15 +1,17 @@
 # Storage Contracts
 
-This document defines Halpha's M21 storage contract for run archives, shared
-data, runtime state, and derived artifacts. It is a durable implementation
-contract for humans and AI agents. It is not a milestone plan and not a claim
-that every producer already satisfies the target rule.
+This document defines Halpha's storage contract for run archives, shared data,
+runtime state, and derived artifacts. It is a durable implementation contract
+for humans and AI agents. It is not a milestone plan and not a claim that every
+producer already satisfies the target rule.
 
-M21 reliability work requires run history, Monitor state, shared data state,
-and cleanup decisions to be explicit. The goal is simple:
+Current storage work requires run history, Monitor state, shared data state,
+collection coverage, and cleanup decisions to be explicit. The goal is simple:
 
 - product runs stay inspectable but disposable;
 - reusable facts stay outside per-run archives;
+- shared-data coverage distinguishes empty collected intervals from
+  uncollected or failed intervals;
 - mutable operational state has one runtime authority;
 - rebuildable summaries do not become hidden authorities.
 
@@ -219,6 +221,88 @@ as durable shared store roots.
 Run archives may reference shared data through bounded refs and current-run
 views. Run archives must not become the durable store required to query shared
 data.
+
+### Shared Data Collection Coverage
+
+Collection coverage records describe whether Halpha attempted to collect a
+bounded interval for a data type and identity. Coverage is shared-data metadata,
+not raw evidence, report prose, or runtime command-job lifecycle state.
+
+Coverage record identity should include:
+
+- `data_type`, such as `ohlcv`, `text_event`, `derivatives_market`,
+  `macro_calendar`, or `onchain_flow`;
+- `source`;
+- type-specific identity fields, such as `symbol`, `timeframe`, `data_class`,
+  `asset`, `chain`, source group, or feed id;
+- `range_start`;
+- `range_end`;
+- `status`;
+- `updated_at`;
+- bounded `source_artifacts`, `warnings`, and `errors`.
+
+Coverage status vocabulary:
+
+- `collected`: the interval was collected successfully and produced one or more
+  reusable records.
+- `no_data`: the interval was collected successfully and the source returned no
+  records for that interval.
+- `partial`: at least one source, page, class, or sub-range succeeded, but the
+  full requested interval is incomplete.
+- `failed`: collection was attempted and failed for the interval.
+- `not_collected`: no known collection attempt covers the interval.
+- `stale`: coverage exists but no longer satisfies the freshness rule for the
+  consumer asking for it.
+- `warning`: coverage is usable but carries source, timestamp, schema, or
+  completeness warnings.
+- `error`: coverage metadata itself is malformed or cannot be trusted.
+
+Rules:
+
+- `no_data` is evidence only when a source was successfully queried for the
+  interval. It must not be inferred from missing records.
+- `not_collected`, `failed`, `partial`, and unknown coverage must not be
+  displayed or consumed as proof that no event occurred.
+- Coverage state may be summarized by Dashboard, data inspection, manifests, or
+  catalog metadata, but full reusable histories remain outside those summaries
+  by default.
+- Coverage metadata must use safe runtime-root-relative refs or external
+  placeholders. It must not expose local private values.
+
+### Shared Data Query And Export Boundary
+
+Reusable data reads should go through a query contract when the consumer needs a
+time range, a no-lookahead boundary, or an export. Direct store scans may remain
+inside store implementations, but product code should not duplicate filtering
+logic across Dashboard, CLI, and quantitative paths.
+
+Query inputs should include:
+
+- `data_type`;
+- source and type-specific identity filters;
+- `start`;
+- `end`;
+- optional `as_of`;
+- optional bounded result limit or truncation policy;
+- format-independent filters that are part of the implemented store contract.
+
+Query results should include:
+
+- bounded records;
+- deterministic ordering;
+- selected time fields used for filtering;
+- coverage diagnostics;
+- truncation status;
+- bounded warnings, errors, and source refs.
+
+Export rules:
+
+- Exports must call the same query boundary as backtests and Dashboard previews.
+- Exports must not bypass `as_of`, range, coverage, or truncation rules by
+  reading full store files directly.
+- Export metadata must record request parameters, row counts, truncation state,
+  coverage diagnostics, warnings, errors, and source refs.
+- Full reusable histories must not be exported by default.
 
 ## Runtime State
 

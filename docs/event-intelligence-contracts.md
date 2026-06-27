@@ -43,6 +43,8 @@ promises, price forecasts, or financial advice.
   event-quant confluence consumers.
 - `docs/macro-calendar-contracts.md`: macro and scheduled-event context
   contracts for event proximity and report evidence.
+- `docs/research-data-contracts.md`: reusable text-event history, coverage,
+  query, export, and no-lookahead contracts.
 - `docs/decision-intelligence-contracts.md`: downstream risk, decision, watch,
   and alert-adjacent contracts.
 - `docs/outcome-tracking-contracts.md`: planned downstream target, evaluation,
@@ -350,6 +352,17 @@ Rules:
 - Missing optional fields should become explicit warnings.
 - Normalization supports downstream processing only; it must not rewrite source
   text into conclusions.
+- `published_at` is source-provided publication evidence and may be missing,
+  delayed, corrected, or stale.
+- `collected_at` records when Halpha collected the raw item.
+- Reusable text-event history should preserve `first_seen_at` and
+  `last_seen_at` when records are observed across runs.
+- No-lookahead retrieval must not expose a text event before the record was
+  published, collected, or first seen according to the query contract in
+  `docs/research-data-contracts.md`.
+- If a source cannot prove historical coverage for a requested interval, query
+  diagnostics must report unknown or not-collected coverage instead of treating
+  an empty result as no event.
 
 ## NLP Evidence Records
 
@@ -592,6 +605,29 @@ Rules:
 - `same_topic` should group related coverage without deleting source events.
 - Embedding similarity alone must not force a merge.
 - Topic grouping must preserve source events and merge reasons.
+
+## Shared Text Event Duplicate Boundary
+
+Reusable text-event history may annotate duplicate or same-event relationships
+to avoid counting repeated public coverage as independent events. These
+annotations are evidence metadata; they must not delete source records or hide
+source disagreements.
+
+Duplicate boundary rules:
+
+- Exact duplicate handling may use canonical URL, source raw id, stable event
+  key, or content hash evidence.
+- Near-duplicate or same-event grouping should preserve a group id, method,
+  confidence or score bucket, grouped record ids, source count, timestamps,
+  warnings, and conflicts where implemented.
+- Original title, link, canonical URL, normalized text, source name,
+  `published_at`, `collected_at`, `first_seen_at`, and source refs must remain
+  inspectable.
+- A low-confidence near match should stay separate or be marked uncertain.
+- False duplicate merges are critical regressions because they can suppress
+  market-relevant evidence.
+- Codex may explain Halpha-generated duplicate or topic grouping from bounded
+  material, but it must not create duplicate decisions.
 
 ## Text Event Signals
 

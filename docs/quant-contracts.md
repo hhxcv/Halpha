@@ -502,6 +502,48 @@ Initial adoption:
 - Keep raw OHLCV history out of Codex context.
 - Implement only the fields required by this schema.
 
+## No-Lookahead Data Access Contract
+
+Quantitative consumers must read reusable data through bounded query semantics
+when evaluating a historical window. A backtest or benchmark window must not
+silently use records that would not have been available at the requested point
+in time.
+
+OHLCV query inputs:
+
+- `source`;
+- `symbol`;
+- `timeframe`;
+- `start`;
+- `end`;
+- optional `as_of`.
+
+OHLCV query rules:
+
+- Filter by `open_time` and closed-candle eligibility.
+- Do not return rows after the requested `end`.
+- Do not return rows that violate the requested `as_of` boundary.
+- Preserve deterministic ordering by `open_time`.
+- Return missing-candle and coverage diagnostics when the store can derive
+  them.
+
+Event-like query rules for future quant consumers:
+
+- Text, macro/calendar, on-chain flow, and derivatives records must use the
+  shared query contract in `docs/research-data-contracts.md`.
+- Text events must not be available to a backtest before the relevant
+  `published_at`, `collected_at`, or `first_seen_at` boundary.
+- Empty event-like results must carry coverage diagnostics so quantitative code
+  can distinguish `no_data` from `not_collected`, `partial`, `failed`, or
+  unknown coverage.
+- Query output may be converted into DataFrame-like structures for local
+  research tools, but that conversion must not drop coverage warnings or source
+  refs.
+
+Exports for quantitative research must use the same query boundary. They must
+not read full reusable store files directly to bypass range, `as_of`, or
+coverage rules.
+
 ## Strategy Data View Contract
 
 Each run records the deterministic OHLCV windows used for signal calculation.

@@ -272,6 +272,61 @@ Every view must distinguish available, partial, missing, stale, degraded,
 failed, skipped, and not-applicable states where the source artifacts support
 those distinctions. Missing evidence must not be displayed as neutral evidence.
 
+## Data Viewer And Collection Boundary
+
+Dashboard data views are operator surfaces over shared data contracts. They are
+not the source of collection coverage, query results, exports, or data-quality
+truth.
+
+When data-viewer APIs and controls are implemented, they should use the shared
+contracts in `docs/research-data-contracts.md`:
+
+- coverage state for store counts, ranges, timeline intervals, gaps, partial
+  intervals, failed intervals, stale intervals, and warnings;
+- collection plans for dry-run previews before a user starts a data collection
+  job;
+- query adapters for bounded record previews;
+- export services for bounded downloads.
+
+Dashboard data-view state vocabulary must preserve these distinctions:
+
+- `collected`;
+- `no_data`;
+- `partial`;
+- `failed`;
+- `not_collected`;
+- `stale`;
+- `warning`;
+- `error`;
+- unsupported or unavailable source state where a source cannot satisfy the
+  requested collection or query.
+
+Placement rules:
+
+- Strategy Lab owns OHLCV and quantitative shared-data review, including
+  coverage ranges, missing candles, bounded previews, dry-run collection plans,
+  collection job actions, and bounded downloads.
+- Intelligence owns text-event and event-like shared-data review, including
+  text, derivatives, macro/calendar, on-chain flow, bounded previews, dry-run
+  collection plans, collection job actions, duplicate or topic annotations, and
+  bounded downloads.
+
+Behavior rules:
+
+- Empty collected intervals must be displayed as `no_data`, not as missing or
+  failed evidence.
+- `not_collected`, `partial`, `failed`, and unknown coverage must remain
+  visibly different from `no_data`.
+- Dashboard dry-run controls must not fetch network data or write shared
+  stores.
+- Dashboard apply controls must submit an allowlisted command job or service
+  request. They must not expose arbitrary shell execution.
+- Dashboard previews and downloads must call shared query and export services.
+  They must not read full reusable store files directly or bypass `as_of`,
+  range, coverage, or truncation rules.
+- Dashboard APIs may return bounded local refs, diagnostics, and previews.
+  They must not embed full reusable histories by default.
+
 ## UI Smoke Validation
 
 Dashboard UI validation should cover both source-backed APIs and the HTML shell
