@@ -41,6 +41,10 @@ must stay marked until their producers are added.
 | Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
 | Macro calendar history | Initial adoption | macro calendar history writer | macro calendar views, data inspection, data quality |
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
+| Collection coverage state | Planned | data collection paths | collection planner, data inspection, Dashboard data viewer, data quality |
+| Collection plan | Planned | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
+| Shared data query | Planned | store query adapters | backtests, event queries, Dashboard previews, exports |
+| Bounded data export | Planned | shared query/export service | CLI export, Dashboard download, external quant tools |
 
 ## Layer Boundary
 
@@ -72,6 +76,202 @@ Artifacts and stores must use stable references:
 - do not print proxy URLs, hostnames, ports, credentials, tokens, cookies,
   account IDs, or private endpoints;
 - keep raw artifacts and reusable stores inspectable on disk.
+
+## Collection Coverage State
+
+Collection coverage state records whether a reusable data interval was
+collected, empty, partial, failed, stale, or not collected. It is metadata about
+collection coverage, not the raw records themselves.
+
+Coverage applies to implemented reusable stores:
+
+- OHLCV history;
+- text-event history;
+- derivatives market history;
+- macro/calendar history;
+- on-chain flow history.
+
+Required coverage fields:
+
+- `schema_version`
+- `artifact_type`
+- `generated_at` or `updated_at`
+- `data_type`
+- `source`
+- `identity`
+- `range_start`
+- `range_end`
+- `status`
+- `record_count`
+- `attempt_count`
+- `latest_attempt_at`
+- `latest_success_at`
+- `coverage_method`
+- `source_artifacts`
+- `warnings`
+- `errors`
+
+Coverage status values:
+
+- `collected`: source collection succeeded and reusable records exist for the
+  interval.
+- `no_data`: source collection succeeded and returned no records for the
+  interval.
+- `partial`: only part of the requested interval, source set, page set, or data
+  class was collected.
+- `failed`: collection was attempted and failed.
+- `not_collected`: no successful or failed attempt is known for the interval.
+- `stale`: coverage exists but does not satisfy the consumer freshness rule.
+- `warning`: coverage is present with non-fatal completeness, timestamp, or
+  schema warnings.
+- `error`: coverage metadata is malformed or cannot be trusted.
+
+Rules:
+
+- `no_data` must come from a successful source response. It must not be inferred
+  from missing records or missing coverage.
+- `not_collected`, `failed`, `partial`, and unknown coverage must remain
+  visible to data inspection, Dashboard views, and query diagnostics.
+- Coverage records should preserve bounded source refs and collection attempt
+  diagnostics, not raw endpoint payloads or full histories.
+- Coverage state should be summarized in the research data catalog when
+  implemented.
+
+## Timestamp And No-Lookahead Semantics
+
+Reusable data may carry multiple time fields. Consumers must use the field that
+matches the question being asked.
+
+Canonical time fields:
+
+- `open_time`: OHLCV candle open time. Closed-candle rules decide whether a bar
+  is eligible for a backtest window.
+- `event_time`: time the external event occurred when the source provides it.
+- `published_at`: time a text or public-information source says an item was
+  published.
+- `collected_at`: time Halpha collected the record.
+- `first_seen_at`: first time Halpha observed a reusable record.
+- `last_seen_at`: latest time Halpha observed a repeated reusable record.
+- `as_of`: caller-supplied point-in-time boundary for no-lookahead retrieval.
+
+No-lookahead rules:
+
+- A query with `as_of` must exclude records that were not published, collected,
+  or first seen by that boundary when those fields are relevant to the data
+  type.
+- Text-event retrieval should not expose a record first observed after `as_of`,
+  even if the source `published_at` claims an earlier timestamp.
+- OHLCV retrieval should not expose open or future bars beyond the requested
+  range or closed-candle eligibility.
+- Event-like retrieval should return coverage diagnostics with empty results so
+  callers can distinguish `no_data` from `not_collected`, `failed`, or unknown
+  coverage.
+
+## Collection Plan Contract
+
+Collection planning is a dry-run-friendly decision layer between a requested
+range and actual source collection. It reads coverage state before fetches are
+attempted.
+
+Required plan fields:
+
+- `schema_version`
+- `created_at`
+- `data_type`
+- `source`
+- `identity`
+- `requested_start`
+- `requested_end`
+- `strategy`
+- `skipped_ranges`
+- `gap_ranges`
+- `retry_ranges`
+- `planned_fetch_windows`
+- `coverage_refs`
+- `warnings`
+- `errors`
+
+Strategy values:
+
+- `no_work`: requested range is already sufficiently covered.
+- `gap_only`: planned fetches target missing or incomplete gaps.
+- `merged_gaps`: fragmented gaps are combined to reduce fetch overhead.
+- `widened_window`: a wider window is more efficient than exact gap fetches.
+- `full_range`: full requested range collection is more efficient or required
+  by the source.
+- `blocked`: source or configuration cannot satisfy the requested collection.
+
+Rules:
+
+- Complete intervals should be skipped.
+- Partial and failed intervals should remain visible and eligible for retry.
+- Fragmented gaps should be planned by efficiency, not by blindly issuing one
+  request per fragment.
+- Unsupported historical collection must produce `blocked` or warnings, not
+  fake successful coverage.
+
+## Shared Data Query Contract
+
+Shared data queries provide the common read path for backtests, Dashboard
+previews, report-facing material builders, and exports.
+
+Required query inputs:
+
+- `data_type`
+- source and identity filters
+- `start`
+- `end`
+- optional `as_of`
+- optional bounded limit or truncation policy
+- optional data-type filters supported by the implemented store
+
+Required query outputs:
+
+- `records`
+- `record_count`
+- `truncated`
+- `time_fields`
+- `coverage_diagnostics`
+- `warnings`
+- `errors`
+- `source_artifacts`
+
+Rules:
+
+- Query output ordering must be deterministic.
+- Empty query results must carry enough coverage diagnostics to distinguish
+  successful `no_data` from `not_collected`, `failed`, `partial`, or unknown
+  coverage.
+- Query adapters must preserve source names, source refs, schema version,
+  timestamps, duplicate status, conflict warnings, and errors where available.
+- Query APIs are product data access boundaries, not Codex context.
+
+## Bounded Data Export Contract
+
+Exports make reusable data available to local research tools without bypassing
+query safety.
+
+Export inputs:
+
+- `data_type`
+- source and identity filters
+- `start`
+- `end`
+- optional `as_of`
+- output format
+- output path or destination managed by the command or Dashboard endpoint
+
+Export rules:
+
+- Exports must call the shared data query contract.
+- Exports must not read full store files directly to bypass no-lookahead,
+  coverage, range, or truncation behavior.
+- OHLCV exports may use CSV or Parquet where the store supports it.
+- Event-like exports may use JSON or CSV until the store supports a better
+  columnar format.
+- Export metadata must include request parameters, row count, truncation state,
+  coverage diagnostics, warnings, errors, and source refs.
+- Full reusable history export is not the default behavior.
 
 ## Shared OHLCV History
 
@@ -158,6 +358,12 @@ Required store fields:
 - `warnings`
 - `errors`
 
+Planned store extension fields for coverage and query work:
+
+- `coverage_state`
+- `query_capability`
+- `export_capability`
+
 Required migration fields:
 
 - `status`
@@ -191,6 +397,8 @@ Rules:
 - summarize large stores by metadata, not row dumps;
 - expose catalog field summaries through data inspection and Dashboard
   data-store views without embedding raw shared histories;
+- summarize coverage-state availability, query capability, and export
+  capability when those are implemented;
 - in product runs, build the catalog from prepared shared-state candidates and
   publish the official catalog only after product validation is publishable;
 - record missing optional stores as `skipped`, not fabricated data.
@@ -482,6 +690,9 @@ Automated validation should cover:
 - malformed timestamps;
 - duplicate and conflicting duplicate handling;
 - schema drift;
+- collection coverage status vocabulary;
+- no-lookahead query filtering;
+- bounded export metadata;
 - partial collection failure;
 - manifest references;
 - Codex input boundaries.
