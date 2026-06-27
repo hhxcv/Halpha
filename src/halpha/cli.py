@@ -28,6 +28,11 @@ from halpha.data.run_archive_cleanup import (
     apply_run_archive_cleanup,
     plan_run_archive_cleanup,
 )
+from halpha.market.ohlcv_collection import (
+    OHLCVCollectionError,
+    collect_ohlcv_data,
+    display_collection_artifacts,
+)
 from halpha.runtime.legacy_state_migration import (
     apply_legacy_state_migration,
     legacy_state_migration_dry_run,
@@ -189,6 +194,52 @@ def build_parser() -> argparse.ArgumentParser:
     )
     inspect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
     inspect_parser.add_argument("--run-dir", help="Optional run directory for data-quality inspection.")
+    collect_parser = data_subparsers.add_parser(
+        "collect",
+        help="Collect or backfill local research data without running a report.",
+        description="Collect or backfill local research data without running a report.",
+    )
+    collect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    collect_parser.add_argument(
+        "--data-type",
+        required=True,
+        choices=("ohlcv",),
+        help="Data type to collect. Currently only ohlcv is implemented.",
+    )
+    collect_parser.add_argument("--source", required=True, help="Configured data source to collect.")
+    collect_parser.add_argument("--symbol", required=True, help="Configured OHLCV symbol to collect.")
+    collect_parser.add_argument("--timeframe", required=True, help="Configured OHLCV timeframe to collect.")
+    collect_parser.add_argument("--start", required=True, help="Inclusive ISO 8601 UTC range start.")
+    collect_parser.add_argument("--end", required=True, help="Exclusive ISO 8601 UTC range end.")
+    collect_mode = collect_parser.add_mutually_exclusive_group()
+    collect_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the collection plan without network fetches or writes. This is the default.",
+    )
+    collect_mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Execute planned fetch windows and update local stores.",
+    )
+    collect_parser.add_argument(
+        "--max-exact-windows",
+        type=_positive_int_arg,
+        default=3,
+        help="Maximum exact missing windows before planning a wider full-range fetch.",
+    )
+    collect_parser.add_argument(
+        "--merge-gap-threshold-seconds",
+        type=_non_negative_int_arg,
+        default=0,
+        help="Merge planned fetch windows separated by this many seconds or less.",
+    )
+    collect_parser.add_argument(
+        "--min-fetch-window-seconds",
+        type=_non_negative_int_arg,
+        default=0,
+        help="Widen smaller fetch windows to at least this many seconds when possible.",
+    )
     migrate_state_parser = data_subparsers.add_parser(
         "migrate-state",
         help="Inspect or apply explicit legacy local state migration.",
@@ -388,6 +439,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "data" and args.data_command == "inspect":
         return _data_inspect(args.config, run_dir=args.run_dir)
+
+    if args.command == "data" and args.data_command == "collect":
+        return _data_collect(
+            args.config,
+            data_type=args.data_type,
+            source=args.source,
+            symbol=args.symbol,
+            timeframe=args.timeframe,
+            requested_start=args.start,
+            requested_end=args.end,
+            apply=args.apply,
+            max_exact_windows=args.max_exact_windows,
+            merge_gap_threshold_seconds=args.merge_gap_threshold_seconds,
+            min_fetch_window_seconds=args.min_fetch_window_seconds,
+        )
 
     if args.command == "data" and args.data_command == "migrate-state":
         return _data_migrate_state(
@@ -1131,6 +1197,139 @@ def _data_inspect(config_arg: str, *, run_dir: str | None) -> int:
         print(line)
     _log_command_succeeded("data inspect", status=result.status, explicit_run=run_dir is not None)
     return 0
+
+
+def _data_collect(
+    config_arg: str,
+    *,
+    data_type: str,
+    source: str,
+    symbol: str,
+    timeframe: str,
+    requested_start: str,
+    requested_end: str,
+    apply: bool,
+    max_exact_windows: int,
+    merge_gap_threshold_seconds: int,
+    min_fetch_window_seconds: int,
+) -> int:
+    config_path = Path(config_arg)
+    command = "data collect"
+    mode = "apply" if apply else "dry_run"
+    _configure_logging(config_path=config_path)
+    _log_command_start(command, mode=mode, data_type=data_type, source=source, symbol=symbol, timeframe=timeframe)
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        _log_command_failed(command, stage="config", reason=str(exc), exit_code=2)
+        print("Halpha data collection failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+
+    _configure_logging(config_path=config_path, config=config)
+    if data_type != "ohlcv":
+        reason = f"data collect does not support data_type={data_type}."
+        _log_command_failed(command, stage="data_collect", reason=reason, exit_code=2)
+        print("Halpha data collection failed.")
+        print("stage: data_collect")
+        print(f"reason: {reason}")
+        return 2
+
+    try:
+        result = collect_ohlcv_data(
+            config,
+            config_path=config_path,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+            requested_start=requested_start,
+            requested_end=requested_end,
+            dry_run=not apply,
+            max_exact_windows=max_exact_windows,
+            merge_gap_threshold_seconds=merge_gap_threshold_seconds,
+            min_fetch_window_seconds=min_fetch_window_seconds,
+        )
+    except OHLCVCollectionError as exc:
+        _log_command_failed(command, stage="data_collect", reason=str(exc), exit_code=exc.exit_code)
+        print("Halpha data collection failed.")
+        print("stage: data_collect")
+        print(f"reason: {exc}")
+        return exc.exit_code
+
+    _print_data_collection_result(result, config_path=config_path)
+    exit_code = 3 if result.get("status") in {"failed", "blocked"} else 0
+    if exit_code == 0:
+        _log_command_succeeded(command, status=str(result.get("status") or "unknown"), mode=mode)
+    else:
+        _log_command_failed(
+            command,
+            stage="data_collect",
+            reason=str(result.get("status") or "failed"),
+            exit_code=exit_code,
+            mode=mode,
+        )
+    return exit_code
+
+
+def _print_data_collection_result(result: dict, *, config_path: Path) -> None:
+    dry_run = result.get("mode") == "dry_run"
+    if result.get("status") in {"failed", "blocked"}:
+        title = "Halpha data collection failed."
+    elif dry_run:
+        title = "Halpha data collection dry run succeeded."
+    else:
+        title = "Halpha data collection apply succeeded."
+    plan = result.get("plan") if isinstance(result.get("plan"), dict) else {}
+    counts = result.get("counts") if isinstance(result.get("counts"), dict) else {}
+    print(title)
+    print(f"status: {result.get('status')}")
+    print(f"mode: {result.get('mode')}")
+    print(f"data_type: {result.get('data_type')}")
+    print(f"source: {result.get('source')}")
+    print(f"symbol: {result.get('symbol')}")
+    print(f"timeframe: {result.get('timeframe')}")
+    print(f"requested_start: {result.get('requested_start')}")
+    print(f"requested_end: {result.get('requested_end')}")
+    print(f"strategy: {plan.get('strategy')}")
+    _print_counts(
+        counts,
+        keys=(
+            "skipped_ranges",
+            "gap_ranges",
+            "retry_ranges",
+            "planned_fetch_windows",
+            "fetched_records",
+            "window_records",
+            "stored_records",
+            "coverage_records_written",
+            "coverage_state_records",
+        ),
+    )
+    for window in (plan.get("planned_fetch_windows") or [])[:10]:
+        if isinstance(window, dict):
+            print(
+                "fetch_window: "
+                f"{window.get('range_start')}..{window.get('range_end')} "
+                f"reason={window.get('reason')}"
+            )
+    for fetch in (result.get("fetches") or [])[:10]:
+        if isinstance(fetch, dict):
+            print(
+                "fetch_result: "
+                f"{fetch.get('range_start')}..{fetch.get('range_end')} "
+                f"status={fetch.get('status')} "
+                f"records={fetch.get('window_record_count')} "
+                f"stored={fetch.get('stored_count')}"
+            )
+    for key, value in sorted(display_collection_artifacts(result, config_path=config_path).items()):
+        print(f"{key}: {value}")
+    for warning in (result.get("warnings") or [])[:10]:
+        print(f"warning: {warning}")
+    for error in (result.get("errors") or [])[:10]:
+        if isinstance(error, dict):
+            print(f"error: {error.get('message')}")
 
 
 def _data_migrate_state(config_arg: str, *, apply: bool, replace_schedule: bool) -> int:
@@ -1895,4 +2094,14 @@ def _positive_int_arg(value: str) -> int:
         raise argparse.ArgumentTypeError("must be a positive integer") from exc
     if parsed <= 0:
         raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def _non_negative_int_arg(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a non-negative integer") from exc
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be a non-negative integer")
     return parsed

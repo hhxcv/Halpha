@@ -41,8 +41,8 @@ must stay marked until their producers are added.
 | Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
 | Macro calendar history | Initial adoption | macro calendar history writer | macro calendar views, data inspection, data quality |
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
-| Collection coverage state | Planned | data collection paths | collection planner, data inspection, Dashboard data viewer, data quality |
-| Collection plan | Planned | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
+| Collection coverage state | Initial adoption | OHLCV data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
+| Collection plan | Implemented | coverage-aware planner | CLI dry-run, Dashboard dry-run, collection apply paths |
 | Shared data query | Planned | store query adapters | backtests, event queries, Dashboard previews, exports |
 | Bounded data export | Planned | shared query/export service | CLI export, Dashboard download, external quant tools |
 
@@ -213,6 +213,12 @@ Rules:
   request per fragment.
 - Unsupported historical collection must produce `blocked` or warnings, not
   fake successful coverage.
+- OHLCV `data collect` dry-run reads coverage state and returns a bounded plan
+  without source fetches, Parquet writes, coverage writes, catalog writes, run
+  archives, monitor cycles, schedules, report generation, or Codex execution.
+- OHLCV `data collect --apply` executes planned fetch windows, writes finalized
+  candles to the shared OHLCV store, updates collection coverage, and refreshes
+  the shared research data catalog snapshot without creating a product run.
 
 ## Shared Data Query Contract
 
@@ -308,6 +314,10 @@ Required behavior:
 - report stored ranges and update status through metadata;
 - reject or warn on conflicting duplicate candles instead of silently replacing
   source evidence;
+- allow explicit OHLCV range collection and backfill through
+  `python -m halpha data collect --data-type ohlcv ...`, with dry-run as the
+  safe default and `--apply` required for source fetches and shared-store
+  writes;
 - avoid embedding full OHLCV history into Codex input.
 
 ## Research Data Catalog
@@ -403,6 +413,8 @@ Rules:
   data-store views without embedding raw shared histories;
 - summarize coverage-state availability, query capability, and export
   capability when those are implemented;
+- standalone shared-data collection may refresh the catalog from shared store
+  metadata and bounded collection diagnostics without a `run_manifest.json`;
 - in product runs, build the catalog from prepared shared-state candidates and
   publish the official catalog only after product validation is publishable;
 - record missing optional stores as `skipped`, not fabricated data.
