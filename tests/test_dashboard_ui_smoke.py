@@ -133,11 +133,10 @@ def test_dashboard_pages_expose_primary_semantic_views(tmp_path: Path) -> None:
         "strategy-symbol",
         "strategy-timeframe",
         "strategy-name",
-        "intel-asset",
-        "intel-range",
-        "intel-severity",
-        "intel-source",
-        "intel-sort",
+        "intel-collect-range",
+        "intel-preview-range",
+        "intel-preview-as-of-mode",
+        "intel-preview-as-of",
     ],
 )
 def test_dashboard_exposes_primary_filter_controls(tmp_path: Path, selector_id: str) -> None:
@@ -146,7 +145,18 @@ def test_dashboard_exposes_primary_filter_controls(tmp_path: Path, selector_id: 
     assert f'id="{selector_id}"' in html
 
 
-@pytest.mark.parametrize("contract", ['data-strategy-tab="trades"', 'data-intel-tab="text"', "detail-rail"])
+@pytest.mark.parametrize(
+    "contract",
+    [
+        'data-strategy-tab="trades"',
+        'data-intel-tab="overview"',
+        'data-intel-tab="text_event"',
+        'data-intel-tab="macro_calendar"',
+        'data-intel-tab="onchain_flow"',
+        'data-intel-tab="derivatives_market"',
+        "detail-rail",
+    ],
+)
 def test_dashboard_exposes_tabs_and_detail_rails_for_primary_flows(tmp_path: Path, contract: str) -> None:
     html = _dashboard_html(tmp_path)
 
@@ -190,46 +200,96 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     ):
         assert data_attr in parser.data_attrs
     for selector_id in (
-        "strategy-data-viewer",
-        "strategy-data-source",
-        "strategy-data-symbol",
-        "strategy-data-timeframe",
-        "strategy-data-start",
-        "strategy-data-end",
-        "strategy-data-as-of",
-        "strategy-data-format",
-        "strategy-data-coverage",
-        "strategy-data-preview-panel",
-        "strategy-data-plan-panel",
+        "strategy-workbench",
+        "strategy-operation-tabs",
+        "strategy-symbol",
+        "strategy-timeframe",
+        "strategy-name",
+        "strategy-range",
+        "strategy-ohlcv-source-options",
+        "strategy-backtest-progress",
+        "strategy-chart-source",
+        "strategy-chart-symbol",
+        "strategy-chart-timeframe",
+        "strategy-chart-range",
+        "strategy-chart-refresh",
+        "strategy-collect-source",
+        "strategy-collect-symbol",
+        "strategy-collect-timeframe",
+        "strategy-collect-targets",
+        "strategy-collect-range",
+        "strategy-collect-date-range",
+        "strategy-collect-start",
+        "strategy-collect-end",
+        "strategy-collect-timeline",
+        "strategy-collect-progress",
+        "strategy-export-source",
+        "strategy-export-symbol",
+        "strategy-export-timeframe",
+        "strategy-export-range",
+        "strategy-export-date-range",
+        "strategy-export-start",
+        "strategy-export-end",
+        "strategy-export-as-of",
+        "strategy-export-format",
+        "strategy-export-progress",
         "strategy-data-job-panel",
+        "intel-overview-panel",
+        "intel-overview-kpis",
+        "intel-overview-content",
         "intel-data-viewer",
         "intel-data-type",
-        "intel-data-source",
-        "intel-data-identity-key",
-        "intel-data-identity-value",
-        "intel-data-start",
-        "intel-data-end",
-        "intel-data-as-of",
-        "intel-data-format",
+        "intel-collect-range",
+        "intel-collect-date-range",
+        "intel-collect-start",
+        "intel-collect-end",
+        "intel-collect-reset",
+        "intel-preview-range",
+        "intel-preview-date-range",
+        "intel-preview-as-of-mode",
+        "intel-preview-as-of-custom-field",
+        "intel-preview-start",
+        "intel-preview-end",
+        "intel-preview-as-of",
+        "intel-preview-reset",
         "intel-data-coverage",
         "intel-data-preview-panel",
-        "intel-data-plan-panel",
         "intel-data-job-panel",
     ):
         assert f'id="{selector_id}"' in html
+    assert "Identity filter key" not in html
+    assert "Identity filter value" not in html
+    assert "Source scope" not in html
+    assert "Point-in-time view" in html
+    assert "Point-in-time help" in html
+    assert "Optional no-lookahead cutoff" in html
+    assert html.count("data-date-range-picker") == 4
+    assert html.count("data-range-picker-label") == 4
     for action in (
         "strategy-timeline",
-        "strategy-preview",
-        "strategy-plan",
         "strategy-collect",
         "strategy-export",
-        "intel-timeline",
-        "intel-preview",
-        "intel-plan",
         "intel-collect",
-        "intel-export",
     ):
         assert f'data-data-viewer-action="{action}"' in html
+    assert 'id="strategy-collect-preview"' not in html
+    assert 'id="strategy-collect-plan"' not in html
+    for removed_id in (
+        "intel-asset",
+        "intel-range",
+        "intel-severity",
+        "intel-sort",
+        "intel-data-format",
+        "intel-data-keyword",
+        "intel-data-timeline",
+        "intel-data-preview",
+        "intel-data-plan",
+        "intel-data-export",
+        "intel-data-plan-panel",
+        "intel-events",
+        "intel-detail",
+    ):
+        assert f'id="{removed_id}"' not in html
 
 
 def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Path) -> None:
@@ -247,6 +307,38 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "postJson(endpoints.dataViewerCollectPlan" in script
     assert "postJson(endpoints.dataViewerCollectJobs" in script
     assert "postJson(endpoints.dataViewerExport" in script
+    assert "renderStrategyOhlcvPreview(payload, request)" in script
+    assert 'scope === "strategy" && payload.data_type === "ohlcv"' in script
+    assert "Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy Lab chart." in script
+    assert "runStrategyCollectBatch" in script
+    assert "renderCollectTimelineResults" in script
+    assert "runStrategyExport" in script
+    assert "renderOperationProgress" in script
+    assert "renderIntelligenceOverview" in script
+    assert "loadIntelligenceDataPanels" in script
+    assert "renderIntelligenceTimeline" in script
+    assert "renderIntelligencePreview" in script
+    assert "renderDateJumpCalendar" in script
+    assert "previewListItemsWithDates" in script
+    assert "recordMetricFacts" in script
+    assert "intelPreviewDisplayLimit" in script
+    assert "intel-preview-keyword" in script
+    assert "intel-preview-category-filter" in script
+    assert "Search loaded records" in script
+    assert "recordCategory" in script
+    assert "Unclassified" in script
+    assert "wireDateRangePickers" in script
+    assert "data-range-day" in script
+    assert "range-start" in script
+    assert "range-end" in script
+    assert "in-range" in script
+    assert "data-range-quick" in script
+    assert "syncDateRangePicker" in script
+    assert "Click two dates to set one UTC range." in script
+    assert "ensureStrategyDefaultRange" in script
+    assert "coverage.range_start" in script
+    assert 'ensureDefaultRange("strategy-data")' in script
+    assert 'function wire() {\n          ensureDefaultRange("strategy-data");' not in script
     for status in (
         "collected",
         "no_data",
@@ -370,20 +462,79 @@ def test_dashboard_schedule_service_contracts_are_present(tmp_path: Path) -> Non
     assert 'data-service-action="restart"' in html
 
 
-def test_dashboard_strategy_backtest_chart_shell_contracts_are_present(tmp_path: Path) -> None:
+def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     css = _style_block(html)
     script = _script_block(html)
 
     assert ".kline-panel" in css
     assert ".chart-wrap" in css
+    assert ".chart-tooltip" in css
+    assert ".candle-hit" in css
+    assert ".candle-crosshair" in css
     assert 'id="backtest-chart"' in html
+    assert "OHLCV candlestick chart" in html
+    assert "OHLCV only" in script
+    assert 'data-strategy-operation-tab="backtest"' in html
+    assert 'data-strategy-operation-tab="collect"' in html
+    assert 'data-strategy-operation-tab="export"' in html
+    assert "As of help" in html
+    assert "Optional ISO timestamp for no-lookahead reads" in html
+    assert ".operation-progress" in css
+    assert ".collect-timeline-track" in css
+    assert ".date-range-field" in css
+    assert ".range-picker-trigger" in css
+    assert ".range-picker-popover" in css
+    assert ".range-picker-day.range-start" in css
+    assert ".range-picker-day.in-range" in css
+    assert "renderStrategyOhlcvPreview" in script
+    assert "loadStrategyChartPreview" in script
+    assert "runStrategyCollectPlan" not in script
+    assert "loadStrategyCollectPreview" not in script
+    assert "candlestick_data_viewer" in script
+    assert "candle-hit" in script
+    assert "candle-crosshair" in script
+    assert "chart-tooltip" in script
+    assert "Operations" in script
+    assert "onwheel" in script
+    assert "onpointerdown" in script
     assert "downloadSelectedOhlcv" not in html
     assert "sampleVisualization" not in script
     assert "sampleIntelItems" not in script
     assert 'id="strategy-range"' in html
     assert "chart-tools" in html
     assert "tool-dot" in html
+
+
+def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert ".intelligence-preview" in css
+    assert "overflow: visible;" in css
+    assert ".intel-preview-sidebar" in css
+    assert ".intel-list-filterbar" in css
+    assert ".intel-filter-actions" in css
+    assert ".intel-date-picker" in css
+    assert ".intel-calendar-day.has-data" in css
+    assert ".intel-date-heading" in css
+    assert ".intel-metric-grid" in css
+    assert ".macro-event-banner.future" in css
+    assert ".macro-event-banner.past" in css
+    assert ".intel-preview-row.macro-event-future" in css
+    assert ".intel-preview-row.macro-event-past" in css
+    assert "Jump date" in script
+    assert "Scroll for more records" in script
+    assert "Bounded preview limit reached" in script
+    assert "Key metrics" in script
+    assert "Record context" in script
+    assert "macroCalendarTemporalState" in script
+    assert "Future event" in script
+    assert "Past event" in script
+    assert "data-data-viewer-job-log-toggle" in script
+    assert "execution: internal dashboard service" in script
+    assert "data-intel-jump-date" in script
     assert "data-strategy-window" in html
     assert ">USDT</span>" not in html
     assert "Latest available window" not in html

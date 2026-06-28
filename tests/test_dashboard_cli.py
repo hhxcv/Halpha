@@ -263,12 +263,15 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "All reports" in response.text
     assert "Report outline" in response.text
     assert "Markdown" not in response.text
-    assert "Backtest candlestick chart" in response.text
+    assert "OHLCV candlestick chart" in response.text
     assert "Strategy parameters" in response.text
     assert "Monitor timeline" in response.text
     assert "Controls" in response.text
     assert "Intelligence" in response.text
-    assert "Topic volume over time" in response.text
+    assert "Overview" in response.text
+    assert "Intelligence shared stores" in response.text
+    assert "Coverage timeline" in response.text
+    assert "Topic volume over time" not in response.text
     assert "Settings" in response.text
     assert "Config file" in response.text
     assert "Storage maintenance" in script.text
@@ -342,7 +345,17 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
     assert fields["dashboard.display_timezone"]["value"] == "Asia/Shanghai"
     assert fields["market.enabled"]["control"] == "toggle"
     assert fields["market.symbols"]["control"] == "tags"
-    assert fields["market.ohlcv.timeframes"]["options"] == ["1d", "1h"]
+    assert fields["market.ohlcv.timeframes"]["options"] == [
+        "1m",
+        "5m",
+        "15m",
+        "1h",
+        "4h",
+        "1d",
+        "1w",
+        "1month",
+    ]
+    assert "binance_usdm" in fields["market.ohlcv.sources"]["options"]
     assert "monitor.enabled" not in fields
     assert payload["omitted"]["raw_config_text_embedded"] is False
     assert str(tmp_path) not in response.text
@@ -1725,8 +1738,32 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
         "sma_cross_trend",
         "tsmom_vol_scaled",
     ]
-    assert payload["commands"]["options"]["symbols"] == ["BTCUSDT", "ETHUSDT"]
-    assert payload["commands"]["options"]["timeframes"] == ["1d", "1h"]
+    assert payload["commands"]["options"]["sources"] == [
+        "binance",
+        "binance_spot",
+        "binance_usdm",
+        "okx_spot",
+        "okx_swap",
+        "bybit_spot",
+        "bybit_swap",
+        "kucoin_spot",
+        "kucoin_swap",
+        "bitget_spot",
+        "bitget_swap",
+        "kraken_spot",
+        "coinbase_spot",
+    ]
+    assert payload["commands"]["options"]["symbols"][:4] == ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"]
+    assert payload["commands"]["options"]["timeframes"] == [
+        "1m",
+        "5m",
+        "15m",
+        "1h",
+        "4h",
+        "1d",
+        "1w",
+        "1month",
+    ]
 
 
 def test_dashboard_command_loads_config_and_invokes_service(

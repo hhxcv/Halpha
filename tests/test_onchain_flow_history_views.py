@@ -133,6 +133,54 @@ def test_onchain_flow_history_tracks_duplicate_conflicts(tmp_path: Path) -> None
     assert "conflicting duplicate on-chain flow record" in records[0]["warnings"][0]
 
 
+def test_onchain_flow_history_merges_added_metrics_without_conflict(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, data_classes=["chain_activity"])
+    config = load_config(config_path)
+    first_run = _run_context(tmp_path, config_path, "run-1")
+    second_run = _run_context(tmp_path, config_path, "run-2")
+
+    _write_raw(
+        first_run,
+        [
+            _chain_item(
+                "chain_activity",
+                "2026-06-18T00:00:00Z",
+                {"transaction_count": 1000.0},
+                endpoint="blockchain_chart_n_transactions",
+            )
+        ],
+    )
+    sync_onchain_flow_history(config, first_run, now="2026-06-18T01:00:00Z")
+    _write_raw(
+        second_run,
+        [
+            _chain_item(
+                "chain_activity",
+                "2026-06-18T00:00:00Z",
+                {"transaction_count": 1000.0, "estimated_transaction_volume_btc": 50.0},
+                endpoint="blockchain_charts_chain_activity",
+            )
+        ],
+    )
+    sync_onchain_flow_history(config, second_run, now="2026-06-18T02:00:00Z")
+
+    state = _state(tmp_path)
+    records = _stored_blockchain_records(tmp_path, data_class="chain_activity")
+
+    assert state["status"] == "ok"
+    assert state["totals"]["records"] == 1
+    assert state["totals"]["duplicate_records"] == 1
+    assert state["totals"]["conflicting_duplicates"] == 0
+    assert records[0]["endpoint"] == "blockchain_charts_chain_activity"
+    assert records[0]["metrics"] == {
+        "estimated_transaction_volume_btc": 50.0,
+        "transaction_count": 1000.0,
+    }
+    assert records[0]["origin_run_ids"] == ["run-1", "run-2"]
+    assert records[0]["status"] == "active"
+    assert records[0]["warnings"] == []
+
+
 def test_disabled_onchain_flow_config_skips_history_and_views(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, enabled=False)
     config = load_config(config_path)
@@ -403,6 +451,34 @@ def _stablecoin_item(as_of: str, *, total_circulating_usd: float) -> dict[str, A
     }
 
 
+def _chain_item(
+    data_class: str,
+    as_of: str,
+    metrics: dict[str, float],
+    *,
+    endpoint: str,
+) -> dict[str, Any]:
+    return {
+        "item_id": f"onchain_flow:{data_class}:blockchain_com_charts:bitcoin:{as_of}",
+        "data_class": data_class,
+        "source": "blockchain_com_charts",
+        "asset": "BTC",
+        "chain": "bitcoin",
+        "as_of": as_of,
+        "endpoint": endpoint,
+        "metrics": metrics,
+        "units": {
+            metric_name: "BTC" if metric_name == "estimated_transaction_volume_btc" else "transactions"
+            for metric_name in metrics
+        },
+        "raw_fields": {
+            "source_urls": {endpoint: "https://api.blockchain.info/charts/example"},
+        },
+        "warnings": [],
+        "errors": [],
+    }
+
+
 def _stablecoin_availability(
     *,
     status: str,
@@ -474,6 +550,22 @@ def _stored_records(tmp_path: Path, *, data_class: str, asset: str, chain: str) 
             / f"data_class={data_class}"
             / f"asset={asset}"
             / f"chain={chain}"
+            / "records.json"
+        ).read_text(encoding="utf-8")
+    )
+
+
+def _stored_blockchain_records(tmp_path: Path, *, data_class: str) -> list[dict[str, Any]]:
+    return json.loads(
+        (
+            tmp_path
+            / "data"
+            / "onchain"
+            / "flow"
+            / "source=blockchain_com_charts"
+            / f"data_class={data_class}"
+            / "asset=BTC"
+            / "chain=bitcoin"
             / "records.json"
         ).read_text(encoding="utf-8")
     )

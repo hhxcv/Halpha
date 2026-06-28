@@ -11,6 +11,8 @@ from halpha.data.run_index import (
     run_index_path,
     select_latest_run_record,
 )
+from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
+from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
 from halpha.storage import (
     artifact_base as _artifact_base,
     read_json_object,
@@ -91,9 +93,10 @@ def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
         "backtest": "available",
         "experiment": "available",
         "options": {
+            "sources": _configured_ohlcv_sources(config),
             "strategy_names": sorted(_configured_strategy_names(config)),
-            "symbols": sorted(_configured_symbols(config)),
-            "timeframes": sorted(_configured_timeframes(config)),
+            "symbols": _configured_symbols(config),
+            "timeframes": _configured_timeframes(config),
         },
     }
 
@@ -108,17 +111,35 @@ def _configured_strategy_names(config: dict[str, Any]) -> set[str]:
     }
 
 
-def _configured_symbols(config: dict[str, Any]) -> set[str]:
+def _configured_symbols(config: dict[str, Any]) -> list[str]:
     market = config.get("market") if isinstance(config.get("market"), dict) else {}
     values = market.get("symbols") if isinstance(market.get("symbols"), list) else []
-    return {str(value) for value in values if isinstance(value, str) and value}
+    symbols = []
+    seen = set()
+    for value in values:
+        if not isinstance(value, str) or not value or value in seen:
+            continue
+        symbols.append(value)
+        seen.add(value)
+    return symbols
 
 
-def _configured_timeframes(config: dict[str, Any]) -> set[str]:
+def _configured_ohlcv_sources(config: dict[str, Any]) -> list[str]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+    values = ohlcv.get("sources") if isinstance(ohlcv.get("sources"), list) else []
+    configured = {str(value) for value in values if isinstance(value, str) and value}
+    if not configured:
+        configured = set(OHLCV_SOURCE_ORDER)
+    return [source for source in OHLCV_SOURCE_ORDER if source in configured]
+
+
+def _configured_timeframes(config: dict[str, Any]) -> list[str]:
     market = config.get("market") if isinstance(config.get("market"), dict) else {}
     ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
     values = ohlcv.get("timeframes") if isinstance(ohlcv.get("timeframes"), list) else []
-    return {str(value) for value in values if isinstance(value, str) and value}
+    configured = {str(value) for value in values if isinstance(value, str) and value}
+    return [timeframe for timeframe in OHLCV_TIMEFRAME_ORDER if timeframe in configured]
 
 
 def _selected_run(config_path: Path, *, base: Path, run_id: str | None) -> dict[str, Any]:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -10,13 +10,17 @@ from halpha.data.collection_planner import plan_collection_from_coverage
 from halpha.data.data_export import DataExportError, export_data
 from halpha.data.event_like_query import EventLikeQueryError, query_event_like_records
 from halpha.market.ohlcv_query import OHLCVQueryError, query_ohlcv_records
+from halpha.macro.macro_calendar_history import read_macro_calendar_history_records
+from halpha.market.derivatives_history import read_derivatives_history_records
+from halpha.onchain.onchain_flow_history import read_onchain_flow_history_records
 from halpha.runtime.command_jobs import CommandJobManager
 from halpha.storage import resolve_runtime_path
+from halpha.text.text_event_history import read_text_event_history_records
 
 
 DATA_VIEWER_SCHEMA_VERSION = 1
 SUPPORTED_DATA_TYPES = ("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market")
-COLLECTABLE_DATA_TYPES = {"ohlcv", "text_event"}
+COLLECTABLE_DATA_TYPES = set(SUPPORTED_DATA_TYPES)
 EVENT_LIKE_DATA_TYPES = {"text_event", "macro_calendar", "onchain_flow", "derivatives_market"}
 STORE_BY_DATA_TYPE = {
     "ohlcv": "ohlcv_history",
@@ -32,7 +36,8 @@ EXPORT_FORMATS = {
     "onchain_flow": ("csv", "json"),
     "derivatives_market": ("csv", "json"),
 }
-MAX_PREVIEW_RECORDS = 100
+MAX_PREVIEW_RECORDS = 500
+MAX_OHLCV_PREVIEW_RECORDS = 1000
 MAX_TIMELINE_INTERVALS = 200
 EXPORT_ROOT_REF = "data/exports"
 
@@ -49,6 +54,8 @@ def dashboard_data_viewer_summary(config: dict[str, Any], *, config_path: Path) 
     for data_type in SUPPORTED_DATA_TYPES:
         store = stores_by_name.get(STORE_BY_DATA_TYPE[data_type], {})
         coverage = summarize_collection_coverage(coverage_state, data_type=data_type)
+        coverage_payload = _coverage_summary(coverage, coverage_state=coverage_state)
+        _fill_history_range_fallback(coverage_payload, data_type=data_type, config_path=config_path)
         warnings = _string_list(store.get("warnings"))
         warnings.extend(str(item) for item in coverage_state.get("warnings", []) if isinstance(item, str))
         summaries.append(
@@ -59,7 +66,7 @@ def dashboard_data_viewer_summary(config: dict[str, Any], *, config_path: Path) 
                 "status": str(store.get("status") or "skipped"),
                 "summary": _dict(store.get("drilldown")).get("summary") or _dict(store.get("fields")),
                 "ranges": _dict(store.get("drilldown")).get("ranges") or {},
-                "coverage": _coverage_summary(coverage, coverage_state=coverage_state),
+                "coverage": coverage_payload,
                 "query_capability": _query_capability(data_type),
                 "export_capability": _export_capability(data_type),
                 "collection_capability": _collection_capability(data_type),
@@ -132,7 +139,9 @@ def dashboard_data_viewer_timeline(config: dict[str, Any], *, config_path: Path,
 
 
 def dashboard_data_viewer_preview(config: dict[str, Any], *, config_path: Path, request: dict[str, Any]) -> dict[str, Any]:
-    parsed, error = _parse_viewer_request(request, require_source=False, default_limit=MAX_PREVIEW_RECORDS)
+    data_type = str(request.get("data_type") or "").strip()
+    default_limit = MAX_OHLCV_PREVIEW_RECORDS if data_type == "ohlcv" else MAX_PREVIEW_RECORDS
+    parsed, error = _parse_viewer_request(request, require_source=False, default_limit=default_limit)
     if error:
         return _error_payload("dashboard_data_preview", error)
     try:
@@ -246,18 +255,21 @@ def dashboard_data_viewer_collection_plan(
         return _error_payload("dashboard_data_collection_plan", error)
     state = read_collection_coverage_state(config_path)
     try:
-        plan = plan_collection_from_coverage(
-            state,
-            data_type=params["data_type"],
-            source=params["source"],
-            identity=params["identity"],
-            requested_start=params["start"],
-            requested_end=params["end"],
-            supports_historical=bool(request.get("supports_historical", True)),
-            max_exact_windows=_positive_int(request.get("max_exact_windows"), default=3),
-            merge_gap_threshold_seconds=_non_negative_int(request.get("merge_gap_threshold_seconds"), default=0),
-            min_fetch_window_seconds=_non_negative_int(request.get("min_fetch_window_seconds"), default=0),
-        )
+        if params.get("source"):
+            plan = plan_collection_from_coverage(
+                state,
+                data_type=params["data_type"],
+                source=params["source"],
+                identity=params["identity"],
+                requested_start=params["start"],
+                requested_end=params["end"],
+                supports_historical=bool(request.get("supports_historical", True)),
+                max_exact_windows=_positive_int(request.get("max_exact_windows"), default=3),
+                merge_gap_threshold_seconds=_non_negative_int(request.get("merge_gap_threshold_seconds"), default=0),
+                min_fetch_window_seconds=_non_negative_int(request.get("min_fetch_window_seconds"), default=0),
+            )
+        else:
+            plan = _configured_source_collection_plan(params)
     except (ValueError, TypeError) as exc:
         return _error_payload("dashboard_data_collection_plan", str(exc))
     return {
@@ -286,10 +298,11 @@ def dashboard_data_viewer_collection_job(
         return _error_payload("dashboard_data_collection_job", error)
     job_params = {
         "data_type": params["data_type"],
-        "source": params["source"],
         "start": params["start"],
         "end": params["end"],
     }
+    if params.get("source"):
+        job_params["source"] = params["source"]
     try:
         if request.get("max_exact_windows") is not None:
             job_params["max_exact_windows"] = _positive_int(request.get("max_exact_windows"), default=3)
@@ -366,10 +379,14 @@ def _parse_viewer_request(
 def _collect_params(request: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     data_type = str(request.get("data_type") or "").strip()
     if data_type not in COLLECTABLE_DATA_TYPES:
-        return {}, "data collection jobs currently support ohlcv and text_event only."
+        return {}, "data collection jobs currently do not support this data type."
     source = _optional_text(request.get("source"))
-    if not source:
+    if data_type == "ohlcv" and not source:
         return {}, "source is required."
+    if data_type == "text_event" and not source:
+        source = "all"
+    if data_type not in {"ohlcv", "text_event"}:
+        source = None
     start = str(request.get("start") or "").strip()
     end = str(request.get("end") or "").strip()
     if not start or not end:
@@ -392,6 +409,45 @@ def _collect_params(request: dict[str, Any]) -> tuple[dict[str, Any], str | None
     elif data_type == "text_event" and not params["identity"]:
         params["identity"] = {"source_group": "all"} if source == "all" else {"source_name": source}
     return params, None
+
+
+def _configured_source_collection_plan(params: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "collection_plan",
+        "created_at": None,
+        "status": "warning",
+        "data_type": params["data_type"],
+        "source": None,
+        "identity": params["identity"],
+        "requested_start": params["start"],
+        "requested_end": params["end"],
+        "strategy": "configured_scope",
+        "skipped_ranges": [],
+        "gap_ranges": [
+            {
+                "range_start": params["start"],
+                "range_end": params["end"],
+                "status": "unknown",
+            }
+        ],
+        "retry_ranges": [],
+        "planned_fetch_windows": [
+            {
+                "range_start": params["start"],
+                "range_end": params["end"],
+                "reason": "configured_scope",
+            }
+        ],
+        "coverage_diagnostics": {
+            "status": "not_available",
+            "reason": "configured-source collection is planned from configured channels, not a single source identity.",
+        },
+        "warnings": [
+            "Configured-source collection uses configured channels for this data type; source-specific gap planning is not available.",
+        ],
+        "errors": [],
+    }
 
 
 def _coverage_intervals(
@@ -480,6 +536,67 @@ def _coverage_summary(summary: dict[str, Any], *, coverage_state: dict[str, Any]
         "warnings": _bounded_strings(_string_list(coverage_state.get("warnings"))),
         "errors": _bounded_error_messages(coverage_state.get("errors")),
     }
+
+
+def _fill_history_range_fallback(coverage: dict[str, Any], *, data_type: str, config_path: Path) -> None:
+    if coverage.get("range_start") and coverage.get("range_end"):
+        coverage["range_source"] = "coverage"
+        return
+    records = _event_like_history_records(data_type, config_path)
+    if not records:
+        return
+    fields = {
+        "text_event": ("published_at", "collected_at", "first_seen_at"),
+        "macro_calendar": ("scheduled_at",),
+        "onchain_flow": ("as_of",),
+        "derivatives_market": ("as_of",),
+    }.get(data_type, ())
+    times = [
+        parsed
+        for record in records
+        if isinstance(record, dict)
+        for field in fields
+        for parsed in [_parse_record_time(record.get(field))]
+        if parsed is not None
+    ]
+    if not times:
+        return
+    coverage["range_start"] = _isoformat_utc(min(times))
+    coverage["range_end"] = _isoformat_utc(max(times) + timedelta(seconds=1))
+    coverage["range_source"] = "history"
+
+
+def _event_like_history_records(data_type: str, config_path: Path) -> list[dict[str, Any]]:
+    readers = {
+        "text_event": read_text_event_history_records,
+        "macro_calendar": read_macro_calendar_history_records,
+        "onchain_flow": read_onchain_flow_history_records,
+        "derivatives_market": read_derivatives_history_records,
+    }
+    reader = readers.get(data_type)
+    if reader is None:
+        return []
+    try:
+        records = reader(config_path)
+    except Exception:
+        return []
+    return [record for record in records if isinstance(record, dict)]
+
+
+def _parse_record_time(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _isoformat_utc(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _query_summary(result: dict[str, Any]) -> dict[str, Any]:

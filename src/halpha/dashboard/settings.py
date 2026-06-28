@@ -23,9 +23,21 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
 from halpha.dashboard.paths import dashboard_control_path
+from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
+from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
 from halpha.storage import config_base, display_path, safe_local_ref
 
 
+OHLCV_LOOKBACK_DEFAULTS = {
+    "1m": 1440,
+    "5m": 2016,
+    "15m": 2016,
+    "1h": 720,
+    "4h": 720,
+    "1d": 500,
+    "1w": 260,
+    "1month": 120,
+}
 DERIVATIVES_PERIOD_OPTIONS = tuple(
     period
     for period in ("5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d")
@@ -134,6 +146,16 @@ CONFIG_PROFILE_FIELDS = (
     },
     {
         "section": "Market data",
+        "label": "OHLCV sources",
+        "path": "market.ohlcv.sources",
+        "control": "multi_select",
+        "value_type": "string_list",
+        "options": OHLCV_SOURCE_ORDER,
+        "default": OHLCV_SOURCE_ORDER,
+        "description": "Public OHLCV sources available to CLI and dashboard collection.",
+    },
+    {
+        "section": "Market data",
         "label": "Symbols",
         "path": "market.symbols",
         "control": "tags",
@@ -146,25 +168,21 @@ CONFIG_PROFILE_FIELDS = (
         "path": "market.ohlcv.timeframes",
         "control": "multi_select",
         "value_type": "string_list",
-        "options": ("1d", "1h"),
+        "options": OHLCV_TIMEFRAME_ORDER,
         "description": "Reusable OHLCV windows maintained outside single-run artifacts.",
     },
-    {
-        "section": "Market data",
-        "label": "Daily lookback",
-        "path": "market.ohlcv.lookback.1d",
-        "control": "number",
-        "value_type": "positive_int",
-        "description": "Number of daily candles to collect.",
-    },
-    {
-        "section": "Market data",
-        "label": "Hourly lookback",
-        "path": "market.ohlcv.lookback.1h",
-        "control": "number",
-        "value_type": "positive_int",
-        "description": "Number of hourly candles to collect.",
-    },
+    *(
+        {
+            "section": "Market data",
+            "label": f"OHLCV lookback {timeframe}",
+            "path": f"market.ohlcv.lookback.{timeframe}",
+            "control": "number",
+            "value_type": "positive_int",
+            "default": OHLCV_LOOKBACK_DEFAULTS[timeframe],
+            "description": f"Number of {timeframe} candles to collect during automatic OHLCV sync.",
+        }
+        for timeframe in OHLCV_TIMEFRAME_ORDER
+    ),
     {
         "section": "Market data",
         "label": "Use proxy",
@@ -781,7 +799,27 @@ def _materialize_enabled_capability_defaults(config: dict[str, Any]) -> None:
                 continue
             if _get_config_value(config, path) is None:
                 _set_config_value(config, path, _config_profile_default(config, field))
+    _normalize_ohlcv_lookback(config)
     _normalize_derivatives_lookback(config)
+
+
+def _normalize_ohlcv_lookback(config: dict[str, Any]) -> None:
+    market = _get_config_value(config, "market")
+    if not isinstance(market, dict) or market.get("enabled") is not True:
+        return
+    ohlcv = market.get("ohlcv")
+    if not isinstance(ohlcv, dict):
+        return
+    timeframes = ohlcv.get("timeframes")
+    if not isinstance(timeframes, list):
+        return
+    lookback = ohlcv.get("lookback")
+    if not isinstance(lookback, dict):
+        lookback = {}
+    normalized = {}
+    for timeframe in [str(item) for item in timeframes]:
+        normalized[timeframe] = lookback.get(timeframe, OHLCV_LOOKBACK_DEFAULTS.get(timeframe, 1))
+    ohlcv["lookback"] = normalized
 
 
 def _normalize_derivatives_lookback(config: dict[str, Any]) -> None:

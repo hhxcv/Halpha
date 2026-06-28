@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
-from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, TIMEFRAME_DURATIONS
+from halpha.market.ohlcv_quality import ohlcv_next_open_time
+from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.data.research_data_catalog import write_research_data_catalog
@@ -396,7 +397,7 @@ def _latest_open_time(records: list[dict[str, Any]]) -> str | None:
 
 def _next_open_time(open_time: str, timeframe: str) -> datetime:
     opened_at = _parse_utc(open_time)
-    return opened_at + TIMEFRAME_DURATIONS[timeframe]
+    return ohlcv_next_open_time(opened_at, timeframe)
 
 
 def _parse_utc(value: str) -> datetime:

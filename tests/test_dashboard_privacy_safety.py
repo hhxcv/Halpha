@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
+from halpha.runtime.command_job_execution import CommandJobExecutionResult
 from halpha.runtime.command_jobs import MAX_JOB_LOG_CHARS
 from halpha.runtime.state_store import runtime_state_path
 from halpha.storage import write_json
@@ -105,10 +106,14 @@ def test_command_job_api_redacts_private_values_from_response_and_logs(
     stdout += "x" * (MAX_JOB_LOG_CHARS + 1)
     stderr = f"{PRIVATE_PROXY}\n{PRIVATE_USER_STATE}\n{machine_path}"
 
-    def fake_popen(*args, **kwargs):  # noqa: ANN002, ANN003
-        return _FakeProcess(stdout=stdout, stderr=stderr, returncode=0)
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard command jobs must use internal execution")
 
-    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout, stderr=stderr)
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     create_response = client.post("/api/jobs", json={"intent": "validate", "params": {}})

@@ -371,6 +371,10 @@ Required behavior:
 - report stored ranges and update status through metadata;
 - reject or warn on conflicting duplicate candles instead of silently replacing
   source evidence;
+- preserve `source` as part of record identity so spot and perpetual public
+  OHLCV histories from multiple supported exchanges remain separate;
+- support configured OHLCV timeframes from minute candles through monthly
+  candles where the selected public source provides them;
 - allow explicit OHLCV range collection and backfill through
   `python -m halpha data collect --data-type ohlcv ...`, with dry-run as the
   safe default and `--apply` required for source fetches and shared-store

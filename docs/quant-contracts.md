@@ -167,12 +167,30 @@ market:
     - ETHUSDT
   ohlcv:
     storage_dir: data/market/ohlcv
+    sources:
+      - binance
+      - binance_spot
+      - binance_usdm
+      - okx_spot
+      - okx_swap
     timeframes:
-      - 1d
+      - 1m
+      - 5m
+      - 15m
       - 1h
+      - 4h
+      - 1d
+      - 1w
+      - 1month
     lookback:
-      1d: 500
+      1m: 1440
+      5m: 2016
+      15m: 2016
       1h: 720
+      4h: 720
+      1d: 500
+      1w: 260
+      1month: 120
 
 quant:
   enabled: true
@@ -289,7 +307,10 @@ Validation contract:
 
 - `market.enabled` is required.
 - `market.source` is required when `market.enabled` is true.
-- `market.source` must be a supported OHLCV market source when `market.ohlcv` exists or `quant.enabled` is true.
+- `market.source` is the current-run market snapshot source and remains
+  separate from optional OHLCV collection source choices.
+- `market.source` must be a supported market snapshot source when
+  `market.ohlcv` exists or `quant.enabled` is true.
 - `market.proxy` may be omitted when direct public source access works.
 - `market.proxy.enabled` is required when `market.proxy` exists.
 - `market.proxy.url` is required when `market.proxy.enabled` is true.
@@ -303,6 +324,12 @@ Validation contract:
 - Relative `market.ohlcv.storage_dir` and `run.output_dir` values resolve from
   the runtime root. Absolute paths remain explicit local overrides.
 - `market.ohlcv.timeframes` must be a non-empty list when `market.ohlcv` exists or `quant.enabled` is true.
+- Supported OHLCV timeframes are `1m`, `5m`, `15m`, `1h`, `4h`, `1d`,
+  `1w`, and `1month`.
+- `market.ohlcv.sources` may list explicit public OHLCV collection sources for
+  CLI and Dashboard collection. If omitted, explicit collection may use the
+  built-in supported OHLCV sources. Product OHLCV sync still uses
+  `market.source` unless a later contract changes sync selection.
 - `market.ohlcv.lookback` must define a positive integer for each configured timeframe when `market.ohlcv` exists or `quant.enabled` is true.
 - `quant` may be omitted when the report path does not use quant strategies.
 - `quant.enabled` is required when `quant` exists.
@@ -632,7 +659,9 @@ Rules:
 - Configured lookback defines the current-run data view window, not the shared storage retention policy.
 - Shared storage may retain more historical rows than the configured lookback so later runs can reuse history.
 - If data is insufficient, record `insufficient_data: true` and an actionable warning.
-- Views validate supported OHLCV timeframe continuity and freshness for `1h` and `1d`.
+- Views validate supported OHLCV timeframe continuity and freshness for
+  configured OHLCV timeframes, including minute, hourly, daily, weekly, and
+  monthly candles.
 - Missing intervals, duplicate `open_time` values, or stale latest candles set `quality_status: degraded`.
 - Degraded OHLCV quality must keep `insufficient_data: true` so downstream strategy runs do not report ordinary success from degraded input.
 - Quality samples are bounded and diagnostic; views must not fill missing candles or rewrite raw evidence.

@@ -26,8 +26,12 @@ def test_pipeline_collects_onchain_flow_raw_artifact(tmp_path: Path, monkeypatch
             return _FakeResponse(_stablecoin_payload())
         if "n-transactions" in request.full_url:
             return _FakeResponse(_chart_payload("Confirmed Transactions Per Day", "Transactions", [1000, 1200]))
+        if "estimated-transaction-volume" in request.full_url:
+            return _FakeResponse(_chart_payload("Estimated Transaction Value", "BTC", [50, 75]))
         if "mempool-size" in request.full_url:
             return _FakeResponse(_chart_payload("Mempool Size", "Bytes", [500000, 700000]))
+        if "mempool-count" in request.full_url:
+            return _FakeResponse(_chart_payload("Mempool Transaction Count", "Transactions", [25, 40]))
         raise AssertionError(f"unexpected URL: {request.full_url}")
 
     monkeypatch.setattr("halpha.collectors.onchain_flow.urlopen", fake_urlopen)
@@ -44,7 +48,7 @@ def test_pipeline_collects_onchain_flow_raw_artifact(tmp_path: Path, monkeypatch
     )
 
     assert result.succeeded is True
-    assert len(requested_urls) == 3
+    assert len(requested_urls) == 5
     raw = json.loads((result.run.raw_dir / "onchain_flow.json").read_text(encoding="utf-8"))
     assert raw["artifact_type"] == "onchain_flow_raw"
     assert raw["collector"] == "onchain_flow"
@@ -62,7 +66,15 @@ def test_pipeline_collects_onchain_flow_raw_artifact(tmp_path: Path, monkeypatch
     }
     assert any(item["metrics"].get("total_circulating_usd") == 2500.0 for item in raw["items"])
     assert any(item["metrics"].get("transaction_count") == 1200.0 for item in raw["items"])
+    assert any(item["metrics"].get("estimated_transaction_volume_btc") == 75.0 for item in raw["items"])
     assert any(item["metrics"].get("mempool_size_bytes") == 700000.0 for item in raw["items"])
+    assert any(item["metrics"].get("mempool_transaction_count") == 40.0 for item in raw["items"])
+    chain_item = next(item for item in raw["items"] if item["metrics"].get("transaction_count") == 1200.0)
+    assert chain_item["endpoint"] == "blockchain_charts_chain_activity"
+    assert chain_item["metrics"]["estimated_transaction_volume_btc"] == 75.0
+    congestion_item = next(item for item in raw["items"] if item["metrics"].get("mempool_size_bytes") == 700000.0)
+    assert congestion_item["endpoint"] == "blockchain_charts_network_congestion"
+    assert congestion_item["metrics"]["mempool_transaction_count"] == 40.0
     assert {item["status"] for item in raw["availability"]} == {"succeeded", "unavailable"}
     exchange_flow = [item for item in raw["availability"] if item["data_class"] == "exchange_flow_availability"][0]
     assert exchange_flow["status"] == "unavailable"

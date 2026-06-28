@@ -130,7 +130,10 @@ ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES: Final[dict[str, PublicDataClassCapability]
         data_class="chain_activity",
         collection_status="implemented",
         view_status="implemented",
-        request_classes=("blockchain_chart_n_transactions",),
+        request_classes=(
+            "blockchain_chart_n_transactions",
+            "blockchain_chart_estimated_transaction_volume",
+        ),
     ),
     "exchange_flow_availability": PublicDataClassCapability(
         data_class="exchange_flow_availability",
@@ -151,7 +154,7 @@ ONCHAIN_FLOW_DATA_CLASS_CAPABILITIES: Final[dict[str, PublicDataClassCapability]
         data_class="network_congestion",
         collection_status="implemented",
         view_status="implemented",
-        request_classes=("blockchain_chart_mempool_size",),
+        request_classes=("blockchain_chart_mempool_size", "blockchain_chart_mempool_count"),
     ),
     "stablecoin_supply": PublicDataClassCapability(
         data_class="stablecoin_supply",

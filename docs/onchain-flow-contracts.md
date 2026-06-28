@@ -209,6 +209,15 @@ Rules:
 - Data classes should be expanded only when a downstream consumer is ready to
   use the evidence conservatively.
 
+Current implemented public-source metrics:
+
+| Data class | Source | Metrics |
+| --- | --- | --- |
+| `stablecoin_supply` | `defillama_stablecoins` | `total_circulating`, `total_circulating_usd` |
+| `chain_activity` | `blockchain_com_charts` | `transaction_count`, `estimated_transaction_volume_btc` |
+| `network_congestion` | `blockchain_com_charts` | `mempool_size_bytes`, `mempool_transaction_count` |
+| `exchange_flow_availability` | `public_aggregate` | availability status only; no fabricated inflow, outflow, balance, reserve, or netflow metric |
+
 ## Raw On-Chain Flow Artifact
 
 Implemented artifact:

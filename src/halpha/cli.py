@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Sequence
 
 from halpha.config import ConfigError, load_config
+from halpha.data.data_collection_service import collect_research_data
 from halpha.dashboard import (
     DEFAULT_DASHBOARD_HOST,
     DEFAULT_DASHBOARD_PORT,
@@ -29,11 +30,7 @@ from halpha.data.run_archive_cleanup import (
     apply_run_archive_cleanup,
     plan_run_archive_cleanup,
 )
-from halpha.market.ohlcv_collection import (
-    OHLCVCollectionError,
-    collect_ohlcv_data,
-    display_collection_artifacts,
-)
+from halpha.market.ohlcv_collection import OHLCVCollectionError, display_collection_artifacts
 from halpha.runtime.legacy_state_migration import (
     apply_legacy_state_migration,
     legacy_state_migration_dry_run,
@@ -77,13 +74,12 @@ from halpha.strategy.standalone_backtest import StandaloneBacktestError, run_sta
 from halpha.text.standalone_text_intelligence import run_standalone_text_intelligence
 from halpha.storage import display_path
 from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
-from halpha.text.text_event_collection import TextEventCollectionError, collect_text_event_data
+from halpha.text.text_event_collection import TextEventCollectionError
 from halpha.text.text_models import prepare_text_models
 from halpha.workbench.workbench import build_workbench_summary, inspect_workbench_summary
 
 
 LOGGER = logging.getLogger(__name__)
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="halpha")
@@ -205,10 +201,13 @@ def build_parser() -> argparse.ArgumentParser:
     collect_parser.add_argument(
         "--data-type",
         required=True,
-        choices=("ohlcv", "text_event"),
+        choices=("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"),
         help="Data type to collect.",
     )
-    collect_parser.add_argument("--source", required=True, help="Configured data source to collect.")
+    collect_parser.add_argument(
+        "--source",
+        help="Configured OHLCV or text source to collect. Text defaults to all configured sources.",
+    )
     collect_parser.add_argument("--symbol", help="Configured OHLCV symbol to collect.")
     collect_parser.add_argument("--timeframe", help="Configured OHLCV timeframe to collect.")
     collect_parser.add_argument("--start", required=True, help="Inclusive ISO 8601 UTC range start.")
@@ -1265,7 +1264,7 @@ def _data_collect(
     config_arg: str,
     *,
     data_type: str,
-    source: str,
+    source: str | None,
     symbol: str | None,
     timeframe: str | None,
     requested_start: str,
@@ -1291,47 +1290,48 @@ def _data_collect(
         return 2
 
     _configure_logging(config_path=config_path, config=config)
-    if data_type == "ohlcv" and (not symbol or not timeframe):
-        reason = "data collect --data-type ohlcv requires --symbol and --timeframe."
+    if data_type == "ohlcv" and (not source or not symbol or not timeframe):
+        reason = "data collect --data-type ohlcv requires --source, --symbol and --timeframe."
         _log_command_failed(command, stage="data_collect", reason=reason, exit_code=2)
         print("Halpha data collection failed.")
         print("stage: data_collect")
         print(f"reason: {reason}")
         return 2
+    if data_type == "text_event" and not source:
+        source = "all"
 
     try:
-        if data_type == "ohlcv":
-            result = collect_ohlcv_data(
-                config,
-                config_path=config_path,
-                source=source,
-                symbol=str(symbol),
-                timeframe=str(timeframe),
-                requested_start=requested_start,
-                requested_end=requested_end,
-                dry_run=not apply,
-                max_exact_windows=max_exact_windows,
-                merge_gap_threshold_seconds=merge_gap_threshold_seconds,
-                min_fetch_window_seconds=min_fetch_window_seconds,
-            )
-        else:
-            result = collect_text_event_data(
-                config,
-                config_path=config_path,
-                source=source,
-                requested_start=requested_start,
-                requested_end=requested_end,
-                dry_run=not apply,
-                max_exact_windows=max_exact_windows,
-                merge_gap_threshold_seconds=merge_gap_threshold_seconds,
-                min_fetch_window_seconds=min_fetch_window_seconds,
-            )
+        result = collect_research_data(
+            config,
+            config_path=config_path,
+            data_type=data_type,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+            requested_start=requested_start,
+            requested_end=requested_end,
+            apply=apply,
+            max_exact_windows=max_exact_windows,
+            merge_gap_threshold_seconds=merge_gap_threshold_seconds,
+            min_fetch_window_seconds=min_fetch_window_seconds,
+            run_trigger=run_trigger_from_env(
+                default_source="CLI",
+                default_intent="data_collect",
+            ),
+        )
     except (OHLCVCollectionError, TextEventCollectionError) as exc:
         _log_command_failed(command, stage="data_collect", reason=str(exc), exit_code=exc.exit_code)
         print("Halpha data collection failed.")
         print("stage: data_collect")
         print(f"reason: {exc}")
         return exc.exit_code
+    except (PipelineError, ValueError) as exc:
+        exit_code = exc.exit_code if isinstance(exc, PipelineError) else 2
+        _log_command_failed(command, stage="data_collect", reason=str(exc), exit_code=exit_code)
+        print("Halpha data collection failed.")
+        print("stage: data_collect")
+        print(f"reason: {exc}")
+        return exit_code
 
     _print_data_collection_result(result, config_path=config_path)
     exit_code = 3 if result.get("status") in {"failed", "blocked"} else 0

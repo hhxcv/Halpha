@@ -42,8 +42,15 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "market.derivatives.source",
     "market.derivatives.symbols",
     "market.enabled",
+    "market.ohlcv.lookback.15m",
     "market.ohlcv.lookback.1d",
     "market.ohlcv.lookback.1h",
+    "market.ohlcv.lookback.1m",
+    "market.ohlcv.lookback.1month",
+    "market.ohlcv.lookback.1w",
+    "market.ohlcv.lookback.4h",
+    "market.ohlcv.lookback.5m",
+    "market.ohlcv.sources",
     "market.ohlcv.timeframes",
     "market.proxy.enabled",
     "market.source",
@@ -331,6 +338,32 @@ def test_dashboard_settings_derivatives_periods_materialize_matching_lookback(tm
     assert str(tmp_path) not in str(result)
 
 
+def test_dashboard_settings_ohlcv_timeframes_materialize_matching_lookback(tmp_path: Path) -> None:
+    config_path = _write_market_enabled_ohlcv_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "market.ohlcv.timeframes": ["1m", "4h", "1month"],
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    saved = load_config(config_path)
+    assert saved["market"]["ohlcv"]["timeframes"] == ["1m", "4h", "1month"]
+    assert saved["market"]["ohlcv"]["lookback"] == {
+        "1m": 1440,
+        "4h": 720,
+        "1month": 120,
+    }
+    assert str(tmp_path) not in str(result)
+
+
 def test_dashboard_settings_enabling_text_intelligence_materializes_model_defaults(tmp_path: Path) -> None:
     config_path = _write_text_enabled_config(tmp_path)
     config = load_config(config_path)
@@ -438,6 +471,29 @@ def _write_market_enabled_config(tmp_path: Path) -> Path:
         config_path.read_text(encoding="utf-8").replace(
             "market:\n  enabled: false",
             "market:\n  enabled: true\n  source: binance\n  symbols:\n    - BTCUSDT\n    - ETHUSDT",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_market_enabled_ohlcv_config(tmp_path: Path) -> Path:
+    config_path = _write_market_enabled_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "  symbols:\n    - BTCUSDT\n    - ETHUSDT",
+            """
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: 500
+""".rstrip(),
             1,
         ),
         encoding="utf-8",

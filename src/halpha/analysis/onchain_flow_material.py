@@ -14,7 +14,7 @@ MAX_RECORDS_PER_SECTION = 4
 MAX_MESSAGES = 4
 MAX_ARTIFACTS = 8
 MAX_EVIDENCE_ITEMS = 1
-MAX_MAPPING_ITEMS = 4
+MAX_MAPPING_ITEMS = 8
 
 LIMITED_STATUSES = {"failed", "unavailable", "stale", "degraded", "partial", "insufficient"}
 

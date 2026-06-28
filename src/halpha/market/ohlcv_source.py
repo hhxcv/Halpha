@@ -1,19 +1,84 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from math import isfinite
 from typing import Any
 
 import ccxt
 
-from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS, ohlcv_record_invariant_errors
+from halpha.market.ohlcv_quality import (
+    OHLCV_TIMEFRAME_DURATIONS,
+    ohlcv_next_open_time,
+    ohlcv_record_invariant_errors,
+)
 from halpha.runtime.public_http import market_proxy_url_from_market, normalize_public_proxy_url
 
 
-SUPPORTED_OHLCV_SOURCES = {"binance"}
 BINANCE_SPOT_PUBLIC_API_URL = "https://data-api.binance.vision/api/v3"
+OHLCV_SOURCE_ORDER = (
+    "binance",
+    "binance_spot",
+    "binance_usdm",
+    "okx_spot",
+    "okx_swap",
+    "bybit_spot",
+    "bybit_swap",
+    "kucoin_spot",
+    "kucoin_swap",
+    "bitget_spot",
+    "bitget_swap",
+    "kraken_spot",
+    "coinbase_spot",
+)
+SUPPORTED_OHLCV_SOURCES = frozenset(OHLCV_SOURCE_ORDER)
+QUOTE_SUFFIXES = ("USDT", "USDC", "USD", "BTC", "ETH", "EUR")
 TIMEFRAME_DURATIONS = OHLCV_TIMEFRAME_DURATIONS
+
+
+@dataclass(frozen=True)
+class OHLCVSourceSpec:
+    exchange_id: str
+    market_type: str
+    default_type: str
+    fetch_market_types: tuple[str, ...] = ()
+    public_api_url: str | None = None
+
+
+OHLCV_SOURCE_SPECS = {
+    "binance": OHLCVSourceSpec(
+        exchange_id="binance",
+        market_type="spot",
+        default_type="spot",
+        fetch_market_types=("spot",),
+        public_api_url=BINANCE_SPOT_PUBLIC_API_URL,
+    ),
+    "binance_spot": OHLCVSourceSpec(
+        exchange_id="binance",
+        market_type="spot",
+        default_type="spot",
+        fetch_market_types=("spot",),
+        public_api_url=BINANCE_SPOT_PUBLIC_API_URL,
+    ),
+    "binance_usdm": OHLCVSourceSpec(
+        exchange_id="binance",
+        market_type="swap",
+        default_type="future",
+        fetch_market_types=("future",),
+    ),
+    "okx_spot": OHLCVSourceSpec(exchange_id="okx", market_type="spot", default_type="spot"),
+    "okx_swap": OHLCVSourceSpec(exchange_id="okx", market_type="swap", default_type="swap"),
+    "bybit_spot": OHLCVSourceSpec(exchange_id="bybit", market_type="spot", default_type="spot"),
+    "bybit_swap": OHLCVSourceSpec(exchange_id="bybit", market_type="swap", default_type="swap"),
+    "kucoin_spot": OHLCVSourceSpec(exchange_id="kucoin", market_type="spot", default_type="spot"),
+    "kucoin_swap": OHLCVSourceSpec(exchange_id="kucoinfutures", market_type="swap", default_type="swap"),
+    "bitget_spot": OHLCVSourceSpec(exchange_id="bitget", market_type="spot", default_type="spot"),
+    "bitget_swap": OHLCVSourceSpec(exchange_id="bitget", market_type="swap", default_type="swap"),
+    "kraken_spot": OHLCVSourceSpec(exchange_id="kraken", market_type="spot", default_type="spot"),
+    "coinbase_spot": OHLCVSourceSpec(exchange_id="coinbase", market_type="spot", default_type="spot"),
+}
+CCXT_TIMEFRAME_BY_TIMEFRAME = {"1month": "1M"}
 
 
 class OHLCVSourceError(Exception):
@@ -47,9 +112,11 @@ class CCXTOHLCVSource:
         self._require_timeframe(timeframe)
         fetched_at = _coerce_utc(now)
         since_ms = _millis_from_utc(since) if since is not None else None
+        exchange_symbol = _exchange_symbol(self.source, symbol)
+        exchange_timeframe = _exchange_timeframe(timeframe)
 
         try:
-            rows = self.exchange.fetch_ohlcv(symbol, timeframe, since=since_ms, limit=limit)
+            rows = self.exchange.fetch_ohlcv(exchange_symbol, exchange_timeframe, since=since_ms, limit=limit)
         except ccxt.BadSymbol as exc:
             raise OHLCVSourceError(f"unsupported symbol {symbol} for {self.source}: {exc}") from exc
         except ccxt.NetworkError as exc:
@@ -95,7 +162,8 @@ class CCXTOHLCVSource:
                 f"unsupported timeframe {timeframe}. Supported timeframes: {supported}."
             )
         exchange_timeframes = getattr(self.exchange, "timeframes", {}) or {}
-        if timeframe not in exchange_timeframes:
+        exchange_timeframe = _exchange_timeframe(timeframe)
+        if exchange_timeframe not in exchange_timeframes:
             supported = ", ".join(sorted(exchange_timeframes)) or "none"
             raise OHLCVSourceError(
                 f"unsupported timeframe {timeframe} for {self.source}. Exchange timeframes: {supported}."
@@ -142,20 +210,53 @@ def _require_supported_source(source: str) -> str:
 
 
 def _ccxt_exchange_factory(source: str) -> Callable[[dict[str, Any]], Any]:
-    exchange_class = getattr(ccxt, source, None)
+    exchange_class = getattr(ccxt, OHLCV_SOURCE_SPECS[source].exchange_id, None)
     if exchange_class is None:
         raise OHLCVSourceError(f"ccxt exchange is not available for source: {source}.")
     return exchange_class
 
 
 def _exchange_options(source: str, *, proxy_url: str | None) -> dict[str, Any]:
+    spec = OHLCV_SOURCE_SPECS[source]
     options: dict[str, Any] = {"enableRateLimit": True}
-    if source == "binance":
-        options["options"] = {"fetchMarkets": {"types": ["spot"]}}
-        options["urls"] = {"api": {"public": BINANCE_SPOT_PUBLIC_API_URL}}
-        if proxy_url is not None:
-            options["httpsProxy"] = proxy_url
+    exchange_options: dict[str, Any] = {}
+    if spec.default_type:
+        exchange_options["defaultType"] = spec.default_type
+    if spec.fetch_market_types:
+        exchange_options["fetchMarkets"] = {"types": list(spec.fetch_market_types)}
+    if exchange_options:
+        options["options"] = exchange_options
+    if spec.public_api_url:
+        options["urls"] = {"api": {"public": spec.public_api_url}}
+    if proxy_url is not None:
+        options["httpsProxy"] = proxy_url
     return options
+
+
+def _exchange_timeframe(timeframe: str) -> str:
+    return CCXT_TIMEFRAME_BY_TIMEFRAME.get(timeframe, timeframe)
+
+
+def _exchange_symbol(source: str, symbol: str) -> str:
+    requested = symbol.strip()
+    if "/" in requested or ":" in requested:
+        return requested
+    split = _split_compact_symbol(requested)
+    if split is None:
+        return requested
+    base, quote = split
+    spec = OHLCV_SOURCE_SPECS[source]
+    if spec.market_type == "swap" and quote in {"USDT", "USDC", "USD"}:
+        return f"{base}/{quote}:{quote}"
+    return f"{base}/{quote}"
+
+
+def _split_compact_symbol(symbol: str) -> tuple[str, str] | None:
+    upper = symbol.upper()
+    for quote in QUOTE_SUFFIXES:
+        if upper.endswith(quote) and len(upper) > len(quote):
+            return upper[: -len(quote)], quote
+    return None
 
 
 def _proxy_url_from_market_config(market: dict[str, Any]) -> str | None:
@@ -223,7 +324,7 @@ def _sort_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _is_finalized(open_time: str, timeframe: str, now: datetime) -> bool:
     opened_at = _coerce_utc(open_time)
-    return opened_at + TIMEFRAME_DURATIONS[timeframe] <= now
+    return ohlcv_next_open_time(opened_at, timeframe) <= now
 
 
 def _coerce_utc(value: datetime | str | None) -> datetime:

@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from halpha.collectors.onchain_flow import ONCHAIN_FLOW_ARTIFACT
-from halpha.data.history_merge import merge_history_records
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
@@ -182,11 +181,148 @@ def _merge_history(
     existing_records: list[dict[str, Any]],
     incoming_records: list[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    return merge_history_records(
-        existing_records,
-        incoming_records,
-        conflict_label="on-chain flow",
-        sort_key=_record_sort_key,
+    _clear_stale_merge_warnings(existing_records)
+    by_key = {record["history_key"]: record for record in existing_records}
+    inserted = 0
+    updated = 0
+    duplicate = 0
+    conflicts = 0
+    warnings: list[str] = []
+
+    for incoming in incoming_records:
+        existing = by_key.get(incoming["history_key"])
+        if existing is None:
+            by_key[incoming["history_key"]] = incoming
+            inserted += 1
+            continue
+
+        duplicate += 1
+        updated += 1
+        conflict_warnings = _merge_onchain_record(existing, incoming)
+        if conflict_warnings:
+            conflicts += 1
+            warnings.extend(conflict_warnings)
+
+    return (
+        sorted(by_key.values(), key=_record_sort_key),
+        {
+            "inserted_records": inserted,
+            "updated_records": updated,
+            "duplicate_records": duplicate,
+            "conflicting_duplicates": conflicts,
+            "warnings": _unique_sorted(warnings),
+        },
+    )
+
+
+def _merge_onchain_record(existing: dict[str, Any], incoming: dict[str, Any]) -> list[str]:
+    history_key = incoming["history_key"]
+    conflict_warning = f"conflicting duplicate on-chain flow record: {history_key}"
+    metric_conflicts = _merge_mapping_without_overwrite(existing, incoming, "metrics")
+    unit_conflicts = _merge_mapping_without_overwrite(existing, incoming, "units", case_insensitive_text=True)
+    _merge_raw_fields(existing, incoming)
+
+    if _incoming_has_more_specific_endpoint(existing, incoming):
+        existing["endpoint"] = incoming["endpoint"]
+    existing["payload_signature"] = _payload_signature(
+        endpoint=existing["endpoint"],
+        metrics=_mapping(existing.get("metrics")),
+        units=_mapping(existing.get("units")),
+        raw_fields=_mapping(existing.get("raw_fields")),
+    )
+    existing["origin_run_ids"] = _unique_sorted(
+        [*existing.get("origin_run_ids", []), *incoming.get("origin_run_ids", [])]
+    )
+    existing["last_seen_run_id"] = incoming["last_seen_run_id"]
+    existing["last_seen_at"] = _latest_timestamp(existing.get("last_seen_at"), incoming.get("last_seen_at"))
+    existing["source_artifacts"] = _unique_sorted(
+        [*existing.get("source_artifacts", []), *incoming.get("source_artifacts", [])]
+    )
+    existing_warnings = _without_warning(_string_list(existing.get("warnings")), conflict_warning)
+    incoming_warnings = _without_warning(_string_list(incoming.get("warnings")), conflict_warning)
+    conflicts = [*metric_conflicts, *unit_conflicts]
+    if conflicts:
+        existing_warnings.append(conflict_warning)
+        existing_warnings.extend(conflicts)
+    existing["warnings"] = _unique_sorted([*existing_warnings, *incoming_warnings])
+    existing["errors"] = _error_list([*existing.get("errors", []), *incoming.get("errors", [])])
+    existing["status"] = "warning" if existing["warnings"] or existing["errors"] else "active"
+    return [conflict_warning] if conflicts else []
+
+
+def _merge_mapping_without_overwrite(
+    existing: dict[str, Any],
+    incoming: dict[str, Any],
+    field: str,
+    *,
+    case_insensitive_text: bool = False,
+) -> list[str]:
+    existing_value = _mapping(existing.get(field))
+    incoming_value = _mapping(incoming.get(field))
+    conflicts = []
+    for key, value in sorted(incoming_value.items()):
+        if key not in existing_value:
+            existing_value[key] = value
+        elif _same_merge_value(existing_value[key], value, case_insensitive_text=case_insensitive_text):
+            existing_value[key] = value
+        else:
+            conflicts.append(f"conflicting on-chain flow {field}.{key} for {incoming['history_key']}.")
+    existing[field] = existing_value
+    return conflicts
+
+
+def _same_merge_value(left: Any, right: Any, *, case_insensitive_text: bool) -> bool:
+    if left == right:
+        return True
+    if case_insensitive_text and isinstance(left, str) and isinstance(right, str):
+        return left.strip().lower() == right.strip().lower()
+    return False
+
+
+def _merge_raw_fields(existing: dict[str, Any], incoming: dict[str, Any]) -> None:
+    existing["raw_fields"] = _merge_raw_mapping(
+        _mapping(existing.get("raw_fields")),
+        _mapping(incoming.get("raw_fields")),
+    )
+
+
+def _merge_raw_mapping(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(existing)
+    for key, value in sorted(incoming.items()):
+        if key not in merged:
+            merged[key] = value
+        elif isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = _merge_raw_mapping(merged[key], value)
+    return merged
+
+
+def _incoming_has_more_specific_endpoint(existing: dict[str, Any], incoming: dict[str, Any]) -> bool:
+    incoming_metrics = _mapping(incoming.get("metrics"))
+    existing_metrics = _mapping(existing.get("metrics"))
+    return len(incoming_metrics) >= len(existing_metrics) and incoming.get("endpoint") != existing.get("endpoint")
+
+
+def _latest_timestamp(left: Any, right: Any) -> str:
+    left_value = str(left) if left else ""
+    right_value = str(right) if right else ""
+    return max(left_value, right_value)
+
+
+def _without_warning(warnings: list[str], warning: str) -> list[str]:
+    return [item for item in warnings if item != warning]
+
+
+def _clear_stale_merge_warnings(records: list[dict[str, Any]]) -> None:
+    for record in records:
+        warnings = [warning for warning in _string_list(record.get("warnings")) if not _is_merge_warning(warning)]
+        record["warnings"] = warnings
+        if not warnings and not _error_list(record.get("errors")):
+            record["status"] = "active"
+
+
+def _is_merge_warning(warning: str) -> bool:
+    return warning.startswith("conflicting duplicate on-chain flow record:") or warning.startswith(
+        "conflicting on-chain flow "
     )
 
 

@@ -21,6 +21,16 @@ COVERAGE_STATUSES = {
     "error",
 }
 MERGEABLE_STATUSES = {"collected", "not_collected", "no_data", "stale", "warning"}
+STATUS_PRIORITY = {
+    "collected": 80,
+    "no_data": 70,
+    "warning": 60,
+    "stale": 50,
+    "partial": 40,
+    "failed": 30,
+    "not_collected": 20,
+    "error": 10,
+}
 
 
 def collection_coverage_path(config_path: Path) -> Path:
@@ -195,7 +205,9 @@ def merge_collection_coverage_records(records: list[dict[str, Any]]) -> list[dic
     normalized.sort(key=_record_sort_key)
     merged: list[dict[str, Any]] = []
     for record in normalized:
-        if merged and _can_merge(merged[-1], record):
+        if merged and _same_coverage_range(merged[-1], record):
+            merged[-1] = _merge_exact_range(merged[-1], record)
+        elif merged and _can_merge(merged[-1], record):
             merged[-1] = _merge_pair(merged[-1], record)
         else:
             merged.append(record)
@@ -253,11 +265,59 @@ def _can_merge(left: dict[str, Any], right: dict[str, Any]) -> bool:
     return _parse_utc(right["range_start"]) <= _parse_utc(left["range_end"])
 
 
+def _same_coverage_range(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    return (
+        left["data_type"] == right["data_type"]
+        and left["source"] == right["source"]
+        and left["identity"] == right["identity"]
+        and left["coverage_method"] == right["coverage_method"]
+        and left["range_start"] == right["range_start"]
+        and left["range_end"] == right["range_end"]
+    )
+
+
+def _merge_exact_range(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    selected, other = _preferred_exact_range_record(left, right)
+    same_status = selected["status"] == other["status"]
+    return {
+        **selected,
+        "attempt_count": _non_negative_int(left.get("attempt_count")) + _non_negative_int(right.get("attempt_count")),
+        "latest_attempt_at": _latest_time(left.get("latest_attempt_at"), right.get("latest_attempt_at")),
+        "latest_success_at": _latest_time(left.get("latest_success_at"), right.get("latest_success_at")),
+        "updated_at": _latest_time(left.get("updated_at"), right.get("updated_at")),
+        "source_artifacts": _unique_sorted(
+            [*_string_list(left.get("source_artifacts")), *_string_list(right.get("source_artifacts"))]
+        ),
+        "warnings": _unique_sorted([*_string_list(left.get("warnings")), *_string_list(right.get("warnings"))])
+        if same_status
+        else _string_list(selected.get("warnings")),
+        "errors": [*_error_list(left.get("errors")), *_error_list(right.get("errors"))]
+        if same_status
+        else _error_list(selected.get("errors")),
+    }
+
+
+def _preferred_exact_range_record(left: dict[str, Any], right: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    left_key = (_status_priority(left), _record_updated_at(left))
+    right_key = (_status_priority(right), _record_updated_at(right))
+    if right_key > left_key:
+        return right, left
+    return left, right
+
+
+def _status_priority(record: dict[str, Any]) -> int:
+    return STATUS_PRIORITY.get(str(record.get("status") or ""), 0)
+
+
+def _record_updated_at(record: dict[str, Any]) -> str:
+    return str(record.get("updated_at") or record.get("latest_attempt_at") or record.get("latest_success_at") or "")
+
+
 def _merge_pair(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
     return {
         **left,
         "range_end": max(left["range_end"], right["range_end"]),
-        "record_count": _non_negative_int(left.get("record_count")) + _non_negative_int(right.get("record_count")),
+        "record_count": _merged_record_count(left, right),
         "attempt_count": _non_negative_int(left.get("attempt_count")) + _non_negative_int(right.get("attempt_count")),
         "latest_attempt_at": _latest_time(left.get("latest_attempt_at"), right.get("latest_attempt_at")),
         "latest_success_at": _latest_time(left.get("latest_success_at"), right.get("latest_success_at")),
@@ -268,6 +328,14 @@ def _merge_pair(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
         "warnings": _unique_sorted([*_string_list(left.get("warnings")), *_string_list(right.get("warnings"))]),
         "errors": [*_error_list(left.get("errors")), *_error_list(right.get("errors"))],
     }
+
+
+def _merged_record_count(left: dict[str, Any], right: dict[str, Any]) -> int:
+    left_count = _non_negative_int(left.get("record_count"))
+    right_count = _non_negative_int(right.get("record_count"))
+    if _parse_utc(right["range_start"]) >= _parse_utc(left["range_end"]):
+        return left_count + right_count
+    return max(left_count, right_count)
 
 
 def _unknown_ranges(records: list[dict[str, Any]], requested_start: str, requested_end: str) -> list[dict[str, str]]:

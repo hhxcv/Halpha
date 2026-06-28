@@ -12,12 +12,12 @@ from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, _fetch
 def test_internal_fetch_configured_ohlcv_returns_normalized_finalized_records() -> None:
     exchange = _FakeExchange(
         {
-            ("BTCUSDT", "1d"): [
+            ("BTC/USDT", "1d"): [
                 _row("2026-06-01T00:00:00Z", 100),
                 _row("2026-06-02T00:00:00Z", 101),
                 _row("2026-06-03T00:00:00Z", 102),
             ],
-            ("BTCUSDT", "1h"): [
+            ("BTC/USDT", "1h"): [
                 _row("2026-06-03T09:00:00Z", 110),
                 _row("2026-06-03T10:00:00Z", 111),
             ],
@@ -44,13 +44,13 @@ def test_internal_fetch_configured_ohlcv_returns_normalized_finalized_records() 
 
     assert captured_options == {
         "enableRateLimit": True,
-        "options": {"fetchMarkets": {"types": ["spot"]}},
+        "options": {"defaultType": "spot", "fetchMarkets": {"types": ["spot"]}},
         "urls": {"api": {"public": "https://data-api.binance.vision/api/v3"}},
     }
     assert not {"apiKey", "secret", "password", "uid"} & set(captured_options)
     assert exchange.calls == [
-        {"symbol": "BTCUSDT", "timeframe": "1d", "since": None, "limit": 3},
-        {"symbol": "BTCUSDT", "timeframe": "1h", "since": None, "limit": 2},
+        {"symbol": "BTC/USDT", "timeframe": "1d", "since": None, "limit": 3},
+        {"symbol": "BTC/USDT", "timeframe": "1h", "since": None, "limit": 2},
     ]
     assert records == [
         {
@@ -97,7 +97,7 @@ def test_internal_fetch_configured_ohlcv_uses_configured_proxy_without_credentia
 
     def factory(options: dict[str, Any]) -> _FakeExchange:
         captured_options.update(options)
-        return _FakeExchange({("BTCUSDT", "1d"): [_row("2026-06-01T00:00:00Z", 100)]})
+        return _FakeExchange({("BTC/USDT", "1d"): [_row("2026-06-01T00:00:00Z", 100)]})
 
     _fetch_configured_ohlcv(
         {
@@ -118,7 +118,7 @@ def test_internal_fetch_configured_ohlcv_uses_configured_proxy_without_credentia
 
     assert captured_options == {
         "enableRateLimit": True,
-        "options": {"fetchMarkets": {"types": ["spot"]}},
+        "options": {"defaultType": "spot", "fetchMarkets": {"types": ["spot"]}},
         "urls": {"api": {"public": "https://data-api.binance.vision/api/v3"}},
         "httpsProxy": "http://proxy.example:8080",
     }
@@ -135,7 +135,7 @@ def test_ccxt_ohlcv_source_rejects_proxy_credentials() -> None:
 
 
 def test_ccxt_ohlcv_source_passes_since_as_milliseconds() -> None:
-    exchange = _FakeExchange({("BTCUSDT", "1d"): [_row("2026-06-01T00:00:00Z", 100)]})
+    exchange = _FakeExchange({("BTC/USDT", "1d"): [_row("2026-06-01T00:00:00Z", 100)]})
     source = CCXTOHLCVSource("binance", exchange_factory=lambda options: exchange)
 
     source.fetch_records(
@@ -148,7 +148,7 @@ def test_ccxt_ohlcv_source_passes_since_as_milliseconds() -> None:
 
     assert exchange.calls == [
         {
-            "symbol": "BTCUSDT",
+            "symbol": "BTC/USDT",
             "timeframe": "1d",
             "since": 1777593600000,
             "limit": 50,
@@ -157,8 +157,29 @@ def test_ccxt_ohlcv_source_passes_since_as_milliseconds() -> None:
 
 
 def test_ccxt_ohlcv_source_rejects_unsupported_source() -> None:
-    with pytest.raises(OHLCVSourceError, match="unsupported OHLCV source: kraken"):
-        CCXTOHLCVSource("kraken", exchange_factory=lambda options: _FakeExchange({}))
+    with pytest.raises(OHLCVSourceError, match="unsupported OHLCV source: unsupported_exchange"):
+        CCXTOHLCVSource("unsupported_exchange", exchange_factory=lambda options: _FakeExchange({}))
+
+
+def test_ccxt_ohlcv_source_maps_swap_symbol_and_monthly_timeframe() -> None:
+    exchange = _FakeExchange(
+        {("BTC/USDT:USDT", "1M"): [_row("2026-05-01T00:00:00Z", 100)]},
+        timeframes={"1M": "1M"},
+    )
+    source = CCXTOHLCVSource("binance_usdm", exchange_factory=lambda options: exchange)
+
+    records = source.fetch_records(
+        symbol="BTCUSDT",
+        timeframe="1month",
+        now="2026-06-02T00:00:00Z",
+    )
+
+    assert exchange.calls == [
+        {"symbol": "BTC/USDT:USDT", "timeframe": "1M", "since": None, "limit": None}
+    ]
+    assert records[0]["source"] == "binance_usdm"
+    assert records[0]["symbol"] == "BTCUSDT"
+    assert records[0]["timeframe"] == "1month"
 
 
 def test_ccxt_ohlcv_source_rejects_unsupported_timeframe() -> None:
@@ -204,7 +225,7 @@ def test_ccxt_ohlcv_source_reports_exchange_source_error() -> None:
 def test_ccxt_ohlcv_source_rejects_malformed_rows() -> None:
     source = CCXTOHLCVSource(
         "binance",
-        exchange_factory=lambda options: _FakeExchange({("BTCUSDT", "1d"): [[1, 2]]}),
+        exchange_factory=lambda options: _FakeExchange({("BTC/USDT", "1d"): [[1, 2]]}),
     )
 
     with pytest.raises(OHLCVSourceError, match="timestamp, open, high, low, close, volume"):
@@ -216,7 +237,7 @@ def test_ccxt_ohlcv_source_rejects_impossible_candle_values() -> None:
     source = CCXTOHLCVSource(
         "binance",
         exchange_factory=lambda options: _FakeExchange(
-            {("BTCUSDT", "1d"): [[timestamp, 100, 99, 98, 101, 10]]}
+            {("BTC/USDT", "1d"): [[timestamp, 100, 99, 98, 101, 10]]}
         ),
     )
 

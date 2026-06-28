@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from halpha.market.ohlcv_source import SUPPORTED_OHLCV_SOURCES
 from halpha.pipeline_stages import STAGE_ORDER
 from halpha.storage import display_path, safe_local_ref as _safe_ref
 
@@ -268,8 +269,11 @@ class CommandJobBuilder:
             source = self._validated_data_collect_source(data_type, params.get("source"))
             start = self._validated_non_empty_text(params.get("start"), param_name="start")
             end = self._validated_non_empty_text(params.get("end"), param_name="end")
-            command.extend(["--data-type", data_type, "--source", source])
-            preview.extend(["--data-type", data_type, "--source", source])
+            command.extend(["--data-type", data_type])
+            preview.extend(["--data-type", data_type])
+            if source:
+                command.extend(["--source", source])
+                preview.extend(["--source", source])
             if data_type == "ohlcv":
                 symbol = self._validated_symbol(params.get("symbol"))
                 timeframe = self._validated_timeframe(params.get("timeframe"))
@@ -394,26 +398,38 @@ class CommandJobBuilder:
 
     def _validated_data_collect_type(self, value: Any) -> str:
         data_type = self._validated_non_empty_text(value, param_name="data_type")
-        if data_type not in {"ohlcv", "text_event"}:
-            raise CommandJobError("data_type must be ohlcv or text_event for data collection jobs.")
+        if data_type not in {"ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"}:
+            raise CommandJobError(
+                "data_type must be ohlcv, text_event, macro_calendar, onchain_flow, or derivatives_market "
+                "for data collection jobs."
+            )
         return data_type
 
-    def _validated_data_collect_source(self, data_type: str, value: Any) -> str:
-        source = self._validated_non_empty_text(value, param_name="source")
+    def _validated_data_collect_source(self, data_type: str, value: Any) -> str | None:
+        if data_type not in {"ohlcv", "text_event"}:
+            source = str(value or "").strip()
+            if source and source != "configured":
+                raise CommandJobError(f"{data_type} collection uses configured data sources; omit source.")
+            return None
+        source = str(value or "").strip()
+        if data_type == "text_event" and not source:
+            source = "all"
+        if not source:
+            raise CommandJobError("source must not be empty.")
         if data_type == "ohlcv":
-            configured = self._configured_market_source()
-            if source != configured:
+            configured = self._configured_ohlcv_sources()
+            if source not in configured:
                 raise CommandJobError(f"source is not configured: {source}.")
         elif source != "all" and source not in self._configured_text_sources():
             raise CommandJobError(f"source is not configured: {source}.")
         return source
 
-    def _configured_market_source(self) -> str:
+    def _configured_ohlcv_sources(self) -> set[str]:
         market = self.config.get("market") if isinstance(self.config.get("market"), dict) else {}
-        source = str(market.get("source") or "")
-        if not source:
-            raise CommandJobError("market.source must be configured for OHLCV collection.")
-        return source
+        ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+        sources = ohlcv.get("sources") if isinstance(ohlcv.get("sources"), list) else []
+        configured = {str(source) for source in sources if isinstance(source, str) and source}
+        return configured or set(SUPPORTED_OHLCV_SOURCES)
 
     def _configured_text_sources(self) -> set[str]:
         text = self.config.get("text") if isinstance(self.config.get("text"), dict) else {}
