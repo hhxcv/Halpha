@@ -152,6 +152,15 @@ SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
         "trend_window",
         "trend_filter_pct",
     },
+    "bollinger_rsi_long_short": {
+        "bollinger_window",
+        "band_std",
+        "rsi_window",
+        "rsi_oversold",
+        "rsi_overbought",
+        "trend_window",
+        "trend_filter_pct",
+    },
 }
 
 
@@ -871,7 +880,7 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
             _require_positive_int(params, "exit_window", f"{path}.exit_window")
         if "atr_window" in params:
             _require_positive_int(params, "atr_window", f"{path}.atr_window")
-    if name == "bollinger_rsi_reversion":
+    if name in {"bollinger_rsi_reversion", "bollinger_rsi_long_short"}:
         if "bollinger_window" in params:
             _require_positive_int(params, "bollinger_window", f"{path}.bollinger_window")
         if "band_std" in params:
@@ -1014,7 +1023,7 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
             _require_positive_number_value(value, path)
     if name == "breakout_atr_trend":
         _require_positive_int_value(value, path)
-    if name == "bollinger_rsi_reversion":
+    if name in {"bollinger_rsi_reversion", "bollinger_rsi_long_short"}:
         if param_name in {"bollinger_window", "rsi_window", "trend_window"}:
             _require_positive_int_value(value, path)
         if param_name in {"band_std", "trend_filter_pct"}:

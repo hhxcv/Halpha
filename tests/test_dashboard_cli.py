@@ -1733,6 +1733,7 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
     assert payload["commands"]["backtest"] == "available"
     assert payload["commands"]["experiment"] == "available"
     assert payload["commands"]["options"]["strategy_names"] == [
+        "bollinger_rsi_long_short",
         "bollinger_rsi_reversion",
         "breakout_atr_trend",
         "signed_tsmom_trend",

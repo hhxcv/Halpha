@@ -155,7 +155,7 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `pyarrow` | Parquet read/write support for the shared OHLCV fact store. | File format support only. Not an AI context input. |
 | `vectorbt` | Strategy indicator and signal calculation support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
-Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `signed_tsmom_trend` implementation uses pandas close-to-close momentum to emit signed long, short, and flat research exposure. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `sma_cross_long_short` implementation uses pandas rolling means to emit signed long, short, and flat research exposure. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, bounded historical diagnostics use Halpha-owned canonical next-bar close-to-close evaluators. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `signed_tsmom_trend` implementation uses pandas close-to-close momentum to emit signed long, short, and flat research exposure. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `sma_cross_long_short` implementation uses pandas rolling means to emit signed long, short, and flat research exposure. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. Current `bollinger_rsi_long_short` implementation uses pandas rolling Bollinger, RSI, and trend-filter calculations to emit signed long, short, flat, and trend-suppressed research exposure. When configured, bounded historical diagnostics use Halpha-owned canonical next-bar close-to-close evaluators. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
 
 ## Instrument Identity Contract
 
@@ -801,6 +801,21 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+    - name: bollinger_rsi_long_short
+      enabled: true
+      params:
+        bollinger_window: 20
+        band_std: 2.0
+        rsi_window: 14
+        rsi_oversold: 30
+        rsi_overbought: 70
+        trend_window: 100
+        trend_filter_pct: 10.0
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
   parameter_diagnostics:
     enabled: true
     max_combinations: 16
@@ -849,6 +864,25 @@ quant:
           - 0.0
           - 0.5
       bollinger_rsi_reversion:
+        bollinger_window:
+          - 20
+        band_std:
+          - 2.0
+          - 2.5
+        rsi_window:
+          - 14
+        rsi_oversold:
+          - 25
+          - 30
+        rsi_overbought:
+          - 70
+          - 75
+        trend_window:
+          - 50
+          - 100
+        trend_filter_pct:
+          - 10.0
+      bollinger_rsi_long_short:
         bollinger_window:
           - 20
         band_std:
@@ -933,6 +967,10 @@ Validation contract:
 - `bollinger_rsi_reversion` params `band_std` and `trend_filter_pct` must be positive numbers when present.
 - `bollinger_rsi_reversion` params `rsi_oversold` and `rsi_overbought` must be numbers greater than 0 and lower than 100 when present.
 - Effective `bollinger_rsi_reversion` `rsi_oversold` must be lower than effective `rsi_overbought`.
+- `bollinger_rsi_long_short` params `bollinger_window`, `rsi_window`, and `trend_window` must be positive integers when present.
+- `bollinger_rsi_long_short` params `band_std` and `trend_filter_pct` must be positive numbers when present.
+- `bollinger_rsi_long_short` params `rsi_oversold` and `rsi_overbought` must be numbers greater than 0 and lower than 100 when present.
+- Effective `bollinger_rsi_long_short` `rsi_oversold` must be lower than effective `rsi_overbought`.
 - Quant config must not require credentials, account settings, trading settings, portfolio settings, or hosted service settings.
 
 Proxy configuration:
@@ -1775,8 +1813,8 @@ Parameter diagnostic rules:
 
 Strategy names:
 
-- Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, `sma_cross_long_short`, and `bollinger_rsi_reversion`.
-- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, `sma_cross_long_short`, and `bollinger_rsi_reversion`.
+- Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, `sma_cross_long_short`, `bollinger_rsi_reversion`, and `bollinger_rsi_long_short`.
+- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, `sma_cross_long_short`, `bollinger_rsi_reversion`, and `bollinger_rsi_long_short`.
 - The M1 demo signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are retired from the strategy-centered product path.
 - Retired demo names are not migrated into strategy aliases.
 - If an old demo name is requested after strategy adoption, config validation should fail with an actionable error.
