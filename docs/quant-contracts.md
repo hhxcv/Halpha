@@ -372,7 +372,7 @@ Signed exposure rules:
 - Direct long-to-short or short-to-long transitions must remain visible in
   transition diagnostics.
 
-Planned multi-leg signal shape:
+Implemented multi-leg signal shape for the evaluation core:
 
 ```json
 {
@@ -404,8 +404,12 @@ Multi-leg rules:
 
 - Leg records must preserve source, symbol, timeframe, and normalized
   instrument identity when implemented.
-- Multi-leg evaluation must align legs by observable bar time and report
-  omitted or missing rows.
+- Multi-leg evaluation aligns legs by observable open time and reports omitted
+  or missing rows.
+- The first implemented multi-leg evaluator requires all legs to share one
+  timeframe. It does not resample mixed-frequency legs.
+- Multi-leg target exposure must be finite and bounded to
+  `-1.0 <= target_exposure <= 1.0` per leg.
 - Leg exposure units are research exposure units, not account allocation or
   margin instructions.
 - Multi-leg records must not collapse pair, spread, or basket evidence into a
@@ -1734,6 +1738,22 @@ execution model:
 }
 ```
 
+Multi-leg evaluation uses the same no-lookahead timing with a separate
+versioned execution model:
+
+```json
+{
+  "execution_model_id": "close_to_close_next_bar_multi_leg_v1",
+  "price_source": "close",
+  "signal_timing": "signal_at_bar_close",
+  "position_timing": "next_bar",
+  "lookahead_policy": "no_same_bar_execution",
+  "execution_timing": "research_close_to_close",
+  "direction": "multi_leg",
+  "position_unit": "research_leg_exposure"
+}
+```
+
 Reusable core output contract:
 
 ```json
@@ -1876,6 +1896,13 @@ Execution model rules:
   when price rises.
 - Turnover is the absolute change in target exposure. A direct long `1.0` to
   short `-1.0` transition has turnover `2.0`.
+- `close_to_close_next_bar_multi_leg_v1` aligns legs by inner-joined
+  `open_time`, requires one shared timeframe, applies previous-bar leg target
+  exposure to each leg's next close-to-close return, and sums leg
+  contributions into aggregate gross and net returns.
+- Multi-leg outputs record aggregate gross exposure, net exposure, turnover,
+  drawdown, per-leg contribution, per-leg turnover, omitted rows, and
+  insufficient/degraded alignment warnings.
 - Evaluation must record fees and slippage assumptions before net metrics.
 - Gross and net metrics must be separate.
 - Strategy metrics must include gross return, net return, total cost, cost drag, drawdown, volatility, risk-adjusted metrics, and final equity.

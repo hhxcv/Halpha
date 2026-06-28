@@ -11,6 +11,7 @@ DEFAULT_BACKTEST_INITIAL_CASH = 10000.0
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
 CANONICAL_EXECUTION_MODEL_ID = "close_to_close_next_bar_v1"
 SIGNED_EXECUTION_MODEL_ID = "close_to_close_next_bar_signed_v1"
+MULTI_LEG_EXECUTION_MODEL_ID = "close_to_close_next_bar_multi_leg_v1"
 CANONICAL_EXECUTION_MODEL = {
     "execution_model_id": CANONICAL_EXECUTION_MODEL_ID,
     "price_source": "close",
@@ -24,6 +25,12 @@ SIGNED_EXECUTION_MODEL = {
     "execution_model_id": SIGNED_EXECUTION_MODEL_ID,
     "direction": "long_short",
     "position_unit": "fractional_signed_exposure",
+}
+MULTI_LEG_EXECUTION_MODEL = {
+    **CANONICAL_EXECUTION_MODEL,
+    "execution_model_id": MULTI_LEG_EXECUTION_MODEL_ID,
+    "direction": "multi_leg",
+    "position_unit": "research_leg_exposure",
 }
 
 
