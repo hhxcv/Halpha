@@ -4,6 +4,8 @@ import math
 from statistics import mean, median, pstdev
 from typing import Any
 
+from halpha.market.instrument_identity import InstrumentIdentityError, derive_instrument_identity
+
 from .signal_records import validate_single_leg_target_exposure
 from .strategy_records import CANONICAL_EXECUTION_MODEL, SIGNED_EXECUTION_MODEL, SUPPORTED_BACKTEST_MODES, warning
 
@@ -20,6 +22,10 @@ MIN_SAMPLE_ROWS_FOR_RELIABILITY = 60
 LOW_TRADE_COUNT_THRESHOLD = 3
 HIGH_TURNOVER_THRESHOLD = 10.0
 HIGH_COST_DRAG_PCT_THRESHOLD = 1.0
+CONTRACT_HIGH_ABS_EXPOSURE_PCT_THRESHOLD = 80.0
+CONTRACT_HIGH_PERIOD_MOVE_PCT_THRESHOLD = 15.0
+CONTRACT_MARKET_TYPES = {"perpetual", "swap", "futures"}
+CONTRACT_TYPES = {"linear_perpetual", "inverse_perpetual", "linear_futures", "inverse_futures"}
 DEFAULT_WALK_FORWARD_POLICY = {
     "calibration_rows": 60,
     "window_rows": 60,
@@ -117,7 +123,22 @@ def evaluate_single_window_backtest(
             signed=signed_exposure,
         )
         baseline_metrics = _baseline_metrics(rows, closes, costs, timeframe=str(market_identity.get("timeframe")))
-        warnings = [*_research_warnings(sample, strategy_metrics, trade_summary), *_funding_warnings(funding)]
+        futures_diagnostics = _futures_diagnostics(
+            market_identity=market_identity,
+            rows=rows,
+            closes=closes,
+            result=result,
+            strategy_metrics=strategy_metrics,
+            trade_summary=trade_summary,
+            funding=funding,
+        )
+        warnings = _unique_warnings(
+            [
+                *_research_warnings(sample, strategy_metrics, trade_summary),
+                *_funding_warnings(funding),
+                *_diagnostic_warnings(futures_diagnostics),
+            ]
+        )
 
         return _base_record(
             strategy,
@@ -136,6 +157,7 @@ def evaluate_single_window_backtest(
             warnings=warnings,
             errors=[],
             funding_costs=funding,
+            futures_diagnostics=futures_diagnostics,
         )
     except Exception as exc:  # noqa: BLE001 - core returns bounded failed records instead of leaking internals.
         return _failed_record(
@@ -508,6 +530,242 @@ def _research_warnings(
             )
         )
     return warnings
+
+
+def _futures_diagnostics(
+    *,
+    market_identity: dict[str, Any],
+    rows: list[dict[str, Any]],
+    closes: list[float],
+    result: dict[str, Any],
+    strategy_metrics: dict[str, Any],
+    trade_summary: dict[str, Any],
+    funding: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    identity = _contract_identity(market_identity)
+    if identity is None:
+        return None
+
+    positions = _float_list(result.get("period_positions"))
+    gross_returns = _float_list(result.get("period_gross_returns"))
+    turnovers = _float_list(result.get("turnovers"))
+    cost_returns = _float_list(result.get("cost_returns"))
+    period_count = len(positions)
+    warnings = [
+        *_dict_list(identity.get("warnings")),
+        *_futures_funding_warnings(funding),
+    ]
+
+    exposure = _futures_exposure_summary(positions)
+    risk_warnings = _contract_risk_warnings(
+        exposure=exposure,
+        closes=closes,
+    )
+    warnings.extend(risk_warnings)
+
+    return {
+        "artifact_type": "futures_strategy_diagnostics",
+        "schema_version": 1,
+        "status": "degraded" if warnings else "succeeded",
+        "instrument_identity": {
+            "source": identity.get("source"),
+            "symbol": identity.get("symbol"),
+            "timeframe": identity.get("timeframe"),
+            "market_type": identity.get("market_type"),
+            "contract_type": identity.get("contract_type"),
+            "base_asset": identity.get("base_asset"),
+            "quote_asset": identity.get("quote_asset"),
+            "settlement_asset": identity.get("settlement_asset"),
+            "identity_status": identity.get("identity_status"),
+        },
+        "method": {
+            "basis": "account_independent_contract_research_diagnostics",
+            "contribution_basis": "additive_period_gross_return_percentage_points",
+            "liquidation_model": "not_modeled",
+            "margin_model": "not_modeled",
+            "account_balance_model": "not_modeled",
+        },
+        "period_count": period_count,
+        "contribution": _futures_contribution_summary(positions, gross_returns),
+        "exposure": exposure,
+        "turnover": {
+            "total_turnover": _round(sum(turnovers)),
+            "average_turnover": _round(mean(turnovers)) if turnovers else 0.0,
+        },
+        "costs": {
+            "total_cost_pct": strategy_metrics.get("total_cost_pct"),
+            "cost_drag_pct": strategy_metrics.get("cost_drag_pct"),
+            "additive_cost_pct": _pct(sum(cost_returns)),
+        },
+        "funding": _futures_funding_summary(strategy_metrics, funding),
+        "trade_summary": {
+            "trade_count": trade_summary.get("trade_count"),
+            "long_trade_count": trade_summary.get("long_trade_count"),
+            "short_trade_count": trade_summary.get("short_trade_count"),
+            "side_flip_count": trade_summary.get("side_flip_count"),
+        },
+        "risk_warnings": risk_warnings,
+        "warnings": warnings,
+    }
+
+
+def _contract_identity(market_identity: dict[str, Any]) -> dict[str, Any] | None:
+    nested = market_identity.get("instrument_identity")
+    if isinstance(nested, dict):
+        return nested if _is_contract_identity(nested) else None
+    if _has_explicit_identity_fields(market_identity):
+        return market_identity if _is_contract_identity(market_identity) else None
+    source = market_identity.get("source")
+    symbol = market_identity.get("symbol")
+    timeframe = market_identity.get("timeframe")
+    if not all(isinstance(value, str) and value.strip() for value in (source, symbol, timeframe)):
+        return None
+    try:
+        identity = derive_instrument_identity(source=source, symbol=symbol, timeframe=timeframe)
+    except InstrumentIdentityError:
+        return None
+    return identity if _is_contract_identity(identity) else None
+
+
+def _has_explicit_identity_fields(value: dict[str, Any]) -> bool:
+    return any(key in value for key in ("market_type", "contract_type", "settlement_asset"))
+
+
+def _is_contract_identity(identity: dict[str, Any]) -> bool:
+    market_type = str(identity.get("market_type") or "").strip().lower()
+    contract_type = str(identity.get("contract_type") or "").strip().lower()
+    return market_type in CONTRACT_MARKET_TYPES or contract_type in CONTRACT_TYPES
+
+
+def _futures_contribution_summary(
+    positions: list[float],
+    gross_returns: list[float],
+) -> dict[str, Any]:
+    long_return = 0.0
+    short_return = 0.0
+    flat_return = 0.0
+    for position, period_return in zip(positions, gross_returns, strict=False):
+        if position > 0:
+            long_return += period_return
+        elif position < 0:
+            short_return += period_return
+        else:
+            flat_return += period_return
+    return {
+        "long_gross_contribution_pct": _pct(long_return),
+        "short_gross_contribution_pct": _pct(short_return),
+        "flat_gross_contribution_pct": _pct(flat_return),
+        "total_gross_contribution_pct": _pct(long_return + short_return + flat_return),
+    }
+
+
+def _futures_exposure_summary(positions: list[float]) -> dict[str, Any]:
+    if not positions:
+        return {
+            "long_time_pct": 0.0,
+            "short_time_pct": 0.0,
+            "flat_time_pct": 0.0,
+            "average_gross_exposure_pct": 0.0,
+            "average_net_exposure_pct": 0.0,
+            "average_abs_exposure_pct": 0.0,
+            "max_abs_exposure_pct": 0.0,
+        }
+    count = len(positions)
+    average_abs = sum(abs(position) for position in positions) / count
+    return {
+        "long_time_pct": _pct(sum(1 for position in positions if position > 0) / count),
+        "short_time_pct": _pct(sum(1 for position in positions if position < 0) / count),
+        "flat_time_pct": _pct(sum(1 for position in positions if position == 0) / count),
+        "average_gross_exposure_pct": _pct(average_abs),
+        "average_net_exposure_pct": _pct(sum(positions) / count),
+        "average_abs_exposure_pct": _pct(average_abs),
+        "max_abs_exposure_pct": _pct(max(abs(position) for position in positions)),
+    }
+
+
+def _futures_funding_summary(
+    strategy_metrics: dict[str, Any],
+    funding: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if funding is None:
+        return {
+            "status": "unavailable",
+            "availability": "not_provided",
+        }
+    summary = {
+        "status": str(funding.get("status") or "unknown"),
+        "period_count": funding.get("period_count"),
+        "matched_record_count": funding.get("matched_record_count"),
+        "missing_period_count": funding.get("missing_period_count"),
+    }
+    if "funding_drag_pct" in strategy_metrics:
+        summary["funding_drag_pct"] = strategy_metrics["funding_drag_pct"]
+    return summary
+
+
+def _futures_funding_warnings(funding: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if funding is None:
+        return [
+            warning(
+                "funding_costs_not_provided_for_contract",
+                "Contract evaluation did not receive funding cost inputs; funding drag is unavailable.",
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        ]
+    return _funding_warnings(funding)
+
+
+def _contract_risk_warnings(
+    *,
+    exposure: dict[str, Any],
+    closes: list[float],
+) -> list[dict[str, Any]]:
+    average_abs_exposure_pct = float(exposure.get("average_abs_exposure_pct") or 0.0)
+    max_period_move_pct = _max_period_abs_return_pct(closes)
+    if (
+        average_abs_exposure_pct >= CONTRACT_HIGH_ABS_EXPOSURE_PCT_THRESHOLD
+        and max_period_move_pct >= CONTRACT_HIGH_PERIOD_MOVE_PCT_THRESHOLD
+    ):
+        return [
+            warning(
+                "contract_volatility_exposure_risk",
+                (
+                    "Contract evaluation combines high average absolute exposure "
+                    f"({average_abs_exposure_pct}%) with a large observed period move "
+                    f"({max_period_move_pct}%). This is a qualitative research warning; "
+                    "exchange margin schedules and liquidation engines are not modeled."
+                ),
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        ]
+    return []
+
+
+def _max_period_abs_return_pct(closes: list[float]) -> float:
+    values = [
+        abs((closes[index] / closes[index - 1]) - 1)
+        for index in range(1, len(closes))
+        if closes[index - 1] > 0
+    ]
+    return _pct(max(values)) if values else 0.0
+
+
+def _diagnostic_warnings(diagnostics: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if diagnostics is None:
+        return []
+    return _dict_list(diagnostics.get("warnings"))
+
+
+def _unique_warnings(warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen = set()
+    result = []
+    for item in warnings:
+        key = (item.get("code"), item.get("message"), item.get("source"))
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(item)
+    return result
 
 
 def _walk_forward_window_record(
@@ -1039,6 +1297,7 @@ def _base_record(
     warnings: list[dict[str, Any]],
     errors: list[dict[str, Any]],
     funding_costs: dict[str, Any] | None = None,
+    futures_diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     name = str(strategy.get("name"))
     source = market_identity.get("source")
@@ -1068,6 +1327,8 @@ def _base_record(
     }
     if funding_costs is not None:
         record["funding_costs"] = funding_costs
+    if futures_diagnostics is not None:
+        record["futures_diagnostics"] = futures_diagnostics
     return record
 
 
@@ -1451,6 +1712,10 @@ def _mapping(value: Any) -> dict[str, Any]:
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _float_list(value: Any) -> list[float]:
+    return [float(item) for item in value if isinstance(item, (int, float)) and not isinstance(item, bool)] if isinstance(value, list) else []
 
 
 def _pct(value: float) -> float:

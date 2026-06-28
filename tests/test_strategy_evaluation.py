@@ -394,6 +394,165 @@ def test_signed_single_window_records_unavailable_funding_without_silent_zero_as
     json.dumps(result)
 
 
+def test_futures_diagnostics_record_long_only_contract_exposure_and_funding() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 110),
+        _record("2026-06-03T00:00:00Z", 121),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_contract_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, 1, 1]),
+        funding_costs=_funding_costs(rows, [0.001, 0.001]),
+    )
+
+    diagnostics = result["futures_diagnostics"]
+    assert diagnostics["status"] == "succeeded"
+    assert diagnostics["instrument_identity"]["market_type"] == "swap"
+    assert diagnostics["instrument_identity"]["contract_type"] == "linear_perpetual"
+    assert diagnostics["contribution"] == {
+        "long_gross_contribution_pct": 20.0,
+        "short_gross_contribution_pct": 0.0,
+        "flat_gross_contribution_pct": 0.0,
+        "total_gross_contribution_pct": 20.0,
+    }
+    assert diagnostics["exposure"]["long_time_pct"] == 100.0
+    assert diagnostics["exposure"]["short_time_pct"] == 0.0
+    assert diagnostics["exposure"]["average_gross_exposure_pct"] == 100.0
+    assert diagnostics["exposure"]["average_net_exposure_pct"] == 100.0
+    assert diagnostics["turnover"] == {"total_turnover": 1.0, "average_turnover": 0.5}
+    assert diagnostics["funding"]["status"] == "available"
+    assert diagnostics["funding"]["funding_drag_pct"] == 0.2
+    json.dumps(result)
+
+
+def test_futures_diagnostics_record_short_only_contract_contribution() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 90),
+        _record("2026-06-03T00:00:00Z", 81),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_contract_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [-1, -1, -1]),
+        funding_costs=_funding_costs(rows, [0.001, 0.001]),
+    )
+
+    diagnostics = result["futures_diagnostics"]
+    assert diagnostics["contribution"]["long_gross_contribution_pct"] == 0.0
+    assert diagnostics["contribution"]["short_gross_contribution_pct"] == 20.0
+    assert diagnostics["exposure"]["long_time_pct"] == 0.0
+    assert diagnostics["exposure"]["short_time_pct"] == 100.0
+    assert diagnostics["exposure"]["average_net_exposure_pct"] == -100.0
+    assert diagnostics["funding"]["funding_drag_pct"] == -0.2
+    json.dumps(result)
+
+
+def test_futures_diagnostics_record_alternating_long_short_and_flat_time() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 110),
+        _record("2026-06-03T00:00:00Z", 99),
+        _record("2026-06-04T00:00:00Z", 99),
+        _record("2026-06-05T00:00:00Z", 118.8),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_contract_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, -1, 0, 1, 1]),
+        cost_assumptions={"fees_bps": 10, "slippage_bps": 0},
+        funding_costs=_funding_costs(rows, [0.0, 0.0, 0.0, 0.0]),
+    )
+
+    diagnostics = result["futures_diagnostics"]
+    assert diagnostics["contribution"]["long_gross_contribution_pct"] == 30.0
+    assert diagnostics["contribution"]["short_gross_contribution_pct"] == 10.0
+    assert diagnostics["exposure"]["long_time_pct"] == 50.0
+    assert diagnostics["exposure"]["short_time_pct"] == 25.0
+    assert diagnostics["exposure"]["flat_time_pct"] == 25.0
+    assert diagnostics["exposure"]["average_gross_exposure_pct"] == 75.0
+    assert diagnostics["exposure"]["average_net_exposure_pct"] == 25.0
+    assert diagnostics["turnover"]["total_turnover"] == 5.0
+    assert diagnostics["trade_summary"]["side_flip_count"] == 1
+    json.dumps(result)
+
+
+def test_futures_diagnostics_mark_missing_funding_unavailable_without_fabricating_drag() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 100),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_contract_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, 1]),
+    )
+
+    diagnostics = result["futures_diagnostics"]
+    assert diagnostics["status"] == "degraded"
+    assert diagnostics["funding"] == {
+        "status": "unavailable",
+        "availability": "not_provided",
+    }
+    assert "funding_drag_pct" not in result["strategy_metrics"]
+    assert "funding_drag_pct" not in diagnostics["funding"]
+    assert "funding_costs_not_provided_for_contract" in {
+        item["code"] for item in result["warnings"]
+    }
+    json.dumps(result)
+
+
+def test_futures_diagnostics_warn_on_high_contract_exposure_and_price_move() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 130),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_contract_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, 1]),
+        funding_costs=_funding_costs(rows, [0.0]),
+    )
+
+    warning_codes = {item["code"] for item in result["warnings"]}
+    diagnostics = result["futures_diagnostics"]
+    assert diagnostics["status"] == "degraded"
+    assert "contract_volatility_exposure_risk" in warning_codes
+    assert [item["code"] for item in diagnostics["risk_warnings"]] == [
+        "contract_volatility_exposure_risk"
+    ]
+    json.dumps(result)
+
+
+def test_spot_identity_does_not_emit_futures_diagnostics() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 100),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_spot_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, 1]),
+    )
+
+    assert "futures_diagnostics" not in result
+    json.dumps(result)
+
+
 def test_single_window_backtest_entry_exit_applies_costs_and_no_same_bar_execution() -> None:
     rows = [
         _record("2026-06-01T00:00:00Z", 100),
@@ -624,6 +783,52 @@ def _market_identity() -> dict[str, str]:
         "source": "unit",
         "symbol": "TEST",
         "timeframe": "1d",
+    }
+
+
+def _contract_market_identity() -> dict[str, Any]:
+    return {
+        "source": "unit",
+        "symbol": "TEST",
+        "timeframe": "1d",
+        "instrument_identity": {
+            "schema_version": 1,
+            "source": "unit",
+            "symbol": "TEST",
+            "exchange_symbol": "TEST",
+            "market_type": "swap",
+            "contract_type": "linear_perpetual",
+            "base_asset": "TEST",
+            "quote_asset": "USDT",
+            "settlement_asset": "USDT",
+            "price_unit": "quote_asset_per_base_asset",
+            "timeframe": "1d",
+            "identity_status": "normalized",
+            "warnings": [],
+        },
+    }
+
+
+def _spot_market_identity() -> dict[str, Any]:
+    return {
+        "source": "unit",
+        "symbol": "TEST",
+        "timeframe": "1d",
+        "instrument_identity": {
+            "schema_version": 1,
+            "source": "unit",
+            "symbol": "TEST",
+            "exchange_symbol": "TEST",
+            "market_type": "spot",
+            "contract_type": "spot",
+            "base_asset": "TEST",
+            "quote_asset": "USDT",
+            "settlement_asset": "none",
+            "price_unit": "quote_asset_per_base_asset",
+            "timeframe": "1d",
+            "identity_status": "normalized",
+            "warnings": [],
+        },
     }
 
 
