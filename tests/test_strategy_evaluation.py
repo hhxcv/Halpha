@@ -317,6 +317,83 @@ def test_signed_single_window_long_to_short_transition_records_turnover_and_side
     json.dumps(result)
 
 
+def test_signed_single_window_applies_funding_with_opposite_long_short_effects() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 100),
+        _record("2026-06-03T00:00:00Z", 100),
+    ]
+    funding_costs = _funding_costs(rows, [0.01, 0.01])
+
+    long_result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, 1, 1]),
+        funding_costs=funding_costs,
+    )
+    short_result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [-1, -1, -1]),
+        funding_costs=funding_costs,
+    )
+
+    assert long_result["status"] == "succeeded"
+    assert short_result["status"] == "succeeded"
+    assert _curve_values(long_result, "funding_return_pct") == [0.0, -1.0, -1.0]
+    assert _curve_values(short_result, "funding_return_pct") == [0.0, 1.0, 1.0]
+    assert long_result["strategy_metrics"]["net_return_pct"] == -1.99
+    assert short_result["strategy_metrics"]["net_return_pct"] == 2.01
+    assert long_result["strategy_metrics"]["funding_drag_pct"] == 2.0
+    assert short_result["strategy_metrics"]["funding_drag_pct"] == -2.0
+    assert long_result["funding_costs"]["matched_record_count"] == 2
+    assert short_result["funding_costs"]["matched_record_count"] == 2
+    json.dumps(long_result)
+    json.dumps(short_result)
+
+
+def test_signed_single_window_records_unavailable_funding_without_silent_zero_assumption() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 100),
+    ]
+    funding_costs = {
+        "schema_version": 1,
+        "artifact_type": "strategy_funding_cost_input",
+        "status": "unavailable",
+        "periods": [],
+        "matched_record_count": 0,
+        "missing_period_count": 1,
+        "warnings": [
+            {
+                "severity": "warning",
+                "code": "funding_history_unavailable",
+                "message": "No matching funding records are available for the evaluation window.",
+                "source": "strategy_funding_costs",
+            }
+        ],
+        "errors": [],
+    }
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, 1]),
+        funding_costs=funding_costs,
+    )
+
+    assert result["status"] == "succeeded"
+    assert result["strategy_metrics"]["net_return_pct"] == 0.0
+    assert "funding_drag_pct" not in result["strategy_metrics"]
+    assert result["funding_costs"]["status"] == "unavailable"
+    assert "funding_rate" not in result["equity_curve"][0]
+    assert "funding_history_unavailable" in {item["code"] for item in result["warnings"]}
+    json.dumps(result)
+
+
 def test_single_window_backtest_entry_exit_applies_costs_and_no_same_bar_execution() -> None:
     rows = [
         _record("2026-06-01T00:00:00Z", 100),
@@ -606,6 +683,37 @@ def _signed_signal_records(rows: list[dict[str, Any]], targets: list[float]) -> 
             }
             for row, target in zip(rows, targets, strict=True)
         ],
+    }
+
+
+def _funding_costs(rows: list[dict[str, Any]], rates: list[float]) -> dict[str, Any]:
+    periods = [
+        {
+            "period_start": rows[index - 1]["open_time"],
+            "period_end": rows[index]["open_time"],
+            "funding_rate": rate,
+            "matched_record_count": 1,
+            "funding_as_of": [rows[index]["open_time"]],
+        }
+        for index, rate in enumerate(rates, start=1)
+    ]
+    return {
+        "schema_version": 1,
+        "artifact_type": "strategy_funding_cost_input",
+        "status": "available",
+        "source": "unit",
+        "symbol": "TEST",
+        "data_class": "funding_rate",
+        "period": "8h",
+        "unit": "fraction_of_notional",
+        "sign_convention": "positive_rate_paid_by_longs_received_by_shorts",
+        "period_count": len(periods),
+        "matched_record_count": len(periods),
+        "missing_period_count": 0,
+        "periods": periods,
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": [],
     }
 
 
