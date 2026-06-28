@@ -71,6 +71,8 @@ market:
       1month: 120
   derivatives:
     enabled: false
+  anomalies:
+    enabled: false
 
 macro_calendar:
   enabled: false

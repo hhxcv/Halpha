@@ -39,6 +39,7 @@ must stay marked until their producers are added.
 | Data quality material | Implemented | analysis material stage | research context, Codex context, report |
 | Outcome history | Implemented | outcome history writer | later runs, data inspection, outcome material |
 | Derivatives market history | Initial adoption | derivatives history writer | derivatives views, data inspection, data quality |
+| Market anomaly history | Initial adoption | market anomaly history writer | Dashboard data viewer, data inspection, future monitor/event workflows |
 | Macro calendar history | Initial adoption | macro calendar history writer | macro calendar views, data inspection, data quality |
 | On-chain flow history | Initial adoption | on-chain flow history writer | on-chain views, data inspection, data quality |
 | Collection coverage state | Initial adoption | OHLCV and text-event data collect, coverage state writer | collection planner, data inspection, Dashboard data viewer, data quality |
@@ -92,6 +93,7 @@ Coverage applies to implemented reusable stores:
 - OHLCV history;
 - text-event history;
 - derivatives market history;
+- market anomaly history;
 - macro/calendar history;
 - on-chain flow history.
 
@@ -251,6 +253,8 @@ Implemented query adapters:
   `halpha.data.event_like_query.query_onchain_flow_records`.
 - Derivatives market range query:
   `halpha.data.event_like_query.query_derivatives_market_records`.
+- Market anomaly range query:
+  `halpha.data.event_like_query.query_market_anomaly_records`.
 
 Required query inputs:
 
@@ -298,6 +302,53 @@ Rules:
   local history had made them visible by the boundary.
 - On-chain flow and derivatives market queries use record `as_of` for both
   range filtering and no-lookahead eligibility.
+- Market anomaly queries use `observed_at` for range filtering and
+  `published_at` plus `first_seen_at` for no-lookahead eligibility.
+
+## Market Anomaly History
+
+Market anomaly history records abnormal market observations from two source
+kinds behind one structure:
+
+- external anomaly intelligence imported from configured local source adapters;
+- Halpha rule-detected anomalies derived from local reusable market data.
+
+Current artifact paths:
+
+- current-run raw anomaly artifact: `raw/market_anomalies.json`;
+- reusable history store: `data/market/anomalies/`;
+- schema metadata: `data/market/metadata/market_anomaly_schema.json`;
+- state metadata: `data/market/metadata/market_anomaly_state.json`.
+
+Required record fields:
+
+- `history_key`: project-defined canonical identity for exact signal merging;
+- `anomaly_id`: source-provided or Halpha-generated item id;
+- `dedupe_key`: project-defined dedupe grouping key for related signal work;
+- `source_kind`: `external_intel` or `halpha_rule`;
+- `source`: configured source name;
+- `source_kinds`, `sources`, `source_records`: merged provenance;
+- `data_class`: anomaly category such as `price_move` or `volume_spike`;
+- `symbol`, `market_type`, `timeframe`;
+- `observed_at`: market observation time and primary query time;
+- `published_at`, `collected_at`, `first_seen_at`, `last_seen_at`;
+- `severity`, `direction`, `metric`, `value`, `threshold`, `unit`;
+- `window_start`, `window_end`;
+- `title`, `summary`;
+- `metrics`, `units`, `raw_fields`;
+- `origin_run_ids`, `first_seen_run_id`, `last_seen_run_id`;
+- `status`, `warnings`, `errors`, `source_artifacts`.
+
+Identity and no-lookahead rules:
+
+- `history_key` is based on `data_class`, `symbol`, `timeframe`,
+  `observed_at`, `metric`, and `direction`; it intentionally excludes source
+  so external intelligence and Halpha rules can merge the same anomaly signal.
+- `source_records` preserves per-source provenance after merging.
+- Conflicting duplicates must be kept with warning status, not silently
+  overwritten.
+- Backtests and previews must treat an anomaly as visible only when its
+  `published_at` and `first_seen_at` are not after the requested `as_of`.
 
 ## Bounded Data Export Contract
 

@@ -12,11 +12,12 @@ from halpha.runtime.run_classification import run_trigger_from_env
 from halpha.text.text_event_collection import collect_text_event_data
 
 
-CONFIGURED_EVENT_DATA_TYPES = {"macro_calendar", "onchain_flow", "derivatives_market"}
+CONFIGURED_EVENT_DATA_TYPES = {"macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"}
 CONFIGURED_EVENT_REFRESH_TASKS = {
     "macro_calendar": ("collect_macro_calendar_data", "sync_macro_calendar_history"),
     "onchain_flow": ("collect_onchain_flow_data", "sync_onchain_flow_history"),
     "derivatives_market": ("collect_derivatives_market_data", "sync_derivatives_market_history"),
+    "market_anomaly": ("collect_market_anomalies_data", "sync_market_anomaly_history"),
 }
 REFRESH_DATA_TASKS = (
     "collect_market_data",
@@ -28,6 +29,8 @@ REFRESH_DATA_TASKS = (
     "sync_onchain_flow_history",
     "collect_text_events",
     "sync_ohlcv",
+    "collect_market_anomalies_data",
+    "sync_market_anomaly_history",
 )
 
 
@@ -245,6 +248,17 @@ def _configured_event_collection_config(
             _days_between(now, requested_start),
         )
         return adjusted, warnings
+    if data_type == "market_anomaly":
+        market = adjusted.setdefault("market", {})
+        anomalies = market.setdefault("anomalies", {})
+        anomalies["enabled"] = True
+        anomalies["window_start"] = _format_collection_timestamp(requested_start)
+        anomalies["window_end"] = _format_collection_timestamp(requested_end)
+        warnings.append(
+            "Market anomaly collection uses configured external sources and local OHLCV rule scope; "
+            "the requested range is applied as the anomaly observation window."
+        )
+        return adjusted, warnings
     warnings.append(
         "Derivatives collection uses configured symbols, periods, and source endpoint limits; "
         "the requested range is recorded for the job but exact historical gap fetches are source-limited."
@@ -260,6 +274,10 @@ def _parse_collection_timestamp(value: str, *, field_name: str) -> datetime:
     if parsed.tzinfo is None:
         raise ValueError(f"{field_name} must include a UTC offset.")
     return parsed.astimezone(timezone.utc).replace(microsecond=0)
+
+
+def _format_collection_timestamp(value: datetime) -> str:
+    return value.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _days_between(later: datetime, earlier: datetime) -> int:

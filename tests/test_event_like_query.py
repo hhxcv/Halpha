@@ -10,6 +10,7 @@ from halpha.data.event_like_query import (
     query_derivatives_market_records,
     query_event_like_records,
     query_macro_calendar_records,
+    query_market_anomaly_records,
     query_onchain_flow_records,
     query_text_event_records,
 )
@@ -171,6 +172,31 @@ def test_derivatives_query_filters_observation_range_deterministically(tmp_path:
         "start": "2026-06-17T16:00:00Z",
         "end": "2026-06-18T00:00:00Z",
     }
+
+
+def test_market_anomaly_query_uses_observed_time_and_seen_as_of(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    _write_history_records(
+        tmp_path / "data" / "market" / "anomalies" / "source_kind=halpha_rule"
+        / "data_class=price_move" / "symbol=BTCUSDT" / "timeframe=1d" / "records.json",
+        [
+            _market_anomaly_record("2026-06-17T00:00:00Z", first_seen_at="2026-06-17T01:00:00Z"),
+            _market_anomaly_record("2026-06-18T00:00:00Z", first_seen_at="2026-06-20T00:00:00Z"),
+        ],
+    )
+
+    result = query_market_anomaly_records(
+        config_path,
+        identity={"data_class": "price_move", "symbol": "BTCUSDT", "timeframe": "1d"},
+        start="2026-06-17T00:00:00Z",
+        end="2026-06-19T00:00:00Z",
+        as_of="2026-06-18T12:00:00Z",
+    )
+
+    assert result["time_fields"]["range_field"] == "observed_at"
+    assert result["record_count"] == 1
+    assert result["filter_diagnostics"]["as_of_excluded_record_count"] == 1
+    assert result["records"][0]["observed_at"] == "2026-06-17T00:00:00Z"
 
 
 def test_event_like_query_distinguishes_no_data_not_collected_and_unknown_coverage(
@@ -382,4 +408,47 @@ def _derivatives_record(as_of: str, *, funding_rate: float) -> dict[str, Any]:
         "warnings": [],
         "errors": [],
         "source_artifacts": ["runs/run-1/raw/derivatives_market.json"],
+    }
+
+
+def _market_anomaly_record(observed_at: str, *, first_seen_at: str) -> dict[str, Any]:
+    return {
+        "history_key": f"price_move|BTCUSDT|1d|{observed_at}|close_return_pct|up",
+        "anomaly_id": f"halpha:{observed_at}",
+        "dedupe_key": f"price_move|BTCUSDT|1d|{observed_at}|close_return_pct|up",
+        "source_kind": "halpha_rule",
+        "source": "halpha_monitor_rules",
+        "source_kinds": ["halpha_rule"],
+        "sources": ["halpha_monitor_rules"],
+        "source_records": [],
+        "data_class": "price_move",
+        "symbol": "BTCUSDT",
+        "market_type": "spot",
+        "timeframe": "1d",
+        "observed_at": observed_at,
+        "published_at": observed_at,
+        "collected_at": first_seen_at,
+        "first_seen_at": first_seen_at,
+        "last_seen_at": first_seen_at,
+        "severity": "medium",
+        "direction": "up",
+        "metric": "close_return_pct",
+        "value": 10.0,
+        "threshold": 5.0,
+        "unit": "percent",
+        "window_start": "2026-06-16T00:00:00Z",
+        "window_end": observed_at,
+        "title": "BTCUSDT 1d close return 10.00%",
+        "summary": "BTCUSDT 1d close changed 10.00% from the previous candle.",
+        "metrics": {"close_return_pct": 10.0},
+        "units": {"close_return_pct": "percent"},
+        "raw_fields": {},
+        "payload_signature": "test",
+        "origin_run_ids": ["run-1"],
+        "first_seen_run_id": "run-1",
+        "last_seen_run_id": "run-1",
+        "status": "active",
+        "warnings": [],
+        "errors": [],
+        "source_artifacts": ["runs/run-1/raw/market_anomalies.json"],
     }

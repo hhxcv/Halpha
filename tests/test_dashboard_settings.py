@@ -26,6 +26,7 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "macro_calendar.lookback_days",
     "macro_calendar.regions",
     "macro_calendar.source",
+    "market.anomalies.enabled",
     "market.derivatives.data_classes",
     "market.derivatives.enabled",
     "market.derivatives.lookback.12h",

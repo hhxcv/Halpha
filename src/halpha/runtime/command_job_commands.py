@@ -162,6 +162,8 @@ SUPPORTED_COMMANDS = {
         param_mode="data_collect",
     ),
 }
+DATA_COLLECT_TYPES = {"ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"}
+CONFIGURED_SOURCE_DATA_COLLECT_TYPES = {"macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"}
 
 
 class CommandJobBuilder:
@@ -398,15 +400,15 @@ class CommandJobBuilder:
 
     def _validated_data_collect_type(self, value: Any) -> str:
         data_type = self._validated_non_empty_text(value, param_name="data_type")
-        if data_type not in {"ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"}:
+        if data_type not in DATA_COLLECT_TYPES:
+            supported = ", ".join(sorted(DATA_COLLECT_TYPES))
             raise CommandJobError(
-                "data_type must be ohlcv, text_event, macro_calendar, onchain_flow, or derivatives_market "
-                "for data collection jobs."
+                f"data_type must be one of: {supported} for data collection jobs."
             )
         return data_type
 
     def _validated_data_collect_source(self, data_type: str, value: Any) -> str | None:
-        if data_type not in {"ohlcv", "text_event"}:
+        if data_type in CONFIGURED_SOURCE_DATA_COLLECT_TYPES:
             source = str(value or "").strip()
             if source and source != "configured":
                 raise CommandJobError(f"{data_type} collection uses configured data sources; omit source.")

@@ -21,6 +21,11 @@ from halpha.market.derivatives_history import (
     DERIVATIVES_HISTORY_STATE_ARTIFACT,
     read_derivatives_history_records,
 )
+from halpha.market.market_anomaly_history import (
+    MARKET_ANOMALY_HISTORY_SCHEMA_ARTIFACT,
+    MARKET_ANOMALY_HISTORY_STATE_ARTIFACT,
+    read_market_anomaly_history_records,
+)
 from halpha.onchain.onchain_flow_history import (
     ONCHAIN_FLOW_HISTORY_SCHEMA_ARTIFACT,
     ONCHAIN_FLOW_HISTORY_STATE_ARTIFACT,
@@ -84,6 +89,14 @@ _ADAPTERS: dict[str, _EventLikeAdapter] = {
         range_time_fields=("as_of",),
         as_of_time_fields=("as_of",),
         source_artifacts=(DERIVATIVES_HISTORY_SCHEMA_ARTIFACT, DERIVATIVES_HISTORY_STATE_ARTIFACT),
+    ),
+    "market_anomaly": _EventLikeAdapter(
+        data_type="market_anomaly",
+        reader=read_market_anomaly_history_records,
+        primary_time_field="observed_at",
+        range_time_fields=("observed_at",),
+        as_of_time_fields=("published_at", "first_seen_at"),
+        source_artifacts=(MARKET_ANOMALY_HISTORY_SCHEMA_ARTIFACT, MARKET_ANOMALY_HISTORY_STATE_ARTIFACT),
     ),
 }
 
@@ -258,6 +271,30 @@ def query_derivatives_market_records(
     return query_event_like_records(
         config_path,
         data_type="derivatives_market",
+        source=source,
+        identity=identity,
+        start=start,
+        end=end,
+        as_of=as_of,
+        limit=limit,
+        sort_order=sort_order,
+    )
+
+
+def query_market_anomaly_records(
+    config_path: Path,
+    *,
+    start: str | datetime,
+    end: str | datetime,
+    source: str | None = None,
+    identity: dict[str, Any] | None = None,
+    as_of: str | datetime | None = None,
+    limit: int | None = None,
+    sort_order: str = "asc",
+) -> dict[str, Any]:
+    return query_event_like_records(
+        config_path,
+        data_type="market_anomaly",
         source=source,
         identity=identity,
         start=start,

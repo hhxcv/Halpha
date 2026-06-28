@@ -215,6 +215,7 @@
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="collect">
               <div class="data-viewer-header">
                 <h2 class="panel-title">OHLCV shared store <span id="strategy-data-status" class="status-pill pending">loading</span></h2>
+                <div id="strategy-data-issues" class="data-viewer-issues"></div>
               </div>
               <div class="strategy-collect-grid">
                 <div class="field"><label for="strategy-collect-source">Source</label><input id="strategy-collect-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
@@ -373,6 +374,7 @@
               <button class="tab-button" type="button" data-intel-tab="macro_calendar">Macro calendar</button>
               <button class="tab-button" type="button" data-intel-tab="onchain_flow">On-chain flow</button>
               <button class="tab-button" type="button" data-intel-tab="derivatives_market">Derivatives market</button>
+              <button class="tab-button" type="button" data-intel-tab="market_anomaly">Market anomalies</button>
             </div>
           </section>
           <datalist id="strategy-ohlcv-source-options"></datalist>
@@ -385,9 +387,10 @@
           <section class="panel panel-pad data-viewer-panel hidden" id="intel-data-viewer">
             <div class="data-viewer-header">
               <h2 class="panel-title">Intelligence shared stores <span id="intel-data-status" class="status-pill pending">loading</span></h2>
+              <div id="intel-data-issues" class="data-viewer-issues"></div>
             </div>
             <div class="data-viewer-controls intel-data-controls">
-              <select id="intel-data-type" class="hidden" aria-hidden="true"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option></select>
+              <select id="intel-data-type" class="hidden" aria-hidden="true"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option><option value="market_anomaly">Market anomalies</option></select>
               <div class="field"><label for="intel-collect-range">Collection range</label><select id="intel-collect-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
               <div class="field date-range-field" data-date-range-picker data-start-input="intel-collect-start" data-end-input="intel-collect-end" data-preset-input="intel-collect-range">
                 <label for="intel-collect-date-range">Collection time window</label>

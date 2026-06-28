@@ -82,6 +82,7 @@ def test_dashboard_data_viewer_summary_and_timeline_show_coverage_states(tmp_pat
     assert stores["macro_calendar"]["collection_capability"]["apply_job"] is True
     assert stores["onchain_flow"]["collection_capability"]["apply_job"] is True
     assert stores["derivatives_market"]["collection_capability"]["apply_job"] is True
+    assert stores["market_anomaly"]["collection_capability"]["apply_job"] is True
 
     assert timeline_response.status_code == 200
     timeline = timeline_response.json()
@@ -194,6 +195,84 @@ def test_dashboard_data_viewer_summary_uses_event_history_range_when_coverage_mi
     assert stores["macro_calendar"]["coverage"]["range_source"] == "history"
     assert stores["macro_calendar"]["coverage"]["range_start"] == "2026-01-28T00:00:00Z"
     assert stores["macro_calendar"]["coverage"]["range_end"] == "2026-12-09T00:00:01Z"
+
+
+def test_dashboard_data_viewer_summary_uses_history_records_not_coverage_intervals(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    write_collection_coverage_state(
+        config_path,
+        [
+            {
+                "data_type": "market_anomaly",
+                "source": "configured",
+                "identity": {},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-02T00:00:00Z",
+                "status": "collected",
+                "record_count": 1,
+            }
+        ],
+        now="2026-06-03T00:00:00Z",
+    )
+    monkeypatch.setattr(
+        "halpha.dashboard.data_viewer.read_market_anomaly_history_records",
+        lambda _config_path: [
+            {"observed_at": "2026-06-01T01:00:00Z", "title": "BTC volume spike"},
+            {"observed_at": "2026-06-01T02:00:00Z", "title": "ETH volume spike"},
+            {"observed_at": "2026-06-01T03:00:00Z", "title": "SOL volume spike"},
+        ],
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    payload = client.get("/api/data/viewer/summary").json()
+    stores = {store["data_type"]: store for store in payload["stores"]}
+
+    assert stores["market_anomaly"]["summary"]["records"] == 3
+    assert stores["market_anomaly"]["summary"]["record_count_source"] == "history"
+    assert stores["market_anomaly"]["coverage"]["record_count"] == 1
+
+
+def test_dashboard_data_viewer_market_anomaly_timeline_and_preview_are_supported(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    write_collection_coverage_state(
+        config_path,
+        [
+            {
+                "data_type": "market_anomaly",
+                "source": "configured",
+                "identity": {},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-03T00:00:00Z",
+                "status": "collected",
+                "record_count": 1,
+            }
+        ],
+        now="2026-06-04T00:00:00Z",
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    request = {
+        "data_type": "market_anomaly",
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-06-04T00:00:00Z",
+        "limit": 10,
+    }
+
+    timeline = client.post("/api/data/viewer/timeline", json=request).json()
+    preview = client.post("/api/data/viewer/preview", json=request).json()
+
+    assert timeline["artifact_type"] == "dashboard_data_coverage_timeline"
+    assert timeline["data_type"] == "market_anomaly"
+    assert "data_type must be one of" not in timeline.get("errors", [])
+    assert [interval["status"] for interval in timeline["intervals"]] == ["collected", "unknown"]
+    assert preview["artifact_type"] == "dashboard_data_preview"
+    assert preview["data_type"] == "market_anomaly"
+    assert preview["query"]["time_fields"]["range_field"] == "observed_at"
+    assert "data_type must be one of" not in preview.get("errors", [])
 
 
 def test_dashboard_data_viewer_export_calls_shared_service_and_rejects_unsafe_paths(
@@ -388,6 +467,56 @@ def test_dashboard_data_viewer_configured_intelligence_collection_job_omits_sour
     assert completed["status"] == "succeeded"
     assert completed["command"] == ["internal", "data_collect"]
     assert calls[0]["data_type"] == "derivatives_market"
+    assert calls[0]["source"] is None
+    assert completed["result_refs"]["manifest"] == "runs/run-1/run_manifest.json"
+
+
+def test_dashboard_data_viewer_market_anomaly_collection_job_uses_internal_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    calls: list[dict[str, Any]] = []
+
+    def fail_popen(*args: Any, **kwargs: Any) -> _FakeProcess:
+        raise AssertionError("dashboard market anomaly collection must use internal execution")
+
+    def fake_collect_research_data(config_arg: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        calls.append(kwargs)
+        return {
+            "status": "succeeded",
+            "mode": "apply",
+            "data_type": kwargs["data_type"],
+            "source": kwargs["source"],
+            "symbol": kwargs["symbol"],
+            "timeframe": kwargs["timeframe"],
+            "requested_start": kwargs["requested_start"],
+            "requested_end": kwargs["requested_end"],
+            "plan": {"strategy": "configured_scope"},
+            "counts": {"raw_items": 1},
+            "artifacts": {"manifest": "runs/run-1/run_manifest.json"},
+            "warnings": [],
+            "errors": [],
+        }
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_job_execution.collect_research_data", fake_collect_research_data)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    request = {
+        "data_type": "market_anomaly",
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-06-03T00:00:00Z",
+    }
+
+    plan = client.post("/api/data/viewer/collect/plan", json=request).json()
+    job_payload = client.post("/api/data/viewer/collect/jobs", json=request).json()
+    completed = _wait_for_api_terminal(client, job_payload["job"]["job_id"])
+
+    assert plan["plan"]["strategy"] == "configured_scope"
+    assert completed["status"] == "succeeded"
+    assert completed["command"] == ["internal", "data_collect"]
+    assert calls[0]["data_type"] == "market_anomaly"
     assert calls[0]["source"] is None
     assert completed["result_refs"]["manifest"] == "runs/run-1/run_manifest.json"
 

@@ -524,6 +524,13 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert ".macro-event-banner.past" in css
     assert ".intel-preview-row.macro-event-future" in css
     assert ".intel-preview-row.macro-event-past" in css
+    assert ".intel-timeline-segment.unknown" in css
+    assert ".timeline-legend-dot.unknown" in css
+    assert ".collect-timeline-segment.unknown" in css
+    assert ".data-viewer-issues" in css
+    assert ".data-viewer-issue-popover" in css
+    assert ".data-viewer-issue-list" in css
+    assert "background: #94a3b8;" in css
     assert "Jump date" in script
     assert "Scroll for more records" in script
     assert "Bounded preview limit reached" in script
@@ -533,6 +540,12 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "Future event" in script
     assert "Past event" in script
     assert "data-data-viewer-job-log-toggle" in script
+    assert "storeFields.records ?? storeFields.record_count ?? coverage.record_count" not in script
+    assert "data-data-viewer-issues" in script
+    assert "toggleIssuePopover" in script
+    assert 'metricCell("Records"' not in script
+    assert 'metricCell("Coverage states"' not in script
+    assert 'metricCell("Issues"' not in script
     assert "execution: internal dashboard service" in script
     assert "data-intel-jump-date" in script
     assert "data-strategy-window" in html

@@ -60,6 +60,50 @@ def test_configured_macro_collection_uses_refresh_data_pipeline_without_source(
     assert calls[0]["run_trigger"]["source"] == "test"
 
 
+def test_configured_market_anomaly_collection_applies_requested_window(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_market_anomaly_config(tmp_path)
+    config = load_config(config_path)
+    calls: list[dict[str, Any]] = []
+
+    def fake_run_pipeline(config_arg: dict[str, Any], **kwargs: Any) -> SimpleNamespace:
+        calls.append({"config": config_arg, **kwargs})
+        manifest_path = tmp_path / "runs" / "run-1" / "run_manifest.json"
+        manifest_path.parent.mkdir(parents=True)
+        manifest_path.write_text("{}", encoding="utf-8")
+        run = SimpleNamespace(manifest_path=manifest_path)
+        return SimpleNamespace(succeeded=True, exit_code=0, failed_stage=None, reason=None, run=run)
+
+    monkeypatch.setattr("halpha.data.data_collection_service.run_pipeline", fake_run_pipeline)
+
+    result = collect_research_data(
+        config,
+        config_path=config_path,
+        data_type="market_anomaly",
+        source=None,
+        symbol=None,
+        timeframe=None,
+        requested_start="2026-06-01T00:00:00Z",
+        requested_end="2026-06-03T00:00:00Z",
+        apply=True,
+        max_exact_windows=3,
+        merge_gap_threshold_seconds=0,
+        min_fetch_window_seconds=0,
+        run_trigger={"source": "test", "intent": "data_collect"},
+    )
+
+    assert result["status"] == "ok"
+    assert result["source"] == "configured"
+    assert calls[0]["config"]["market"]["anomalies"]["enabled"] is True
+    assert calls[0]["config"]["market"]["anomalies"]["window_start"] == "2026-06-01T00:00:00Z"
+    assert calls[0]["config"]["market"]["anomalies"]["window_end"] == "2026-06-03T00:00:00Z"
+    assert "collect_market_anomalies_data" not in calls[0]["stage_handlers"]
+    assert "sync_market_anomaly_history" not in calls[0]["stage_handlers"]
+    assert "collect_market_data" in calls[0]["stage_handlers"]
+
+
 def _write_macro_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -80,6 +124,42 @@ macro_calendar:
     - US
   lookback_days: 1
   lookahead_days: 1
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_market_anomaly_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: 2
+  anomalies:
+    enabled: false
+    source_kinds:
+      - halpha_rule
+    price_move_threshold_pct: 5.0
+text:
+  enabled: false
 report:
   title: Daily Market Brief
   language: zh-CN
