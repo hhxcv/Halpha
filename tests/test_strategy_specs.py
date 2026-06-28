@@ -14,18 +14,21 @@ from halpha.quant.strategies import (
     bollinger_rsi_reversion,
     breakout_atr_trend,
     sma_cross_trend,
+    signed_tsmom_trend,
     tsmom_vol_scaled,
 )
 
 
 EXPECTED_ORDER = [
     "tsmom_vol_scaled",
+    "signed_tsmom_trend",
     "breakout_atr_trend",
     "sma_cross_trend",
     "bollinger_rsi_reversion",
 ]
 STRATEGY_MODULES = {
     "tsmom_vol_scaled": tsmom_vol_scaled,
+    "signed_tsmom_trend": signed_tsmom_trend,
     "breakout_atr_trend": breakout_atr_trend,
     "sma_cross_trend": sma_cross_trend,
     "bollinger_rsi_reversion": bollinger_rsi_reversion,
@@ -69,7 +72,10 @@ def test_registry_returns_complete_spec_records() -> None:
                 "fields": ["open_time", "open", "high", "low", "close", "volume"],
             }
         ]
-        assert record["output_position_policy"] == "research_long_flat_target_exposure"
+        if record["name"] == "signed_tsmom_trend":
+            assert record["output_position_policy"] == "research_signed_target_exposure"
+        else:
+            assert record["output_position_policy"] == "research_long_flat_target_exposure"
         assert record["default_params"]
         assert set(record["default_params"]) == set(record["parameter_schema"])
         assert set(record["default_params"]) == set(record["optimization_space"])
@@ -110,7 +116,10 @@ def test_current_strategy_modules_use_spec_defaults() -> None:
         assert module.NAME == name
         assert module.SPEC is definition.spec
         assert module.DEFAULT_PARAMS == definition.spec.default_params
-        assert definition.spec.output_position_policy == "research_long_flat_target_exposure"
+        if name == "signed_tsmom_trend":
+            assert definition.spec.output_position_policy == "research_signed_target_exposure"
+        else:
+            assert definition.spec.output_position_policy == "research_long_flat_target_exposure"
 
 
 def test_current_strategy_minimum_rows_match_specs() -> None:

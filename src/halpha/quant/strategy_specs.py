@@ -6,6 +6,7 @@ from typing import Any
 
 OHLCV_REQUIRED_FIELDS = ("open_time", "open", "high", "low", "close", "volume")
 LONG_FLAT_POLICY = "research_long_flat_target_exposure"
+SIGNED_POLICY = "research_signed_target_exposure"
 SUPPORTED_MARKET_TYPES = ("spot", "swap")
 OHLCV_INPUT = {
     "input_type": "ohlcv",
@@ -140,6 +141,7 @@ def _copy_mapping(value: dict[str, Any]) -> dict[str, Any]:
 
 STRATEGY_SPEC_ORDER = (
     "tsmom_vol_scaled",
+    "signed_tsmom_trend",
     "breakout_atr_trend",
     "sma_cross_trend",
     "bollinger_rsi_reversion",
@@ -187,6 +189,45 @@ STRATEGY_SPECS = {
         risk_notes=(
             RESEARCH_RISK_NOTE,
             "Momentum strategies can fail during fast reversals and sideways markets.",
+        ),
+    ),
+    "signed_tsmom_trend": StrategySpec(
+        name="signed_tsmom_trend",
+        family="trend",
+        version="1",
+        description="Signed time-series momentum strategy with long, short, and flat exposure states.",
+        supported_market_types=SUPPORTED_MARKET_TYPES,
+        required_inputs=(OHLCV_INPUT,),
+        output_position_policy=SIGNED_POLICY,
+        default_params={
+            "return_window": 20,
+            "deadband_pct": 0.0,
+        },
+        parameter_schema={
+            "return_window": _positive_integer_param(
+                20,
+                "Lookback bars used to measure signed momentum return.",
+            ),
+            "deadband_pct": _bounded_number_param(
+                0.0,
+                "Absolute momentum threshold below which target exposure stays flat.",
+                minimum=0.0,
+                maximum=100.0,
+            ),
+        },
+        optimization_space={
+            "return_window": _grid([10, 20, 40]),
+            "deadband_pct": _grid([0.0, 1.0, 2.5]),
+        },
+        minimum_rows_policy={
+            "formula": "return_window + 1",
+            "minimum_rows_with_default_params": 21,
+            "reason": "Requires signed momentum warmup plus one prior bar.",
+        },
+        risk_notes=(
+            RESEARCH_RISK_NOTE,
+            "Signed momentum strategies can lose on both long and short reversals.",
+            "Short exposure is research exposure only, not borrowing or account state.",
         ),
     ),
     "breakout_atr_trend": StrategySpec(

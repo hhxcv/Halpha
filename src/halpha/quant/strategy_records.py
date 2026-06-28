@@ -5,6 +5,8 @@ from typing import Any
 
 from halpha.market.market_data_views import MARKET_DATA_VIEWS_ARTIFACT
 
+from .strategy_specs import get_strategy_spec
+
 
 STRATEGY_VERSION = 1
 DEFAULT_BACKTEST_INITIAL_CASH = 10000.0
@@ -53,11 +55,15 @@ def strategy_run_record(
 ) -> dict[str, Any]:
     name = str(strategy["name"])
     latest = view.get("latest_candle_time") or "missing"
+    spec = get_strategy_spec(name)
     return {
         "strategy_run_id": f"quant_strategy_run:{name}:{view.get('source')}:{view.get('symbol')}:{view.get('timeframe')}:{latest}",
         "status": status,
         "strategy_name": name,
         "strategy_version": STRATEGY_VERSION,
+        "strategy_family": spec.family if spec is not None else "unknown",
+        "strategy_contract_version": spec.version if spec is not None else str(STRATEGY_VERSION),
+        "output_position_policy": spec.output_position_policy if spec is not None else "unknown",
         "engine": engine,
         "source": view.get("source"),
         "symbol": view.get("symbol"),

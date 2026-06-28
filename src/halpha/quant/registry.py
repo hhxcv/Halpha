@@ -55,6 +55,16 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             failed_params=tsmom_vol_scaled.failed_params,
             signal_records=tsmom_vol_scaled.signal_records,
         )
+    if name == "signed_tsmom_trend":
+        from .strategies import signed_tsmom_trend
+
+        return StrategyDefinition(
+            name=signed_tsmom_trend.NAME,
+            spec=spec,
+            run=signed_tsmom_trend.run,
+            failed_params=signed_tsmom_trend.failed_params,
+            signal_records=signed_tsmom_trend.signal_records,
+        )
     if name == "breakout_atr_trend":
         from .strategies import breakout_atr_trend
 

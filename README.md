@@ -435,8 +435,8 @@ projection.
 - Optional text-intelligence model roles, revisions, download policy, and thresholds.
 - Shared OHLCV history storage under `data/market/`.
 - Built-in quantitative strategies:
-  `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and
-  `bollinger_rsi_reversion`.
+  `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`,
+  `sma_cross_trend`, and `bollinger_rsi_reversion`.
 - Bounded backtest and parameter diagnostics.
 - Optional Federal Reserve FOMC public calendar collection.
 - Optional public on-chain flow collection.

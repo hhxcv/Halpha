@@ -139,6 +139,7 @@ SUPPORTED_LIFECYCLE_POLICY_ACTIONS = {"promote", "reject", "retire", "watchlist"
 SUPPORTED_LIFECYCLE_POLICY_SCOPE_FIELDS = {"symbol", "timeframe"}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "sma_cross_trend": {"short_window", "long_window"},
+    "signed_tsmom_trend": {"return_window", "deadband_pct"},
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
     "bollinger_rsi_reversion": {
@@ -538,6 +539,17 @@ def _require_unit_interval_number(data: dict[str, Any], key: str, path: str) -> 
     return float(value)
 
 
+def _require_bounded_number(
+    data: dict[str, Any],
+    key: str,
+    path: str,
+    *,
+    minimum: float,
+    maximum: float,
+) -> float:
+    return _require_bounded_number_value(data.get(key), path, minimum=minimum, maximum=maximum)
+
+
 def _require_non_negative_number(data: dict[str, Any], key: str, path: str) -> float:
     value = data.get(key)
     if (
@@ -839,6 +851,11 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
 
 
 def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str) -> None:
+    if name == "signed_tsmom_trend":
+        if "return_window" in params:
+            _require_positive_int(params, "return_window", f"{path}.return_window")
+        if "deadband_pct" in params:
+            _require_bounded_number(params, "deadband_pct", f"{path}.deadband_pct", minimum=0.0, maximum=100.0)
     if name == "tsmom_vol_scaled":
         if "return_window" in params:
             _require_positive_int(params, "return_window", f"{path}.return_window")
@@ -976,6 +993,11 @@ def _validate_quant_parameter_grid(
 
 
 def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any, path: str) -> None:
+    if name == "signed_tsmom_trend":
+        if param_name == "return_window":
+            _require_positive_int_value(value, path)
+        if param_name == "deadband_pct":
+            _require_bounded_number_value(value, path, minimum=0.0, maximum=100.0)
     if name == "tsmom_vol_scaled":
         if param_name in {"return_window", "volatility_window"}:
             _require_positive_int_value(value, path)
@@ -1036,6 +1058,18 @@ def _require_positive_number_value(value: Any, path: str) -> float:
         or float(value) <= 0
     ):
         raise ConfigError(f"{path} must be a positive number.")
+    return float(value)
+
+
+def _require_bounded_number_value(value: Any, path: str, *, minimum: float, maximum: float) -> float:
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) < minimum
+        or float(value) > maximum
+    ):
+        raise ConfigError(f"{path} must be a number between {minimum} and {maximum}.")
     return float(value)
 
 
