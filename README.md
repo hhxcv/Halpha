@@ -436,7 +436,7 @@ projection.
 - Shared OHLCV history storage under `data/market/`.
 - Built-in quantitative strategies:
   `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`,
-  `sma_cross_trend`, and `bollinger_rsi_reversion`.
+  `sma_cross_trend`, `sma_cross_long_short`, and `bollinger_rsi_reversion`.
 - Bounded backtest and parameter diagnostics.
 - Optional Federal Reserve FOMC public calendar collection.
 - Optional public on-chain flow collection.

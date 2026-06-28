@@ -139,6 +139,7 @@ SUPPORTED_LIFECYCLE_POLICY_ACTIONS = {"promote", "reject", "retire", "watchlist"
 SUPPORTED_LIFECYCLE_POLICY_SCOPE_FIELDS = {"symbol", "timeframe"}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "sma_cross_trend": {"short_window", "long_window"},
+    "sma_cross_long_short": {"short_window", "long_window", "neutral_band_pct"},
     "signed_tsmom_trend": {"return_window", "deadband_pct"},
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
@@ -888,6 +889,14 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
         if "long_window" in params:
             _require_positive_int(params, "long_window", f"{path}.long_window")
         _validate_sma_cross_windows(params, path)
+    if name == "sma_cross_long_short":
+        if "short_window" in params:
+            _require_positive_int(params, "short_window", f"{path}.short_window")
+        if "long_window" in params:
+            _require_positive_int(params, "long_window", f"{path}.long_window")
+        if "neutral_band_pct" in params:
+            _require_bounded_number(params, "neutral_band_pct", f"{path}.neutral_band_pct", minimum=0.0, maximum=100.0)
+        _validate_sma_cross_windows(params, path)
 
 
 def _validate_bollinger_rsi_thresholds(params: dict[str, Any], path: str) -> None:
@@ -1015,6 +1024,11 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
     if name == "sma_cross_trend":
         if param_name in {"short_window", "long_window"}:
             _require_positive_int_value(value, path)
+    if name == "sma_cross_long_short":
+        if param_name in {"short_window", "long_window"}:
+            _require_positive_int_value(value, path)
+        if param_name == "neutral_band_pct":
+            _require_bounded_number_value(value, path, minimum=0.0, maximum=100.0)
 
 
 def _validate_quant_benchmark_suite(suite: dict[str, Any], path: str) -> None:

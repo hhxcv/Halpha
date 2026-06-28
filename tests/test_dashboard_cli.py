@@ -1736,6 +1736,7 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
         "bollinger_rsi_reversion",
         "breakout_atr_trend",
         "signed_tsmom_trend",
+        "sma_cross_long_short",
         "sma_cross_trend",
         "tsmom_vol_scaled",
     ]

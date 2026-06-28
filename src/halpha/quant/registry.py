@@ -85,6 +85,16 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             failed_params=bollinger_rsi_reversion.failed_params,
             signal_records=bollinger_rsi_reversion.signal_records,
         )
+    if name == "sma_cross_long_short":
+        from .strategies import sma_cross_long_short
+
+        return StrategyDefinition(
+            name=sma_cross_long_short.NAME,
+            spec=spec,
+            run=sma_cross_long_short.run,
+            failed_params=sma_cross_long_short.failed_params,
+            signal_records=sma_cross_long_short.signal_records,
+        )
     if name == "sma_cross_trend":
         from .strategies import sma_cross_trend
 

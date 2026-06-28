@@ -144,6 +144,7 @@ STRATEGY_SPEC_ORDER = (
     "signed_tsmom_trend",
     "breakout_atr_trend",
     "sma_cross_trend",
+    "sma_cross_long_short",
     "bollinger_rsi_reversion",
 )
 
@@ -308,6 +309,53 @@ STRATEGY_SPECS = {
         risk_notes=(
             RESEARCH_RISK_NOTE,
             "Moving-average crossovers can lag during fast regime changes.",
+        ),
+    ),
+    "sma_cross_long_short": StrategySpec(
+        name="sma_cross_long_short",
+        family="moving_average",
+        version="1",
+        description="Signed simple moving-average crossover strategy with long, short, and flat exposure states.",
+        supported_market_types=SUPPORTED_MARKET_TYPES,
+        required_inputs=(OHLCV_INPUT,),
+        output_position_policy=SIGNED_POLICY,
+        default_params={
+            "short_window": 20,
+            "long_window": 50,
+            "neutral_band_pct": 0.0,
+        },
+        parameter_schema={
+            "short_window": _positive_integer_param(
+                20,
+                "Short moving-average lookback bars.",
+                constraints=["short_window must be lower than long_window"],
+            ),
+            "long_window": _positive_integer_param(
+                50,
+                "Long moving-average lookback bars.",
+                constraints=["long_window must be greater than short_window"],
+            ),
+            "neutral_band_pct": _bounded_number_param(
+                0.0,
+                "Absolute SMA spread threshold below which target exposure stays flat.",
+                minimum=0.0,
+                maximum=100.0,
+            ),
+        },
+        optimization_space={
+            "short_window": _grid([10, 20, 30]),
+            "long_window": _grid([30, 50, 80]),
+            "neutral_band_pct": _grid([0.0, 0.5, 1.0]),
+        },
+        minimum_rows_policy={
+            "formula": "long_window + 1",
+            "minimum_rows_with_default_params": 51,
+            "reason": "Requires long moving-average warmup plus one prior bar.",
+        },
+        risk_notes=(
+            RESEARCH_RISK_NOTE,
+            "Moving-average crossovers can lag during fast regime changes.",
+            "Short exposure is research exposure only, not borrowing or account state.",
         ),
     ),
     "bollinger_rsi_reversion": StrategySpec(

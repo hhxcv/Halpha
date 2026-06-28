@@ -121,6 +121,7 @@ def test_config_example_loads_successfully() -> None:
         "signed_tsmom_trend",
         "breakout_atr_trend",
         "sma_cross_trend",
+        "sma_cross_long_short",
         "bollinger_rsi_reversion",
     ]
     assert all(strategy["enabled"] is True for strategy in config["quant"]["strategies"])
@@ -144,6 +145,11 @@ def test_config_example_loads_successfully() -> None:
         "long_window": 30,
     }
     assert config["quant"]["strategies"][4]["params"] == {
+        "short_window": 20,
+        "long_window": 30,
+        "neutral_band_pct": 0.5,
+    }
+    assert config["quant"]["strategies"][5]["params"] == {
         "bollinger_window": 20,
         "band_std": 2.0,
         "rsi_window": 14,
@@ -164,6 +170,7 @@ def test_config_example_loads_successfully() -> None:
         "bollinger_rsi_reversion",
         "breakout_atr_trend",
         "signed_tsmom_trend",
+        "sma_cross_long_short",
         "sma_cross_trend",
         "tsmom_vol_scaled",
     ]
@@ -1223,6 +1230,18 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: sma_cross_trend\n      params:\n        short_window: 50\n        long_window: 20",
             r"quant\.strategies\[0\]\.params\.short_window must be lower than quant\.strategies\[0\]\.params\.long_window",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: sma_cross_long_short\n      params:\n        short_window: 0",
+            r"quant\.strategies\[0\]\.params\.short_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: sma_cross_long_short\n      params:\n        short_window: 50\n        long_window: 20",
+            r"quant\.strategies\[0\]\.params\.short_window must be lower than quant\.strategies\[0\]\.params\.long_window",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: sma_cross_long_short\n      params:\n        neutral_band_pct: -1",
+            r"quant\.strategies\[0\]\.params\.neutral_band_pct must be a number between 0.0 and 100.0",
         ),
         (
             "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        bollinger_window: 0",
