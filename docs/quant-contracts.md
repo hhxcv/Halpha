@@ -155,7 +155,7 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `pyarrow` | Parquet read/write support for the shared OHLCV fact store. | File format support only. Not an AI context input. |
 | `vectorbt` | Strategy indicator and signal calculation support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
-Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `signed_tsmom_trend` implementation uses pandas close-to-close momentum to emit signed long, short, and flat research exposure. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, bounded historical diagnostics use Halpha-owned canonical next-bar close-to-close evaluators. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
+Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `signed_tsmom_trend` implementation uses pandas close-to-close momentum to emit signed long, short, and flat research exposure. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `sma_cross_long_short` implementation uses pandas rolling means to emit signed long, short, and flat research exposure. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, bounded historical diagnostics use Halpha-owned canonical next-bar close-to-close evaluators. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
 
 ## Instrument Identity Contract
 
@@ -741,6 +741,16 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+    - name: signed_tsmom_trend
+      enabled: true
+      params:
+        return_window: 120
+        deadband_pct: 1.0
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
     - name: breakout_atr_trend
       enabled: true
       params:
@@ -764,6 +774,17 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+    - name: sma_cross_long_short
+      enabled: true
+      params:
+        short_window: 20
+        long_window: 30
+        neutral_band_pct: 0.5
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
     - name: bollinger_rsi_reversion
       enabled: true
       params:
@@ -794,6 +815,13 @@ quant:
         target_volatility:
           - 0.15
           - 0.2
+      signed_tsmom_trend:
+        return_window:
+          - 80
+          - 120
+        deadband_pct:
+          - 0.5
+          - 1.0
       breakout_atr_trend:
         breakout_window:
           - 80
@@ -810,6 +838,16 @@ quant:
         long_window:
           - 30
           - 50
+      sma_cross_long_short:
+        short_window:
+          - 10
+          - 20
+        long_window:
+          - 30
+          - 50
+        neutral_band_pct:
+          - 0.0
+          - 0.5
       bollinger_rsi_reversion:
         bollinger_window:
           - 20
@@ -888,6 +926,9 @@ Validation contract:
 - `breakout_atr_trend` params `breakout_window`, `exit_window`, and `atr_window` must be positive integers when present.
 - `sma_cross_trend` params `short_window` and `long_window` must be positive integers when present.
 - Effective `sma_cross_trend` `short_window` must be lower than effective `long_window`.
+- `sma_cross_long_short` params `short_window` and `long_window` must be positive integers when present.
+- `sma_cross_long_short` param `neutral_band_pct` must be a number between 0 and 100 when present.
+- Effective `sma_cross_long_short` `short_window` must be lower than effective `long_window`.
 - `bollinger_rsi_reversion` params `bollinger_window`, `rsi_window`, and `trend_window` must be positive integers when present.
 - `bollinger_rsi_reversion` params `band_std` and `trend_filter_pct` must be positive numbers when present.
 - `bollinger_rsi_reversion` params `rsi_oversold` and `rsi_overbought` must be numbers greater than 0 and lower than 100 when present.
@@ -1734,8 +1775,8 @@ Parameter diagnostic rules:
 
 Strategy names:
 
-- Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, and `bollinger_rsi_reversion`.
-- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, and `bollinger_rsi_reversion`.
+- Strategy-centered flow uses explicit built-in strategy names such as `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, `sma_cross_long_short`, and `bollinger_rsi_reversion`.
+- Initial implemented strategy-centered flow supports `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`, `sma_cross_trend`, `sma_cross_long_short`, and `bollinger_rsi_reversion`.
 - The M1 demo signal names `trend`, `momentum`, `volatility`, and `volume_anomaly` are retired from the strategy-centered product path.
 - Retired demo names are not migrated into strategy aliases.
 - If an old demo name is requested after strategy adoption, config validation should fail with an actionable error.

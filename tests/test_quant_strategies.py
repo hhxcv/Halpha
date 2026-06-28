@@ -23,6 +23,7 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     signed_tsmom = get_strategy_definition("signed_tsmom_trend")
     breakout = get_strategy_definition("breakout_atr_trend")
     sma_cross = get_strategy_definition("sma_cross_trend")
+    sma_cross_long_short = get_strategy_definition("sma_cross_long_short")
     reversion = get_strategy_definition("bollinger_rsi_reversion")
 
     assert definition is not None
@@ -41,6 +42,10 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert sma_cross.name == "sma_cross_trend"
     assert sma_cross.run.__module__ == "halpha.quant.strategies.sma_cross_trend"
     assert sma_cross.signal_records.__module__ == "halpha.quant.strategies.sma_cross_trend"
+    assert sma_cross_long_short is not None
+    assert sma_cross_long_short.name == "sma_cross_long_short"
+    assert sma_cross_long_short.run.__module__ == "halpha.quant.strategies.sma_cross_long_short"
+    assert sma_cross_long_short.signal_records.__module__ == "halpha.quant.strategies.sma_cross_long_short"
     assert reversion is not None
     assert reversion.name == "bollinger_rsi_reversion"
     assert reversion.run.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
@@ -332,6 +337,44 @@ def test_quant_strategy_runner_writes_signed_tsmom_strategy_artifacts(tmp_path: 
     assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
     assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
     assert manifest["quant_strategies"]["enabled"] == ["signed_tsmom_trend"]
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    json.dumps(strategy_runs)
+
+
+def test_quant_strategy_runner_writes_sma_cross_long_short_artifacts(tmp_path: Path) -> None:
+    config_path = _write_sma_cross_long_short_strategy_config(tmp_path, lookback=5)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=99, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=100, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=103, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_runs = _strategy_runs(result)
+    manifest = _manifest(result)
+    strategy_run = strategy_runs["runs"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["strategy_name"] == "sma_cross_long_short"
+    assert strategy_run["strategy_family"] == "moving_average"
+    assert strategy_run["output_position_policy"] == "research_signed_target_exposure"
+    assert strategy_run["params"] == {
+        "short_window": 1,
+        "long_window": 2,
+        "neutral_band_pct": 0.5,
+    }
+    assert strategy_run["signals"]["latest_position_state"] == "long"
+    assert strategy_run["signals"]["short_entry_count"] == 1
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
+    assert manifest["quant_strategies"]["enabled"] == ["sma_cross_long_short"]
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
     json.dumps(strategy_runs)
 
@@ -1288,6 +1331,198 @@ def test_signed_tsmom_trend_records_insufficient_data_and_param_validation() -> 
     json.dumps(signal_records)
 
 
+def test_sma_cross_long_short_signal_records_cover_long_short_flat_transitions() -> None:
+    definition = get_strategy_definition("sma_cross_long_short")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=99, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=100, volume=13),
+        _record(open_time="2026-06-05T00:00:00Z", close=103, volume=14),
+    ]
+    strategy = {
+        "name": "sma_cross_long_short",
+        "params": {
+            "short_window": 1,
+            "long_window": 2,
+            "neutral_band_pct": 0.5,
+        },
+        "backtest": {"enabled": False},
+    }
+
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert signal_records["status"] == "succeeded"
+    assert signal_records["signal_record_version"] == 2
+    assert signal_records["position_policy"] == "research_signed_target_exposure"
+    assert [item["position"]["position_state"] for item in signal_records["records"]] == [
+        "flat",
+        "long",
+        "short",
+        "flat",
+        "long",
+    ]
+    assert [item["position"]["target_exposure"] for item in signal_records["records"]] == [
+        0.0,
+        1.0,
+        -1.0,
+        0.0,
+        1.0,
+    ]
+    assert signal_records["records"][2]["short_entry"] is True
+    assert signal_records["records"][3]["short_exit"] is True
+    assert signal_records["latest_record"]["indicator_context"]["short_sma"] == 103.0
+    assert signal_records["latest_record"]["indicator_context"]["long_sma"] == 101.5
+    assert signal_records["latest_record"]["indicator_context"]["trend_spread_pct"] == pytest.approx(
+        1.456311,
+        abs=0.000001,
+    )
+    json.dumps(signal_records)
+
+
+def test_sma_cross_long_short_run_records_signed_policy_and_backtest_metrics() -> None:
+    definition = get_strategy_definition("sma_cross_long_short")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=99, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=100, volume=13),
+        _record(open_time="2026-06-05T00:00:00Z", close=103, volume=14),
+    ]
+    strategy = {
+        "name": "sma_cross_long_short",
+        "params": {
+            "short_window": 1,
+            "long_window": 2,
+            "neutral_band_pct": 0.5,
+        },
+        "backtest": {
+            "enabled": True,
+            "initial_cash": 10000,
+            "fees_bps": 10,
+            "slippage_bps": 5,
+        },
+    }
+
+    strategy_run = definition.run(
+        strategy,
+        _view(rows),
+        rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["strategy_family"] == "moving_average"
+    assert strategy_run["output_position_policy"] == "research_signed_target_exposure"
+    assert strategy_run["signals"]["latest_position_state"] == "long"
+    assert strategy_run["signals"]["long_entry_count"] == 2
+    assert strategy_run["signals"]["short_entry_count"] == 1
+    assert strategy_run["signals"]["side_flip_count"] == 1
+    assert strategy_run["indicators"]["neutral_band_pct"] == 0.5
+    assert strategy_run["assessment"]["direction"] == "bullish"
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
+    assert strategy_run["backtest_diagnostic"]["metrics"]["long_trade_count"] == 1
+    assert strategy_run["backtest_diagnostic"]["metrics"]["short_trade_count"] == 1
+    json.dumps(strategy_run)
+
+
+def test_sma_cross_long_short_run_records_bearish_and_neutral_states() -> None:
+    definition = get_strategy_definition("sma_cross_long_short")
+    assert definition is not None
+    bearish_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=99, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=98, volume=12),
+    ]
+    neutral_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=100.1, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=100.2, volume=12),
+    ]
+    strategy = {
+        "name": "sma_cross_long_short",
+        "params": {
+            "short_window": 1,
+            "long_window": 2,
+            "neutral_band_pct": 0.5,
+        },
+    }
+
+    bearish_run = definition.run(
+        strategy,
+        _view(bearish_rows),
+        bearish_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+    neutral_run = definition.run(
+        strategy,
+        _view(neutral_rows),
+        neutral_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert bearish_run["signals"]["latest_position_state"] == "short"
+    assert bearish_run["assessment"]["direction"] == "bearish"
+    assert neutral_run["signals"]["latest_position_state"] == "flat"
+    assert neutral_run["assessment"]["direction"] == "neutral"
+    json.dumps(bearish_run)
+    json.dumps(neutral_run)
+
+
+def test_sma_cross_long_short_records_insufficient_data_and_param_validation() -> None:
+    definition = get_strategy_definition("sma_cross_long_short")
+    assert definition is not None
+    rows = [_record(open_time="2026-06-01T00:00:00Z", close=100, volume=10)]
+    strategy = {
+        "name": "sma_cross_long_short",
+        "params": {
+            "short_window": 1,
+            "long_window": 2,
+            "neutral_band_pct": 0.5,
+        },
+    }
+
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert signal_records["status"] == "insufficient_data"
+    assert signal_records["position_policy"] == "research_signed_target_exposure"
+    assert signal_records["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    with pytest.raises(ValueError, match="short_window must be a positive integer"):
+        definition.signal_records(
+            {
+                "name": "sma_cross_long_short",
+                "params": {"short_window": 0, "long_window": 2, "neutral_band_pct": 0.5},
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="short_window must be lower than long_window"):
+        definition.signal_records(
+            {
+                "name": "sma_cross_long_short",
+                "params": {"short_window": 2, "long_window": 2, "neutral_band_pct": 0.5},
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="neutral_band_pct must be a number between 0.0 and 100.0"):
+        definition.signal_records(
+            {
+                "name": "sma_cross_long_short",
+                "params": {"short_window": 1, "long_window": 2, "neutral_band_pct": -0.1},
+            },
+            _view(rows),
+            rows,
+        )
+    json.dumps(signal_records)
+
+
 def test_strategy_signal_records_align_with_sma_cross_transitions() -> None:
     definition = get_strategy_definition("sma_cross_trend")
     assert definition is not None
@@ -1535,6 +1770,59 @@ quant:
       params:
         return_window: 1
         deadband_pct: 0.5
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_sma_cross_long_short_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: {lookback}
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: sma_cross_long_short
+      enabled: true
+      params:
+        short_window: 1
+        long_window: 2
+        neutral_band_pct: 0.5
       backtest:
         enabled: true
         initial_cash: 10000
