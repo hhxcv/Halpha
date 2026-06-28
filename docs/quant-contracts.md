@@ -159,9 +159,10 @@ Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for m
 
 ## Instrument Identity Contract
 
-Status: current OHLCV and strategy artifacts identify markets by `source`,
-`symbol`, and `timeframe`. The expanded normalized identity below is planned
-unless a downstream implementation issue explicitly ships it.
+Status: deterministic source/symbol/timeframe instrument identity helpers are
+implemented for configured OHLCV sources. Existing OHLCV and strategy artifacts
+continue to identify markets by `source`, `symbol`, and `timeframe` until later
+integration issues embed normalized identity records in downstream artifacts.
 
 Purpose:
 
@@ -180,7 +181,7 @@ Instrument identity fields:
     "source": "binance_usdm",
     "symbol": "BTCUSDT",
     "exchange_symbol": "BTC/USDT:USDT",
-    "market_type": "perpetual",
+    "market_type": "swap",
     "contract_type": "linear_perpetual",
     "base_asset": "BTC",
     "quote_asset": "USDT",
@@ -214,7 +215,7 @@ Allowed `contract_type` values:
 Rules:
 
 - Existing `source`, `symbol`, and `timeframe` fields remain valid current
-  identity fields until normalized identity is implemented.
+  identity fields until downstream artifacts embed normalized identity records.
 - Normalized identity must be derived from configured sources and source
   metadata, not guessed only from symbol suffixes.
 - Unknown source metadata must produce `unknown` identity values and warnings,
