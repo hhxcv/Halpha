@@ -3,6 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from .strategy_specs import (
+    STRATEGY_SPEC_ORDER,
+    StrategySpec,
+    get_strategy_spec,
+    list_strategy_specs,
+    strategy_spec_records,
+)
+
 
 StrategyRun = Callable[..., dict[str, Any]]
 StrategyParams = Callable[[dict[str, Any]], dict[str, Any]]
@@ -12,25 +20,37 @@ StrategySignalRecords = Callable[[dict[str, Any], dict[str, Any], list[dict[str,
 @dataclass(frozen=True)
 class StrategyDefinition:
     name: str
+    spec: StrategySpec
     run: StrategyRun
     failed_params: StrategyParams
     signal_records: StrategySignalRecords
 
 
-SUPPORTED_STRATEGY_NAMES = {
-    "bollinger_rsi_reversion",
-    "breakout_atr_trend",
-    "sma_cross_trend",
-    "tsmom_vol_scaled",
-}
+SUPPORTED_STRATEGY_NAMES = frozenset(STRATEGY_SPEC_ORDER)
+
+
+def get_supported_strategy_spec(name: str) -> StrategySpec | None:
+    return get_strategy_spec(name)
+
+
+def supported_strategy_specs() -> list[StrategySpec]:
+    return list_strategy_specs()
+
+
+def supported_strategy_spec_records() -> list[dict[str, Any]]:
+    return strategy_spec_records()
 
 
 def get_strategy_definition(name: str) -> StrategyDefinition | None:
+    spec = get_strategy_spec(name)
+    if spec is None:
+        return None
     if name == "tsmom_vol_scaled":
         from .strategies import tsmom_vol_scaled
 
         return StrategyDefinition(
             name=tsmom_vol_scaled.NAME,
+            spec=spec,
             run=tsmom_vol_scaled.run,
             failed_params=tsmom_vol_scaled.failed_params,
             signal_records=tsmom_vol_scaled.signal_records,
@@ -40,6 +60,7 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
 
         return StrategyDefinition(
             name=breakout_atr_trend.NAME,
+            spec=spec,
             run=breakout_atr_trend.run,
             failed_params=breakout_atr_trend.failed_params,
             signal_records=breakout_atr_trend.signal_records,
@@ -49,6 +70,7 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
 
         return StrategyDefinition(
             name=bollinger_rsi_reversion.NAME,
+            spec=spec,
             run=bollinger_rsi_reversion.run,
             failed_params=bollinger_rsi_reversion.failed_params,
             signal_records=bollinger_rsi_reversion.signal_records,
@@ -58,6 +80,7 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
 
         return StrategyDefinition(
             name=sma_cross_trend.NAME,
+            spec=spec,
             run=sma_cross_trend.run,
             failed_params=sma_cross_trend.failed_params,
             signal_records=sma_cross_trend.signal_records,

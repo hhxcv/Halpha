@@ -227,9 +227,9 @@ Rules:
 
 ## Strategy Spec Contract
 
-Status: planned. Current strategy registry exposes strategy names and callable
-implementations. A durable `strategy_spec` record is intended to become the
-reviewable interface for strategy metadata before new strategy families expand.
+Status: Strategy spec records are implemented for the currently supported
+strategy registry. Dashboard parameter forms, signed-exposure strategies, and
+expanded strategy families are planned downstream consumers.
 
 Purpose:
 
