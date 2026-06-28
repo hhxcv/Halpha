@@ -45,7 +45,7 @@ MONITOR_DIAGNOSTIC_CYCLE_DIR_LIMIT = 20
 SOURCE_REFRESH_TASKS = {
     "derivatives": ("collect_derivatives_market_data", "sync_derivatives_market_history"),
     "macro_calendar": ("collect_macro_calendar_data", "sync_macro_calendar_history"),
-    "market": ("collect_market_data", "sync_ohlcv"),
+    "market": ("collect_market_data", "sync_ohlcv", "collect_market_anomalies_data", "sync_market_anomaly_history"),
     "onchain_flow": ("collect_onchain_flow_data", "sync_onchain_flow_history"),
     "text": ("collect_text_events",),
 }
@@ -1023,11 +1023,16 @@ def _source_scoped_config(config: dict[str, Any], source_key: str) -> dict[str, 
     derivatives = _dict(market.get("derivatives"))
     if derivatives is not market.get("derivatives"):
         market["derivatives"] = derivatives
+    anomalies = _dict(market.get("anomalies"))
+    if anomalies is not market.get("anomalies"):
+        market["anomalies"] = anomalies
 
     if source_key != "market":
         market["enabled"] = False
     if source_key != "derivatives":
         derivatives["enabled"] = False
+    if anomalies:
+        anomalies["enabled"] = source_key == "market"
 
     macro_calendar = _dict(scoped.get("macro_calendar"))
     if macro_calendar or source_key == "macro_calendar":

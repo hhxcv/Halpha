@@ -1309,9 +1309,12 @@
     .collect-timeline-segment.partial,
     .collect-timeline-segment.not_collected,
     .collect-timeline-segment.stale,
-    .collect-timeline-segment.warning,
-    .collect-timeline-segment.unknown {
+    .collect-timeline-segment.warning {
       background: var(--amber);
+    }
+
+    .collect-timeline-segment.unknown {
+      background: #94a3b8;
     }
 
     .collect-timeline-segment.failed,
@@ -1615,7 +1618,7 @@
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      align-items: flex-start;
+      align-items: center;
       min-width: 0;
     }
 
@@ -1626,6 +1629,116 @@
     .data-viewer-header .toolbar-actions {
       flex-wrap: wrap;
       justify-content: flex-end;
+    }
+
+    .data-viewer-issues {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+      min-width: 118px;
+    }
+
+    .data-viewer-issue-widget {
+      position: relative;
+    }
+
+    .data-viewer-issue-button {
+      min-height: 36px;
+      padding-inline: 12px;
+    }
+
+    .data-viewer-issue-button.ok {
+      color: var(--muted);
+    }
+
+    .data-viewer-issue-button.warning {
+      border-color: #f2cf83;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .data-viewer-issue-button.error,
+    .data-viewer-issue-button.failed {
+      border-color: #ef8585;
+      background: #fff4f4;
+      color: var(--red);
+    }
+
+    .data-viewer-issue-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      margin-left: 6px;
+      border-radius: 999px;
+      background: #edf2f7;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .data-viewer-issue-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 20;
+      width: min(420px, 86vw);
+      max-height: 360px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+    }
+
+    .data-viewer-issue-popover-head {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .data-viewer-issue-popover-head span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .data-viewer-issue-list {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .data-viewer-issue-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-viewer-issue-item:last-child {
+      border-bottom: 0;
+    }
+
+    .data-viewer-issue-item p {
+      margin: 0;
+      color: var(--text);
+      line-height: 1.45;
+      word-break: break-word;
     }
 
     .data-viewer-controls {
@@ -2013,10 +2126,13 @@
     .intel-timeline-segment.not_collected,
     .intel-timeline-segment.stale,
     .intel-timeline-segment.warning,
-    .intel-timeline-segment.unknown,
-    .timeline-legend-dot.partial,
-    .timeline-legend-dot.unknown {
+    .timeline-legend-dot.partial {
       background: var(--amber);
+    }
+
+    .intel-timeline-segment.unknown,
+    .timeline-legend-dot.unknown {
+      background: #94a3b8;
     }
 
     .intel-timeline-segment.failed,

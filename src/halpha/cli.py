@@ -201,7 +201,7 @@ def build_parser() -> argparse.ArgumentParser:
     collect_parser.add_argument(
         "--data-type",
         required=True,
-        choices=("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"),
+        choices=("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"),
         help="Data type to collect.",
     )
     collect_parser.add_argument(
@@ -250,7 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument(
         "--data-type",
         required=True,
-        choices=("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"),
+        choices=("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"),
         help="Data type to export.",
     )
     export_parser.add_argument("--source", help="Configured source or source filter to export.")

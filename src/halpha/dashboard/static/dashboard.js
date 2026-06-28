@@ -2073,7 +2073,7 @@
     }
 
     function syncIntelTabs() {
-      const supportedTabs = ["overview", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"];
+      const supportedTabs = ["overview", "text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"];
       if (!supportedTabs.includes(state.selectedIntelTab)) {
         state.selectedIntelTab = "overview";
       }
@@ -2108,7 +2108,7 @@
 
     function intelligenceStoreSummaries() {
       const stores = Array.isArray(state.dataViewerSummary?.stores) ? state.dataViewerSummary.stores : [];
-      return stores.filter((store) => ["text_event", "macro_calendar", "onchain_flow", "derivatives_market"].includes(store.data_type));
+      return stores.filter((store) => ["text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"].includes(store.data_type));
     }
 
     function renderIntelStoreCard(store) {
@@ -2161,6 +2161,7 @@
         macro_calendar: "Macro calendar",
         onchain_flow: "On-chain flow",
         derivatives_market: "Derivatives market",
+        market_anomaly: "Market anomalies",
       }[dataType] || label(dataType);
     }
 

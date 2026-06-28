@@ -8,6 +8,14 @@ def stage_handlers() -> dict[str, StageHandler]:
     return {
         "collect_market_data": lazy_stage_handler("halpha.collectors.market", "collect_market_data"),
         "sync_ohlcv": lazy_stage_handler("halpha.market.ohlcv_sync", "sync_ohlcv_history"),
+        "collect_market_anomalies_data": lazy_stage_handler(
+            "halpha.collectors.market_anomalies",
+            "collect_market_anomalies_data",
+        ),
+        "sync_market_anomaly_history": lazy_stage_handler(
+            "halpha.market.market_anomaly_history",
+            "sync_market_anomaly_history",
+        ),
         "build_market_data_views": lazy_stage_handler("halpha.market.market_data_views", "build_market_data_views"),
         "build_market_signals": lazy_stage_handler("halpha.market.market_signals", "build_market_signals"),
         "build_market_signal_material": lazy_stage_handler(

@@ -92,6 +92,7 @@ def test_config_example_loads_successfully() -> None:
         "1month": 120,
     }
     assert config["market"]["derivatives"] == {"enabled": False}
+    assert config["market"]["anomalies"] == {"enabled": False}
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
     assert config["user_state"] == {"enabled": False, "path": "user_state.local.yaml"}

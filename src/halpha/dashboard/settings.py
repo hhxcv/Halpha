@@ -250,6 +250,14 @@ CONFIG_PROFILE_FIELDS = (
         for period in DERIVATIVES_PERIOD_OPTIONS
     ),
     {
+        "section": "Market data",
+        "label": "Enable market anomalies",
+        "path": "market.anomalies.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Collect external or Halpha rule-detected market anomaly records.",
+    },
+    {
         "section": "Strategy",
         "label": "Enable quant research",
         "path": "quant.enabled",

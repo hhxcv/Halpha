@@ -46,6 +46,20 @@ SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
 SUPPORTED_OHLCV_DATA_SOURCES = set(SUPPORTED_OHLCV_SOURCES)
 SUPPORTED_OHLCV_TIMEFRAMES = set(OHLCV_TIMEFRAME_DURATIONS)
 SUPPORTED_DERIVATIVES_FIELDS = {"data_classes", "enabled", "lookback", "periods", "source", "symbols"}
+SUPPORTED_MARKET_ANOMALY_FIELDS = {
+    "enabled",
+    "external_json_path",
+    "lookback_days",
+    "ohlcv_source",
+    "price_move_threshold_pct",
+    "source_kinds",
+    "symbols",
+    "timeframes",
+    "volume_spike_multiplier",
+    "window_end",
+    "window_start",
+}
+SUPPORTED_MARKET_ANOMALY_SOURCE_KINDS = {"external_intel", "halpha_rule"}
 SUPPORTED_MACRO_CALENDAR_FIELDS = {
     "data_classes",
     "enabled",
@@ -192,6 +206,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
             _validate_market_proxy_config(market)
     if "derivatives" in market:
         _validate_derivatives_config(market, market_enabled=market_enabled)
+    if "anomalies" in market:
+        _validate_market_anomalies_config(market, market_enabled=market_enabled)
 
     if "macro_calendar" in config:
         _validate_macro_calendar_config(config["macro_calendar"])
@@ -471,6 +487,17 @@ def _require_non_empty_string(data: dict[str, Any], key: str, path: str) -> str:
     return value
 
 
+def _require_utc_timestamp(data: dict[str, Any], key: str, path: str) -> datetime:
+    value = _require_non_empty_string(data, key, path)
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ConfigError(f"{path} must be an ISO 8601 timestamp.") from exc
+    if parsed.tzinfo is None:
+        raise ConfigError(f"{path} must include a UTC offset.")
+    return parsed
+
+
 def _require_http_url(data: dict[str, Any], key: str, path: str) -> str:
     value = _require_non_empty_string(data, key, path)
     parsed = urlparse(value)
@@ -617,6 +644,66 @@ def _validate_derivatives_config(market: dict[str, Any], *, market_enabled: bool
         )
     for period in periods:
         _require_positive_int(lookback, period, f"market.derivatives.lookback.{period}")
+
+
+def _validate_market_anomalies_config(market: dict[str, Any], *, market_enabled: bool) -> None:
+    anomalies = market.get("anomalies")
+    if not isinstance(anomalies, dict):
+        raise ConfigError("market.anomalies must be a mapping.")
+    _reject_unsupported_fields(
+        anomalies,
+        path="market.anomalies",
+        supported_fields=SUPPORTED_MARKET_ANOMALY_FIELDS,
+    )
+
+    enabled = _require_bool(anomalies, "enabled", "market.anomalies.enabled")
+    if not enabled:
+        return
+    if not market_enabled:
+        raise ConfigError("market.anomalies.enabled requires market.enabled to be true.")
+
+    source_kinds = ["halpha_rule"]
+    if "source_kinds" in anomalies:
+        source_kinds = _require_non_empty_string_list(anomalies, "source_kinds", "market.anomalies.source_kinds")
+        for index, source_kind in enumerate(source_kinds):
+            _require_supported_value(
+                source_kind,
+                f"market.anomalies.source_kinds[{index}]",
+                SUPPORTED_MARKET_ANOMALY_SOURCE_KINDS,
+            )
+
+    if "external_intel" in source_kinds or "external_json_path" in anomalies:
+        _require_non_empty_string(anomalies, "external_json_path", "market.anomalies.external_json_path")
+
+    if "halpha_rule" in source_kinds and not isinstance(market.get("ohlcv"), dict):
+        raise ConfigError("market.anomalies halpha_rule source requires market.ohlcv.")
+
+    if "ohlcv_source" in anomalies:
+        source = _require_non_empty_string(anomalies, "ohlcv_source", "market.anomalies.ohlcv_source")
+        _require_supported_value(source, "market.anomalies.ohlcv_source", SUPPORTED_OHLCV_DATA_SOURCES)
+    if "symbols" in anomalies:
+        _require_non_empty_string_list(anomalies, "symbols", "market.anomalies.symbols")
+    if "timeframes" in anomalies:
+        timeframes = _require_non_empty_string_list(anomalies, "timeframes", "market.anomalies.timeframes")
+        for index, timeframe in enumerate(timeframes):
+            _require_supported_value(timeframe, f"market.anomalies.timeframes[{index}]", SUPPORTED_OHLCV_TIMEFRAMES)
+    if "lookback_days" in anomalies:
+        _require_positive_int(anomalies, "lookback_days", "market.anomalies.lookback_days")
+    if "price_move_threshold_pct" in anomalies:
+        _require_positive_number(
+            anomalies,
+            "price_move_threshold_pct",
+            "market.anomalies.price_move_threshold_pct",
+        )
+    if "volume_spike_multiplier" in anomalies:
+        _require_positive_number(
+            anomalies,
+            "volume_spike_multiplier",
+            "market.anomalies.volume_spike_multiplier",
+        )
+    for key in ("window_start", "window_end"):
+        if key in anomalies:
+            _require_utc_timestamp(anomalies, key, f"market.anomalies.{key}")
 
 
 def _validate_macro_calendar_config(macro_calendar: Any) -> None:

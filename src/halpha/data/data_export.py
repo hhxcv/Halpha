@@ -14,7 +14,7 @@ from halpha.storage import display_path, resolve_runtime_path, runtime_root, wri
 
 
 DATA_EXPORT_SCHEMA_VERSION = 1
-EVENT_LIKE_DATA_TYPES = {"text_event", "macro_calendar", "onchain_flow", "derivatives_market"}
+EVENT_LIKE_DATA_TYPES = {"text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"}
 OHLCV_EXPORT_FORMATS = {"csv", "parquet"}
 EVENT_LIKE_EXPORT_FORMATS = {"csv", "json"}
 

@@ -22,6 +22,7 @@ DATA_STORE_SECTION_NAMES = {
     "text_event_history",
     "ohlcv_history",
     "derivatives_market_history",
+    "market_anomaly_history",
     "macro_calendar_history",
     "onchain_flow_history",
 }
@@ -31,11 +32,18 @@ DATA_STORE_TITLES = {
     "text_event_history": "Text event history",
     "ohlcv_history": "OHLCV history",
     "derivatives_market_history": "Derivatives market history",
+    "market_anomaly_history": "Market anomaly history",
     "macro_calendar_history": "Macro/calendar history",
     "onchain_flow_history": "On-chain flow history",
     "outcome_history": "Outcome history",
 }
 SAFE_METADATA_PREVIEW_SUFFIXES = {".json", ".md", ".markdown", ".txt", ".yaml", ".yml"}
+
+
+def _include_dashboard_store_section(section: dict[str, Any]) -> bool:
+    if section.get("name") == "market_anomaly_history" and section.get("status") == "skipped":
+        return section.get("reason") != "market.anomalies is not enabled."
+    return True
 
 
 def dashboard_data_stores(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
@@ -56,7 +64,9 @@ def dashboard_data_stores(config: dict[str, Any], *, config_path: Path) -> dict[
     sections = [
         _dashboard_store_section(section, config_path=config_path)
         for section in _list(state.get("sections"))
-        if isinstance(section, dict) and section.get("name") in DATA_STORE_SECTION_NAMES
+        if isinstance(section, dict)
+        and section.get("name") in DATA_STORE_SECTION_NAMES
+        and _include_dashboard_store_section(section)
     ]
     sections.append(_outcome_history_store_section(config_path))
     statuses = [str(section.get("status") or "unknown") for section in sections]

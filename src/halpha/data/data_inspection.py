@@ -46,6 +46,8 @@ OHLCV_SYNC_STATE_ARTIFACT = "data/market/metadata/ohlcv_sync_state.json"
 DERIVATIVES_SCHEMA_ARTIFACT = "data/market/metadata/derivatives_market_schema.json"
 DERIVATIVES_STATE_ARTIFACT = "data/market/metadata/derivatives_market_state.json"
 DERIVATIVES_VIEWS_ARTIFACT = "raw/derivatives_market_views.json"
+MARKET_ANOMALY_SCHEMA_ARTIFACT = "data/market/metadata/market_anomaly_schema.json"
+MARKET_ANOMALY_STATE_ARTIFACT = "data/market/metadata/market_anomaly_state.json"
 MACRO_CALENDAR_SCHEMA_ARTIFACT = "data/macro/metadata/macro_calendar_schema.json"
 MACRO_CALENDAR_STATE_ARTIFACT = "data/macro/metadata/macro_calendar_state.json"
 MACRO_CALENDAR_VIEWS_ARTIFACT = "raw/macro_calendar_views.json"
@@ -148,6 +150,7 @@ def _local_store_sections(
         _text_event_history_section(config_path, base=base),
         _ohlcv_section(config, config_path, base=base),
         _derivatives_section(config, config_path, run_dir=run_dir, base=base),
+        _market_anomaly_section(config, config_path, base=base),
         _macro_calendar_section(config, config_path, run_dir=run_dir, base=base),
         _onchain_flow_section(config, config_path, run_dir=run_dir, base=base),
     ]
@@ -340,6 +343,38 @@ def _derivatives_section(
         "derivatives_market_history",
         status,
         artifact=DERIVATIVES_STATE_ARTIFACT,
+        fields=fields,
+        reason="; ".join(warnings) if warnings else None,
+    )
+
+
+def _market_anomaly_section(config: dict[str, Any], config_path: Path, *, base: Path) -> dict[str, Any]:
+    market = config.get("market") if isinstance(config.get("market"), dict) else {}
+    anomalies = market.get("anomalies") if isinstance(market, dict) else None
+    if not isinstance(anomalies, dict) or not anomalies.get("enabled"):
+        return _section("market_anomaly_history", "skipped", reason="market.anomalies is not enabled.")
+
+    schema, schema_error = _read_json(base / MARKET_ANOMALY_SCHEMA_ARTIFACT)
+    state, state_error = _read_json(base / MARKET_ANOMALY_STATE_ARTIFACT)
+    warnings = [error for error in (schema_error, state_error) if error]
+    totals = _dict(state.get("totals")) if isinstance(state, dict) else {}
+    groups = _list(state.get("groups")) if isinstance(state, dict) else []
+    fields = {
+        "records": _int(totals.get("records")),
+        "groups": len(groups),
+        "schema_version": schema.get("schema_version") if isinstance(schema, dict) else None,
+        "warnings": len(_list(state.get("warnings"))) if isinstance(state, dict) else len(warnings),
+        "errors": len(_list(state.get("errors"))) if isinstance(state, dict) else 0,
+        "duplicate_records": _int(totals.get("duplicate_records")),
+        "conflicting_duplicates": _int(totals.get("conflicting_duplicates")),
+        "dedupe_groups": _int(totals.get("dedupe_groups")),
+    }
+
+    status = "warning" if warnings else str(state.get("status") or "ok")
+    return _section(
+        "market_anomaly_history",
+        status,
+        artifact=MARKET_ANOMALY_STATE_ARTIFACT,
         fields=fields,
         reason="; ".join(warnings) if warnings else None,
     )

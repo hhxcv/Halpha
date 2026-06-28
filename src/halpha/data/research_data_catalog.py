@@ -113,6 +113,7 @@ def build_research_data_catalog(
     for store in (
         _ohlcv_store_record(config, run),
         _derivatives_market_history_store_record(run),
+        _market_anomaly_history_store_record(run),
         _macro_calendar_history_store_record(run),
         _onchain_flow_history_store_record(run),
         _run_index_store_record(run),
@@ -464,6 +465,78 @@ def _derivatives_market_history_store_record(run: RunContext) -> dict[str, Any] 
     )
 
 
+def _market_anomaly_history_store_record(run: RunContext) -> dict[str, Any] | None:
+    state_path = runtime_root(run.config_path) / "data" / "market" / "metadata" / "market_anomaly_state.json"
+    schema_path = runtime_root(run.config_path) / "data" / "market" / "metadata" / "market_anomaly_schema.json"
+    storage_path = runtime_root(run.config_path) / "data" / "market" / "anomalies"
+    state = _read_json_object(state_path)
+    summary = run.manifest.get("market_anomaly_history")
+    if state is None and (
+        not isinstance(summary, dict) or summary.get("status") != "failed"
+    ):
+        return None
+
+    warnings = _string_list(state.get("warnings")) if isinstance(state, dict) else []
+    errors = _error_list(state.get("errors")) if isinstance(state, dict) else []
+    if state is None:
+        errors.append({"message": "market anomaly history state metadata is missing."})
+    totals = state.get("totals") if isinstance(state, dict) else {}
+    groups = state.get("groups") if isinstance(state, dict) else []
+    schema = _read_json_object(schema_path)
+    if schema is None and isinstance(state, dict) and state.get("status") != "skipped":
+        warnings.append("market anomaly schema metadata is missing.")
+
+    return _with_catalog_contract(
+        {
+        "name": "market_anomaly_history",
+        "kind": "market_anomaly_history",
+        "status": state.get("status") if isinstance(state, dict) else summary.get("status"),
+        "format": "json",
+        "storage_path": _catalog_ref(storage_path, run),
+        "schema_path": _catalog_ref(schema_path, run),
+        "state_path": _catalog_ref(state_path, run),
+        "schema_version": state.get("schema_version") if isinstance(state, dict) else None,
+        "partition_fields": ["source_kind", "data_class", "symbol", "timeframe"],
+        "unique_key_fields": _string_list(schema.get("identity")) if isinstance(schema, dict) else [
+            "data_class",
+            "symbol",
+            "timeframe",
+            "observed_at",
+            "metric",
+            "direction",
+        ],
+        "source_fields": ["source_kind", "source", "data_class", "symbol", "timeframe"],
+        "sources": _market_anomaly_sources(state),
+        "latest_update_at": state.get("updated_at") if isinstance(state, dict) else None,
+        "record_count": _int(totals.get("records")) if isinstance(totals, dict) else 0,
+        "warning_count": len(warnings),
+        "error_count": len(errors),
+        "consumers": [
+            "dashboard_data_viewer",
+            "future_monitor_rules",
+            "future_event_workflows",
+            "data_quality_summary",
+            "data_inspection",
+        ],
+        "source_artifacts": [
+            _catalog_ref(schema_path, run),
+            _catalog_ref(state_path, run),
+        ],
+        "details": {
+            "groups": len(groups) if isinstance(groups, list) else 0,
+            "incoming_records": _int(totals.get("incoming_records")) if isinstance(totals, dict) else 0,
+            "duplicate_records": _int(totals.get("duplicate_records")) if isinstance(totals, dict) else 0,
+            "conflicting_duplicates": _int(totals.get("conflicting_duplicates")) if isinstance(totals, dict) else 0,
+            "dedupe_groups": _int(totals.get("dedupe_groups")) if isinstance(totals, dict) else 0,
+        },
+        "warnings": _unique_sorted(warnings),
+        "errors": errors,
+        },
+        domain="market_anomaly",
+        time_field="observed_at",
+    )
+
+
 def _macro_calendar_history_store_record(run: RunContext) -> dict[str, Any] | None:
     state_path = runtime_root(run.config_path) / "data" / "macro" / "metadata" / "macro_calendar_state.json"
     schema_path = runtime_root(run.config_path) / "data" / "macro" / "metadata" / "macro_calendar_schema.json"
@@ -758,6 +831,19 @@ def _derivatives_sources(state: dict[str, Any] | None) -> list[str]:
     )
 
 
+def _market_anomaly_sources(state: dict[str, Any] | None) -> list[str]:
+    groups = state.get("groups") if isinstance(state, dict) else None
+    if not isinstance(groups, list):
+        return []
+    return sorted(
+        {
+            str(group.get("source_kind"))
+            for group in groups
+            if isinstance(group, dict) and isinstance(group.get("source_kind"), str) and group.get("source_kind")
+        }
+    )
+
+
 def _macro_calendar_sources(state: dict[str, Any] | None) -> list[str]:
     groups = state.get("groups") if isinstance(state, dict) else None
     if not isinstance(groups, list):
@@ -828,6 +914,7 @@ def _apply_coverage_metadata(stores: list[dict[str, Any]], coverage_state: dict[
         "ohlcv_history": "ohlcv",
         "text_event_history": "text_event",
         "derivatives_market_history": "derivatives_market",
+        "market_anomaly_history": "market_anomaly",
         "macro_calendar_history": "macro_calendar",
         "onchain_flow_history": "onchain_flow",
     }
@@ -861,6 +948,7 @@ def _apply_coverage_metadata(stores: list[dict[str, Any]], coverage_state: dict[
             "ohlcv_history",
             "text_event_history",
             "derivatives_market_history",
+            "market_anomaly_history",
             "macro_calendar_history",
             "onchain_flow_history",
         }

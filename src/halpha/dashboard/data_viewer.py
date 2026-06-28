@@ -12,6 +12,7 @@ from halpha.data.event_like_query import EventLikeQueryError, query_event_like_r
 from halpha.market.ohlcv_query import OHLCVQueryError, query_ohlcv_records
 from halpha.macro.macro_calendar_history import read_macro_calendar_history_records
 from halpha.market.derivatives_history import read_derivatives_history_records
+from halpha.market.market_anomaly_history import read_market_anomaly_history_records
 from halpha.onchain.onchain_flow_history import read_onchain_flow_history_records
 from halpha.runtime.command_jobs import CommandJobManager
 from halpha.storage import resolve_runtime_path
@@ -19,15 +20,16 @@ from halpha.text.text_event_history import read_text_event_history_records
 
 
 DATA_VIEWER_SCHEMA_VERSION = 1
-SUPPORTED_DATA_TYPES = ("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market")
+SUPPORTED_DATA_TYPES = ("ohlcv", "text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly")
 COLLECTABLE_DATA_TYPES = set(SUPPORTED_DATA_TYPES)
-EVENT_LIKE_DATA_TYPES = {"text_event", "macro_calendar", "onchain_flow", "derivatives_market"}
+EVENT_LIKE_DATA_TYPES = {"text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"}
 STORE_BY_DATA_TYPE = {
     "ohlcv": "ohlcv_history",
     "text_event": "text_event_history",
     "derivatives_market": "derivatives_market_history",
     "macro_calendar": "macro_calendar_history",
     "onchain_flow": "onchain_flow_history",
+    "market_anomaly": "market_anomaly_history",
 }
 EXPORT_FORMATS = {
     "ohlcv": ("csv", "parquet"),
@@ -35,6 +37,7 @@ EXPORT_FORMATS = {
     "macro_calendar": ("csv", "json"),
     "onchain_flow": ("csv", "json"),
     "derivatives_market": ("csv", "json"),
+    "market_anomaly": ("csv", "json"),
 }
 MAX_PREVIEW_RECORDS = 500
 MAX_OHLCV_PREVIEW_RECORDS = 1000
@@ -53,6 +56,12 @@ def dashboard_data_viewer_summary(config: dict[str, Any], *, config_path: Path) 
     summaries = []
     for data_type in SUPPORTED_DATA_TYPES:
         store = stores_by_name.get(STORE_BY_DATA_TYPE[data_type], {})
+        store_summary = _dict(_dict(store.get("drilldown")).get("summary")) or _dict(store.get("fields"))
+        store_summary = _store_summary_with_history_count(
+            store_summary,
+            data_type=data_type,
+            config_path=config_path,
+        )
         coverage = summarize_collection_coverage(coverage_state, data_type=data_type)
         coverage_payload = _coverage_summary(coverage, coverage_state=coverage_state)
         _fill_history_range_fallback(coverage_payload, data_type=data_type, config_path=config_path)
@@ -64,7 +73,7 @@ def dashboard_data_viewer_summary(config: dict[str, Any], *, config_path: Path) 
                 "store_name": STORE_BY_DATA_TYPE[data_type],
                 "title": store.get("title") or _title_for_data_type(data_type),
                 "status": str(store.get("status") or "skipped"),
-                "summary": _dict(store.get("drilldown")).get("summary") or _dict(store.get("fields")),
+                "summary": store_summary,
                 "ranges": _dict(store.get("drilldown")).get("ranges") or {},
                 "coverage": coverage_payload,
                 "query_capability": _query_capability(data_type),
@@ -550,6 +559,7 @@ def _fill_history_range_fallback(coverage: dict[str, Any], *, data_type: str, co
         "macro_calendar": ("scheduled_at",),
         "onchain_flow": ("as_of",),
         "derivatives_market": ("as_of",),
+        "market_anomaly": ("observed_at",),
     }.get(data_type, ())
     times = [
         parsed
@@ -566,12 +576,41 @@ def _fill_history_range_fallback(coverage: dict[str, Any], *, data_type: str, co
     coverage["range_source"] = "history"
 
 
+def _store_summary_with_history_count(
+    summary: dict[str, Any],
+    *,
+    data_type: str,
+    config_path: Path,
+) -> dict[str, Any]:
+    if data_type not in EVENT_LIKE_DATA_TYPES:
+        return summary
+    records = _event_like_history_records(data_type, config_path)
+    if not records:
+        return summary
+    current_count = _summary_record_count(summary)
+    if current_count is not None and current_count >= len(records):
+        return summary
+    result = dict(summary)
+    result["records"] = len(records)
+    result["record_count_source"] = "history"
+    return result
+
+
+def _summary_record_count(summary: dict[str, Any]) -> int | None:
+    for key in ("records", "record_count"):
+        value = summary.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            return value
+    return None
+
+
 def _event_like_history_records(data_type: str, config_path: Path) -> list[dict[str, Any]]:
     readers = {
         "text_event": read_text_event_history_records,
         "macro_calendar": read_macro_calendar_history_records,
         "onchain_flow": read_onchain_flow_history_records,
         "derivatives_market": read_derivatives_history_records,
+        "market_anomaly": read_market_anomaly_history_records,
     }
     reader = readers.get(data_type)
     if reader is None:
@@ -678,6 +717,7 @@ def _query_capability(data_type: str) -> dict[str, Any]:
         "macro_calendar": "scheduled_at",
         "onchain_flow": "as_of",
         "derivatives_market": "as_of",
+        "market_anomaly": "observed_at",
     }
     return {"implemented": True, "range_field": fields.get(data_type), "as_of": True, "requires": ["data_type"]}
 

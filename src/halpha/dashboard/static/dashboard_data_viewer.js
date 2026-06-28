@@ -30,7 +30,7 @@
           "unavailable",
           "unknown",
         ];
-        const EVENT_LIKE_TYPES = ["text_event", "macro_calendar", "onchain_flow", "derivatives_market"];
+        const EVENT_LIKE_TYPES = ["text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"];
         const COLLECTABLE_TYPES = ["ohlcv", ...EVENT_LIKE_TYPES];
         const TYPE_LABELS = {
           ohlcv: "OHLCV",
@@ -38,6 +38,7 @@
           macro_calendar: "Macro calendar",
           onchain_flow: "On-chain flow",
           derivatives_market: "Derivatives market",
+          market_anomaly: "Market anomalies",
         };
         const EXPORT_FORMATS = {
           ohlcv: ["csv", "parquet"],
@@ -45,6 +46,7 @@
           macro_calendar: ["json", "csv"],
           onchain_flow: ["json", "csv"],
           derivatives_market: ["json", "csv"],
+          market_anomaly: ["json", "csv"],
         };
         const INTEL_PREVIEW_PAGE_SIZE = 30;
         const INTEL_PREVIEW_FETCH_STEP = 100;
@@ -160,29 +162,81 @@
           const summary = storeSummary(dataType);
           const statusSelector = scope === "strategy" ? "#strategy-data-status" : "#intel-data-status";
           const summarySelector = scope === "strategy" ? "#strategy-data-summary" : "#intel-data-summary";
+          hideSummaryStrip(summarySelector);
           if (!summary) {
             setStatus(statusSelector, state.dataViewerSummary?.status || "missing", "No summary");
-            setHtml(summarySelector, `<div class="summary-cell"><div class="summary-label">Store</div><div class="summary-value">n/a</div><div class="summary-note">No shared store summary is available.</div></div>`);
+            renderIssueControl(scope, null);
             return;
           }
           const coverage = summary.coverage || {};
-          const rangeLabel = coverage.range_start && coverage.range_end
-            ? `${formatTimestamp(coverage.range_start)} to ${formatTimestamp(coverage.range_end)}`
-            : "No collected range";
-          const rangeNote = coverage.range_source === "history" ? "shared store history" : "shared store coverage";
-          const warningCount = (summary.warnings || []).length;
-          const errorCount = (summary.errors || []).length;
-          const statusCounts = statusCountLabel(coverage.status_counts || {});
-          const storeFields = summary.summary || {};
-          const storedRecords = storeFields.records ?? storeFields.record_count ?? coverage.record_count ?? 0;
-          const recordNote = dataType === "ohlcv" ? "stored candles" : (TYPE_LABELS[dataType] || dataType);
           setStatus(statusSelector, summary.status || coverage.state_status || "unknown", summary.status || "unknown");
-          setHtml(summarySelector, [
-            metricCell("Records", formatNumber(storedRecords), recordNote),
-            metricCell("Range", rangeLabel, rangeNote),
-            metricCell("Coverage states", statusCounts || "none", "collected / gaps / failures"),
-            metricCell("Issues", errorCount ? `${errorCount} errors` : warningCount ? `${warningCount} warnings` : "none", firstIssue(summary)),
-          ].join(""));
+          renderIssueControl(scope, summary);
+        }
+
+        function hideSummaryStrip(selector) {
+          const target = node(selector);
+          if (!target) return;
+          target.innerHTML = "";
+          target.classList.add("hidden");
+        }
+
+        function renderIssueControl(scope, summary) {
+          const target = node(scope === "strategy" ? "#strategy-data-issues" : "#intel-data-issues");
+          if (!target) return;
+          const issues = storeIssues(summary);
+          const errorCount = issues.filter((issue) => issue.kind === "error").length;
+          const warningCount = issues.filter((issue) => issue.kind === "warning").length;
+          const issueStatus = errorCount ? "error" : warningCount ? "warning" : "ok";
+          const issueCopy = issues.length
+            ? `${formatNumber(issues.length)} ${issues.length === 1 ? "issue" : "issues"}`
+            : "0 issues";
+          const details = issues.length
+            ? `<ul class="data-viewer-issue-list">${issues.map((issue) => `
+                <li class="data-viewer-issue-item ${escapeHtml(statusClass(issue.kind))}">
+                  <span class="status-pill ${escapeHtml(statusClass(issue.kind))}">${escapeHtml(label(issue.kind))}</span>
+                  <p>${escapeHtml(issue.message)}</p>
+                </li>
+              `).join("")}</ul>`
+            : `<div class="empty-state">No current issues for this data store.</div>`;
+          target.innerHTML = `
+            <div class="data-viewer-issue-widget">
+              <button class="ghost-button data-viewer-issue-button ${escapeHtml(statusClass(issueStatus))}" type="button" data-data-viewer-issues="${escapeHtml(scope)}" aria-expanded="false">
+                Issues <span class="data-viewer-issue-count">${escapeHtml(formatNumber(issues.length))}</span>
+              </button>
+              <div class="data-viewer-issue-popover hidden" data-data-viewer-issue-panel="${escapeHtml(scope)}" role="dialog" aria-label="${escapeHtml(issueCopy)}">
+                <div class="data-viewer-issue-popover-head">
+                  <strong>${escapeHtml(issueCopy)}</strong>
+                  <span>${escapeHtml(errorCount ? `${formatNumber(errorCount)} errors` : warningCount ? `${formatNumber(warningCount)} warnings` : "clear")}</span>
+                </div>
+                ${details}
+              </div>
+            </div>
+          `;
+        }
+
+        function storeIssues(summary) {
+          if (!summary) return [];
+          const errors = Array.isArray(summary.errors) ? summary.errors : [];
+          const warnings = Array.isArray(summary.warnings) ? summary.warnings : [];
+          return [
+            ...errors.map((message) => ({kind: "error", message: String(message)})),
+            ...warnings.map((message) => ({kind: "warning", message: String(message)})),
+          ].filter((issue) => issue.message.trim());
+        }
+
+        function toggleIssuePopover(scope) {
+          const button = node(`[data-data-viewer-issues="${scope}"]`);
+          const panel = node(`[data-data-viewer-issue-panel="${scope}"]`);
+          if (!button || !panel) return;
+          const shouldOpen = panel.classList.contains("hidden");
+          closeIssuePopovers();
+          panel.classList.toggle("hidden", !shouldOpen);
+          button.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+        }
+
+        function closeIssuePopovers() {
+          document.querySelectorAll("[data-data-viewer-issue-panel]").forEach((panel) => panel.classList.add("hidden"));
+          document.querySelectorAll("[data-data-viewer-issues]").forEach((button) => button.setAttribute("aria-expanded", "false"));
         }
 
         function renderCapabilityState(scope, dataType) {
@@ -196,18 +250,6 @@
             return;
           }
           setDisabled("#intel-data-collect", !collectable);
-        }
-
-        function statusCountLabel(counts) {
-          return Object.entries(counts || {})
-            .filter((entry) => Number(entry[1]) > 0)
-            .map(([status, count]) => `${status}: ${formatNumber(count)}`)
-            .join(" / ");
-        }
-
-        function firstIssue(summary) {
-          const issue = [...(summary.errors || []), ...(summary.warnings || [])][0];
-          return issue ? String(issue).slice(0, 120) : "latest coverage state";
         }
 
         async function loadTimeline(scope) {
@@ -739,7 +781,9 @@
         }
 
         function recordCategory(record, dataType) {
-          const raw = dataType === "derivatives_market"
+          const raw = dataType === "market_anomaly"
+            ? record?.data_class || record?.severity || record?.source_kind
+            : dataType === "derivatives_market"
             ? record?.data_class || record?.market_type || record?.endpoint
             : dataType === "onchain_flow"
               ? record?.data_class || record?.endpoint
@@ -838,6 +882,11 @@
             const title = [record?.symbol, label(record?.data_class || "derivatives"), record?.period].filter(Boolean).join(" ");
             if (title) return title;
           }
+          if (dataType === "market_anomaly") {
+            const title = [record?.symbol, label(record?.data_class || "market anomaly"), record?.timeframe].filter(Boolean).join(" ");
+            if (record?.title) return record.title;
+            if (title) return title;
+          }
           if (dataType === "macro_calendar") {
             const title = [record?.event_name || record?.title || record?.name, record?.currency || record?.country].filter(Boolean).join(" / ");
             if (title) return title;
@@ -864,6 +913,9 @@
           if (dataType === "derivatives_market" && metrics.length) {
             return `${label(record?.data_class || "derivatives")} snapshot for ${text(record?.symbol, "symbol")} ${record?.period ? `(${record.period})` : ""} at ${formatTimestamp(recordTime(record, dataType))}.`;
           }
+          if (dataType === "market_anomaly" && metrics.length) {
+            return `${label(record?.data_class || "market anomaly")} for ${text(record?.symbol, "symbol")} ${record?.timeframe ? `(${record.timeframe})` : ""} observed at ${formatTimestamp(recordTime(record, dataType))}.`;
+          }
           const facts = recordPrimaryFacts(record, dataType);
           return facts.map(([key, val]) => `${key}: ${text(val)}`).join(" / ");
         }
@@ -874,6 +926,7 @@
             macro_calendar: ["region", "country", "currency", "importance", "actual", "forecast", "previous"],
             onchain_flow: ["source", "asset", "chain", "data_class", "endpoint", "status"],
             derivatives_market: ["source", "symbol", "market_type", "data_class", "period", "endpoint", "status"],
+            market_anomaly: ["source_kind", "source", "symbol", "market_type", "data_class", "timeframe", "severity", "direction", "status"],
           }[dataType] || [];
           return keys
             .filter((key) => record?.[key] !== null && record?.[key] !== undefined && record?.[key] !== "")
@@ -885,6 +938,7 @@
           return record?.published_at
             || record?.source_published_at
             || record?.scheduled_at
+            || record?.observed_at
             || record?.as_of
             || record?.open_time
             || record?.collected_at
@@ -910,6 +964,9 @@
           const numeric = Number(value);
           if (!Number.isFinite(numeric)) return text(value);
           const rawKey = String(key || "").toLowerCase();
+          if (String(unit || "").toLowerCase() === "percent") {
+            return `${numeric.toFixed(4)}%`;
+          }
           if (String(unit || "").toLowerCase() === "ratio" || rawKey.includes("rate")) {
             return `${(numeric * 100).toFixed(4)}%`;
           }
@@ -1394,6 +1451,23 @@
             applyIntelligenceRangePreset("intel-preview", true);
             resetIntelligencePreviewState();
             queueIntelligencePreviewLoad();
+          });
+          document.addEventListener("click", (event) => {
+            const eventTarget = event.target instanceof Element ? event.target : null;
+            if (!eventTarget) return;
+            const issueButton = eventTarget.closest("[data-data-viewer-issues]");
+            if (issueButton) {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleIssuePopover(issueButton.dataset.dataViewerIssues);
+              return;
+            }
+            if (!eventTarget.closest(".data-viewer-issue-widget")) {
+              closeIssuePopovers();
+            }
+          });
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeIssuePopovers();
           });
         }
 
