@@ -237,6 +237,11 @@ def _exchange_timeframe(timeframe: str) -> str:
     return CCXT_TIMEFRAME_BY_TIMEFRAME.get(timeframe, timeframe)
 
 
+def ohlcv_exchange_symbol(source: str, symbol: str) -> str:
+    _require_non_empty_text(symbol, "symbol")
+    return _exchange_symbol(_require_supported_source(source), symbol)
+
+
 def _exchange_symbol(source: str, symbol: str) -> str:
     requested = symbol.strip()
     if "/" in requested or ":" in requested:
