@@ -8,7 +8,6 @@ from typing import Any
 
 from halpha.market.ohlcv_collection import collect_ohlcv_data
 from halpha.pipeline import run_pipeline
-from halpha.runtime.pipeline_contracts import PipelineError
 from halpha.runtime.run_classification import run_trigger_from_env
 from halpha.text.text_event_collection import collect_text_event_data
 
