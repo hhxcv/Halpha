@@ -279,6 +279,76 @@ Every view must distinguish available, partial, missing, stale, degraded,
 failed, skipped, and not-applicable states where the source artifacts support
 those distinctions. Missing evidence must not be displayed as neutral evidence.
 
+## Strategy Lab Workbench Contract
+
+Status: current Strategy Lab includes OHLCV shared-store review, collection
+controls, existing backtest artifacts, and reusable candlestick chart behavior.
+Expanded strategy workbench controls, optimization views, and advanced
+evaluation overlays are planned.
+
+Purpose:
+
+- Make Strategy Lab the local strategy research workbench without creating a
+  trading surface.
+- Keep Dashboard actions and CLI actions on shared internal service contracts.
+- Preserve the candlestick chart as the common OHLCV viewer and strategy
+  overlay surface.
+
+Workbench action contract:
+
+- Backtest, experiment, optimization, comparison, collect, and export-like
+  strategy actions must call internal allowlisted services or job intents.
+- UI actions must not shell out to CLI commands or open command windows.
+- CLI commands should be thin adapters over the same internal services where
+  the behavior overlaps.
+- Action requests must validate source, symbol, market identity, timeframe,
+  date/time range, strategy, params, optimization scope, and output format
+  before starting work.
+- Running actions must expose progress and bounded logs. Logs are collapsed by
+  default and expand to a bounded scroll area.
+- Results must return bounded artifact refs, warnings, errors, and summaries.
+  They must not return full reusable OHLCV history or full raw optimization
+  tables by default.
+
+Strategy control contract:
+
+- Strategy family, strategy name, parameter controls, defaults, supported
+  market types, required inputs, and optimization ranges should come from
+  strategy spec metadata when implemented.
+- Unknown strategy names or unsupported params must fail with actionable
+  validation errors.
+- Chart source, symbol, timeframe, and chart range remain independent OHLCV
+  viewer controls.
+- Selecting a backtest or strategy artifact may overlay markers on the chart
+  only when the artifact matches the chart identity or the mismatch is clearly
+  shown.
+
+Visualization contract:
+
+- A plain OHLCV view shows candles, volume, crosshair, time alignment, and
+  candle tooltips.
+- A selected strategy artifact may add long, short, close, exit, event,
+  funding, and multi-leg markers where the artifact provides them.
+- Candle hover details should include OHLCV and volume. Marker hover details
+  should include strategy, side, exposure, transition, execution timing, costs,
+  funding, warnings, and source refs where available.
+- Evaluation panels may show equity, drawdown, exposure, turnover, cost drag,
+  funding drag, benchmark comparison, parameter heatmaps or candidate tables,
+  walk-forward windows, gate outcomes, lifecycle state, warnings, and source
+  refs.
+- Empty, insufficient-data, degraded, and failed states must be visually
+  distinct from successful evaluations.
+
+Boundary rules:
+
+- Strategy Lab must not create orders, positions, account connections, API-key
+  flows, portfolio allocation, or trading advice.
+- Strategy Lab must not ask Codex or another LLM to generate strategy signals,
+  metrics, optimization results, gate statuses, lifecycle states, forecasts, or
+  trading instructions.
+- Strategy Lab must not persist a second authority for strategy results.
+  Durable artifacts and runtime job state remain the source of truth.
+
 ## Data Viewer And Collection Boundary
 
 Dashboard data views are operator surfaces over shared data contracts. They are
