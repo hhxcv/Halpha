@@ -287,8 +287,9 @@ Allowed `output_position_policy` values:
 
 - `research_long_flat_target_exposure`: implemented current long-flat record
   semantics.
-- `research_signed_target_exposure`: planned single-leg long, short, and flat
-  exposure semantics.
+- `research_signed_target_exposure`: implemented single-leg long, short, and
+  flat record semantics. Strategy implementations and evaluation integration
+  are separate consumers.
 - `research_multi_leg_target_exposure`: planned multi-leg exposure semantics.
 
 Rules:
@@ -305,7 +306,9 @@ Rules:
 
 ## Strategy Signal And Exposure Contract
 
-Status: current strategy signal records are long-flat. Signed and multi-leg
+Status: current strategy implementations emit long-flat records. Signed
+single-leg signal record helpers and validation are implemented for downstream
+long, short, and flat strategy work. Signed-exposure evaluation and multi-leg
 records are planned.
 
 Current single-leg long-flat shape:
@@ -324,7 +327,7 @@ Current single-leg long-flat shape:
 }
 ```
 
-Planned signed single-leg shape:
+Implemented signed single-leg shape:
 
 ```json
 {
