@@ -193,91 +193,119 @@
           <div class="page-title"><h1>Strategy Lab</h1></div>
         </div>
         <div class="strategy-layout">
-          <section class="panel strategy-controls">
-            <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
-            <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
-            <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
-            <div class="field"><label for="strategy-range">Date range</label><select id="strategy-range" class="select-input"><option value="all">All candles</option><option value="180">Last 180 candles</option><option value="90">Last 90 candles</option><option value="30">Last 30 candles</option></select></div>
-            <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
-            <button class="ghost-button" type="button" id="download-ohlcv-button">Download OHLCV</button>
-          </section>
-          <section class="panel metric-strip" id="strategy-metrics"></section>
-          <section class="panel panel-pad data-viewer-panel" id="strategy-data-viewer">
-            <div class="data-viewer-header">
-              <h2 class="panel-title">OHLCV shared store <span id="strategy-data-status" class="status-pill pending">loading</span></h2>
-              <div class="toolbar-actions">
-                <button class="ghost-button" type="button" id="strategy-data-timeline" data-data-viewer-action="strategy-timeline">Timeline</button>
-                <button class="ghost-button" type="button" id="strategy-data-preview" data-data-viewer-action="strategy-preview">Preview</button>
-                <button class="ghost-button" type="button" id="strategy-data-plan" data-data-viewer-action="strategy-plan">Dry run</button>
-                <button class="primary-button" type="button" id="strategy-data-collect" data-data-viewer-action="strategy-collect">Collect</button>
-                <button class="ghost-button" type="button" id="strategy-data-export" data-data-viewer-action="strategy-export">Export</button>
+          <section class="panel strategy-workbench" id="strategy-workbench">
+            <div class="tabs strategy-operation-tabs" id="strategy-operation-tabs" aria-label="Strategy Lab operations">
+              <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtest</button>
+              <button class="tab-button" type="button" data-strategy-operation-tab="collect">Collect</button>
+              <button class="tab-button" type="button" data-strategy-operation-tab="export">Export</button>
+            </div>
+
+            <div class="strategy-operation-panel" data-strategy-operation-panel="backtest">
+              <div class="strategy-controls strategy-backtest-controls">
+                <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
+                <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
+                <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
+                <div class="field"><label for="strategy-range">Chart range</label><select id="strategy-range" class="select-input"><option value="all">All candles</option><option value="180">Last 180 candles</option><option value="90">Last 90 candles</option><option value="30">Last 30 candles</option></select></div>
+                <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
               </div>
+              <div id="strategy-backtest-progress" class="operation-progress hidden"></div>
+              <div class="metric-strip" id="strategy-metrics"></div>
             </div>
-            <div class="data-viewer-controls">
-              <div class="field"><label for="strategy-data-source">Source</label><input id="strategy-data-source" class="text-input" type="text" placeholder="binance"></div>
-              <div class="field"><label for="strategy-data-symbol">Symbol</label><input id="strategy-data-symbol" class="text-input" type="text" placeholder="BTCUSDT"></div>
-              <div class="field"><label for="strategy-data-timeframe">Timeframe</label><input id="strategy-data-timeframe" class="text-input" type="text" placeholder="1d"></div>
-              <div class="field"><label for="strategy-data-start">Start</label><input id="strategy-data-start" class="text-input" type="text" placeholder="2026-06-01T00:00:00Z"></div>
-              <div class="field"><label for="strategy-data-end">End</label><input id="strategy-data-end" class="text-input" type="text" placeholder="2026-06-02T00:00:00Z"></div>
-              <div class="field"><label for="strategy-data-as-of">As of</label><input id="strategy-data-as-of" class="text-input" type="text" placeholder="optional"></div>
-              <div class="field"><label for="strategy-data-format">Format</label><select id="strategy-data-format" class="select-input"><option value="csv">CSV</option><option value="parquet">Parquet</option></select></div>
-            </div>
-            <div id="strategy-data-summary" class="summary-strip data-viewer-summary"></div>
-            <div class="data-viewer-grid">
-              <section>
+
+            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="collect">
+              <div class="data-viewer-header">
+                <h2 class="panel-title">OHLCV shared store <span id="strategy-data-status" class="status-pill pending">loading</span></h2>
+              </div>
+              <div class="strategy-collect-grid">
+                <div class="field"><label for="strategy-collect-source">Source</label><input id="strategy-collect-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
+                <div class="field"><label for="strategy-collect-symbol">Symbol</label><select id="strategy-collect-symbol" class="select-input"></select></div>
+                <div class="field"><label for="strategy-collect-timeframe">Timeframe</label><select id="strategy-collect-timeframe" class="select-input"></select></div>
+                <button class="ghost-button" type="button" id="strategy-collect-add-target">Add pair</button>
+              </div>
+              <div id="strategy-collect-targets" class="collect-target-list" aria-label="Selected collection targets"></div>
+              <div class="strategy-range-grid">
+                <div class="field"><label for="strategy-collect-range">Range preset</label><select id="strategy-collect-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
+                <div class="field date-range-field" data-date-range-picker data-start-input="strategy-collect-start" data-end-input="strategy-collect-end" data-preset-input="strategy-collect-range">
+                  <label for="strategy-collect-date-range">Time window</label>
+                  <button class="range-picker-trigger" type="button" id="strategy-collect-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+                  <input id="strategy-collect-start" class="hidden" type="text" aria-hidden="true">
+                  <input id="strategy-collect-end" class="hidden" type="text" aria-hidden="true">
+                  <div class="range-picker-popover hidden" role="dialog" aria-label="Collection time window"></div>
+                </div>
+                <button class="ghost-button" type="button" id="strategy-collect-refresh-timeline" data-data-viewer-action="strategy-timeline">Refresh timeline</button>
+                <button class="primary-button" type="button" id="strategy-collect-run" data-data-viewer-action="strategy-collect">Collect</button>
+              </div>
+              <div id="strategy-data-summary" class="summary-strip data-viewer-summary"></div>
+              <section class="strategy-collect-timeline-section">
                 <h3 class="subsection-title">Coverage timeline</h3>
-                <div id="strategy-data-coverage" class="data-viewer-timeline"><div class="message">Choose a time range, then load the timeline.</div></div>
+                <div id="strategy-collect-timeline" class="collect-timeline"><div class="message">Collection timeline follows the selected targets and range.</div></div>
               </section>
-              <section>
-                <h3 class="subsection-title">Bounded preview</h3>
-                <div id="strategy-data-preview-panel" class="data-viewer-preview"><div class="message">Preview uses the shared query boundary and a small record limit.</div></div>
-              </section>
+              <div id="strategy-collect-progress" class="operation-progress hidden"></div>
             </div>
-            <div class="data-viewer-grid">
-              <section>
-                <h3 class="subsection-title">Collection plan</h3>
-                <div id="strategy-data-plan-panel" class="data-viewer-plan"><div class="message">Dry run shows the efficient collection window plan before submitting a job.</div></div>
-              </section>
-              <section>
-                <h3 class="subsection-title">Job and export</h3>
-                <div id="strategy-data-job-panel" class="data-viewer-job"><div class="message">Collection jobs and exports will appear here.</div></div>
-              </section>
+
+            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="export">
+              <div class="strategy-export-grid">
+                <div class="field"><label for="strategy-export-source">Source</label><input id="strategy-export-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
+                <div class="field"><label for="strategy-export-symbol">Symbol</label><select id="strategy-export-symbol" class="select-input"></select></div>
+                <div class="field"><label for="strategy-export-timeframe">Timeframe</label><select id="strategy-export-timeframe" class="select-input"></select></div>
+                <div class="field"><label for="strategy-export-range">Range preset</label><select id="strategy-export-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
+                <div class="field date-range-field" data-date-range-picker data-start-input="strategy-export-start" data-end-input="strategy-export-end" data-preset-input="strategy-export-range">
+                  <label for="strategy-export-date-range">Time window</label>
+                  <button class="range-picker-trigger" type="button" id="strategy-export-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+                  <input id="strategy-export-start" class="hidden" type="text" aria-hidden="true">
+                  <input id="strategy-export-end" class="hidden" type="text" aria-hidden="true">
+                  <div class="range-picker-popover hidden" role="dialog" aria-label="Export time window"></div>
+                </div>
+                <div class="field"><label for="strategy-export-as-of">As of <button class="hint-icon" type="button" aria-label="As of help" title="Optional ISO timestamp for no-lookahead reads. Use it to export only records known at that time, for example 2026-06-28T00:00:00Z. Leave empty for the latest stored view.">?</button></label><input id="strategy-export-as-of" class="text-input" type="text" placeholder="optional ISO timestamp"></div>
+                <div class="field"><label for="strategy-export-format">Format</label><select id="strategy-export-format" class="select-input"><option value="csv">CSV</option><option value="parquet">Parquet</option></select></div>
+                <button class="primary-button" type="button" id="strategy-export-run" data-data-viewer-action="strategy-export">Export</button>
+                <button class="ghost-button" type="button" id="download-ohlcv-button">Download visible chart</button>
+              </div>
+              <div id="strategy-export-progress" class="operation-progress hidden"></div>
+              <div id="strategy-data-job-panel" class="data-viewer-job"><div class="message">Exports will appear here.</div></div>
             </div>
           </section>
           <section class="panel kline-panel">
             <div class="chart-header">
               <div>
-                <div id="strategy-chart-title" class="chart-title">Backtest candlestick chart</div>
+                <div id="strategy-chart-title" class="chart-title">OHLCV candlestick chart</div>
                 <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
               </div>
-              <span id="strategy-quote-label" class="status-pill ok">n/a</span>
+              <div class="chart-selector" aria-label="OHLCV chart controls">
+                <div class="field"><label for="strategy-chart-source">Source</label><input id="strategy-chart-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
+                <div class="field"><label for="strategy-chart-symbol">Symbol</label><select id="strategy-chart-symbol" class="select-input"></select></div>
+                <div class="field"><label for="strategy-chart-timeframe">Timeframe</label><select id="strategy-chart-timeframe" class="select-input"></select></div>
+                <div class="field"><label for="strategy-chart-range">Range</label><select id="strategy-chart-range" class="select-input"><option value="all">All stored</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option></select></div>
+                <button class="ghost-button chart-refresh-button" type="button" id="strategy-chart-refresh">Refresh candles</button>
+                <span id="strategy-quote-label" class="status-pill ok">n/a</span>
+              </div>
             </div>
             <div class="chart-wrap">
-              <div class="chart-tools" aria-label="Backtest chart window">
+              <div class="chart-tools" aria-label="Candlestick chart window">
                 <button class="tool-dot active" type="button" data-strategy-window="all" title="Show all available candles">All</button>
                 <button class="tool-dot" type="button" data-strategy-window="180" title="Show last 180 candles">180</button>
                 <button class="tool-dot" type="button" data-strategy-window="90" title="Show last 90 candles">90</button>
                 <button class="tool-dot" type="button" data-strategy-window="30" title="Show last 30 candles">30</button>
               </div>
-              <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="Backtest candlestick chart"></svg>
+              <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="OHLCV candlestick chart"></svg>
             </div>
             <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>
           </section>
           <aside class="strategy-side">
-            <section class="panel panel-pad">
-              <h2 class="panel-title">Strategy parameters</h2>
+            <section class="panel panel-pad" id="strategy-params-panel">
+              <h2 class="panel-title" id="strategy-params-title">Strategy parameters</h2>
               <table id="strategy-params" class="kv-table"></table>
             </section>
-            <section class="panel panel-pad">
+            <section class="panel panel-pad" data-backtest-only="true">
               <h2 class="panel-title">Recent trades</h2>
               <div id="recent-trades"></div>
             </section>
-            <section class="panel panel-pad">
+            <section class="panel panel-pad" data-backtest-only="true">
               <h2 class="panel-title">Backtest runs</h2>
               <div id="backtest-runs"></div>
             </section>
           </aside>
-          <section class="panel strategy-tabs">
+          <section class="panel strategy-tabs" data-backtest-only="true">
             <div class="tabs" id="strategy-tabs">
               <button class="tab-button active" type="button" data-strategy-tab="trades">Trades</button>
               <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
@@ -339,87 +367,65 @@
         </div>
         <div class="intelligence-layout">
           <section class="panel panel-pad">
-            <div class="filter-grid">
-              <div class="field"><label>Asset</label><select id="intel-asset" class="select-input"><option>All assets</option></select></div>
-              <div class="field"><label>Date range</label><select id="intel-range" class="select-input"><option value="all">All time</option><option value="7d">Latest 7 days</option><option value="30d">Latest 30 days</option></select></div>
-              <div class="field"><label>Severity</label><select id="intel-severity" class="select-input"><option>All severities</option><option>High</option><option>Medium</option><option>Low</option></select></div>
-              <div class="field"><label>Source</label><select id="intel-source" class="select-input"><option>All sources</option></select></div>
-              <button class="ghost-button" type="button" id="intel-reset">Reset</button>
-            </div>
-            <div class="tabs" id="intel-tabs" style="margin-top: 14px;">
-              <button class="tab-button active" type="button" data-intel-tab="text">Text</button>
-              <button class="tab-button" type="button" data-intel-tab="derivatives">Derivatives</button>
-              <button class="tab-button" type="button" data-intel-tab="onchain">On-chain</button>
-              <button class="tab-button" type="button" data-intel-tab="macro">Macro</button>
-              <button class="tab-button" type="button" data-intel-tab="outcomes">Outcomes</button>
-              <button class="tab-button" type="button" data-intel-tab="quality">Data quality</button>
+            <div class="tabs" id="intel-tabs">
+              <button class="tab-button active" type="button" data-intel-tab="overview">Overview</button>
+              <button class="tab-button" type="button" data-intel-tab="text_event">Text events</button>
+              <button class="tab-button" type="button" data-intel-tab="macro_calendar">Macro calendar</button>
+              <button class="tab-button" type="button" data-intel-tab="onchain_flow">On-chain flow</button>
+              <button class="tab-button" type="button" data-intel-tab="derivatives_market">Derivatives market</button>
             </div>
           </section>
-          <section class="summary-strip" id="intel-kpis"></section>
-          <section class="panel panel-pad data-viewer-panel" id="intel-data-viewer">
+          <datalist id="strategy-ohlcv-source-options"></datalist>
+
+          <section id="intel-overview-panel" class="intel-overview-panel">
+            <div class="summary-strip" id="intel-overview-kpis"></div>
+            <div class="intel-overview-grid" id="intel-overview-content"></div>
+          </section>
+
+          <section class="panel panel-pad data-viewer-panel hidden" id="intel-data-viewer">
             <div class="data-viewer-header">
               <h2 class="panel-title">Intelligence shared stores <span id="intel-data-status" class="status-pill pending">loading</span></h2>
-              <div class="toolbar-actions">
-                <button class="ghost-button" type="button" id="intel-data-timeline" data-data-viewer-action="intel-timeline">Timeline</button>
-                <button class="ghost-button" type="button" id="intel-data-preview" data-data-viewer-action="intel-preview">Preview</button>
-                <button class="ghost-button" type="button" id="intel-data-plan" data-data-viewer-action="intel-plan">Dry run</button>
-                <button class="primary-button" type="button" id="intel-data-collect" data-data-viewer-action="intel-collect">Collect</button>
-                <button class="ghost-button" type="button" id="intel-data-export" data-data-viewer-action="intel-export">Export</button>
-              </div>
             </div>
             <div class="data-viewer-controls intel-data-controls">
-              <div class="field"><label for="intel-data-type">Data type</label><select id="intel-data-type" class="select-input"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option></select></div>
-              <div class="field"><label for="intel-data-source">Source</label><input id="intel-data-source" class="text-input" type="text" placeholder="coindesk or all"></div>
-              <div class="field"><label for="intel-data-identity-key">Identity key</label><input id="intel-data-identity-key" class="text-input" type="text" placeholder="source_name"></div>
-              <div class="field"><label for="intel-data-identity-value">Identity value</label><input id="intel-data-identity-value" class="text-input" type="text" placeholder="optional"></div>
-              <div class="field"><label for="intel-data-start">Start</label><input id="intel-data-start" class="text-input" type="text" placeholder="2026-06-01T00:00:00Z"></div>
-              <div class="field"><label for="intel-data-end">End</label><input id="intel-data-end" class="text-input" type="text" placeholder="2026-06-02T00:00:00Z"></div>
-              <div class="field"><label for="intel-data-as-of">As of</label><input id="intel-data-as-of" class="text-input" type="text" placeholder="optional"></div>
-              <div class="field"><label for="intel-data-format">Format</label><select id="intel-data-format" class="select-input"><option value="json">JSON</option><option value="csv">CSV</option></select></div>
+              <select id="intel-data-type" class="hidden" aria-hidden="true"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option></select>
+              <div class="field"><label for="intel-collect-range">Collection range</label><select id="intel-collect-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
+              <div class="field date-range-field" data-date-range-picker data-start-input="intel-collect-start" data-end-input="intel-collect-end" data-preset-input="intel-collect-range">
+                <label for="intel-collect-date-range">Collection time window</label>
+                <button class="range-picker-trigger" type="button" id="intel-collect-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+                <input id="intel-collect-start" class="hidden" type="text" aria-hidden="true">
+                <input id="intel-collect-end" class="hidden" type="text" aria-hidden="true">
+                <div class="range-picker-popover hidden" role="dialog" aria-label="Intelligence collection time window"></div>
+              </div>
+              <button class="ghost-button" type="button" id="intel-collect-reset">Reset</button>
+              <button class="primary-button" type="button" id="intel-data-collect" data-data-viewer-action="intel-collect">Collect</button>
             </div>
             <div id="intel-data-summary" class="summary-strip data-viewer-summary"></div>
-            <div class="data-viewer-grid">
-              <section>
-                <h3 class="subsection-title">Coverage timeline</h3>
-                <div id="intel-data-coverage" class="data-viewer-timeline"><div class="message">Choose a data type and time range, then load the timeline.</div></div>
-              </section>
-              <section>
-                <h3 class="subsection-title">Bounded content preview</h3>
-                <div id="intel-data-preview-panel" class="data-viewer-preview"><div class="message">Preview keeps text and event-like records bounded.</div></div>
-              </section>
-            </div>
-            <div class="data-viewer-grid">
-              <section>
-                <h3 class="subsection-title">Collection plan</h3>
-                <div id="intel-data-plan-panel" class="data-viewer-plan"><div class="message">Text-event dry runs use the shared collection planner. Other stores show unsupported collection state.</div></div>
-              </section>
-              <section>
-                <h3 class="subsection-title">Job and export</h3>
-                <div id="intel-data-job-panel" class="data-viewer-job"><div class="message">Collection jobs and exports will appear here.</div></div>
-              </section>
-            </div>
-          </section>
-          <div class="intel-grid">
-            <section class="panel">
-              <div class="library-header">
-                <select id="intel-sort" class="select-input"><option value="latest">Latest first</option><option value="severity">Severity first</option></select>
+            <section>
+              <h3 class="subsection-title">Coverage timeline</h3>
+              <div id="intel-data-coverage" class="data-viewer-timeline"><div class="message">Coverage timeline loads automatically for the selected data type and range.</div></div>
+            </section>
+            <section>
+              <h3 class="subsection-title">Preview</h3>
+              <div class="data-viewer-controls intel-preview-controls">
+                <div class="field"><label for="intel-preview-range">Preview range</label><select id="intel-preview-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
+                <div class="field date-range-field" data-date-range-picker data-start-input="intel-preview-start" data-end-input="intel-preview-end" data-preset-input="intel-preview-range">
+                  <label for="intel-preview-date-range">Preview time window</label>
+                  <button class="range-picker-trigger" type="button" id="intel-preview-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+                  <input id="intel-preview-start" class="hidden" type="text" aria-hidden="true">
+                  <input id="intel-preview-end" class="hidden" type="text" aria-hidden="true">
+                  <div class="range-picker-popover hidden" role="dialog" aria-label="Intelligence preview time window"></div>
+                </div>
+                <div class="field">
+                  <label for="intel-preview-as-of-mode">Point-in-time view <button class="hint-icon" type="button" aria-label="Point-in-time help" title="Optional no-lookahead cutoff for preview only. Latest stored data shows the current view. Range end shows only records known by the preview window end. Custom cutoff lets you choose a UTC timestamp.">?</button></label>
+                  <select id="intel-preview-as-of-mode" class="select-input"><option value="">Latest stored data</option><option value="range_end">At preview range end</option><option value="custom">Custom cutoff</option></select>
+                </div>
+                <div class="field hidden" id="intel-preview-as-of-custom-field"><label for="intel-preview-as-of">Custom cutoff UTC</label><input id="intel-preview-as-of" class="text-input" type="datetime-local" step="1"></div>
+                <button class="ghost-button" type="button" id="intel-preview-reset">Reset preview</button>
               </div>
-              <div id="intel-events" class="event-list"></div>
+              <div id="intel-data-preview-panel" class="data-viewer-preview intelligence-preview"><div class="message">Preview loads automatically for the selected data type and range.</div></div>
             </section>
-            <section class="intel-charts">
-              <section class="panel panel-pad chart-card">
-                <h2 class="panel-title">Topic volume over time</h2>
-                <svg id="intel-volume-chart" viewBox="0 0 520 240"></svg>
-              </section>
-              <section class="panel panel-pad chart-card">
-                <h2 class="panel-title">Severity mix</h2>
-                <svg id="intel-severity-chart" viewBox="0 0 520 240"></svg>
-              </section>
-            </section>
-            <aside class="panel panel-pad">
-              <div id="intel-detail"></div>
-            </aside>
-          </div>
+            <div id="intel-data-job-panel" class="data-viewer-job hidden"></div>
+          </section>
         </div>
       </section>
 

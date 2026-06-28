@@ -12,7 +12,13 @@ from halpha.data.collection_coverage import (
 )
 from halpha.data.collection_planner import plan_collection_from_coverage
 from halpha.data.research_data_catalog import CATALOG_ARTIFACT, write_research_data_catalog_snapshot
-from halpha.market.ohlcv_source import CCXTOHLCVSource, OHLCVSourceError, TIMEFRAME_DURATIONS
+from halpha.market.ohlcv_quality import ohlcv_next_open_time, ohlcv_timeframe_is_aligned
+from halpha.market.ohlcv_source import (
+    CCXTOHLCVSource,
+    OHLCVSourceError,
+    SUPPORTED_OHLCV_SOURCES,
+    TIMEFRAME_DURATIONS,
+)
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.storage import display_path, resolve_runtime_path, runtime_root
 
@@ -552,15 +558,27 @@ def _configured_market_ohlcv(config: dict[str, Any]) -> tuple[dict[str, Any], di
 
 
 def _require_configured_source(market: dict[str, Any], source: str) -> str:
-    configured = str(market.get("source") or "")
-    if not configured:
-        raise OHLCVCollectionError("market.source must be configured for OHLCV collection.", exit_code=2)
-    if source != configured:
+    requested = str(source or "").strip()
+    if not requested:
+        raise OHLCVCollectionError("source must be configured for OHLCV collection.", exit_code=2)
+    ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
+    configured_sources = [
+        str(value)
+        for value in ohlcv.get("sources", [])
+        if isinstance(value, str) and value.strip()
+    ]
+    if configured_sources and requested not in configured_sources:
         raise OHLCVCollectionError(
-            f"requested source {source} is not configured; configured source is {configured}.",
+            f"requested source {requested} is not configured for OHLCV collection.",
             exit_code=2,
         )
-    return configured
+    if not configured_sources and requested not in SUPPORTED_OHLCV_SOURCES:
+        supported = ", ".join(sorted(SUPPORTED_OHLCV_SOURCES))
+        raise OHLCVCollectionError(
+            f"unsupported OHLCV source {requested}. Supported sources: {supported}.",
+            exit_code=2,
+        )
+    return requested
 
 
 def _require_configured_symbol(market: dict[str, Any], symbol: str) -> None:
@@ -579,18 +597,24 @@ def _require_configured_timeframe(ohlcv: dict[str, Any], timeframe: str) -> None
 
 
 def _require_timeframe_aligned(value: datetime, timeframe: str, field: str) -> None:
-    seconds = int(TIMEFRAME_DURATIONS[timeframe].total_seconds())
-    if int(value.timestamp()) % seconds != 0:
+    if not ohlcv_timeframe_is_aligned(value, timeframe):
         raise OHLCVCollectionError(f"{field} must align to the {timeframe} UTC timeframe boundary.", exit_code=2)
 
 
 def _expected_open_count(start: str, end: str, timeframe: str) -> int:
-    duration = TIMEFRAME_DURATIONS[timeframe]
     start_dt = _parse_utc(start)
     end_dt = _parse_utc(end)
     if end_dt <= start_dt:
         return 0
-    return int((end_dt - start_dt).total_seconds() // duration.total_seconds())
+    if timeframe != "1month":
+        duration = TIMEFRAME_DURATIONS[timeframe]
+        return int((end_dt - start_dt).total_seconds() // duration.total_seconds())
+    count = 0
+    cursor = start_dt
+    while cursor < end_dt:
+        count += 1
+        cursor = ohlcv_next_open_time(cursor, timeframe)
+    return count
 
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:

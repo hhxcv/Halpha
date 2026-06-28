@@ -101,7 +101,7 @@ def test_data_collect_apply_uses_shared_service_boundary(
             "errors": [],
         }
 
-    monkeypatch.setattr("halpha.cli.collect_ohlcv_data", fake_collect)
+    monkeypatch.setattr("halpha.cli.collect_research_data", fake_collect)
 
     exit_code = main(
         [
@@ -127,7 +127,7 @@ def test_data_collect_apply_uses_shared_service_boundary(
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert calls[0]["dry_run"] is False
+    assert calls[0]["apply"] is True
     assert calls[0]["source"] == "binance"
     assert calls[0]["symbol"] == "BTCUSDT"
     assert calls[0]["timeframe"] == "1d"
@@ -178,7 +178,7 @@ def test_data_collect_text_event_apply_uses_shared_service_boundary(
             "errors": [],
         }
 
-    monkeypatch.setattr("halpha.cli.collect_text_event_data", fake_collect)
+    monkeypatch.setattr("halpha.cli.collect_research_data", fake_collect)
 
     exit_code = main(
         [
@@ -200,7 +200,7 @@ def test_data_collect_text_event_apply_uses_shared_service_boundary(
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert calls[0]["dry_run"] is False
+    assert calls[0]["apply"] is True
     assert calls[0]["source"] == "coindesk"
     assert "Halpha data collection apply succeeded." in output
     assert "data_type: text_event" in output
@@ -232,7 +232,65 @@ def test_data_collect_ohlcv_requires_symbol_and_timeframe(tmp_path: Path, capsys
 
     output = capsys.readouterr().out
     assert exit_code == 2
-    assert "data collect --data-type ohlcv requires --symbol and --timeframe." in output
+    assert "data collect --data-type ohlcv requires --source, --symbol and --timeframe." in output
+
+
+def test_data_collect_macro_calendar_apply_uses_configured_pipeline_without_source(
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_macro_config(tmp_path)
+    calls: list[dict[str, Any]] = []
+
+    def fake_collect(config: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        calls.append(kwargs)
+        return {
+            "schema_version": 1,
+            "artifact_type": "research_data_collection_result",
+            "mode": "apply",
+            "status": "succeeded",
+            "data_type": "macro_calendar",
+            "source": "configured",
+            "symbol": None,
+            "timeframe": None,
+            "requested_start": kwargs["requested_start"],
+            "requested_end": kwargs["requested_end"],
+            "plan": {"strategy": "configured_scope", "planned_fetch_windows": []},
+            "counts": {"raw_items": 2},
+            "artifacts": {"manifest": "runs/run-1/run_manifest.json"},
+            "warnings": [],
+            "errors": [],
+        }
+
+    monkeypatch.setattr("halpha.cli.collect_research_data", fake_collect)
+
+    exit_code = main(
+        [
+            "data",
+            "collect",
+            "--config",
+            str(config_path),
+            "--data-type",
+            "macro_calendar",
+            "--start",
+            "2026-06-01T00:00:00Z",
+            "--end",
+            "2026-06-03T00:00:00Z",
+            "--apply",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Halpha data collection apply succeeded." in output
+    assert "data_type: macro_calendar" in output
+    assert "source: configured" in output
+    assert calls[0]["data_type"] == "macro_calendar"
+    assert calls[0]["source"] is None
+    assert calls[0]["symbol"] is None
+    assert calls[0]["timeframe"] is None
+    assert calls[0]["apply"] is True
 
 
 def _write_config(tmp_path: Path) -> Path:
@@ -281,6 +339,37 @@ text:
     - name: coindesk
       type: rss
       url: https://example.com/rss.xml
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_macro_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: false
+macro_calendar:
+  enabled: true
+  source: federal_reserve_fomc
+  data_classes:
+    - central_bank_event
+  regions:
+    - US
+  lookback_days: 7
+  lookahead_days: 45
+text:
+  enabled: false
 report:
   title: Daily Market Brief
   language: zh-CN

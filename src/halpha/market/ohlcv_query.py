@@ -9,7 +9,12 @@ from halpha.data.collection_coverage import (
     read_collection_coverage_state,
     summarize_collection_coverage,
 )
-from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS, ohlcv_series_quality, quality_warning_messages
+from halpha.market.ohlcv_quality import (
+    OHLCV_TIMEFRAME_DURATIONS,
+    ohlcv_next_open_time,
+    ohlcv_series_quality,
+    quality_warning_messages,
+)
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.storage import display_path, runtime_root
 
@@ -60,6 +65,7 @@ def query_ohlcv_records(
         start_dt=start_dt,
         end_dt=end_dt,
         duration=duration,
+        timeframe=timeframe,
         as_of_dt=as_of_dt,
         end_inclusive=end_inclusive,
     )
@@ -108,7 +114,7 @@ def query_latest_ohlcv_records(
     eligible = [
         record
         for record in all_records
-        if _is_closed_candle(record, duration=duration, as_of_dt=as_of_dt)
+        if _is_closed_candle(record, timeframe=timeframe, as_of_dt=as_of_dt)
     ]
     selected = eligible[-lookback:] if eligible else []
     requested_start = selected[0]["open_time"] if selected else None
@@ -244,6 +250,7 @@ def _filter_records(
     start_dt: datetime,
     end_dt: datetime,
     duration: timedelta,
+    timeframe: str,
     as_of_dt: datetime | None,
     end_inclusive: bool,
 ) -> list[dict[str, Any]]:
@@ -257,7 +264,7 @@ def _filter_records(
                 continue
         elif open_time >= end_dt:
             continue
-        if not _is_closed_candle(record, duration=duration, as_of_dt=as_of_dt):
+        if not _is_closed_candle(record, timeframe=timeframe, as_of_dt=as_of_dt):
             continue
         selected.append(record)
     return sorted(selected, key=lambda item: str(item.get("open_time") or ""))
@@ -266,13 +273,13 @@ def _filter_records(
 def _is_closed_candle(
     record: dict[str, Any],
     *,
-    duration: timedelta,
+    timeframe: str,
     as_of_dt: datetime | None,
 ) -> bool:
     if as_of_dt is None:
         return True
     open_time = _parse_utc(str(record.get("open_time") or ""), "open_time")
-    return open_time + duration <= as_of_dt
+    return ohlcv_next_open_time(open_time, timeframe) <= as_of_dt
 
 
 def _apply_limit(records: list[dict[str, Any]], limit: int | None) -> tuple[list[dict[str, Any]], bool]:
@@ -308,6 +315,7 @@ def _missing_diagnostics(
         requested_start,
         requested_end,
         duration=duration,
+        timeframe=timeframe,
         as_of=as_of,
         end_inclusive=end_inclusive,
     )
@@ -448,6 +456,7 @@ def _expected_open_times(
     end: str,
     *,
     duration: timedelta,
+    timeframe: str,
     as_of: str | None,
     end_inclusive: bool,
 ) -> list[str]:
@@ -456,9 +465,9 @@ def _expected_open_times(
     as_of_dt = _parse_optional_utc(as_of, "as_of")
     expected = []
     while cursor < end_dt or (end_inclusive and cursor == end_dt):
-        if as_of_dt is None or cursor + duration <= as_of_dt:
+        if as_of_dt is None or ohlcv_next_open_time(cursor, timeframe) <= as_of_dt:
             expected.append(_iso(cursor))
-        cursor = cursor + duration
+        cursor = ohlcv_next_open_time(cursor, timeframe)
     return expected
 
 

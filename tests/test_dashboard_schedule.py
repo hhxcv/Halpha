@@ -4,12 +4,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 import threading
 import time
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
+from halpha.runtime.command_job_execution import CommandJobExecutionResult
 from halpha.runtime.command_jobs import CommandJobManager
 from halpha.runtime.command_job_store import CommandJobRepository
 from halpha.dashboard.schedule import DashboardScheduleManager
@@ -152,26 +154,25 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
     )
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    commands: list[list[str]] = []
-    captured_env: list[dict[str, str]] = []
+    captured_calls: list[dict[str, Any]] = []
+    stdout = "\n".join(
+        [
+            "Halpha run succeeded.",
+            "run_id: run-1",
+            "report: runs/run-1/report/report.md",
+            "manifest: runs/run-1/run_manifest.json",
+        ]
+    )
 
-    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
-        commands.append(command)
-        captured_env.append(dict(kwargs.get("env") or {}))
-        return _FakeProcess(
-            stdout="\n".join(
-                [
-                    "Halpha run succeeded.",
-                    "run_id: run-1",
-                    "report: runs/run-1/report/report.md",
-                    "manifest: runs/run-1/run_manifest.json",
-                ]
-            ),
-            stderr="",
-            returncode=0,
-        )
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard schedule jobs must use internal execution")
 
-    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_calls.append(kwargs)
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout)
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     client.post(
@@ -199,15 +200,14 @@ def test_dashboard_daily_report_schedule_manual_trigger_creates_visible_job(
         "schedule_id": "daily_report",
         "source": "daily_report_schedule",
     }
-    assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>", "--no-codex"]
-    assert captured_env
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_SOURCE"] == "Schedule"
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_INTENT"] == "run_no_codex"
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_JOB_ID"] == job_id
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_SCHEDULE_ID"] == "daily_report"
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_DISPATCH_KIND"] == "manual"
+    assert completed["command"] == ["internal", "run_no_codex"]
+    assert captured_calls
+    assert captured_calls[0]["run_trigger"]["source"] == "Schedule"
+    assert captured_calls[0]["run_trigger"]["intent"] == "run_no_codex"
+    assert captured_calls[0]["run_trigger"]["job_id"] == job_id
+    assert captured_calls[0]["run_trigger"]["schedule_id"] == "daily_report"
+    assert captured_calls[0]["run_trigger"]["dispatch_kind"] == "manual"
     assert schedule_response.json()["last_job_id"] == job_id
-    assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path), "--no-codex"]]
     assert str(tmp_path) not in trigger_response.text
     assert str(tmp_path) not in schedule_response.text
 
@@ -240,24 +240,25 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
 ) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    commands: list[list[str]] = []
+    captured_calls: list[dict[str, Any]] = []
+    stdout = "\n".join(
+        [
+            "Halpha run succeeded.",
+            "run_id: run-1",
+            "report: runs/run-1/report/report.md",
+            "manifest: runs/run-1/run_manifest.json",
+        ]
+    )
 
-    def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
-        commands.append(command)
-        return _FakeProcess(
-            stdout="\n".join(
-                [
-                    "Halpha run succeeded.",
-                    "run_id: run-1",
-                    "report: runs/run-1/report/report.md",
-                    "manifest: runs/run-1/run_manifest.json",
-                ]
-            ),
-            stderr="",
-            returncode=0,
-        )
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard schedule jobs must use internal execution")
 
-    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_calls.append(kwargs)
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout)
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
     client.post(
@@ -282,8 +283,10 @@ def test_dashboard_daily_report_schedule_confirmed_codex_trigger_creates_report_
         "schedule_id": "daily_report",
         "source": "daily_report_schedule",
     }
-    assert completed["command"] == ["python", "-m", "halpha", "run", "--config", "<external-config>"]
-    assert commands == [[commands[0][0], "-m", "halpha", "run", "--config", str(config_path)]]
+    assert completed["command"] == ["internal", "run"]
+    assert captured_calls[0]["run_trigger"]["source"] == "Schedule"
+    assert captured_calls[0]["run_trigger"]["intent"] == "run"
+    assert captured_calls[0]["run_trigger"]["job_id"] == job_id
 
 
 def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(

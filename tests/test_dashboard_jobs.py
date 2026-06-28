@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import threading
 import time
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -22,6 +23,7 @@ from halpha.runtime.command_job_commands import (
     CommandSpec,
     command_config_ref,
 )
+from halpha.runtime.command_job_execution import CommandJobExecutionResult
 from halpha.runtime.command_job_store import CommandJobRepository, CommandJobStoreError, apply_command_job_migrations
 from halpha.runtime.command_jobs import CommandJobManager, MAX_JOB_LOG_CHARS
 from halpha.runtime.mutation_lease import acquire_mutation_lease
@@ -892,15 +894,22 @@ def test_command_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) 
             "manifest: runs/run-api/run_manifest.json",
         ]
     )
-    captured_env: list[dict[str, str]] = []
+    captured_calls: list[dict[str, Any]] = []
 
-    def fake_popen(*args, **kwargs):  # noqa: ANN002, ANN003
-        captured_env.append(dict(kwargs.get("env") or {}))
-        return _FakeProcess(stdout=stdout, stderr="", returncode=0)
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard API jobs must use internal execution")
+
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_calls.append(kwargs)
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout)
 
     monkeypatch.setattr(
         "halpha.runtime.command_jobs.subprocess.Popen",
-        fake_popen,
+        fail_popen,
+    )
+    monkeypatch.setattr(
+        "halpha.runtime.command_jobs.execute_command_job",
+        fake_execute_command_job,
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -913,11 +922,13 @@ def test_command_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) 
     assert completed["intent"] == "run_no_codex"
     assert completed["requested_by"] == "Dashboard"
     assert completed["requester"] == {"source": "dashboard_api"}
+    assert completed["command"] == ["internal", "run_no_codex"]
+    assert completed["pid"] is None
     assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
-    assert captured_env
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_SOURCE"] == "Dashboard"
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_INTENT"] == "run_no_codex"
-    assert captured_env[0]["HALPHA_RUN_TRIGGER_JOB_ID"] == completed["job_id"]
+    assert captured_calls[0]["spec"].intent == "run_no_codex"
+    assert captured_calls[0]["run_trigger"]["source"] == "Dashboard"
+    assert captured_calls[0]["run_trigger"]["intent"] == "run_no_codex"
+    assert captured_calls[0]["run_trigger"]["job_id"] == completed["job_id"]
     assert str(tmp_path) not in create_response.text
 
 
@@ -931,9 +942,22 @@ def test_command_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypa
             "manifest: runs/backtests/run-api/manifest.json",
         ]
     )
+    captured_calls: list[dict[str, Any]] = []
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard API jobs must use internal execution")
+
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_calls.append(kwargs)
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout)
+
     monkeypatch.setattr(
         "halpha.runtime.command_jobs.subprocess.Popen",
-        lambda *args, **kwargs: _FakeProcess(stdout=stdout, stderr="", returncode=0),
+        fail_popen,
+    )
+    monkeypatch.setattr(
+        "halpha.runtime.command_jobs.execute_command_job",
+        fake_execute_command_job,
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -954,9 +978,45 @@ def test_command_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypa
     assert create_response.status_code == 200
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "backtest"
+    assert completed["command"] == ["internal", "backtest"]
+    assert completed["pid"] is None
+    assert captured_calls[0]["params"]["strategy_name"] == "tsmom_vol_scaled"
     assert completed["result_refs"]["strategy_backtest"] == "runs/backtests/run-api/strategy_backtest.json"
     assert completed["result_refs"]["manifest"] == "runs/backtests/run-api/manifest.json"
     assert str(tmp_path) not in create_response.text
+
+
+def test_command_job_manager_preserves_attached_internal_running_job(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    started = threading.Event()
+    release = threading.Event()
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("internal command job must not start a process")
+
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        started.set()
+        release.wait(timeout=2)
+        return CommandJobExecutionResult(exit_code=0, stdout="ok")
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
+    manager = CommandJobManager(config, config_path=config_path, execution_mode="internal")
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    assert started.wait(timeout=2)
+    running = manager.get_job(job["job_id"])
+
+    assert running["status"] == "running"
+    assert running["runtime_attached"] is True
+    assert running["process_alive"] is True
+    release.set()
+    completed = _wait_for_terminal(manager, job["job_id"])
+    assert completed["status"] == "succeeded"
 
 
 def test_command_job_manager_normalizes_result_refs_without_external_path_leakage(
@@ -1272,9 +1332,17 @@ def test_command_job_repository_surfaces_corrupt_database_without_private_paths(
 def test_command_job_api_lists_and_reads_jobs(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard API jobs must use internal execution")
+
     monkeypatch.setattr(
         "halpha.runtime.command_jobs.subprocess.Popen",
-        lambda *args, **kwargs: _FakeProcess(stdout="ok", stderr="", returncode=0),
+        fail_popen,
+    )
+    monkeypatch.setattr(
+        "halpha.runtime.command_jobs.execute_command_job",
+        lambda *args, **kwargs: CommandJobExecutionResult(exit_code=0, stdout="ok"),
     )
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 

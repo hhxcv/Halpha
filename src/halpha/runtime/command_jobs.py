@@ -24,6 +24,7 @@ from halpha.runtime.command_job_store import (
 )
 from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging
+from halpha.runtime.command_job_execution import execute_command_job
 from halpha.runtime.command_job_process import CommandJobProcess
 from halpha.runtime.command_job_process import CommandJobProcessError
 from halpha.runtime.command_job_process import launch_command_job_process
@@ -90,6 +91,7 @@ class CommandJobManager:
         config_path: Path,
         requested_by: str = "CLI",
         requester: dict[str, Any] | None = None,
+        execution_mode: str = "subprocess",
     ) -> None:
         self.config = config
         self.config_path = Path(config_path)
@@ -99,6 +101,9 @@ class CommandJobManager:
         self.jobs_root = Path.cwd() / COMMAND_JOB_LOG_ROOT_REF
         self.default_requested_by = _requested_by(requested_by, default="CLI")
         self.default_requester = _requester_metadata(requester)
+        if execution_mode not in {"subprocess", "internal"}:
+            raise ValueError("execution_mode must be subprocess or internal.")
+        self.execution_mode = execution_mode
         with suppress(OSError):
             configure_local_logging(config_path=self.config_path, config=config)
         self._command_builder = CommandJobBuilder(config, config_path=self.config_path, base=self.base)
@@ -106,6 +111,7 @@ class CommandJobManager:
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
         self._processes: dict[str, CommandJobProcess] = {}
+        self._internal_running_job_ids: set[str] = set()
         self._cancel_requested: set[str] = set()
         self._reconcile_diagnostic: dict[str, Any] | None = None
         self._reconcile_unattached_jobs()
@@ -155,10 +161,10 @@ class CommandJobManager:
 
         spec = job_command.spec
         command = job_command.command
-        command_preview = job_command.preview
+        command_preview = ["internal", intent] if self.execution_mode == "internal" else job_command.preview
         job["kind"] = spec.kind
         job["command"] = command_preview
-        job["cancellable"] = spec.cancellable
+        job["cancellable"] = spec.cancellable and self.execution_mode != "internal"
         job = self._save_job(job, event_type="queued")
         self._logger.info(
             "command job queued.",
@@ -239,6 +245,13 @@ class CommandJobManager:
                 return job
             job_process = self._processes.get(job_id)
             if job_process is None:
+                if self._is_internal_job_attached(job):
+                    job["runtime_attached"] = True
+                    job["process_alive"] = True
+                    warnings = job.setdefault("warnings", [])
+                    if isinstance(warnings, list):
+                        warnings.append("internal command job is running and cannot be cancelled.")
+                    return job
                 if self._persisted_process_identity_alive(job):
                     job["runtime_attached"] = False
                     job["process_alive"] = True
@@ -284,6 +297,10 @@ class CommandJobManager:
             return
 
         lease_context = lease if lease is not None else nullcontext()
+        if self.execution_mode == "internal":
+            self._run_internal_job(job, spec=spec, started_at=started_at, lease_context=lease_context)
+            return
+
         try:
             with lease_context:
                 process_env = lease.subprocess_env(os.environ) if lease is not None else dict(os.environ)
@@ -335,6 +352,25 @@ class CommandJobManager:
             )
             return
 
+        self._finish_subprocess_job(
+            job_id=job_id,
+            job=job,
+            spec=spec,
+            job_process=job_process,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+    def _finish_subprocess_job(
+        self,
+        *,
+        job_id: str,
+        job: dict[str, Any],
+        spec: CommandSpec,
+        job_process: CommandJobProcess,
+        stdout: str,
+        stderr: str,
+    ) -> None:
         finished_at = _utc_now()
         was_cancelled = job_id in self._cancel_requested
         if was_cancelled:
@@ -413,6 +449,123 @@ class CommandJobManager:
                 "kind": spec.kind,
                 "status": status,
                 "exit_code": exit_code,
+            },
+        )
+
+    def _run_internal_job(
+        self,
+        job: dict[str, Any],
+        *,
+        spec: CommandSpec,
+        started_at: str,
+        lease_context: Any,
+    ) -> None:
+        job_id = str(job.get("job_id") or "")
+        with self._lock:
+            self._internal_running_job_ids.add(job_id)
+            job.update(
+                {
+                    "status": "running",
+                    "started_at": started_at,
+                    "updated_at": started_at,
+                    "pid": None,
+                    "process_identity": {
+                        "schema_version": 1,
+                        "platform": "python",
+                        "strategy": "internal_thread",
+                        "manager_pid": os.getpid(),
+                        "verified": True,
+                        "private_values_embedded": False,
+                    },
+                    "process_termination": {
+                        "schema_version": 1,
+                        "status": "not_applicable",
+                        "strategy": "internal_thread",
+                        "confirmed_exit": True,
+                        "forced": False,
+                        "private_values_embedded": False,
+                    },
+                }
+            )
+            self._save_job(job, event_type="started")
+        try:
+            with lease_context:
+                result = execute_command_job(
+                    self.config,
+                    config_path=self.config_path,
+                    spec=spec,
+                    params=job.get("params") if isinstance(job.get("params"), dict) else {},
+                    run_trigger=_job_run_trigger(job),
+                )
+        except Exception as exc:
+            stdout = ""
+            stderr = self._redact_text(str(exc))
+            exit_code = 1
+            diagnostic = bounded_exception_diagnostic(exc, context={"phase": "internal_execution"})
+        else:
+            stdout = result.stdout
+            stderr = result.stderr
+            exit_code = result.exit_code
+            diagnostic = None
+
+        finished_at = _utc_now()
+        try:
+            job = self._repository.get_job(job_id) or job
+        except CommandJobStoreError:
+            return
+        stdout_ref, stdout_truncated, stdout_chars = self._write_log(job_id, "stdout.log", stdout)
+        stderr_ref, stderr_truncated, stderr_chars = self._write_log(job_id, "stderr.log", stderr)
+        result_refs = self._job_result_refs(stdout, spec=spec)
+        source_artifacts = [stdout_ref, stderr_ref]
+        for key, artifact_ref in result_refs.items():
+            if (
+                key not in {"output_dir", "run_id"}
+                and artifact_ref
+                and artifact_ref not in RESULT_REF_PLACEHOLDERS
+                and artifact_ref not in source_artifacts
+            ):
+                source_artifacts.append(artifact_ref)
+        status = "succeeded" if exit_code == 0 else "failed"
+        job.update(
+            {
+                "status": status,
+                "updated_at": finished_at,
+                "finished_at": finished_at,
+                "exit_code": exit_code,
+                "pid": None,
+                "logs": {
+                    "stdout_ref": stdout_ref,
+                    "stderr_ref": stderr_ref,
+                    "stdout_chars": stdout_chars,
+                    "stderr_chars": stderr_chars,
+                    "stdout_truncated": stdout_truncated,
+                    "stderr_truncated": stderr_truncated,
+                    "max_chars": MAX_JOB_LOG_CHARS,
+                },
+                "result_refs": result_refs,
+                "source_artifacts": source_artifacts,
+            }
+        )
+        if diagnostic is not None:
+            job["diagnostic"] = diagnostic
+        if status == "failed" and not job.get("errors"):
+            job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
+        try:
+            self._save_job(job, event_type=status)
+        finally:
+            with self._lock:
+                self._internal_running_job_ids.discard(job_id)
+        self._logger.log(
+            logging.INFO if status == "succeeded" else logging.WARNING,
+            "command job finished.",
+            extra={
+                "event": "command_job.finished",
+                "job_id": job_id,
+                "intent": job.get("intent"),
+                "kind": spec.kind,
+                "status": status,
+                "exit_code": exit_code,
+                "execution_mode": "internal",
             },
         )
 
@@ -618,6 +771,10 @@ class CommandJobManager:
             job["runtime_attached"] = True
             job["process_alive"] = True
             return job
+        if self._is_internal_job_attached(job):
+            job["runtime_attached"] = True
+            job["process_alive"] = True
+            return job
 
         latest = self._repository.get_job(job_id)
         if latest is not None and str(latest.get("status") or "").lower() != status:
@@ -641,6 +798,13 @@ class CommandJobManager:
         if not isinstance(identity, dict):
             return False
         return process_identity_alive(identity)
+
+    def _is_internal_job_attached(self, job: dict[str, Any]) -> bool:
+        job_id = str(job.get("job_id") or "")
+        identity = job.get("process_identity")
+        if not isinstance(identity, dict) or identity.get("strategy") != "internal_thread":
+            return False
+        return job_id in self._internal_running_job_ids
 
     def _mark_process_lost(self, job: dict[str, Any]) -> dict[str, Any]:
         status = str(job.get("status") or "").lower()

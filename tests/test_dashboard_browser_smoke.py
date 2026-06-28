@@ -88,6 +88,26 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
 
     test.use({viewport: {width: 1280, height: 900}});
 
+    async function chooseVisibleDateRange(page, triggerSelector) {
+      await page.click(triggerSelector);
+      const popover = page.locator(".range-picker-popover:not(.hidden)");
+      await expect(popover).toBeVisible({timeout: 5000});
+      const days = popover.locator("[data-range-day]");
+      const count = await days.count();
+      if (count < 2) throw new Error(`date range picker at ${triggerSelector} did not render selectable days`);
+      const firstDate = await days.nth(0).getAttribute("data-range-day");
+      const secondDate = await days.nth(1).getAttribute("data-range-day");
+      await days.nth(0).click();
+      await popover.locator(`[data-range-day="${secondDate}"]`).click();
+      const selectedCount = await popover.locator(".range-picker-day.selected").count();
+      if (selectedCount < 2) throw new Error(`date range picker at ${triggerSelector} did not highlight the selected range`);
+      await popover.locator("[data-range-start-time]").fill("00:00:00");
+      await popover.locator("[data-range-end-time]").fill("23:59:59");
+      await popover.locator("[data-range-apply]").click();
+      await expect(page.locator(".range-picker-popover:not(.hidden)")).toHaveCount(0);
+      return {firstDate, secondDate};
+    }
+
     test("primary dashboard pages navigate without loading or console failures", async ({ page }) => {
       const url = process.env.HALPHA_DASHBOARD_URL;
       if (!url) throw new Error("HALPHA_DASHBOARD_URL is required");
@@ -207,32 +227,58 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       await page.click('[data-view-target="strategies"]');
       await page.click('[data-strategy-tab="equity"]');
       await page.waitForSelector("#strategy-tab-content", {timeout: 5000});
-      await page.locator("#strategy-data-viewer").waitFor({state: "visible", timeout: 5000});
-      await page.fill("#strategy-data-source", "binance");
-      await page.fill("#strategy-data-symbol", "BTCUSDT");
-      await page.fill("#strategy-data-timeframe", "1d");
-      await page.fill("#strategy-data-start", "2026-06-01T00:00:00Z");
-      await page.fill("#strategy-data-end", "2026-06-02T00:00:00Z");
-      await page.click("#strategy-data-timeline");
-      await expect(page.locator("#strategy-data-coverage")).toContainText(/unknown|coverage|interval/i, {timeout: 10000});
-      await page.click("#strategy-data-plan");
-      await expect(page.locator("#strategy-data-plan-panel")).toContainText(/Strategy|Fetch windows|collection/i, {timeout: 10000});
-      await page.click("#strategy-data-export");
-      await expect(page.locator("#strategy-data-job-panel")).toContainText(/Export|storage_dir|failed|error/i, {timeout: 10000});
+      await page.locator("#strategy-workbench").waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator("#strategy-chart-symbol")).toBeVisible();
+      await expect(page.locator("#strategy-chart-timeframe")).toBeVisible();
+      await expect(page.locator("#strategy-chart-refresh")).toBeVisible();
+      await page.click('[data-strategy-operation-tab="collect"]');
+      await page.locator("#strategy-collect-timeline").waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator("#strategy-collect-preview")).toHaveCount(0);
+      await expect(page.locator("#strategy-collect-plan")).toHaveCount(0);
+      await expect(page.locator('[data-backtest-only="true"]').first()).toBeHidden();
+      await page.fill("#strategy-collect-source", "binance");
+      const collectRange = await chooseVisibleDateRange(page, "#strategy-collect-date-range");
+      await expect(page.locator("#strategy-collect-date-range")).toContainText(collectRange.firstDate);
+      const collectHiddenStart = await page.locator("#strategy-collect-start").evaluate((node) => node.value);
+      const collectHiddenEnd = await page.locator("#strategy-collect-end").evaluate((node) => node.value);
+      if (!collectHiddenStart.endsWith("T00:00:00Z") || !collectHiddenEnd.endsWith("T23:59:59Z")) {
+        throw new Error("strategy collect picker did not sync hidden start/end timestamps");
+      }
+      await page.click("#strategy-collect-refresh-timeline");
+      await expect(page.locator("#strategy-collect-timeline")).toContainText(/target|timeline|coverage|range/i, {timeout: 10000});
+      await page.click('[data-strategy-operation-tab="export"]');
+      await page.locator("#strategy-export-as-of").waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator("#strategy-export-format")).toBeVisible();
+      await chooseVisibleDateRange(page, "#strategy-export-date-range");
+      const exportHiddenStart = await page.locator("#strategy-export-start").evaluate((node) => node.value);
+      if (!exportHiddenStart.includes("T00:00:00Z")) throw new Error("strategy export picker did not sync hidden start timestamp");
       await page.click('[data-view-target="intelligence"]');
-      await page.click('[data-intel-tab="quality"]');
-      await page.waitForSelector("#intel-events", {timeout: 5000});
+      await page.waitForSelector("#intel-overview-panel:not(.hidden)", {timeout: 5000});
+      await expect(page.locator("#intel-overview-kpis")).toContainText(/High-impact events|Data quality/i, {timeout: 5000});
+      await expect(page.locator("#intel-data-timeline")).toHaveCount(0);
+      await expect(page.locator("#intel-data-preview")).toHaveCount(0);
+      await expect(page.locator("#intel-data-plan")).toHaveCount(0);
+      await expect(page.locator("#intel-data-export")).toHaveCount(0);
+      await expect(page.locator("#intel-data-format")).toHaveCount(0);
+      await expect(page.locator("#intel-data-plan-panel")).toHaveCount(0);
+      await page.click('[data-intel-tab="text_event"]');
       await page.locator("#intel-data-viewer").waitFor({state: "visible", timeout: 5000});
-      await page.fill("#intel-data-source", "all");
-      await page.fill("#intel-data-start", "2026-06-01T00:00:00Z");
-      await page.fill("#intel-data-end", "2026-06-02T00:00:00Z");
-      await page.click("#intel-data-timeline");
+      const intelCollectRange = await chooseVisibleDateRange(page, "#intel-collect-date-range");
+      await expect(page.locator("#intel-collect-date-range")).toContainText(intelCollectRange.firstDate);
+      const intelCollectHiddenEnd = await page.locator("#intel-collect-end").evaluate((node) => node.value);
+      if (!intelCollectHiddenEnd.endsWith("T23:59:59Z")) throw new Error("intelligence collect picker did not sync hidden end timestamp");
+      const intelPreviewRange = await chooseVisibleDateRange(page, "#intel-preview-date-range");
+      await expect(page.locator("#intel-preview-date-range")).toContainText(intelPreviewRange.firstDate);
+      const intelPreviewHiddenEnd = await page.locator("#intel-preview-end").evaluate((node) => node.value);
+      if (!intelPreviewHiddenEnd.endsWith("T23:59:59Z")) throw new Error("intelligence preview picker did not sync hidden end timestamp");
       await expect(page.locator("#intel-data-coverage")).toContainText(/unknown|coverage|interval/i, {timeout: 10000});
-      await page.click("#intel-data-preview");
       await expect(page.locator("#intel-data-preview-panel")).toContainText(/No records|history|preview|failed/i, {timeout: 10000});
-      await page.selectOption("#intel-data-type", "macro_calendar");
-      await expect(page.locator("#intel-data-collect")).toBeDisabled();
-      await expect(page.locator("#intel-data-plan-panel")).toContainText(/unsupported/i, {timeout: 5000});
+      await expect(page.locator("#intel-preview-category-filter")).toBeVisible({timeout: 5000});
+      await page.fill("#intel-preview-keyword", "bitcoin");
+      await expect(page.locator("#intel-data-preview-panel")).toContainText(/No records|history|preview|failed|query/i, {timeout: 10000});
+      await page.click('[data-intel-tab="macro_calendar"]');
+      await expect(page.locator("#intel-data-collect")).toBeEnabled();
+      await expect(page.locator("#intel-data-coverage")).toContainText(/unknown|coverage|interval/i, {timeout: 10000});
       await page.setViewportSize({width: 390, height: 820});
       await page.click('[data-view-target="overview"]');
       await page.waitForSelector("#overview-view:not(.hidden)", {timeout: 5000});

@@ -248,18 +248,25 @@ Dashboard pages should expose the current product shape through bounded views:
 - Reports: all generated reports, report metadata, real source refs, rendered
   Markdown previews, report generation, report download, and single-run report
   deletion.
-- Strategy lab: pipeline strategy artifacts, standalone backtests, standalone
-  experiments, gates, lifecycle state, warnings, and limitations. Standalone
-  backtests may render bounded candlestick bars, deterministic exposure
-  markers, and an equity curve from the `strategy_backtest.json`
-  `visualization` block. The dashboard must not reconstruct charts by dumping
-  full reusable OHLCV history by default.
+- Strategy lab: OHLCV shared-store review through the reusable candlestick
+  chart, pipeline strategy artifacts, standalone backtests, standalone
+  experiments, gates, lifecycle state, warnings, and limitations. The top
+  workbench separates Backtest, Collect, and Export controls into tabs. Without
+  a selected backtest, the candlestick chart is an OHLCV data viewer. With a
+  selected backtest, deterministic exposure markers are overlaid on the same
+  chart for the matching symbol and timeframe. Standalone backtests may also
+  provide bounded candlestick bars, deterministic exposure markers, and an
+  equity curve from the `strategy_backtest.json` `visualization` block. The
+  dashboard must not reconstruct charts by dumping full reusable OHLCV history
+  by default.
 - Monitor: monitor control, configured loop parameters, state-store cycle
   history, linked runs, alert archive aggregates, cooldown state, warnings,
   errors, and explicit daily-report schedule state.
-- Intelligence: source-aware non-OHLCV intelligence summaries, including text,
-  derivatives, on-chain, macro, outcomes, and data-quality tabs where the
-  corresponding artifacts exist.
+- Intelligence: config-source non-OHLCV intelligence review. The Overview tab
+  owns overall statistics such as high-impact events, source coverage, warnings,
+  new topics, and data quality. Category tabs map to implemented backend shared
+  data categories and expose automatic timeline plus preview inspection for the
+  selected preview time range.
 - Settings: config loading and switching, current config controls, validation,
   backup, and storage maintenance for single-run artifacts and shared stores.
 
@@ -283,8 +290,8 @@ Implemented data-viewer backend APIs use the shared contracts in
 
 - coverage state for store counts, ranges, timeline intervals, gaps, partial
   intervals, failed intervals, stale intervals, and warnings;
-- collection plans for dry-run previews before a user starts a data collection
-  job;
+- collection plans for backend collection efficiency before a user starts a data
+  collection job;
 - query adapters for bounded record previews;
 - export services for bounded downloads.
 
@@ -293,16 +300,16 @@ Implemented backend endpoints:
 - `GET /api/data/viewer/summary`: reusable store summaries with coverage,
   query, export, and collection capabilities.
 - `POST /api/data/viewer/timeline`: bounded coverage intervals for a selected
-  data type, source, identity, and time range.
+  data type, optional source or identity, and time range.
 - `POST /api/data/viewer/preview`: bounded records from the shared OHLCV and
   event-like query adapters.
 - `POST /api/data/viewer/export`: bounded export handoff through
   `halpha.data.data_export.export_data`; Dashboard-managed output paths stay
   under `data/exports/`.
-- `POST /api/data/viewer/collect/plan`: dry-run collection plan from coverage
-  state.
+- `POST /api/data/viewer/collect/plan`: collection plan from coverage state.
 - `POST /api/data/viewer/collect/jobs`: allowlisted `data collect --apply`
-  command-job submission for implemented OHLCV and text-event collection paths.
+  command-job submission for implemented OHLCV, text-event, and config-driven
+  event-like collection paths.
 
 Visible Dashboard controls for these endpoints are implemented in the Strategy
 Lab and Intelligence views. The controls call the backend APIs above and remain
@@ -325,12 +332,33 @@ Dashboard data-view state vocabulary must preserve these distinctions:
 Placement rules:
 
 - Strategy Lab owns OHLCV and quantitative shared-data review, including
-  coverage ranges, missing candles, bounded previews, dry-run collection plans,
-  collection job actions, and bounded downloads.
+  coverage ranges, missing candles, bounded candlestick previews, candle
+  tooltips, backtest operation overlays, collection job actions, and bounded
+  downloads. Its candlestick chart owns independent source, symbol, timeframe,
+  and chart-range controls. Its Collect tab coordinates multiple
+  symbol/timeframe targets by calling the shared single-target timeline and
+  collection APIs per target. It shows one timeline per selected target using
+  coverage-state colors and keeps the timeline range aligned with the current
+  collection range controls. Collection planning remains a backend/shared API
+  capability, but the Strategy Lab Collect tab does not expose a manual planning
+  or bounded-preview section.
 - Intelligence owns text-event and event-like shared-data review, including
-  text, derivatives, macro/calendar, on-chain flow, bounded previews, dry-run
-  collection plans, collection job actions, duplicate or topic annotations, and
-  bounded downloads.
+  text events, derivatives, macro/calendar, and on-chain flow. Each category tab
+  has a collection scope and a separate preview scope. The collection scope owns
+  the data type and collection time range, uses configured data channels rather
+  than user-visible source fields, and displays a coverage-state timeline for
+  that collection range without a manual timeline button. The preview scope owns
+  its independent time range, point-in-time cutoff, type/category filter, and
+  keyword filter; changing collection controls must not refresh or change the
+  preview scope. Preview renders bounded human-readable records in a
+  date-grouped list/content/properties layout without exposing raw Markdown,
+  JSON, or table dumps as the primary view. The preview container itself does
+  not scroll; the record list, main content, and property rail own their own
+  scroll regions. Category lists expose a calendar date jump that only enables
+  loaded dates with data, and list rendering can progressively reveal more
+  bounded preview records as the user scrolls. Intelligence keeps export and
+  collection-plan APIs available as backend capabilities but does not expose
+  export, manual planning, timeline, or preview buttons in the UI.
 
 Behavior rules:
 
@@ -338,7 +366,7 @@ Behavior rules:
   failed evidence.
 - `not_collected`, `partial`, `failed`, and unknown coverage must remain
   visibly different from `no_data`.
-- Dashboard dry-run controls must not fetch network data or write shared
+- Dashboard collection-planning APIs must not fetch network data or write shared
   stores.
 - Dashboard apply controls must submit an allowlisted command job or service
   request. They must not expose arbitrary shell execution.

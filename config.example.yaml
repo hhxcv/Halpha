@@ -16,14 +16,59 @@ market:
   symbols:
     - BTCUSDT
     - ETHUSDT
+    - BNBUSDT
+    - SOLUSDT
+    - XRPUSDT
+    - ADAUSDT
+    - DOGEUSDT
+    - AVAXUSDT
+    - LINKUSDT
+    - DOTUSDT
+    - TRXUSDT
+    - LTCUSDT
+    - BCHUSDT
+    - UNIUSDT
+    - AAVEUSDT
+    - NEARUSDT
+    - ATOMUSDT
+    - ETCUSDT
+    - FILUSDT
+    - ARBUSDT
+    - OPUSDT
   ohlcv:
     storage_dir: data/market/ohlcv
+    sources:
+      - binance
+      - binance_spot
+      - binance_usdm
+      - okx_spot
+      - okx_swap
+      - bybit_spot
+      - bybit_swap
+      - kucoin_spot
+      - kucoin_swap
+      - bitget_spot
+      - bitget_swap
+      - kraken_spot
+      - coinbase_spot
     timeframes:
-      - 1d
+      - 1m
+      - 5m
+      - 15m
       - 1h
+      - 4h
+      - 1d
+      - 1w
+      - 1month
     lookback:
-      1d: 500
+      1m: 1440
+      5m: 2016
+      15m: 2016
       1h: 720
+      4h: 720
+      1d: 500
+      1w: 260
+      1month: 120
   derivatives:
     enabled: false
 

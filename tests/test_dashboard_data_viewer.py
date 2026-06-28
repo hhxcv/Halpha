@@ -79,7 +79,9 @@ def test_dashboard_data_viewer_summary_and_timeline_show_coverage_states(tmp_pat
     assert stores["ohlcv"]["query_capability"]["implemented"] is True
     assert stores["ohlcv"]["export_capability"]["formats"] == ["csv", "parquet"]
     assert stores["ohlcv"]["collection_capability"]["apply_job"] is True
-    assert stores["macro_calendar"]["collection_capability"]["apply_job"] is False
+    assert stores["macro_calendar"]["collection_capability"]["apply_job"] is True
+    assert stores["onchain_flow"]["collection_capability"]["apply_job"] is True
+    assert stores["derivatives_market"]["collection_capability"]["apply_job"] is True
 
     assert timeline_response.status_code == 200
     timeline = timeline_response.json()
@@ -155,9 +157,43 @@ def test_dashboard_data_viewer_preview_uses_query_boundaries(tmp_path: Path) -> 
         "2026-06-02T00:00:00Z",
     ]
     assert ohlcv["query"]["matched_record_count"] == 2
-    assert ohlcv["omitted"]["record_limit"] == 100
+    assert ohlcv["omitted"]["record_limit"] == 1000
     assert [record["raw_item_id"] for record in text["records"]] == ["text:coindesk:btc-1"]
     assert text["query"]["filter_diagnostics"]["as_of_excluded_record_count"] == 1
+
+
+def test_dashboard_data_viewer_summary_uses_event_history_range_when_coverage_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    monkeypatch.setattr(
+        "halpha.dashboard.data_viewer.read_macro_calendar_history_records",
+        lambda _config_path: [
+            {
+                "source": "federal_reserve_fomc",
+                "data_class": "central_bank_event",
+                "event_name": "Federal Open Market Committee meeting",
+                "scheduled_at": "2026-01-28T00:00:00Z",
+            },
+            {
+                "source": "federal_reserve_fomc",
+                "data_class": "central_bank_event",
+                "event_name": "Federal Open Market Committee meeting",
+                "scheduled_at": "2026-12-09T00:00:00Z",
+            },
+        ],
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    payload = client.get("/api/data/viewer/summary").json()
+    stores = {store["data_type"]: store for store in payload["stores"]}
+
+    assert stores["macro_calendar"]["coverage"]["range_source"] == "history"
+    assert stores["macro_calendar"]["coverage"]["range_start"] == "2026-01-28T00:00:00Z"
+    assert stores["macro_calendar"]["coverage"]["range_end"] == "2026-12-09T00:00:01Z"
 
 
 def test_dashboard_data_viewer_export_calls_shared_service_and_rejects_unsafe_paths(
@@ -238,24 +274,38 @@ def test_dashboard_data_viewer_collection_plan_and_job_use_planner_and_allowlist
 ) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
-    commands: list[list[str]] = []
-    stdout = "\n".join(
-        [
-            "Halpha data collection apply succeeded.",
-            "collection_coverage: data/research/metadata/collection_coverage_state.json",
-            "research_data_catalog: data/research/metadata/research_data_catalog.json",
-        ]
-    )
+    calls: list[dict[str, Any]] = []
 
-    def fake_popen(command: list[str], *args: Any, **kwargs: Any) -> _FakeProcess:
-        commands.append(command)
-        return _FakeProcess(stdout=stdout, stderr="", returncode=0)
+    def fail_popen(*args: Any, **kwargs: Any) -> _FakeProcess:
+        raise AssertionError("dashboard data collection must use internal execution")
 
-    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fake_popen)
+    def fake_collect_research_data(config_arg: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        calls.append(kwargs)
+        return {
+            "status": "succeeded",
+            "mode": "apply",
+            "data_type": kwargs["data_type"],
+            "source": kwargs["source"],
+            "symbol": kwargs["symbol"],
+            "timeframe": kwargs["timeframe"],
+            "requested_start": kwargs["requested_start"],
+            "requested_end": kwargs["requested_end"],
+            "plan": {"strategy": "gap_only"},
+            "counts": {"planned_fetch_windows": 1},
+            "artifacts": {
+                "collection_coverage": "data/research/metadata/collection_coverage_state.json",
+                "research_data_catalog": "data/research/metadata/research_data_catalog.json",
+            },
+            "warnings": [],
+            "errors": [],
+        }
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_job_execution.collect_research_data", fake_collect_research_data)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
     request = {
         "data_type": "ohlcv",
-        "source": "binance",
+        "source": "okx_spot",
         "symbol": "BTCUSDT",
         "timeframe": "1d",
         "start": "2026-06-01T00:00:00Z",
@@ -280,33 +330,66 @@ def test_dashboard_data_viewer_collection_plan_and_job_use_planner_and_allowlist
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "data_collect"
     assert completed["requested_by"] == "Dashboard"
-    assert completed["command"] == [
-        "python",
-        "-m",
-        "halpha",
-        "data",
-        "collect",
-        "--config",
-        "<external-config>",
-        "--apply",
-        "--data-type",
-        "ohlcv",
-        "--source",
-        "binance",
-        "--symbol",
-        "BTCUSDT",
-        "--timeframe",
-        "1d",
-        "--start",
-        "2026-06-01T00:00:00Z",
-        "--end",
-        "2026-06-03T00:00:00Z",
-        "--max-exact-windows",
-        "2",
-    ]
+    assert completed["command"] == ["internal", "data_collect"]
+    assert completed["pid"] is None
+    assert completed["cancellable"] is False
     assert completed["result_refs"]["collection_coverage"] == "data/research/metadata/collection_coverage_state.json"
     assert completed["result_refs"]["research_data_catalog"] == "data/research/metadata/research_data_catalog.json"
-    assert commands
+    assert calls[0]["data_type"] == "ohlcv"
+    assert calls[0]["source"] == "okx_spot"
+    assert calls[0]["symbol"] == "BTCUSDT"
+    assert calls[0]["timeframe"] == "1d"
+    assert calls[0]["apply"] is True
+
+
+def test_dashboard_data_viewer_configured_intelligence_collection_job_omits_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    calls: list[dict[str, Any]] = []
+
+    def fail_popen(*args: Any, **kwargs: Any) -> _FakeProcess:
+        raise AssertionError("dashboard intelligence collection must use internal execution")
+
+    def fake_collect_research_data(config_arg: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        calls.append(kwargs)
+        return {
+            "status": "succeeded",
+            "mode": "apply",
+            "data_type": kwargs["data_type"],
+            "source": kwargs["source"],
+            "symbol": kwargs["symbol"],
+            "timeframe": kwargs["timeframe"],
+            "requested_start": kwargs["requested_start"],
+            "requested_end": kwargs["requested_end"],
+            "plan": {"strategy": "configured_scope"},
+            "counts": {"raw_items": 1},
+            "artifacts": {"manifest": "runs/run-1/run_manifest.json"},
+            "warnings": [],
+            "errors": [],
+        }
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_job_execution.collect_research_data", fake_collect_research_data)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    request = {
+        "data_type": "derivatives_market",
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-06-03T00:00:00Z",
+    }
+
+    plan = client.post("/api/data/viewer/collect/plan", json=request).json()
+    job_payload = client.post("/api/data/viewer/collect/jobs", json=request).json()
+    completed = _wait_for_api_terminal(client, job_payload["job"]["job_id"])
+
+    assert plan["plan"]["strategy"] == "configured_scope"
+    assert completed["status"] == "succeeded"
+    assert completed["command"] == ["internal", "data_collect"]
+    assert calls[0]["data_type"] == "derivatives_market"
+    assert calls[0]["source"] is None
+    assert completed["result_refs"]["manifest"] == "runs/run-1/run_manifest.json"
 
 
 def test_dashboard_data_viewer_rejects_unsupported_requests_before_process(
@@ -329,8 +412,7 @@ def test_dashboard_data_viewer_rejects_unsupported_requests_before_process(
     job = client.post(
         "/api/data/viewer/collect/jobs",
         json={
-            "data_type": "macro_calendar",
-            "source": "federal_reserve_fomc",
+            "data_type": "outcome",
             "start": "2026-06-01T00:00:00Z",
             "end": "2026-06-02T00:00:00Z",
         },
@@ -339,7 +421,7 @@ def test_dashboard_data_viewer_rejects_unsupported_requests_before_process(
     assert preview["status"] == "unsupported"
     assert "data_type must be one of" in preview["errors"][0]
     assert job["status"] == "unsupported"
-    assert "currently support ohlcv and text_event" in job["errors"][0]
+    assert "currently do not support this data type" in job["errors"][0]
 
 
 def _write_config(tmp_path: Path) -> Path:

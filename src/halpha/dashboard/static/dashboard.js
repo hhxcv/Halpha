@@ -74,7 +74,17 @@
       deletionPlan: null,
       strategies: null,
       selectedStrategyOutput: null,
+      strategyDataVisualization: null,
+      strategyOperationTab: "backtest",
       strategyWindow: "all",
+      strategyChartPreviewTimer: null,
+      strategyChartPreviewRequest: 0,
+      strategyCollectTargets: [],
+      strategyCollectTimelineTimer: null,
+      strategyCollectTimelineRequest: 0,
+      strategyBacktestLogs: [],
+      strategyCollectLogs: [],
+      strategyExportLogs: [],
       monitor: null,
       monitorCycles: [],
       monitorAlerts: null,
@@ -93,8 +103,19 @@
       dataViewerIntelPlan: null,
       dataViewerIntelJob: null,
       dataViewerIntelExport: null,
-      selectedIntelTab: "text",
+      selectedIntelTab: "overview",
       selectedIntelItem: null,
+      selectedIntelPreviewIndex: 0,
+      intelPreviewDisplayLimit: 30,
+      intelPreviewFetchLimit: 100,
+      intelPreviewLoadingMore: false,
+      intelPreviewKeyword: "",
+      intelPreviewCategory: "",
+      intelPreviewFilterTimer: null,
+      intelDatePickerOpen: false,
+      intelCalendarMonth: null,
+      dateRangePickerGlobalWired: false,
+      intelligenceViewerTimer: null,
       settingsProfile: null,
       settingsSection: "Market data",
       settingsChanges: {},
@@ -135,6 +156,8 @@
       metricCell,
       table,
       terminalJobStatus,
+      renderStrategyOhlcvPreview,
+      syncDateRangePicker: syncDateRangePickerByInputs,
     });
 
     function label(value) {
@@ -672,31 +695,501 @@
 
     function renderStrategyControls() {
       const options = state.strategies?.commands?.options || {};
-      fillSelect("#strategy-symbol", options.symbols || []);
-      fillSelect("#strategy-timeframe", options.timeframes || []);
-      fillSelect("#strategy-name", options.strategy_names || []);
+      const sources = options.sources || ["binance"];
+      const symbols = options.symbols || [];
+      const timeframes = options.timeframes || [];
+      fillDatalist("#strategy-ohlcv-source-options", sources);
+      fillSelect("#strategy-symbol", symbols);
+      fillSelect("#strategy-timeframe", timeframes);
+      fillSelect("#strategy-name", ["", ...(options.strategy_names || [])], {"": "OHLCV only"});
+      fillSelect("#strategy-chart-symbol", symbols);
+      fillSelect("#strategy-chart-timeframe", timeframes);
+      fillSelect("#strategy-collect-symbol", symbols);
+      fillSelect("#strategy-collect-timeframe", timeframes);
+      fillSelect("#strategy-export-symbol", symbols);
+      fillSelect("#strategy-export-timeframe", timeframes);
+      ensureStrategyCollectTargets(symbols, timeframes);
+      renderStrategyCollectTargets();
+      syncStrategyOperationTabs();
+      syncStrategyDataInputs(false);
+      syncStrategyRangePresets(false);
       ["#strategy-symbol", "#strategy-timeframe", "#strategy-name"].forEach((selector) => {
         document.querySelector(selector).onchange = () => {
           state.selectedStrategyOutput = null;
+          if (selector !== "#strategy-name") {
+            state.strategyDataVisualization = null;
+            syncStrategyDataInputs(true);
+            dataViewerWorkflow.ensureStrategyDefaultRange?.(true);
+            dataViewerWorkflow.renderStrategyViewer();
+            queueStrategyChartRefresh();
+            if (!state.strategyCollectTargets.length) {
+              ensureStrategyCollectTargets(symbols, timeframes);
+              renderStrategyCollectTargets();
+            }
+          }
+          strategyChart.resetCandlestickView("#backtest-chart");
           renderStrategies();
         };
       });
       document.querySelector("#strategy-range").value = state.strategyWindow;
       document.querySelector("#strategy-range").onchange = () => setStrategyWindow(document.querySelector("#strategy-range").value);
+      queueStrategyChartRefresh();
     }
 
-    function fillSelect(selector, values) {
+    function syncStrategyDataInputs(force = false) {
+      const symbol = document.querySelector("#strategy-symbol")?.value || "";
+      const timeframe = document.querySelector("#strategy-timeframe")?.value || "";
+      const source = defaultStrategySource();
+      setInputValue("#strategy-chart-source", source, false);
+      setInputValue("#strategy-chart-symbol", symbol, force);
+      setInputValue("#strategy-chart-timeframe", timeframe, force);
+      setInputValue("#strategy-export-symbol", symbol, force);
+      setInputValue("#strategy-export-timeframe", timeframe, force);
+      setInputValue("#strategy-collect-source", source, false);
+      setInputValue("#strategy-export-source", source, false);
+    }
+
+    function setInputValue(selector, value, force) {
       const node = document.querySelector(selector);
+      if (!node || !value) return;
+      if (force || !node.value) node.value = value;
+    }
+
+    function fillSelect(selector, values, labels = {}) {
+      const node = document.querySelector(selector);
+      if (!node) return;
       const current = node.value;
-      node.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+      node.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labels[value] || value)}</option>`).join("");
       if (values.includes(current)) node.value = current;
+    }
+
+    function fillDatalist(selector, values) {
+      const node = document.querySelector(selector);
+      if (!node) return;
+      node.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+    }
+
+    function defaultStrategySource() {
+      const sources = state.strategies?.commands?.options?.sources || [];
+      return sources[0] || "binance";
+    }
+
+    function ensureStrategyCollectTargets(symbols, timeframes) {
+      if (state.strategyCollectTargets.length) return;
+      const symbol = document.querySelector("#strategy-symbol")?.value || symbols[0] || "";
+      const timeframe = document.querySelector("#strategy-timeframe")?.value || timeframes[0] || "";
+      if (!symbol || !timeframe) return;
+      state.strategyCollectTargets = [{id: nextCollectTargetId(), symbol, timeframe}];
+    }
+
+    function nextCollectTargetId() {
+      return `target-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    }
+
+    function renderStrategyCollectTargets() {
+      const target = document.querySelector("#strategy-collect-targets");
+      if (!target) return;
+      target.innerHTML = state.strategyCollectTargets.length
+        ? state.strategyCollectTargets.map((item) => `
+          <div class="collect-target-row" data-collect-target-id="${escapeHtml(item.id)}">
+            <span class="collect-target-symbol">${escapeHtml(item.symbol)}</span>
+            <span class="collect-target-timeframe">${escapeHtml(item.timeframe)}</span>
+            <button class="icon-button" type="button" data-collect-target-remove="${escapeHtml(item.id)}" title="Remove target" aria-label="Remove ${escapeHtml(item.symbol)} ${escapeHtml(item.timeframe)}">x</button>
+          </div>`).join("")
+        : `<div class="message">Add at least one symbol and timeframe to collect OHLCV data.</div>`;
+      document.querySelectorAll("[data-collect-target-remove]").forEach((button) => {
+        button.onclick = () => {
+          const id = button.dataset.collectTargetRemove;
+          state.strategyCollectTargets = state.strategyCollectTargets.filter((item) => item.id !== id);
+          renderStrategyCollectTargets();
+          queueStrategyCollectTimelineRefresh();
+        };
+      });
+      queueStrategyCollectTimelineRefresh();
+    }
+
+    function addStrategyCollectTarget() {
+      const symbol = document.querySelector("#strategy-collect-symbol")?.value || "";
+      const timeframe = document.querySelector("#strategy-collect-timeframe")?.value || "";
+      if (!symbol || !timeframe) {
+        showToast("Select a symbol and timeframe first.");
+        return;
+      }
+      const duplicate = state.strategyCollectTargets.some((item) => item.symbol === symbol && item.timeframe === timeframe);
+      if (duplicate) {
+        showToast(`${symbol} ${timeframe} is already selected.`);
+        return;
+      }
+      state.strategyCollectTargets.push({id: nextCollectTargetId(), symbol, timeframe});
+      renderStrategyCollectTargets();
+    }
+
+    function strategyOhlcvCoverage() {
+      const stores = Array.isArray(state.dataViewerSummary?.stores) ? state.dataViewerSummary.stores : [];
+      return stores.find((store) => store.data_type === "ohlcv")?.coverage || {};
+    }
+
+    function syncStrategyRangePresets(force = false) {
+      applyRangePreset("#strategy-collect-range", "#strategy-collect-start", "#strategy-collect-end", force);
+      applyRangePreset("#strategy-export-range", "#strategy-export-start", "#strategy-export-end", force);
+    }
+
+    function presetDateRange(value) {
+      const coverage = strategyOhlcvCoverage();
+      const anchor = parseIsoDate(coverage.range_end) || new Date();
+      if (value === "custom") return null;
+      if (value === "all") {
+        if (coverage.range_start && coverage.range_end) {
+          return {start: coverage.range_start, end: coverage.range_end};
+        }
+        return {
+          start: toIsoSecond(new Date(anchor.getTime() - 7 * 24 * 3600 * 1000)),
+          end: toIsoSecond(anchor),
+        };
+      }
+      const days = value === "1d" ? 1 : value === "7d" ? 7 : value === "30d" ? 30 : value === "180d" ? 180 : 7;
+      return {
+        start: toIsoSecond(new Date(anchor.getTime() - days * 24 * 3600 * 1000)),
+        end: toIsoSecond(anchor),
+      };
+    }
+
+    function applyRangePreset(rangeSelector, startSelector, endSelector, force = false) {
+      const range = document.querySelector(rangeSelector);
+      const start = document.querySelector(startSelector);
+      const end = document.querySelector(endSelector);
+      if (!range || !start || !end) return;
+      if (!force && start.value && end.value) {
+        syncDateRangePickerByInputs(startSelector, endSelector);
+        return;
+      }
+      const value = range.value || "all";
+      const nextRange = presetDateRange(value);
+      if (!nextRange) {
+        syncDateRangePickerByInputs(startSelector, endSelector);
+        return;
+      }
+      start.value = nextRange.start;
+      end.value = nextRange.end;
+      syncDateRangePickerByInputs(startSelector, endSelector);
+    }
+
+    function wireDateRangePickers() {
+      document.querySelectorAll("[data-date-range-picker]").forEach((field) => {
+        if (field.dataset.rangePickerWired === "true") {
+          syncDateRangePickerLabel(field);
+          return;
+        }
+        field.dataset.rangePickerWired = "true";
+        const controls = dateRangePickerControls(field);
+        controls.trigger?.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const isOpening = controls.popover?.classList.contains("hidden");
+          closeDateRangePickers();
+          if (isOpening) {
+            initializeDateRangePickerState(field);
+            renderDateRangePicker(field);
+            controls.popover?.classList.remove("hidden");
+            controls.trigger?.setAttribute("aria-expanded", "true");
+          }
+        });
+        controls.popover?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          handleDateRangePickerClick(event, field);
+        });
+        controls.popover?.addEventListener("input", (event) => handleDateRangePickerInput(event, field));
+        syncDateRangePickerLabel(field);
+      });
+      if (!state.dateRangePickerGlobalWired) {
+        state.dateRangePickerGlobalWired = true;
+        document.addEventListener("click", (event) => {
+          if (!event.target.closest("[data-date-range-picker]")) {
+            closeDateRangePickers();
+          }
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") closeDateRangePickers();
+        });
+      }
+    }
+
+    function dateRangePickerControls(field) {
+      return {
+        start: document.getElementById(field.dataset.startInput || ""),
+        end: document.getElementById(field.dataset.endInput || ""),
+        preset: document.getElementById(field.dataset.presetInput || ""),
+        trigger: field.querySelector(".range-picker-trigger"),
+        label: field.querySelector("[data-range-picker-label]"),
+        popover: field.querySelector(".range-picker-popover"),
+      };
+    }
+
+    function syncDateRangePickerByInputs(startSelector, endSelector) {
+      const startId = selectorToId(startSelector);
+      const endId = selectorToId(endSelector);
+      document.querySelectorAll("[data-date-range-picker]").forEach((field) => {
+        if (field.dataset.startInput === startId && field.dataset.endInput === endId) {
+          syncDateRangePickerLabel(field);
+          if (!field.querySelector(".range-picker-popover")?.classList.contains("hidden")) {
+            renderDateRangePicker(field);
+          }
+        }
+      });
+    }
+
+    function selectorToId(selector) {
+      return String(selector || "").replace(/^#/, "");
+    }
+
+    function syncDateRangePickerLabel(field) {
+      const controls = dateRangePickerControls(field);
+      if (!controls.label) return;
+      const startLabel = compactUtcDateTime(controls.start?.value);
+      const endLabel = compactUtcDateTime(controls.end?.value);
+      controls.label.textContent = startLabel && endLabel ? `${startLabel} -> ${endLabel}` : "Choose range";
+      if (controls.trigger) {
+        controls.trigger.title = startLabel && endLabel ? `${startLabel} UTC to ${endLabel} UTC` : "Choose start and end time";
+        controls.trigger.setAttribute("aria-expanded", controls.popover?.classList.contains("hidden") ? "false" : "true");
+      }
+    }
+
+    function initializeDateRangePickerState(field) {
+      const controls = dateRangePickerControls(field);
+      const startDate = parseIsoDate(controls.start?.value);
+      const endDate = parseIsoDate(controls.end?.value);
+      field.dataset.pendingStart = startDate ? utcDateKey(startDate) : "";
+      field.dataset.pendingEnd = endDate ? utcDateKey(endDate) : "";
+      field.dataset.pendingStartTime = startDate ? utcTimeKey(startDate) : "00:00:00";
+      field.dataset.pendingEndTime = endDate ? utcTimeKey(endDate) : "23:59:59";
+      field.dataset.pendingPreset = "";
+      const monthKey = (field.dataset.pendingStart || field.dataset.pendingEnd || utcDateKey(new Date())).slice(0, 7);
+      field.dataset.visibleMonth = monthKey;
+    }
+
+    function renderDateRangePicker(field) {
+      const controls = dateRangePickerControls(field);
+      const popover = controls.popover;
+      if (!popover) return;
+      const monthKey = field.dataset.visibleMonth || utcDateKey(new Date()).slice(0, 7);
+      const [year, month] = monthKey.split("-").map((part) => Number(part));
+      const firstDay = new Date(Date.UTC(year, month - 1, 1));
+      const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      const leading = firstDay.getUTCDay();
+      const cells = [];
+      for (let index = 0; index < leading; index += 1) {
+        cells.push(`<span class="range-picker-day empty"></span>`);
+      }
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateKey = `${monthKey}-${String(day).padStart(2, "0")}`;
+        const classes = ["range-picker-day", dateRangeDayClass(field, dateKey)].filter(Boolean).join(" ");
+        cells.push(`<button class="${classes}" type="button" data-range-day="${escapeHtml(dateKey)}">${day}</button>`);
+      }
+      popover.innerHTML = `
+        <div class="range-picker-head">
+          <button class="ghost-button compact-button" type="button" data-range-month-shift="-1">Prev</button>
+          <strong>${escapeHtml(monthLabel(monthKey))}</strong>
+          <button class="ghost-button compact-button" type="button" data-range-month-shift="1">Next</button>
+        </div>
+        <div class="range-picker-presets">
+          ${rangeQuickButtons()}
+        </div>
+        <div class="range-picker-weekdays">${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => `<span>${day}</span>`).join("")}</div>
+        <div class="range-picker-grid">${cells.join("")}</div>
+        <div class="range-picker-times">
+          <label>Start time<input class="text-input" type="time" step="1" data-range-start-time value="${escapeHtml(normalizeTime(field.dataset.pendingStartTime, "00:00:00"))}"></label>
+          <label>End time<input class="text-input" type="time" step="1" data-range-end-time value="${escapeHtml(normalizeTime(field.dataset.pendingEndTime, "23:59:59"))}"></label>
+        </div>
+        <div class="range-picker-actions">
+          <span class="range-picker-hint">Click two dates to set one UTC range.</span>
+          <button class="ghost-button compact-button" type="button" data-range-cancel>Cancel</button>
+          <button class="primary-button compact-button" type="button" data-range-apply>Apply</button>
+        </div>
+      `;
+    }
+
+    function rangeQuickButtons() {
+      return [
+        ["1d", "1D"],
+        ["7d", "7D"],
+        ["30d", "30D"],
+        ["180d", "180D"],
+      ].map(([value, labelText]) => `<button class="ghost-button compact-button" type="button" data-range-quick="${value}">${labelText}</button>`).join("");
+    }
+
+    function dateRangeDayClass(field, dateKey) {
+      const start = field.dataset.pendingStart || "";
+      const end = field.dataset.pendingEnd || "";
+      if (!start && !end) return "";
+      const normalizedEnd = end || start;
+      const classes = [];
+      if (dateKey === start) classes.push("range-start");
+      if (dateKey === normalizedEnd) classes.push("range-end");
+      if (dateKey > start && dateKey < normalizedEnd) classes.push("in-range");
+      if (dateKey === start || dateKey === normalizedEnd || (dateKey > start && dateKey < normalizedEnd)) {
+        classes.push("selected");
+      }
+      return classes.join(" ");
+    }
+
+    function handleDateRangePickerClick(event, field) {
+      const monthButton = event.target.closest("[data-range-month-shift]");
+      if (monthButton) {
+        field.dataset.visibleMonth = shiftMonthKey(field.dataset.visibleMonth, Number(monthButton.dataset.rangeMonthShift) || 0);
+        renderDateRangePicker(field);
+        return;
+      }
+      const quickButton = event.target.closest("[data-range-quick]");
+      if (quickButton) {
+        applyDateRangeQuick(field, quickButton.dataset.rangeQuick);
+        renderDateRangePicker(field);
+        return;
+      }
+      const dayButton = event.target.closest("[data-range-day]");
+      if (dayButton) {
+        applyDateRangeDay(field, dayButton.dataset.rangeDay);
+        renderDateRangePicker(field);
+        return;
+      }
+      if (event.target.closest("[data-range-cancel]")) {
+        closeDateRangePickers();
+        return;
+      }
+      if (event.target.closest("[data-range-apply]")) {
+        applyDateRangePickerSelection(field);
+      }
+    }
+
+    function handleDateRangePickerInput(event, field) {
+      if (event.target.matches("[data-range-start-time]")) {
+        field.dataset.pendingStartTime = normalizeTime(event.target.value, "00:00:00");
+      }
+      if (event.target.matches("[data-range-end-time]")) {
+        field.dataset.pendingEndTime = normalizeTime(event.target.value, "23:59:59");
+      }
+    }
+
+    function applyDateRangeDay(field, dateKey) {
+      field.dataset.pendingPreset = "custom";
+      const start = field.dataset.pendingStart || "";
+      const end = field.dataset.pendingEnd || "";
+      if (!start || end) {
+        field.dataset.pendingStart = dateKey;
+        field.dataset.pendingEnd = "";
+        return;
+      }
+      if (dateKey < start) {
+        field.dataset.pendingStart = dateKey;
+        field.dataset.pendingEnd = start;
+        return;
+      }
+      field.dataset.pendingEnd = dateKey;
+    }
+
+    function applyDateRangeQuick(field, value) {
+      const days = value === "1d" ? 1 : value === "7d" ? 7 : value === "30d" ? 30 : value === "180d" ? 180 : 7;
+      const controls = dateRangePickerControls(field);
+      const anchor = parseIsoDate(controls.end?.value) || new Date();
+      const start = new Date(anchor.getTime() - days * 24 * 3600 * 1000);
+      field.dataset.pendingStart = utcDateKey(start);
+      field.dataset.pendingEnd = utcDateKey(anchor);
+      field.dataset.pendingStartTime = utcTimeKey(start);
+      field.dataset.pendingEndTime = utcTimeKey(anchor);
+      field.dataset.visibleMonth = field.dataset.pendingStart.slice(0, 7);
+      field.dataset.pendingPreset = value;
+    }
+
+    function applyDateRangePickerSelection(field) {
+      const controls = dateRangePickerControls(field);
+      if (!controls.start || !controls.end) return;
+      const startDate = field.dataset.pendingStart || field.dataset.pendingEnd;
+      const endDate = field.dataset.pendingEnd || field.dataset.pendingStart;
+      if (!startDate || !endDate) {
+        showToast("Choose at least one date for the time window.");
+        return;
+      }
+      const startValue = `${startDate}T${normalizeTime(field.dataset.pendingStartTime, "00:00:00")}Z`;
+      const endValue = `${endDate}T${normalizeTime(field.dataset.pendingEndTime, "23:59:59")}Z`;
+      if (Date.parse(startValue) > Date.parse(endValue)) {
+        showToast("Start time must be before end time.");
+        return;
+      }
+      controls.start.value = startValue;
+      controls.end.value = endValue;
+      if (controls.preset) {
+        controls.preset.value = field.dataset.pendingPreset && field.dataset.pendingPreset !== "custom"
+          ? field.dataset.pendingPreset
+          : "custom";
+      }
+      syncDateRangePickerLabel(field);
+      closeDateRangePickers();
+      dispatchInputChange(controls.start);
+      dispatchInputChange(controls.end);
+    }
+
+    function dispatchInputChange(input) {
+      input.dispatchEvent(new Event("change", {bubbles: true}));
+    }
+
+    function closeDateRangePickers() {
+      document.querySelectorAll("[data-date-range-picker]").forEach((field) => {
+        const controls = dateRangePickerControls(field);
+        controls.popover?.classList.add("hidden");
+        controls.trigger?.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    function utcDateKey(date) {
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+    }
+
+    function utcTimeKey(date) {
+      return `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}:${String(date.getUTCSeconds()).padStart(2, "0")}`;
+    }
+
+    function compactUtcDateTime(value) {
+      const date = parseIsoDate(value);
+      if (!date) return value ? String(value) : "";
+      return `${utcDateKey(date)} ${utcTimeKey(date)}`;
+    }
+
+    function normalizeTime(value, fallback) {
+      const raw = String(value || "").trim();
+      if (/^\d{2}:\d{2}:\d{2}$/.test(raw)) return raw;
+      if (/^\d{2}:\d{2}$/.test(raw)) return `${raw}:00`;
+      return fallback;
+    }
+
+    function monthLabel(monthKey) {
+      const [year, month] = String(monthKey || "").split("-").map((part) => Number(part));
+      if (!year || !month) return "Select range";
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      return `${monthNames[month - 1]} ${year}`;
+    }
+
+    function shiftMonthKey(monthKey, delta) {
+      const [year, month] = String(monthKey || utcDateKey(new Date()).slice(0, 7)).split("-").map((part) => Number(part));
+      const shifted = new Date(Date.UTC(year || new Date().getUTCFullYear(), (month || 1) - 1 + delta, 1));
+      return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function parseIsoDate(value) {
+      const time = value ? new Date(value) : null;
+      return time && Number.isFinite(time.getTime()) ? time : null;
+    }
+
+    function toIsoSecond(date) {
+      return date.toISOString().replace(/\.\d{3}Z$/, "Z");
     }
 
     function renderStrategies() {
       const outputs = strategyOutputs();
-      const selected = selectedStrategyOutput(outputs);
-      state.selectedStrategyOutput = selected;
+      const selected = state.strategyOperationTab === "backtest" ? selectedStrategyOutput(outputs) : null;
+      if (state.strategyOperationTab === "backtest") {
+        state.selectedStrategyOutput = selected;
+      }
       syncStrategyControls(selected);
+      syncStrategyDataInputs(false);
       const metrics = strategyMetrics(selected);
       document.querySelector("#strategy-metrics").innerHTML = [
         metricCell("Total return", metrics.totalReturn, "strategy"),
@@ -706,12 +1199,10 @@
         metricCell("Profit factor", metrics.profitFactor, "gross"),
         metricCell("Trades", metrics.trades, "count"),
       ].join("");
-      const vis = visibleBacktestVisualization(selected);
+      const vis = visibleStrategyVisualization(selected);
       const identityLabel = [vis.symbol, vis.timeframe].filter(Boolean).join(" - ");
-      document.querySelector("#strategy-chart-title").textContent = identityLabel ? `${identityLabel} - Halpha` : "No backtest visualization selected";
-      document.querySelector("#strategy-chart-meta").textContent = vis.strategy_name
-        ? `${vis.strategy_name} - ${vis.status || selected?.status || "partial"}`
-        : "Run a backtest or select an artifact with candlestick data.";
+      document.querySelector("#strategy-chart-title").textContent = identityLabel ? `${identityLabel} - Halpha` : "OHLCV data viewer";
+      document.querySelector("#strategy-chart-meta").textContent = strategyChartMeta(selected, vis);
       document.querySelector("#strategy-quote-label").textContent = strategyChart.quoteAsset(vis.symbol);
       document.querySelector("#strategy-window-label").textContent = strategyChart.strategyWindowLabel(
         vis,
@@ -719,26 +1210,81 @@
       );
       document.querySelector("#strategy-chart-clock").textContent = displayTimezone;
       syncStrategyWindowControls();
-      strategyChart.renderCandlestickSvg("#backtest-chart", vis);
+      strategyChart.renderCandlestickSvg("#backtest-chart", vis, {displayTimezone});
       renderStrategyParams(selected, vis);
       renderRecentTrades(vis);
       renderBacktestRuns(outputs);
       renderStrategyTab("trades");
     }
 
+    function strategyChartMeta(selected, vis) {
+      if (state.strategyOperationTab === "backtest" && selected && vis.strategy_name) {
+        return `${vis.strategy_name} - ${vis.status || selected?.status || "partial"}`;
+      }
+      const bars = Array.isArray(vis.bars) ? vis.bars.length : 0;
+      if (bars) {
+        const source = vis.source || document.querySelector("#strategy-chart-source")?.value || "shared store";
+        return `OHLCV only - ${formatNumber(bars)} candles from ${source}.`;
+      }
+      if (state.strategyOperationTab === "backtest") {
+        return "OHLCV-only chart. Select a backtest run to overlay operations.";
+      }
+      return "OHLCV-only chart. Collection and export settings do not select a backtest.";
+    }
+
+    function setStrategyOperationTab(tab) {
+      state.strategyOperationTab = ["backtest", "collect", "export"].includes(tab) ? tab : "backtest";
+      syncStrategyOperationTabs();
+      if (state.strategyOperationTab === "collect") {
+        syncStrategyRangePresets(false);
+        queueStrategyCollectTimelineRefresh();
+      } else if (state.strategyOperationTab === "export") {
+        syncStrategyRangePresets(false);
+      }
+      renderStrategies();
+    }
+
+    function syncStrategyOperationTabs() {
+      document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.strategyOperationTab === state.strategyOperationTab);
+      });
+      document.querySelectorAll("[data-strategy-operation-panel]").forEach((panel) => {
+        panel.classList.toggle("hidden", panel.dataset.strategyOperationPanel !== state.strategyOperationTab);
+      });
+      document.querySelectorAll("[data-backtest-only]").forEach((panel) => {
+        panel.classList.toggle("hidden", state.strategyOperationTab !== "backtest");
+      });
+      const paramsTitle = document.querySelector("#strategy-params-title");
+      if (paramsTitle) {
+        paramsTitle.textContent = state.strategyOperationTab === "backtest" ? "Strategy parameters" : "Chart parameters";
+      }
+    }
+
     function selectedStrategyOutput(outputs) {
       const selectedName = document.querySelector("#strategy-name").value;
       const selectedSymbol = document.querySelector("#strategy-symbol").value;
       const selectedTimeframe = document.querySelector("#strategy-timeframe").value;
-      const matchingControls = outputs.find((item) => {
+      if (!state.selectedStrategyOutput || !outputs.includes(state.selectedStrategyOutput)) {
+        return null;
+      }
+      const identity = strategyIdentity(state.selectedStrategyOutput);
+      const matchesControls = (!selectedName || identity.name === selectedName)
+        && (!selectedSymbol || identity.symbol === selectedSymbol)
+        && (!selectedTimeframe || identity.timeframe === selectedTimeframe);
+      if (matchesControls) return state.selectedStrategyOutput;
+      return null;
+    }
+
+    function filteredStrategyOutputs(outputs) {
+      const selectedName = document.querySelector("#strategy-name").value;
+      const selectedSymbol = document.querySelector("#strategy-symbol").value;
+      const selectedTimeframe = document.querySelector("#strategy-timeframe").value;
+      return outputs.filter((item) => {
         const identity = strategyIdentity(item);
         return (!selectedName || identity.name === selectedName)
           && (!selectedSymbol || identity.symbol === selectedSymbol)
           && (!selectedTimeframe || identity.timeframe === selectedTimeframe);
       });
-      if (matchingControls) return matchingControls;
-      if (state.selectedStrategyOutput && outputs.includes(state.selectedStrategyOutput)) return state.selectedStrategyOutput;
-      return outputs[0] || null;
     }
 
     function strategyIdentity(item) {
@@ -754,6 +1300,9 @@
 
     function syncStrategyControls(item) {
       const identity = strategyIdentity(item);
+      if (!item) {
+        return;
+      }
       setSelectIfPresent("#strategy-name", identity.name);
       setSelectIfPresent("#strategy-symbol", identity.symbol);
       setSelectIfPresent("#strategy-timeframe", identity.timeframe);
@@ -761,9 +1310,10 @@
 
     function setSelectIfPresent(selector, value) {
       const node = document.querySelector(selector);
-      if (!node || !value) return;
-      if (Array.from(node.options).some((option) => option.value === value)) {
-        node.value = value;
+      if (!node || value === null || value === undefined) return;
+      const raw = String(value);
+      if (Array.from(node.options).some((option) => option.value === raw)) {
+        node.value = raw;
       }
     }
 
@@ -808,6 +1358,85 @@
       };
     }
 
+    function visibleStrategyVisualization(item) {
+      return applyStrategyWindow(strategyVisualization(item), state.strategyWindow);
+    }
+
+    function strategyVisualization(item) {
+      const dataVis = state.strategyDataVisualization;
+      if (!item) {
+        return dataVis || emptyStrategyVisualization();
+      }
+      const backtestVis = backtestVisualization(item);
+      if (canOverlayBacktest(dataVis, backtestVis)) {
+        return {
+          ...dataVis,
+          chart_type: "candlestick_backtest",
+          status: backtestVis.status || item.status || dataVis.status,
+          strategy_name: backtestVis.strategy_name,
+          markers: Array.isArray(backtestVis.markers) ? backtestVis.markers : [],
+          equity_curve: Array.isArray(backtestVis.equity_curve) ? backtestVis.equity_curve : [],
+          warnings: [...(dataVis.warnings || []), ...(backtestVis.warnings || [])],
+        };
+      }
+      return backtestVis;
+    }
+
+    function emptyStrategyVisualization() {
+      return {
+        chart_type: "candlestick_data_viewer",
+        status: "missing",
+        strategy_name: "",
+        source: document.querySelector("#strategy-chart-source")?.value || defaultStrategySource(),
+        symbol: document.querySelector("#strategy-chart-symbol")?.value || document.querySelector("#strategy-symbol")?.value || "",
+        timeframe: document.querySelector("#strategy-chart-timeframe")?.value || document.querySelector("#strategy-timeframe")?.value || "",
+        bars: [],
+        markers: [],
+        equity_curve: [],
+      };
+    }
+
+    function canOverlayBacktest(dataVis, backtestVis) {
+      if (!dataVis || !Array.isArray(dataVis.bars) || !dataVis.bars.length) return false;
+      if (!backtestVis || !Array.isArray(backtestVis.markers)) return false;
+      return String(dataVis.symbol || "") === String(backtestVis.symbol || "")
+        && String(dataVis.timeframe || "") === String(backtestVis.timeframe || "");
+    }
+
+    function renderStrategyOhlcvPreview(payload, request, options = {}) {
+      state.strategyDataVisualization = ohlcvPreviewVisualization(payload, request);
+      if (options.clearBacktest !== false) {
+        state.selectedStrategyOutput = null;
+        setSelectIfPresent("#strategy-name", "");
+      }
+      strategyChart.resetCandlestickView("#backtest-chart");
+      renderStrategies();
+    }
+
+    function ohlcvPreviewVisualization(payload, request) {
+      const records = Array.isArray(payload?.records) ? payload.records : [];
+      return {
+        chart_type: "candlestick_data_viewer",
+        status: payload?.status || "ok",
+        strategy_name: "",
+        source: payload?.source || request?.source || defaultStrategySource(),
+        symbol: request?.symbol || payload?.identity?.symbol || "",
+        timeframe: request?.timeframe || payload?.identity?.timeframe || "",
+        bars: records.map((record) => ({
+          time: record.open_time,
+          open: record.open,
+          high: record.high,
+          low: record.low,
+          close: record.close,
+          volume: record.volume,
+        })).filter((bar) => bar.time),
+        markers: [],
+        equity_curve: [],
+        warnings: payload?.warnings || [],
+        query: payload?.query || {},
+      };
+    }
+
     function visibleBacktestVisualization(item) {
       return applyStrategyWindow(backtestVisualization(item), state.strategyWindow);
     }
@@ -832,6 +1461,7 @@
       const range = document.querySelector("#strategy-range");
       if (range) range.value = state.strategyWindow;
       syncStrategyWindowControls();
+      strategyChart.resetCandlestickView("#backtest-chart");
       renderStrategies();
     }
 
@@ -847,7 +1477,7 @@
 
     function renderStrategyParams(item, vis) {
       const inputs = item?.fields?.inputs || {};
-      const rows = {
+      const rows = item ? {
         "Momentum window": inputs.momentum_window,
         "Volume window": inputs.volume_window,
         "Symbol": vis.symbol || inputs.symbol,
@@ -856,24 +1486,51 @@
         "Take profit": inputs.take_profit,
         "Stake per trade": inputs.stake_per_trade,
         "Time in force": inputs.time_in_force,
+      } : {
+        "Source": vis.source,
+        "Symbol": vis.symbol,
+        "Timeframe": vis.timeframe,
+        "Candles": Array.isArray(vis.bars) ? vis.bars.length : 0,
+        "First candle": vis.bars?.[0]?.time,
+        "Latest candle": vis.bars?.[vis.bars.length - 1]?.time,
+        "Backtest overlay": "none",
+        "Status": vis.status,
       };
       document.querySelector("#strategy-params").innerHTML = Object.entries(rows).map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text(value))}</td></tr>`).join("");
     }
 
     function renderRecentTrades(vis) {
       const markers = (vis.markers || []).slice(-5).reverse();
-      document.querySelector("#recent-trades").innerHTML = markers.length ? `<div class="trade-list">${markers.map((marker) => `<div class="trade-row"><span class="status-pill ${String(marker.kind || "").toLowerCase().includes("exit") ? "failed" : "available"}">${escapeHtml(marker.label || marker.kind)}</span><strong>${escapeHtml(formatNumber(marker.price || ""))}</strong><small>${escapeHtml(formatTimestamp(marker.time))}</small></div>`).join("")}</div>` : `<div class="message">No recent trades available.</div>`;
+      document.querySelector("#recent-trades").innerHTML = markers.length ? `<div class="trade-list">${markers.map((marker) => `<div class="trade-row"><span class="status-pill ${String(marker.kind || "").toLowerCase().includes("exit") ? "failed" : "available"}">${escapeHtml(marker.label || marker.kind)}</span><strong>${escapeHtml(formatNumber(marker.price || ""))}</strong><small>${escapeHtml(formatTimestamp(marker.time))}</small></div>`).join("")}</div>` : `<div class="message">No operations on the current chart.</div>`;
     }
 
     function renderBacktestRuns(outputs) {
-      document.querySelector("#backtest-runs").innerHTML = outputs.slice(0, 4).map((item, index) => `
+      const filtered = filteredStrategyOutputs(outputs);
+      const clearButton = `<button class="report-row ${state.selectedStrategyOutput ? "" : "active"}" type="button" data-backtest-clear="true">
+          <span class="report-row-title">OHLCV only</span>
+          <span class="report-row-meta">No backtest overlay</span>
+        </button>`;
+      document.querySelector("#backtest-runs").innerHTML = clearButton + (filtered.slice(0, 4).map((item, index) => `
         <button class="report-row ${item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${index}">
           <span class="report-row-title">${escapeHtml(strategyName(item))}</span>
           <span class="report-row-meta">${escapeHtml(item.fields?.created_at || item.status || "latest")}</span>
-        </button>`).join("") || `<div class="message">No backtest runs yet.</div>`;
+        </button>`).join("") || `<div class="message">No matching backtest runs.</div>`);
+      document.querySelector("[data-backtest-clear]")?.addEventListener("click", () => {
+        state.selectedStrategyOutput = null;
+        setSelectIfPresent("#strategy-name", "");
+        strategyChart.resetCandlestickView("#backtest-chart");
+        queueStrategyChartRefresh({clearBacktest: true});
+        renderStrategies();
+      });
       document.querySelectorAll("[data-backtest-index]").forEach((button) => {
         button.addEventListener("click", () => {
-          state.selectedStrategyOutput = outputs[Number(button.dataset.backtestIndex)];
+          state.selectedStrategyOutput = filtered[Number(button.dataset.backtestIndex)];
+          const identity = strategyIdentity(state.selectedStrategyOutput);
+          setSelectIfPresent("#strategy-chart-symbol", identity.symbol);
+          setSelectIfPresent("#strategy-chart-timeframe", identity.timeframe);
+          setInputValue("#strategy-chart-source", defaultStrategySource(), false);
+          strategyChart.resetCandlestickView("#backtest-chart");
+          queueStrategyChartRefresh({clearBacktest: false});
           renderStrategies();
         });
       });
@@ -937,23 +1594,427 @@
 
     async function startBacktest() {
       const params = {
-        strategy_name: document.querySelector("#strategy-name").value,
-        symbol: document.querySelector("#strategy-symbol").value,
-        timeframe: document.querySelector("#strategy-timeframe").value,
+        strategy_name: document.querySelector("#strategy-name")?.value,
+        symbol: document.querySelector("#strategy-symbol")?.value,
+        timeframe: document.querySelector("#strategy-timeframe")?.value,
       };
       if (!params.strategy_name || !params.symbol || !params.timeframe) {
         showToast("Select a configured strategy, symbol, and timeframe first.");
         return;
       }
-      const job = await postJob("backtest", params);
-      showToast(`Backtest ${job.status}.`);
+      state.strategyBacktestLogs = [];
+      appendOperationLog("backtest", `Submitting ${params.strategy_name} on ${params.symbol} ${params.timeframe}.`);
+      renderOperationProgress("backtest", {
+        status: "running",
+        percent: 6,
+        headline: `Backtest ${params.symbol} ${params.timeframe}`,
+        logs: state.strategyBacktestLogs,
+      });
+      try {
+        const job = await postJob("backtest", params);
+        appendOperationLog("backtest", `Job ${job.job_id || "pending"} ${job.status || "created"}.`);
+        renderOperationProgress("backtest", {
+          status: job.status || "queued",
+          percent: jobStatusPercent(job.status),
+          headline: `Backtest ${params.symbol} ${params.timeframe}`,
+          logs: operationLogsWithJob("backtest", job),
+        });
+        if (job.job_id) {
+          const completed = await pollBacktestJob(job.job_id, params);
+          if (terminalJobStatus(completed.status)) {
+            await refreshStrategies();
+          }
+        }
+      } catch (error) {
+        appendOperationLog("backtest", `Failed: ${error.message}`);
+        renderOperationProgress("backtest", {
+          status: "failed",
+          percent: 100,
+          headline: "Backtest failed",
+          logs: state.strategyBacktestLogs,
+        });
+      }
+    }
+
+    async function pollBacktestJob(jobId, params) {
+      let latest = {job_id: jobId, status: "queued"};
+      let lastStatus = "";
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        await wait(3000);
+        latest = await fetchJob(jobId);
+        const status = latest.status || "unknown";
+        if (status !== lastStatus) {
+          appendOperationLog("backtest", `Job ${jobId} ${status}.`);
+          lastStatus = status;
+        }
+        renderOperationProgress("backtest", {
+          status,
+          percent: jobStatusPercent(status),
+          headline: `Backtest ${params.symbol} ${params.timeframe}`,
+          logs: operationLogsWithJob("backtest", latest),
+        });
+        if (terminalJobStatus(status)) {
+          showToast(`Backtest job ${status}.`);
+          return latest;
+        }
+      }
+      appendOperationLog("backtest", "Backtest is still running. Refresh jobs to inspect it later.");
+      renderOperationProgress("backtest", {
+        status: "running",
+        percent: 88,
+        headline: `Backtest ${params.symbol} ${params.timeframe}`,
+        logs: state.strategyBacktestLogs,
+      });
+      return latest;
+    }
+
+    function queueStrategyChartRefresh(options = {}) {
+      window.clearTimeout(state.strategyChartPreviewTimer);
+      state.strategyChartPreviewTimer = window.setTimeout(() => loadStrategyChartPreview({silent: true, ...options}), 220);
+    }
+
+    function strategyChartRequest({silent = false} = {}) {
+      const source = String(document.querySelector("#strategy-chart-source")?.value || "").trim();
+      const symbol = String(document.querySelector("#strategy-chart-symbol")?.value || "").trim();
+      const timeframe = String(document.querySelector("#strategy-chart-timeframe")?.value || "").trim();
+      const range = document.querySelector("#strategy-chart-range")?.value || "all";
+      const dateRange = presetDateRange(range);
+      if (!source || !symbol || !timeframe || !dateRange?.start || !dateRange?.end) {
+        if (!silent) showToast("Chart requires source, symbol, timeframe, and a stored date range.");
+        return null;
+      }
+      return {
+        data_type: "ohlcv",
+        source,
+        symbol,
+        timeframe,
+        start: dateRange.start,
+        end: dateRange.end,
+      };
+    }
+
+    async function loadStrategyChartPreview(options = {}) {
+      const request = strategyChartRequest(options);
+      if (!request) return;
+      const requestId = state.strategyChartPreviewRequest + 1;
+      state.strategyChartPreviewRequest = requestId;
+      const meta = document.querySelector("#strategy-chart-meta");
+      if (meta && !options.silent) {
+        meta.textContent = `Loading ${request.symbol} ${request.timeframe} candles.`;
+      }
+      try {
+        const payload = await postJson(endpoints.dataViewerPreview, {...request, limit: 1000, sort_order: "asc"});
+        if (requestId !== state.strategyChartPreviewRequest) return;
+        state.dataViewerStrategyPreview = payload;
+        const clearBacktest = options.clearBacktest ?? state.strategyOperationTab !== "backtest";
+        renderStrategyOhlcvPreview(payload, request, {clearBacktest});
+      } catch (error) {
+        if (requestId !== state.strategyChartPreviewRequest) return;
+        if (meta) {
+          meta.textContent = `Chart load failed: ${error.message}`;
+        }
+        if (!options.silent) showToast(`Chart load failed: ${error.message}`);
+      }
+    }
+
+    function strategyCollectTargets() {
+      return state.strategyCollectTargets.filter((target) => target.symbol && target.timeframe);
+    }
+
+    function strategyCollectBaseRequest({silent = false} = {}) {
+      const source = String(document.querySelector("#strategy-collect-source")?.value || "").trim();
+      const start = String(document.querySelector("#strategy-collect-start")?.value || "").trim();
+      const end = String(document.querySelector("#strategy-collect-end")?.value || "").trim();
+      if (!source || !start || !end) {
+        if (!silent) showToast("Collect requires source, start, and end.");
+        return null;
+      }
+      return {
+        data_type: "ohlcv",
+        source,
+        start,
+        end,
+        max_exact_windows: 3,
+        merge_gap_threshold_seconds: 0,
+        min_fetch_window_seconds: 0,
+      };
+    }
+
+    function strategyCollectRequest(target, options = {}) {
+      const base = strategyCollectBaseRequest(options);
+      if (!base) return null;
+      return {...base, symbol: target.symbol, timeframe: target.timeframe};
+    }
+
+    function queueStrategyCollectTimelineRefresh() {
+      window.clearTimeout(state.strategyCollectTimelineTimer);
+      state.strategyCollectTimelineTimer = window.setTimeout(refreshStrategyCollectTimeline, 220);
+    }
+
+    async function refreshStrategyCollectTimeline() {
+      const panel = document.querySelector("#strategy-collect-timeline");
+      if (!panel || state.strategyOperationTab !== "collect") return;
+      const targets = strategyCollectTargets();
+      const base = strategyCollectBaseRequest({silent: true});
+      if (!targets.length) {
+        panel.innerHTML = `<div class="message">Add at least one target to view collection coverage.</div>`;
+        return;
+      }
+      if (!base) {
+        panel.innerHTML = `<div class="message">Choose a source and time range to view collection coverage.</div>`;
+        return;
+      }
+      const requestId = state.strategyCollectTimelineRequest + 1;
+      state.strategyCollectTimelineRequest = requestId;
+      panel.innerHTML = `<div class="message">Loading ${escapeHtml(formatNumber(targets.length))} coverage timeline${targets.length === 1 ? "" : "s"}.</div>`;
+      const results = await Promise.all(targets.map(async (target) => {
+        const request = {...base, symbol: target.symbol, timeframe: target.timeframe};
+        try {
+          const payload = await postJson(endpoints.dataViewerTimeline, request);
+          return {target, request, payload};
+        } catch (error) {
+          return {target, request, payload: {status: "failed", intervals: [], errors: [error.message]}};
+        }
+      }));
+      if (requestId !== state.strategyCollectTimelineRequest) return;
+      panel.innerHTML = renderCollectTimelineResults(results, base);
+    }
+
+    function renderCollectTimelineResults(results, base) {
+      return results.map((item) => {
+        const intervals = Array.isArray(item.payload?.intervals) ? item.payload.intervals : [];
+        const errors = Array.isArray(item.payload?.errors) ? item.payload.errors : [];
+        const segments = intervals.length && !errors.length
+          ? intervals.map((interval) => collectTimelineSegment(interval, base)).join("")
+          : collectTimelineSegment({range_start: base.start, range_end: base.end, status: errors.length ? "failed" : "unknown"}, base);
+        const meta = errors.length
+          ? errors.slice(0, 2).join("; ")
+          : intervals.length
+          ? `${intervals.length} coverage interval${intervals.length === 1 ? "" : "s"}`
+          : "coverage is unknown for this range";
+        return `
+          <div class="collect-timeline-row">
+            <div class="collect-timeline-label"><strong>${escapeHtml(item.target.symbol)}</strong><span>${escapeHtml(item.target.timeframe)}</span></div>
+            <div class="collect-timeline-track" aria-label="${escapeHtml(item.target.symbol)} ${escapeHtml(item.target.timeframe)} coverage">${segments}</div>
+            <div class="collect-timeline-meta">${escapeHtml(meta)}</div>
+          </div>`;
+      }).join("");
+    }
+
+    function collectTimelineSegment(interval, base) {
+      const startMs = Date.parse(base.start);
+      const endMs = Date.parse(base.end);
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+        const status = String(interval.status || "unknown").toLowerCase();
+        return `<span class="collect-timeline-segment ${escapeHtml(statusClass(status))} ${escapeHtml(status)}" style="left:0%;width:100%;" title="${escapeHtml(status)}"></span>`;
+      }
+      const rawIntervalStart = Date.parse(interval.range_start || base.start);
+      const rawIntervalEnd = Date.parse(interval.range_end || base.end);
+      const intervalStart = Math.max(startMs, Number.isFinite(rawIntervalStart) ? rawIntervalStart : startMs);
+      const intervalEnd = Math.min(endMs, Number.isFinite(rawIntervalEnd) ? rawIntervalEnd : endMs);
+      const total = Math.max(1, endMs - startMs);
+      const left = Math.max(0, Math.min(100, (intervalStart - startMs) / total * 100));
+      const width = Math.max(1, Math.min(100 - left, (intervalEnd - intervalStart) / total * 100));
+      const status = String(interval.status || "unknown").toLowerCase();
+      const title = `${status}: ${formatTimestamp(interval.range_start || base.start)} to ${formatTimestamp(interval.range_end || base.end)}`;
+      return `<span class="collect-timeline-segment ${escapeHtml(statusClass(status))} ${escapeHtml(status)}" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%;" title="${escapeHtml(title)}"></span>`;
+    }
+
+    async function runStrategyCollectBatch() {
+      const targets = strategyCollectTargets();
+      if (!targets.length) {
+        showToast("Add at least one collection target first.");
+        return;
+      }
+      state.strategyCollectLogs = [];
+      appendOperationLog("collect", `Starting collection for ${targets.length} target${targets.length === 1 ? "" : "s"}.`);
+      let failed = false;
+      for (let index = 0; index < targets.length; index += 1) {
+        const target = targets[index];
+        const request = strategyCollectRequest(target);
+        if (!request) return;
+        appendOperationLog("collect", `Submitting ${target.symbol} ${target.timeframe}.`);
+        renderOperationProgress("collect", {
+          status: "running",
+          percent: Math.round(index / targets.length * 100),
+          headline: `Collecting ${target.symbol} ${target.timeframe}`,
+          logs: state.strategyCollectLogs,
+        });
+        try {
+          const payload = await postJson(endpoints.dataViewerCollectJobs, request);
+          const job = payload.job || payload;
+          appendOperationLog("collect", `${target.symbol} ${target.timeframe} job ${job.job_id || "pending"} ${job.status || "created"}.`);
+          if (job.job_id) {
+            const completed = await pollCollectJob(job.job_id, target, index, targets.length);
+            failed = failed || statusClass(completed.status) === "failed";
+          } else {
+            failed = true;
+          }
+        } catch (error) {
+          failed = true;
+          appendOperationLog("collect", `${target.symbol} ${target.timeframe} failed: ${error.message}`);
+          renderOperationProgress("collect", {
+            status: "failed",
+            percent: Math.round((index + 1) / targets.length * 100),
+            headline: `Collection failed for ${target.symbol} ${target.timeframe}`,
+            logs: state.strategyCollectLogs,
+          });
+        }
+      }
+      await dataViewerWorkflow.loadDataViewerSummary();
+      dataViewerWorkflow.renderStrategyViewer();
+      queueStrategyCollectTimelineRefresh();
+      renderOperationProgress("collect", {
+        status: failed ? "failed" : "succeeded",
+        percent: 100,
+        headline: failed ? "Collection finished with errors" : "Collection complete",
+        logs: state.strategyCollectLogs,
+      });
+    }
+
+    async function pollCollectJob(jobId, target, index, total) {
+      let latest = {job_id: jobId, status: "queued"};
+      let lastStatus = "";
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        await wait(3000);
+        latest = await fetchJob(jobId);
+        const status = latest.status || "unknown";
+        if (status !== lastStatus) {
+          appendOperationLog("collect", `${target.symbol} ${target.timeframe} ${status}.`);
+          lastStatus = status;
+        }
+        const percent = Math.round(((index + jobStatusFraction(status)) / total) * 100);
+        renderOperationProgress("collect", {
+          status,
+          percent,
+          headline: `Collecting ${target.symbol} ${target.timeframe}`,
+          logs: operationLogsWithJob("collect", latest),
+        });
+        if (terminalJobStatus(status)) return latest;
+      }
+      appendOperationLog("collect", `${target.symbol} ${target.timeframe} is still running.`);
+      return latest;
+    }
+
+    function strategyExportRequest() {
+      const source = String(document.querySelector("#strategy-export-source")?.value || "").trim();
+      const symbol = String(document.querySelector("#strategy-export-symbol")?.value || "").trim();
+      const timeframe = String(document.querySelector("#strategy-export-timeframe")?.value || "").trim();
+      const start = String(document.querySelector("#strategy-export-start")?.value || "").trim();
+      const end = String(document.querySelector("#strategy-export-end")?.value || "").trim();
+      const asOf = String(document.querySelector("#strategy-export-as-of")?.value || "").trim();
+      const format = String(document.querySelector("#strategy-export-format")?.value || "csv").trim();
+      if (!source || !symbol || !timeframe || !start || !end) {
+        showToast("Export requires source, symbol, timeframe, start, and end.");
+        return null;
+      }
+      return removeEmpty({
+        data_type: "ohlcv",
+        source,
+        symbol,
+        timeframe,
+        start,
+        end,
+        as_of: asOf,
+        format,
+      });
+    }
+
+    async function runStrategyExport() {
+      const request = strategyExportRequest();
+      if (!request) return;
+      state.strategyExportLogs = [];
+      appendOperationLog("export", `Exporting ${request.symbol} ${request.timeframe} as ${String(request.format).toUpperCase()}.`);
+      renderOperationProgress("export", {status: "running", percent: 18, headline: `Export ${request.symbol} ${request.timeframe}`, logs: state.strategyExportLogs});
+      const panel = document.querySelector("#strategy-data-job-panel");
+      panel.innerHTML = `<div class="message">Creating bounded export under data/exports.</div>`;
+      try {
+        const payload = await postJson(endpoints.dataViewerExport, request);
+        state.dataViewerStrategyExport = payload;
+        const result = payload.export || {};
+        appendOperationLog("export", `Export ${payload.status || result.status || "ok"}: ${result.output_path || "output path n/a"}.`);
+        panel.innerHTML = `
+          <div class="message">
+            <strong>Export ${escapeHtml(label(payload.status || result.status || "ok"))}</strong><br>
+            Output: ${escapeHtml(result.output_path || "n/a")}<br>
+            Records: ${escapeHtml(text(result.record_count, "0"))}${result.truncated ? " / truncated" : ""}
+          </div>
+          ${table(["Field", "Value"], [
+            ["Format", result.format || result.output_format || request.format || "n/a"],
+            ["Metadata", result.metadata_path || "embedded or n/a"],
+            ["As of", result.query_parameters?.as_of || "latest stored view"],
+            ["Coverage", result.coverage_diagnostics?.status || "n/a"],
+          ])}`;
+        renderOperationProgress("export", {status: payload.status || "succeeded", percent: 100, headline: "Export complete", logs: state.strategyExportLogs});
+      } catch (error) {
+        appendOperationLog("export", `Failed: ${error.message}`);
+        panel.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+        renderOperationProgress("export", {status: "failed", percent: 100, headline: "Export failed", logs: state.strategyExportLogs});
+      }
+    }
+
+    function appendOperationLog(kind, message) {
+      const key = kind === "backtest" ? "strategyBacktestLogs" : kind === "export" ? "strategyExportLogs" : "strategyCollectLogs";
+      const timeText = new Date().toLocaleTimeString(undefined, {hour12: false});
+      state[key].push(`${timeText} ${message}`);
+    }
+
+    function operationLogsWithJob(kind, job) {
+      const key = kind === "backtest" ? "strategyBacktestLogs" : kind === "export" ? "strategyExportLogs" : "strategyCollectLogs";
+      const logs = [...state[key]];
+      const warnings = Array.isArray(job?.warnings) ? job.warnings : [];
+      const errors = Array.isArray(job?.errors) ? job.errors : [];
+      Object.entries(job?.result_refs || {}).forEach(([name, ref]) => logs.push(`${name}: ${ref}`));
+      warnings.slice(0, 3).forEach((warning) => logs.push(`warning: ${warning}`));
+      errors.slice(0, 3).forEach((error) => logs.push(`error: ${error}`));
+      return logs;
+    }
+
+    function renderOperationProgress(kind, payload) {
+      const node = document.querySelector(`#strategy-${kind}-progress`);
+      if (!node) return;
+      const status = payload.status || "running";
+      const percent = Math.max(0, Math.min(100, Number(payload.percent) || 0));
+      const logs = Array.isArray(payload.logs) ? payload.logs : [];
+      const expanded = node.dataset.expanded === "true";
+      const visibleLogs = logs.slice().reverse();
+      node.className = `operation-progress ${expanded ? "expanded" : ""}`.trim();
+      node.innerHTML = `
+        <div class="operation-progress-top">
+          <div><strong>${escapeHtml(payload.headline || label(status))}</strong><span>${escapeHtml(label(status))}</span></div>
+          <span>${escapeHtml(`${Math.round(percent)}%`)}</span>
+        </div>
+        <div class="operation-progress-track"><span class="${escapeHtml(statusClass(status))}" style="width:${percent}%;"></span></div>
+        <div class="operation-log-header">
+          <span>${escapeHtml(visibleLogs[0] || "No log lines yet.")}</span>
+          <button class="ghost-button" type="button" data-operation-log-toggle="${escapeHtml(kind)}">${expanded ? "Collapse" : "Expand logs"}</button>
+        </div>
+        <pre class="operation-log ${expanded ? "expanded" : ""}">${escapeHtml(visibleLogs.join("\n") || "No log lines yet.")}</pre>`;
+      node.querySelector("[data-operation-log-toggle]")?.addEventListener("click", () => {
+        node.dataset.expanded = expanded ? "false" : "true";
+        renderOperationProgress(kind, payload);
+      });
+    }
+
+    function jobStatusFraction(status) {
+      const normalized = String(status || "").toLowerCase();
+      if (terminalJobStatus(normalized)) return 1;
+      if (normalized === "running") return 0.66;
+      if (normalized === "queued" || normalized === "created" || normalized === "creating") return 0.18;
+      if (normalized === "cancel_requested") return 0.85;
+      return 0.35;
+    }
+
+    function jobStatusPercent(status) {
+      return Math.round(jobStatusFraction(status) * 100);
     }
 
     function downloadSelectedOhlcv() {
-      const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
+      const selected = state.strategyOperationTab === "backtest" ? state.selectedStrategyOutput : null;
+      const vis = visibleStrategyVisualization(selected);
       const bars = Array.isArray(vis.bars) ? vis.bars : [];
       if (!bars.length) {
-        showToast("No OHLCV bars are available for the selected backtest.");
+        showToast("No OHLCV bars are available on the current chart.");
         return;
       }
       const columns = ["time", "open", "high", "low", "close", "volume"];
@@ -965,7 +2026,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${vis.symbol || "ohlcv"}-${vis.timeframe || "window"}-backtest-bars.csv`;
+      link.download = `${vis.symbol || "ohlcv"}-${vis.timeframe || "window"}-candles.csv`;
       link.click();
       URL.revokeObjectURL(url);
     }
@@ -976,6 +2037,10 @@
         return `"${textValue.replace(/"/g, '""')}"`;
       }
       return textValue;
+    }
+
+    function removeEmpty(value) {
+      return Object.fromEntries(Object.entries(value).filter((entry) => entry[1] !== null && entry[1] !== undefined && entry[1] !== ""));
     }
 
     async function refreshIntelligence() {
@@ -994,109 +2059,114 @@
     }
 
     function renderIntelligence() {
-      const allItems = intelligenceItems();
-      renderIntelFilterOptions(allItems);
-      const items = filteredIntelligenceItems(allItems);
-      if (!state.selectedIntelItem || !items.includes(state.selectedIntelItem)) {
-        state.selectedIntelItem = items[0] || null;
+      syncIntelTabs();
+      const overview = state.selectedIntelTab === "overview";
+      document.querySelector("#intel-overview-panel")?.classList.toggle("hidden", !overview);
+      document.querySelector("#intel-data-viewer")?.classList.toggle("hidden", overview);
+      if (overview) {
+        renderIntelligenceOverview();
+        return;
       }
-      renderIntelKpis(items);
-      renderIntelEvents(items);
-      renderIntelCharts(items);
-      renderIntelDetail(state.selectedIntelItem);
+      setSelectIfPresent("#intel-data-type", state.selectedIntelTab);
+      state.selectedIntelPreviewIndex = 0;
       dataViewerWorkflow.renderIntelligenceViewer();
     }
 
-    function renderIntelFilterOptions(items) {
-      fillSelect("#intel-asset", ["All assets", ...unique(items.flatMap((item) => intelAssets(item))).sort()]);
-      fillSelect("#intel-source", ["All sources", ...unique(items.flatMap((item) => item.sources || [])).sort()]);
-    }
-
-    function filteredIntelligenceItems(items) {
-      const asset = document.querySelector("#intel-asset").value;
-      const range = document.querySelector("#intel-range").value;
-      const severity = document.querySelector("#intel-severity").value;
-      const source = document.querySelector("#intel-source").value;
-      const sort = document.querySelector("#intel-sort").value;
-      const filtered = items.filter((item) => {
-        if (severity !== "All severities" && item.severity !== severity) return false;
-        if (source !== "All sources" && !(item.sources || []).includes(source)) return false;
-        if (asset !== "All assets" && !intelAssets(item).includes(asset)) return false;
-        if (!withinIntelRange(item.time, range)) return false;
-        return true;
-      });
-      return filtered.sort((left, right) => {
-        if (sort === "severity") {
-          return severityRank(right.severity) - severityRank(left.severity);
-        }
-        return timestampMs(right.time) - timestampMs(left.time);
+    function syncIntelTabs() {
+      const supportedTabs = ["overview", "text_event", "macro_calendar", "onchain_flow", "derivatives_market"];
+      if (!supportedTabs.includes(state.selectedIntelTab)) {
+        state.selectedIntelTab = "overview";
+      }
+      document.querySelectorAll("[data-intel-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.intelTab === state.selectedIntelTab);
       });
     }
 
-    function intelAssets(item) {
-      return unique(item?.assets || []);
+    function renderIntelligenceOverview() {
+      const items = intelligenceOverviewItems();
+      const stores = intelligenceStoreSummaries();
+      const healthyStores = stores.filter((store) => ["ok", "available"].includes(String(store.status || "").toLowerCase())).length;
+      const warningCount = stores.reduce((sum, store) => sum + (store.warnings || []).length + (store.errors || []).length, 0)
+        + items.filter((item) => item.severity === "Medium" || item.severity === "High").length;
+      document.querySelector("#intel-overview-kpis").innerHTML = [
+        metricCell("High-impact events", items.filter((item) => item.severity === "High").length, "from current intelligence artifacts"),
+        metricCell("Source coverage", unique([...items.flatMap((item) => item.sources || []), ...stores.flatMap((store) => store.source_artifacts || [])]).length, "source refs"),
+        metricCell("Warnings", warningCount, "warnings and errors"),
+        metricCell("New topics", unique(items.map((item) => item.category || item.title)).length, "artifact categories"),
+        metricCell("Data quality", `${healthyStores}/${stores.length || 0}`, "healthy shared stores"),
+      ].join("");
+      document.querySelector("#intel-overview-content").innerHTML = `
+        <section class="panel panel-pad">
+          <h2 class="panel-title">Shared store coverage</h2>
+          <div class="intel-store-card-grid">${stores.map(renderIntelStoreCard).join("") || `<div class="empty-state">No intelligence shared-store summaries are available.</div>`}</div>
+        </section>
+        <section class="panel panel-pad">
+          <h2 class="panel-title">Recent intelligence artifacts</h2>
+          <div class="intel-overview-list">${items.slice(0, 8).map(renderIntelOverviewItem).join("") || `<div class="empty-state">No intelligence artifact summaries are available.</div>`}</div>
+        </section>`;
     }
 
-    function withinIntelRange(value, range) {
-      if (range === "all") return true;
-      const days = range === "30d" ? 30 : range === "7d" ? 7 : null;
-      if (!days) return true;
-      const itemTime = timestampMs(value);
-      if (!Number.isFinite(itemTime)) return false;
-      return itemTime >= Date.now() - days * 24 * 3600 * 1000;
+    function intelligenceStoreSummaries() {
+      const stores = Array.isArray(state.dataViewerSummary?.stores) ? state.dataViewerSummary.stores : [];
+      return stores.filter((store) => ["text_event", "macro_calendar", "onchain_flow", "derivatives_market"].includes(store.data_type));
+    }
+
+    function renderIntelStoreCard(store) {
+      const coverage = store.coverage || {};
+      const summary = store.summary || {};
+      const records = summary.records ?? summary.record_count ?? coverage.record_count ?? 0;
+      const statusCounts = Object.entries(coverage.status_counts || {})
+        .filter((entry) => Number(entry[1]) > 0)
+        .map(([status, count]) => `${status}: ${formatNumber(count)}`)
+        .join(" / ");
+      return `
+        <article class="intel-store-card">
+          <div class="intel-store-card-head">
+            <strong>${escapeHtml(intelligenceTypeLabel(store.data_type))}</strong>
+            ${statusPill(store.status || coverage.state_status || "unknown")}
+          </div>
+          <div class="intel-store-card-metric">${escapeHtml(formatNumber(records))}</div>
+          <div class="muted">${escapeHtml(coverage.range_start && coverage.range_end ? `${formatTimestamp(coverage.range_start)} to ${formatTimestamp(coverage.range_end)}` : "No collected range")}</div>
+          <div class="tag-row">${statusCounts ? statusCounts.split(" / ").map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("") : `<span class="tag">coverage n/a</span>`}</div>
+        </article>`;
+    }
+
+    function renderIntelOverviewItem(item) {
+      return `
+        <article class="intel-overview-row">
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <span>${escapeHtml(item.summary || "No summary recorded.")}</span>
+          </div>
+          <div class="tag-row"><span class="status-pill ${item.severity === "High" ? "failed" : item.severity === "Medium" ? "warning" : "available"}">${escapeHtml(item.severity)}</span><span class="tag">${escapeHtml(item.category)}</span></div>
+        </article>`;
+    }
+
+    function intelligenceOverviewItems() {
+      const artifacts = Array.isArray(state.intelligence?.artifacts) ? state.intelligence.artifacts : [];
+      return artifacts.map((artifact) => ({
+        title: artifact.fields?.title || artifact.name || "Intelligence artifact",
+        severity: artifact.errors?.length ? "High" : artifact.warnings?.length ? "Medium" : "Low",
+        category: artifact.name || "artifact",
+        time: artifact.fields?.updated_at || artifact.fields?.created_at,
+        summary: [...(artifact.warnings || []), ...(artifact.errors || [])].join(" ") || `${label(artifact.status)} source-aware intelligence artifact.`,
+        sources: artifact.source_artifacts || [],
+        assets: intelligenceAssets(artifact),
+      })).sort((left, right) => timestampMs(right.time) - timestampMs(left.time));
+    }
+
+    function intelligenceTypeLabel(dataType) {
+      return {
+        text_event: "Text events",
+        macro_calendar: "Macro calendar",
+        onchain_flow: "On-chain flow",
+        derivatives_market: "Derivatives market",
+      }[dataType] || label(dataType);
     }
 
     function timestampMs(value) {
       const time = value ? new Date(value).getTime() : NaN;
       return Number.isFinite(time) ? time : 0;
-    }
-
-    function severityRank(value) {
-      return {Low: 1, Medium: 2, High: 3}[value] || 0;
-    }
-
-    function resetIntelFilters() {
-      document.querySelector("#intel-asset").value = "All assets";
-      document.querySelector("#intel-range").value = "all";
-      document.querySelector("#intel-severity").value = "All severities";
-      document.querySelector("#intel-source").value = "All sources";
-      document.querySelector("#intel-sort").value = "latest";
-      state.selectedIntelItem = null;
-      renderIntelligence();
-      showToast("Filters reset.");
-    }
-
-    function intelligenceItems() {
-      const artifacts = Array.isArray(state.intelligence?.artifacts) ? state.intelligence.artifacts : [];
-      if (state.selectedIntelTab === "quality") {
-        return state.stores.map((store) => ({
-          title: store.title || store.name,
-          severity: store.errors?.length ? "High" : store.warnings?.length ? "Medium" : "Low",
-          category: "Data quality",
-          time: store.fields?.updated_at,
-          summary: [...(store.warnings || []), ...(store.errors || [])].join(" ") || `${store.source_label || "Data store"} status.`,
-          sources: store.source_artifacts || [],
-          assets: [],
-          tags: [store.status || "unknown", store.source_label || store.state_scope || "store"],
-        }));
-      }
-      const filtered = artifacts.filter((artifact) => {
-        const title = `${artifact.name || ""} ${artifact.fields?.title || ""}`.toLowerCase();
-        return state.selectedIntelTab === "text" || title.includes(state.selectedIntelTab);
-      });
-      if (filtered.length) {
-        return filtered.map((artifact) => ({
-          title: artifact.fields?.title || artifact.name || "Intelligence artifact",
-          severity: artifact.errors?.length ? "High" : artifact.warnings?.length ? "Medium" : "Low",
-          category: artifact.name || "Text",
-          time: artifact.fields?.updated_at || artifact.fields?.created_at,
-          summary: [...(artifact.warnings || []), ...(artifact.errors || [])].join(" ") || `${label(artifact.status)} source-aware intelligence artifact.`,
-          sources: artifact.source_artifacts || [],
-          assets: intelligenceAssets(artifact),
-          tags: [artifact.status || "unknown"],
-        }));
-      }
-      return [];
     }
 
     function intelligenceAssets(artifact) {
@@ -1108,91 +2178,6 @@
         ...(Array.isArray(fields.assets) ? fields.assets : []),
       ];
       return unique(values).slice(0, 8);
-    }
-
-    function renderIntelKpis(items) {
-      document.querySelector("#intel-kpis").innerHTML = [
-        metricCell("High-impact events", items.filter((item) => item.severity === "High").length, "selected tab"),
-        metricCell("Source coverage", unique(items.flatMap((item) => item.sources || [])).length, "sources"),
-        metricCell("Warnings", items.filter((item) => item.severity === "Medium").length, "needs review"),
-        metricCell("New topics", items.length, "latest window"),
-        metricCell("Data quality", state.stores.filter((store) => store.status === "ok" || store.status === "available").length, "healthy stores"),
-      ].join("");
-    }
-
-    function renderIntelEvents(items) {
-      document.querySelector("#intel-events").innerHTML = items.map((item, index) => `
-        <button class="event-row ${item === state.selectedIntelItem ? "active" : ""}" type="button" data-intel-index="${index}">
-          <span class="muted">${escapeHtml(formatTimestamp(item.time).split(",")[1] || "")}</span>
-          <span><span class="event-title">${escapeHtml(item.title)}</span><span class="tag-row">${(item.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</span></span>
-          <span class="status-pill ${item.severity === "High" ? "failed" : item.severity === "Medium" ? "warning" : "available"}">${escapeHtml(item.severity)}</span>
-        </button>`).join("") || `<div class="empty-state">No intelligence items for this tab.</div>`;
-      document.querySelectorAll("[data-intel-index]").forEach((button) => button.addEventListener("click", () => {
-        state.selectedIntelItem = items[Number(button.dataset.intelIndex)];
-        renderIntelligence();
-      }));
-    }
-
-    function renderIntelCharts(items) {
-      document.querySelector("#intel-volume-chart").innerHTML = areaChart(items);
-      document.querySelector("#intel-severity-chart").innerHTML = donutChart(items);
-    }
-
-    function renderIntelDetail(item) {
-      if (!item) {
-        document.querySelector("#intel-detail").innerHTML = `<div class="empty-state">Select an intelligence item.</div>`;
-        return;
-      }
-      document.querySelector("#intel-detail").innerHTML = `
-        <div class="tag-row"><span class="status-pill ${item.severity === "High" ? "failed" : item.severity === "Medium" ? "warning" : "available"}">${escapeHtml(item.severity)}</span><span class="tag">${escapeHtml(item.category)}</span></div>
-        <h2 style="font-size: 20px; line-height: 1.25; margin: 16px 0 8px;">${escapeHtml(item.title)}</h2>
-        <p class="muted" style="line-height:1.55;">${escapeHtml(item.summary)}</p>
-        <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0;">
-          ${metricCell("Severity", item.severity, "")}
-          ${metricCell("Sources", (item.sources || []).length, "")}
-          ${metricCell("Updated", formatTimestamp(item.time), "")}
-        </div>
-        <h3>Evidence</h3>
-        <ul>${(item.sources || []).length ? item.sources.slice(0, 4).map((source) => `<li>${escapeHtml(source)}</li>`).join("") : `<li class="message">No source refs recorded for this item.</li>`}</ul>
-        <h3>Related assets</h3>
-        <div class="tag-row">${(item.assets || []).length ? item.assets.map((asset) => `<span class="tag">${escapeHtml(asset)}</span>`).join("") : `<span class="message">No related assets recorded.</span>`}</div>`;
-    }
-
-    function areaChart(items) {
-      const now = new Date();
-      const start = new Date(now.getTime() - 6 * 24 * 3600 * 1000);
-      const days = Array.from({length: 7}, (_, index) => {
-        const day = new Date(start.getTime() + index * 24 * 3600 * 1000);
-        return day.toISOString().slice(0, 10);
-      });
-      const counts = new Map(days.map((day) => [day, 0]));
-      (items || []).forEach((item) => {
-        const date = new Date(item.time);
-        if (Number.isNaN(date.getTime())) return;
-        const key = date.toISOString().slice(0, 10);
-        if (counts.has(key)) {
-          counts.set(key, counts.get(key) + 1);
-        }
-      });
-      const values = days.map((day) => counts.get(day) || 0);
-      if (!values.some((value) => value > 0)) {
-        return `<text x="260" y="126" text-anchor="middle" fill="#5d6675">No timestamped intelligence data</text>`;
-      }
-      const max = Math.max(...values, 1);
-      const points = values.map((value, index) => `${40 + index * 70},${210 - value / max * 150}`);
-      const area = `40,210 ${points.join(" ")} ${40 + (values.length - 1) * 70},210`;
-      return `<polygon points="${area}" fill="#dbeafe"></polygon><polyline points="${points.join(" ")}" fill="none" stroke="#3b82f6" stroke-width="3"></polyline>`;
-    }
-
-    function donutChart(items) {
-      if (!items.length) {
-        return `<text x="150" y="126" text-anchor="middle" fill="#5d6675">No intelligence items</text>`;
-      }
-      const total = items.length;
-      const high = items.filter((item) => item.severity === "High").length;
-      const medium = items.filter((item) => item.severity === "Medium").length;
-      const low = total - high - medium;
-      return `<circle cx="150" cy="120" r="68" fill="none" stroke="#e5e7eb" stroke-width="28"></circle><circle cx="150" cy="120" r="68" fill="none" stroke="#dc2626" stroke-width="28" stroke-dasharray="${high / total * 427} 427" transform="rotate(-90 150 120)"></circle><circle cx="150" cy="120" r="68" fill="none" stroke="#f59e0b" stroke-width="28" stroke-dasharray="${medium / total * 427} 427" stroke-dashoffset="${-(high / total * 427)}" transform="rotate(-90 150 120)"></circle><circle cx="150" cy="120" r="68" fill="none" stroke="#008575" stroke-width="28" stroke-dasharray="${low / total * 427} 427" stroke-dashoffset="${-((high + medium) / total * 427)}" transform="rotate(-90 150 120)"></circle><text x="150" y="116" text-anchor="middle" font-size="24" font-weight="800" fill="#111827">${total}</text><text x="150" y="138" text-anchor="middle" font-size="12" fill="#5d6675">Total</text>`;
     }
 
     async function refreshSettings() {
@@ -1911,6 +2896,7 @@
 
     function wireGlobalEvents() {
       dialogs.wire();
+      wireDateRangePickers();
       document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
         event.preventDefault();
         setHashView(node.dataset.viewTarget);
@@ -1927,6 +2913,39 @@
       document.querySelector("#download-report-button").addEventListener("click", downloadSelectedReport);
       document.querySelector("#run-backtest-button").addEventListener("click", startBacktest);
       document.querySelector("#download-ohlcv-button").addEventListener("click", downloadSelectedOhlcv);
+      document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
+        button.addEventListener("click", () => setStrategyOperationTab(button.dataset.strategyOperationTab));
+      });
+      document.querySelector("#strategy-collect-add-target").addEventListener("click", addStrategyCollectTarget);
+      document.querySelector("#strategy-collect-refresh-timeline").addEventListener("click", refreshStrategyCollectTimeline);
+      document.querySelector("#strategy-collect-run").addEventListener("click", runStrategyCollectBatch);
+      document.querySelector("#strategy-export-run").addEventListener("click", runStrategyExport);
+      document.querySelector("#strategy-chart-refresh").addEventListener("click", () => loadStrategyChartPreview({silent: false}));
+      ["#strategy-chart-source", "#strategy-chart-symbol", "#strategy-chart-timeframe"].forEach((selector) => {
+        document.querySelector(selector).addEventListener("change", () => {
+          state.selectedStrategyOutput = null;
+          setSelectIfPresent("#strategy-name", "");
+          queueStrategyChartRefresh({clearBacktest: true});
+        });
+      });
+      document.querySelector("#strategy-chart-range").addEventListener("change", () => {
+        queueStrategyChartRefresh();
+      });
+      document.querySelector("#strategy-collect-range").addEventListener("change", () => {
+        applyRangePreset("#strategy-collect-range", "#strategy-collect-start", "#strategy-collect-end", true);
+        queueStrategyCollectTimelineRefresh();
+      });
+      document.querySelector("#strategy-export-range").addEventListener("change", () => {
+        applyRangePreset("#strategy-export-range", "#strategy-export-start", "#strategy-export-end", true);
+      });
+      ["#strategy-collect-source", "#strategy-collect-start", "#strategy-collect-end"].forEach((selector) => {
+        document.querySelector(selector).addEventListener("change", queueStrategyCollectTimelineRefresh);
+      });
+      ["#strategy-collect-symbol", "#strategy-collect-timeframe"].forEach((selector) => {
+        document.querySelector(selector).addEventListener("change", () => {
+          if (!state.strategyCollectTargets.length) addStrategyCollectTarget();
+        });
+      });
       document.querySelectorAll("[data-strategy-window]").forEach((button) => button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow)));
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
       monitorWorkflow.wire();
@@ -1936,16 +2955,16 @@
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {
         state.selectedIntelTab = button.dataset.intelTab;
         state.selectedIntelItem = null;
-        document.querySelectorAll("[data-intel-tab]").forEach((node) => node.classList.toggle("active", node === button));
+        state.selectedIntelPreviewIndex = 0;
+        state.intelPreviewDisplayLimit = 30;
+        state.intelPreviewFetchLimit = 100;
+        state.intelPreviewLoadingMore = false;
+        state.intelPreviewKeyword = "";
+        state.intelPreviewCategory = "";
+        state.intelDatePickerOpen = false;
+        state.intelCalendarMonth = null;
         renderIntelligence();
       }));
-      ["#intel-asset", "#intel-range", "#intel-severity", "#intel-source", "#intel-sort"].forEach((selector) => {
-        document.querySelector(selector).addEventListener("change", () => {
-          state.selectedIntelItem = null;
-          renderIntelligence();
-        });
-      });
-      document.querySelector("#intel-reset").addEventListener("click", resetIntelFilters);
       document.querySelector("#settings-save").addEventListener("click", saveSettings);
       document.querySelector("#settings-backup").addEventListener("click", backupSettings);
       document.querySelector("#settings-load-config").addEventListener("click", loadSelectedConfig);

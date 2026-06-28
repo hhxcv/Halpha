@@ -103,6 +103,7 @@ class DashboardConfigContext:
                 config_path=config_path,
                 requested_by="Dashboard",
                 requester={"source": "dashboard_api"},
+                execution_mode="internal",
             )
             self.schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=self.job_manager)
             if persist:

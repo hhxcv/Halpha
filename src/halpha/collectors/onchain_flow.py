@@ -25,8 +25,34 @@ DEFILLAMA_STABLECOINS_SOURCE = "defillama_stablecoins"
 BLOCKCHAIN_COM_CHARTS_SOURCE = "blockchain_com_charts"
 DEFILLAMA_STABLECOIN_CHARTS_URL = "https://stablecoins.llama.fi/stablecoincharts/all"
 BLOCKCHAIN_CHARTS_BASE_URL = "https://api.blockchain.info/charts"
-CHAIN_ACTIVITY_CHART = "n-transactions"
-NETWORK_CONGESTION_CHART = "mempool-size"
+CHAIN_ACTIVITY_CHART_SPECS = (
+    {
+        "chart_name": "n-transactions",
+        "endpoint": "blockchain_chart_n_transactions",
+        "metric_name": "transaction_count",
+        "unit_name": "transactions",
+    },
+    {
+        "chart_name": "estimated-transaction-volume",
+        "endpoint": "blockchain_chart_estimated_transaction_volume",
+        "metric_name": "estimated_transaction_volume_btc",
+        "unit_name": "BTC",
+    },
+)
+NETWORK_CONGESTION_CHART_SPECS = (
+    {
+        "chart_name": "mempool-size",
+        "endpoint": "blockchain_chart_mempool_size",
+        "metric_name": "mempool_size_bytes",
+        "unit_name": "bytes",
+    },
+    {
+        "chart_name": "mempool-count",
+        "endpoint": "blockchain_chart_mempool_count",
+        "metric_name": "mempool_transaction_count",
+        "unit_name": "transactions",
+    },
+)
 REQUEST_TIMEOUT_SECONDS = 20
 
 
@@ -92,26 +118,20 @@ def collect_onchain_flow_raw(
     if "stablecoin_supply" in data_classes:
         _collect_stablecoin_supply(raw, onchain_flow, window_start=window_start, proxy_url=proxy_url)
     if "chain_activity" in data_classes:
-        _collect_blockchain_chart(
+        _collect_blockchain_charts(
             raw,
             onchain_flow,
             data_class="chain_activity",
-            chart_name=CHAIN_ACTIVITY_CHART,
-            endpoint="blockchain_chart_n_transactions",
-            metric_name="transaction_count",
-            unit_name="transactions",
+            chart_specs=CHAIN_ACTIVITY_CHART_SPECS,
             window_start=window_start,
             proxy_url=proxy_url,
         )
     if "network_congestion" in data_classes:
-        _collect_blockchain_chart(
+        _collect_blockchain_charts(
             raw,
             onchain_flow,
             data_class="network_congestion",
-            chart_name=NETWORK_CONGESTION_CHART,
-            endpoint="blockchain_chart_mempool_size",
-            metric_name="mempool_size_bytes",
-            unit_name="bytes",
+            chart_specs=NETWORK_CONGESTION_CHART_SPECS,
             window_start=window_start,
             proxy_url=proxy_url,
         )
@@ -186,15 +206,12 @@ def _collect_stablecoin_supply(
     )
 
 
-def _collect_blockchain_chart(
+def _collect_blockchain_charts(
     raw: dict[str, Any],
     onchain_flow: dict[str, Any],
     *,
     data_class: str,
-    chart_name: str,
-    endpoint: str,
-    metric_name: str,
-    unit_name: str,
+    chart_specs: tuple[dict[str, str], ...],
     window_start: datetime,
     proxy_url: str | None,
 ) -> None:
@@ -204,64 +221,84 @@ def _collect_blockchain_chart(
                 source=BLOCKCHAIN_COM_CHARTS_SOURCE,
                 data_class=data_class,
                 status="skipped",
-                endpoint=endpoint,
+                endpoint=f"blockchain_charts_{data_class}",
                 reason="bitcoin chain is not configured.",
             )
         )
         return
 
-    source_url = _blockchain_chart_url(onchain_flow, data_class=data_class, chart_name=chart_name)
-    records: list[dict[str, Any]] = []
+    records_by_time: dict[str, dict[str, Any]] = {}
     errors: list[dict[str, Any]] = []
     parsed_count = 0
-    try:
-        payload = _request_json(source_url, proxy_url=proxy_url)
-        if not isinstance(payload, dict):
-            raise OnchainFlowCollectionError(f"{data_class} response must be a JSON object.")
-        values = payload.get("values")
-        if not isinstance(values, list):
-            raise OnchainFlowCollectionError(f"{data_class} response values must be a list.")
-        parsed_count = len(values)
-        chart_unit = str(payload.get("unit") or unit_name)
-        chart_title = str(payload.get("name") or chart_name)
-        for entry in values:
-            if not isinstance(entry, dict):
-                continue
-            try:
-                record = _blockchain_chart_record(
-                    entry,
+    source_urls: dict[str, str] = {}
+    request_endpoints = []
+
+    for index, spec in enumerate(chart_specs):
+        chart_name = spec["chart_name"]
+        endpoint = spec["endpoint"]
+        metric_name = spec["metric_name"]
+        unit_name = spec["unit_name"]
+        source_url = _blockchain_chart_url(
+            onchain_flow,
+            data_class=data_class,
+            chart_name=chart_name,
+            use_configured_url=index == 0,
+        )
+        source_urls[endpoint] = source_url
+        request_endpoints.append(endpoint)
+        try:
+            payload = _request_json(source_url, proxy_url=proxy_url)
+            if not isinstance(payload, dict):
+                raise OnchainFlowCollectionError(f"{data_class} response must be a JSON object.")
+            values = payload.get("values")
+            if not isinstance(values, list):
+                raise OnchainFlowCollectionError(f"{data_class} response values must be a list.")
+            parsed_count += len(values)
+            chart_unit = str(payload.get("unit") or unit_name)
+            chart_title = str(payload.get("name") or chart_name)
+            for entry in values:
+                if not isinstance(entry, dict):
+                    continue
+                try:
+                    as_of, metric_value = _blockchain_chart_metric(
+                        entry,
+                        data_class=data_class,
+                        metric_name=metric_name,
+                    )
+                except (TypeError, ValueError) as exc:
+                    errors.append(
+                        _parse_error(
+                            source=BLOCKCHAIN_COM_CHARTS_SOURCE,
+                            endpoint=endpoint,
+                            data_class=data_class,
+                            message=str(exc),
+                            raw_fields=_bounded_raw_fields(entry),
+                        )
+                    )
+                    continue
+                if _parse_timestamp(as_of) < window_start:
+                    continue
+                record = records_by_time.setdefault(as_of, _blockchain_chart_base_record(data_class, as_of))
+                record["metrics"][metric_name] = metric_value
+                record["units"][metric_name] = unit_name
+                record["raw_fields"]["source_urls"][endpoint] = source_url
+                record["raw_fields"]["chart_names"][endpoint] = chart_name
+                record["raw_fields"]["chart_titles"][endpoint] = chart_title
+                record["raw_fields"]["chart_units"][endpoint] = chart_unit
+                record["raw_fields"]["source_timestamps"][endpoint] = entry.get("x")
+                record["raw_fields"]["raw_values"][metric_name] = entry.get("y")
+        except OnchainFlowCollectionError as exc:
+            errors.append(
+                _collector_error(
+                    source=BLOCKCHAIN_COM_CHARTS_SOURCE,
                     data_class=data_class,
+                    message=str(exc),
                     endpoint=endpoint,
-                    metric_name=metric_name,
-                    unit_name=chart_unit,
-                    chart_name=chart_name,
-                    chart_title=chart_title,
                     source_url=source_url,
                 )
-            except (TypeError, ValueError) as exc:
-                errors.append(
-                    _parse_error(
-                        source=BLOCKCHAIN_COM_CHARTS_SOURCE,
-                        endpoint=endpoint,
-                        data_class=data_class,
-                        message=str(exc),
-                        raw_fields=_bounded_raw_fields(entry),
-                    )
-                )
-                continue
-            if _parse_timestamp(record["as_of"]) >= window_start:
-                records.append(record)
-    except OnchainFlowCollectionError as exc:
-        errors.append(
-            _collector_error(
-                source=BLOCKCHAIN_COM_CHARTS_SOURCE,
-                data_class=data_class,
-                message=str(exc),
-                endpoint=endpoint,
-                source_url=source_url,
             )
-        )
 
+    records = sorted(records_by_time.values(), key=lambda record: record["as_of"])
     raw["items"].extend(records)
     raw["errors"].extend(errors)
     raw["availability"].append(
@@ -269,11 +306,12 @@ def _collect_blockchain_chart(
             source=BLOCKCHAIN_COM_CHARTS_SOURCE,
             data_class=data_class,
             status=_window_status(records=records, errors=errors, parsed_count=parsed_count),
-            endpoint=endpoint,
+            endpoint=f"blockchain_charts_{data_class}",
             record_count=len(records),
             parsed_record_count=parsed_count,
             error_count=len(errors),
-            source_url=source_url,
+            source_url=";".join(source_urls[endpoint] for endpoint in sorted(source_urls)),
+            request_endpoints=request_endpoints,
         )
     )
 
@@ -337,19 +375,19 @@ def _stablecoin_record(entry: dict[str, Any], *, source_url: str) -> dict[str, A
     }
 
 
-def _blockchain_chart_record(
+def _blockchain_chart_metric(
     entry: dict[str, Any],
     *,
     data_class: str,
-    endpoint: str,
     metric_name: str,
-    unit_name: str,
-    chart_name: str,
-    chart_title: str,
-    source_url: str,
-) -> dict[str, Any]:
+) -> tuple[str, float]:
     as_of = _timestamp_from_epoch_seconds(entry.get("x"))
     metric_value = _finite_number(entry.get("y"), f"{data_class} y")
+    _ = metric_name
+    return as_of, metric_value
+
+
+def _blockchain_chart_base_record(data_class: str, as_of: str) -> dict[str, Any]:
     return {
         "item_id": f"onchain_flow:{data_class}:{BLOCKCHAIN_COM_CHARTS_SOURCE}:bitcoin:{as_of}",
         "data_class": data_class,
@@ -357,32 +395,35 @@ def _blockchain_chart_record(
         "asset": "BTC",
         "chain": "bitcoin",
         "as_of": as_of,
-        "endpoint": endpoint,
-        "metrics": {
-            metric_name: metric_value,
-        },
-        "units": {
-            metric_name: unit_name,
-        },
+        "endpoint": f"blockchain_charts_{data_class}",
+        "metrics": {},
+        "units": {},
         "raw_fields": {
-            "source_url": source_url,
-            "chart_name": chart_name,
-            "chart_title": chart_title,
-            "x": entry.get("x"),
-            "y": entry.get("y"),
+            "source_urls": {},
+            "chart_names": {},
+            "chart_titles": {},
+            "chart_units": {},
+            "source_timestamps": {},
+            "raw_values": {},
         },
         "warnings": [],
         "errors": [],
     }
 
 
-def _blockchain_chart_url(onchain_flow: dict[str, Any], *, data_class: str, chart_name: str) -> str:
+def _blockchain_chart_url(
+    onchain_flow: dict[str, Any],
+    *,
+    data_class: str,
+    chart_name: str,
+    use_configured_url: bool,
+) -> str:
     configured_key = {
         "chain_activity": "chain_activity_source_url",
         "network_congestion": "network_congestion_source_url",
     }[data_class]
     configured = onchain_flow.get(configured_key)
-    if isinstance(configured, str) and configured.strip():
+    if use_configured_url and isinstance(configured, str) and configured.strip():
         return configured.strip()
     lookback_days = _positive_int(onchain_flow.get("lookback_days"), default=7)
     query = urlencode({"timespan": f"{lookback_days}days", "format": "json", "sampled": "false"})
@@ -422,6 +463,7 @@ def _availability_record(
     error_count: int = 0,
     reason: str | None = None,
     source_url: str | None = None,
+    request_endpoints: list[str] | None = None,
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "source": source,
@@ -437,6 +479,8 @@ def _availability_record(
         record["reason"] = reason
     if source_url is not None:
         record["source_url"] = source_url
+    if request_endpoints is not None:
+        record["request_endpoints"] = request_endpoints
     return record
 
 

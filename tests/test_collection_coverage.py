@@ -71,6 +71,48 @@ def test_collection_coverage_merges_adjacent_compatible_intervals() -> None:
     assert merged[0]["attempt_count"] == 2
 
 
+def test_collection_coverage_resolved_exact_range_supersedes_partial_attempt() -> None:
+    state = build_collection_coverage_state(
+        [
+            _record(
+                "2026-06-01T00:00:00Z",
+                "2026-06-02T00:00:00Z",
+                status="partial",
+                records=23,
+                warnings=["feed lagged"],
+            ),
+            _record("2026-06-01T00:00:00Z", "2026-06-02T00:00:00Z", status="collected", records=24),
+        ],
+        now="2026-06-03T00:00:00Z",
+    )
+
+    assert state["status"] == "ok"
+    assert state["counts"]["statuses"] == {"collected": 1}
+    assert state["records"][0]["status"] == "collected"
+    assert state["records"][0]["record_count"] == 24
+    assert state["records"][0]["attempt_count"] == 2
+    assert state["records"][0]["warnings"] == []
+
+
+def test_collection_coverage_exact_duplicate_uses_latest_count_without_double_counting() -> None:
+    merged = merge_collection_coverage_records(
+        [
+            _record("2026-06-01T00:00:00Z", "2026-06-02T00:00:00Z", status="collected", records=23),
+            {
+                **_record("2026-06-01T00:00:00Z", "2026-06-02T00:00:00Z", status="collected", records=24),
+                "updated_at": "2026-06-03T00:00:00Z",
+                "latest_attempt_at": "2026-06-03T00:00:00Z",
+                "latest_success_at": "2026-06-03T00:00:00Z",
+            },
+        ]
+    )
+
+    assert len(merged) == 1
+    assert merged[0]["status"] == "collected"
+    assert merged[0]["record_count"] == 24
+    assert merged[0]["attempt_count"] == 2
+
+
 def test_collection_coverage_preserves_partial_and_failed_intervals() -> None:
     state = build_collection_coverage_state(
         [

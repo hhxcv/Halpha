@@ -32,10 +32,65 @@ def test_config_example_loads_successfully() -> None:
     assert config["logging"] == {"output_dir": "logs"}
     assert config["market"]["source"] == "binance"
     assert config["market"]["proxy"] == {"enabled": False}
-    assert config["market"]["symbols"] == ["BTCUSDT", "ETHUSDT"]
+    assert config["market"]["symbols"] == [
+        "BTCUSDT",
+        "ETHUSDT",
+        "BNBUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "ADAUSDT",
+        "DOGEUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "TRXUSDT",
+        "LTCUSDT",
+        "BCHUSDT",
+        "UNIUSDT",
+        "AAVEUSDT",
+        "NEARUSDT",
+        "ATOMUSDT",
+        "ETCUSDT",
+        "FILUSDT",
+        "ARBUSDT",
+        "OPUSDT",
+    ]
     assert config["market"]["ohlcv"]["storage_dir"] == "data/market/ohlcv"
-    assert config["market"]["ohlcv"]["timeframes"] == ["1d", "1h"]
-    assert config["market"]["ohlcv"]["lookback"] == {"1d": 500, "1h": 720}
+    assert config["market"]["ohlcv"]["sources"] == [
+        "binance",
+        "binance_spot",
+        "binance_usdm",
+        "okx_spot",
+        "okx_swap",
+        "bybit_spot",
+        "bybit_swap",
+        "kucoin_spot",
+        "kucoin_swap",
+        "bitget_spot",
+        "bitget_swap",
+        "kraken_spot",
+        "coinbase_spot",
+    ]
+    assert config["market"]["ohlcv"]["timeframes"] == [
+        "1m",
+        "5m",
+        "15m",
+        "1h",
+        "4h",
+        "1d",
+        "1w",
+        "1month",
+    ]
+    assert config["market"]["ohlcv"]["lookback"] == {
+        "1m": 1440,
+        "5m": 2016,
+        "15m": 2016,
+        "1h": 720,
+        "4h": 720,
+        "1d": 500,
+        "1w": 260,
+        "1month": 120,
+    }
     assert config["market"]["derivatives"] == {"enabled": False}
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
@@ -931,7 +986,8 @@ def test_load_config_accepts_existing_text_source_type_behavior(tmp_path: Path) 
         ("    storage_dir: data/market/ohlcv", "", "market.ohlcv.storage_dir"),
         ("    storage_dir: data/market/ohlcv", "    storage_dir: runs/ohlcv", "market.ohlcv.storage_dir"),
         ("    timeframes:\n      - 1d\n      - 1h", "    timeframes: []", "market.ohlcv.timeframes"),
-        ("      - 1h", "      - 5m", r"market\.ohlcv\.timeframes\[1\]"),
+        ("      - 1h", "      - 2m", r"market\.ohlcv\.timeframes\[1\]"),
+        ("    storage_dir: data/market/ohlcv", "    storage_dir: data/market/ohlcv\n    sources:\n      - unsupported_exchange", r"market\.ohlcv\.sources\[0\]"),
         ("      1h: 720", "", "market.ohlcv.lookback.1h"),
         ("      1h: 720", "      1h: 0", "market.ohlcv.lookback.1h"),
         ("      1h: 720", "      1h: true", "market.ohlcv.lookback.1h"),

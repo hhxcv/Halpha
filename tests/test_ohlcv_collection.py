@@ -86,6 +86,42 @@ def test_ohlcv_collection_apply_writes_store_coverage_and_catalog(tmp_path: Path
     assert catalog["stores"][0]["coverage_state"]["status_counts"] == {"collected": 1}
 
 
+def test_ohlcv_collection_accepts_supported_non_default_ohlcv_source(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    source = _FakeSource(
+        [
+            _record(source="okx_spot", open_time="2026-06-01T00:00:00Z", close=101),
+            _record(source="okx_spot", open_time="2026-06-02T00:00:00Z", close=102),
+        ]
+    )
+
+    result = collect_ohlcv_data(
+        config,
+        config_path=config_path,
+        source="okx_spot",
+        symbol="BTCUSDT",
+        timeframe="1d",
+        requested_start="2026-06-01T00:00:00Z",
+        requested_end="2026-06-03T00:00:00Z",
+        dry_run=False,
+        source_factory=lambda source_name, proxy_url: source,
+        now="2026-06-05T00:00:00Z",
+    )
+
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    stored = store.read_records(source="okx_spot", symbol="BTCUSDT", timeframe="1d")
+    coverage = read_collection_coverage_state(config_path)
+
+    assert result["status"] == "ok"
+    assert result["source"] == "okx_spot"
+    assert [record["open_time"] for record in stored] == [
+        "2026-06-01T00:00:00Z",
+        "2026-06-02T00:00:00Z",
+    ]
+    assert coverage["records"][0]["source"] == "okx_spot"
+
+
 def test_ohlcv_collection_repeated_dry_run_skips_completed_interval(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)

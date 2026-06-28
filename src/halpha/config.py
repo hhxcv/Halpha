@@ -19,6 +19,8 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
+from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS
+from halpha.market.ohlcv_source import SUPPORTED_OHLCV_SOURCES
 from halpha.monitor.monitoring import MONITOR_SOURCE_KEYS, SUPPORTED_MONITOR_FIELDS
 from halpha.quant.registry import SUPPORTED_STRATEGY_NAMES
 from halpha.storage import resolve_runtime_path
@@ -41,7 +43,8 @@ CONFIG_SECTIONS = {
 SUPPORTED_LOGGING_FIELDS = {"output_dir"}
 SUPPORTED_USER_STATE_FIELDS = {"enabled", "path"}
 SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
-SUPPORTED_OHLCV_TIMEFRAMES = {"1d", "1h"}
+SUPPORTED_OHLCV_DATA_SOURCES = set(SUPPORTED_OHLCV_SOURCES)
+SUPPORTED_OHLCV_TIMEFRAMES = set(OHLCV_TIMEFRAME_DURATIONS)
 SUPPORTED_DERIVATIVES_FIELDS = {"data_classes", "enabled", "lookback", "periods", "source", "symbols"}
 SUPPORTED_MACRO_CALENDAR_FIELDS = {
     "data_classes",
@@ -551,6 +554,11 @@ def _validate_ohlcv_config(
     timeframes = _require_non_empty_string_list(ohlcv, "timeframes", "market.ohlcv.timeframes")
     for index, timeframe in enumerate(timeframes):
         _require_supported_value(timeframe, f"market.ohlcv.timeframes[{index}]", SUPPORTED_OHLCV_TIMEFRAMES)
+
+    if "sources" in ohlcv:
+        sources = _require_non_empty_string_list(ohlcv, "sources", "market.ohlcv.sources")
+        for index, source in enumerate(sources):
+            _require_supported_value(source, f"market.ohlcv.sources[{index}]", SUPPORTED_OHLCV_DATA_SOURCES)
 
     lookback = ohlcv.get("lookback")
     if not isinstance(lookback, dict):

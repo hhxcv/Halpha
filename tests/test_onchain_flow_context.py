@@ -49,9 +49,13 @@ def test_onchain_flow_context_builds_abnormal_activity_congestion_and_unavailabl
     assert activity["state"] == "surging_chain_activity"
     assert activity["severity"] == "high"
     assert activity["metrics"]["transaction_count_change_pct"] == 0.6
+    assert activity["metrics"]["latest_estimated_transaction_volume_btc"] == 75.0
+    assert activity["metrics"]["estimated_transaction_volume_btc_change_pct"] == 0.5
     assert congestion["state"] == "severe_network_congestion"
     assert congestion["severity"] == "high"
     assert congestion["metrics"]["latest_mempool_size_bytes"] == 120_000_000.0
+    assert congestion["metrics"]["latest_mempool_transaction_count"] == 80.0
+    assert congestion["metrics"]["mempool_transaction_count_change_pct"] == 1.0
     assert exchange["status"] == "unavailable"
     assert exchange["state"] == "source_unavailable"
     assert exchange["severity"] == "medium"
@@ -199,10 +203,26 @@ def _write_abnormal_raw_stage(config: dict[str, Any], run: RunContext) -> list[s
     items = [
         _stablecoin_item("2026-06-11T00:00:00Z", 1000.0),
         _stablecoin_item("2026-06-18T00:00:00Z", 900.0),
-        _chain_item("chain_activity", "2026-06-11T00:00:00Z", "transaction_count", 1000.0),
-        _chain_item("chain_activity", "2026-06-18T00:00:00Z", "transaction_count", 1600.0),
-        _chain_item("network_congestion", "2026-06-11T00:00:00Z", "mempool_size_bytes", 10_000_000.0),
-        _chain_item("network_congestion", "2026-06-18T00:00:00Z", "mempool_size_bytes", 120_000_000.0),
+        _chain_item(
+            "chain_activity",
+            "2026-06-11T00:00:00Z",
+            {"transaction_count": 1000.0, "estimated_transaction_volume_btc": 50.0},
+        ),
+        _chain_item(
+            "chain_activity",
+            "2026-06-18T00:00:00Z",
+            {"transaction_count": 1600.0, "estimated_transaction_volume_btc": 75.0},
+        ),
+        _chain_item(
+            "network_congestion",
+            "2026-06-11T00:00:00Z",
+            {"mempool_size_bytes": 10_000_000.0, "mempool_transaction_count": 40.0},
+        ),
+        _chain_item(
+            "network_congestion",
+            "2026-06-18T00:00:00Z",
+            {"mempool_size_bytes": 120_000_000.0, "mempool_transaction_count": 80.0},
+        ),
     ]
     _write_raw(
         run,
@@ -319,7 +339,7 @@ def _stablecoin_item(as_of: str, total_circulating_usd: float) -> dict[str, Any]
     }
 
 
-def _chain_item(data_class: str, as_of: str, metric_name: str, value: float) -> dict[str, Any]:
+def _chain_item(data_class: str, as_of: str, metrics: dict[str, float]) -> dict[str, Any]:
     return {
         "item_id": f"onchain_flow:{data_class}:blockchain_com_charts:bitcoin:{as_of}",
         "data_class": data_class,
@@ -327,13 +347,24 @@ def _chain_item(data_class: str, as_of: str, metric_name: str, value: float) -> 
         "asset": "BTC",
         "chain": "bitcoin",
         "as_of": as_of,
-        "endpoint": f"blockchain_chart_{data_class}",
-        "metrics": {metric_name: value},
-        "units": {metric_name: "bytes" if metric_name == "mempool_size_bytes" else "transactions"},
-        "raw_fields": {"source_url": "https://api.blockchain.info/charts/example", "x": as_of, "y": value},
+        "endpoint": f"blockchain_charts_{data_class}",
+        "metrics": metrics,
+        "units": {
+            metric_name: _chain_metric_unit(metric_name)
+            for metric_name in metrics
+        },
+        "raw_fields": {"source_url": "https://api.blockchain.info/charts/example", "x": as_of},
         "warnings": [],
         "errors": [],
     }
+
+
+def _chain_metric_unit(metric_name: str) -> str:
+    if metric_name == "mempool_size_bytes":
+        return "bytes"
+    if metric_name == "estimated_transaction_volume_btc":
+        return "BTC"
+    return "transactions"
 
 
 def _availability(

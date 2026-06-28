@@ -256,36 +256,64 @@ def _stablecoin_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, An
 def _chain_activity_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, Any]) -> dict[str, Any]:
     if status_inputs["status"] in {"failed", "missing_availability", "missing_history", "skipped", "stale", "unavailable"}:
         return _empty_state(str(status_inputs["status"]), thresholds=CHAIN_ACTIVITY_THRESHOLDS, rows=rows)
-    metrics = _metric_series(rows, "transaction_count")
-    if len(metrics) < 2:
+    transaction_points = _metric_points(rows, "transaction_count")
+    if len(transaction_points) < 2:
         return _empty_state(
             "insufficient_evidence",
             thresholds=CHAIN_ACTIVITY_THRESHOLDS,
             rows=rows,
             warnings=["chain activity context requires at least two observations."],
         )
-    first = metrics[0]
-    latest = metrics[-1]
+    first = transaction_points[0]["value"]
+    latest = transaction_points[-1]["value"]
     change = latest - first
     change_pct = _safe_change_pct(first, latest)
     state, severity = _chain_activity_state_from_change(change_pct)
+    transfer_volume_points = _metric_points(rows, "estimated_transaction_volume_btc")
+    transfer_volume_metrics = _optional_change_metrics(
+        transfer_volume_points,
+        first_key="first_estimated_transaction_volume_btc",
+        latest_key="latest_estimated_transaction_volume_btc",
+        change_key="estimated_transaction_volume_btc_change",
+        change_pct_key="estimated_transaction_volume_btc_change_pct",
+        observations_key="estimated_transaction_volume_observations",
+    )
+    evidence = _metric_evidence(
+        transaction_points,
+        metric_name="transaction_count",
+        latest_value=latest,
+        rolling_change=change,
+        rolling_change_pct=change_pct,
+    )
+    if transfer_volume_points:
+        evidence.extend(
+            _metric_evidence(
+                transfer_volume_points,
+                metric_name="estimated_transaction_volume_btc",
+                latest_value=transfer_volume_points[-1]["value"],
+                rolling_change=transfer_volume_metrics.get("estimated_transaction_volume_btc_change"),
+                rolling_change_pct=transfer_volume_metrics.get("estimated_transaction_volume_btc_change_pct"),
+            )
+        )
     return {
         "state": state,
         "severity": severity,
         "confidence": "medium",
-        "as_of": rows[-1].get("as_of"),
+        "as_of": transaction_points[-1]["as_of"],
         "metrics": {
             "first_transaction_count": first,
             "latest_transaction_count": latest,
             "transaction_count_change": change,
             "transaction_count_change_pct": change_pct,
-            "observations": len(metrics),
+            "transaction_count_observations": len(transaction_points),
+            **transfer_volume_metrics,
             "units": _latest_units(rows),
         },
         "thresholds": CHAIN_ACTIVITY_THRESHOLDS,
-        "evidence": _evidence(rows, metric_name="transaction_count", latest_value=latest, rolling_change=change, rolling_change_pct=change_pct),
+        "evidence": evidence,
         "uncertainty": [
             "chain activity is usage context, not a directional price signal.",
+            "estimated transaction volume is not the same as exchange netflow or economic demand.",
         ],
         "warnings": [],
         "errors": [],
@@ -295,35 +323,63 @@ def _chain_activity_state(rows: list[dict[str, Any]], *, status_inputs: dict[str
 def _network_congestion_state(rows: list[dict[str, Any]], *, status_inputs: dict[str, Any]) -> dict[str, Any]:
     if status_inputs["status"] in {"failed", "missing_availability", "missing_history", "skipped", "stale", "unavailable"}:
         return _empty_state(str(status_inputs["status"]), thresholds=NETWORK_CONGESTION_THRESHOLDS, rows=rows)
-    metrics = _metric_series(rows, "mempool_size_bytes")
-    if not metrics:
+    mempool_size_points = _metric_points(rows, "mempool_size_bytes")
+    if not mempool_size_points:
         return _empty_state(
             "insufficient_evidence",
             thresholds=NETWORK_CONGESTION_THRESHOLDS,
             rows=rows,
             warnings=["network congestion context requires mempool_size_bytes observations."],
         )
-    first = metrics[0]
-    latest = metrics[-1]
-    change = latest - first if len(metrics) >= 2 else None
-    change_pct = _safe_change_pct(first, latest) if len(metrics) >= 2 else None
+    first = mempool_size_points[0]["value"]
+    latest = mempool_size_points[-1]["value"]
+    change = latest - first if len(mempool_size_points) >= 2 else None
+    change_pct = _safe_change_pct(first, latest) if len(mempool_size_points) >= 2 else None
     state, severity = _network_congestion_state_from_metrics(latest, change_pct)
+    mempool_count_points = _metric_points(rows, "mempool_transaction_count")
+    mempool_count_metrics = _optional_change_metrics(
+        mempool_count_points,
+        first_key="first_mempool_transaction_count",
+        latest_key="latest_mempool_transaction_count",
+        change_key="mempool_transaction_count_change",
+        change_pct_key="mempool_transaction_count_change_pct",
+        observations_key="mempool_transaction_count_observations",
+    )
+    evidence = _metric_evidence(
+        mempool_size_points,
+        metric_name="mempool_size_bytes",
+        latest_value=latest,
+        rolling_change=change,
+        rolling_change_pct=change_pct,
+    )
+    if mempool_count_points:
+        evidence.extend(
+            _metric_evidence(
+                mempool_count_points,
+                metric_name="mempool_transaction_count",
+                latest_value=mempool_count_points[-1]["value"],
+                rolling_change=mempool_count_metrics.get("mempool_transaction_count_change"),
+                rolling_change_pct=mempool_count_metrics.get("mempool_transaction_count_change_pct"),
+            )
+        )
     return {
         "state": state,
         "severity": severity,
         "confidence": "medium",
-        "as_of": rows[-1].get("as_of"),
+        "as_of": mempool_size_points[-1]["as_of"],
         "metrics": {
             "latest_mempool_size_bytes": latest,
             "mempool_size_change": change,
             "mempool_size_change_pct": change_pct,
-            "observations": len(metrics),
+            "mempool_size_observations": len(mempool_size_points),
+            **mempool_count_metrics,
             "units": _latest_units(rows),
         },
         "thresholds": NETWORK_CONGESTION_THRESHOLDS,
-        "evidence": _evidence(rows, metric_name="mempool_size_bytes", latest_value=latest, rolling_change=change, rolling_change_pct=change_pct),
+        "evidence": evidence,
         "uncertainty": [
             "network congestion is settlement-friction context, not a price forecast.",
+            "mempool transaction count and mempool size can diverge when average transaction weight changes.",
         ],
         "warnings": [],
         "errors": [],
@@ -529,6 +585,37 @@ def _evidence(
     return evidence
 
 
+def _metric_evidence(
+    points: list[dict[str, Any]],
+    *,
+    metric_name: str,
+    latest_value: float,
+    rolling_change: float | None,
+    rolling_change_pct: float | None,
+) -> list[dict[str, Any]]:
+    latest_point = points[-1] if points else {}
+    evidence = [
+        {
+            "metric": metric_name,
+            "value": latest_value,
+            "as_of": latest_point.get("as_of"),
+            "source_artifact": ONCHAIN_FLOW_VIEWS_ARTIFACT,
+        }
+    ]
+    if rolling_change is not None:
+        evidence.append(
+            {
+                "metric": f"{metric_name}_rolling_change",
+                "value": rolling_change,
+                "value_pct": rolling_change_pct,
+                "window_start": points[0].get("as_of") if points else None,
+                "window_end": latest_point.get("as_of"),
+                "source_artifact": ONCHAIN_FLOW_VIEWS_ARTIFACT,
+            }
+        )
+    return evidence
+
+
 def _view_records(view: dict[str, Any]) -> list[dict[str, Any]]:
     records = []
     for record in _list(view.get("records")):
@@ -538,6 +625,10 @@ def _view_records(view: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _metric_series(rows: list[dict[str, Any]], metric_name: str) -> list[float]:
+    return [point["value"] for point in _metric_points(rows, metric_name)]
+
+
+def _metric_points(rows: list[dict[str, Any]], metric_name: str) -> list[dict[str, Any]]:
     values = []
     for row in rows:
         metrics = row.get("metrics")
@@ -545,8 +636,32 @@ def _metric_series(rows: list[dict[str, Any]], metric_name: str) -> list[float]:
             continue
         value = metrics.get(metric_name)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
-            values.append(float(value))
-    return values
+            values.append({"as_of": row.get("as_of"), "value": float(value)})
+    return sorted(values, key=lambda point: str(point.get("as_of") or ""))
+
+
+def _optional_change_metrics(
+    points: list[dict[str, Any]],
+    *,
+    first_key: str,
+    latest_key: str,
+    change_key: str,
+    change_pct_key: str,
+    observations_key: str,
+) -> dict[str, Any]:
+    if not points:
+        return {}
+    first = points[0]["value"]
+    latest = points[-1]["value"]
+    change = latest - first if len(points) >= 2 else None
+    change_pct = _safe_change_pct(first, latest) if len(points) >= 2 else None
+    return {
+        first_key: first,
+        latest_key: latest,
+        change_key: change,
+        change_pct_key: change_pct,
+        observations_key: len(points),
+    }
 
 
 def _latest_units(rows: list[dict[str, Any]]) -> dict[str, Any]:

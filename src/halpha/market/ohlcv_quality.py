@@ -6,9 +6,16 @@ from typing import Any
 
 
 OHLCV_TIMEFRAME_DURATIONS = {
-    "1d": timedelta(days=1),
+    "1m": timedelta(minutes=1),
+    "5m": timedelta(minutes=5),
+    "15m": timedelta(minutes=15),
     "1h": timedelta(hours=1),
+    "4h": timedelta(hours=4),
+    "1d": timedelta(days=1),
+    "1w": timedelta(weeks=1),
+    "1month": timedelta(days=31),
 }
+OHLCV_TIMEFRAME_ORDER = ("1m", "5m", "15m", "1h", "4h", "1d", "1w", "1month")
 STALE_CANDLE_TOLERANCE_MULTIPLIER = 2
 QUALITY_SAMPLE_LIMIT = 3
 
@@ -40,10 +47,9 @@ def ohlcv_record_invariant_errors(record: dict[str, Any]) -> list[str]:
             errors.append(f"{identity}: low must be less than or equal to open, close, and high.")
 
     timeframe = str(record.get("timeframe") or "")
-    duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe)
-    if duration is not None:
+    if timeframe in OHLCV_TIMEFRAME_DURATIONS:
         opened_at = _parse_utc_or_none(record.get("open_time"))
-        if opened_at is not None and not _is_aligned(opened_at, duration):
+        if opened_at is not None and not ohlcv_timeframe_is_aligned(opened_at, timeframe):
             errors.append(
                 f"{identity}: open_time must align to the {timeframe} UTC timeframe boundary."
             )
@@ -62,7 +68,7 @@ def ohlcv_series_quality(
     open_times = [str(record.get("open_time")) for record in ordered if record.get("open_time")]
     unique_open_times = sorted(set(open_times))
     duplicate_samples, duplicate_count = _duplicate_open_time_samples(open_times)
-    missing_samples, missing_count = _missing_interval_samples(unique_open_times, duration)
+    missing_samples, missing_count = _missing_interval_samples(unique_open_times, timeframe, duration)
     freshness = _freshness_state(unique_open_times[-1] if unique_open_times else None, duration, now=now)
     status = "degraded" if duplicate_count or missing_count or freshness["stale_latest_candle"] else "ok"
     return {
@@ -118,6 +124,7 @@ def _duplicate_open_time_samples(open_times: list[str]) -> tuple[list[dict[str, 
 
 def _missing_interval_samples(
     open_times: list[str],
+    timeframe: str,
     duration: timedelta | None,
 ) -> tuple[list[dict[str, Any]], int]:
     if duration is None or len(open_times) < 2:
@@ -129,16 +136,20 @@ def _missing_interval_samples(
     for (previous_value, previous_time), (next_value, next_time) in zip(parsed, parsed[1:]):
         if previous_time is None or next_time is None:
             continue
-        delta = next_time - previous_time
-        if delta <= duration:
+        expected_next = ohlcv_next_open_time(previous_time, timeframe)
+        if next_time <= expected_next:
             continue
-        missing = max(int(delta / duration) - 1, 1)
+        missing = 0
+        cursor = expected_next
+        while cursor < next_time:
+            missing += 1
+            cursor = ohlcv_next_open_time(cursor, timeframe)
         total += missing
         gaps.append(
             {
                 "after_open_time": previous_value,
                 "before_open_time": next_value,
-                "expected_next_open_time": _format_utc(previous_time + duration),
+                "expected_next_open_time": _format_utc(expected_next),
                 "missing_intervals": missing,
             }
         )
@@ -185,9 +196,39 @@ def _record_identity(record: dict[str, Any]) -> str:
     )
 
 
-def _is_aligned(value: datetime, duration: timedelta) -> bool:
+def ohlcv_timeframe_is_aligned(value: datetime, timeframe: str) -> bool:
+    value = value.astimezone(timezone.utc).replace(microsecond=0)
+    if timeframe == "1month":
+        return (
+            value.day == 1
+            and value.hour == 0
+            and value.minute == 0
+            and value.second == 0
+        )
+    if timeframe == "1w":
+        return (
+            value.weekday() == 0
+            and value.hour == 0
+            and value.minute == 0
+            and value.second == 0
+        )
+    duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe)
+    if duration is None:
+        return False
     seconds = int(value.timestamp())
     return seconds % int(duration.total_seconds()) == 0
+
+
+def ohlcv_next_open_time(value: datetime, timeframe: str) -> datetime:
+    value = value.astimezone(timezone.utc).replace(microsecond=0)
+    if timeframe == "1month":
+        year = value.year + (1 if value.month == 12 else 0)
+        month = 1 if value.month == 12 else value.month + 1
+        return value.replace(year=year, month=month, day=1, hour=0, minute=0, second=0)
+    duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe)
+    if duration is None:
+        raise KeyError(timeframe)
+    return value + duration
 
 
 def _parse_utc_or_none(value: Any) -> datetime | None:
