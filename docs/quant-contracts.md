@@ -418,9 +418,10 @@ Multi-leg rules:
 
 ## Futures Cost And Funding Contract
 
-Status: current evaluation records include fees, slippage, and optional
-evidence-backed funding cost inputs for signed single-leg evaluations.
-Contract-specific diagnostics and leverage-risk warnings are planned.
+Status: current evaluation records include fees, slippage, optional
+evidence-backed funding cost inputs for signed single-leg evaluations, and
+bounded futures diagnostics when an explicit contract-market instrument
+identity is available.
 
 Purpose:
 
@@ -460,12 +461,77 @@ Implemented funding-cost input shape:
 }
 ```
 
+Implemented futures diagnostic shape:
+
+```json
+{
+  "artifact_type": "futures_strategy_diagnostics",
+  "schema_version": 1,
+  "status": "succeeded",
+  "instrument_identity": {
+    "source": "binance_usdm",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "market_type": "swap",
+    "contract_type": "linear_perpetual",
+    "base_asset": "BTC",
+    "quote_asset": "USDT",
+    "settlement_asset": "USDT",
+    "identity_status": "normalized"
+  },
+  "method": {
+    "basis": "account_independent_contract_research_diagnostics",
+    "contribution_basis": "additive_period_gross_return_percentage_points",
+    "liquidation_model": "not_modeled",
+    "margin_model": "not_modeled",
+    "account_balance_model": "not_modeled"
+  },
+  "contribution": {
+    "long_gross_contribution_pct": 8.2,
+    "short_gross_contribution_pct": 3.1,
+    "flat_gross_contribution_pct": 0.0,
+    "total_gross_contribution_pct": 11.3
+  },
+  "exposure": {
+    "long_time_pct": 40.0,
+    "short_time_pct": 35.0,
+    "flat_time_pct": 25.0,
+    "average_gross_exposure_pct": 75.0,
+    "average_net_exposure_pct": 5.0,
+    "average_abs_exposure_pct": 75.0,
+    "max_abs_exposure_pct": 100.0
+  },
+  "turnover": {
+    "total_turnover": 12.0,
+    "average_turnover": 0.24
+  },
+  "costs": {
+    "total_cost_pct": 0.8,
+    "cost_drag_pct": 0.8,
+    "additive_cost_pct": 0.8
+  },
+  "funding": {
+    "status": "available",
+    "period_count": 50,
+    "matched_record_count": 50,
+    "missing_period_count": 0,
+    "funding_drag_pct": 0.3
+  },
+  "risk_warnings": [],
+  "warnings": []
+}
+```
+
 Futures evaluation rules:
 
 - Funding adapters must read reusable derivatives history through the
   derivatives event-like query boundary, not direct ad hoc file scans.
 - Funding costs may be applied only when source data is available and aligned
   to the evaluated instrument and time range.
+- Futures diagnostics are emitted only when market identity has explicit
+  contract-market evidence from embedded `instrument_identity`, explicit
+  identity fields, or configured source metadata. They must not be enabled from
+  symbol suffix guesses alone.
 - Funding record visibility must respect the evaluation `as_of` boundary.
 - Missing funding data must be recorded as unavailable, stale, partial, or
   insufficient. It must not be treated as zero funding unless a strategy or
@@ -480,6 +546,11 @@ Futures evaluation rules:
   account margin state unless a later explicit contract implements that.
 - Futures-aware records must continue to include fees, slippage, gross return,
   net return, turnover, exposure, drawdown, and historical-research warnings.
+- Futures diagnostics summarize long contribution, short contribution, flat
+  time, gross exposure, net exposure, average absolute exposure, turnover, cost
+  drag, funding drag when available, and qualitative risk warnings. They must
+  not include account balances, margin mode, leverage settings, exchange
+  liquidation prices, or position-size recommendations.
 
 ## Strategy Optimization Contract
 
@@ -1910,9 +1981,12 @@ Execution model rules:
 - Signed trade summaries additionally include long exposure, short exposure,
   average absolute exposure, long trade count, short trade count, long-to-short
   transition count, short-to-long transition count, and side-flip count.
+- Contract-market single-window records may include `futures_diagnostics` when
+  explicit instrument identity supports futures-aware interpretation. Spot
+  records and identity-unknown records omit this field.
 - Baseline metrics must include buy-and-hold and cash or no-position behavior where applicable.
 - Relative metrics must compare net strategy behavior with buy-and-hold baseline behavior.
-- Research limitation warnings must distinguish method or evidence limitations from strategy conclusions. Current warning codes include `historical_research_only`, `insufficient_sample_length`, `low_trade_count`, `no_strategy_exposure`, `high_turnover`, and `high_cost_drag`.
+- Research limitation warnings must distinguish method or evidence limitations from strategy conclusions. Current warning codes include `historical_research_only`, `insufficient_sample_length`, `low_trade_count`, `no_strategy_exposure`, `high_turnover`, `high_cost_drag`, `funding_costs_not_provided_for_contract`, and `contract_volatility_exposure_risk`.
 - Backtest evaluation remains research material, not a forecast, trading instruction, or return promise.
 
 Pipeline strategy evaluation artifact:
