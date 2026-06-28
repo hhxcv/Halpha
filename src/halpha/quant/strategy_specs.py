@@ -146,6 +146,7 @@ STRATEGY_SPEC_ORDER = (
     "sma_cross_trend",
     "sma_cross_long_short",
     "bollinger_rsi_reversion",
+    "bollinger_rsi_long_short",
 )
 
 
@@ -428,6 +429,79 @@ STRATEGY_SPECS = {
         risk_notes=(
             RESEARCH_RISK_NOTE,
             "Mean-reversion strategies can fail during persistent directional trends.",
+        ),
+    ),
+    "bollinger_rsi_long_short": StrategySpec(
+        name="bollinger_rsi_long_short",
+        family="mean_reversion",
+        version="1",
+        description="Signed Bollinger and RSI reversion strategy with long, short, flat, and trend-suppressed states.",
+        supported_market_types=SUPPORTED_MARKET_TYPES,
+        required_inputs=(OHLCV_INPUT,),
+        output_position_policy=SIGNED_POLICY,
+        default_params={
+            "bollinger_window": 20,
+            "band_std": 2.0,
+            "rsi_window": 14,
+            "rsi_oversold": 30.0,
+            "rsi_overbought": 70.0,
+            "trend_window": 50,
+            "trend_filter_pct": 8.0,
+        },
+        parameter_schema={
+            "bollinger_window": _positive_integer_param(
+                20,
+                "Bollinger middle-band lookback bars.",
+            ),
+            "band_std": _positive_number_param(
+                2.0,
+                "Standard-deviation multiplier for Bollinger bands.",
+            ),
+            "rsi_window": _positive_integer_param(
+                14,
+                "RSI lookback bars.",
+            ),
+            "rsi_oversold": _bounded_number_param(
+                30.0,
+                "RSI threshold for oversold long reversion context.",
+                minimum=0.0,
+                maximum=100.0,
+                constraints=["rsi_oversold must be lower than rsi_overbought"],
+            ),
+            "rsi_overbought": _bounded_number_param(
+                70.0,
+                "RSI threshold for overbought short reversion context.",
+                minimum=0.0,
+                maximum=100.0,
+                constraints=["rsi_overbought must be greater than rsi_oversold"],
+            ),
+            "trend_window": _positive_integer_param(
+                50,
+                "Trend-filter lookback bars.",
+            ),
+            "trend_filter_pct": _positive_number_param(
+                8.0,
+                "Trend move threshold that suppresses same-direction reversion entries.",
+            ),
+        },
+        optimization_space={
+            "bollinger_window": _grid([20, 40]),
+            "band_std": _grid([2.0, 2.5]),
+            "rsi_window": _grid([14]),
+            "rsi_oversold": _grid([25.0, 30.0]),
+            "rsi_overbought": _grid([70.0, 75.0]),
+            "trend_window": _grid([50, 100]),
+            "trend_filter_pct": _grid([8.0, 10.0]),
+        },
+        minimum_rows_policy={
+            "formula": "max(bollinger_window, rsi_window + 1, trend_window + 1)",
+            "minimum_rows_with_default_params": 51,
+            "reason": "Requires Bollinger, RSI, and trend-filter warmup.",
+        },
+        risk_notes=(
+            RESEARCH_RISK_NOTE,
+            "Mean-reversion strategies can fail during persistent directional trends.",
+            "Short exposure is research exposure only, not borrowing or account state.",
         ),
     ),
 }

@@ -11,6 +11,7 @@ from halpha.quant.registry import (
     supported_strategy_specs,
 )
 from halpha.quant.strategies import (
+    bollinger_rsi_long_short,
     bollinger_rsi_reversion,
     breakout_atr_trend,
     sma_cross_long_short,
@@ -27,6 +28,7 @@ EXPECTED_ORDER = [
     "sma_cross_trend",
     "sma_cross_long_short",
     "bollinger_rsi_reversion",
+    "bollinger_rsi_long_short",
 ]
 STRATEGY_MODULES = {
     "tsmom_vol_scaled": tsmom_vol_scaled,
@@ -35,6 +37,7 @@ STRATEGY_MODULES = {
     "sma_cross_trend": sma_cross_trend,
     "sma_cross_long_short": sma_cross_long_short,
     "bollinger_rsi_reversion": bollinger_rsi_reversion,
+    "bollinger_rsi_long_short": bollinger_rsi_long_short,
 }
 
 
@@ -75,7 +78,7 @@ def test_registry_returns_complete_spec_records() -> None:
                 "fields": ["open_time", "open", "high", "low", "close", "volume"],
             }
         ]
-        if record["name"] in {"signed_tsmom_trend", "sma_cross_long_short"}:
+        if record["name"] in {"signed_tsmom_trend", "sma_cross_long_short", "bollinger_rsi_long_short"}:
             assert record["output_position_policy"] == "research_signed_target_exposure"
         else:
             assert record["output_position_policy"] == "research_long_flat_target_exposure"
@@ -119,7 +122,7 @@ def test_current_strategy_modules_use_spec_defaults() -> None:
         assert module.NAME == name
         assert module.SPEC is definition.spec
         assert module.DEFAULT_PARAMS == definition.spec.default_params
-        if name in {"signed_tsmom_trend", "sma_cross_long_short"}:
+        if name in {"signed_tsmom_trend", "sma_cross_long_short", "bollinger_rsi_long_short"}:
             assert definition.spec.output_position_policy == "research_signed_target_exposure"
         else:
             assert definition.spec.output_position_policy == "research_long_flat_target_exposure"

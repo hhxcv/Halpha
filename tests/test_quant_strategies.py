@@ -25,6 +25,7 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     sma_cross = get_strategy_definition("sma_cross_trend")
     sma_cross_long_short = get_strategy_definition("sma_cross_long_short")
     reversion = get_strategy_definition("bollinger_rsi_reversion")
+    reversion_long_short = get_strategy_definition("bollinger_rsi_long_short")
 
     assert definition is not None
     assert definition.name == "tsmom_vol_scaled"
@@ -50,6 +51,10 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert reversion.name == "bollinger_rsi_reversion"
     assert reversion.run.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
     assert reversion.signal_records.__module__ == "halpha.quant.strategies.bollinger_rsi_reversion"
+    assert reversion_long_short is not None
+    assert reversion_long_short.name == "bollinger_rsi_long_short"
+    assert reversion_long_short.run.__module__ == "halpha.quant.strategies.bollinger_rsi_long_short"
+    assert reversion_long_short.signal_records.__module__ == "halpha.quant.strategies.bollinger_rsi_long_short"
     assert get_strategy_definition("missing") is None
 
 
@@ -375,6 +380,38 @@ def test_quant_strategy_runner_writes_sma_cross_long_short_artifacts(tmp_path: P
     assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
     assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
     assert manifest["quant_strategies"]["enabled"] == ["sma_cross_long_short"]
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    json.dumps(strategy_runs)
+
+
+def test_quant_strategy_runner_writes_bollinger_rsi_long_short_artifacts(tmp_path: Path) -> None:
+    config_path = _write_bollinger_rsi_long_short_strategy_config(tmp_path, lookback=3)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=98, volume=12),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_runs = _strategy_runs(result)
+    manifest = _manifest(result)
+    strategy_run = strategy_runs["runs"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["strategy_name"] == "bollinger_rsi_long_short"
+    assert strategy_run["strategy_family"] == "mean_reversion"
+    assert strategy_run["output_position_policy"] == "research_signed_target_exposure"
+    assert strategy_run["params"]["bollinger_window"] == 2
+    assert strategy_run["signals"]["latest_position_state"] == "long"
+    assert strategy_run["signals"]["latest_oversold"] is True
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
+    assert manifest["quant_strategies"]["enabled"] == ["bollinger_rsi_long_short"]
     assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
     json.dumps(strategy_runs)
 
@@ -1523,6 +1560,131 @@ def test_sma_cross_long_short_records_insufficient_data_and_param_validation() -
     json.dumps(signal_records)
 
 
+def test_bollinger_rsi_long_short_signal_records_cover_long_short_flat_and_suppression() -> None:
+    definition = get_strategy_definition("bollinger_rsi_long_short")
+    assert definition is not None
+    strategy = _bollinger_rsi_long_short_strategy()
+    long_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=98, volume=12),
+    ]
+    short_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=98, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+    ]
+    flat_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=100, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=100, volume=12),
+    ]
+    suppressed_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=80, volume=12),
+    ]
+    suppressed_strategy = _bollinger_rsi_long_short_strategy(trend_filter_pct=10)
+
+    long_records = definition.signal_records(strategy, _view(long_rows), long_rows)
+    short_records = definition.signal_records(strategy, _view(short_rows), short_rows)
+    flat_records = definition.signal_records(strategy, _view(flat_rows), flat_rows)
+    suppressed_records = definition.signal_records(suppressed_strategy, _view(suppressed_rows), suppressed_rows)
+
+    assert long_records["latest_record"]["position"]["position_state"] == "long"
+    assert long_records["latest_record"]["position"]["target_exposure"] == 1.0
+    assert long_records["latest_record"]["indicator_context"]["latest_oversold"] is True
+    assert short_records["latest_record"]["position"]["position_state"] == "short"
+    assert short_records["latest_record"]["position"]["target_exposure"] == -1.0
+    assert short_records["latest_record"]["indicator_context"]["latest_overbought"] is True
+    assert flat_records["latest_record"]["position"]["position_state"] == "flat"
+    assert flat_records["latest_record"]["indicator_context"]["latest_oversold"] is False
+    assert flat_records["latest_record"]["indicator_context"]["latest_overbought"] is False
+    assert suppressed_records["latest_record"]["position"]["position_state"] == "flat"
+    assert suppressed_records["latest_record"]["indicator_context"]["latest_oversold"] is True
+    assert suppressed_records["latest_record"]["indicator_context"]["trend_filter_active"] is True
+    assert suppressed_records["latest_record"]["indicator_context"]["suppression_reason"] == "oversold_strong_downtrend"
+    json.dumps(long_records)
+    json.dumps(short_records)
+    json.dumps(flat_records)
+    json.dumps(suppressed_records)
+
+
+def test_bollinger_rsi_long_short_run_records_short_and_suppressed_states() -> None:
+    definition = get_strategy_definition("bollinger_rsi_long_short")
+    assert definition is not None
+    short_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=98, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+    ]
+    suppressed_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=80, volume=12),
+    ]
+
+    short_run = definition.run(
+        _bollinger_rsi_long_short_strategy(),
+        _view(short_rows),
+        short_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+    suppressed_run = definition.run(
+        _bollinger_rsi_long_short_strategy(trend_filter_pct=10),
+        _view(suppressed_rows),
+        suppressed_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert short_run["strategy_family"] == "mean_reversion"
+    assert short_run["output_position_policy"] == "research_signed_target_exposure"
+    assert short_run["signals"]["latest_position_state"] == "short"
+    assert short_run["signals"]["short_entry_count"] == 1
+    assert short_run["assessment"]["direction"] == "bearish"
+    assert short_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert short_run["backtest_diagnostic"]["metrics"]["short_trade_count"] == 0
+    assert suppressed_run["signals"]["latest_position_state"] == "flat"
+    assert suppressed_run["signals"]["suppression_reason"] == "oversold_strong_downtrend"
+    assert suppressed_run["assessment"]["direction"] == "mixed"
+    assert suppressed_run["warnings"][0]["code"] == "strong_downtrend_reversion_filter"
+    json.dumps(short_run)
+    json.dumps(suppressed_run)
+
+
+def test_bollinger_rsi_long_short_records_insufficient_data_and_param_validation() -> None:
+    definition = get_strategy_definition("bollinger_rsi_long_short")
+    assert definition is not None
+    rows = [_record(open_time="2026-06-01T00:00:00Z", close=100, volume=10)]
+
+    signal_records = definition.signal_records(_bollinger_rsi_long_short_strategy(), _view(rows), rows)
+
+    assert signal_records["status"] == "insufficient_data"
+    assert signal_records["position_policy"] == "research_signed_target_exposure"
+    assert signal_records["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    with pytest.raises(ValueError, match="bollinger_window must be a positive integer"):
+        definition.signal_records(
+            _bollinger_rsi_long_short_strategy(bollinger_window=0),
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="rsi_oversold must be lower than rsi_overbought"):
+        definition.signal_records(
+            _bollinger_rsi_long_short_strategy(rsi_oversold=80, rsi_overbought=70),
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="trend_filter_pct must be a positive number"):
+        definition.signal_records(
+            _bollinger_rsi_long_short_strategy(trend_filter_pct=0),
+            _view(rows),
+            rows,
+        )
+    json.dumps(signal_records)
+
+
 def test_strategy_signal_records_align_with_sma_cross_transitions() -> None:
     definition = get_strategy_definition("sma_cross_trend")
     assert definition is not None
@@ -1844,6 +2006,63 @@ codex:
     return config_path
 
 
+def _write_bollinger_rsi_long_short_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: {lookback}
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: bollinger_rsi_long_short
+      enabled: true
+      params:
+        bollinger_window: 2
+        band_std: 0.5
+        rsi_window: 1
+        rsi_oversold: 35
+        rsi_overbought: 65
+        trend_window: 2
+        trend_filter_pct: 50
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _write_manifest_diagnostics_strategy_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -2102,6 +2321,29 @@ def _engine() -> dict[str, Any]:
         "name": "vectorbt",
         "version": "test",
         "objects_exposed": False,
+    }
+
+
+def _bollinger_rsi_long_short_strategy(**params: Any) -> dict[str, Any]:
+    strategy_params = {
+        "bollinger_window": 2,
+        "band_std": 0.5,
+        "rsi_window": 1,
+        "rsi_oversold": 35,
+        "rsi_overbought": 65,
+        "trend_window": 2,
+        "trend_filter_pct": 50,
+    }
+    strategy_params.update(params)
+    return {
+        "name": "bollinger_rsi_long_short",
+        "params": strategy_params,
+        "backtest": {
+            "enabled": True,
+            "initial_cash": 10000,
+            "fees_bps": 10,
+            "slippage_bps": 5,
+        },
     }
 
 
