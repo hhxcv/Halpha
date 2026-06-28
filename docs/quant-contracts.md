@@ -414,9 +414,9 @@ Multi-leg rules:
 
 ## Futures Cost And Funding Contract
 
-Status: current evaluation records include fees and slippage assumptions.
-Futures funding, contract-specific diagnostics, and leverage-risk warnings are
-planned.
+Status: current evaluation records include fees, slippage, and optional
+evidence-backed funding cost inputs for signed single-leg evaluations.
+Contract-specific diagnostics and leverage-risk warnings are planned.
 
 Purpose:
 
@@ -424,35 +424,53 @@ Purpose:
   trading costs, funding costs, and data-availability limits.
 - Keep futures-aware evaluation account-independent.
 
-Planned funding-cost input shape:
+Implemented funding-cost input shape:
 
 ```json
 {
+  "schema_version": 1,
+  "artifact_type": "strategy_funding_cost_input",
+  "status": "available",
   "source": "binance_usdm",
   "symbol": "BTCUSDT",
-  "market_type": "perpetual",
-  "funding_time": "2026-06-05T08:00:00Z",
-  "funding_rate": 0.0001,
-  "rate_unit": "fraction_of_notional",
-  "as_of": "2026-06-05T08:01:00Z",
-  "quality": {
-    "status": "available",
-    "warnings": []
-  }
+  "data_class": "funding_rate",
+  "period": "8h",
+  "as_of_boundary": "2026-06-05T00:00:00Z",
+  "unit": "fraction_of_notional",
+  "sign_convention": "positive_rate_paid_by_longs_received_by_shorts",
+  "period_count": 2,
+  "matched_record_count": 2,
+  "missing_period_count": 0,
+  "periods": [
+    {
+      "period_start": "2026-06-04T00:00:00Z",
+      "period_end": "2026-06-05T00:00:00Z",
+      "funding_rate": 0.0001,
+      "matched_record_count": 1,
+      "funding_as_of": ["2026-06-04T08:00:00Z"]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "source_artifacts": []
 }
 ```
 
 Futures evaluation rules:
 
+- Funding adapters must read reusable derivatives history through the
+  derivatives event-like query boundary, not direct ad hoc file scans.
 - Funding costs may be applied only when source data is available and aligned
   to the evaluated instrument and time range.
+- Funding record visibility must respect the evaluation `as_of` boundary.
 - Missing funding data must be recorded as unavailable, stale, partial, or
   insufficient. It must not be treated as zero funding unless a strategy or
   evaluation config explicitly declares a zero-funding assumption.
 - Long and short exposure must apply funding with opposite economic signs when
   funding data supports it.
-- Evaluation artifacts should record `funding_drag_pct`,
-  `funding_source_status`, and funding warnings where available.
+- Evaluation artifacts record funding input status, matched record counts,
+  missing period counts, funding warnings, and `funding_drag_pct` where funding
+  is applied.
 - Leverage-risk or liquidation-proximity warnings are qualitative research
   diagnostics only. They must not model a real exchange liquidation engine or
   account margin state unless a later explicit contract implements that.

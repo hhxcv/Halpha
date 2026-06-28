@@ -36,9 +36,11 @@ def evaluate_single_window_backtest(
     signal_records: dict[str, Any] | list[dict[str, Any]],
     cost_assumptions: dict[str, Any] | None = None,
     execution_model: dict[str, Any] | None = None,
+    funding_costs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     costs = _cost_assumptions(None)
     model = _execution_model(execution_model)
+    funding = None
     rows = _sorted_rows(ohlcv_rows)
     sample = _sample(rows)
 
@@ -46,6 +48,7 @@ def evaluate_single_window_backtest(
         costs = _cost_assumptions(cost_assumptions)
         records = _signal_record_list(signal_records)
         signed_exposure = _uses_signed_target_exposure(signal_records, records)
+        funding = _funding_cost_input(funding_costs, signed=signed_exposure)
         model = _execution_model(execution_model, signed=signed_exposure)
         if len(rows) < 2:
             return _insufficient_record(
@@ -96,13 +99,14 @@ def evaluate_single_window_backtest(
                 "Signal records must cover every OHLCV row by open_time.",
             )
 
-        result = _evaluate_periods(rows, closes, targets, costs)
+        result = _evaluate_periods(rows, closes, targets, costs, funding_by_period=_funding_by_period(funding))
         drawdown_curve, drawdown_summary = _drawdowns(result["equity_curve"])
         strategy_metrics = _strategy_metrics(
             result["gross_equity"],
             result["net_equity"],
             result["period_net_returns"],
             result["cost_returns"],
+            funding_drag_returns=result.get("funding_drag_returns"),
             max_drawdown_pct=float(drawdown_summary["max_drawdown_pct"]),
             timeframe=str(market_identity.get("timeframe")),
         )
@@ -113,7 +117,7 @@ def evaluate_single_window_backtest(
             signed=signed_exposure,
         )
         baseline_metrics = _baseline_metrics(rows, closes, costs, timeframe=str(market_identity.get("timeframe")))
-        warnings = _research_warnings(sample, strategy_metrics, trade_summary)
+        warnings = [*_research_warnings(sample, strategy_metrics, trade_summary), *_funding_warnings(funding)]
 
         return _base_record(
             strategy,
@@ -131,6 +135,7 @@ def evaluate_single_window_backtest(
             drawdown_curve=drawdown_curve,
             warnings=warnings,
             errors=[],
+            funding_costs=funding,
         )
     except Exception as exc:  # noqa: BLE001 - core returns bounded failed records instead of leaking internals.
         return _failed_record(
@@ -315,35 +320,52 @@ def _evaluate_periods(
     closes: list[float],
     targets: list[float],
     costs: dict[str, float],
+    *,
+    funding_by_period: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     cost_rate = (costs["fees_bps"] + costs["slippage_bps"]) / 10000
+    funding_enabled = funding_by_period is not None
     gross_equity = 1.0
     net_equity = 1.0
-    equity_curve = [
-        {
-            "open_time": _open_time(rows[0]),
-            "gross_equity": 1.0,
-            "net_equity": 1.0,
-            "position": 0.0,
-            "turnover": 0.0,
-            "period_gross_return_pct": None,
-            "period_net_return_pct": None,
-            "cost_pct": 0.0,
-        }
-    ]
+    initial_point = {
+        "open_time": _open_time(rows[0]),
+        "gross_equity": 1.0,
+        "net_equity": 1.0,
+        "position": 0.0,
+        "turnover": 0.0,
+        "period_gross_return_pct": None,
+        "period_net_return_pct": None,
+        "cost_pct": 0.0,
+    }
+    if funding_enabled:
+        initial_point.update(
+            {
+                "funding_rate": 0.0,
+                "funding_return_pct": 0.0,
+                "funding_drag_pct": 0.0,
+                "matched_funding_count": 0,
+            }
+        )
+    equity_curve = [initial_point]
     period_gross_returns = []
     period_net_returns = []
     period_positions = []
     turnovers = []
     cost_returns = []
+    funding_drag_returns = []
+    funding_record_count = 0
     for index in range(1, len(rows)):
         close_return = (closes[index] / closes[index - 1]) - 1
         position = targets[index - 1]
         previous_position = targets[index - 2] if index >= 2 else 0.0
         turnover = abs(position - previous_position)
         cost_return = turnover * cost_rate
+        period_funding = _period_funding(funding_by_period, period_end=_open_time(rows[index]))
+        funding_rate = float(period_funding.get("funding_rate") or 0.0)
+        funding_return = -position * funding_rate
+        funding_drag_return = position * funding_rate
         gross_return = position * close_return
-        net_return = gross_return - cost_return
+        net_return = gross_return + funding_return - cost_return
         gross_equity *= 1 + gross_return
         net_equity *= 1 + net_return
         period_gross_returns.append(gross_return)
@@ -351,19 +373,30 @@ def _evaluate_periods(
         period_positions.append(position)
         turnovers.append(turnover)
         cost_returns.append(cost_return)
-        equity_curve.append(
-            {
-                "open_time": _open_time(rows[index]),
-                "gross_equity": _round(gross_equity),
-                "net_equity": _round(net_equity),
-                "position": _round(position),
-                "turnover": _round(turnover),
-                "period_gross_return_pct": _pct(gross_return),
-                "period_net_return_pct": _pct(net_return),
-                "cost_pct": _pct(cost_return),
-            }
-        )
-    return {
+        if funding_enabled:
+            funding_drag_returns.append(funding_drag_return)
+            funding_record_count += int(period_funding.get("matched_record_count") or 0)
+        point = {
+            "open_time": _open_time(rows[index]),
+            "gross_equity": _round(gross_equity),
+            "net_equity": _round(net_equity),
+            "position": _round(position),
+            "turnover": _round(turnover),
+            "period_gross_return_pct": _pct(gross_return),
+            "period_net_return_pct": _pct(net_return),
+            "cost_pct": _pct(cost_return),
+        }
+        if funding_enabled:
+            point.update(
+                {
+                    "funding_rate": _round(funding_rate),
+                    "funding_return_pct": _pct(funding_return),
+                    "funding_drag_pct": _pct(funding_drag_return),
+                    "matched_funding_count": int(period_funding.get("matched_record_count") or 0),
+                }
+            )
+        equity_curve.append(point)
+    result = {
         "gross_equity": gross_equity,
         "net_equity": net_equity,
         "equity_curve": equity_curve,
@@ -373,6 +406,10 @@ def _evaluate_periods(
         "turnovers": turnovers,
         "cost_returns": cost_returns,
     }
+    if funding_enabled:
+        result["funding_drag_returns"] = funding_drag_returns
+        result["funding_record_count"] = funding_record_count
+    return result
 
 
 def _strategy_metrics(
@@ -381,12 +418,13 @@ def _strategy_metrics(
     period_net_returns: list[float],
     cost_returns: list[float],
     *,
+    funding_drag_returns: list[float] | None = None,
     max_drawdown_pct: float,
     timeframe: str,
 ) -> dict[str, Any]:
     gross_return_pct = _pct(gross_equity - 1)
     net_return_pct = _pct(net_equity - 1)
-    return {
+    metrics = {
         "gross_return_pct": gross_return_pct,
         "net_return_pct": net_return_pct,
         "total_cost_pct": _pct(sum(cost_returns)),
@@ -397,6 +435,9 @@ def _strategy_metrics(
         "sortino": _sortino(period_net_returns, timeframe=timeframe),
         "final_equity": _round(net_equity),
     }
+    if funding_drag_returns is not None:
+        metrics["funding_drag_pct"] = _pct(sum(funding_drag_returns))
+    return metrics
 
 
 def _research_warnings(
@@ -997,13 +1038,14 @@ def _base_record(
     drawdown_curve: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
     errors: list[dict[str, Any]],
+    funding_costs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     name = str(strategy.get("name"))
     source = market_identity.get("source")
     symbol = market_identity.get("symbol")
     timeframe = market_identity.get("timeframe")
     latest = sample.get("end") or "missing"
-    return {
+    record = {
         "evaluation_id": f"single_window_backtest:{name}:{source}:{symbol}:{timeframe}:{latest}",
         "status": status,
         "strategy_name": name,
@@ -1024,6 +1066,9 @@ def _base_record(
         "warnings": warnings,
         "errors": errors,
     }
+    if funding_costs is not None:
+        record["funding_costs"] = funding_costs
+    return record
 
 
 def _signal_record_list(signal_records: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1116,6 +1161,93 @@ def _uses_signed_target_exposure(
         }:
             return True
     return False
+
+
+def _funding_cost_input(raw: dict[str, Any] | None, *, signed: bool) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError("funding_costs must be a funding cost input object.")
+    if not signed:
+        return {
+            **raw,
+            "status": "skipped",
+            "periods": [],
+            "warnings": [
+                *_dict_list(raw.get("warnings")),
+                warning(
+                    "funding_requires_signed_exposure",
+                    "Funding costs are applied only to signed exposure evaluations.",
+                    source=STRATEGY_EVALUATION_SOURCE,
+                ),
+            ],
+        }
+    periods = []
+    for item in raw.get("periods") or []:
+        if not isinstance(item, dict):
+            continue
+        period_end = item.get("period_end")
+        if not isinstance(period_end, str) or not period_end.strip():
+            continue
+        periods.append(
+            {
+                **item,
+                "period_end": period_end.strip(),
+                "funding_rate": _finite_number(item.get("funding_rate"), "funding_rate"),
+                "matched_record_count": _non_negative_int(
+                    item.get("matched_record_count", 0),
+                    "matched_record_count",
+                ),
+            }
+        )
+    status = str(raw.get("status") or ("available" if periods else "unavailable"))
+    if status in {"available", "partial"} and not periods:
+        status = "unavailable"
+    return {
+        **raw,
+        "status": status,
+        "periods": periods,
+        "warnings": _dict_list(raw.get("warnings")),
+        "errors": _dict_list(raw.get("errors")),
+    }
+
+
+def _funding_by_period(funding: dict[str, Any] | None) -> dict[str, dict[str, Any]] | None:
+    if funding is None:
+        return None
+    if funding.get("status") not in {"available", "partial"}:
+        return None
+    return {
+        str(item["period_end"]): item
+        for item in _dict_list(funding.get("periods"))
+        if isinstance(item.get("period_end"), str)
+    }
+
+
+def _period_funding(
+    funding_by_period: dict[str, dict[str, Any]] | None,
+    *,
+    period_end: str,
+) -> dict[str, Any]:
+    if funding_by_period is None:
+        return {}
+    return funding_by_period.get(period_end) or {"funding_rate": 0.0, "matched_record_count": 0}
+
+
+def _funding_warnings(funding: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if funding is None:
+        return []
+    warnings = _dict_list(funding.get("warnings"))
+    status = funding.get("status")
+    if status in {"unavailable", "partial", "failed", "skipped"} and not warnings:
+        warnings.append(
+            warning(
+                "funding_costs_not_fully_applied",
+                f"Funding cost status is {status}.",
+                source=STRATEGY_EVALUATION_SOURCE,
+            )
+        )
+    return warnings
 
 
 def _backtest_mode(strategy: dict[str, Any]) -> str:
