@@ -4,10 +4,12 @@ import math
 from statistics import mean, median, pstdev
 from typing import Any
 
-from .strategy_records import CANONICAL_EXECUTION_MODEL, SUPPORTED_BACKTEST_MODES, warning
+from .signal_records import validate_single_leg_target_exposure
+from .strategy_records import CANONICAL_EXECUTION_MODEL, SIGNED_EXECUTION_MODEL, SUPPORTED_BACKTEST_MODES, warning
 
 
 DEFAULT_EXECUTION_MODEL = dict(CANONICAL_EXECUTION_MODEL)
+DEFAULT_SIGNED_EXECUTION_MODEL = dict(SIGNED_EXECUTION_MODEL)
 DEFAULT_COST_ASSUMPTIONS = {
     "fees_bps": 0.0,
     "slippage_bps": 0.0,
@@ -43,6 +45,8 @@ def evaluate_single_window_backtest(
     try:
         costs = _cost_assumptions(cost_assumptions)
         records = _signal_record_list(signal_records)
+        signed_exposure = _uses_signed_target_exposure(signal_records, records)
+        model = _execution_model(execution_model, signed=signed_exposure)
         if len(rows) < 2:
             return _insufficient_record(
                 strategy,
@@ -75,7 +79,12 @@ def evaluate_single_window_backtest(
             )
 
         closes = [_positive_close(row) for row in rows]
-        targets = _aligned_target_exposures(rows, records, mode=_backtest_mode(strategy))
+        targets = _aligned_target_exposures(
+            rows,
+            records,
+            mode=_backtest_mode(strategy),
+            signed=signed_exposure,
+        )
         if targets is None:
             return _insufficient_record(
                 strategy,
@@ -101,6 +110,7 @@ def evaluate_single_window_backtest(
             result["period_positions"],
             result["period_net_returns"],
             result["turnovers"],
+            signed=signed_exposure,
         )
         baseline_metrics = _baseline_metrics(rows, closes, costs, timeframe=str(market_identity.get("timeframe")))
         warnings = _research_warnings(sample, strategy_metrics, trade_summary)
@@ -153,6 +163,8 @@ def evaluate_walk_forward_backtest(
     try:
         costs = _cost_assumptions(cost_assumptions)
         records = _signal_record_list(signal_records)
+        signed_exposure = _uses_signed_target_exposure(signal_records, records)
+        model = _execution_model(execution_model, signed=signed_exposure)
         if len(rows) < 2:
             return _walk_forward_record(
                 strategy,
@@ -720,7 +732,12 @@ def _trade_summary(
     period_positions: list[float],
     period_net_returns: list[float],
     turnovers: list[float],
+    *,
+    signed: bool,
 ) -> dict[str, Any]:
+    if signed:
+        return _signed_trade_summary(period_positions, period_net_returns, turnovers)
+
     trade_count = 0
     completed_returns = []
     holding_bars = []
@@ -763,6 +780,97 @@ def _trade_summary(
         "turnover": _round(sum(turnovers)),
         "exposure_pct": _round(exposure),
         "average_holding_bars": _round(average_holding) if average_holding is not None else None,
+    }
+
+
+def _signed_trade_summary(
+    period_positions: list[float],
+    period_net_returns: list[float],
+    turnovers: list[float],
+) -> dict[str, Any]:
+    trade_count = 0
+    long_trade_count = 0
+    short_trade_count = 0
+    long_to_short_count = 0
+    short_to_long_count = 0
+    completed_returns = []
+    holding_bars = []
+    current_side = "flat"
+    current_multiplier: float | None = None
+    current_holding_bars = 0
+
+    for position, period_return in zip(period_positions, period_net_returns, strict=True):
+        side = _position_side(position)
+        if current_side == "flat":
+            if side != "flat":
+                trade_count += 1
+                long_trade_count += 1 if side == "long" else 0
+                short_trade_count += 1 if side == "short" else 0
+                current_side = side
+                current_multiplier = 1.0
+                current_holding_bars = 0
+        elif side == "flat":
+            if current_multiplier is not None:
+                current_multiplier *= 1 + period_return
+                completed_returns.append(current_multiplier - 1)
+                holding_bars.append(current_holding_bars)
+            current_side = "flat"
+            current_multiplier = None
+            current_holding_bars = 0
+            continue
+        elif side != current_side:
+            if current_multiplier is not None:
+                completed_returns.append(current_multiplier - 1)
+                holding_bars.append(current_holding_bars)
+            if current_side == "long" and side == "short":
+                long_to_short_count += 1
+            elif current_side == "short" and side == "long":
+                short_to_long_count += 1
+            trade_count += 1
+            long_trade_count += 1 if side == "long" else 0
+            short_trade_count += 1 if side == "short" else 0
+            current_side = side
+            current_multiplier = 1.0
+            current_holding_bars = 0
+
+        if current_multiplier is not None:
+            current_multiplier *= 1 + period_return
+            current_holding_bars += 1
+
+    if current_multiplier is not None:
+        holding_bars.append(current_holding_bars)
+
+    completed_count = len(completed_returns)
+    hit_rate = None
+    if completed_count:
+        hit_rate = (sum(1 for value in completed_returns if value > 0) / completed_count) * 100
+    exposure = 0.0
+    long_exposure = 0.0
+    short_exposure = 0.0
+    average_abs_exposure = 0.0
+    if period_positions:
+        exposure = (sum(1 for position in period_positions if position != 0) / len(period_positions)) * 100
+        long_exposure = (sum(1 for position in period_positions if position > 0) / len(period_positions)) * 100
+        short_exposure = (sum(1 for position in period_positions if position < 0) / len(period_positions)) * 100
+        average_abs_exposure = (sum(abs(position) for position in period_positions) / len(period_positions)) * 100
+    average_holding = mean(holding_bars) if holding_bars else None
+    open_trade_count = 1 if current_multiplier is not None else 0
+    return {
+        "trade_count": trade_count,
+        "completed_trade_count": completed_count,
+        "open_trade_count": open_trade_count,
+        "hit_rate_pct": _round(hit_rate) if hit_rate is not None else None,
+        "turnover": _round(sum(turnovers)),
+        "exposure_pct": _round(exposure),
+        "long_exposure_pct": _round(long_exposure),
+        "short_exposure_pct": _round(short_exposure),
+        "average_abs_exposure_pct": _round(average_abs_exposure),
+        "average_holding_bars": _round(average_holding) if average_holding is not None else None,
+        "long_trade_count": long_trade_count,
+        "short_trade_count": short_trade_count,
+        "long_to_short_count": long_to_short_count,
+        "short_to_long_count": short_to_long_count,
+        "side_flip_count": long_to_short_count + short_to_long_count,
     }
 
 
@@ -948,15 +1056,16 @@ def _aligned_target_exposures(
     signal_records: list[dict[str, Any]],
     *,
     mode: str,
+    signed: bool,
 ) -> list[float] | None:
-    by_time = {_open_time(record): _target_exposure(record) for record in signal_records}
+    by_time = {_open_time(record): _target_exposure(record, signed=signed) for record in signal_records}
     targets = []
     for row in rows:
         key = _open_time(row)
         if key not in by_time:
             return None
         targets.append(by_time[key])
-    if mode == "long_only":
+    if mode == "long_only" and not signed:
         targets = _long_only_targets(targets)
     return targets
 
@@ -970,16 +1079,43 @@ def _long_only_targets(targets: list[float]) -> list[float]:
     return result
 
 
-def _target_exposure(record: dict[str, Any]) -> float:
+def _target_exposure(record: dict[str, Any], *, signed: bool) -> float:
     position = record.get("position") if isinstance(record.get("position"), dict) else {}
     value = position.get("target_exposure")
     if value is None:
         signal = record.get("signal") if isinstance(record.get("signal"), dict) else {}
         value = 1.0 if signal.get("active") is True else 0.0
+    if signed:
+        return validate_single_leg_target_exposure(value, path="signal record target_exposure")
     target = _finite_number(value, "signal record target_exposure")
     if target < 0 or target > 1:
         raise ValueError("signal record target_exposure must be between 0 and 1.")
     return target
+
+
+def _uses_signed_target_exposure(
+    signal_records: dict[str, Any] | list[dict[str, Any]],
+    records: list[dict[str, Any]],
+) -> bool:
+    if isinstance(signal_records, dict):
+        if signal_records.get("position_policy") == "research_signed_target_exposure":
+            return True
+        version = _int_or_none(signal_records.get("signal_record_version"))
+        if version is not None and version >= 2:
+            return True
+    for record in records:
+        position = record.get("position") if isinstance(record.get("position"), dict) else {}
+        signal = record.get("signal") if isinstance(record.get("signal"), dict) else {}
+        if position.get("unit") == "fractional_signed_exposure":
+            return True
+        if str(position.get("position_state") or signal.get("position_state") or "") in {
+            "long",
+            "short",
+            "flat",
+            "unknown",
+        }:
+            return True
+    return False
 
 
 def _backtest_mode(strategy: dict[str, Any]) -> str:
@@ -1003,10 +1139,15 @@ def _cost_assumptions(raw: dict[str, Any] | None) -> dict[str, float]:
     }
 
 
-def _execution_model(raw: dict[str, Any] | None) -> dict[str, str]:
-    model = dict(DEFAULT_EXECUTION_MODEL)
+def _execution_model(raw: dict[str, Any] | None, *, signed: bool = False) -> dict[str, str]:
+    model = dict(DEFAULT_SIGNED_EXECUTION_MODEL if signed else DEFAULT_EXECUTION_MODEL)
     if isinstance(raw, dict):
         model.update({str(key): str(value) for key, value in raw.items()})
+    if signed and model.get("execution_model_id") == CANONICAL_EXECUTION_MODEL.get("execution_model_id"):
+        model["execution_model_id"] = SIGNED_EXECUTION_MODEL["execution_model_id"]
+    if signed:
+        model.setdefault("direction", "long_short")
+        model.setdefault("position_unit", "fractional_signed_exposure")
     return model
 
 
@@ -1038,6 +1179,24 @@ def _finite_number(value: Any, name: str) -> float:
     if not math.isfinite(number):
         raise ValueError(f"{name} must be a finite number.")
     return number
+
+
+def _int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value)
+    return None
+
+
+def _position_side(position: float) -> str:
+    if position > 0:
+        return "long"
+    if position < 0:
+        return "short"
+    return "flat"
 
 
 def _non_negative_number(value: Any, name: str) -> float:

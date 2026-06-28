@@ -1700,6 +1700,22 @@ Reusable core input contract:
 }
 ```
 
+Signed single-leg evaluation uses the same no-lookahead timing with a versioned
+execution model:
+
+```json
+{
+  "execution_model_id": "close_to_close_next_bar_signed_v1",
+  "price_source": "close",
+  "signal_timing": "signal_at_bar_close",
+  "position_timing": "next_bar",
+  "lookahead_policy": "no_same_bar_execution",
+  "execution_timing": "research_close_to_close",
+  "direction": "long_short",
+  "position_unit": "fractional_signed_exposure"
+}
+```
+
 Reusable core output contract:
 
 ```json
@@ -1832,10 +1848,23 @@ Execution model rules:
 - The default research execution model is close-to-close with no same-bar execution.
 - A signal known at bar `t` may affect position from bar `t+1`.
 - `long_flat` target exposure follows each signal record; `long_only` keeps target exposure active after the first positive target and does not model exits.
+- `close_to_close_next_bar_v1` keeps the current long-flat target exposure
+  boundary of `0.0 <= target_exposure <= 1.0`.
+- `close_to_close_next_bar_signed_v1` supports signed single-leg target
+  exposure in `-1.0 <= target_exposure <= 1.0`; positive exposure is long,
+  negative exposure is short, and zero exposure is flat.
+- Signed evaluation uses previous-bar signed target exposure for the next
+  close-to-close return. A short exposure profits when price falls and loses
+  when price rises.
+- Turnover is the absolute change in target exposure. A direct long `1.0` to
+  short `-1.0` transition has turnover `2.0`.
 - Evaluation must record fees and slippage assumptions before net metrics.
 - Gross and net metrics must be separate.
 - Strategy metrics must include gross return, net return, total cost, cost drag, drawdown, volatility, risk-adjusted metrics, and final equity.
 - Trade summaries must include trade count, completed and open trades, hit rate, turnover, exposure, and average holding bars.
+- Signed trade summaries additionally include long exposure, short exposure,
+  average absolute exposure, long trade count, short trade count, long-to-short
+  transition count, short-to-long transition count, and side-flip count.
 - Baseline metrics must include buy-and-hold and cash or no-position behavior where applicable.
 - Relative metrics must compare net strategy behavior with buy-and-hold baseline behavior.
 - Research limitation warnings must distinguish method or evidence limitations from strategy conclusions. Current warning codes include `historical_research_only`, `insufficient_sample_length`, `low_trade_count`, `no_strategy_exposure`, `high_turnover`, and `high_cost_drag`.

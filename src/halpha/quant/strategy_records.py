@@ -10,6 +10,7 @@ STRATEGY_VERSION = 1
 DEFAULT_BACKTEST_INITIAL_CASH = 10000.0
 SUPPORTED_BACKTEST_MODES = {"long_flat", "long_only"}
 CANONICAL_EXECUTION_MODEL_ID = "close_to_close_next_bar_v1"
+SIGNED_EXECUTION_MODEL_ID = "close_to_close_next_bar_signed_v1"
 CANONICAL_EXECUTION_MODEL = {
     "execution_model_id": CANONICAL_EXECUTION_MODEL_ID,
     "price_source": "close",
@@ -17,6 +18,12 @@ CANONICAL_EXECUTION_MODEL = {
     "position_timing": "next_bar",
     "lookahead_policy": "no_same_bar_execution",
     "execution_timing": "research_close_to_close",
+}
+SIGNED_EXECUTION_MODEL = {
+    **CANONICAL_EXECUTION_MODEL,
+    "execution_model_id": SIGNED_EXECUTION_MODEL_ID,
+    "direction": "long_short",
+    "position_unit": "fractional_signed_exposure",
 }
 
 
