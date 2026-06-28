@@ -15,14 +15,13 @@ from ..strategy_records import (
     strategy_run_record,
     warning,
 )
+from ..strategy_specs import require_strategy_spec
 from ..vectorbt_engine import load_vectorbt
 
 
 NAME = "sma_cross_trend"
-DEFAULT_PARAMS = {
-    "short_window": 20,
-    "long_window": 50,
-}
+SPEC = require_strategy_spec(NAME)
+DEFAULT_PARAMS = dict(SPEC.default_params)
 VECTORBT_BACKEND = "vectorbt.IndicatorFactory"
 
 

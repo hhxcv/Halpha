@@ -19,15 +19,13 @@ from ..strategy_records import (
     strategy_run_record,
     warning,
 )
+from ..strategy_specs import require_strategy_spec
 from ..vectorbt_engine import load_vectorbt
 
 
 NAME = "tsmom_vol_scaled"
-DEFAULT_PARAMS = {
-    "return_window": 20,
-    "volatility_window": 20,
-    "target_volatility": 0.2,
-}
+SPEC = require_strategy_spec(NAME)
+DEFAULT_PARAMS = dict(SPEC.default_params)
 VECTORBT_BACKEND = "vectorbt.IndicatorFactory"
 
 

@@ -348,6 +348,13 @@ def get_strategy_spec(name: str) -> StrategySpec | None:
     return STRATEGY_SPECS.get(name)
 
 
+def require_strategy_spec(name: str) -> StrategySpec:
+    spec = get_strategy_spec(name)
+    if spec is None:
+        raise KeyError(f"unsupported strategy spec: {name}")
+    return spec
+
+
 def list_strategy_specs() -> list[StrategySpec]:
     return [STRATEGY_SPECS[name] for name in STRATEGY_SPEC_ORDER]
 

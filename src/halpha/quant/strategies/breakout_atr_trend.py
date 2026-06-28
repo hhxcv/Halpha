@@ -15,15 +15,13 @@ from ..strategy_records import (
     strategy_run_record,
     warning,
 )
+from ..strategy_specs import require_strategy_spec
 from ..vectorbt_engine import load_vectorbt
 
 
 NAME = "breakout_atr_trend"
-DEFAULT_PARAMS = {
-    "breakout_window": 20,
-    "exit_window": 10,
-    "atr_window": 14,
-}
+SPEC = require_strategy_spec(NAME)
+DEFAULT_PARAMS = dict(SPEC.default_params)
 VECTORBT_BACKEND = "vectorbt.IndicatorFactory"
 
 

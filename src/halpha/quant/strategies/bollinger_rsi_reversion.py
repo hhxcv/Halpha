@@ -15,19 +15,13 @@ from ..strategy_records import (
     strategy_run_record,
     warning,
 )
+from ..strategy_specs import require_strategy_spec
 from ..vectorbt_engine import load_vectorbt
 
 
 NAME = "bollinger_rsi_reversion"
-DEFAULT_PARAMS = {
-    "bollinger_window": 20,
-    "band_std": 2.0,
-    "rsi_window": 14,
-    "rsi_oversold": 30.0,
-    "rsi_overbought": 70.0,
-    "trend_window": 50,
-    "trend_filter_pct": 8.0,
-}
+SPEC = require_strategy_spec(NAME)
+DEFAULT_PARAMS = dict(SPEC.default_params)
 VECTORBT_BACKEND = "vectorbt.IndicatorFactory"
 
 
