@@ -194,6 +194,129 @@ def test_single_window_backtest_always_long_uses_next_bar_position() -> None:
     json.dumps(result)
 
 
+def test_signed_single_window_short_profits_when_price_falls() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 90),
+        _record("2026-06-03T00:00:00Z", 81),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [-1, -1, -1]),
+    )
+
+    assert result["status"] == "succeeded"
+    assert result["execution_model"]["execution_model_id"] == "close_to_close_next_bar_signed_v1"
+    assert result["execution_model"]["direction"] == "long_short"
+    assert _curve_values(result, "position") == [0.0, -1.0, -1.0]
+    assert _curve_values(result, "period_gross_return_pct") == [None, 10.0, 10.0]
+    assert result["strategy_metrics"]["gross_return_pct"] == 21.0
+    assert result["strategy_metrics"]["net_return_pct"] == 21.0
+    assert result["baseline_metrics"]["buy_and_hold"]["net_return_pct"] == -19.0
+    assert result["trade_summary"]["trade_count"] == 1
+    assert result["trade_summary"]["short_trade_count"] == 1
+    assert result["trade_summary"]["long_trade_count"] == 0
+    assert result["trade_summary"]["short_exposure_pct"] == 100.0
+    assert result["trade_summary"]["open_trade_count"] == 1
+    json.dumps(result)
+
+
+def test_signed_single_window_short_loses_when_price_rises() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 110),
+        _record("2026-06-03T00:00:00Z", 121),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [-1, -1, -1]),
+    )
+
+    assert result["status"] == "succeeded"
+    assert _curve_values(result, "position") == [0.0, -1.0, -1.0]
+    assert _curve_values(result, "period_gross_return_pct") == [None, -10.0, -10.0]
+    assert result["strategy_metrics"]["gross_return_pct"] == -19.0
+    assert result["strategy_metrics"]["net_return_pct"] == -19.0
+    assert result["baseline_metrics"]["buy_and_hold"]["net_return_pct"] == 21.0
+    assert result["strategy_metrics"]["max_drawdown_pct"] == -19.0
+    assert result["trade_summary"]["short_trade_count"] == 1
+    assert result["trade_summary"]["open_trade_count"] == 1
+    json.dumps(result)
+
+
+def test_signed_single_window_sideways_short_records_cost_drag() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 100),
+        _record("2026-06-03T00:00:00Z", 100),
+        _record("2026-06-04T00:00:00Z", 100),
+        _record("2026-06-05T00:00:00Z", 100),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [0, -1, -1, 0, 0]),
+        cost_assumptions={"fees_bps": 10, "slippage_bps": 5},
+    )
+
+    assert result["status"] == "succeeded"
+    assert _curve_values(result, "position") == [0.0, 0.0, -1.0, -1.0, 0.0]
+    assert _curve_values(result, "turnover") == [0.0, 0.0, 1.0, 0.0, 1.0]
+    assert result["strategy_metrics"]["gross_return_pct"] == 0.0
+    assert result["strategy_metrics"]["net_return_pct"] == -0.299775
+    assert result["strategy_metrics"]["total_cost_pct"] == 0.3
+    assert result["strategy_metrics"]["cost_drag_pct"] == 0.299775
+    assert result["trade_summary"]["trade_count"] == 1
+    assert result["trade_summary"]["completed_trade_count"] == 1
+    assert result["trade_summary"]["open_trade_count"] == 0
+    assert result["trade_summary"]["short_exposure_pct"] == 50.0
+    assert result["trade_summary"]["average_holding_bars"] == 2.0
+    json.dumps(result)
+
+
+def test_signed_single_window_long_to_short_transition_records_turnover_and_side_flip() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 110),
+        _record("2026-06-03T00:00:00Z", 99),
+        _record("2026-06-04T00:00:00Z", 108.9),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signed_signal_records(rows, [1, -1, -1, 0]),
+        cost_assumptions={"fees_bps": 10, "slippage_bps": 0},
+    )
+
+    assert result["status"] == "succeeded"
+    assert _curve_values(result, "position") == [0.0, 1.0, -1.0, -1.0]
+    assert _curve_values(result, "turnover") == [0.0, 1.0, 2.0, 0.0]
+    assert _curve_values(result, "period_net_return_pct") == [None, 9.9, 9.8, -10.0]
+    assert result["strategy_metrics"]["total_cost_pct"] == 0.3
+    assert result["trade_summary"]["turnover"] == 3.0
+    assert result["trade_summary"]["trade_count"] == 2
+    assert result["trade_summary"]["completed_trade_count"] == 1
+    assert result["trade_summary"]["open_trade_count"] == 1
+    assert result["trade_summary"]["long_trade_count"] == 1
+    assert result["trade_summary"]["short_trade_count"] == 1
+    assert result["trade_summary"]["long_to_short_count"] == 1
+    assert result["trade_summary"]["short_to_long_count"] == 0
+    assert result["trade_summary"]["side_flip_count"] == 1
+    assert result["trade_summary"]["long_exposure_pct"] == 33.333333
+    assert result["trade_summary"]["short_exposure_pct"] == 66.666667
+    json.dumps(result)
+
+
 def test_single_window_backtest_entry_exit_applies_costs_and_no_same_bar_execution() -> None:
     rows = [
         _record("2026-06-01T00:00:00Z", 100),
@@ -329,6 +452,30 @@ def test_single_window_backtest_rejects_non_positive_close_without_fake_success(
     json.dumps(result)
 
 
+def test_single_window_backtest_rejects_negative_target_without_signed_contract() -> None:
+    rows = [
+        _record("2026-06-01T00:00:00Z", 100),
+        _record("2026-06-02T00:00:00Z", 110),
+    ]
+
+    result = evaluate_single_window_backtest(
+        strategy=_strategy(),
+        market_identity=_market_identity(),
+        ohlcv_rows=rows,
+        signal_records=_signal_records(rows, [-1, -1]),
+    )
+
+    assert result["status"] == "failed"
+    assert result["errors"] == [
+        {
+            "error_type": "ValueError",
+            "message": "signal record target_exposure must be between 0 and 1.",
+            "stage": "strategy_evaluation.single_window",
+        }
+    ]
+    json.dumps(result)
+
+
 def test_walk_forward_backtest_records_sequential_windows_and_instability_warnings() -> None:
     rows = _walk_forward_rows()
 
@@ -432,6 +579,42 @@ def _signal_records(rows: list[dict[str, Any]], targets: list[float]) -> dict[st
             for row, target in zip(rows, targets, strict=True)
         ],
     }
+
+
+def _signed_signal_records(rows: list[dict[str, Any]], targets: list[float]) -> dict[str, Any]:
+    return {
+        "status": "succeeded",
+        "signal_record_version": 2,
+        "position_policy": "research_signed_target_exposure",
+        "records": [
+            {
+                "schema_version": 2,
+                "open_time": row["open_time"],
+                "signal_time": row["open_time"],
+                "signal": {
+                    "active": target != 0,
+                    "position_state": _target_state(target),
+                },
+                "position": {
+                    "target_exposure": target,
+                    "unit": "fractional_signed_exposure",
+                    "position_state": _target_state(target),
+                },
+                "entry": False,
+                "exit": False,
+                "indicator_context": {},
+            }
+            for row, target in zip(rows, targets, strict=True)
+        ],
+    }
+
+
+def _target_state(target: float) -> str:
+    if target > 0:
+        return "long"
+    if target < 0:
+        return "short"
+    return "flat"
 
 
 def _curve_values(result: dict[str, Any], field: str) -> list[Any]:
