@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from types import ModuleType
 
 from halpha.quant.registry import (
     SUPPORTED_STRATEGY_NAMES,
@@ -8,6 +9,12 @@ from halpha.quant.registry import (
     get_supported_strategy_spec,
     supported_strategy_spec_records,
     supported_strategy_specs,
+)
+from halpha.quant.strategies import (
+    bollinger_rsi_reversion,
+    breakout_atr_trend,
+    sma_cross_trend,
+    tsmom_vol_scaled,
 )
 
 
@@ -17,6 +24,12 @@ EXPECTED_ORDER = [
     "sma_cross_trend",
     "bollinger_rsi_reversion",
 ]
+STRATEGY_MODULES = {
+    "tsmom_vol_scaled": tsmom_vol_scaled,
+    "breakout_atr_trend": breakout_atr_trend,
+    "sma_cross_trend": sma_cross_trend,
+    "bollinger_rsi_reversion": bollinger_rsi_reversion,
+}
 
 
 def test_supported_strategy_specs_are_deterministic() -> None:
@@ -88,3 +101,24 @@ def test_strategy_specs_include_dashboard_parameter_metadata() -> None:
     assert record["parameter_schema"]["rsi_oversold"]["maximum"] == 100.0
     assert record["parameter_schema"]["rsi_oversold"]["optimization_enabled"] is True
     assert record["optimization_space"]["rsi_oversold"]["values"] == [25.0, 30.0]
+
+
+def test_current_strategy_modules_use_spec_defaults() -> None:
+    for name, module in STRATEGY_MODULES.items():
+        definition = get_strategy_definition(name)
+        assert definition is not None
+        assert module.NAME == name
+        assert module.SPEC is definition.spec
+        assert module.DEFAULT_PARAMS == definition.spec.default_params
+        assert definition.spec.output_position_policy == "research_long_flat_target_exposure"
+
+
+def test_current_strategy_minimum_rows_match_specs() -> None:
+    for name, module in STRATEGY_MODULES.items():
+        spec = get_supported_strategy_spec(name)
+        assert spec is not None
+        assert _minimum_rows(module) == spec.minimum_rows_policy["minimum_rows_with_default_params"]
+
+
+def _minimum_rows(module: ModuleType) -> int:
+    return module._minimum_rows(module.DEFAULT_PARAMS)
