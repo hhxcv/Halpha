@@ -20,9 +20,76 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M22 - Data Collection, Retrieval, and Storage Foundation v1
+### M23 - Contract-First Quant Strategy Framework and Evaluation Workbench v1
 
 Status: active.
+
+Goal:
+
+```text
+Make Halpha's quantitative research layer contract-first, futures-aware, long-short capable, strategy-family complete, optimization-aware, and visually inspectable in Strategy Lab without introducing trading execution or account operations.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M22 reusable data-store, collection-coverage, no-lookahead query, dashboard data-view, and CLI/dashboard parity work instead of replacing it;
+* define durable quantitative contracts for instruments, market types, contract types, quote assets, settlement assets, source identities, strategy specs, signal records, evaluation records, optimization artifacts, and dashboard read models;
+* treat configured spot, USD-margined perpetual, swap, and other implemented public OHLCV sources as explicit market identities rather than interchangeable symbol strings;
+* support futures-first research on implemented public contract OHLCV sources, especially linear USDT or USDC perpetual and swap markets, while preserving spot support;
+* extend strategy signals from boolean long-flat states to signed target exposure records that can represent long, short, flat, and bounded multi-leg research exposure;
+* extend the canonical no-lookahead evaluator so signed exposures use previous-bar signals, next-bar position timing, explicit price basis, fees, slippage, turnover, funding-cost assumptions where data supports them, and bounded warnings where data is missing;
+* keep backtest evaluation account-independent by using unit-equity, notional, exposure, and explicit cost assumptions instead of exchange balances, margin accounts, order books, or live positions;
+* support contract-specific research diagnostics such as long and short contribution, gross and net exposure, funding drag, turnover, cost drag, drawdown, liquidation-proximity or leverage-risk warnings, and data-coverage limits;
+* support strategy-family metadata that identifies trend, moving-average, mean-reversion, volatility or risk-regime, statistical-arbitrage, cross-sectional, derivatives-aware, and event-driven strategies;
+* migrate the implemented `tsmom_vol_scaled`, `breakout_atr_trend`, `sma_cross_trend`, and `bollinger_rsi_reversion` strategies onto the durable strategy-spec interface without silently changing their existing behavior;
+* add futures-aware long-short strategy variants for implemented trend, breakout, moving-average, and mean-reversion families;
+* add at least one implemented statistical-arbitrage path that can evaluate pair or spread-style signals with explicit alignment, hedge-ratio or spread assumptions, multi-leg exposure, and insufficient-evidence states;
+* add at least one implemented cross-sectional or relative-strength futures strategy that can compare configured symbols without inventing unavailable market history;
+* add implemented event-driven strategy inputs that can consume M22 event-like stores, including market anomalies and selected text, macro/calendar, derivatives, or on-chain records, with event time, published time, first-seen time, and as-of boundaries enforced;
+* add implemented derivatives-aware strategy inputs where funding, open interest, premium, basis, spread, or depth records are available, and preserve explicit unavailable or stale states where sources cannot support a feature;
+* separate signal generation, feature construction, execution assumptions, evaluation, optimization, gate classification, lifecycle state, and report material so each step has a reviewable artifact boundary;
+* upgrade parameter diagnostics into a bounded optimization workflow that records the tested search space, train/validation or walk-forward policy, candidate metrics, failed combinations, selection rules, robustness diagnostics, and overfitting warnings;
+* keep optimization research-only by recording candidate evidence without automatically mutating active strategy configuration, promoting strategies, creating trading instructions, or claiming future performance;
+* extend strategy effectiveness gates so long-short, futures-aware, multi-leg, statistical-arbitrage, and event-driven strategy evidence is judged with appropriate benchmark coverage, sample quality, walk-forward, cost, funding, turnover, and robustness checks;
+* integrate optimization and expanded strategy evidence with strategy lifecycle state so effective, watchlisted, rejected, degraded, retired, and insufficient-evidence states remain deterministic and reviewable;
+* make standalone strategy backtests, experiments, optimization runs, and strategy comparisons use the same core evaluation and artifact contracts as pipeline strategy stages;
+* expose Strategy Lab as the primary local strategy workbench for selecting market identity, strategy family, strategy, parameters, optimization scope, time range, and evaluation mode through API-backed controls;
+* reuse the Strategy Lab K-line component as the common OHLCV viewer and strategy overlay surface, including long, short, close, exit, event, and funding markers where available;
+* show dashboard evaluation views for equity, drawdown, exposure, turnover, cost drag, funding drag, benchmark comparison, parameter heatmaps, walk-forward windows, gate outcomes, lifecycle state, warnings, and source refs without dumping full raw histories by default;
+* preserve bounded dashboard progress and logs for backtest, experiment, optimization, and export-like strategy artifact actions through internal service or job APIs rather than UI shell command execution;
+* update quant, strategy-lifecycle, dashboard, research-data, derivatives, event-intelligence, and artifact-governance docs only where implemented behavior or artifact semantics change;
+* add focused tests for strategy specs, signed exposure records, long and short PnL, funding-cost handling, no-lookahead timing, multi-leg alignment, event as-of filtering, derivatives feature availability, optimization robustness, gate behavior, lifecycle integration, CLI behavior, dashboard APIs, and browser-level Strategy Lab smoke flows.
+
+M23 favors:
+
+* durable strategy and evaluation contracts over one-off strategy implementations;
+* contract futures and long-short research support over adding more long-only spot examples;
+* no-lookahead feature alignment over convenient latest-data joins;
+* account-independent exposure modeling over exchange-account simulation;
+* explicit fees, slippage, funding, turnover, leverage-risk, sample-quality, and data-coverage assumptions over optimistic backtest summaries;
+* bounded optimization, walk-forward evidence, and robustness gates over best-parameter storytelling;
+* strategy-family coverage and reusable strategy specs over ad hoc registry growth;
+* Strategy Lab visual inspection over raw JSON or table-only strategy review;
+* source-backed deterministic artifacts over LLM-generated signals, rankings, gates, or lifecycle decisions;
+* incremental end-to-end slices that keep existing collection, report, monitor, dashboard, lifecycle, and workbench workflows executable.
+
+M23 does not require:
+
+* exchange account access, wallet access, broker integration, order placement, live trading, paper trading, portfolio automation, position sizing against real balances, deposits, withdrawals, or account operations;
+* modeling exchange liquidation engines, maintenance-margin schedules, funding forecasts, order-book queue position, partial fills, market impact, borrow constraints, tax treatment, or real execution routing;
+* replacing Halpha-owned artifact contracts with vectorbt, Backtrader, Zipline, LEAN, notebook, or hosted-platform objects as persisted contracts;
+* a hosted strategy registry, multi-user experiment platform, cloud optimizer, remote scheduler, Redis, Celery, Prefect, Airflow, Kafka, or hidden worker pool;
+* high-frequency tick simulation, websocket streaming backtests, latency modeling, order-flow execution, or microstructure research beyond bounded public data features already collected;
+* autonomous strategy generation, reinforcement learning, black-box AutoML, unlimited parameter search, automatic production parameter selection, or automatic active-strategy mutation;
+* perfect multi-exchange contract normalization for every venue before implemented public futures paths are useful;
+* full semantic event understanding before event-driven strategies can use deterministic event-like records with explicit uncertainty;
+* making Codex or another LLM the source of strategy signals, feature values, optimization results, gate statuses, lifecycle states, forecasts, trading instructions, or financial advice.
+
+## Completed Milestones
+
+### M22 - Data Collection, Retrieval, and Storage Foundation v1
+
+Status: completed.
 
 Goal:
 
@@ -73,8 +140,6 @@ M22 does not require:
 * replacing existing shared stores, run artifacts, report artifacts, dashboard views, or CLI commands when a narrow extension preserves the current contract;
 * exchange account access, wallet access, broker integration, order placement, trading execution, portfolio automation, position sizing, or account operations;
 * making Codex or another LLM the source of collection coverage state, query results, duplicate decisions, data-quality decisions, forecasts, or trading advice.
-
-## Completed Milestones
 
 ### M21 - Technical Debt and Product Reliability Cleanup v1
 
