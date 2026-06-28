@@ -67,6 +67,8 @@ Decision-intelligence contracts live in `docs/decision-intelligence-contracts.md
 ## Related Docs
 
 - `docs/artifact-governance.md`: artifact map, layer rules, Codex input policy, and documentation index.
+- `docs/research-data-contracts.md`: reusable data-store coverage, query,
+  no-lookahead, and export boundaries for shared data consumers.
 - `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
 - `docs/decision-intelligence-contracts.md`: downstream regime, risk, decision, watch trigger, delta, and decision material contracts.
 - `docs/event-intelligence-contracts.md`: event intelligence and event-quant confluence contracts.
@@ -87,12 +89,19 @@ README should describe only user-visible behavior that exists. This file may def
 Define contracts for:
 
 - Quant configuration.
+- Instrument identity and market identity.
+- Strategy specs and strategy-family metadata.
 - OHLCV schema.
 - Shared OHLCV storage layout.
 - Strategy data view records.
 - Strategy research run artifacts.
+- Strategy signal and exposure records.
 - Bounded strategy diagnostics.
 - Strategy evaluation artifacts.
+- Futures-aware cost and funding assumptions.
+- Multi-leg strategy evaluation records.
+- Strategy optimization artifacts.
+- Strategy dashboard read models.
 - AI-readable strategy evaluation material.
 - Market strategy signal artifacts.
 - Normalized market signal artifacts.
@@ -110,8 +119,9 @@ Define contracts for:
 - Order simulation.
 - Position records.
 - Portfolio automation.
-- Automatic strategy parameter optimization.
-- Best-parameter selection.
+- Automatic production parameter optimization.
+- Automatic active-config mutation from optimized parameters.
+- Best-parameter selection outside an explicit bounded research artifact.
 - Machine learning prediction.
 - Text event signal processing.
 - Real-time market monitoring.
@@ -127,6 +137,7 @@ Selected tools are implementation aids, not product architecture boundaries.
 | Market data access | CCXT may be used only for public OHLCV data. No authenticated endpoints, account state, balances, orders, or trading operations. |
 | Strategy calculation | vectorbt may be used for indicators, signal calculation, and bounded research diagnostics. Vectorbt objects are internal implementation details and must not be persisted as stable Halpha artifacts or embedded into AI context. |
 | Strategy evaluation | Halpha-owned evaluation records are the stable interface for backtest summaries, baseline comparison, walk-forward evidence, and evaluation warnings. |
+| Strategy optimization | Halpha-owned optimization artifacts are research evidence only. Optimization must not mutate active config, promote strategies, or select production parameters automatically. |
 | History storage | Hive-style partitioned Parquet may be used as the reusable OHLCV fact store. It is not AI context. |
 | Query and cropping | Current-run OHLCV windows are selected from the local Parquet-backed store. No database service is used. |
 | Report interface | Halpha-owned strategy run, signal JSON, and Markdown contracts are the stable report-loop interface. |
@@ -145,6 +156,426 @@ Runtime dependencies should serve the current quant flow. They must not introduc
 | `vectorbt` | Strategy indicator and signal calculation support. | Internal implementation helper only. Do not expose vectorbt objects as Halpha artifact contracts or AI context. No portfolio automation, order execution, or trading product flow. |
 
 Current `tsmom_vol_scaled` implementation uses vectorbt `IndicatorFactory` for momentum return and signal calculation. Current `breakout_atr_trend` implementation uses vectorbt `IndicatorFactory` for rolling breakout levels and ATR context. Current `sma_cross_trend` implementation uses vectorbt `IndicatorFactory` for short/long simple moving-average trend state. Current `bollinger_rsi_reversion` implementation uses vectorbt `IndicatorFactory` for Bollinger-style bands, RSI state, and trend-filter context. When configured, bounded historical diagnostics use the Halpha-owned canonical next-bar close-to-close evaluator. Persisted artifacts contain only Halpha-owned summary fields, assumptions, scalar metrics, and warnings.
+
+## Instrument Identity Contract
+
+Status: current OHLCV and strategy artifacts identify markets by `source`,
+`symbol`, and `timeframe`. The expanded normalized identity below is planned
+unless a downstream implementation issue explicitly ships it.
+
+Purpose:
+
+- Make spot, linear perpetual, inverse perpetual, swap, and other public market
+  histories explicit instead of treating every symbol string as equivalent.
+- Keep futures-aware strategy evaluation account-independent and source-aware.
+- Give Strategy Lab and optimization artifacts one stable market-identity
+  vocabulary.
+
+Instrument identity fields:
+
+```json
+{
+  "instrument_identity": {
+    "schema_version": 1,
+    "source": "binance_usdm",
+    "symbol": "BTCUSDT",
+    "exchange_symbol": "BTC/USDT:USDT",
+    "market_type": "perpetual",
+    "contract_type": "linear_perpetual",
+    "base_asset": "BTC",
+    "quote_asset": "USDT",
+    "settlement_asset": "USDT",
+    "price_unit": "quote_asset_per_base_asset",
+    "timeframe": "1h",
+    "identity_status": "normalized",
+    "warnings": []
+  }
+}
+```
+
+Allowed `market_type` values:
+
+- `spot`;
+- `perpetual`;
+- `swap`;
+- `futures`;
+- `unknown`.
+
+Allowed `contract_type` values:
+
+- `none`;
+- `linear_perpetual`;
+- `inverse_perpetual`;
+- `linear_futures`;
+- `inverse_futures`;
+- `spot`;
+- `unknown`.
+
+Rules:
+
+- Existing `source`, `symbol`, and `timeframe` fields remain valid current
+  identity fields until normalized identity is implemented.
+- Normalized identity must be derived from configured sources and source
+  metadata, not guessed only from symbol suffixes.
+- Unknown source metadata must produce `unknown` identity values and warnings,
+  not fabricated contract details.
+- Strategy artifacts that support contracts must record `settlement_asset`
+  when known and must record an explicit warning when it is unknown.
+- Public market identity must not include account identifiers, balances,
+  margin mode, position mode, leverage settings, or order information.
+
+## Strategy Spec Contract
+
+Status: planned. Current strategy registry exposes strategy names and callable
+implementations. A durable `strategy_spec` record is intended to become the
+reviewable interface for strategy metadata before new strategy families expand.
+
+Purpose:
+
+- Make strategy family, supported market types, parameter schema, required
+  inputs, output exposure policy, and optimization space visible to CLI,
+  pipeline, Strategy Lab, gates, lifecycle, and tests.
+- Prevent dashboard and config code from hardcoding strategy behavior that
+  belongs to the strategy registry.
+
+Strategy spec record:
+
+```json
+{
+  "schema_version": 1,
+  "strategy_name": "sma_cross_trend",
+  "strategy_family": "moving_average",
+  "strategy_contract_version": "1",
+  "status": "implemented",
+  "description": "Simple moving-average crossover trend research strategy.",
+  "supported_market_types": ["spot", "perpetual", "swap"],
+  "required_inputs": [
+    {
+      "input_type": "ohlcv",
+      "required": true,
+      "time_alignment": "closed_bar_no_lookahead"
+    }
+  ],
+  "output_position_policy": "research_long_flat_target_exposure",
+  "default_params": {},
+  "parameter_schema": {},
+  "optimization_space": {},
+  "minimum_rows_policy": {
+    "minimum_rows": 60,
+    "reason": "indicator warmup and transition evidence"
+  },
+  "risk_notes": [
+    "Historical strategy output is research material, not a forecast."
+  ]
+}
+```
+
+Allowed `strategy_family` values:
+
+- `trend`;
+- `moving_average`;
+- `mean_reversion`;
+- `volatility_regime`;
+- `statistical_arbitrage`;
+- `cross_sectional`;
+- `derivatives_aware`;
+- `event_driven`;
+- `other`.
+
+Allowed `output_position_policy` values:
+
+- `research_long_flat_target_exposure`: implemented current long-flat record
+  semantics.
+- `research_signed_target_exposure`: planned single-leg long, short, and flat
+  exposure semantics.
+- `research_multi_leg_target_exposure`: planned multi-leg exposure semantics.
+
+Rules:
+
+- Strategy specs are metadata and validation contracts. They must not execute
+  strategy logic.
+- Unknown strategy names must continue to fail with actionable validation.
+- Strategy specs must not contain credentials, private account fields, or live
+  execution settings.
+- `optimization_space` is a bounded research search space. It is not an
+  instruction to optimize active configuration automatically.
+- Strategy Lab should prefer strategy spec metadata for controls and hints when
+  the spec registry is implemented.
+
+## Strategy Signal And Exposure Contract
+
+Status: current strategy signal records are long-flat. Signed and multi-leg
+records are planned.
+
+Current single-leg long-flat shape:
+
+```json
+{
+  "open_time": "2026-06-05T00:00:00Z",
+  "close": 104000.0,
+  "signal": {
+    "active": true
+  },
+  "position": {
+    "target_exposure": 1.0,
+    "unit": "fractional_long_exposure"
+  }
+}
+```
+
+Planned signed single-leg shape:
+
+```json
+{
+  "schema_version": 2,
+  "open_time": "2026-06-05T00:00:00Z",
+  "signal_time": "2026-06-05T00:00:00Z",
+  "position": {
+    "target_exposure": -1.0,
+    "unit": "fractional_signed_exposure",
+    "position_state": "short"
+  },
+  "transition": {
+    "entry": true,
+    "exit": false,
+    "long_entry": false,
+    "long_exit": false,
+    "short_entry": true,
+    "short_exit": false
+  },
+  "evidence": [],
+  "warnings": []
+}
+```
+
+Allowed `position_state` values:
+
+- `long`;
+- `short`;
+- `flat`;
+- `unknown`.
+
+Signed exposure rules:
+
+- `target_exposure` must be finite and bounded to `-1.0 <= value <= 1.0`
+  for single-leg research records.
+- Positive exposure means long research exposure. Negative exposure means
+  short research exposure. Zero means flat.
+- Signal records describe target exposure known at the signal timestamp. They
+  do not imply same-bar execution.
+- Evaluation timing remains controlled by the execution model. The default
+  rule is signal at bar close, position from the next bar.
+- Direct long-to-short or short-to-long transitions must remain visible in
+  transition diagnostics.
+
+Planned multi-leg signal shape:
+
+```json
+{
+  "schema_version": 1,
+  "record_type": "multi_leg_signal",
+  "signal_time": "2026-06-05T00:00:00Z",
+  "strategy_name": "pair_zscore_reversion",
+  "legs": [
+    {
+      "leg_id": "long_leg",
+      "instrument_identity": {},
+      "target_exposure": 0.5,
+      "price_basis": "close"
+    },
+    {
+      "leg_id": "short_leg",
+      "instrument_identity": {},
+      "target_exposure": -0.5,
+      "price_basis": "close"
+    }
+  ],
+  "gross_exposure": 1.0,
+  "net_exposure": 0.0,
+  "warnings": []
+}
+```
+
+Multi-leg rules:
+
+- Leg records must preserve source, symbol, timeframe, and normalized
+  instrument identity when implemented.
+- Multi-leg evaluation must align legs by observable bar time and report
+  omitted or missing rows.
+- Leg exposure units are research exposure units, not account allocation or
+  margin instructions.
+- Multi-leg records must not collapse pair, spread, or basket evidence into a
+  single synthetic symbol unless the synthetic construction is separately
+  persisted and reviewable.
+
+## Futures Cost And Funding Contract
+
+Status: current evaluation records include fees and slippage assumptions.
+Futures funding, contract-specific diagnostics, and leverage-risk warnings are
+planned.
+
+Purpose:
+
+- Make public contract strategy evaluation distinguish gross performance,
+  trading costs, funding costs, and data-availability limits.
+- Keep futures-aware evaluation account-independent.
+
+Planned funding-cost input shape:
+
+```json
+{
+  "source": "binance_usdm",
+  "symbol": "BTCUSDT",
+  "market_type": "perpetual",
+  "funding_time": "2026-06-05T08:00:00Z",
+  "funding_rate": 0.0001,
+  "rate_unit": "fraction_of_notional",
+  "as_of": "2026-06-05T08:01:00Z",
+  "quality": {
+    "status": "available",
+    "warnings": []
+  }
+}
+```
+
+Futures evaluation rules:
+
+- Funding costs may be applied only when source data is available and aligned
+  to the evaluated instrument and time range.
+- Missing funding data must be recorded as unavailable, stale, partial, or
+  insufficient. It must not be treated as zero funding unless a strategy or
+  evaluation config explicitly declares a zero-funding assumption.
+- Long and short exposure must apply funding with opposite economic signs when
+  funding data supports it.
+- Evaluation artifacts should record `funding_drag_pct`,
+  `funding_source_status`, and funding warnings where available.
+- Leverage-risk or liquidation-proximity warnings are qualitative research
+  diagnostics only. They must not model a real exchange liquidation engine or
+  account margin state unless a later explicit contract implements that.
+- Futures-aware records must continue to include fees, slippage, gross return,
+  net return, turnover, exposure, drawdown, and historical-research warnings.
+
+## Strategy Optimization Contract
+
+Status: current parameter diagnostics are implemented as bounded sensitivity
+context. Optimization artifacts and walk-forward optimization are planned.
+
+Parameter diagnostics and optimization are different contracts:
+
+- Parameter diagnostics summarize configured sensitivity grids and fragility.
+- Optimization evaluates a bounded search space, records candidate outcomes,
+  records failed combinations, applies a declared selection policy, and writes
+  a research artifact.
+- Neither diagnostics nor optimization may mutate active strategy config or
+  promote a strategy automatically.
+
+Standalone optimization artifact:
+
+```text
+runs/strategy_optimizations/<id>/strategy_optimization.json
+```
+
+Planned pipeline artifact, when optimization is integrated into a product run:
+
+```text
+runs/<run_id>/analysis/strategy_optimization.json
+```
+
+Top-level planned contract:
+
+```json
+{
+  "schema_version": 1,
+  "artifact_type": "strategy_optimization",
+  "created_at": "2026-06-06T00:00:00Z",
+  "strategy_name": "tsmom_vol_scaled",
+  "instrument_identity": {},
+  "search_space": {},
+  "selection_policy": {
+    "name": "max_validation_net_return_with_risk_limits",
+    "automatic_config_mutation": false
+  },
+  "coverage": {
+    "candidate_count": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "insufficient_data": 0
+  },
+  "candidates": [],
+  "selected_candidate": null,
+  "walk_forward": {
+    "enabled": false,
+    "status": "skipped",
+    "windows": []
+  },
+  "robustness": {
+    "status": "unknown",
+    "warnings": []
+  },
+  "source_artifacts": [],
+  "warnings": [],
+  "errors": []
+}
+```
+
+Optimization candidate contract:
+
+```json
+{
+  "candidate_id": "candidate:0001",
+  "params": {},
+  "status": "succeeded|failed|insufficient_data|skipped",
+  "metrics": {
+    "net_return_pct": 0.0,
+    "max_drawdown_pct": 0.0,
+    "cost_drag_pct": 0.0,
+    "turnover": 0.0
+  },
+  "gate_inputs": {},
+  "warnings": [],
+  "errors": []
+}
+```
+
+Optimization rules:
+
+- Candidate enumeration must be deterministic.
+- Search spaces must be bounded by explicit max-combination limits.
+- Failed and insufficient candidates must remain visible.
+- Selection policy must be recorded before selected-candidate interpretation.
+- Walk-forward optimization must record train and validation windows when
+  enabled.
+- Optimization results are historical research evidence only. They are not
+  trading instructions, return forecasts, or active configuration changes.
+
+## Strategy Dashboard Read Model Contract
+
+Status: current Strategy Lab exposes OHLCV shared-store review and existing
+strategy artifacts. Expanded workbench, optimization, and advanced evaluation
+read models are planned.
+
+Purpose:
+
+- Give Dashboard bounded, API-backed read models for strategy workbench
+  controls and visual review.
+- Keep UI and CLI on the same internal service contracts.
+
+Read-model rules:
+
+- Strategy Lab metadata should come from config, instrument identity, and
+  strategy specs when implemented.
+- Backtest, experiment, optimization, and comparison actions should return
+  job or service status, progress, bounded logs, warnings, errors, and source
+  artifact refs.
+- The K-line chart remains the OHLCV viewer when no strategy artifact is
+  selected.
+- When a strategy artifact is selected, markers must be artifact-derived and
+  aligned to the matching source, symbol, and timeframe.
+- Dashboard read models must bound bars, markers, equity points, candidates,
+  warnings, logs, and source refs.
+- Dashboard read models must not embed full reusable OHLCV history, vectorbt
+  objects, full optimization candidate tables, account state, or trading
+  instructions by default.
 
 ## Configuration Contract
 

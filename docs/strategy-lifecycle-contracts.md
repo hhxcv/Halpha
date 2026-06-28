@@ -68,6 +68,12 @@ Lifecycle state may use implemented current-run artifacts when present:
 - `analysis/intelligence_fusion.json`
 - `analysis/data_quality_summary.json`
 
+Planned expanded strategy evidence may also include these artifacts when the
+quant contracts implement them:
+
+- `analysis/strategy_optimization.json`
+- standalone `runs/strategy_optimizations/<id>/strategy_optimization.json`
+
 Lifecycle state may also use explicit local lifecycle policy records when the
 product implements that input. Those records may express review intent such as
 promotion, watchlisting, rejection, or retirement. They must not contain
@@ -84,6 +90,41 @@ Rules:
   unavailable, insufficient-evidence, or degraded states where material.
 - Do not call Codex, another LLM, or a hidden model to generate lifecycle
   states, promotions, retirements, or degradation decisions.
+
+## Expanded Strategy Evidence
+
+Status: current lifecycle consumes implemented strategy runs, evaluation,
+experiment, gate, outcome, regime, risk, fusion, data-quality, and policy
+evidence. Optimization, signed long-short, futures-aware, and multi-leg
+evidence consumption is planned.
+
+Rules:
+
+- Lifecycle may summarize signed long-short evaluation evidence when the
+  upstream evaluation artifact records it. It must preserve whether long-side,
+  short-side, or both-side evidence is weak, degraded, or unavailable.
+- Lifecycle may summarize futures-aware diagnostics such as funding drag, cost
+  drag, turnover, exposure, and funding-source availability when upstream
+  evaluation artifacts provide them.
+- Lifecycle may summarize multi-leg evaluation evidence only from explicit
+  multi-leg artifacts. It must preserve leg-alignment warnings and insufficient
+  leg coverage.
+- Lifecycle may reference optimization artifacts as research evidence. It must
+  not treat selected optimization candidates as active configuration unless an
+  explicit lifecycle policy record says so.
+- Optimization evidence may qualify lifecycle records with reasons such as
+  `optimized_candidate_available`, `optimization_fragile`,
+  `optimization_overfit_risk`, `optimization_insufficient_data`, and
+  `optimization_unavailable`.
+- Walk-forward robustness evidence may downgrade or qualify a strategy as
+  watchlisted, degraded, rejected, or insufficient-evidence through
+  deterministic gate and lifecycle rules.
+- Missing planned advanced evidence must not be treated as positive evidence.
+  If a strategy spec declares an input required and that input is missing,
+  lifecycle should preserve an insufficient-evidence or degraded reason.
+- Lifecycle records must keep source artifact refs to optimization, advanced
+  evaluation, and gate artifacts instead of copying full candidate tables or
+  per-bar records.
 
 ## analysis/strategy_lifecycle_state.json
 
@@ -238,7 +279,7 @@ Required fields:
 
 ```json
 {
-  "source_layer": "strategy_run|evaluation|gate|outcome|regime|risk|fusion|data_quality|policy",
+  "source_layer": "strategy_run|evaluation|optimization|gate|outcome|regime|risk|fusion|data_quality|policy",
   "source_artifact": "analysis/strategy_effectiveness_gates.json",
   "status": "used|skipped|missing|unavailable|degraded|failed|insufficient",
   "records": 0,
