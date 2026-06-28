@@ -20,6 +20,7 @@ def _isolate_artifact_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     definition = get_strategy_definition("tsmom_vol_scaled")
+    signed_tsmom = get_strategy_definition("signed_tsmom_trend")
     breakout = get_strategy_definition("breakout_atr_trend")
     sma_cross = get_strategy_definition("sma_cross_trend")
     reversion = get_strategy_definition("bollinger_rsi_reversion")
@@ -28,6 +29,10 @@ def test_quant_strategy_registry_resolves_strategy_modules() -> None:
     assert definition.name == "tsmom_vol_scaled"
     assert definition.run.__module__ == "halpha.quant.strategies.tsmom_vol_scaled"
     assert definition.signal_records.__module__ == "halpha.quant.strategies.tsmom_vol_scaled"
+    assert signed_tsmom is not None
+    assert signed_tsmom.name == "signed_tsmom_trend"
+    assert signed_tsmom.run.__module__ == "halpha.quant.strategies.signed_tsmom_trend"
+    assert signed_tsmom.signal_records.__module__ == "halpha.quant.strategies.signed_tsmom_trend"
     assert breakout is not None
     assert breakout.name == "breakout_atr_trend"
     assert breakout.run.__module__ == "halpha.quant.strategies.breakout_atr_trend"
@@ -292,6 +297,43 @@ def test_quant_strategy_runner_writes_tsmom_strategy_artifacts(tmp_path: Path) -
     assert _stage(manifest, "evaluate_quant_strategies")["artifacts"] == [
         "analysis/quant_strategy_runs.json"
     ]
+
+
+def test_quant_strategy_runner_writes_signed_tsmom_strategy_artifacts(tmp_path: Path) -> None:
+    config_path = _write_signed_tsmom_strategy_config(tmp_path, lookback=5)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(open_time="2026-06-03T00:00:00Z", close=101, volume=12),
+            _record(open_time="2026-06-04T00:00:00Z", close=101.2, volume=13),
+            _record(open_time="2026-06-05T00:00:00Z", close=103.224, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    strategy_runs = _strategy_runs(result)
+    manifest = _manifest(result)
+    strategy_run = strategy_runs["runs"][0]
+
+    assert result.succeeded is True
+    assert strategy_run["strategy_name"] == "signed_tsmom_trend"
+    assert strategy_run["strategy_family"] == "trend"
+    assert strategy_run["output_position_policy"] == "research_signed_target_exposure"
+    assert strategy_run["params"] == {
+        "return_window": 1,
+        "deadband_pct": 0.5,
+    }
+    assert strategy_run["signals"]["latest_position_state"] == "long"
+    assert strategy_run["signals"]["short_entry_count"] == 1
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
+    assert manifest["quant_strategies"]["enabled"] == ["signed_tsmom_trend"]
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    json.dumps(strategy_runs)
 
 
 def test_quant_strategy_runner_records_insufficient_data_without_fabrication(tmp_path: Path) -> None:
@@ -1062,6 +1104,190 @@ def test_strategy_signal_records_align_with_tsmom_run_transitions() -> None:
     json.dumps(signal_records)
 
 
+def test_signed_tsmom_trend_signal_records_cover_long_short_flat_transitions() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=101, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=101.2, volume=13),
+        _record(open_time="2026-06-05T00:00:00Z", close=103.224, volume=14),
+    ]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 1,
+            "deadband_pct": 0.5,
+        },
+        "backtest": {"enabled": False},
+    }
+
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert signal_records["status"] == "succeeded"
+    assert signal_records["signal_record_version"] == 2
+    assert signal_records["position_policy"] == "research_signed_target_exposure"
+    assert [item["position"]["position_state"] for item in signal_records["records"]] == [
+        "flat",
+        "long",
+        "short",
+        "flat",
+        "long",
+    ]
+    assert [item["position"]["target_exposure"] for item in signal_records["records"]] == [
+        0.0,
+        1.0,
+        -1.0,
+        0.0,
+        1.0,
+    ]
+    assert [item["long_entry"] for item in signal_records["records"]] == [
+        False,
+        True,
+        False,
+        False,
+        True,
+    ]
+    assert [item["short_entry"] for item in signal_records["records"]] == [
+        False,
+        False,
+        True,
+        False,
+        False,
+    ]
+    assert signal_records["records"][2]["long_exit"] is True
+    assert signal_records["records"][3]["short_exit"] is True
+    assert signal_records["latest_record"]["indicator_context"]["return_window_pct"] == 2.0
+    json.dumps(signal_records)
+
+
+def test_signed_tsmom_trend_run_records_signed_policy_and_backtest_metrics() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=101, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=101.2, volume=13),
+        _record(open_time="2026-06-05T00:00:00Z", close=103.224, volume=14),
+    ]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 1,
+            "deadband_pct": 0.5,
+        },
+        "backtest": {
+            "enabled": True,
+            "initial_cash": 10000,
+            "fees_bps": 10,
+            "slippage_bps": 5,
+        },
+    }
+
+    strategy_run = definition.run(
+        strategy,
+        _view(rows),
+        rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["strategy_family"] == "trend"
+    assert strategy_run["output_position_policy"] == "research_signed_target_exposure"
+    assert strategy_run["signals"]["latest_position_state"] == "long"
+    assert strategy_run["signals"]["long_entry_count"] == 2
+    assert strategy_run["signals"]["side_flip_count"] == 1
+    assert strategy_run["assessment"]["direction"] == "bullish"
+    assert strategy_run["backtest_diagnostic"]["status"] == "succeeded"
+    assert strategy_run["backtest_diagnostic"]["assumptions"]["direction"] == "long_short"
+    assert strategy_run["backtest_diagnostic"]["metrics"]["long_trade_count"] == 1
+    assert strategy_run["backtest_diagnostic"]["metrics"]["short_trade_count"] == 1
+    json.dumps(strategy_run)
+
+
+def test_signed_tsmom_trend_run_records_bearish_and_neutral_states() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    bearish_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=98, volume=11),
+    ]
+    neutral_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=100.2, volume=11),
+    ]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 1,
+            "deadband_pct": 0.5,
+        },
+    }
+
+    bearish_run = definition.run(
+        strategy,
+        _view(bearish_rows),
+        bearish_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+    neutral_run = definition.run(
+        strategy,
+        _view(neutral_rows),
+        neutral_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert bearish_run["signals"]["latest_position_state"] == "short"
+    assert bearish_run["assessment"]["direction"] == "bearish"
+    assert neutral_run["signals"]["latest_position_state"] == "flat"
+    assert neutral_run["assessment"]["direction"] == "neutral"
+    json.dumps(bearish_run)
+    json.dumps(neutral_run)
+
+
+def test_signed_tsmom_trend_records_insufficient_data_and_param_validation() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [_record(open_time="2026-06-01T00:00:00Z", close=100, volume=10)]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 2,
+            "deadband_pct": 0.5,
+        },
+    }
+
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert signal_records["status"] == "insufficient_data"
+    assert signal_records["position_policy"] == "research_signed_target_exposure"
+    assert signal_records["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    with pytest.raises(ValueError, match="return_window must be a positive integer"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {"return_window": 0, "deadband_pct": 0.5},
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="deadband_pct must be a number between 0.0 and 100.0"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {"return_window": 1, "deadband_pct": -0.1},
+            },
+            _view(rows),
+            rows,
+        )
+    json.dumps(signal_records)
+
+
 def test_strategy_signal_records_align_with_sma_cross_transitions() -> None:
     definition = get_strategy_definition("sma_cross_trend")
     assert definition is not None
@@ -1265,6 +1491,58 @@ quant:
         slippage_bps: 5
         mode: long_flat
 {parameter_diagnostics_yaml}
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_signed_tsmom_strategy_config(
+    tmp_path: Path,
+    *,
+    lookback: int,
+) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: {lookback}
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: signed_tsmom_trend
+      enabled: true
+      params:
+        return_window: 1
+        deadband_pct: 0.5
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
 text:
   enabled: false
 report:

@@ -118,6 +118,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["quant"]["engine"] == "vectorbt"
     assert [strategy["name"] for strategy in config["quant"]["strategies"]] == [
         "tsmom_vol_scaled",
+        "signed_tsmom_trend",
         "breakout_atr_trend",
         "sma_cross_trend",
         "bollinger_rsi_reversion",
@@ -130,15 +131,19 @@ def test_config_example_loads_successfully() -> None:
         "target_volatility": 0.2,
     }
     assert config["quant"]["strategies"][1]["params"] == {
+        "return_window": 120,
+        "deadband_pct": 1.0,
+    }
+    assert config["quant"]["strategies"][2]["params"] == {
         "breakout_window": 120,
         "exit_window": 20,
         "atr_window": 14,
     }
-    assert config["quant"]["strategies"][2]["params"] == {
+    assert config["quant"]["strategies"][3]["params"] == {
         "short_window": 20,
         "long_window": 30,
     }
-    assert config["quant"]["strategies"][3]["params"] == {
+    assert config["quant"]["strategies"][4]["params"] == {
         "bollinger_window": 20,
         "band_std": 2.0,
         "rsi_window": 14,
@@ -158,6 +163,7 @@ def test_config_example_loads_successfully() -> None:
     assert sorted(config["quant"]["parameter_diagnostics"]["grids"]) == [
         "bollinger_rsi_reversion",
         "breakout_atr_trend",
+        "signed_tsmom_trend",
         "sma_cross_trend",
         "tsmom_vol_scaled",
     ]
@@ -1161,6 +1167,14 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      params:\n        target_volatility: \"0.2\"",
             r"quant\.strategies\[0\]\.params\.target_volatility must be a positive number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: signed_tsmom_trend\n      params:\n        return_window: 0",
+            r"quant\.strategies\[0\]\.params\.return_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: signed_tsmom_trend\n      params:\n        deadband_pct: -1",
+            r"quant\.strategies\[0\]\.params\.deadband_pct must be a number between 0.0 and 100.0",
         ),
         (
             "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest: invalid",

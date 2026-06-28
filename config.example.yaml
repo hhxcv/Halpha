@@ -121,6 +121,16 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+    - name: signed_tsmom_trend
+      enabled: true
+      params:
+        return_window: 120
+        deadband_pct: 1.0
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
     - name: breakout_atr_trend
       enabled: true
       params:
@@ -174,6 +184,13 @@ quant:
         target_volatility:
           - 0.15
           - 0.2
+      signed_tsmom_trend:
+        return_window:
+          - 80
+          - 120
+        deadband_pct:
+          - 0.5
+          - 1.0
       breakout_atr_trend:
         breakout_window:
           - 80
