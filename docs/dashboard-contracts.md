@@ -289,11 +289,11 @@ those distinctions. Missing evidence must not be displayed as neutral evidence.
 ## Strategy Lab Workbench Contract
 
 Status: current Strategy Lab includes OHLCV shared-store review, collection
-controls, existing backtest and optimization artifacts, reusable candlestick
-chart behavior, and API-backed strategy action job submission for backtest,
-experiment, and optimization. Expanded strategy workbench controls,
-optimization visual analysis, comparison views, and advanced evaluation
-overlays are planned.
+controls, existing backtest, experiment, and optimization artifacts, reusable
+candlestick chart behavior, API-backed strategy action job submission for
+backtest, experiment, and optimization, and strategy-spec-backed workbench
+controls. Optimization visual analysis, comparison views, and advanced
+evaluation overlays are planned.
 
 Purpose:
 
@@ -311,8 +311,8 @@ Workbench action contract:
 - CLI commands should be thin adapters over the same internal services where
   the behavior overlaps.
 - Action requests must validate source, symbol, market identity, timeframe,
-  date/time range, strategy, params, optimization scope, and output format
-  before starting work.
+  strategy, params, optimization scope, output format, and date/time range where
+  the action supports an explicit range before starting work.
 - Running actions must expose progress and bounded logs. Logs are collapsed by
   default and expand to a bounded scroll area.
 - Results must return bounded artifact refs, warnings, errors, and summaries.
@@ -322,8 +322,8 @@ Workbench action contract:
 Strategy control contract:
 
 - Strategy family, strategy name, parameter controls, defaults, supported
-  market types, required inputs, and optimization ranges should come from
-  strategy spec metadata when implemented.
+  market types, required inputs, and optimization ranges come from strategy spec
+  metadata.
 - Unknown strategy names or unsupported params must fail with actionable
   validation errors.
 - Chart source, symbol, timeframe, and chart range remain independent OHLCV

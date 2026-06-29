@@ -13,6 +13,7 @@ from halpha.data.run_index import (
 )
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
 from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
+from halpha.quant.registry import supported_strategy_specs
 from halpha.storage import (
     artifact_base as _artifact_base,
     read_json_object,
@@ -89,15 +90,41 @@ def dashboard_strategy_research(
 
 
 def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
+    specs = _configured_strategy_specs(config)
     return {
         "backtest": "available",
         "experiment": "available",
         "optimize": "available",
         "options": {
+            "action_scopes": _strategy_action_scopes(),
+            "evaluation_modes": ["backtest", "experiment", "optimize"],
+            "market_types": _configured_market_types(specs),
             "sources": _configured_ohlcv_sources(config),
+            "strategy_families": _configured_strategy_families(specs),
             "strategy_names": sorted(_configured_strategy_names(config)),
+            "strategy_specs": specs,
             "symbols": _configured_symbols(config),
             "timeframes": _configured_timeframes(config),
+        },
+    }
+
+
+def _strategy_action_scopes() -> dict[str, dict[str, Any]]:
+    return {
+        "backtest": {
+            "window_policy": "configured_latest_lookback",
+            "range_supported": False,
+            "label": "Configured latest lookback",
+        },
+        "experiment": {
+            "window_policy": "configured_benchmark_suite",
+            "range_supported": False,
+            "label": "Configured benchmark suite",
+        },
+        "optimize": {
+            "window_policy": "configured_benchmark_suite",
+            "range_supported": False,
+            "label": "Configured benchmark suite",
         },
     }
 
@@ -110,6 +137,47 @@ def _configured_strategy_names(config: dict[str, Any]) -> set[str]:
         for strategy in strategies
         if isinstance(strategy, dict) and strategy.get("name") and strategy.get("enabled", True) is not False
     }
+
+
+def _configured_strategy_specs(config: dict[str, Any]) -> list[dict[str, Any]]:
+    configured = _configured_strategy_names(config)
+    strategy_configs = _configured_strategy_map(config)
+    records = []
+    for spec in supported_strategy_specs():
+        if spec.name in configured:
+            record = spec.to_record()
+            strategy_config = strategy_configs.get(spec.name, {})
+            params = strategy_config.get("params") if isinstance(strategy_config.get("params"), dict) else {}
+            record["configured_params"] = dict(params)
+            records.append(record)
+    return records
+
+
+def _configured_strategy_map(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    strategies = quant.get("strategies") if isinstance(quant.get("strategies"), list) else []
+    result = {}
+    for strategy in strategies:
+        if not isinstance(strategy, dict) or strategy.get("enabled", True) is False:
+            continue
+        name = strategy.get("name")
+        if isinstance(name, str) and name:
+            result[name] = strategy
+    return result
+
+
+def _configured_strategy_families(specs: list[dict[str, Any]]) -> list[str]:
+    return sorted({str(spec.get("family")) for spec in specs if spec.get("family")})
+
+
+def _configured_market_types(specs: list[dict[str, Any]]) -> list[str]:
+    values = {
+        str(market_type)
+        for spec in specs
+        for market_type in _list(spec.get("supported_market_types"))
+        if market_type
+    }
+    return sorted(values)
 
 
 def _configured_symbols(config: dict[str, Any]) -> list[str]:
