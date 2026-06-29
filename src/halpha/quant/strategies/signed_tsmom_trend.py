@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from ..regime_filters import realized_volatility_filter_contexts
 from ..signal_records import insufficient_signed_strategy_signal_records, signed_strategy_signal_records
 from ..signed_strategy_support import signed_backtest_diagnostic, signed_transition_counts
 from ..strategy_execution import input_is_insufficient, insufficient_strategy_run
@@ -12,6 +13,7 @@ from ..strategy_records import (
     data_quality,
     parameter_diagnostic,
     strategy_run_record,
+    warning,
 )
 from ..strategy_specs import require_strategy_spec
 
@@ -51,7 +53,7 @@ def run(
     latest_position_state = str(latest_record["position"]["position_state"])
     return_window_pct = float(state["return_window_pct"])
     transition_counts = signed_transition_counts(state["signal_records"]["records"])
-    warnings = []
+    warnings = _strategy_warnings(state)
 
     return strategy_run_record(
         strategy=strategy,
@@ -68,6 +70,7 @@ def run(
             "return_window_pct": _round(return_window_pct),
             "deadband_pct": _round(params["deadband_pct"]),
             "row_count": len(rows),
+            **_filter_indicator_values(state),
         },
         signals={
             "calculation_backend": CALCULATION_BACKEND,
@@ -78,6 +81,7 @@ def run(
             ),
             "latest_position_state": latest_position_state,
             "latest_target_exposure": _round(latest_exposure),
+            **_filter_signal_values(state),
             **transition_counts,
         },
         backtest_diagnostic=signed_backtest_diagnostic(
@@ -96,6 +100,7 @@ def run(
                 f"return_window_pct is {_round(return_window_pct)}% over the configured return window.",
                 f"deadband_pct is {_round(params['deadband_pct'])}%.",
                 f"latest_target_exposure is {_round(latest_exposure)}.",
+                *_filter_evidence(state),
             ],
             "uncertainty": [
                 "Strategy uses OHLCV close prices only and excludes text events.",
@@ -139,14 +144,33 @@ def _params(raw: Any) -> dict[str, Any]:
         params.update(raw)
     return_window = _positive_int(params["return_window"], "return_window")
     deadband_pct = _bounded_number(params["deadband_pct"], "deadband_pct", minimum=0.0, maximum=100.0)
-    return {
+    parsed = {
         "return_window": return_window,
         "deadband_pct": deadband_pct,
     }
+    filter_enabled = _bool(params.get("volatility_filter_enabled", False), "volatility_filter_enabled")
+    if filter_enabled:
+        parsed.update(
+            {
+                "volatility_filter_enabled": True,
+                "volatility_filter_window": _positive_int(
+                    params.get("volatility_filter_window", 20),
+                    "volatility_filter_window",
+                ),
+                "max_realized_volatility_pct": _positive_number(
+                    params.get("max_realized_volatility_pct", 100.0),
+                    "max_realized_volatility_pct",
+                ),
+            }
+        )
+    return parsed
 
 
 def _minimum_rows(params: dict[str, Any]) -> int:
-    return int(params["return_window"]) + 1
+    minimum_rows = int(params["return_window"]) + 1
+    if params.get("volatility_filter_enabled") is True:
+        minimum_rows = max(minimum_rows, int(params["volatility_filter_window"]) + 1)
+    return minimum_rows
 
 
 def _signal_state(
@@ -161,18 +185,27 @@ def _signal_state(
     return_window = int(params["return_window"])
     deadband_pct = float(params["deadband_pct"])
     momentum_return = close.pct_change(return_window)
-    target_exposure_series = _target_exposure_series(momentum_return, deadband_pct=deadband_pct)
+    base_target_exposure_series = _target_exposure_series(momentum_return, deadband_pct=deadband_pct)
+    filter_contexts = _filter_contexts(close, view, params)
+    target_exposure_series = _apply_filters(
+        base_target_exposure_series,
+        filter_contexts=filter_contexts,
+    )
     indicator_contexts = _signal_indicator_contexts(
         momentum_return,
         target_exposure_series,
         deadband_pct=deadband_pct,
+        filter_contexts=filter_contexts,
     )
+    latest_filter = filter_contexts[-1] if filter_contexts else None
     return {
         "frame": frame,
         "close": close,
         "latest_close": float(close.iloc[-1]),
         "baseline_close": float(close.iloc[-return_window - 1]),
         "return_window_pct": float(momentum_return.iloc[-1]) * 100,
+        "filter_enabled": bool(filter_contexts),
+        "latest_filter": latest_filter,
         "target_exposure_series": target_exposure_series,
         "signal_records": signed_strategy_signal_records(
             strategy,
@@ -207,20 +240,103 @@ def _signal_indicator_contexts(
     target_exposure_series: pd.Series,
     *,
     deadband_pct: float,
+    filter_contexts: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     contexts = []
-    for momentum_value, exposure in zip(momentum_return, target_exposure_series, strict=True):
+    for position, (momentum_value, exposure) in enumerate(zip(momentum_return, target_exposure_series, strict=True)):
         return_window_pct = _number_or_none(float(momentum_value) * 100)
-        contexts.append(
-            {
-                "calculation_backend": CALCULATION_BACKEND,
-                "return_window_pct": return_window_pct,
-                "deadband_pct": deadband_pct,
-                "target_exposure": float(exposure),
-                "position_state": _position_state(float(exposure)),
-            }
-        )
+        context = {
+            "calculation_backend": CALCULATION_BACKEND,
+            "return_window_pct": return_window_pct,
+            "deadband_pct": deadband_pct,
+            "target_exposure": float(exposure),
+            "position_state": _position_state(float(exposure)),
+        }
+        if filter_contexts:
+            context["volatility_filter"] = filter_contexts[position]
+        contexts.append(context)
     return contexts
+
+
+def _filter_contexts(
+    close: pd.Series,
+    view: dict[str, Any],
+    params: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if params.get("volatility_filter_enabled") is not True:
+        return []
+    return realized_volatility_filter_contexts(
+        close,
+        timeframe=str(view.get("timeframe")),
+        window=int(params["volatility_filter_window"]),
+        max_realized_volatility_pct=float(params["max_realized_volatility_pct"]),
+    )
+
+
+def _apply_filters(
+    target_exposure_series: pd.Series,
+    *,
+    filter_contexts: list[dict[str, Any]],
+) -> pd.Series:
+    if not filter_contexts:
+        return target_exposure_series
+    values = []
+    for exposure, context in zip(target_exposure_series, filter_contexts, strict=True):
+        if context.get("suppressed") is True:
+            values.append(0.0)
+        else:
+            values.append(float(exposure))
+    return pd.Series(values, index=target_exposure_series.index, dtype=float)
+
+
+def _filter_indicator_values(state: dict[str, Any]) -> dict[str, Any]:
+    latest_filter = state.get("latest_filter")
+    if not isinstance(latest_filter, dict):
+        return {}
+    return {
+        "volatility_filter_status": latest_filter.get("status"),
+        "volatility_filter_realized_volatility_pct": latest_filter.get("realized_volatility_pct"),
+        "volatility_filter_max_realized_volatility_pct": latest_filter.get("max_realized_volatility_pct"),
+    }
+
+
+def _filter_signal_values(state: dict[str, Any]) -> dict[str, Any]:
+    latest_filter = state.get("latest_filter")
+    if not isinstance(latest_filter, dict):
+        return {}
+    return {
+        "volatility_filter": latest_filter,
+        "filter_suppression_reason": latest_filter.get("suppression_reason"),
+    }
+
+
+def _filter_evidence(state: dict[str, Any]) -> list[str]:
+    latest_filter = state.get("latest_filter")
+    if not isinstance(latest_filter, dict):
+        return []
+    return [
+        (
+            "volatility_filter status is "
+            f"{latest_filter.get('status')} with realized_volatility_pct "
+            f"{latest_filter.get('realized_volatility_pct')} and max_realized_volatility_pct "
+            f"{latest_filter.get('max_realized_volatility_pct')}."
+        )
+    ]
+
+
+def _strategy_warnings(state: dict[str, Any]) -> list[dict[str, Any]]:
+    latest_filter = state.get("latest_filter")
+    if not isinstance(latest_filter, dict):
+        return []
+    if latest_filter.get("suppression_reason") == "realized_volatility_above_max":
+        return [
+            warning(
+                "realized_volatility_filter_suppressed_signal",
+                "Signed momentum exposure is suppressed because realized volatility is above the configured maximum.",
+                source="strategy_filter",
+            )
+        ]
+    return []
 
 
 def _direction(position_state: str) -> str:
@@ -288,6 +404,17 @@ def _positive_int(value: Any, name: str) -> int:
     return value
 
 
+def _positive_number(value: Any, name: str) -> float:
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        or float(value) <= 0
+    ):
+        raise ValueError(f"{name} must be a positive number.")
+    return float(value)
+
+
 def _bounded_number(value: Any, name: str, *, minimum: float, maximum: float) -> float:
     if (
         not isinstance(value, (int, float))
@@ -300,18 +427,10 @@ def _bounded_number(value: Any, name: str, *, minimum: float, maximum: float) ->
     return float(value)
 
 
-def _positive_number_or_default(value: Any, default: float) -> float:
-    number = _finite_number_or_none(value)
-    if number is None or number <= 0:
-        return default
-    return number
-
-
-def _non_negative_number_or_default(value: Any, default: float) -> float:
-    number = _finite_number_or_none(value)
-    if number is None or number < 0:
-        return default
-    return number
+def _bool(value: Any, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be a boolean.")
+    return value
 
 
 def _finite_number_or_none(value: Any) -> float | None:
@@ -325,26 +444,6 @@ def _finite_number_or_none(value: Any) -> float | None:
 def _number_or_none(value: Any) -> float | None:
     number = _finite_number_or_none(value)
     return _round(number) if number is not None else None
-
-
-def _warning_messages(value: Any) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [
-        str(item.get("message"))
-        for item in value
-        if isinstance(item, dict) and isinstance(item.get("message"), str)
-    ]
-
-
-def _error_messages(value: Any) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [
-        str(item.get("message"))
-        for item in value
-        if isinstance(item, dict) and isinstance(item.get("message"), str)
-    ]
 
 
 def _round(value: float) -> float:
