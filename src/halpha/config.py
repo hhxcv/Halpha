@@ -110,7 +110,10 @@ SUPPORTED_DASHBOARD_FIELDS = {"display_timezone"}
 SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "elevated_overfitting_blocks_effective",
     "max_abs_drawdown_pct",
+    "max_abs_funding_drag_pct",
+    "max_average_gross_exposure_pct",
     "max_cost_drag_pct",
+    "max_turnover",
     "min_benchmark_success_rate_pct",
     "min_mean_excess_return_vs_buy_and_hold_pct",
     "min_mean_net_return_pct",
@@ -1240,7 +1243,10 @@ def _validate_quant_effectiveness_gates(gates: dict[str, Any], path: str) -> Non
     }
     non_negative_number_fields = {
         "max_abs_drawdown_pct",
+        "max_abs_funding_drag_pct",
+        "max_average_gross_exposure_pct",
         "max_cost_drag_pct",
+        "max_turnover",
         "min_benchmark_success_rate_pct",
         "min_mean_excess_return_vs_buy_and_hold_pct",
         "min_mean_net_return_pct",
