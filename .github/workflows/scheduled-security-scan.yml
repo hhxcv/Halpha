@@ -1,0 +1,85 @@
+name: Scheduled Security Scan
+
+on:
+  schedule:
+    # Every Friday at 02:17 UTC.
+    - cron: "17 2 * * 5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
+
+  dependency-audit:
+    name: OSV dependency audit
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.8
+    permissions:
+      actions: read
+      security-events: write
+      contents: read
+    with:
+      scan-args: |-
+        --recursive
+        ./
+
+  python-dependency-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install project and pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pip-audit
+          python -m pip install .
+
+      - name: Run pip-audit
+        run: pip-audit --progress-spinner off --desc
+
+  secret-scan:
+    name: Gitleaks secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

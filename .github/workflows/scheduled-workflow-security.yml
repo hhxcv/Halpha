@@ -1,0 +1,78 @@
+name: Scheduled Workflow Security
+
+on:
+  schedule:
+    # Every Friday at 02:37 UTC.
+    - cron: "37 2 * * 5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "stable"
+
+      - name: Install actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@latest
+
+      - name: Run actionlint
+        run: actionlint -color
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install zizmor
+        run: python -m pip install --upgrade pip zizmor
+
+      - name: Run zizmor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: zizmor .github/workflows
+
+  scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      issues: read
+      pull-requests: read
+      checks: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@v2.4.3
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
