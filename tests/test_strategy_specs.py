@@ -14,6 +14,7 @@ from halpha.quant.strategies import (
     bollinger_rsi_long_short,
     bollinger_rsi_reversion,
     breakout_atr_trend,
+    cross_sectional_momentum,
     pair_zscore_reversion,
     sma_cross_long_short,
     sma_cross_trend,
@@ -29,6 +30,7 @@ EXPECTED_ORDER = [
     "sma_cross_trend",
     "sma_cross_long_short",
     "pair_zscore_reversion",
+    "cross_sectional_momentum",
     "bollinger_rsi_reversion",
     "bollinger_rsi_long_short",
 ]
@@ -39,6 +41,7 @@ STRATEGY_MODULES = {
     "sma_cross_trend": sma_cross_trend,
     "sma_cross_long_short": sma_cross_long_short,
     "pair_zscore_reversion": pair_zscore_reversion,
+    "cross_sectional_momentum": cross_sectional_momentum,
     "bollinger_rsi_reversion": bollinger_rsi_reversion,
     "bollinger_rsi_long_short": bollinger_rsi_long_short,
 }
@@ -72,10 +75,16 @@ def test_registry_returns_complete_spec_records() -> None:
         assert record["family"]
         assert record["version"]
         assert record["description"]
-        assert record["supported_market_types"] == ["spot", "swap"]
+        if record["name"] == "cross_sectional_momentum":
+            assert record["supported_market_types"] == ["swap"]
+        else:
+            assert record["supported_market_types"] == ["spot", "swap"]
         if record["name"] == "pair_zscore_reversion":
             assert [item["leg_id"] for item in record["required_inputs"]] == ["spread_leg_a", "spread_leg_b"]
             assert record["required_inputs"][0]["time_alignment"] == "closed_bar_no_lookahead"
+        elif record["name"] == "cross_sectional_momentum":
+            assert record["required_inputs"][0]["instrument_role"] == "ranked_universe_member"
+            assert record["required_inputs"][0]["minimum_instrument_count"] == 3
         else:
             assert record["required_inputs"] == [
                 {
@@ -87,7 +96,7 @@ def test_registry_returns_complete_spec_records() -> None:
             ]
         if record["name"] in {"signed_tsmom_trend", "sma_cross_long_short", "bollinger_rsi_long_short"}:
             assert record["output_position_policy"] == "research_signed_target_exposure"
-        elif record["name"] == "pair_zscore_reversion":
+        elif record["name"] in {"pair_zscore_reversion", "cross_sectional_momentum"}:
             assert record["output_position_policy"] == "research_multi_leg_target_exposure"
         else:
             assert record["output_position_policy"] == "research_long_flat_target_exposure"
@@ -143,6 +152,10 @@ def test_current_strategy_modules_use_spec_defaults() -> None:
             assert definition.spec.output_position_policy == "research_multi_leg_target_exposure"
             assert definition.multi_leg_signal_records is module.pair_signal_records
             assert definition.multi_leg_backtest is module.evaluate_pair_backtest
+        elif name == "cross_sectional_momentum":
+            assert definition.spec.output_position_policy == "research_multi_leg_target_exposure"
+            assert definition.multi_leg_signal_records is module.universe_signal_records
+            assert definition.multi_leg_backtest is module.evaluate_universe_backtest
         else:
             assert definition.spec.output_position_policy == "research_long_flat_target_exposure"
 

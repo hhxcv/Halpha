@@ -111,6 +111,18 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             multi_leg_signal_records=pair_zscore_reversion.pair_signal_records,
             multi_leg_backtest=pair_zscore_reversion.evaluate_pair_backtest,
         )
+    if name == "cross_sectional_momentum":
+        from .strategies import cross_sectional_momentum
+
+        return StrategyDefinition(
+            name=cross_sectional_momentum.NAME,
+            spec=spec,
+            run=cross_sectional_momentum.run,
+            failed_params=cross_sectional_momentum.failed_params,
+            signal_records=cross_sectional_momentum.signal_records,
+            multi_leg_signal_records=cross_sectional_momentum.universe_signal_records,
+            multi_leg_backtest=cross_sectional_momentum.evaluate_universe_backtest,
+        )
     if name == "sma_cross_long_short":
         from .strategies import sma_cross_long_short
 
