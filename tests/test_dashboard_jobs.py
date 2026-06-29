@@ -228,6 +228,8 @@ def test_command_job_start_failure_records_bounded_diagnostic(tmp_path: Path, mo
     job = manager.create_job({"intent": "validate", "params": {}})
     completed = _wait_for_terminal(manager, job["job_id"])
     state_bytes = runtime_state_path(config_path=config_path).read_bytes()
+    stderr_text = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
+    log_text = _wait_for_log_event(tmp_path / "logs" / "halpha.log", completed["job_id"], "command_job.start_failed")
 
     assert completed["status"] == "failed"
     assert completed["diagnostic"] == {
@@ -236,9 +238,46 @@ def test_command_job_start_failure_records_bounded_diagnostic(tmp_path: Path, mo
         "context": {"phase": "process_start"},
     }
     assert "<redacted>" in completed["errors"][0]
+    assert "job process could not start" in stderr_text
+    assert "<redacted>" in stderr_text
+    assert "process_start" in log_text
+    assert secret not in stderr_text
+    assert str(config_path) not in stderr_text
     assert secret.encode() not in state_bytes
     assert str(config_path).encode() not in state_bytes
     assert str(tmp_path).encode() not in state_bytes
+
+
+def test_internal_command_job_exception_records_diagnostic_log(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_private_config(tmp_path)
+    config = load_config(config_path)
+    secret = "http://private-proxy.example:7890"
+
+    def fail_internal_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise RuntimeError(f"internal failed through {secret} at {config_path}")
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fail_internal_job)
+    manager = CommandJobManager(config, config_path=config_path, execution_mode="internal")
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+    stderr_text = (tmp_path / completed["logs"]["stderr_ref"]).read_text(encoding="utf-8")
+    log_text = _wait_for_log_event(tmp_path / "logs" / "halpha.log", completed["job_id"], "command_job.internal_failed")
+    events = [json.loads(line) for line in log_text.splitlines() if line.strip()]
+    failure = next(event for event in events if event.get("event") == "command_job.internal_failed")
+
+    assert completed["status"] == "failed"
+    assert completed["diagnostic"] == {
+        "exception_type": "RuntimeError",
+        "traceback_embedded": False,
+        "context": {"phase": "internal_execution"},
+    }
+    assert "internal command job failed" in stderr_text
+    assert "<redacted>" in stderr_text
+    assert failure["phase"] == "internal_execution"
+    assert failure["exception_type"] == "RuntimeError"
+    assert secret not in log_text
+    assert str(config_path) not in log_text
 
 
 def test_command_job_manager_preserves_relative_config_ref(

@@ -156,7 +156,7 @@ def _sync_item(
             latest_existing=latest_existing,
             lookback=lookback,
         )
-        store.write_records(records_to_store)
+        store.write_records(records_to_store, update_metadata=False)
         after_records = store.read_records(source=source_name, symbol=symbol, timeframe=timeframe)
         stored_count = max(len(after_records) - before_count, 0)
         fetched_count = len(fetched_records)

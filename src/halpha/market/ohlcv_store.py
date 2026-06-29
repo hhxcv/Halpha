@@ -55,10 +55,10 @@ class OHLCVParquetStore:
         if run_output_dir is not None:
             _require_outside_run_output_dir(self.storage_dir, Path(run_output_dir))
 
-    def write_records(self, records: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    def write_records(self, records: Iterable[dict[str, Any]], *, update_metadata: bool = True) -> dict[str, Any]:
         normalized_records = [_normalize_record(record) for record in records]
         if not normalized_records:
-            return self._write_metadata()
+            return self._write_metadata() if update_metadata else {}
 
         groups = sorted({_group_key(record) for record in normalized_records})
         for source, symbol, timeframe in groups:
@@ -71,7 +71,7 @@ class OHLCVParquetStore:
             merged_records = _deduplicate_records([*existing_records, *incoming_records])
             self._rewrite_group(source, symbol, timeframe, merged_records)
 
-        return self._write_metadata()
+        return self._write_metadata() if update_metadata else {}
 
     def read_records(
         self,

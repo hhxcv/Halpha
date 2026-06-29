@@ -36,7 +36,8 @@ from halpha.runtime.legacy_state_migration import (
     legacy_state_migration_dry_run,
     rebuild_run_index_from_manifests,
 )
-from halpha.runtime.logging_utils import configure_local_logging
+from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
+from halpha.runtime.logging_utils import configure_local_logging, redact_private_text
 from halpha.runtime.schedule_service import (
     ScheduleServiceError,
     load_schedule_startup_config,
@@ -490,7 +491,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    try:
+        return _dispatch_command(args, parser)
+    except Exception as exc:
+        return _handle_unhandled_cli_exception(args, exc)
 
+
+def _dispatch_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     if args.command == "run":
         return _run(args.config, no_codex=args.no_codex, until_stage=args.until)
 
@@ -634,6 +641,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _workbench_inspect(args.config)
 
     parser.error(f"unknown command: {args.command}")
+    return 1
+
+
+def _handle_unhandled_cli_exception(args: argparse.Namespace, exc: Exception) -> int:
+    command = str(getattr(args, "command", None) or "unknown")
+    config_arg = getattr(args, "config", None)
+    config_path = Path(config_arg) if isinstance(config_arg, str) and config_arg else Path(command)
+    if not logging.getLogger("halpha").handlers:
+        _configure_logging(config_path=config_path)
+    reason = redact_private_text(str(exc), config_path=config_path)
+    LOGGER.error(
+        "Halpha command crashed.",
+        extra=_command_log_extra(
+            "cli.command.crashed",
+            command,
+            stage="cli",
+            reason=reason,
+            exception_type=type(exc).__name__,
+            diagnostic=bounded_exception_diagnostic(exc, context={"phase": "cli_dispatch"}),
+            exit_code=1,
+        ),
+    )
+    print("Halpha command failed.")
+    print("stage: cli")
+    print("reason: unhandled exception; inspect local logs.")
     return 1
 
 

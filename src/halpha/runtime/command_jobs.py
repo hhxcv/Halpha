@@ -328,15 +328,20 @@ class CommandJobManager:
 
                 stdout, stderr = job_process.communicate()
         except (CommandJobProcessError, OSError) as exc:
+            finished_at = _utc_now()
+            diagnostic = bounded_exception_diagnostic(exc, context={"phase": "process_start"})
             reason = self._redact_text(f"job process could not start: {exc}")
+            logs = self._write_job_logs(job_id, stdout="", stderr=f"{reason}\n")
             job.update(
                 {
                     "status": "failed",
-                    "updated_at": _utc_now(),
+                    "updated_at": finished_at,
                     "started_at": started_at,
-                    "finished_at": _utc_now(),
+                    "finished_at": finished_at,
                     "errors": [reason],
-                    "diagnostic": bounded_exception_diagnostic(exc, context={"phase": "process_start"}),
+                    "diagnostic": diagnostic,
+                    "logs": logs,
+                    "source_artifacts": [logs["stdout_ref"], logs["stderr_ref"]],
                 }
             )
             self._save_job(job, event_type="start_failed")
@@ -348,7 +353,9 @@ class CommandJobManager:
                     "intent": job.get("intent"),
                     "kind": spec.kind,
                     "reason": reason,
+                    "phase": "process_start",
                     "exception_type": type(exc).__name__,
+                    "diagnostic": diagnostic,
                 },
             )
             return
@@ -499,10 +506,24 @@ class CommandJobManager:
                     run_trigger=_job_run_trigger(job),
                 )
         except Exception as exc:
+            reason = self._redact_text(str(exc))
             stdout = ""
-            stderr = self._redact_text(str(exc))
+            stderr = f"internal command job failed: {reason}\n"
             exit_code = 1
             diagnostic = bounded_exception_diagnostic(exc, context={"phase": "internal_execution"})
+            self._logger.error(
+                "internal command job failed.",
+                extra={
+                    "event": "command_job.internal_failed",
+                    "job_id": job_id,
+                    "intent": job.get("intent"),
+                    "kind": spec.kind,
+                    "phase": "internal_execution",
+                    "reason": reason,
+                    "exception_type": type(exc).__name__,
+                    "diagnostic": diagnostic,
+                },
+            )
         else:
             stdout = result.stdout
             stderr = result.stderr
@@ -615,6 +636,12 @@ class CommandJobManager:
 
     def _mark_job_failed_before_process(self, job: dict[str, Any], *, started_at: str, exc: PipelineError) -> None:
         now = _utc_now()
+        reason = self._redact_text(str(exc))
+        logs = self._write_job_logs(
+            str(job.get("job_id") or ""),
+            stdout="",
+            stderr=f"command job failed before starting process: {reason}\n",
+        )
         job.update(
             {
                 "status": "failed",
@@ -622,8 +649,10 @@ class CommandJobManager:
                 "started_at": started_at,
                 "finished_at": now,
                 "cancellable": False,
-                "errors": [str(exc)],
+                "errors": [reason],
                 "diagnostic": exc.error_details,
+                "logs": logs,
+                "source_artifacts": [logs["stdout_ref"], logs["stderr_ref"]],
             }
         )
         self._save_job(job, event_type="start_failed")
@@ -634,7 +663,8 @@ class CommandJobManager:
                 "job_id": job.get("job_id"),
                 "intent": job.get("intent"),
                 "kind": job.get("kind"),
-                "reason": str(exc),
+                "reason": reason,
+                "phase": "pre_process",
             },
         )
 
@@ -719,6 +749,19 @@ class CommandJobManager:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(bounded, encoding="utf-8")
         return _safe_ref(path, base=self.control_base), len(safe) > MAX_JOB_LOG_CHARS, len(safe)
+
+    def _write_job_logs(self, job_id: str, *, stdout: str | None, stderr: str | None) -> dict[str, Any]:
+        stdout_ref, stdout_truncated, stdout_chars = self._write_log(job_id, "stdout.log", stdout)
+        stderr_ref, stderr_truncated, stderr_chars = self._write_log(job_id, "stderr.log", stderr)
+        return {
+            "stdout_ref": stdout_ref,
+            "stderr_ref": stderr_ref,
+            "stdout_chars": stdout_chars,
+            "stderr_chars": stderr_chars,
+            "stdout_truncated": stdout_truncated,
+            "stderr_truncated": stderr_truncated,
+            "max_chars": MAX_JOB_LOG_CHARS,
+        }
 
     def _job_result_refs(self, stdout: str | None, *, spec: CommandSpec) -> dict[str, str]:
         refs: dict[str, str] = {}

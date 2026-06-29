@@ -118,6 +118,15 @@ def _run_pipeline_unlocked(
         }
         run.manifest["stages"].append(stage_record)
         _write_manifest(run)
+        LOGGER.info(
+            "Pipeline product stage started.",
+            extra={
+                "event": "pipeline.product_stage.start",
+                "run_id": run.run_id,
+                "stage": stage,
+                "task_count": len(_tasks_for_stage(stage)),
+            },
+        )
 
         failure = _run_stage_tasks(
             config,
@@ -132,6 +141,15 @@ def _run_pipeline_unlocked(
         if failure:
             return failure
         _write_manifest(run)
+        LOGGER.info(
+            "Pipeline product stage succeeded.",
+            extra={
+                "event": "pipeline.product_stage.succeeded",
+                "run_id": run.run_id,
+                "stage": stage,
+                "task_count": len(_tasks_for_stage(stage)),
+            },
+        )
         if stage == until_stage:
             _record_not_run_stages(
                 run,
@@ -485,6 +503,16 @@ def _run_stage_sequence(
             stage_record["mode"] = mode
         run.manifest["stages"].append(stage_record)
         _write_manifest(run)
+        LOGGER.info(
+            "Pipeline product stage started.",
+            extra={
+                "event": "pipeline.product_stage.start",
+                "run_id": run.run_id,
+                "stage": stage,
+                "mode": mode,
+                "task_count": len(_tasks_for_stage(stage)),
+            },
+        )
         failure = _run_stage_tasks(
             config,
             run,
@@ -498,6 +526,16 @@ def _run_stage_sequence(
         if failure:
             return failure
         _write_manifest(run)
+        LOGGER.info(
+            "Pipeline product stage succeeded.",
+            extra={
+                "event": "pipeline.product_stage.succeeded",
+                "run_id": run.run_id,
+                "stage": stage,
+                "mode": mode,
+                "task_count": len(_tasks_for_stage(stage)),
+            },
+        )
     return None
 
 
@@ -512,7 +550,8 @@ def _run_stage_tasks(
     mode: str | None,
     skip_codex: bool,
 ) -> RunResult | None:
-    for task in _tasks_for_stage(stage):
+    tasks = _tasks_for_stage(stage)
+    for task_index, task in enumerate(tasks):
         task_record: dict[str, Any] = {
             "name": task,
             "status": "running",
@@ -529,6 +568,18 @@ def _run_stage_tasks(
         _set_codex_status(run, stage=task, status="running")
         _refresh_stage_record(stage_record)
         _write_manifest(run)
+        LOGGER.info(
+            "Pipeline task started.",
+            extra={
+                "event": "pipeline.task.start",
+                "run_id": run.run_id,
+                "stage": task,
+                "product_stage": stage,
+                "task_index": task_index,
+                "task_count": len(tasks),
+                "mode": mode,
+            },
+        )
 
         if skip_codex and task == "run_codex_report":
             _skip_stage(
