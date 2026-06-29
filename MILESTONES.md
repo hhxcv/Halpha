@@ -20,9 +20,64 @@ Do not describe planned work outside the active milestone.
 
 ## Active Milestone
 
-### M23 - Contract-First Quant Strategy Framework and Evaluation Workbench v1
+### M24 - Product Experience, Design System, and Interaction Flow Rebuild v1
 
 Status: active.
+
+Goal:
+
+```text
+Rebuild Halpha's local dashboard experience around a durable product design system, clearer interaction flows, and API-backed workflow state so reports, jobs, intelligence data, and strategy research outputs become easier to understand, trust, and act on without changing Halpha's local-first research boundary.
+```
+
+The loop is complete when Halpha can:
+
+* preserve the M22 reusable data-store and M23 strategy-evaluation foundations instead of replacing their artifact contracts or research semantics;
+* make `DESIGN.md` the durable source for Halpha dashboard visual style, layout rules, component behavior, interaction tone, information density, and reusable UI patterns;
+* apply the M24 design style consistently across the dashboard shell, navigation, cards, tables, timelines, charts, controls, status surfaces, dialogs, empty states, warnings, and progress views;
+* reorganize the dashboard around user workflows rather than implementation modules, especially report generation and review, task status, intelligence inspection, strategy research, data coverage, and system health;
+* make report results visibly valuable by showing report status, generated conclusions, supporting evidence, related artifacts, warnings, missing data, and follow-up actions in a coherent review flow;
+* make task and job state first-class, including queued, running, completed, failed, skipped, stale, partial, cancelled, and recoverable states with clear progress, latest log line, expandable logs, run IDs, timestamps, source command, and linked output artifacts;
+* make Intelligence views communicate stored data value through clear overview metrics, data-type tabs, coverage timelines, date navigation, readable content previews, filters, search, source refs, quality states, and bounded property panels;
+* make Strategy Lab communicate strategy state through clear market selection, configured strategy profiles, backtest records, optimization evidence, lifecycle or gate state, warnings, K-line overlays, trades, equity, drawdown, and parameter context;
+* keep dashboard actions backed by internal service or job APIs shared with CLI paths, rather than spawning shell commands from UI handlers;
+* reduce duplicate controls, unclear parameters, mixed collection/view filters, hidden coupling between panels, and controls that cannot be explained from the visible workflow;
+* separate collection, viewing, backtesting, optimization, report generation, export, and inspection interactions so each workflow has clear inputs, progress, result state, and next step;
+* surface data and artifact quality honestly, including missing coverage, partial collection, stale records, failed jobs, warning counts, insufficient evidence, and unavailable features without burying them in raw logs;
+* provide dashboard-level drill-down from high-level status into the exact report, run, data interval, strategy record, warning, or artifact that explains the state;
+* keep CLI behavior available as validation, automation, and recovery paths while making dashboard and CLI share the same backend semantics and artifact ownership;
+* keep local-first privacy boundaries explicit, including no hosted assumptions, no user account system, no exchange account operations, no trading execution, and no hidden remote service dependency;
+* update dashboard, artifact, workflow, and design documentation only where implemented behavior or durable UI contracts change;
+* add focused backend, API, UI-state, and browser-level smoke tests for the redesigned flows, including task state, report review, intelligence data viewing, Strategy Lab inspection, progress/log display, and error-state rendering.
+
+M24 favors:
+
+* product clarity over adding new research depth;
+* durable design rules over one-off page styling;
+* workflow-oriented navigation over implementation-oriented panels;
+* truthful state, warnings, and artifact links over optimistic summaries;
+* reusable UI patterns over repeated bespoke controls;
+* API-backed interactions over UI shell command execution;
+* bounded readable previews over raw JSON dumps;
+* small end-to-end flow improvements over a single broad rewrite;
+* preserving current data and strategy contracts while improving how their value is presented.
+
+M24 does not require:
+
+* new trading execution, order placement, exchange account access, wallet access, portfolio automation, or account-based position sizing;
+* a hosted SaaS dashboard, multi-user permissions, remote sync, or cloud workflow engine;
+* replacing Halpha-owned artifacts with third-party UI, notebook, backtesting, or workflow-platform objects as persisted contracts;
+* adding Redis, Celery, Prefect, Airflow, Kafka, a hidden worker pool, or a fourth resident process role;
+* expanding market, macro, on-chain, derivatives, text, or strategy data depth unless needed to make existing UI flows truthful and testable;
+* redesigning the research methodology, strategy math, data-store contracts, or report-writing logic beyond the backend flow changes needed for clear interaction;
+* perfect visual polish for every future page before the main report, task, intelligence, and strategy workflows are coherent;
+* making Codex or another LLM the source of task state, data quality, report validity, strategy gates, optimization results, warnings, or dashboard conclusions.
+
+## Completed Milestones
+
+### M23 - Contract-First Quant Strategy Framework and Evaluation Workbench v1
+
+Status: completed.
 
 Goal:
 
@@ -84,8 +139,6 @@ M23 does not require:
 * perfect multi-exchange contract normalization for every venue before implemented public futures paths are useful;
 * full semantic event understanding before event-driven strategies can use deterministic event-like records with explicit uncertainty;
 * making Codex or another LLM the source of strategy signals, feature values, optimization results, gate statuses, lifecycle states, forecasts, trading instructions, or financial advice.
-
-## Completed Milestones
 
 ### M22 - Data Collection, Retrieval, and Storage Foundation v1
 
