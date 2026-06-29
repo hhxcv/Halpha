@@ -267,7 +267,8 @@ Strategy spec record:
   },
   "risk_notes": [
     "Historical strategy output is research material, not a forecast."
-  ]
+  ],
+  "supported_filters": []
 }
 ```
 
@@ -299,6 +300,9 @@ Rules:
 - Unknown strategy names must continue to fail with actionable validation.
 - Strategy specs must not contain credentials, private account fields, or live
   execution settings.
+- Strategy specs may declare reusable optional filter inputs with
+  `supported_filters`; implemented filter inputs must include explicit
+  parameter names and `closed_bar_no_lookahead` alignment.
 - `optimization_space` is a bounded research search space. It is not an
   instruction to optimize active configuration automatically.
 - Strategy Lab should prefer strategy spec metadata for controls and hints when
@@ -957,6 +961,9 @@ Validation contract:
 - `tsmom_vol_scaled` param `target_volatility` must be a positive number when present.
 - `signed_tsmom_trend` param `return_window` must be a positive integer when present.
 - `signed_tsmom_trend` param `deadband_pct` must be a number between 0 and 100 when present.
+- `signed_tsmom_trend` optional `volatility_filter_enabled` param must be a boolean when present.
+- `signed_tsmom_trend` optional `volatility_filter_window` param must be a positive integer when present.
+- `signed_tsmom_trend` optional `max_realized_volatility_pct` param must be a positive number when present.
 - `breakout_atr_trend` params `breakout_window`, `exit_window`, and `atr_window` must be positive integers when present.
 - `sma_cross_trend` params `short_window` and `long_window` must be positive integers when present.
 - Effective `sma_cross_trend` `short_window` must be lower than effective `long_window`.

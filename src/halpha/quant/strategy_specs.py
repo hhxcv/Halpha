@@ -15,6 +15,17 @@ OHLCV_INPUT = {
     "fields": list(OHLCV_REQUIRED_FIELDS),
 }
 RESEARCH_RISK_NOTE = "Historical strategy output is research material, not a forecast."
+REALIZED_VOLATILITY_FILTER = {
+    "filter_id": "realized_volatility_max_pct_v1",
+    "input_type": "ohlcv_close_return",
+    "required": False,
+    "time_alignment": "closed_bar_no_lookahead",
+    "parameters": {
+        "volatility_filter_enabled": {"type": "boolean", "default": False},
+        "volatility_filter_window": {"type": "positive_integer", "default": 20},
+        "max_realized_volatility_pct": {"type": "positive_number", "default": 100.0},
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -31,6 +42,7 @@ class StrategySpec:
     optimization_space: dict[str, dict[str, Any]]
     minimum_rows_policy: dict[str, Any]
     risk_notes: tuple[str, ...]
+    supported_filters: tuple[dict[str, Any], ...] = ()
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -53,6 +65,7 @@ class StrategySpec:
             },
             "minimum_rows_policy": dict(self.minimum_rows_policy),
             "risk_notes": list(self.risk_notes),
+            "supported_filters": [_copy_mapping(item) for item in self.supported_filters],
         }
 
 
@@ -231,6 +244,7 @@ STRATEGY_SPECS = {
             "Signed momentum strategies can lose on both long and short reversals.",
             "Short exposure is research exposure only, not borrowing or account state.",
         ),
+        supported_filters=(REALIZED_VOLATILITY_FILTER,),
     ),
     "breakout_atr_trend": StrategySpec(
         name="breakout_atr_trend",

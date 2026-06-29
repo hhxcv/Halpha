@@ -140,7 +140,13 @@ SUPPORTED_LIFECYCLE_POLICY_SCOPE_FIELDS = {"symbol", "timeframe"}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "sma_cross_trend": {"short_window", "long_window"},
     "sma_cross_long_short": {"short_window", "long_window", "neutral_band_pct"},
-    "signed_tsmom_trend": {"return_window", "deadband_pct"},
+    "signed_tsmom_trend": {
+        "return_window",
+        "deadband_pct",
+        "volatility_filter_enabled",
+        "volatility_filter_window",
+        "max_realized_volatility_pct",
+    },
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
     "bollinger_rsi_reversion": {
@@ -866,6 +872,12 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
             _require_positive_int(params, "return_window", f"{path}.return_window")
         if "deadband_pct" in params:
             _require_bounded_number(params, "deadband_pct", f"{path}.deadband_pct", minimum=0.0, maximum=100.0)
+        if "volatility_filter_enabled" in params:
+            _require_bool(params, "volatility_filter_enabled", f"{path}.volatility_filter_enabled")
+        if "volatility_filter_window" in params:
+            _require_positive_int(params, "volatility_filter_window", f"{path}.volatility_filter_window")
+        if "max_realized_volatility_pct" in params:
+            _require_positive_number(params, "max_realized_volatility_pct", f"{path}.max_realized_volatility_pct")
     if name == "tsmom_vol_scaled":
         if "return_window" in params:
             _require_positive_int(params, "return_window", f"{path}.return_window")
@@ -1016,6 +1028,13 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
             _require_positive_int_value(value, path)
         if param_name == "deadband_pct":
             _require_bounded_number_value(value, path, minimum=0.0, maximum=100.0)
+        if param_name == "volatility_filter_enabled":
+            if not isinstance(value, bool):
+                raise ConfigError(f"{path} must be a boolean.")
+        if param_name == "volatility_filter_window":
+            _require_positive_int_value(value, path)
+        if param_name == "max_realized_volatility_pct":
+            _require_positive_number_value(value, path)
     if name == "tsmom_vol_scaled":
         if param_name in {"return_window", "volatility_window"}:
             _require_positive_int_value(value, path)

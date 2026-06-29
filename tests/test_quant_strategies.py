@@ -1368,6 +1368,116 @@ def test_signed_tsmom_trend_records_insufficient_data_and_param_validation() -> 
     json.dumps(signal_records)
 
 
+def test_signed_tsmom_trend_optional_volatility_filter_records_pass_and_suppression() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    passed_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=103, volume=13),
+    ]
+    suppressed_rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+        _record(open_time="2026-06-04T00:00:00Z", close=120, volume=13),
+    ]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 1,
+            "deadband_pct": 0.1,
+            "volatility_filter_enabled": True,
+            "volatility_filter_window": 2,
+            "max_realized_volatility_pct": 20.0,
+        },
+        "backtest": {"enabled": False},
+    }
+
+    passed_run = definition.run(
+        strategy,
+        _view(passed_rows),
+        passed_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+    suppressed_run = definition.run(
+        strategy,
+        _view(suppressed_rows),
+        suppressed_rows,
+        engine=_engine(),
+        created_at="2026-06-05T00:00:00Z",
+    )
+
+    assert passed_run["signals"]["latest_position_state"] == "long"
+    assert passed_run["signals"]["volatility_filter"]["status"] == "passed"
+    assert passed_run["signals"]["filter_suppression_reason"] is None
+    assert suppressed_run["signals"]["latest_position_state"] == "flat"
+    assert suppressed_run["signals"]["volatility_filter"]["status"] == "suppressed"
+    assert suppressed_run["signals"]["filter_suppression_reason"] == "realized_volatility_above_max"
+    assert suppressed_run["warnings"][0]["code"] == "realized_volatility_filter_suppressed_signal"
+    assert suppressed_run["indicators"]["volatility_filter_realized_volatility_pct"] > 20.0
+    json.dumps(passed_run)
+    json.dumps(suppressed_run)
+
+
+def test_signed_tsmom_trend_optional_volatility_filter_insufficient_and_invalid_params() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=101, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=102, volume=12),
+    ]
+
+    signal_records = definition.signal_records(
+        {
+            "name": "signed_tsmom_trend",
+            "params": {
+                "return_window": 1,
+                "deadband_pct": 0.1,
+                "volatility_filter_enabled": True,
+                "volatility_filter_window": 4,
+                "max_realized_volatility_pct": 20.0,
+            },
+        },
+        _view(rows),
+        rows,
+    )
+
+    assert signal_records["status"] == "insufficient_data"
+    assert signal_records["warnings"][0]["code"] == "insufficient_ohlcv_rows"
+    with pytest.raises(ValueError, match="volatility_filter_enabled must be a boolean"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "volatility_filter_enabled": "yes",
+                },
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="max_realized_volatility_pct must be a positive number"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "volatility_filter_enabled": True,
+                    "max_realized_volatility_pct": 0.0,
+                },
+            },
+            _view(rows),
+            rows,
+        )
+    json.dumps(signal_records)
+
+
 def test_sma_cross_long_short_signal_records_cover_long_short_flat_transitions() -> None:
     definition = get_strategy_definition("sma_cross_long_short")
     assert definition is not None

@@ -87,6 +87,12 @@ def test_registry_returns_complete_spec_records() -> None:
         assert set(record["default_params"]) == set(record["optimization_space"])
         assert record["minimum_rows_policy"]["minimum_rows_with_default_params"] > 0
         assert record["risk_notes"]
+        assert isinstance(record["supported_filters"], list)
+        if record["name"] == "signed_tsmom_trend":
+            assert record["supported_filters"][0]["filter_id"] == "realized_volatility_max_pct_v1"
+            assert record["supported_filters"][0]["required"] is False
+        else:
+            assert record["supported_filters"] == []
 
 
 def test_strategy_spec_records_are_json_serializable() -> None:
