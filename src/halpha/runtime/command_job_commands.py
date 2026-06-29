@@ -139,6 +139,13 @@ SUPPORTED_COMMANDS = {
         cli_parts=("experiment",),
         param_mode="experiment",
     ),
+    "optimize": CommandSpec(
+        intent="optimize",
+        kind="strategy_optimization",
+        cancellable=True,
+        cli_parts=("optimize",),
+        param_mode="optimize",
+    ),
     "text_models_prepare": CommandSpec(
         intent="text_models_prepare",
         kind="text_model_preparation",
@@ -217,6 +224,18 @@ class CommandJobBuilder:
             return {"strategy_name", "symbol", "timeframe", "output_dir"}
         if param_mode == "experiment":
             return {"strategy_names", "output_dir"}
+        if param_mode == "optimize":
+            return {
+                "strategy_name",
+                "grid",
+                "grid_args",
+                "max_combinations",
+                "walk_forward_train_rows",
+                "walk_forward_validation_rows",
+                "walk_forward_step_rows",
+                "walk_forward_min_windows",
+                "output_dir",
+            }
         if param_mode == "text_models_prepare":
             return {"output_dir"}
         if param_mode == "text_intel":
@@ -254,6 +273,49 @@ class CommandJobBuilder:
             for strategy_name in strategy_names:
                 command.extend(["--strategy", strategy_name])
                 preview.extend(["--strategy", strategy_name])
+            self._extend_optional_output_dir(params, command, preview)
+        elif param_mode == "optimize":
+            strategy_name = self._validated_strategy_name(params.get("strategy_name"), param_name="strategy_name")
+            command.extend(["--strategy", strategy_name])
+            preview.extend(["--strategy", strategy_name])
+            for grid_item in self._validated_optimization_grid_items(params):
+                command.extend(["--grid", grid_item])
+                preview.extend(["--grid", grid_item])
+            self._extend_optional_positive_int(
+                params,
+                command,
+                preview,
+                param_name="max_combinations",
+                cli_name="--max-combinations",
+            )
+            self._extend_optional_positive_int(
+                params,
+                command,
+                preview,
+                param_name="walk_forward_train_rows",
+                cli_name="--walk-forward-train-rows",
+            )
+            self._extend_optional_positive_int(
+                params,
+                command,
+                preview,
+                param_name="walk_forward_validation_rows",
+                cli_name="--walk-forward-validation-rows",
+            )
+            self._extend_optional_positive_int(
+                params,
+                command,
+                preview,
+                param_name="walk_forward_step_rows",
+                cli_name="--walk-forward-step-rows",
+            )
+            self._extend_optional_positive_int(
+                params,
+                command,
+                preview,
+                param_name="walk_forward_min_windows",
+                cli_name="--walk-forward-min-windows",
+            )
             self._extend_optional_output_dir(params, command, preview)
         elif param_mode == "text_models_prepare":
             self._extend_optional_output_dir(params, command, preview)
@@ -366,6 +428,32 @@ class CommandJobBuilder:
         if not isinstance(value, list) or not value:
             raise CommandJobError("strategy_names must be a non-empty list when provided.")
         return [self._validated_strategy_name(item, param_name="strategy_names") for item in value]
+
+    def _validated_optimization_grid_items(self, params: dict[str, Any]) -> list[str]:
+        grid = params.get("grid")
+        grid_args = params.get("grid_args")
+        if grid is not None and grid_args is not None:
+            raise CommandJobError("grid and grid_args cannot both be provided.")
+        if grid_args is not None:
+            if not isinstance(grid_args, list) or any(not isinstance(item, str) or not item.strip() for item in grid_args):
+                raise CommandJobError("grid_args must be a list of non-empty strings.")
+            return [item.strip() for item in grid_args]
+        if grid is None:
+            return []
+        if not isinstance(grid, dict):
+            raise CommandJobError("grid must be an object.")
+        items = []
+        for key in sorted(grid):
+            if not isinstance(key, str) or not key.strip():
+                raise CommandJobError("grid parameter names must be non-empty strings.")
+            values = grid[key]
+            if not isinstance(values, list) or not values:
+                raise CommandJobError(f"grid.{key} must be a non-empty list.")
+            if any(isinstance(value, (dict, list)) for value in values):
+                raise CommandJobError(f"grid.{key} values must be scalar.")
+            rendered_values = ",".join(_grid_value_text(value) for value in values)
+            items.append(f"{key.strip()}={rendered_values}")
+        return items
 
     def _validated_symbol(self, value: Any) -> str:
         if not isinstance(value, str) or not value.strip():
@@ -520,3 +608,9 @@ def command_config_ref(config_path: Path) -> str:
     if not path.is_absolute():
         return display_path(path, external_ref="<external-config>")
     return "<external-config>"
+
+
+def _grid_value_text(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)

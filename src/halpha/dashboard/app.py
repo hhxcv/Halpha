@@ -45,6 +45,7 @@ from halpha.dashboard.settings import (
     sanitize_dashboard_message,
 )
 from halpha.dashboard.state import read_dashboard_selected_config_state, write_dashboard_selected_config_state
+from halpha.dashboard.strategy_actions import dashboard_strategy_action_job
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.ui import dashboard_index_html
 from halpha.runtime.command_jobs import CommandJobManager
@@ -442,6 +443,13 @@ def create_dashboard_app(
             return _unconfigured_payload("dashboard_strategy_research", pipeline={"artifacts": []}, standalone={"artifacts": []})
         active_config, active_config_path = active
         return dashboard_strategy_research(active_config, config_path=active_config_path, run_id=run_id)
+
+    @app.post("/api/strategies/actions/{action}")
+    def strategy_action_job_endpoint(action: str, request: dict[str, Any] | None = Body(default=None)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_strategy_action_job", action=action, job=None)
+        return dashboard_strategy_action_job(job_manager=context.job_manager, action=action, request=request or {})
 
     @app.get("/api/monitor")
     def monitor_endpoint() -> dict[str, Any]:

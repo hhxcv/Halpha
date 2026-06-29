@@ -236,12 +236,15 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
     assert "window.HalphaDashboardMonitor" in monitor_script.text
     assert "refreshCurrentView" in script.text
+    assert 'postStrategyAction("backtest"' in script.text
+    assert 'postJob("backtest"' not in script.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
     assert 'data-stores-endpoint="/api/data/stores"' in response.text
     assert 'data-delete-endpoint="/api/data/deletion"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
+    assert 'data-strategy-actions-endpoint="/api/strategies/actions"' in response.text
     assert 'data-monitor-endpoint="/api/monitor"' in response.text
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
@@ -1603,6 +1606,7 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert payload["standalone"]["status"] == "failed"
     assert payload["commands"]["backtest"] == "available"
     assert payload["commands"]["experiment"] == "available"
+    assert payload["commands"]["optimize"] == "available"
     assert payload["commands"]["options"]["strategy_names"] == []
     assert payload["commands"]["options"]["symbols"] == []
     assert payload["commands"]["options"]["timeframes"] == []
@@ -1642,6 +1646,12 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert experiment["status"] == "available"
     assert experiment["fields"]["counts"]["evaluations"] == 1
     assert experiment["records"]["gates"][0]["reason_codes"] == ["benchmark_coverage_met"]
+
+    optimization = payload["standalone"]["optimizations"][0]
+    assert optimization["status"] == "available"
+    assert optimization["fields"]["strategy_name"] == "tsmom_vol_scaled"
+    assert optimization["fields"]["selected_candidate"]["candidate_id"] == "candidate:0001"
+    assert optimization["fields"]["robustness"]["status"] == "robust"
     assert str(tmp_path) not in response.text
 
 
@@ -1732,6 +1742,7 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
     payload = response.json()
     assert payload["commands"]["backtest"] == "available"
     assert payload["commands"]["experiment"] == "available"
+    assert payload["commands"]["optimize"] == "available"
     assert payload["commands"]["options"]["strategy_names"] == [
         "bollinger_rsi_long_short",
         "bollinger_rsi_reversion",
@@ -2670,6 +2681,62 @@ def _write_standalone_strategy_outputs(tmp_path: Path) -> None:
                 "strategy_experiment": "strategy_experiment.json",
                 "strategy_benchmark_suite": "strategy_benchmark_suite.json",
                 "strategy_effectiveness_gates": "strategy_effectiveness_gates.json",
+                "manifest": "manifest.json",
+            },
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+    optimization_dir = tmp_path / "runs" / "strategy_optimizations" / "20260620T000000Z_tsmom_optimization"
+    write_json(
+        optimization_dir / "strategy_benchmark_suite.json",
+        {
+            "artifact_type": "strategy_benchmark_suite",
+            "status": "ok",
+            "coverage": {"benchmark_records": 1, "succeeded": 1},
+            "benchmarks": [],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        optimization_dir / "strategy_optimization.json",
+        {
+            "artifact_type": "strategy_optimization",
+            "status": "ok",
+            "strategy_name": "tsmom_vol_scaled",
+            "search_space": {"combination_count": 2},
+            "coverage": {"candidate_count": 2, "succeeded": 2},
+            "selected_candidate": {
+                "candidate_id": "candidate:0001",
+                "status": "succeeded",
+                "params": {"return_window": 2},
+                "summary": {"mean_net_return_pct": 1.2},
+                "automatic_config_mutation": False,
+            },
+            "failed_candidates": [],
+            "walk_forward": {
+                "status": "succeeded",
+                "summary": {"succeeded_windows": 3},
+                "warnings": [],
+                "errors": [],
+            },
+            "robustness": {"status": "robust", "warnings": [], "errors": []},
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        optimization_dir / "manifest.json",
+        {
+            "artifact_type": "strategy_optimization_manifest",
+            "created_at": "2026-06-20T00:00:00Z",
+            "status": "succeeded",
+            "counts": {"candidate_count": 2, "succeeded": 2},
+            "artifacts": {
+                "strategy_optimization": "strategy_optimization.json",
+                "strategy_benchmark_suite": "strategy_benchmark_suite.json",
                 "manifest": "manifest.json",
             },
             "warnings": [],

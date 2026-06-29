@@ -70,16 +70,16 @@ from halpha.runtime.run_classification import run_trigger_from_env
 from halpha.pipeline_stages import StageSelectionError
 from halpha.pipeline import run_pipeline, run_pipeline_stage
 from halpha.product.product_validation_inspection import inspect_product_validation
-from halpha.strategy.standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
 from halpha.text.standalone_text_intelligence import run_standalone_text_intelligence
 from halpha.storage import display_path
-from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
 from halpha.strategy.strategy_optimization import (
     DEFAULT_MAX_COMBINATIONS,
     DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY,
-    StrategyOptimizationError,
-    parse_optimization_grid_args,
-    run_strategy_optimization,
+)
+from halpha.strategy.workbench_service import (
+    run_strategy_backtest_action,
+    run_strategy_experiment_action,
+    run_strategy_optimization_action,
 )
 from halpha.text.text_event_collection import TextEventCollectionError
 from halpha.text.text_models import prepare_text_models
@@ -1079,29 +1079,16 @@ def _backtest(
         return 2
 
     _configure_logging(config_path=config_path, config=config)
-    try:
-        result = run_standalone_strategy_backtest(
-            config,
-            config_path=config_path,
-            strategy_name=strategy_name,
-            symbol=symbol,
-            timeframe=timeframe,
-            output_dir=Path(output_dir) if output_dir else None,
-        )
-    except StandaloneBacktestError as exc:
-        _log_command_failed("backtest", stage="backtest", reason=str(exc), exit_code=exc.exit_code)
-        print("Halpha backtest failed.")
-        print("stage: backtest")
-        print(f"reason: {exc}")
-        return exc.exit_code
-
-    artifact = display_path(result.artifact_path)
-    manifest = display_path(result.manifest_path)
+    result = run_strategy_backtest_action(
+        config,
+        config_path=config_path,
+        strategy_name=strategy_name,
+        symbol=symbol,
+        timeframe=timeframe,
+        output_dir=Path(output_dir) if output_dir else None,
+    )
+    print(result.stdout, end="")
     if result.succeeded:
-        print("Halpha backtest succeeded.")
-        print(f"status: {result.status}")
-        print(f"strategy_backtest: {artifact}")
-        print(f"manifest: {manifest}")
         _log_command_succeeded(
             "backtest",
             status=result.status,
@@ -1114,18 +1101,13 @@ def _backtest(
     _log_command_failed(
         "backtest",
         stage="backtest",
-        reason=result.reason or result.status,
+        reason="; ".join(result.errors) or result.status,
         status=result.status,
         strategy_name=strategy_name,
         symbol=symbol,
         timeframe=timeframe,
         exit_code=result.exit_code,
     )
-    print("Halpha backtest failed.")
-    print(f"status: {result.status}")
-    print(f"reason: {result.reason}")
-    print(f"strategy_backtest: {artifact}")
-    print(f"manifest: {manifest}")
     return result.exit_code
 
 
@@ -1153,37 +1135,20 @@ def _experiment(
         return 2
 
     _configure_logging(config_path=config_path, config=config)
-    try:
-        result = run_strategy_experiment(
-            config,
-            config_path=config_path,
-            strategy_names=strategy_names,
-            output_dir=Path(output_dir) if output_dir else None,
-        )
-    except StrategyExperimentError as exc:
-        _log_command_failed("experiment", stage="experiment", reason=str(exc), exit_code=exc.exit_code)
-        print("Halpha experiment failed.")
-        print("stage: experiment")
-        print(f"reason: {exc}")
-        return exc.exit_code
-
-    artifact = display_path(result.artifact_path)
-    benchmark_suite = display_path(result.benchmark_suite_path)
-    gates = display_path(result.gates_path)
-    manifest = display_path(result.manifest_path)
-    print("Halpha experiment succeeded.")
-    print(f"status: {result.status}")
-    print(f"strategy_experiment: {artifact}")
-    print(f"strategy_benchmark_suite: {benchmark_suite}")
-    print(f"strategy_effectiveness_gates: {gates}")
-    print(f"manifest: {manifest}")
+    result = run_strategy_experiment_action(
+        config,
+        config_path=config_path,
+        strategy_names=strategy_names,
+        output_dir=Path(output_dir) if output_dir else None,
+    )
+    print(result.stdout, end="")
     if result.exit_code == 0:
         _log_command_succeeded("experiment", status=result.status, strategy_count=len(strategy_names or []))
     else:
         _log_command_failed(
             "experiment",
             stage="experiment",
-            reason=result.status,
+            reason="; ".join(result.errors) or result.status,
             status=result.status,
             strategy_count=len(strategy_names or []),
             exit_code=result.exit_code,
@@ -1225,47 +1190,35 @@ def _optimize(
 
     try:
         config = load_config(config_path)
-        grid = parse_optimization_grid_args(strategy_name, grid_args)
     except ConfigError as exc:
         _log_command_failed("optimize", stage="config", reason=str(exc), exit_code=2)
         print("Halpha optimization failed.")
         print("stage: config")
         print(f"reason: {exc}")
         return 2
-    except StrategyOptimizationError as exc:
-        _log_command_failed("optimize", stage="optimization", reason=str(exc), exit_code=exc.exit_code)
-        print("Halpha optimization failed.")
-        print("stage: optimization")
-        print(f"reason: {exc}")
-        return exc.exit_code
 
     _configure_logging(config_path=config_path, config=config)
-    try:
-        result = run_strategy_optimization(
-            config,
-            config_path=config_path,
+    result = run_strategy_optimization_action(
+        config,
+        config_path=config_path,
+        strategy_name=strategy_name,
+        grid_args=grid_args,
+        max_combinations=max_combinations,
+        walk_forward_policy=walk_forward_policy,
+        output_dir=Path(output_dir) if output_dir else None,
+    )
+    print(result.stdout, end="")
+    if result.succeeded:
+        _log_command_succeeded("optimize", status=result.status, strategy_name=strategy_name)
+    else:
+        _log_command_failed(
+            "optimize",
+            stage="optimization",
+            reason="; ".join(result.errors) or result.status,
+            status=result.status,
             strategy_name=strategy_name,
-            grid=grid,
-            max_combinations=max_combinations,
-            walk_forward_policy=walk_forward_policy,
-            output_dir=Path(output_dir) if output_dir else None,
+            exit_code=result.exit_code,
         )
-    except StrategyOptimizationError as exc:
-        _log_command_failed("optimize", stage="optimization", reason=str(exc), exit_code=exc.exit_code)
-        print("Halpha optimization failed.")
-        print("stage: optimization")
-        print(f"reason: {exc}")
-        return exc.exit_code
-
-    artifact = display_path(result.artifact_path)
-    benchmark_suite = display_path(result.benchmark_suite_path)
-    manifest = display_path(result.manifest_path)
-    print("Halpha optimization succeeded.")
-    print(f"status: {result.status}")
-    print(f"strategy_optimization: {artifact}")
-    print(f"strategy_benchmark_suite: {benchmark_suite}")
-    print(f"manifest: {manifest}")
-    _log_command_succeeded("optimize", status=result.status, strategy_name=strategy_name)
     return result.exit_code
 
 
