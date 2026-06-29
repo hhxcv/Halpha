@@ -14,6 +14,7 @@ from typing import Any, Callable, Mapping
 COMMAND_JOB_CANCEL_GRACE_SECONDS = 2.0
 COMMAND_JOB_FORCE_GRACE_SECONDS = 2.0
 COMMAND_JOB_POLL_SECONDS = 0.05
+_POSIX_EXITED_STATES = {"Z", "X", "x"}
 _REAL_POPEN = subprocess.Popen
 
 
@@ -327,7 +328,10 @@ def _posix_identity_alive(identity: Mapping[str, Any]) -> bool:
     return _posix_process_group_alive(pgid)
 
 
-def _posix_process_group_alive(pgid: int) -> bool:
+def _posix_process_group_alive(pgid: int, *, proc_root: Path | None = None) -> bool:
+    proc_alive = _posix_process_group_alive_from_proc(pgid, proc_root=proc_root or Path("/proc"))
+    if proc_alive is not None:
+        return proc_alive
     try:
         os.killpg(pgid, 0)
     except ProcessLookupError:
@@ -339,16 +343,60 @@ def _posix_process_group_alive(pgid: int) -> bool:
     return True
 
 
-def _posix_start_time_ticks(pid: int) -> int | None:
-    stat_path = Path("/proc") / str(pid) / "stat"
+def _posix_process_group_alive_from_proc(pgid: int, *, proc_root: Path) -> bool | None:
+    try:
+        if not proc_root.is_dir():
+            return None
+        entries = list(proc_root.iterdir())
+    except OSError:
+        return None
+    found_member = False
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            text = (entry / "stat").read_text(encoding="utf-8")
+        except FileNotFoundError:
+            continue
+        except PermissionError:
+            return None
+        except OSError:
+            continue
+        fields = _parse_posix_stat_fields(text)
+        if len(fields) < 3:
+            continue
+        try:
+            process_group = int(fields[2])
+        except ValueError:
+            continue
+        if process_group != pgid:
+            continue
+        found_member = True
+        if fields[0] not in _POSIX_EXITED_STATES:
+            return True
+    return False if found_member else False
+
+
+def _posix_stat_fields(pid: int, *, proc_root: Path | None = None) -> list[str] | None:
+    stat_path = (proc_root or Path("/proc")) / str(pid) / "stat"
     try:
         text = stat_path.read_text(encoding="utf-8")
     except OSError:
         return None
+    return _parse_posix_stat_fields(text)
+
+
+def _parse_posix_stat_fields(text: str) -> list[str]:
     marker = text.rfind(") ")
     if marker < 0:
+        return []
+    return text[marker + 2 :].split()
+
+
+def _posix_start_time_ticks(pid: int) -> int | None:
+    fields = _posix_stat_fields(pid)
+    if fields is None:
         return None
-    fields = text[marker + 2 :].split()
     if len(fields) < 20:
         return None
     try:

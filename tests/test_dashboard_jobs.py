@@ -1297,6 +1297,49 @@ def test_command_job_manager_forces_posix_process_tree_after_grace_timeout(tmp_p
     assert _wait_for_pid_exit(grandchild_pid)
 
 
+def test_command_job_manager_keeps_cancelled_job_failed_when_tree_exit_unconfirmed(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    manager = CommandJobManager(config, config_path=config_path)
+    job_id = "20260622T000003Z_deadbeef"
+    _seed_state_job(config_path, job_id=job_id, status="cancel_requested", pid=12345)
+    job = manager._repository.get_job(job_id)
+    assert job is not None
+    manager._cancel_requested.add(job_id)
+
+    manager._finish_subprocess_job(
+        job_id=job_id,
+        job=job,
+        spec=CommandSpec(
+            intent="validate",
+            kind="product_validation",
+            cancellable=True,
+            cli_parts=("validate",),
+        ),
+        job_process=_FinishedJobProcess(
+            returncode=-9,
+            termination={
+                "schema_version": 1,
+                "status": "termination_unconfirmed",
+                "strategy": "posix_process_group",
+                "confirmed_exit": False,
+                "forced": True,
+                "private_values_embedded": False,
+            },
+        ),
+        stdout="",
+        stderr="",
+    )
+
+    completed = manager.get_job(job_id)
+
+    assert completed is not None
+    assert completed["status"] == "failed"
+    assert completed["exit_code"] == -9
+    assert completed["process_termination"]["confirmed_exit"] is False
+    assert "job cancellation could not confirm complete process-tree termination." in completed["errors"]
+
+
 @pytest.mark.skipif(os.name != "posix", reason="process identity check is POSIX-specific")
 def test_command_job_manager_preserves_unattached_live_owned_process_after_restart(tmp_path: Path, monkeypatch) -> None:
     config_path = _write_config(tmp_path)
@@ -1604,6 +1647,21 @@ class _BlockingProcess:
         self.terminated = True
         self.returncode = -15
         self._done.set()
+
+
+class _FinishedJobProcess:
+    def __init__(self, *, returncode: int, termination: dict[str, Any]) -> None:
+        self.returncode = returncode
+        self.termination = termination
+        self.identity = {
+            "schema_version": 1,
+            "platform": "posix",
+            "strategy": "posix_process_group",
+            "pid": 12345,
+            "pgid": 12345,
+            "verified": True,
+            "private_values_embedded": False,
+        }
 
 
 def _wait_for_terminal(manager: CommandJobManager, job_id: str) -> dict:
