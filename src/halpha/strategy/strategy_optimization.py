@@ -20,6 +20,13 @@ STRATEGY_OPTIMIZATION_MANIFEST_ARTIFACT = "manifest.json"
 STRATEGY_OPTIMIZATION_BENCHMARK_ARTIFACT = "strategy_benchmark_suite.json"
 OPTIMIZATION_SOURCE = "strategy_optimization"
 DEFAULT_MAX_COMBINATIONS = 50
+DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY = {
+    "train_rows": 60,
+    "validation_rows": 20,
+    "step_rows": 20,
+    "min_windows": 3,
+}
+OVERFIT_TRAIN_VALIDATION_GAP_PCT = 5.0
 
 
 class StrategyOptimizationError(Exception):
@@ -47,6 +54,7 @@ def run_strategy_optimization(
     strategy_name: str,
     grid: dict[str, list[Any]] | None = None,
     max_combinations: int = DEFAULT_MAX_COMBINATIONS,
+    walk_forward_policy: dict[str, Any] | None = None,
     output_dir: Path | None = None,
     now: datetime | None = None,
 ) -> StrategyOptimizationResult:
@@ -102,8 +110,27 @@ def run_strategy_optimization(
         for index, params in enumerate(combinations, start=1)
     ]
     selected_candidate = _selected_candidate(candidates)
-    warnings = _artifact_warnings(candidates, selected_candidate=selected_candidate)
-    errors = _artifact_errors(candidates)
+    walk_forward = _walk_forward_optimization(
+        base_strategy=strategy,
+        candidates=candidates,
+        benchmarks=_dict_list(benchmark_suite.get("benchmarks")),
+        storage_dir=storage_dir,
+        definition=definition,
+        policy=_optimization_walk_forward_policy(walk_forward_policy),
+    )
+    robustness = _robustness_record(walk_forward)
+    warnings = _unique_items(
+        [
+            *_artifact_warnings(candidates, selected_candidate=selected_candidate),
+            *_warning_items(walk_forward.get("warnings")),
+            *_warning_items(robustness.get("warnings")),
+        ]
+    )
+    errors = [
+        *_artifact_errors(candidates),
+        *_error_items(walk_forward.get("errors")),
+        *_error_items(robustness.get("errors")),
+    ]
     artifact = {
         "schema_version": 1,
         "artifact_type": "strategy_optimization",
@@ -138,16 +165,8 @@ def run_strategy_optimization(
         "candidates": candidates,
         "failed_candidates": _failed_candidates(candidates),
         "selected_candidate": selected_candidate,
-        "walk_forward": {
-            "enabled": False,
-            "status": "skipped",
-            "reason": "walk-forward optimization is not implemented in this artifact.",
-            "windows": [],
-        },
-        "robustness": {
-            "status": "not_evaluated",
-            "warnings": [],
-        },
+        "walk_forward": walk_forward,
+        "robustness": robustness,
         "source_artifacts": [STRATEGY_OPTIMIZATION_BENCHMARK_ARTIFACT],
         "warnings": warnings,
         "errors": errors,
@@ -325,28 +344,259 @@ def _evaluation_record(
                 benchmark,
                 f"Loaded {len(rows)} rows, expected benchmark row_count {benchmark.get('row_count')}.",
             )
-        signals = definition.signal_records(strategy, _view_from_benchmark(benchmark), rows)
-        evaluation = evaluate_single_window_backtest(
+    except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
+        return _failed_record(identity, type(exc).__name__, str(exc))
+    return {
+        **identity,
+        **_evaluate_strategy_rows(
             strategy=strategy,
+            definition=definition,
+            rows=rows,
+            view=_view_from_benchmark(benchmark),
             market_identity={
                 "source": benchmark.get("source"),
                 "symbol": benchmark.get("symbol"),
                 "timeframe": benchmark.get("timeframe"),
             },
+        ),
+        "benchmark_status": benchmark.get("status"),
+    }
+
+
+def _evaluate_strategy_rows(
+    *,
+    strategy: dict[str, Any],
+    definition: Any,
+    rows: list[dict[str, Any]],
+    view: dict[str, Any],
+    market_identity: dict[str, Any],
+) -> dict[str, Any]:
+    try:
+        signals = definition.signal_records(strategy, view, rows)
+        evaluation = evaluate_single_window_backtest(
+            strategy=strategy,
+            market_identity=market_identity,
             ohlcv_rows=rows,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
         )
-    except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
-        return _failed_record(identity, type(exc).__name__, str(exc))
+    except (KeyError, TypeError, ValueError) as exc:
+        return {
+            "status": "failed",
+            "metrics": {},
+            "warnings": [],
+            "errors": [
+                {
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                    "stage": OPTIMIZATION_SOURCE,
+                }
+            ],
+        }
     return {
-        **identity,
         "status": str(evaluation.get("status") or "failed"),
-        "benchmark_status": benchmark.get("status"),
         "metrics": _metrics(evaluation),
         "warnings": _warning_items(evaluation.get("warnings")),
         "errors": _error_items(evaluation.get("errors")),
     }
+
+
+def _walk_forward_optimization(
+    *,
+    base_strategy: dict[str, Any],
+    candidates: list[dict[str, Any]],
+    benchmarks: list[dict[str, Any]],
+    storage_dir: Path,
+    definition: Any,
+    policy: dict[str, int],
+) -> dict[str, Any]:
+    windows = []
+    errors: list[dict[str, Any]] = []
+    for benchmark in benchmarks:
+        if benchmark.get("status") != "succeeded":
+            continue
+        try:
+            rows = _benchmark_rows(benchmark, storage_dir=storage_dir)
+        except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
+            errors.append(
+                {
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                    "stage": "strategy_optimization.walk_forward",
+                    "benchmark_id": benchmark.get("benchmark_id"),
+                }
+            )
+            continue
+        for index, window in enumerate(_walk_forward_windows(rows, policy), start=1):
+            windows.append(
+                _walk_forward_window_record(
+                    window_index=index,
+                    benchmark=benchmark,
+                    rows=rows,
+                    window=window,
+                    base_strategy=base_strategy,
+                    candidates=candidates,
+                    definition=definition,
+                )
+            )
+
+    summary = _walk_forward_summary(windows, policy)
+    warnings = _walk_forward_warnings(summary, errors)
+    if errors and not windows:
+        status = "failed"
+    elif windows and summary["succeeded_windows"] == 0 and summary["failed_windows"] > 0:
+        status = "failed"
+    elif summary["succeeded_windows"] >= policy["min_windows"]:
+        status = "succeeded"
+    else:
+        status = "insufficient_data"
+    return {
+        "enabled": True,
+        "status": status,
+        "method": {
+            "name": "bounded_train_validation_grid_walk_forward_v1",
+            "candidate_selection": "max_train_net_return_with_drawdown_tiebreak",
+            "validation_policy": "selected_candidate_evaluated_on_next_validation_window",
+            "params_optimized_per_window": True,
+            "automatic_config_mutation": False,
+        },
+        "policy": policy,
+        "summary": summary,
+        "windows": windows,
+        "warnings": warnings,
+        "errors": errors,
+    }
+
+
+def _walk_forward_window_record(
+    *,
+    window_index: int,
+    benchmark: dict[str, Any],
+    rows: list[dict[str, Any]],
+    window: dict[str, int],
+    base_strategy: dict[str, Any],
+    candidates: list[dict[str, Any]],
+    definition: Any,
+) -> dict[str, Any]:
+    train_rows = rows[window["train_start"] : window["train_end"]]
+    validation_rows = rows[window["validation_start"] : window["validation_end"]]
+    identity = {
+        "source": benchmark.get("source"),
+        "symbol": benchmark.get("symbol"),
+        "timeframe": benchmark.get("timeframe"),
+    }
+    train_candidates = [
+        _walk_forward_candidate_outcome(
+            candidate=candidate,
+            base_strategy=base_strategy,
+            definition=definition,
+            rows=train_rows,
+            identity=identity,
+            view_id=f"{benchmark.get('benchmark_id')}:train:{window_index}",
+        )
+        for candidate in candidates
+    ]
+    selected = _selected_window_candidate(train_candidates)
+    validation = None
+    if selected is not None:
+        validation = _walk_forward_candidate_outcome(
+            candidate=selected,
+            base_strategy=base_strategy,
+            definition=definition,
+            rows=validation_rows,
+            identity=identity,
+            view_id=f"{benchmark.get('benchmark_id')}:validation:{window_index}",
+        )
+    status = _walk_forward_window_status(train_candidates, selected, validation)
+    return {
+        "window_id": f"walk_forward:{benchmark.get('benchmark_id')}:{window_index:04d}",
+        "benchmark_id": benchmark.get("benchmark_id"),
+        "source": benchmark.get("source"),
+        "symbol": benchmark.get("symbol"),
+        "timeframe": benchmark.get("timeframe"),
+        "status": status,
+        "train_window": _row_window(train_rows),
+        "validation_window": _row_window(validation_rows),
+        "train_candidates": train_candidates,
+        "selected_candidate": _selected_window_summary(selected),
+        "validation": validation,
+        "warnings": _walk_forward_window_warnings(status, selected, validation),
+        "errors": _walk_forward_window_errors(train_candidates, validation),
+    }
+
+
+def _walk_forward_candidate_outcome(
+    *,
+    candidate: dict[str, Any],
+    base_strategy: dict[str, Any],
+    definition: Any,
+    rows: list[dict[str, Any]],
+    identity: dict[str, Any],
+    view_id: str,
+) -> dict[str, Any]:
+    strategy = {
+        **base_strategy,
+        "params": candidate.get("params") if isinstance(candidate.get("params"), dict) else {},
+    }
+    result = _evaluate_strategy_rows(
+        strategy=strategy,
+        definition=definition,
+        rows=rows,
+        view=_view_from_rows(view_id, identity, rows),
+        market_identity=identity,
+    )
+    return {
+        "candidate_id": candidate.get("candidate_id"),
+        "params": candidate.get("params"),
+        "changed_params": candidate.get("changed_params"),
+        **result,
+    }
+
+
+def _selected_window_candidate(candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    eligible = [
+        item
+        for item in candidates
+        if item.get("status") == "succeeded"
+        and isinstance(item.get("metrics"), dict)
+        and isinstance(item["metrics"].get("net_return_pct"), (int, float))
+    ]
+    if not eligible:
+        return None
+    ordered = sorted(
+        eligible,
+        key=lambda item: (
+            -float(item["metrics"]["net_return_pct"]),
+            -float(item["metrics"].get("max_drawdown_pct") or -1_000_000.0),
+            float(item["metrics"].get("cost_drag_pct") or 1_000_000.0),
+            str(item.get("candidate_id")),
+        ),
+    )
+    selected = ordered[0]
+    return {
+        **selected,
+        "selection_reason": "highest_train_net_return_with_drawdown_and_cost_tiebreak",
+        "automatic_config_mutation": False,
+    }
+
+
+def _walk_forward_window_status(
+    train_candidates: list[dict[str, Any]],
+    selected: dict[str, Any] | None,
+    validation: dict[str, Any] | None,
+) -> str:
+    if selected is None:
+        if any(candidate.get("status") == "failed" for candidate in train_candidates):
+            return "failed"
+        return "insufficient_data"
+    if not isinstance(validation, dict):
+        return "failed"
+    status = str(validation.get("status") or "failed")
+    if status == "succeeded":
+        return "succeeded"
+    if status == "insufficient_data":
+        return "insufficient_data"
+    return "failed"
 
 
 def _benchmark_rows(benchmark: dict[str, Any], *, storage_dir: Path) -> list[dict[str, Any]]:
@@ -494,6 +744,291 @@ def _coverage(candidates: list[dict[str, Any]], benchmark_suite: dict[str, Any])
         "benchmark_succeeded": int(benchmark_coverage.get("succeeded") or 0),
         "benchmark_insufficient_data": int(benchmark_coverage.get("insufficient_data") or 0),
     }
+
+
+def _walk_forward_summary(windows: list[dict[str, Any]], policy: dict[str, int]) -> dict[str, Any]:
+    succeeded = [item for item in windows if item.get("status") == "succeeded"]
+    failed = [item for item in windows if item.get("status") == "failed"]
+    insufficient = [item for item in windows if item.get("status") == "insufficient_data"]
+    validation_returns = _validation_metric_values(succeeded, "net_return_pct")
+    validation_drawdowns = _validation_metric_values(succeeded, "max_drawdown_pct")
+    validation_cost_drags = _validation_metric_values(succeeded, "cost_drag_pct")
+    train_returns = _selected_train_metric_values(succeeded, "net_return_pct")
+    selected_counts = _selected_candidate_counts(succeeded)
+    mean_train = _rounded_mean(train_returns)
+    mean_validation = _rounded_mean(validation_returns)
+    return {
+        "window_count": len(windows),
+        "succeeded_windows": len(succeeded),
+        "failed_windows": len(failed),
+        "insufficient_data_windows": len(insufficient),
+        "min_windows": policy["min_windows"],
+        "selected_candidate_counts": selected_counts,
+        "selected_candidate_variants": len(selected_counts),
+        "mean_train_selected_net_return_pct": mean_train,
+        "mean_validation_net_return_pct": mean_validation,
+        "mean_validation_cost_drag_pct": _rounded_mean(validation_cost_drags),
+        "train_validation_gap_pct": _round_float(mean_train - mean_validation)
+        if mean_train is not None and mean_validation is not None
+        else None,
+        "positive_validation_net_return_window_pct": _positive_pct(validation_returns),
+        "worst_validation_drawdown_pct": min(validation_drawdowns) if validation_drawdowns else None,
+    }
+
+
+def _robustness_record(walk_forward: dict[str, Any]) -> dict[str, Any]:
+    summary = walk_forward.get("summary") if isinstance(walk_forward.get("summary"), dict) else {}
+    warnings: list[dict[str, Any]] = []
+    errors = _error_items(walk_forward.get("errors"))
+    status = str(walk_forward.get("status") or "unknown")
+    if status == "failed":
+        robustness_status = "failed"
+        warnings.append(_warning("optimization_walk_forward_failed", "Walk-forward optimization failed."))
+    elif status == "insufficient_data":
+        robustness_status = "insufficient_data"
+        warnings.append(
+            _warning(
+                "optimization_insufficient_walk_forward_data",
+                "Walk-forward optimization does not have enough successful validation windows.",
+            )
+        )
+    else:
+        variants = int(summary.get("selected_candidate_variants") or 0)
+        failed_windows = int(summary.get("failed_windows") or 0)
+        positive_validation = _number_or_none(summary.get("positive_validation_net_return_window_pct"))
+        mean_validation = _number_or_none(summary.get("mean_validation_net_return_pct"))
+        train_validation_gap = _number_or_none(summary.get("train_validation_gap_pct"))
+        if variants > 1:
+            warnings.append(
+                _warning(
+                    "optimization_parameter_instability",
+                    "Walk-forward train windows selected different parameter candidates.",
+                )
+            )
+        if train_validation_gap is not None and train_validation_gap > OVERFIT_TRAIN_VALIDATION_GAP_PCT:
+            warnings.append(
+                _warning(
+                    "optimization_train_validation_gap",
+                    "Walk-forward train performance is materially stronger than validation performance.",
+                )
+            )
+        if failed_windows:
+            warnings.append(
+                _warning(
+                    "optimization_failed_walk_forward_windows",
+                    "One or more walk-forward windows failed.",
+                )
+            )
+        if variants > 1 or (train_validation_gap is not None and train_validation_gap > OVERFIT_TRAIN_VALIDATION_GAP_PCT):
+            robustness_status = "overfit_risk"
+            warnings.append(
+                _warning(
+                    "optimization_overfit_risk",
+                    "Walk-forward evidence suggests parameter instability or train-validation overfit risk.",
+                )
+            )
+        elif failed_windows or positive_validation is None or positive_validation < 50.0 or (mean_validation or 0.0) < 0.0:
+            robustness_status = "fragile"
+            warnings.append(
+                _warning(
+                    "optimization_fragile_validation",
+                    "Walk-forward validation evidence is weak or incomplete.",
+                )
+            )
+        else:
+            robustness_status = "robust"
+    return {
+        "status": robustness_status,
+        "classification_policy": {
+            "statuses": ["robust", "fragile", "overfit_risk", "insufficient_data", "failed"],
+            "min_positive_validation_net_return_window_pct": 50.0,
+            "max_train_validation_gap_pct": OVERFIT_TRAIN_VALIDATION_GAP_PCT,
+            "requires_single_selected_candidate": True,
+        },
+        "summary": summary,
+        "warnings": _unique_items(warnings),
+        "errors": errors,
+    }
+
+
+def _walk_forward_warnings(summary: dict[str, Any], errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    warnings = []
+    if summary["succeeded_windows"] < summary["min_windows"]:
+        warnings.append(
+            _warning(
+                "optimization_insufficient_walk_forward_windows",
+                (
+                    f"Walk-forward optimization has {summary['succeeded_windows']} succeeded windows; "
+                    f"min_windows is {summary['min_windows']}."
+                ),
+            )
+        )
+    if errors:
+        warnings.append(
+            _warning(
+                "optimization_walk_forward_errors",
+                "One or more benchmark windows could not be loaded for walk-forward optimization.",
+            )
+        )
+    return warnings
+
+
+def _walk_forward_window_warnings(
+    status: str,
+    selected: dict[str, Any] | None,
+    validation: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if status == "succeeded":
+        return _warning_items(validation.get("warnings")) if isinstance(validation, dict) else []
+    if selected is None:
+        return [
+            _warning(
+                "optimization_window_no_selected_candidate",
+                "No train candidate was selectable for this walk-forward window.",
+            )
+        ]
+    return [
+        _warning(
+            "optimization_window_validation_unavailable",
+            "Selected train candidate could not be validated for this walk-forward window.",
+        )
+    ]
+
+
+def _walk_forward_window_errors(
+    train_candidates: list[dict[str, Any]],
+    validation: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    errors = []
+    if isinstance(validation, dict):
+        errors.extend(_error_items(validation.get("errors")))
+    errors.extend(
+        error
+        for candidate in train_candidates
+        if candidate.get("status") == "failed"
+        for error in _error_items(candidate.get("errors"))
+    )
+    return errors
+
+
+def _walk_forward_windows(rows: list[dict[str, Any]], policy: dict[str, int]) -> list[dict[str, int]]:
+    windows = []
+    cursor = policy["train_rows"]
+    while cursor + policy["validation_rows"] <= len(rows):
+        windows.append(
+            {
+                "train_start": cursor - policy["train_rows"],
+                "train_end": cursor,
+                "validation_start": cursor,
+                "validation_end": cursor + policy["validation_rows"],
+            }
+        )
+        cursor += policy["step_rows"]
+    return windows
+
+
+def _optimization_walk_forward_policy(raw: dict[str, Any] | None) -> dict[str, int]:
+    values = dict(DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY)
+    if isinstance(raw, dict):
+        values.update({key: raw[key] for key in values if key in raw})
+    policy = {
+        "train_rows": _positive_int(values["train_rows"], "walk_forward_train_rows"),
+        "validation_rows": _positive_int(values["validation_rows"], "walk_forward_validation_rows"),
+        "step_rows": _positive_int(values["step_rows"], "walk_forward_step_rows"),
+        "min_windows": _positive_int(values["min_windows"], "walk_forward_min_windows"),
+    }
+    return policy
+
+
+def _row_window(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "start": rows[0].get("open_time") if rows else None,
+        "end": rows[-1].get("open_time") if rows else None,
+        "rows": len(rows),
+    }
+
+
+def _view_from_rows(view_id: str, identity: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "view_id": view_id,
+        "source": identity.get("source"),
+        "symbol": identity.get("symbol"),
+        "timeframe": identity.get("timeframe"),
+        "requested_lookback": len(rows),
+        "input_window_start": rows[0].get("open_time") if rows else None,
+        "input_window_end": rows[-1].get("open_time") if rows else None,
+        "latest_candle_time": rows[-1].get("open_time") if rows else None,
+        "row_count": len(rows),
+        "storage_ref": None,
+        "included_columns": ["open_time", "open", "high", "low", "close", "volume"],
+        "insufficient_data": len(rows) < 2,
+        "warnings": [],
+    }
+
+
+def _selected_window_summary(selected: dict[str, Any] | None) -> dict[str, Any] | None:
+    if selected is None:
+        return None
+    return {
+        "candidate_id": selected.get("candidate_id"),
+        "params": selected.get("params"),
+        "changed_params": selected.get("changed_params"),
+        "status": selected.get("status"),
+        "metrics": selected.get("metrics"),
+        "selection_reason": selected.get("selection_reason"),
+        "automatic_config_mutation": False,
+    }
+
+
+def _validation_metric_values(windows: list[dict[str, Any]], key: str) -> list[float]:
+    values = []
+    for window in windows:
+        validation = window.get("validation") if isinstance(window.get("validation"), dict) else {}
+        metrics = validation.get("metrics") if isinstance(validation.get("metrics"), dict) else {}
+        value = metrics.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        values.append(float(value))
+    return values
+
+
+def _selected_train_metric_values(windows: list[dict[str, Any]], key: str) -> list[float]:
+    values = []
+    for window in windows:
+        selected = window.get("selected_candidate") if isinstance(window.get("selected_candidate"), dict) else {}
+        metrics = selected.get("metrics") if isinstance(selected.get("metrics"), dict) else {}
+        value = metrics.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        values.append(float(value))
+    return values
+
+
+def _selected_candidate_counts(windows: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for window in windows:
+        selected = window.get("selected_candidate") if isinstance(window.get("selected_candidate"), dict) else {}
+        candidate_id = selected.get("candidate_id")
+        if not isinstance(candidate_id, str) or not candidate_id:
+            continue
+        counts[candidate_id] = counts.get(candidate_id, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _positive_pct(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return _round_float((sum(1 for value in values if value > 0) / len(values)) * 100)
+
+
+def _number_or_none(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _round_float(value: float) -> float:
+    return round(float(value), 6)
 
 
 def _manifest(
@@ -755,6 +1290,12 @@ def _parse_grid_value(value: str, *, schema: dict[str, Any], path: str) -> Any:
         if lowered in {"false", "0", "no"}:
             return False
         raise StrategyOptimizationError(f"{path} must be a boolean.", exit_code=2)
+    return value
+
+
+def _positive_int(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise StrategyOptimizationError(f"{name} must be a positive integer.", exit_code=2)
     return value
 
 

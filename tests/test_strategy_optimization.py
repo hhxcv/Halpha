@@ -96,7 +96,10 @@ def test_cli_optimize_writes_bounded_strategy_optimization_artifact(
     }
     assert artifact["selected_candidate"]["candidate_id"] in {"candidate:0001", "candidate:0002"}
     assert artifact["selected_candidate"]["automatic_config_mutation"] is False
-    assert artifact["walk_forward"]["status"] == "skipped"
+    assert artifact["walk_forward"]["enabled"] is True
+    assert artifact["walk_forward"]["status"] == "insufficient_data"
+    assert artifact["walk_forward"]["windows"] == []
+    assert artifact["robustness"]["status"] == "insufficient_data"
     assert artifact["source_artifacts"] == ["strategy_benchmark_suite.json"]
     assert benchmark_suite["artifact_type"] == "strategy_benchmark_suite"
     assert manifest["artifact_type"] == "strategy_optimization_manifest"
@@ -106,6 +109,213 @@ def test_cli_optimize_writes_bounded_strategy_optimization_artifact(
         "strategy_benchmark_suite": "strategy_benchmark_suite.json",
         "strategy_optimization": "strategy_optimization.json",
     }
+
+
+def test_cli_optimize_records_stable_walk_forward_evidence(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path, lookback=9)
+    _write_records(
+        tmp_path,
+        [
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+        ],
+    )
+    output_dir = tmp_path / "optimizations"
+
+    def evaluate_stable(*, strategy: dict[str, Any], **_kwargs: Any) -> dict[str, Any]:
+        net_return = 2.0 if strategy["params"]["return_window"] == 1 else 0.5
+        return _evaluation_result(net_return_pct=net_return)
+
+    monkeypatch.setattr(
+        "halpha.strategy.strategy_optimization.evaluate_single_window_backtest",
+        evaluate_stable,
+    )
+
+    exit_code = main(
+        [
+            "optimize",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--grid",
+            "return_window=1,2",
+            "--grid",
+            "volatility_window=1",
+            "--grid",
+            "target_volatility=0.2",
+            "--walk-forward-train-rows",
+            "3",
+            "--walk-forward-validation-rows",
+            "3",
+            "--walk-forward-step-rows",
+            "3",
+            "--walk-forward-min-windows",
+            "2",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    capsys.readouterr()
+    artifact = json.loads((next(output_dir.iterdir()) / "strategy_optimization.json").read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert artifact["walk_forward"]["status"] == "succeeded"
+    assert artifact["walk_forward"]["summary"]["window_count"] == 2
+    assert artifact["walk_forward"]["summary"]["succeeded_windows"] == 2
+    assert artifact["walk_forward"]["summary"]["selected_candidate_counts"] == {"candidate:0001": 2}
+    assert artifact["walk_forward"]["summary"]["mean_validation_cost_drag_pct"] == 0.1
+    assert artifact["robustness"]["status"] == "robust"
+    assert artifact["walk_forward"]["windows"][0]["train_window"] == {
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-06-03T00:00:00Z",
+        "rows": 3,
+    }
+    assert artifact["walk_forward"]["windows"][0]["validation_window"] == {
+        "start": "2026-06-04T00:00:00Z",
+        "end": "2026-06-06T00:00:00Z",
+        "rows": 3,
+    }
+    assert artifact["walk_forward"]["windows"][0]["selected_candidate"]["candidate_id"] == "candidate:0001"
+    assert artifact["walk_forward"]["windows"][0]["validation"]["metrics"]["net_return_pct"] == 2.0
+
+
+def test_cli_optimize_flags_unstable_walk_forward_parameters(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path, lookback=9)
+    _write_records(tmp_path, [100, 101, 102, 103, 104, 105, 106, 107, 108])
+    output_dir = tmp_path / "optimizations"
+
+    def evaluate_unstable(
+        *,
+        strategy: dict[str, Any],
+        ohlcv_rows: list[dict[str, Any]],
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
+        first_open = ohlcv_rows[0]["open_time"]
+        return_window = strategy["params"]["return_window"]
+        if first_open == "2026-06-01T00:00:00Z":
+            net_return = 3.0 if return_window == 1 else 1.0
+        elif first_open == "2026-06-04T00:00:00Z":
+            net_return = 1.0 if return_window == 1 else 3.0
+        else:
+            net_return = 1.0
+        return _evaluation_result(net_return_pct=net_return)
+
+    monkeypatch.setattr(
+        "halpha.strategy.strategy_optimization.evaluate_single_window_backtest",
+        evaluate_unstable,
+    )
+
+    exit_code = main(
+        [
+            "optimize",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--grid",
+            "return_window=1,2",
+            "--grid",
+            "volatility_window=1",
+            "--grid",
+            "target_volatility=0.2",
+            "--walk-forward-train-rows",
+            "3",
+            "--walk-forward-validation-rows",
+            "3",
+            "--walk-forward-step-rows",
+            "3",
+            "--walk-forward-min-windows",
+            "2",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    capsys.readouterr()
+    artifact = json.loads((next(output_dir.iterdir()) / "strategy_optimization.json").read_text(encoding="utf-8"))
+    warning_codes = {item["code"] for item in artifact["warnings"]}
+
+    assert exit_code == 0
+    assert artifact["walk_forward"]["status"] == "succeeded"
+    assert artifact["walk_forward"]["summary"]["selected_candidate_counts"] == {
+        "candidate:0001": 1,
+        "candidate:0002": 1,
+    }
+    assert artifact["walk_forward"]["summary"]["selected_candidate_variants"] == 2
+    assert artifact["robustness"]["status"] == "overfit_risk"
+    assert "optimization_parameter_instability" in warning_codes
+    assert "optimization_overfit_risk" in warning_codes
+
+
+def test_cli_optimize_records_failed_walk_forward_windows(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path, lookback=9)
+    _write_records(tmp_path, [100, 101, 102, 103, 104, 105, 106, 107, 108])
+    output_dir = tmp_path / "optimizations"
+
+    def evaluate_failed(**_kwargs: Any) -> dict[str, Any]:
+        raise ValueError("forced walk-forward failure.")
+
+    monkeypatch.setattr(
+        "halpha.strategy.strategy_optimization.evaluate_single_window_backtest",
+        evaluate_failed,
+    )
+
+    exit_code = main(
+        [
+            "optimize",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--grid",
+            "return_window=1,2",
+            "--grid",
+            "volatility_window=1",
+            "--grid",
+            "target_volatility=0.2",
+            "--walk-forward-train-rows",
+            "3",
+            "--walk-forward-validation-rows",
+            "3",
+            "--walk-forward-step-rows",
+            "3",
+            "--walk-forward-min-windows",
+            "2",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    capsys.readouterr()
+    artifact = json.loads((next(output_dir.iterdir()) / "strategy_optimization.json").read_text(encoding="utf-8"))
+    warning_codes = {item["code"] for item in artifact["warnings"]}
+
+    assert exit_code == 0
+    assert artifact["walk_forward"]["status"] == "failed"
+    assert artifact["walk_forward"]["summary"]["failed_windows"] == 2
+    assert artifact["robustness"]["status"] == "failed"
+    assert "optimization_walk_forward_failed" in warning_codes
 
 
 def test_cli_optimize_rejects_grid_over_max_combinations(
@@ -311,6 +521,41 @@ codex:
         encoding="utf-8",
     )
     return config_path
+
+
+def _write_records(tmp_path: Path, closes: list[float]) -> None:
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(
+                open_time=f"2026-06-{index:02d}T00:00:00Z",
+                close=close,
+            )
+            for index, close in enumerate(closes, start=1)
+        ]
+    )
+
+
+def _evaluation_result(*, net_return_pct: float) -> dict[str, Any]:
+    return {
+        "status": "succeeded",
+        "strategy_metrics": {
+            "cost_drag_pct": 0.1,
+            "gross_return_pct": net_return_pct + 0.1,
+            "max_drawdown_pct": -1.0,
+            "net_return_pct": net_return_pct,
+            "sharpe": 1.0,
+            "volatility_pct": 1.0,
+        },
+        "relative_metrics": {"excess_return_vs_buy_and_hold_pct": net_return_pct - 0.5},
+        "trade_summary": {
+            "exposure_pct": 50.0,
+            "trade_count": 1,
+            "turnover": 1.0,
+        },
+        "warnings": [],
+        "errors": [],
+    }
 
 
 def _record(
