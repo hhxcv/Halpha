@@ -1246,6 +1246,64 @@ Event-like query rules for future quant consumers:
   research tools, but that conversion must not drop coverage warnings or source
   refs.
 
+Implemented event strategy feature input:
+
+```json
+{
+  "schema_version": 1,
+  "artifact_type": "strategy_event_feature_input",
+  "feature_source": "strategy_event_features",
+  "data_type": "market_anomaly",
+  "status": "available",
+  "requested_start": "2026-06-01T00:00:00Z",
+  "requested_end": "2026-06-08T00:00:00Z",
+  "as_of_boundary": "2026-06-08T00:00:00Z",
+  "matched_record_count": 8,
+  "filtered_out_record_count": 0,
+  "records": [
+    {
+      "schema_version": 1,
+      "record_type": "strategy_event_feature_record",
+      "data_type": "market_anomaly",
+      "event_time": "2026-06-06T12:00:00Z",
+      "published_at": "2026-06-06T12:00:00Z",
+      "first_seen_at": "2026-06-06T12:01:00Z",
+      "collected_at": "2026-06-06T12:01:00Z",
+      "source": "halpha_monitor_rules",
+      "category": "volume_spike",
+      "severity": "medium",
+      "symbol": "BTCUSDT",
+      "title": "BTCUSDT 1m volume spike 3.2x",
+      "quality": {
+        "status": "warning",
+        "warnings": [],
+        "errors": []
+      }
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "source_artifacts": []
+}
+```
+
+Event strategy feature rules:
+
+- Strategy event features are bounded local inputs, not Codex-generated event
+  impact, forecasts, or trading instructions.
+- Event feature builders must use the event-like query boundary and must carry
+  `published_at`, `first_seen_at`, and `collected_at` visibility fields when the
+  source store provides them.
+- Backtests and strategy simulations must not expose a record before the signal
+  time can see its event time and visibility timestamps.
+- Scheduled-event lookahead windows may include future `event_time` records only
+  when publication or first-seen evidence proves that the event schedule was
+  already visible before the signal time.
+- Missing, unknown, partial, degraded, and failed coverage must stay explicit in
+  the feature input and in downstream strategy diagnostics.
+- Strategy-facing event windows must stay bounded. They may expose counts and a
+  small ordered sample of records; they must not embed full raw histories.
+
 Strategy benchmark suite and strategy experiment benchmark-row loading use the
 OHLCV query adapter instead of independently slicing full reusable OHLCV
 history. Exports for quantitative research must use the same query boundary.

@@ -55,6 +55,18 @@ DERIVATIVES_FUNDING_RATE_FEATURE = {
         "max_abs_funding_rate": {"type": "positive_number", "default": 0.001},
     },
 }
+EVENT_MARKET_ANOMALY_FEATURE = {
+    "feature_id": "event_feature:market_anomaly:count_filter_v1",
+    "input_type": "event_like",
+    "data_type": "market_anomaly",
+    "required": False,
+    "time_alignment": "event_time_and_first_seen_no_lookahead",
+    "parameters": {
+        "market_anomaly_filter_enabled": {"type": "boolean", "default": False},
+        "market_anomaly_filter_lookback_hours": {"type": "positive_number", "default": 24.0},
+        "market_anomaly_filter_min_count": {"type": "positive_integer", "default": 1},
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -278,7 +290,7 @@ STRATEGY_SPECS = {
             "Short exposure is research exposure only, not borrowing or account state.",
         ),
         supported_filters=(REALIZED_VOLATILITY_FILTER,),
-        supported_features=(DERIVATIVES_FUNDING_RATE_FEATURE,),
+        supported_features=(DERIVATIVES_FUNDING_RATE_FEATURE, EVENT_MARKET_ANOMALY_FEATURE),
     ),
     "breakout_atr_trend": StrategySpec(
         name="breakout_atr_trend",

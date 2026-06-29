@@ -785,6 +785,42 @@ Rules:
 - Missing event evidence should produce `insufficient_event_evidence` or
   `unknown`, not fabricated event support.
 
+## Strategy Event Feature Consumers
+
+Status: implemented for bounded event-like strategy inputs.
+
+Purpose:
+
+- Allow quantitative strategies to consume collected event-like stores through
+  explicit no-lookahead feature inputs.
+- Keep event intelligence evidence useful for strategy research without letting
+  Codex or model-generated narratives create trading signals.
+
+Implemented consumer boundary:
+
+- Strategy feature loaders may read text events, macro/calendar, on-chain flow,
+  derivatives market, and market anomaly stores only through the shared
+  event-like query boundary.
+- Feature records must keep event time, publication time, first-seen time,
+  collection time, source, category or class, severity where available, quality
+  status, warnings, errors, and source references.
+- Lookback event windows must exclude events whose event time or visibility
+  timestamps are after the strategy signal time.
+- Scheduled-event lookahead windows may include future events only when source
+  publication or first-seen evidence was visible before the strategy signal
+  time.
+- Missing or unknown coverage must be surfaced as strategy feature diagnostics,
+  not converted into neutral evidence.
+- Strategy features may expose bounded counts and compact record samples. They
+  must not embed full reusable event histories or long source text.
+
+Non-goals:
+
+- No LLM event impact generation.
+- No price forecasts.
+- No account-level trading advice.
+- No event-driven position sizing.
+
 ## Event Intelligence Assessment
 
 Status: implemented.
