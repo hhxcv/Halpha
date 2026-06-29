@@ -902,8 +902,15 @@ def _bounded_marker(value: Any) -> dict[str, Any]:
         "time": item.get("time"),
         "kind": item.get("kind"),
         "label": item.get("label"),
+        "side": item.get("side"),
         "position": item.get("position"),
+        "exposure": item.get("exposure"),
+        "execution_timing": item.get("execution_timing"),
         "price": item.get("price"),
+        "cost": item.get("cost"),
+        "funding": item.get("funding"),
+        "source_ref": item.get("source_ref"),
+        "warnings": _messages(item.get("warnings"))[:MAX_WARNING_GROUPS],
     }
 
 

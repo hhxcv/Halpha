@@ -117,12 +117,14 @@
       }
 
       function renderTradeMarker(x, y, marker, markerIndex = 0) {
-        const entry = String(marker.kind || marker.label || "").toLowerCase().includes("entry") || String(marker.label || "").toLowerCase().includes("buy");
-        const color = entry ? "#00a88f" : "#f04438";
-        const labelText = marker.label || (entry ? "Buy" : "Sell");
+        const tone = markerTone(marker);
+        const exit = tone === "exit" || tone === "short";
+        const color = markerColor(tone);
+        const labelText = marker.label || marker.side || marker.kind || (exit ? "Exit" : "Long");
         const offset = markerIndex * 25;
-        const labelY = entry ? y + 28 + offset : y - 24 - offset;
-        return `<g><line x1="${x}" x2="${x}" y1="${entry ? y + 4 : y - 4}" y2="${entry ? labelY - 10 : labelY + 10}" stroke="${color}" stroke-width="1.4"></line><rect x="${x - 17}" y="${labelY - 11}" width="34" height="22" rx="4" fill="${color}"></rect><text x="${x}" y="${labelY + 4}" fill="#fff" text-anchor="middle" font-size="11" font-weight="800">${escapeHtml(labelText)}</text></g>`;
+        const labelY = exit ? y - 24 - offset : y + 28 + offset;
+        const labelWidth = Math.max(34, Math.min(72, String(labelText).length * 7 + 16));
+        return `<g class="strategy-marker ${escapeHtml(tone)}"><line x1="${x}" x2="${x}" y1="${exit ? y - 4 : y + 4}" y2="${exit ? labelY + 10 : labelY - 10}" stroke="${color}" stroke-width="1.4"></line><rect x="${x - labelWidth / 2}" y="${labelY - 11}" width="${labelWidth}" height="22" rx="4" fill="${color}"></rect><text x="${x}" y="${labelY + 4}" fill="#fff" text-anchor="middle" font-size="11" font-weight="800">${escapeHtml(labelText)}</text></g>`;
       }
 
       function normalizeBars(value) {
@@ -227,7 +229,8 @@
             <div class="chart-tooltip-op ${markerClass(marker)}">
               <span>${escapeHtml(marker.label || marker.kind || "operation")}</span>
               <span>${escapeHtml(formatPrice(marker.price))}${marker.position !== undefined ? ` / pos ${escapeHtml(formatPrice(marker.position))}` : ""}</span>
-            </div>`).join("")}</div>`
+            </div>
+            ${markerDetailRows(marker)}`).join("")}</div>`
           : "";
         return `
           <div class="chart-tooltip-title">${escapeHtml(formatTimestamp(bar.time, displayTimezone))}</div>
@@ -242,8 +245,44 @@
       }
 
       function markerClass(marker) {
-        const text = String(marker.kind || marker.label || "").toLowerCase();
-        return text.includes("exit") || text.includes("sell") ? "exit" : "entry";
+        return markerTone(marker);
+      }
+
+      function markerTone(marker) {
+        const text = `${marker.kind || ""} ${marker.label || ""} ${marker.side || ""}`.toLowerCase();
+        if (text.includes("funding")) return "funding";
+        if (text.includes("event")) return "event";
+        if (text.includes("multi") || text.includes("leg")) return "multi-leg";
+        if (text.includes("exit") || text.includes("close") || text.includes("sell")) return "exit";
+        if (text.includes("short")) return "short";
+        if (text.includes("long") || text.includes("buy") || text.includes("entry")) return "entry";
+        return "entry";
+      }
+
+      function markerColor(tone) {
+        if (tone === "exit") return "#f04438";
+        if (tone === "short") return "#f97316";
+        if (tone === "event") return "#8b5cf6";
+        if (tone === "funding") return "#0ea5e9";
+        if (tone === "multi-leg") return "#64748b";
+        return "#00a88f";
+      }
+
+      function markerDetailRows(marker) {
+        const rows = [
+          ["Side", marker.side],
+          ["Exposure", marker.exposure],
+          ["Execution", marker.execution_timing],
+          ["Cost", marker.cost],
+          ["Funding", marker.funding],
+          ["Source", marker.source_ref],
+        ].filter(([, value]) => value !== undefined && value !== null && value !== "");
+        const warnings = Array.isArray(marker.warnings) ? marker.warnings.filter(Boolean) : [];
+        if (!rows.length && !warnings.length) return "";
+        return `<div class="chart-tooltip-op-detail">
+          ${rows.map(([name, value]) => `<span>${escapeHtml(name)}</span><strong>${escapeHtml(formatPrice(value))}</strong>`).join("")}
+          ${warnings.map((warning) => `<span>Warning</span><strong>${escapeHtml(warning)}</strong>`).join("")}
+        </div>`;
       }
 
       function ensureTooltip(svg) {

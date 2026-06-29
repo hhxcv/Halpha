@@ -1648,6 +1648,10 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert len(backtest["visualization"]["bars"]) == 2
     assert backtest["visualization"]["bars"][0]["open"] == 99
     assert backtest["visualization"]["markers"][0]["kind"] == "entry"
+    assert backtest["visualization"]["markers"][0]["side"] == "long"
+    assert backtest["visualization"]["markers"][0]["execution_timing"] == "next_bar"
+    assert backtest["visualization"]["markers"][0]["cost"] == 1.5
+    assert backtest["visualization"]["markers"][0]["warnings"] == ["small marker sample"]
     assert len(backtest["visualization"]["equity_curve"]) == 2
     assert backtest["visualization"]["limits"]["max_bars"] == 120
 
@@ -2592,8 +2596,15 @@ def _write_standalone_strategy_outputs(tmp_path: Path) -> None:
                         "time": "2026-06-02T00:00:00Z",
                         "kind": "entry",
                         "label": "Long",
+                        "side": "long",
                         "position": 1,
+                        "exposure": 1.0,
+                        "execution_timing": "next_bar",
                         "price": 103,
+                        "cost": 1.5,
+                        "funding": 0.0,
+                        "source_ref": "strategy_backtest.json",
+                        "warnings": [{"message": "small marker sample"}],
                     }
                 ],
                 "equity_curve": [
