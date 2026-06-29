@@ -84,6 +84,8 @@
       strategyCollectTimelineTimer: null,
       strategyCollectTimelineRequest: 0,
       strategyBacktestLogs: [],
+      strategyExperimentLogs: [],
+      strategyOptimizeLogs: [],
       strategyCollectLogs: [],
       strategyExportLogs: [],
       monitor: null,
@@ -699,10 +701,22 @@
       const sources = options.sources || ["binance"];
       const symbols = options.symbols || [];
       const timeframes = options.timeframes || [];
+      const specs = strategySpecs();
+      const families = strategyFamilies(specs);
+      const marketTypes = options.market_types || [];
       fillDatalist("#strategy-ohlcv-source-options", sources);
+      setInputValue("#strategy-source", defaultStrategySource(), true);
+      setInputValue("#strategy-evaluation-window", strategyActionScopeLabel("backtest"), true);
+      setInputValue("#strategy-experiment-window", strategyActionScopeLabel("experiment"), true);
+      setInputValue("#strategy-optimize-window", strategyActionScopeLabel("optimize"), true);
+      fillSelect("#strategy-market-type", marketTypes);
       fillSelect("#strategy-symbol", symbols);
       fillSelect("#strategy-timeframe", timeframes);
-      fillSelect("#strategy-name", ["", ...(options.strategy_names || [])], {"": "OHLCV only"});
+      fillSelect("#strategy-family", ["all", ...families], {"all": "All families"});
+      fillSelect("#strategy-name", strategiesForFamily(document.querySelector("#strategy-family")?.value || "all").map((spec) => spec.name));
+      fillSelect("#strategy-experiment-family", ["all", ...families], {"all": "All families"});
+      fillSelect("#strategy-optimize-family", ["all", ...families], {"all": "All families"});
+      fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
       fillSelect("#strategy-chart-symbol", symbols);
       fillSelect("#strategy-chart-timeframe", timeframes);
       fillSelect("#strategy-collect-symbol", symbols);
@@ -711,29 +725,28 @@
       fillSelect("#strategy-export-timeframe", timeframes);
       ensureStrategyCollectTargets(symbols, timeframes);
       renderStrategyCollectTargets();
+      renderStrategySpecControls();
+      renderStrategyExperimentStrategies();
+      renderStrategyOptimizationSpace();
       syncStrategyOperationTabs();
       syncStrategyDataInputs(false);
       syncStrategyRangePresets(false);
-      ["#strategy-symbol", "#strategy-timeframe", "#strategy-name"].forEach((selector) => {
+      ["#strategy-symbol", "#strategy-timeframe", "#strategy-name", "#strategy-family", "#strategy-market-type"].forEach((selector) => {
         document.querySelector(selector).onchange = () => {
           state.selectedStrategyOutput = null;
-          if (selector !== "#strategy-name") {
-            state.strategyDataVisualization = null;
-            syncStrategyDataInputs(true);
-            dataViewerWorkflow.ensureStrategyDefaultRange?.(true);
-            dataViewerWorkflow.renderStrategyViewer();
-            queueStrategyChartRefresh();
-            if (!state.strategyCollectTargets.length) {
-              ensureStrategyCollectTargets(symbols, timeframes);
-              renderStrategyCollectTargets();
-            }
+          if (selector === "#strategy-family") {
+            fillSelect("#strategy-name", strategiesForFamily(document.querySelector("#strategy-family")?.value || "all").map((spec) => spec.name));
           }
-          strategyChart.resetCandlestickView("#backtest-chart");
+          renderStrategySpecControls();
           renderStrategies();
         };
       });
-      document.querySelector("#strategy-range").value = state.strategyWindow;
-      document.querySelector("#strategy-range").onchange = () => setStrategyWindow(document.querySelector("#strategy-range").value);
+      document.querySelector("#strategy-experiment-family").onchange = renderStrategyExperimentStrategies;
+      document.querySelector("#strategy-optimize-family").onchange = () => {
+        fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
+        renderStrategyOptimizationSpace();
+      };
+      document.querySelector("#strategy-optimize-name").onchange = renderStrategyOptimizationSpace;
       queueStrategyChartRefresh();
     }
 
@@ -773,6 +786,116 @@
     function defaultStrategySource() {
       const sources = state.strategies?.commands?.options?.sources || [];
       return sources[0] || "binance";
+    }
+
+    function strategyActionScopeLabel(action) {
+      const scopes = state.strategies?.commands?.options?.action_scopes || {};
+      const scope = scopes[action] || {};
+      return scope.label || scope.window_policy || "Configured window";
+    }
+
+    function strategySpecs() {
+      const specs = state.strategies?.commands?.options?.strategy_specs;
+      return Array.isArray(specs) ? specs : [];
+    }
+
+    function strategyFamilies(specs = strategySpecs()) {
+      return unique(specs.map((spec) => spec.family).filter(Boolean)).sort();
+    }
+
+    function strategiesForFamily(family) {
+      const normalized = family || "all";
+      return strategySpecs().filter((spec) => normalized === "all" || spec.family === normalized);
+    }
+
+    function strategySpecByName(name) {
+      return strategySpecs().find((spec) => spec.name === name) || null;
+    }
+
+    function selectedStrategySpec() {
+      return strategySpecByName(document.querySelector("#strategy-name")?.value || "");
+    }
+
+    function selectedOptimizeSpec() {
+      return strategySpecByName(document.querySelector("#strategy-optimize-name")?.value || "");
+    }
+
+    function renderStrategySpecControls() {
+      const spec = selectedStrategySpec();
+      const summary = document.querySelector("#strategy-spec-summary");
+      const panel = document.querySelector("#strategy-parameter-controls");
+      if (!summary || !panel) return;
+      if (!spec) {
+        summary.innerHTML = `<div><strong>No configured strategy selected</strong>Select a strategy to inspect its family, market support, row policy, and parameter metadata.</div>`;
+        panel.innerHTML = "";
+        return;
+      }
+      const marketTypes = (spec.supported_market_types || []).join(", ") || "n/a";
+      const rowPolicy = spec.minimum_rows_policy || {};
+      summary.innerHTML = `
+        <div><strong>${escapeHtml(spec.name)}</strong>${escapeHtml(spec.description || "No description recorded.")}</div>
+        <div><strong>Family</strong>${escapeHtml(label(spec.family || "n/a"))}</div>
+        <div><strong>Market support</strong>${escapeHtml(marketTypes)}</div>
+        <div><strong>Rows</strong>${escapeHtml(rowPolicy.minimum_rows_with_default_params || "n/a")} minimum</div>`;
+      const schema = spec.parameter_schema || {};
+      const defaults = Object.keys(spec.configured_params || {}).length ? spec.configured_params : spec.default_params || {};
+      panel.innerHTML = Object.entries(schema).map(([name, field]) => {
+        const value = defaults[name] ?? field.default ?? "";
+        const inputType = String(field.type || "").includes("integer") || String(field.type || "").includes("number") ? "number" : "text";
+        const minimum = field.minimum ?? field.exclusive_minimum;
+        const maximum = field.maximum;
+        const constraints = Array.isArray(field.constraints) ? field.constraints.join("; ") : "";
+        return `
+          <div class="strategy-param-card">
+            <label for="strategy-param-${escapeHtml(name)}">${escapeHtml(name)}</label>
+            <input id="strategy-param-${escapeHtml(name)}" class="text-input" type="${inputType}" value="${escapeHtml(value)}" data-strategy-param="${escapeHtml(name)}" ${minimum !== undefined ? `min="${escapeHtml(minimum)}"` : ""} ${maximum !== undefined ? `max="${escapeHtml(maximum)}"` : ""} readonly>
+            <p>${escapeHtml(field.description || "No parameter description recorded.")}</p>
+            ${constraints ? `<p>${escapeHtml(constraints)}</p>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    function renderStrategyExperimentStrategies() {
+      const panel = document.querySelector("#strategy-experiment-strategies");
+      if (!panel) return;
+      const specs = strategiesForFamily(document.querySelector("#strategy-experiment-family")?.value || "all");
+      if (!specs.length) {
+        panel.innerHTML = `<div class="message">No configured strategies match this family.</div>`;
+        return;
+      }
+      panel.innerHTML = `
+        <div class="strategy-choice-list">
+          ${specs.map((spec) => `
+            <label class="strategy-choice-card">
+              <input type="checkbox" data-strategy-experiment-name="${escapeHtml(spec.name)}" checked>
+              <span><strong>${escapeHtml(spec.name)}</strong><p>${escapeHtml(label(spec.family || "n/a"))} / ${escapeHtml(spec.output_position_policy || "position policy n/a")}</p></span>
+            </label>`).join("")}
+        </div>`;
+    }
+
+    function renderStrategyOptimizationSpace() {
+      const panel = document.querySelector("#strategy-optimization-space");
+      if (!panel) return;
+      const spec = selectedOptimizeSpec();
+      if (!spec) {
+        panel.innerHTML = `<div class="message">Select a strategy to inspect and edit its optimization grid.</div>`;
+        return;
+      }
+      const space = spec.optimization_space || {};
+      if (!Object.keys(space).length) {
+        panel.innerHTML = `<div class="message">This strategy does not expose an optimization grid.</div>`;
+        return;
+      }
+      panel.innerHTML = Object.entries(space).map(([name, config]) => {
+        const values = Array.isArray(config.values) ? config.values.join(", ") : "";
+        const schema = spec.parameter_schema?.[name] || {};
+        return `
+          <div class="strategy-space-card">
+            <label for="strategy-grid-${escapeHtml(name)}">${escapeHtml(name)}</label>
+            <input id="strategy-grid-${escapeHtml(name)}" class="text-input" type="text" value="${escapeHtml(values)}" data-strategy-grid-param="${escapeHtml(name)}">
+            <p>${escapeHtml(schema.description || "Comma-separated grid values.")}</p>
+          </div>`;
+      }).join("");
     }
 
     function ensureStrategyCollectTargets(symbols, timeframes) {
@@ -1234,7 +1357,7 @@
     }
 
     function setStrategyOperationTab(tab) {
-      state.strategyOperationTab = ["backtest", "collect", "export"].includes(tab) ? tab : "backtest";
+      state.strategyOperationTab = ["backtest", "experiment", "optimize", "collect", "export"].includes(tab) ? tab : "backtest";
       syncStrategyOperationTabs();
       if (state.strategyOperationTab === "collect") {
         syncStrategyRangePresets(false);
@@ -1304,9 +1427,15 @@
       if (!item) {
         return;
       }
+      const spec = strategySpecByName(identity.name);
+      if (spec?.family) {
+        setSelectIfPresent("#strategy-family", spec.family);
+        fillSelect("#strategy-name", strategiesForFamily(spec.family).map((itemSpec) => itemSpec.name));
+      }
       setSelectIfPresent("#strategy-name", identity.name);
       setSelectIfPresent("#strategy-symbol", identity.symbol);
       setSelectIfPresent("#strategy-timeframe", identity.timeframe);
+      renderStrategySpecControls();
     }
 
     function setSelectIfPresent(selector, value) {
@@ -1603,41 +1732,96 @@
         showToast("Select a configured strategy, symbol, and timeframe first.");
         return;
       }
-      state.strategyBacktestLogs = [];
-      appendOperationLog("backtest", `Submitting ${params.strategy_name} on ${params.symbol} ${params.timeframe}.`);
-      renderOperationProgress("backtest", {
+      await runStrategyAction("backtest", params, {
+        headline: `Backtest ${params.symbol} ${params.timeframe}`,
+        submitLog: `Submitting ${params.strategy_name} on ${params.symbol} ${params.timeframe}.`,
+      });
+    }
+
+    async function startStrategyExperiment() {
+      const strategyNames = selectedExperimentStrategyNames();
+      if (!strategyNames.length) {
+        showToast("Select at least one configured strategy for the experiment.");
+        return;
+      }
+      await runStrategyAction("experiment", {strategy_names: strategyNames}, {
+        headline: `Experiment ${strategyNames.length} strateg${strategyNames.length === 1 ? "y" : "ies"}`,
+        submitLog: `Submitting experiment for ${strategyNames.join(", ")}.`,
+      });
+    }
+
+    async function startStrategyOptimize() {
+      const strategyName = document.querySelector("#strategy-optimize-name")?.value || "";
+      if (!strategyName) {
+        showToast("Select a configured strategy to optimize.");
+        return;
+      }
+      const numericValidation = validateOptimizeNumericInputs();
+      if (numericValidation) {
+        state.strategyOptimizeLogs = [];
+        appendOperationLog("optimize", numericValidation);
+        renderOperationProgress("optimize", {
+          status: "failed",
+          percent: 100,
+          headline: "Optimization parameters invalid",
+          logs: state.strategyOptimizeLogs,
+        });
+        return;
+      }
+      const params = {
+        strategy_name: strategyName,
+        grid: selectedOptimizationGrid(),
+      };
+      const maxCombinations = positiveIntegerInput("#strategy-optimize-max-combinations");
+      if (maxCombinations) params.max_combinations = maxCombinations;
+      const trainRows = positiveIntegerInput("#strategy-optimize-train-rows");
+      const validationRows = positiveIntegerInput("#strategy-optimize-validation-rows");
+      const stepRows = positiveIntegerInput("#strategy-optimize-step-rows");
+      if (trainRows) params.walk_forward_train_rows = trainRows;
+      if (validationRows) params.walk_forward_validation_rows = validationRows;
+      if (stepRows) params.walk_forward_step_rows = stepRows;
+      await runStrategyAction("optimize", params, {
+        headline: `Optimize ${strategyName}`,
+        submitLog: `Submitting optimization for ${strategyName}.`,
+      });
+    }
+
+    async function runStrategyAction(kind, params, copy) {
+      state[strategyOperationLogKey(kind)] = [];
+      appendOperationLog(kind, copy.submitLog);
+      renderOperationProgress(kind, {
         status: "running",
         percent: 6,
-        headline: `Backtest ${params.symbol} ${params.timeframe}`,
-        logs: state.strategyBacktestLogs,
+        headline: copy.headline,
+        logs: state[strategyOperationLogKey(kind)],
       });
       try {
-        const job = await postStrategyAction("backtest", params);
-        appendOperationLog("backtest", `Job ${job.job_id || "pending"} ${job.status || "created"}.`);
-        renderOperationProgress("backtest", {
+        const job = await postStrategyAction(kind, params);
+        appendOperationLog(kind, `Job ${job.job_id || "pending"} ${job.status || "created"}.`);
+        renderOperationProgress(kind, {
           status: job.status || "queued",
           percent: jobStatusPercent(job.status),
-          headline: `Backtest ${params.symbol} ${params.timeframe}`,
-          logs: operationLogsWithJob("backtest", job),
+          headline: copy.headline,
+          logs: operationLogsWithJob(kind, job),
         });
         if (job.job_id) {
-          const completed = await pollBacktestJob(job.job_id, params);
+          const completed = await pollStrategyActionJob(kind, job.job_id, copy.headline);
           if (terminalJobStatus(completed.status)) {
             await refreshStrategies();
           }
         }
       } catch (error) {
-        appendOperationLog("backtest", `Failed: ${error.message}`);
-        renderOperationProgress("backtest", {
+        appendOperationLog(kind, `Failed: ${error.message}`);
+        renderOperationProgress(kind, {
           status: "failed",
           percent: 100,
-          headline: "Backtest failed",
-          logs: state.strategyBacktestLogs,
+          headline: `${label(kind)} failed`,
+          logs: state[strategyOperationLogKey(kind)],
         });
       }
     }
 
-    async function pollBacktestJob(jobId, params) {
+    async function pollStrategyActionJob(kind, jobId, headline) {
       let latest = {job_id: jobId, status: "queued"};
       let lastStatus = "";
       for (let attempt = 0; attempt < 600; attempt += 1) {
@@ -1645,28 +1829,79 @@
         latest = await fetchJob(jobId);
         const status = latest.status || "unknown";
         if (status !== lastStatus) {
-          appendOperationLog("backtest", `Job ${jobId} ${status}.`);
+          appendOperationLog(kind, `Job ${jobId} ${status}.`);
           lastStatus = status;
         }
-        renderOperationProgress("backtest", {
+        renderOperationProgress(kind, {
           status,
           percent: jobStatusPercent(status),
-          headline: `Backtest ${params.symbol} ${params.timeframe}`,
-          logs: operationLogsWithJob("backtest", latest),
+          headline,
+          logs: operationLogsWithJob(kind, latest),
         });
         if (terminalJobStatus(status)) {
-          showToast(`Backtest job ${status}.`);
+          showToast(`${label(kind)} job ${status}.`);
           return latest;
         }
       }
-      appendOperationLog("backtest", "Backtest is still running. Refresh jobs to inspect it later.");
-      renderOperationProgress("backtest", {
+      appendOperationLog(kind, `${label(kind)} is still running. Refresh jobs to inspect it later.`);
+      renderOperationProgress(kind, {
         status: "running",
         percent: 88,
-        headline: `Backtest ${params.symbol} ${params.timeframe}`,
-        logs: state.strategyBacktestLogs,
+        headline,
+        logs: state[strategyOperationLogKey(kind)],
       });
       return latest;
+    }
+
+    function selectedExperimentStrategyNames() {
+      return Array.from(document.querySelectorAll("[data-strategy-experiment-name]"))
+        .filter((node) => node.checked)
+        .map((node) => node.dataset.strategyExperimentName)
+        .filter(Boolean);
+    }
+
+    function selectedOptimizationGrid() {
+      const grid = {};
+      document.querySelectorAll("[data-strategy-grid-param]").forEach((node) => {
+        const name = node.dataset.strategyGridParam;
+        const values = String(node.value || "")
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .map((value) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : value;
+          });
+        if (name && values.length) {
+          grid[name] = values;
+        }
+      });
+      return grid;
+    }
+
+    function positiveIntegerInput(selector) {
+      const raw = String(document.querySelector(selector)?.value || "").trim();
+      if (!raw) return null;
+      const value = Number(raw);
+      return Number.isInteger(value) && value > 0 ? value : null;
+    }
+
+    function validateOptimizeNumericInputs() {
+      const labels = {
+        "#strategy-optimize-max-combinations": "Max combinations",
+        "#strategy-optimize-train-rows": "Train rows",
+        "#strategy-optimize-validation-rows": "Validation rows",
+        "#strategy-optimize-step-rows": "Step rows",
+      };
+      for (const [selector, labelText] of Object.entries(labels)) {
+        const raw = String(document.querySelector(selector)?.value || "").trim();
+        if (!raw) continue;
+        const value = Number(raw);
+        if (!Number.isInteger(value) || value <= 0) {
+          return `${labelText} must be a positive integer.`;
+        }
+      }
+      return "";
     }
 
     function queueStrategyChartRefresh(options = {}) {
@@ -1955,13 +2190,13 @@
     }
 
     function appendOperationLog(kind, message) {
-      const key = kind === "backtest" ? "strategyBacktestLogs" : kind === "export" ? "strategyExportLogs" : "strategyCollectLogs";
+      const key = strategyOperationLogKey(kind);
       const timeText = new Date().toLocaleTimeString(undefined, {hour12: false});
       state[key].push(`${timeText} ${message}`);
     }
 
     function operationLogsWithJob(kind, job) {
-      const key = kind === "backtest" ? "strategyBacktestLogs" : kind === "export" ? "strategyExportLogs" : "strategyCollectLogs";
+      const key = strategyOperationLogKey(kind);
       const logs = [...state[key]];
       const warnings = Array.isArray(job?.warnings) ? job.warnings : [];
       const errors = Array.isArray(job?.errors) ? job.errors : [];
@@ -1969,6 +2204,14 @@
       warnings.slice(0, 3).forEach((warning) => logs.push(`warning: ${warning}`));
       errors.slice(0, 3).forEach((error) => logs.push(`error: ${error}`));
       return logs;
+    }
+
+    function strategyOperationLogKey(kind) {
+      if (kind === "backtest") return "strategyBacktestLogs";
+      if (kind === "experiment") return "strategyExperimentLogs";
+      if (kind === "optimize") return "strategyOptimizeLogs";
+      if (kind === "export") return "strategyExportLogs";
+      return "strategyCollectLogs";
     }
 
     function renderOperationProgress(kind, payload) {
@@ -2928,6 +3171,8 @@
       document.querySelector("#delete-report-button").addEventListener("click", deleteSelectedReport);
       document.querySelector("#download-report-button").addEventListener("click", downloadSelectedReport);
       document.querySelector("#run-backtest-button").addEventListener("click", startBacktest);
+      document.querySelector("#run-experiment-button").addEventListener("click", startStrategyExperiment);
+      document.querySelector("#run-optimize-button").addEventListener("click", startStrategyOptimize);
       document.querySelector("#download-ohlcv-button").addEventListener("click", downloadSelectedOhlcv);
       document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
         button.addEventListener("click", () => setStrategyOperationTab(button.dataset.strategyOperationTab));

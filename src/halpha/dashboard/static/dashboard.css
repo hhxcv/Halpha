@@ -1088,6 +1088,106 @@
       align-items: end;
     }
 
+    .strategy-action-grid {
+      min-width: 0;
+    }
+
+    .strategy-backtest-controls {
+      grid-template-columns: 140px 130px 140px 120px 150px minmax(190px, 1fr) 130px auto;
+    }
+
+    .strategy-experiment-grid {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.4fr) minmax(260px, 1fr) minmax(220px, 0.8fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .strategy-optimize-grid {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1fr) repeat(4, minmax(110px, 0.7fr)) minmax(180px, 0.8fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .strategy-spec-summary {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(140px, 0.4fr));
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .strategy-spec-summary strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .strategy-parameter-controls,
+    .strategy-optimization-space,
+    .strategy-strategy-list {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .strategy-parameter-controls,
+    .strategy-optimization-space {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .strategy-param-card,
+    .strategy-space-card,
+    .strategy-choice-card {
+      display: grid;
+      gap: 7px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      min-width: 0;
+    }
+
+    .strategy-param-card label,
+    .strategy-space-card label,
+    .strategy-choice-card label {
+      margin: 0;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .strategy-param-card p,
+    .strategy-space-card p,
+    .strategy-choice-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .strategy-choice-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .strategy-choice-card {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .strategy-choice-card input {
+      margin-top: 3px;
+    }
+
     .field label {
       display: block;
       margin-bottom: 5px;
@@ -2873,6 +2973,9 @@
       }
 
       .strategy-controls,
+      .strategy-experiment-grid,
+      .strategy-optimize-grid,
+      .strategy-spec-summary,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,
@@ -2942,6 +3045,9 @@
       }
 
       .strategy-controls,
+      .strategy-experiment-grid,
+      .strategy-optimize-grid,
+      .strategy-spec-summary,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,

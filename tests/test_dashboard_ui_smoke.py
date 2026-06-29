@@ -202,12 +202,12 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     for selector_id in (
         "strategy-workbench",
         "strategy-operation-tabs",
-        "strategy-symbol",
-        "strategy-timeframe",
-        "strategy-name",
-        "strategy-range",
-        "strategy-ohlcv-source-options",
-        "strategy-backtest-progress",
+            "strategy-symbol",
+            "strategy-timeframe",
+            "strategy-name",
+            "strategy-evaluation-window",
+            "strategy-ohlcv-source-options",
+            "strategy-backtest-progress",
         "strategy-chart-source",
         "strategy-chart-symbol",
         "strategy-chart-timeframe",
@@ -501,7 +501,7 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "downloadSelectedOhlcv" not in html
     assert "sampleVisualization" not in script
     assert "sampleIntelItems" not in script
-    assert 'id="strategy-range"' in html
+    assert 'id="strategy-evaluation-window"' in html
     assert "chart-tools" in html
     assert "tool-dot" in html
 

@@ -197,20 +197,53 @@
           <section class="panel strategy-workbench" id="strategy-workbench">
             <div class="tabs strategy-operation-tabs" id="strategy-operation-tabs" aria-label="Strategy Lab operations">
               <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtest</button>
+              <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiment</button>
+              <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
               <button class="tab-button" type="button" data-strategy-operation-tab="collect">Collect</button>
               <button class="tab-button" type="button" data-strategy-operation-tab="export">Export</button>
             </div>
 
             <div class="strategy-operation-panel" data-strategy-operation-panel="backtest">
-              <div class="strategy-controls strategy-backtest-controls">
+              <div class="strategy-controls strategy-backtest-controls strategy-action-grid">
+                <div class="field"><label for="strategy-source">Source <button class="hint-icon" type="button" aria-label="Source help" title="Strategy actions use the configured market source. The chart viewer below can inspect any configured stored source independently.">?</button></label><input id="strategy-source" class="text-input" type="text" readonly></div>
+                <div class="field"><label for="strategy-market-type">Market type</label><select id="strategy-market-type" class="select-input"></select></div>
                 <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
                 <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
+                <div class="field"><label for="strategy-family">Family</label><select id="strategy-family" class="select-input"></select></div>
                 <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
-                <div class="field"><label for="strategy-range">Chart range</label><select id="strategy-range" class="select-input"><option value="all">All candles</option><option value="180">Last 180 candles</option><option value="90">Last 90 candles</option><option value="30">Last 30 candles</option></select></div>
+                <div class="field"><label for="strategy-evaluation-window">Evaluation window <button class="hint-icon" type="button" aria-label="Backtest window help" title="Standalone backtests use the configured latest-lookback window from local OHLCV history. Use the independent K-line controls below to inspect arbitrary stored ranges.">?</button></label><input id="strategy-evaluation-window" class="text-input" type="text" readonly></div>
                 <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
               </div>
+              <div id="strategy-spec-summary" class="strategy-spec-summary"></div>
+              <div id="strategy-parameter-controls" class="strategy-parameter-controls"></div>
               <div id="strategy-backtest-progress" class="operation-progress hidden"></div>
               <div class="metric-strip" id="strategy-metrics"></div>
+            </div>
+
+            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="experiment">
+              <div class="strategy-experiment-grid strategy-action-grid">
+                <div class="field"><label for="strategy-experiment-family">Family</label><select id="strategy-experiment-family" class="select-input"></select></div>
+                <div class="field"><label for="strategy-experiment-mode">Evaluation mode <button class="hint-icon" type="button" aria-label="Experiment mode help" title="Experiment jobs evaluate selected configured strategies over the configured benchmark suite. Date windows come from quant.benchmark_suite.">?</button></label><select id="strategy-experiment-mode" class="select-input"><option value="benchmark_suite">Configured benchmark suite</option></select></div>
+                <div class="field"><label for="strategy-experiment-window">Evaluation window</label><input id="strategy-experiment-window" class="text-input" type="text" readonly></div>
+                <button class="primary-button" type="button" id="run-experiment-button">Run experiment</button>
+              </div>
+              <div id="strategy-experiment-strategies" class="strategy-strategy-list"></div>
+              <div id="strategy-experiment-progress" class="operation-progress hidden"></div>
+            </div>
+
+            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="optimize">
+              <div class="strategy-optimize-grid strategy-action-grid">
+                <div class="field"><label for="strategy-optimize-family">Family</label><select id="strategy-optimize-family" class="select-input"></select></div>
+                <div class="field"><label for="strategy-optimize-name">Strategy</label><select id="strategy-optimize-name" class="select-input"></select></div>
+                <div class="field"><label for="strategy-optimize-max-combinations">Max combinations</label><input id="strategy-optimize-max-combinations" class="text-input" type="number" min="1" step="1" value="80"></div>
+                <div class="field"><label for="strategy-optimize-train-rows">Train rows</label><input id="strategy-optimize-train-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
+                <div class="field"><label for="strategy-optimize-validation-rows">Validation rows</label><input id="strategy-optimize-validation-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
+                <div class="field"><label for="strategy-optimize-step-rows">Step rows</label><input id="strategy-optimize-step-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
+                <div class="field"><label for="strategy-optimize-window">Evaluation window</label><input id="strategy-optimize-window" class="text-input" type="text" readonly></div>
+                <button class="primary-button" type="button" id="run-optimize-button">Run optimization</button>
+              </div>
+              <div id="strategy-optimization-space" class="strategy-optimization-space"></div>
+              <div id="strategy-optimize-progress" class="operation-progress hidden"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="collect">

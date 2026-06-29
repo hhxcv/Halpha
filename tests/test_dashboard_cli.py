@@ -236,8 +236,17 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
     assert "window.HalphaDashboardMonitor" in monitor_script.text
     assert "refreshCurrentView" in script.text
-    assert 'postStrategyAction("backtest"' in script.text
+    assert 'runStrategyAction("backtest"' in script.text
+    assert 'runStrategyAction("experiment"' in script.text
+    assert 'runStrategyAction("optimize"' in script.text
+    assert "postStrategyAction(kind, params)" in script.text
     assert 'postJob("backtest"' not in script.text
+    assert 'id="run-experiment-button"' in response.text
+    assert 'id="run-optimize-button"' in response.text
+    assert 'id="strategy-parameter-controls"' in response.text
+    assert 'id="strategy-optimization-space"' in response.text
+    assert 'id="strategy-evaluation-window"' in response.text
+    assert 'id="strategy-range"' not in response.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
@@ -1752,6 +1761,24 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
         "sma_cross_trend",
         "tsmom_vol_scaled",
     ]
+    assert payload["commands"]["options"]["evaluation_modes"] == ["backtest", "experiment", "optimize"]
+    assert payload["commands"]["options"]["action_scopes"]["backtest"] == {
+        "window_policy": "configured_latest_lookback",
+        "range_supported": False,
+        "label": "Configured latest lookback",
+    }
+    assert payload["commands"]["options"]["strategy_families"] == [
+        "mean_reversion",
+        "moving_average",
+        "trend",
+    ]
+    assert payload["commands"]["options"]["market_types"] == ["spot", "swap"]
+    specs = {item["name"]: item for item in payload["commands"]["options"]["strategy_specs"]}
+    assert specs["tsmom_vol_scaled"]["family"] == "trend"
+    assert specs["tsmom_vol_scaled"]["configured_params"]["return_window"] == 120
+    assert specs["tsmom_vol_scaled"]["parameter_schema"]["return_window"]["default"] == 20
+    assert specs["tsmom_vol_scaled"]["optimization_space"]["return_window"]["values"] == [10, 20, 40]
+    assert specs["bollinger_rsi_long_short"]["output_position_policy"] == "research_signed_target_exposure"
     assert payload["commands"]["options"]["sources"] == [
         "binance",
         "binance_spot",
