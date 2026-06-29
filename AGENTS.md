@@ -100,6 +100,14 @@ Rules:
 - Do not make reusable contracts, schemas, modules, commands, or artifact names milestone-local unless they are truly transitional.
 - If a temporary bridge is unavoidable, mark it explicitly and name the replacement requirement.
 
+## Compatibility
+
+- Compatibility is opt-in.
+- Do not add aliases, shims, migrations, or fallbacks for imagined users.
+- Keep old behavior only when a real public contract or shipped behavior exists.
+- Delete dead paths when replacing behavior.
+- Tests alone do not make an internal API public.
+
 ## Architecture Rules
 
 - Python-first modular monolith.
@@ -111,9 +119,31 @@ Rules:
 - Do not add heavy frameworks for architecture display.
 - Keep raw data, normalized data, deterministic analysis, AI-readable material, reports, run manifests, shared stores, and runtime state boundaries explicit.
 - Shared reusable data is not a per-run report artifact and is not AI context by default.
+- Runtime state should have one authoritative owner per fact.
+- Runtime root is one explicit local root shared by CLI, Dashboard, Monitor, and Schedule.
+- Latest selections are derived or rebuildable views, not parallel authorities.
 - Exactly three target resident Halpha process roles exist: `dashboard`, `monitor`, and `schedule`.
 - Do not add a hidden supervisor, broker, worker pool, or fourth resident process.
 - Do not start resident services, background loops, or destructive migrations unless explicitly requested.
+
+## Code Quality
+
+- One task, one focused change.
+- No unrelated rewrites, silent behavior changes, dead code, generated clutter, or hidden network calls.
+- Use deterministic ordering when generating artifacts, context, reports, indexes, or other reproducible outputs.
+- Comments explain intent, not syntax.
+- Error messages should be actionable.
+- Prefer explicit names over abstractions.
+- Prefer one narrow working path over broad framework scaffolding.
+
+## Dependencies
+
+- Standard library first.
+- Add dependencies only when needed now.
+- Prefer small, maintained packages.
+- Check official docs or source for dependency-backed behavior.
+- Document new runtime dependencies when introduced.
+- Do not add heavy runtime, workflow, database, or UI frameworks for future guesses.
 
 ## Data and Artifact Rules
 
@@ -142,7 +172,12 @@ Rules:
 - Update docs when user-visible behavior, interfaces, commands, or artifact semantics change.
 - If behavior changes and docs are intentionally not updated, state why in the PR.
 
-## Privacy and Security
+## Configuration, Privacy, and Security
+
+- Public config files stay portable.
+- Machine-local config lives in gitignored local config files.
+- Support local variations through config fields, not hardcoded branches or environment-only behavior.
+- Support both configured and omitted local values where practical.
 
 Never commit, print, summarize, or expose:
 
@@ -151,11 +186,9 @@ Never commit, print, summarize, or expose:
 - private user-state files, private policy files, private notes, holdings, balances, or exact position data.
 
 Use placeholders in examples.
-Prefer gitignored local config files for machine-local settings.
-Public config files must remain portable.
 Do not add telemetry or send research material to remote services unless explicitly requested.
 
-## Commands
+## Commands and Validation
 
 Use existing repository commands only.
 If a command does not exist or cannot be run in the current environment, say so.
@@ -183,26 +216,15 @@ python -m halpha run --config config.example.yaml --until <stage_name>
 python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
 ```
 
-CLI entry points documented by README include:
-
-```bash
-python -m halpha run --config config.example.yaml
-python -m halpha validate --config config.example.yaml
-python -m halpha dashboard
-python -m halpha schedule --config config.example.yaml
-python -m halpha monitor --help
-python -m halpha data inspect --config config.example.yaml
-python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>
-python -m halpha experiment --config config.example.yaml
-python -m halpha text-intel --config config.example.yaml
-python -m halpha outcomes inspect --config config.example.yaml
-python -m halpha workbench build --config config.example.yaml
-```
+For the full CLI surface, read `README.md` and `python -m halpha <command> --help`.
+Keep this root file limited to setup, test, and common validation commands.
 
 Full report runs require public network access, configured public sources, a working Codex CLI, and Codex CLI authentication outside this repository.
 `--no-codex`, `--until`, `stage`, `validate`, `data inspect`, `outcomes inspect`, and `workbench inspect/build` are useful bounded validation paths.
 
-For docs-only changes, run the narrowest available check.
+Run the narrowest relevant check for every change.
+Prefer tests for changed behavior and smoke checks for early scaffolding.
+For docs-only changes, run the narrowest available docs or formatting check.
 When a local checkout is available, use:
 
 ```bash
