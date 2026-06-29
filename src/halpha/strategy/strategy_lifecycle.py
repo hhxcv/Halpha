@@ -19,6 +19,7 @@ QUANT_STRATEGY_RUNS_ARTIFACT = "analysis/quant_strategy_runs.json"
 STRATEGY_EVALUATION_SUMMARY_ARTIFACT = "analysis/strategy_evaluation_summary.json"
 STRATEGY_EXPERIMENT_ARTIFACT = "analysis/strategy_experiment.json"
 STRATEGY_EFFECTIVENESS_GATES_ARTIFACT = "analysis/strategy_effectiveness_gates.json"
+STRATEGY_OPTIMIZATION_ARTIFACT = "analysis/strategy_optimization.json"
 OUTCOME_TARGETS_ARTIFACT = "analysis/outcome_targets.json"
 OUTCOME_EVALUATIONS_ARTIFACT = "analysis/outcome_evaluations.json"
 MARKET_REGIME_ASSESSMENT_ARTIFACT = "analysis/market_regime_assessment.json"
@@ -31,6 +32,26 @@ GATE_TO_LIFECYCLE_STATUS = {
     "watchlisted": "watchlisted",
     "rejected": "rejected",
     "insufficient_evidence": "insufficient_evidence",
+}
+GATE_WARNING_REASON_CODES = {
+    "degraded_multi_leg_alignment",
+    "excessive_cost_drag",
+    "excessive_funding_drag",
+    "excessive_gross_exposure",
+    "event_feature_coverage_gap",
+    "high_advanced_turnover",
+    "missing_funding_evidence",
+    "optimization_robustness_not_robust",
+    "parameter_stability_not_stable",
+    "unstable_walk_forward",
+    "weak_short_side_contribution",
+    "weak_walk_forward_positive_coverage",
+}
+GATE_INSUFFICIENT_REASON_CODES = {
+    "event_feature_insufficient_evidence",
+    "insufficient_walk_forward_evidence",
+    "misaligned_multi_leg_evidence",
+    "optimization_robustness_insufficient",
 }
 POLICY_ACTION_ORDER = {"retire": 0, "reject": 1, "watchlist": 2, "promote": 3}
 
@@ -85,6 +106,13 @@ class _StrategyLifecycleBuilder:
             STRATEGY_EFFECTIVENESS_GATES_ARTIFACT,
             run.analysis_dir / "strategy_effectiveness_gates.json",
             "records",
+        )
+        self.optimization = self._read_artifact(
+            "optimization",
+            STRATEGY_OPTIMIZATION_ARTIFACT,
+            run.analysis_dir / "strategy_optimization.json",
+            "candidates",
+            required=False,
         )
         self.targets = self._read_artifact(
             "outcome_target",
@@ -181,6 +209,14 @@ class _StrategyLifecycleBuilder:
             if key[1] is None and key[2] is None and has_scoped_key:
                 continue
             keys.add(key)
+        optimization_name = _text_or_none(self.optimization.get("strategy_name"))
+        if optimization_name is not None:
+            has_scoped_key = any(
+                item[0] == optimization_name and (item[1] is not None or item[2] is not None)
+                for item in keys
+            )
+            if not has_scoped_key:
+                keys.add((optimization_name, None, None))
         return {key for key in keys if key[0] != "unknown"}
 
     def _record_for_key(self, key: tuple[str, str | None, str | None]) -> dict[str, Any]:
@@ -189,8 +225,10 @@ class _StrategyLifecycleBuilder:
         evaluation = self._matching_evaluation(key)
         quant_run = self._matching_quant_run(key)
         experiment_candidate = self._matching_experiment_candidate(strategy_name)
+        optimization = self._matching_optimization(key)
         params = _params_from(gate, evaluation, quant_run, experiment_candidate)
         parameter_digest = _parameter_digest(params)
+        optimization_evidence = _optimization_evidence(optimization)
         strategy_contract_version = _strategy_contract_version(evaluation, quant_run)
         policy_refs = self._matching_policy_refs(
             strategy_name,
@@ -201,7 +239,7 @@ class _StrategyLifecycleBuilder:
         )
         outcome_feedback = self._outcome_feedback(key)
         base_status = _base_lifecycle_status(gate, evaluation, quant_run)
-        degradation = _degradation_state(outcome_feedback, gate, evaluation)
+        degradation = _degradation_state(outcome_feedback, gate, evaluation, optimization_evidence)
         lifecycle_status = _apply_degradation(base_status, degradation)
         lifecycle_status = _apply_policy_status(lifecycle_status, policy_refs)
         source_artifacts = _unique_sorted(
@@ -210,6 +248,8 @@ class _StrategyLifecycleBuilder:
                 *_record_source_artifacts(evaluation),
                 *_record_source_artifacts(quant_run),
                 *_record_source_artifacts(experiment_candidate),
+                *([STRATEGY_OPTIMIZATION_ARTIFACT] if optimization is not None else []),
+                *_record_source_artifacts(optimization),
                 *outcome_feedback["source_artifacts"],
                 *([POLICY_SOURCE_REF] if policy_refs else []),
             ]
@@ -220,6 +260,7 @@ class _StrategyLifecycleBuilder:
                 *_record_warnings(evaluation),
                 *_record_warnings(quant_run),
                 *_record_warnings(experiment_candidate),
+                *_optimization_warning_messages(optimization),
                 *outcome_feedback["warnings"],
             ]
         )
@@ -228,6 +269,7 @@ class _StrategyLifecycleBuilder:
             *_record_errors(evaluation),
             *_record_errors(quant_run),
             *_record_errors(experiment_candidate),
+            *_optimization_errors(optimization),
             *outcome_feedback["errors"],
         ]
         source_record_refs = _unique_sorted(
@@ -236,6 +278,8 @@ class _StrategyLifecycleBuilder:
                 *_record_refs(evaluation, ("evaluation_id", "record_id")),
                 *_record_refs(quant_run, ("strategy_run_id",)),
                 *_record_refs(experiment_candidate, ("strategy_name",)),
+                *_record_refs(optimization, ("optimization_id",)),
+                *_optimization_source_record_refs(optimization_evidence),
                 *outcome_feedback["source_record_refs"],
             ]
         )
@@ -252,7 +296,8 @@ class _StrategyLifecycleBuilder:
             "regime_weakness": _regime_weakness(gate, evaluation),
             "promotion": _promotion_state(policy_refs, lifecycle_status),
             "retirement": _retirement_state(policy_refs),
-            "evidence": _evidence(gate, evaluation, quant_run, outcome_feedback, policy_refs),
+            "optimization_evidence": optimization_evidence,
+            "evidence": _evidence(gate, evaluation, quant_run, optimization_evidence, outcome_feedback, policy_refs),
             "uncertainty": _uncertainty(lifecycle_status, outcome_feedback),
             "warnings": warnings,
             "errors": errors,
@@ -274,6 +319,21 @@ class _StrategyLifecycleBuilder:
             if str(candidate.get("strategy_name") or "") == strategy_name:
                 return candidate
         return None
+
+    def _matching_optimization(self, key: tuple[str, str | None, str | None]) -> dict[str, Any] | None:
+        if not self.optimization:
+            return None
+        if str(self.optimization.get("strategy_name") or "") != key[0]:
+            return None
+        identity = self.optimization.get("instrument_identity")
+        if isinstance(identity, dict):
+            symbols = {str(item) for item in identity.get("symbols", []) if isinstance(item, str)}
+            timeframes = {str(item) for item in identity.get("timeframes", []) if isinstance(item, str)}
+            if key[1] is not None and symbols and key[1] not in symbols:
+                return None
+            if key[2] is not None and timeframes and key[2] not in timeframes:
+                return None
+        return self.optimization
 
     def _outcome_feedback(self, key: tuple[str, str | None, str | None]) -> dict[str, Any]:
         target_by_id = {
@@ -514,6 +574,7 @@ def _degradation_state(
     outcome_feedback: dict[str, Any],
     gate: dict[str, Any] | None,
     evaluation: dict[str, Any] | None,
+    optimization_evidence: dict[str, Any],
 ) -> dict[str, Any]:
     states = set(outcome_feedback["states"])
     reasons = []
@@ -526,12 +587,34 @@ def _degradation_state(
             "source_record_refs": source_record_refs,
         }
     weak_reason_codes = _reason_codes(gate)
-    if weak_reason_codes & {"unstable_walk_forward", "weak_walk_forward_positive_coverage", "excessive_cost_drag"}:
+    if weak_reason_codes & GATE_INSUFFICIENT_REASON_CODES:
+        reasons.append("Strategy gate contains deterministic insufficient-evidence reasons.")
+        return {
+            "state": "insufficient_evidence",
+            "reasons": reasons,
+            "source_record_refs": source_record_refs,
+        }
+    if weak_reason_codes & GATE_WARNING_REASON_CODES:
         reasons.append("Strategy gate contains deterministic degradation warning reasons.")
         return {
             "state": "warning",
             "reasons": reasons,
             "source_record_refs": source_record_refs,
+        }
+    optimization_status = str(optimization_evidence.get("robustness_status") or "not_available")
+    if optimization_status in {"failed", "insufficient_data"}:
+        reasons.append("Optimization robustness evidence is unavailable or failed.")
+        return {
+            "state": "insufficient_evidence",
+            "reasons": reasons,
+            "source_record_refs": _unique_sorted([*source_record_refs, *_optimization_source_record_refs(optimization_evidence)]),
+        }
+    if optimization_status in {"fragile", "overfit_risk"}:
+        reasons.append(f"Optimization robustness status is {optimization_status}.")
+        return {
+            "state": "warning",
+            "reasons": reasons,
+            "source_record_refs": _unique_sorted([*source_record_refs, *_optimization_source_record_refs(optimization_evidence)]),
         }
     if states & {"pending", "unresolved", "insufficient_data", "skipped", "failed", "unknown"}:
         reasons.append("Outcome feedback is not strong enough to confirm lifecycle health.")
@@ -562,6 +645,8 @@ def _apply_degradation(base_status: str, degradation: dict[str, Any]) -> str:
         return "degraded"
     if state == "insufficient_evidence" and base_status in {"effective", "active_candidate"}:
         return "insufficient_evidence"
+    if state == "warning" and base_status in {"effective", "active_candidate"}:
+        return "watchlisted"
     return base_status
 
 
@@ -643,6 +728,7 @@ def _evidence(
     gate: dict[str, Any] | None,
     evaluation: dict[str, Any] | None,
     quant_run: dict[str, Any] | None,
+    optimization_evidence: dict[str, Any],
     outcome_feedback: dict[str, Any],
     policy_refs: list[dict[str, Any]],
 ) -> list[str]:
@@ -656,6 +742,20 @@ def _evidence(
         items.append(f"strategy_evaluation_status={evaluation.get('status')}.")
     if isinstance(quant_run, dict):
         items.append(f"quant_strategy_run_status={quant_run.get('status')}.")
+    if optimization_evidence.get("status") == "available":
+        items.append("strategy_optimization_status=available.")
+        selected_candidate_id = _text_or_none(optimization_evidence.get("selected_candidate_id"))
+        selected_digest = _text_or_none(optimization_evidence.get("selected_candidate_parameter_digest"))
+        if selected_candidate_id is not None:
+            items.append(f"optimization_selected_candidate={selected_candidate_id}.")
+        if selected_digest is not None:
+            items.append(f"optimization_selected_candidate_parameter_digest={selected_digest}.")
+        items.append(f"optimization_robustness_status={optimization_evidence.get('robustness_status')}.")
+        items.append(f"optimization_walk_forward_status={optimization_evidence.get('walk_forward_status')}.")
+        succeeded_windows = optimization_evidence.get("walk_forward_succeeded_windows")
+        if succeeded_windows is not None:
+            items.append(f"optimization_walk_forward_succeeded_windows={succeeded_windows}.")
+        items.append(f"optimization_active_config_mutated={optimization_evidence.get('active_config_mutated')}.")
     if outcome_feedback["records"]:
         states = ",".join(sorted(set(outcome_feedback["states"])))
         items.append(f"strategy_gate_outcome_feedback_states={states}.")
@@ -928,6 +1028,96 @@ def _record_refs(record: dict[str, Any] | None, fields: tuple[str, ...]) -> list
         for field in fields
         if field in record and record[field] is not None
     ]
+
+
+def _optimization_evidence(optimization: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(optimization, dict):
+        return {
+            "status": "not_available",
+            "robustness_status": "not_available",
+            "walk_forward_status": "not_available",
+            "selected_candidate_id": None,
+            "selected_candidate_parameter_digest": None,
+            "active_config_mutated": False,
+            "warnings": [],
+            "errors": [],
+            "source_artifacts": [],
+        }
+    selected = optimization.get("selected_candidate") if isinstance(optimization.get("selected_candidate"), dict) else {}
+    selected_params = selected.get("params") if isinstance(selected.get("params"), dict) else {}
+    robustness = optimization.get("robustness") if isinstance(optimization.get("robustness"), dict) else {}
+    walk_forward = optimization.get("walk_forward") if isinstance(optimization.get("walk_forward"), dict) else {}
+    walk_summary = walk_forward.get("summary") if isinstance(walk_forward.get("summary"), dict) else {}
+    selected_digest = _parameter_digest(selected_params) if selected_params else None
+    return {
+        "status": "available",
+        "optimization_id": optimization.get("optimization_id"),
+        "strategy_name": optimization.get("strategy_name"),
+        "selected_candidate_id": selected.get("candidate_id"),
+        "selected_candidate_parameter_digest": selected_digest,
+        "selected_candidate_automatic_config_mutation": selected.get("automatic_config_mutation"),
+        "active_config_mutated": False,
+        "robustness_status": robustness.get("status") or "not_available",
+        "walk_forward_status": walk_forward.get("status") or "not_available",
+        "walk_forward_succeeded_windows": walk_summary.get("succeeded_windows"),
+        "walk_forward_selected_candidate_variants": walk_summary.get("selected_candidate_variants"),
+        "source_artifacts": _record_source_artifacts(optimization),
+        "warnings": _optimization_warning_messages(optimization),
+        "errors": _optimization_errors(optimization),
+    }
+
+
+def _optimization_warning_messages(optimization: dict[str, Any] | None) -> list[str]:
+    if not isinstance(optimization, dict):
+        return []
+    warnings: list[str] = []
+    warning_sources = [
+        optimization.get("warnings"),
+        _nested_dict(optimization, "robustness").get("warnings"),
+        _nested_dict(optimization, "walk_forward").get("warnings"),
+    ]
+    for source in warning_sources:
+        warnings.extend(_warning_messages(source))
+    return _unique_sorted(warnings)
+
+
+def _optimization_errors(optimization: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(optimization, dict):
+        return []
+    return [
+        *_record_errors(optimization),
+        *_error_list(_nested_dict(optimization, "robustness").get("errors")),
+        *_error_list(_nested_dict(optimization, "walk_forward").get("errors")),
+    ]
+
+
+def _warning_messages(value: Any) -> list[str]:
+    messages = []
+    for warning in _dict_list(value):
+        code = _text_or_none(warning.get("code"))
+        message = _text_or_none(warning.get("message"))
+        if code and message:
+            messages.append(f"{code}: {message}")
+        elif code:
+            messages.append(code)
+        elif message:
+            messages.append(message)
+    messages.extend(_string_list(value))
+    return messages
+
+
+def _nested_dict(record: dict[str, Any], key: str) -> dict[str, Any]:
+    value = record.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _optimization_source_record_refs(optimization_evidence: dict[str, Any]) -> list[str]:
+    refs = []
+    for field in ("optimization_id", "selected_candidate_id"):
+        value = optimization_evidence.get(field)
+        if value is not None:
+            refs.append(str(value))
+    return _unique_sorted(refs)
 
 
 def _count_by(records: list[dict[str, Any]], key: str) -> dict[str, int]:
