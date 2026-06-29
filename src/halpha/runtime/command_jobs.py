@@ -60,6 +60,7 @@ RESULT_ARTIFACT_KEYS = {
     "strategy_benchmark_suite",
     "strategy_effectiveness_gates",
     "strategy_experiment",
+    "strategy_optimization",
     "text_event_classification_evidence",
     "text_event_records",
     "text_event_signals",

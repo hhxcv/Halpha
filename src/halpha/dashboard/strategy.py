@@ -92,6 +92,7 @@ def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
     return {
         "backtest": "available",
         "experiment": "available",
+        "optimize": "available",
         "options": {
             "sources": _configured_ohlcv_sources(config),
             "strategy_names": sorted(_configured_strategy_names(config)),
@@ -300,10 +301,12 @@ def _standalone_strategy_section(
     output_root = _run_output_root(config, config_path=config_path)
     backtests = _standalone_backtests(output_root / "strategy_backtests", base=base)
     experiments = _standalone_experiments(output_root / "strategy_experiments", base=base)
-    statuses = [item["status"] for item in backtests + experiments]
+    optimizations = _standalone_optimizations(output_root / "strategy_optimizations", base=base)
+    standalone_items = [*backtests, *experiments, *optimizations]
+    statuses = [item["status"] for item in standalone_items]
     if not statuses:
         status = "missing"
-        warnings = ["standalone strategy backtest and experiment output directories were not found."]
+        warnings = ["standalone strategy backtest, experiment, and optimization output directories were not found."]
     else:
         status = _overall_status(statuses)
         warnings = []
@@ -314,27 +317,28 @@ def _standalone_strategy_section(
             "output_root": _safe_ref(output_root, base=base),
             "backtest_count": len(backtests),
             "experiment_count": len(experiments),
+            "optimization_count": len(optimizations),
             "max_items": MAX_STANDALONE_RUNS,
         },
         source_artifacts=sorted(
             {
                 artifact
-                for item in backtests + experiments
+                for item in standalone_items
                 for artifact in _string_list(item.get("source_artifacts"))
             }
         ),
         warnings=warnings
         + [
             warning
-            for item in backtests + experiments
+            for item in standalone_items
             for warning in _string_list(item.get("warnings"))
         ],
         errors=[
             error
-            for item in backtests + experiments
+            for item in standalone_items
             for error in _string_list(item.get("errors"))
         ],
-        extra={"backtests": backtests, "experiments": experiments},
+        extra={"backtests": backtests, "experiments": experiments, "optimizations": optimizations},
     )
 
 
@@ -348,6 +352,13 @@ def _standalone_backtests(root: Path, *, base: Path) -> list[dict[str, Any]]:
 def _standalone_experiments(root: Path, *, base: Path) -> list[dict[str, Any]]:
     return [
         _standalone_experiment_summary(path, base=base)
+        for path in _standalone_dirs(root)
+    ]
+
+
+def _standalone_optimizations(root: Path, *, base: Path) -> list[dict[str, Any]]:
+    return [
+        _standalone_optimization_summary(path, base=base)
         for path in _standalone_dirs(root)
     ]
 
@@ -460,6 +471,72 @@ def _standalone_experiment_summary(path: Path, *, base: Path) -> dict[str, Any]:
             *_messages(manifest.get("errors")),
             *_messages(experiment.get("errors")),
             *_messages(gates.get("errors")),
+            *[error for error in artifact_errors if "was not found" not in error],
+        ],
+    )
+
+
+def _standalone_optimization_summary(path: Path, *, base: Path) -> dict[str, Any]:
+    manifest_path = path / "manifest.json"
+    optimization_path = path / "strategy_optimization.json"
+    benchmark_path = path / "strategy_benchmark_suite.json"
+    manifest, manifest_error = _read_json(manifest_path)
+    optimization, optimization_error = _read_json(optimization_path)
+    benchmark, benchmark_error = _read_json(benchmark_path)
+    source_artifacts = [
+        _safe_ref(manifest_path, base=base),
+        _safe_ref(optimization_path, base=base),
+        _safe_ref(benchmark_path, base=base),
+    ]
+    if manifest_error:
+        return _standalone_item(
+            "strategy_optimization",
+            path=path,
+            status="missing" if "was not found" in manifest_error else "failed",
+            base=base,
+            source_artifacts=source_artifacts,
+            warnings=[manifest_error] if "was not found" in manifest_error else [],
+            errors=[] if "was not found" in manifest_error else [manifest_error],
+        )
+    artifact_errors = [error for error in (optimization_error, benchmark_error) if error]
+    status = _manifest_status(manifest, optimization, artifact_errors[0] if artifact_errors else None)
+    if any(error and "is not valid JSON" in error for error in artifact_errors):
+        status = "failed"
+    robustness = _dict(optimization.get("robustness"))
+    walk_forward = _dict(optimization.get("walk_forward"))
+    return _standalone_item(
+        "strategy_optimization",
+        path=path,
+        status=status,
+        base=base,
+        fields={
+            "created_at": manifest.get("created_at"),
+            "status": manifest.get("status"),
+            "strategy_name": optimization.get("strategy_name"),
+            "counts": _bounded_mapping(manifest.get("counts")),
+            "search_space": _bounded_mapping(optimization.get("search_space")),
+            "coverage": _bounded_mapping(optimization.get("coverage")),
+            "benchmark_coverage": _bounded_mapping(benchmark.get("coverage")),
+            "selected_candidate": _optimization_selected_candidate(optimization.get("selected_candidate")),
+            "robustness": _bounded_mapping(robustness),
+            "walk_forward": _walk_forward_summary(walk_forward),
+        },
+        records={
+            "failed_candidates": _optimization_failed_candidates(optimization.get("failed_candidates")),
+        },
+        source_artifacts=source_artifacts + _source_artifacts(manifest),
+        warnings=[
+            *_messages(manifest.get("warnings")),
+            *_messages(optimization.get("warnings")),
+            *_messages(robustness.get("warnings")),
+            *_messages(walk_forward.get("warnings")),
+            *[error for error in artifact_errors if "was not found" in error],
+        ],
+        errors=[
+            *_messages(manifest.get("errors")),
+            *_messages(optimization.get("errors")),
+            *_messages(robustness.get("errors")),
+            *_messages(walk_forward.get("errors")),
             *[error for error in artifact_errors if "was not found" not in error],
         ],
     )
@@ -610,6 +687,31 @@ def _candidate_records(value: Any) -> list[dict[str, Any]]:
             }
         )
     return records
+
+
+def _optimization_selected_candidate(value: Any) -> dict[str, Any]:
+    item = _dict(value)
+    if not item:
+        return {}
+    return {
+        "candidate_id": item.get("candidate_id"),
+        "status": item.get("status"),
+        "strategy_name": item.get("strategy_name"),
+        "params": _bounded_mapping(item.get("params")),
+        "summary": _bounded_mapping(item.get("summary")),
+        "automatic_config_mutation": item.get("automatic_config_mutation"),
+    }
+
+
+def _optimization_failed_candidates(value: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "candidate_id": item.get("candidate_id"),
+            "error_type": item.get("error_type"),
+            "message": item.get("message"),
+        }
+        for item in _dict_items(value)[:MAX_SUMMARY_ITEMS]
+    ]
 
 
 def _gate_records(value: Any) -> list[dict[str, Any]]:

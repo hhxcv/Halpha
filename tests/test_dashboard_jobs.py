@@ -546,6 +546,14 @@ def test_command_job_manager_accepts_strategy_and_text_command_intents(
                 "manifest: runs/manual-experiments/run-1/manifest.json",
             ]
         ),
+        "\n".join(
+            [
+                "Halpha optimization succeeded.",
+                "strategy_optimization: runs/manual-optimizations/run-1/strategy_optimization.json",
+                "strategy_benchmark_suite: runs/manual-optimizations/run-1/strategy_benchmark_suite.json",
+                "manifest: runs/manual-optimizations/run-1/manifest.json",
+            ]
+        ),
         "manifest: data/models/prep/model_prepare_manifest.json",
         "\n".join(
             [
@@ -620,6 +628,41 @@ def test_command_job_manager_accepts_strategy_and_text_command_intents(
                 "strategy_benchmark_suite": "runs/manual-experiments/run-1/strategy_benchmark_suite.json",
                 "strategy_effectiveness_gates": "runs/manual-experiments/run-1/strategy_effectiveness_gates.json",
                 "manifest": "runs/manual-experiments/run-1/manifest.json",
+            },
+        ),
+        (
+            "optimize",
+            {
+                "strategy_name": "tsmom_vol_scaled",
+                "grid": {"return_window": [1, 2], "volatility_window": [1]},
+                "max_combinations": 4,
+                "walk_forward_train_rows": 3,
+                "output_dir": "runs/manual-optimizations",
+            },
+            [
+                "python",
+                "-m",
+                "halpha",
+                "optimize",
+                "--config",
+                "<external-config>",
+                "--strategy",
+                "tsmom_vol_scaled",
+                "--grid",
+                "return_window=1,2",
+                "--grid",
+                "volatility_window=1",
+                "--max-combinations",
+                "4",
+                "--walk-forward-train-rows",
+                "3",
+                "--output-dir",
+                "runs/manual-optimizations",
+            ],
+            {
+                "strategy_optimization": "runs/manual-optimizations/run-1/strategy_optimization.json",
+                "strategy_benchmark_suite": "runs/manual-optimizations/run-1/strategy_benchmark_suite.json",
+                "manifest": "runs/manual-optimizations/run-1/manifest.json",
             },
         ),
         (
@@ -771,6 +814,25 @@ def test_command_job_manager_rejects_unconfigured_strategy_values_before_process
         (
             {"intent": "experiment", "params": {"strategy_names": "tsmom_vol_scaled"}},
             "strategy_names must be a non-empty list",
+        ),
+        (
+            {"intent": "optimize", "params": {"strategy_name": "missing"}},
+            "strategy_name is not configured or enabled",
+        ),
+        (
+            {
+                "intent": "optimize",
+                "params": {
+                    "strategy_name": "tsmom_vol_scaled",
+                    "grid": {"return_window": [1]},
+                    "grid_args": ["return_window=1"],
+                },
+            },
+            "grid and grid_args cannot both be provided",
+        ),
+        (
+            {"intent": "optimize", "params": {"strategy_name": "tsmom_vol_scaled", "max_combinations": 0}},
+            "max_combinations must be a positive integer",
         ),
     ]
 
@@ -984,6 +1046,76 @@ def test_command_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypa
     assert completed["result_refs"]["strategy_backtest"] == "runs/backtests/run-api/strategy_backtest.json"
     assert completed["result_refs"]["manifest"] == "runs/backtests/run-api/manifest.json"
     assert str(tmp_path) not in create_response.text
+
+
+def test_strategy_action_api_starts_optimization_internal_job(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+    stdout = "\n".join(
+        [
+            "Halpha optimization succeeded.",
+            "strategy_optimization: runs/optimizations/run-api/strategy_optimization.json",
+            "strategy_benchmark_suite: runs/optimizations/run-api/strategy_benchmark_suite.json",
+            "manifest: runs/optimizations/run-api/manifest.json",
+        ]
+    )
+    captured_calls: list[dict[str, Any]] = []
+
+    def fail_popen(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("dashboard strategy action jobs must use internal execution")
+
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_calls.append(kwargs)
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout)
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.subprocess.Popen", fail_popen)
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    create_response = client.post(
+        "/api/strategies/actions/optimize",
+        json={
+            "params": {
+                "strategy_name": "tsmom_vol_scaled",
+                "grid": {"return_window": [1, 2]},
+                "max_combinations": 4,
+            }
+        },
+    )
+    payload = create_response.json()
+    completed = _wait_for_api_terminal(client, payload["job"]["job_id"])
+
+    assert create_response.status_code == 200
+    assert payload["artifact_type"] == "dashboard_strategy_action_job"
+    assert payload["action"] == "optimize"
+    assert completed["status"] == "succeeded"
+    assert completed["intent"] == "optimize"
+    assert completed["command"] == ["internal", "optimize"]
+    assert captured_calls[0]["spec"].intent == "optimize"
+    assert captured_calls[0]["params"]["grid"] == {"return_window": [1, 2]}
+    assert completed["result_refs"]["strategy_optimization"] == "runs/optimizations/run-api/strategy_optimization.json"
+    assert completed["result_refs"]["strategy_benchmark_suite"] == "runs/optimizations/run-api/strategy_benchmark_suite.json"
+    assert str(tmp_path) not in create_response.text
+
+
+def test_strategy_action_api_rejects_unknown_action_before_job_creation(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_strategy_text_config(tmp_path)
+    config = load_config(config_path)
+
+    def fail_create_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("unsupported strategy action must not create a job")
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.CommandJobManager.create_job", fail_create_job)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post("/api/strategies/actions/shell", json={"params": {}})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "unsupported"
+    assert payload["job"] is None
+    assert "strategy action must be one of:" in payload["errors"][0]
+    assert str(tmp_path) not in response.text
 
 
 def test_command_job_manager_preserves_attached_internal_running_job(

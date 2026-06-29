@@ -14,6 +14,7 @@
       dataViewerCollectPlan: app.dataset.dataViewerCollectPlanEndpoint,
       dataViewerCollectJobs: app.dataset.dataViewerCollectJobsEndpoint,
       strategies: app.dataset.strategiesEndpoint,
+      strategyActions: app.dataset.strategyActionsEndpoint,
       monitor: app.dataset.monitorEndpoint,
       monitorCycles: app.dataset.monitorCyclesEndpoint,
       monitorAlerts: app.dataset.monitorAlertsEndpoint,
@@ -1611,7 +1612,7 @@
         logs: state.strategyBacktestLogs,
       });
       try {
-        const job = await postJob("backtest", params);
+        const job = await postStrategyAction("backtest", params);
         appendOperationLog("backtest", `Job ${job.job_id || "pending"} ${job.status || "created"}.`);
         renderOperationProgress("backtest", {
           status: job.status || "queued",
@@ -2609,6 +2610,20 @@
       if (intent === "validate") {
         state.validationJob = job;
         renderValidationJob(job);
+      }
+      return job;
+    }
+
+    async function postStrategyAction(action, params = {}) {
+      const payload = await postJson(`${endpoints.strategyActions}/${encodeURIComponent(action)}`, {params});
+      const job = payload?.job || payload;
+      if (!job || typeof job !== "object") {
+        throw new Error("Strategy action request failed.");
+      }
+      showToast(`${label(action)} job ${job.status || "created"}.`);
+      if (job.status === "blocked" || job.status === "unsupported") {
+        const reason = Array.isArray(job.errors) && job.errors.length ? job.errors[0] : `Strategy action ${job.status}.`;
+        throw new Error(reason);
       }
       return job;
     }

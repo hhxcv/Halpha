@@ -60,8 +60,9 @@ Primary sources:
 - `runs/workbench/latest/`: bounded delivery snapshot summaries and local
   indexes for inspection and recovery fallback, not replacements for dashboard
   views.
-- `runs/strategy_backtests/`, `runs/strategy_experiments/`, and
-  `runs/text_intelligence/`: standalone command outputs.
+- `runs/strategy_backtests/`, `runs/strategy_experiments/`,
+  `runs/strategy_optimizations/`, and `runs/text_intelligence/`: standalone
+  command outputs.
 
 Dashboard runtime state may record service lifecycle, selected-config
 preference, UI-triggered job, and schedule state. That state is control and
@@ -131,7 +132,8 @@ Implemented dashboard views expose:
 - run history, report previews, stage timelines, and artifact refs;
 - bounded artifact previews for supported local text-like artifacts;
 - local data store metadata and source refs;
-- strategy research outputs, standalone backtests, experiments, gates, and
+- strategy research outputs, standalone backtests, experiments, optimizations,
+  gates, and
   lifecycle state, including bounded K-line backtest visualizations when the
   standalone backtest artifact records visualization data;
 - monitor health, recent cycles, alert counts, cooldown state, alert samples,
@@ -145,14 +147,18 @@ The current job runner supports:
   `outcomes_inspect`, `workbench_inspect`, and `monitor_inspect`;
 - product jobs: `run`, `run_no_codex`, `run_until`, and `stage_rerun`;
 - workbench build: `workbench_build`;
-- strategy and text jobs: `backtest`, `experiment`,
+- strategy and text jobs: `backtest`, `experiment`, `optimize`,
   `text_models_prepare`, and `text_intel`;
 - monitor jobs: `monitor_dry_run`, `monitor_once`, and `monitor_inspect`.
 
 The dashboard UI may expose short monitor validation jobs directly in the
 Monitor view. It must not create a resident Monitor loop as a command job.
-Other command actions are available through the dashboard jobs API and remain
-explicit allowlisted jobs.
+Strategy actions are also available through
+`POST /api/strategies/actions/{backtest|experiment|optimize}`. The strategy
+action API creates the same internal allowlisted command jobs as the generic
+jobs API and returns bounded job refs, progress/log metadata, warnings, and
+errors. Other command actions are available through the dashboard jobs API and
+remain explicit allowlisted jobs.
 
 Mutating product command jobs contend for the runtime-root mutation lease in
 `.halpha/state.sqlite` before starting a subprocess. The protected job kinds
@@ -250,7 +256,8 @@ Dashboard pages should expose the current product shape through bounded views:
   deletion.
 - Strategy lab: OHLCV shared-store review through the reusable candlestick
   chart, pipeline strategy artifacts, standalone backtests, standalone
-  experiments, gates, lifecycle state, warnings, and limitations. The top
+  experiments, standalone optimizations, gates, lifecycle state, warnings, and
+  limitations. The top
   workbench separates Backtest, Collect, and Export controls into tabs. Without
   a selected backtest, the candlestick chart is an OHLCV data viewer. With a
   selected backtest, deterministic exposure markers are overlaid on the same
@@ -282,9 +289,11 @@ those distinctions. Missing evidence must not be displayed as neutral evidence.
 ## Strategy Lab Workbench Contract
 
 Status: current Strategy Lab includes OHLCV shared-store review, collection
-controls, existing backtest artifacts, and reusable candlestick chart behavior.
-Expanded strategy workbench controls, optimization views, and advanced
-evaluation overlays are planned.
+controls, existing backtest and optimization artifacts, reusable candlestick
+chart behavior, and API-backed strategy action job submission for backtest,
+experiment, and optimization. Expanded strategy workbench controls,
+optimization visual analysis, comparison views, and advanced evaluation
+overlays are planned.
 
 Purpose:
 
@@ -557,8 +566,8 @@ Supported job implementations should record:
   starts;
 - exit code;
 - bounded stdout and stderr refs;
-- linked run, report, monitor, backtest, experiment, text-intelligence, or
-  workbench artifacts when available;
+- linked run, report, monitor, backtest, experiment, optimization,
+  text-intelligence, or workbench artifacts when available;
 - warnings and errors.
 
 Job status values should include:
@@ -590,15 +599,22 @@ legacy storage for `data migrate-state` import or separate cleanup work only.
 Normal Dashboard, Schedule, and CLI job readers must not use them as fallback
 authorities.
 
-One-shot command jobs must launch subprocesses inside a platform-specific
-process-tree ownership boundary. Cancellation requests the complete owned tree
-to stop, waits a bounded interval, then escalates when graceful termination is
-not confirmed. A job reaches `cancelled` only after the owned tree is confirmed
+One-shot command jobs may execute as allowlisted subprocesses or as internal
+service calls, depending on the caller. Dashboard-triggered jobs use internal
+service execution for supported intents and must not shell out to CLI commands
+or open command windows. CLI-created command jobs may launch subprocesses
+inside a platform-specific process-tree ownership boundary when configured for
+subprocess execution. Cancellation requests the complete owned tree to stop,
+waits a bounded interval, then escalates when graceful termination is not
+confirmed. A job reaches `cancelled` only after the owned tree is confirmed
 exited; otherwise it reaches `failed` with an actionable termination
-diagnostic. After a Dashboard runtime restart, persisted transient jobs must use
-recorded process identity metadata instead of PID alone, so an unrelated reused
-PID is not treated as the original job and a still-running owned process is not
-silently rewritten to terminal state.
+diagnostic. Internal service jobs record a verified internal-thread process
+identity, are not externally cancellable, and finish through the same
+state-store transition and bounded log contract. After a Dashboard runtime
+restart, persisted transient jobs must use recorded process identity metadata
+instead of PID alone, so an unrelated reused PID is not treated as the original
+job and a still-running owned process is not silently rewritten to terminal
+state.
 
 Bounded stdout and stderr logs are written under
 `.halpha/command_jobs/job_logs/<job_id>/` below the current working directory by

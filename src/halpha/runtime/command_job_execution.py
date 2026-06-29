@@ -19,8 +19,12 @@ from halpha.product.product_validation_inspection import inspect_product_validat
 from halpha.runtime.command_job_commands import CommandSpec
 from halpha.runtime.pipeline_contracts import PipelineError
 from halpha.storage import artifact_base, display_path
-from halpha.strategy.standalone_backtest import StandaloneBacktestError, run_standalone_strategy_backtest
-from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
+from halpha.strategy.strategy_optimization import DEFAULT_MAX_COMBINATIONS
+from halpha.strategy.workbench_service import (
+    run_strategy_backtest_action,
+    run_strategy_experiment_action,
+    run_strategy_optimization_action,
+)
 from halpha.text.standalone_text_intelligence import run_standalone_text_intelligence
 from halpha.text.text_event_collection import TextEventCollectionError
 from halpha.text.text_models import prepare_text_models
@@ -66,6 +70,8 @@ def execute_command_job(
             return _execute_backtest(config, config_path=config_path, params=params)
         if intent == "experiment":
             return _execute_experiment(config, config_path=config_path, params=params)
+        if intent == "optimize":
+            return _execute_optimize(config, config_path=config_path, params=params)
         if intent == "text_models_prepare":
             return _execute_text_models_prepare(config, config_path=config_path, params=params)
         if intent == "text_intel":
@@ -211,51 +217,39 @@ def _execute_monitor_run(config: dict[str, Any], *, config_path: Path, dry_run: 
 
 
 def _execute_backtest(config: dict[str, Any], *, config_path: Path, params: dict[str, Any]) -> CommandJobExecutionResult:
-    try:
-        result = run_standalone_strategy_backtest(
-            config,
-            config_path=config_path,
-            strategy_name=str(params.get("strategy_name") or ""),
-            symbol=str(params.get("symbol") or ""),
-            timeframe=str(params.get("timeframe") or ""),
-            output_dir=_optional_path(params.get("output_dir")),
-        )
-    except StandaloneBacktestError as exc:
-        return _fail(exc.exit_code, ["Halpha backtest failed.", f"reason: {exc}"])
-    lines = [
-        "Halpha backtest succeeded." if result.succeeded else "Halpha backtest failed.",
-        f"status: {result.status}",
-        f"strategy_backtest: {_display(result.artifact_path, config_path=config_path)}",
-        f"manifest: {_display(result.manifest_path, config_path=config_path)}",
-    ]
-    if not result.succeeded and result.reason:
-        lines.insert(2, f"reason: {result.reason}")
-    return CommandJobExecutionResult(exit_code=result.exit_code, stdout=_lines(lines))
+    result = run_strategy_backtest_action(
+        config,
+        config_path=config_path,
+        strategy_name=str(params.get("strategy_name") or ""),
+        symbol=str(params.get("symbol") or ""),
+        timeframe=str(params.get("timeframe") or ""),
+        output_dir=_optional_path(params.get("output_dir")),
+    )
+    return CommandJobExecutionResult(exit_code=result.exit_code, stdout=result.stdout)
 
 
 def _execute_experiment(config: dict[str, Any], *, config_path: Path, params: dict[str, Any]) -> CommandJobExecutionResult:
-    try:
-        result = run_strategy_experiment(
-            config,
-            config_path=config_path,
-            strategy_names=params.get("strategy_names") if isinstance(params.get("strategy_names"), list) else None,
-            output_dir=_optional_path(params.get("output_dir")),
-        )
-    except StrategyExperimentError as exc:
-        return _fail(exc.exit_code, ["Halpha experiment failed.", f"reason: {exc}"])
-    return CommandJobExecutionResult(
-        exit_code=result.exit_code,
-        stdout=_lines(
-            [
-                "Halpha experiment succeeded.",
-                f"status: {result.status}",
-                f"strategy_experiment: {_display(result.artifact_path, config_path=config_path)}",
-                f"strategy_benchmark_suite: {_display(result.benchmark_suite_path, config_path=config_path)}",
-                f"strategy_effectiveness_gates: {_display(result.gates_path, config_path=config_path)}",
-                f"manifest: {_display(result.manifest_path, config_path=config_path)}",
-            ]
-        ),
+    result = run_strategy_experiment_action(
+        config,
+        config_path=config_path,
+        strategy_names=params.get("strategy_names") if isinstance(params.get("strategy_names"), list) else None,
+        output_dir=_optional_path(params.get("output_dir")),
     )
+    return CommandJobExecutionResult(exit_code=result.exit_code, stdout=result.stdout)
+
+
+def _execute_optimize(config: dict[str, Any], *, config_path: Path, params: dict[str, Any]) -> CommandJobExecutionResult:
+    result = run_strategy_optimization_action(
+        config,
+        config_path=config_path,
+        strategy_name=str(params.get("strategy_name") or ""),
+        grid=params.get("grid") if isinstance(params.get("grid"), dict) else None,
+        grid_args=params.get("grid_args") if isinstance(params.get("grid_args"), list) else None,
+        max_combinations=_positive_int(params.get("max_combinations"), default=DEFAULT_MAX_COMBINATIONS),
+        walk_forward_policy=_walk_forward_policy(params),
+        output_dir=_optional_path(params.get("output_dir")),
+    )
+    return CommandJobExecutionResult(exit_code=result.exit_code, stdout=result.stdout)
 
 
 def _execute_text_models_prepare(config: dict[str, Any], *, config_path: Path, params: dict[str, Any]) -> CommandJobExecutionResult:
@@ -375,6 +369,20 @@ def _non_negative_int(value: Any, *, default: int) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError("non-negative integer parameter is invalid.")
     return value
+
+
+def _walk_forward_policy(params: dict[str, Any]) -> dict[str, Any] | None:
+    policy = {
+        key: params[param_name]
+        for key, param_name in {
+            "train_rows": "walk_forward_train_rows",
+            "validation_rows": "walk_forward_validation_rows",
+            "step_rows": "walk_forward_step_rows",
+            "min_windows": "walk_forward_min_windows",
+        }.items()
+        if params.get(param_name) is not None
+    }
+    return policy or None
 
 
 def _display(path: Path, *, config_path: Path) -> str:
