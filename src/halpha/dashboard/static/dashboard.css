@@ -1579,6 +1579,42 @@
       color: #fb7185;
     }
 
+    .chart-tooltip-op.short {
+      color: #fdba74;
+    }
+
+    .chart-tooltip-op.event {
+      color: #c4b5fd;
+    }
+
+    .chart-tooltip-op.funding {
+      color: #7dd3fc;
+    }
+
+    .chart-tooltip-op.multi-leg {
+      color: #cbd5e1;
+    }
+
+    .chart-tooltip-op-detail {
+      display: grid;
+      grid-template-columns: 78px minmax(0, 1fr);
+      gap: 4px 10px;
+      margin: 5px 0 8px;
+      padding-left: 10px;
+      border-left: 2px solid rgba(219, 231, 243, 0.18);
+      color: #dbe7f3;
+    }
+
+    .chart-tooltip-op-detail span {
+      color: #9fb2c7;
+    }
+
+    .chart-tooltip-op-detail strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      text-align: right;
+    }
+
     .chart-tools {
       position: absolute;
       top: 14px;
@@ -1705,6 +1741,78 @@
     .strategy-tabs {
       grid-column: 1 / -1;
       padding: 0 16px 16px;
+    }
+
+    .strategy-eval-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .strategy-eval-panel {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .strategy-eval-panel h3 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.25;
+      font-weight: 850;
+    }
+
+    .strategy-eval-kv {
+      display: grid;
+      gap: 6px;
+    }
+
+    .strategy-eval-chart {
+      min-height: 150px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+      overflow: hidden;
+    }
+
+    .strategy-eval-chart svg {
+      display: block;
+      width: 100%;
+      height: 150px;
+    }
+
+    .strategy-eval-chart.drawdown polyline {
+      stroke: var(--red);
+    }
+
+    .strategy-walkforward-card {
+      display: grid;
+      gap: 5px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-left: 4px solid #94a3b8;
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .strategy-walkforward-card.available,
+    .strategy-walkforward-card.succeeded,
+    .strategy-walkforward-card.ok {
+      border-left-color: var(--teal);
+    }
+
+    .strategy-walkforward-card.warning,
+    .strategy-walkforward-card.partial {
+      border-left-color: var(--amber);
+    }
+
+    .strategy-walkforward-card.failed,
+    .strategy-walkforward-card.error {
+      border-left-color: var(--red);
     }
 
     .data-viewer-panel {

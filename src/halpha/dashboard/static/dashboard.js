@@ -1671,22 +1671,277 @@
       const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
       const metrics = strategyMetrics(state.selectedStrategyOutput);
       if (tab === "trades" || tab === "list") {
-        document.querySelector("#strategy-tab-content").innerHTML = `<div class="summary-strip" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyTradesPanel(vis, metrics);
+      } else if (tab === "equity") {
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyEquityPanel(vis);
+      } else if (tab === "drawdown") {
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyDrawdownPanel(vis);
+      } else if (tab === "summary") {
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyEvaluationPanels(state.selectedStrategyOutput, vis);
+      } else {
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyDiagnostics();
+      }
+    }
+
+    function renderStrategyTradesPanel(vis, metrics) {
+      const markers = Array.isArray(vis.markers) ? vis.markers : [];
+      const markerRows = markers.map((marker) => [
+        formatTimestamp(marker.time),
+        marker.label || marker.kind || "operation",
+        marker.side || marker.kind || "n/a",
+        marker.price ?? "n/a",
+        marker.position ?? marker.exposure ?? "n/a",
+        marker.execution_timing || "n/a",
+      ]);
+      return `
+        <div class="summary-strip" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
           ${metricCell("Total trades", metrics.trades, "")}
           ${metricCell("Long", metrics.longTrades, "")}
           ${metricCell("Short", metrics.shortTrades, "")}
           ${metricCell("Win rate", metrics.winRate, "")}
           ${metricCell("Best trade", metrics.bestTrade, "")}
           ${metricCell("Worst trade", metrics.worstTrade, "")}
-        </div>`;
-      } else if (tab === "equity") {
-        const curve = Array.isArray(vis.equity_curve) ? vis.equity_curve : [];
-        document.querySelector("#strategy-tab-content").innerHTML = curve.length
-          ? `<svg viewBox="0 0 900 120" style="width:100%; height:120px;">${lineChartPath(curve.map((point) => point.net_equity ?? point.equity ?? point.value))}</svg>`
-          : `<div class="message">No equity curve is available for the selected backtest.</div>`;
-      } else {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyDiagnostics();
+        </div>
+        ${markerRows.length ? table(["Time", "Marker", "Side", "Price", "Exposure", "Execution"], markerRows) : `<div class="message">No strategy markers are available for the selected chart window.</div>`}`;
+    }
+
+    function renderStrategyEquityPanel(vis) {
+      const curve = Array.isArray(vis.equity_curve) ? vis.equity_curve : [];
+      const values = equityCurveValues(curve);
+      if (!values.length) {
+        return `<div class="message">No equity curve is available for the selected backtest.</div>`;
       }
+      return `
+        <div class="strategy-eval-chart">
+          <svg viewBox="0 0 900 140" role="img" aria-label="Equity curve">${lineChartPath(values)}</svg>
+        </div>
+        <div class="summary-strip" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+          ${metricCell("Start equity", formatNumber(values[0]), "")}
+          ${metricCell("Latest equity", formatNumber(values[values.length - 1]), "")}
+          ${metricCell("Points", values.length, "bounded")}
+          ${metricCell("Window", strategyChart.strategyWindowLabel(vis, displayTimezone), "")}
+        </div>`;
+    }
+
+    function renderStrategyDrawdownPanel(vis) {
+      const values = equityCurveValues(Array.isArray(vis.equity_curve) ? vis.equity_curve : []);
+      const drawdowns = drawdownValues(values);
+      if (!drawdowns.length) {
+        return `<div class="message">No drawdown data can be derived for the selected backtest.</div>`;
+      }
+      const worst = Math.min(...drawdowns);
+      return `
+        <div class="strategy-eval-chart drawdown">
+          <svg viewBox="0 0 900 140" role="img" aria-label="Drawdown curve">${lineChartPath(drawdowns)}</svg>
+        </div>
+        <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          ${metricCell("Worst drawdown", metricPercent(worst), "derived from bounded equity")}
+          ${metricCell("Points", drawdowns.length, "bounded")}
+          ${metricCell("Status", vis.status || "n/a", "")}
+        </div>`;
+    }
+
+    function renderStrategyEvaluationPanels(item, vis) {
+      const context = strategyEvaluationContext(item, vis);
+      if (!item && !context.hasEvidence) {
+        return `<div class="message">Select a backtest or run an experiment/optimization to inspect strategy evaluation evidence.</div>`;
+      }
+      return `
+        <div class="strategy-eval-grid">
+          ${strategyEvalPanel("Performance", renderPerformanceEvidence(item, context))}
+          ${strategyEvalPanel("Cost and Funding", renderCostFundingEvidence(item, vis))}
+          ${strategyEvalPanel("Gates", renderGateEvidence(context.gate))}
+          ${strategyEvalPanel("Lifecycle", renderLifecycleEvidence(context.lifecycle))}
+          ${strategyEvalPanel("Optimization", renderOptimizationEvidence(context.optimization))}
+          ${strategyEvalPanel("Walk-forward", renderWalkForwardEvidence(context))}
+          ${strategyEvalPanel("Warnings", renderWarningEvidence(item, context))}
+          ${strategyEvalPanel("Source refs", renderSourceEvidence(item, context))}
+        </div>`;
+    }
+
+    function strategyEvalPanel(title, body) {
+      return `<section class="strategy-eval-panel"><h3>${escapeHtml(title)}</h3>${body}</section>`;
+    }
+
+    function renderPerformanceEvidence(item, context) {
+      const evaluation = context.evaluation || {};
+      const strategy = evaluation.strategy_metrics || item?.fields?.metrics?.strategy_metrics || {};
+      const trade = evaluation.trade_summary || item?.fields?.metrics?.trade_summary || {};
+      const fallback = strategyMetrics(item);
+      const baseline = evaluation.baseline_metrics || item?.fields?.metrics?.baseline_metrics || {};
+      const relative = evaluation.relative_metrics || item?.fields?.metrics?.relative_metrics || {};
+      const totalReturn = strategyMetricPercent(strategy.net_return_pct ?? strategy.total_return_pct, fallback.totalReturn);
+      const drawdown = strategyMetricPercent(strategy.max_drawdown_pct, fallback.drawdown);
+      return `<div class="strategy-eval-kv">
+        ${detailRow("Status", item?.status || evaluation.status || "n/a")}
+        ${detailRow("Total return", totalReturn)}
+        ${detailRow("Max drawdown", drawdown)}
+        ${detailRow("Sharpe", text(strategy.sharpe_ratio ?? strategy.sharpe, fallback.sharpe))}
+        ${detailRow("Trades", trade.trade_count ?? fallback.trades)}
+        ${detailRow("Buy and hold", metricPercent(baseline.buy_and_hold_return_pct))}
+        ${detailRow("Excess return", metricPercent(relative.excess_return_vs_buy_and_hold_pct))}
+      </div>`;
+    }
+
+    function strategyMetricPercent(value, fallback) {
+      return Number.isFinite(Number(value)) ? metricPercent(value) : fallback;
+    }
+
+    function renderCostFundingEvidence(item, vis) {
+      const cost = item?.fields?.metrics?.cost_assumptions || {};
+      const fundingMarkers = (vis.markers || []).filter((marker) => marker.funding !== undefined || String(marker.kind || "").toLowerCase().includes("funding"));
+      return `<div class="strategy-eval-kv">
+        ${detailRow("Fees bps", cost.fees_bps)}
+        ${detailRow("Slippage bps", cost.slippage_bps)}
+        ${detailRow("Cost model", cost.cost_model_id || cost.model_id)}
+        ${detailRow("Funding markers", fundingMarkers.length)}
+        ${detailRow("Funding sample", fundingMarkers[0]?.funding ?? "n/a")}
+      </div>`;
+    }
+
+    function renderGateEvidence(gate) {
+      if (!gate) return `<div class="message">No gate outcome is available for the selected strategy context.</div>`;
+      return `<div class="strategy-eval-kv">
+        ${detailRow("Status", gate.status)}
+        ${detailRow("Strategy", gate.strategy_name)}
+        ${detailRow("Market", [gate.symbol, gate.timeframe].filter(Boolean).join(" "))}
+        ${detailRow("Reasons", (gate.reason_codes || []).join(", ") || "n/a")}
+      </div>`;
+    }
+
+    function renderLifecycleEvidence(lifecycle) {
+      if (!lifecycle) return `<div class="message">No lifecycle state is available for the selected strategy context.</div>`;
+      return `<div class="strategy-eval-kv">
+        ${detailRow("Lifecycle", lifecycle.lifecycle_status)}
+        ${detailRow("Degradation", lifecycle.degradation_state)}
+        ${detailRow("Health", lifecycle.health_state)}
+        ${detailRow("Retirement", lifecycle.retirement_state)}
+        ${detailRow("Parameter version", lifecycle.parameter_version)}
+      </div>`;
+    }
+
+    function renderOptimizationEvidence(optimization) {
+      if (!optimization) return `<div class="message">No optimization artifact is available for the selected strategy context.</div>`;
+      const fields = optimization.fields || {};
+      const candidate = fields.selected_candidate || {};
+      const params = candidate.params || {};
+      const rows = Object.entries(params).map(([name, value]) => [name, value]);
+      return `<div class="strategy-eval-kv">
+        ${detailRow("Status", optimization.status || fields.status)}
+        ${detailRow("Candidate", candidate.candidate_id)}
+        ${detailRow("Robustness", fields.robustness?.status)}
+        ${detailRow("Combinations", fields.search_space?.combination_count)}
+        ${detailRow("Succeeded", fields.coverage?.succeeded)}
+      </div>
+      ${rows.length ? table(["Parameter", "Selected value"], rows) : `<div class="message">No selected candidate params are recorded.</div>`}`;
+    }
+
+    function renderWalkForwardEvidence(context) {
+      const wf = context.optimization?.fields?.walk_forward || context.evaluation?.walk_forward || {};
+      if (!wf || !Object.keys(wf).length) return `<div class="message">No walk-forward evidence is available.</div>`;
+      const summary = wf.summary || {};
+      return `<div class="strategy-walkforward-card ${escapeHtml(statusClass(wf.status))}">
+        <strong>${escapeHtml(label(wf.status || "unknown"))}</strong>
+        <span>${escapeHtml(formatNumber(wf.window_count || summary.window_count || summary.succeeded_windows || 0))} windows</span>
+        <span>${escapeHtml(summary.result_stability || summary.stability || "stability n/a")}</span>
+      </div>`;
+    }
+
+    function renderWarningEvidence(item, context) {
+      const warnings = [
+        ...(item?.warnings || []),
+        ...(item?.visualization?.warnings || []),
+        ...(context.experiment?.warnings || []),
+        ...(context.optimization?.warnings || []),
+        ...(context.pipelineWarnings || []),
+      ].filter(Boolean);
+      if (!warnings.length) return `<div class="message">No warnings are recorded for the selected strategy context.</div>`;
+      return `<ul class="compact-list">${warnings.slice(0, 8).map((warning) => `<li class="compact-row">${escapeHtml(warning)}</li>`).join("")}</ul>`;
+    }
+
+    function renderSourceEvidence(item, context) {
+      const refs = unique([...(item?.source_artifacts || []), ...(context.sourceArtifacts || [])]);
+      if (!refs.length) return `<div class="message">No source refs are recorded for this strategy context.</div>`;
+      return `<ul class="compact-list">${refs.slice(0, 8).map((ref) => `<li class="compact-row">${escapeHtml(ref)}</li>`).join("")}</ul>`;
+    }
+
+    function equityCurveValues(curve) {
+      return curve.map((point) => Number(point.net_equity ?? point.equity ?? point.value)).filter(Number.isFinite);
+    }
+
+    function drawdownValues(values) {
+      let peak = -Infinity;
+      return values.map((value) => {
+        peak = Math.max(peak, value);
+        if (!Number.isFinite(peak) || peak === 0) return 0;
+        return (value - peak) / peak * 100;
+      });
+    }
+
+    function strategyEvaluationContext(item, vis) {
+      const identity = item ? strategyIdentity(item) : {
+        name: document.querySelector("#strategy-name")?.value || vis.strategy_name || "",
+        symbol: vis.symbol || document.querySelector("#strategy-symbol")?.value || "",
+        timeframe: vis.timeframe || document.querySelector("#strategy-timeframe")?.value || "",
+      };
+      const evaluationArtifact = pipelineArtifact("strategy_evaluation_summary");
+      const gateArtifact = pipelineArtifact("strategy_effectiveness_gates");
+      const lifecycleArtifact = pipelineArtifact("strategy_lifecycle_state");
+      const evaluation = matchingRecord(evaluationArtifact?.records?.records || [], identity);
+      const gate = matchingRecord(gateArtifact?.records?.gates || [], identity);
+      const lifecycle = matchingRecord(lifecycleArtifact?.records?.lifecycle || [], identity);
+      const experiment = matchingStandaloneExperiment(identity);
+      const optimization = matchingStandaloneOptimization(identity);
+      return {
+        identity,
+        evaluation,
+        gate,
+        lifecycle,
+        experiment,
+        optimization,
+        hasEvidence: Boolean(evaluation || gate || lifecycle || experiment || optimization),
+        pipelineWarnings: [
+          ...(evaluationArtifact?.warnings || []),
+          ...(gateArtifact?.warnings || []),
+          ...(lifecycleArtifact?.warnings || []),
+        ],
+        sourceArtifacts: [
+          ...(evaluationArtifact?.source_artifacts || []),
+          ...(gateArtifact?.source_artifacts || []),
+          ...(lifecycleArtifact?.source_artifacts || []),
+          ...(experiment?.source_artifacts || []),
+          ...(optimization?.source_artifacts || []),
+        ],
+      };
+    }
+
+    function pipelineArtifact(name) {
+      const artifacts = Array.isArray(state.strategies?.pipeline?.artifacts) ? state.strategies.pipeline.artifacts : [];
+      return artifacts.find((artifact) => artifact.name === name) || null;
+    }
+
+    function matchingRecord(records, identity) {
+      return records.find((record) => matchesStrategyIdentity(record, identity)) || null;
+    }
+
+    function matchingStandaloneExperiment(identity) {
+      const experiments = Array.isArray(state.strategies?.standalone?.experiments) ? state.strategies.standalone.experiments : [];
+      return experiments.find((experiment) => {
+        const candidates = experiment.records?.candidates || [];
+        return candidates.some((candidate) => !identity.name || candidate.strategy_name === identity.name);
+      }) || null;
+    }
+
+    function matchingStandaloneOptimization(identity) {
+      const optimizations = Array.isArray(state.strategies?.standalone?.optimizations) ? state.strategies.standalone.optimizations : [];
+      return optimizations.find((optimization) => !identity.name || optimization.fields?.strategy_name === identity.name) || null;
+    }
+
+    function matchesStrategyIdentity(record, identity) {
+      if (!record) return false;
+      return (!identity.name || !record.strategy_name || record.strategy_name === identity.name)
+        && (!identity.symbol || !record.symbol || record.symbol === identity.symbol)
+        && (!identity.timeframe || !record.timeframe || record.timeframe === identity.timeframe);
     }
 
     function renderStrategyDiagnostics() {

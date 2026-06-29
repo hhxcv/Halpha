@@ -470,8 +470,12 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert ".kline-panel" in css
     assert ".chart-wrap" in css
     assert ".chart-tooltip" in css
+    assert ".chart-tooltip-op-detail" in css
     assert ".candle-hit" in css
     assert ".candle-crosshair" in css
+    assert ".strategy-eval-grid" in css
+    assert ".strategy-eval-panel" in css
+    assert ".strategy-walkforward-card" in css
     assert 'id="backtest-chart"' in html
     assert "OHLCV candlestick chart" in html
     assert "OHLCV only" in script
@@ -495,7 +499,13 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "candle-hit" in script
     assert "candle-crosshair" in script
     assert "chart-tooltip" in script
+    assert "markerDetailRows" in script
+    assert "markerTone" in script
     assert "Operations" in script
+    assert "Cost and Funding" in script
+    assert "Walk-forward" in script
+    assert "renderStrategyEvaluationPanels" in script
+    assert "renderStrategyDrawdownPanel" in script
     assert "onwheel" in script
     assert "onpointerdown" in script
     assert "downloadSelectedOhlcv" not in html

@@ -291,9 +291,9 @@ those distinctions. Missing evidence must not be displayed as neutral evidence.
 Status: current Strategy Lab includes OHLCV shared-store review, collection
 controls, existing backtest, experiment, and optimization artifacts, reusable
 candlestick chart behavior, API-backed strategy action job submission for
-backtest, experiment, and optimization, and strategy-spec-backed workbench
-controls. Optimization visual analysis, comparison views, and advanced
-evaluation overlays are planned.
+backtest, experiment, and optimization, strategy-spec-backed workbench controls,
+bounded evaluation panels, and richer marker tooltips. Comparison views and
+advanced optimization visual analysis are planned.
 
 Purpose:
 
@@ -341,10 +341,10 @@ Visualization contract:
 - Candle hover details should include OHLCV and volume. Marker hover details
   should include strategy, side, exposure, transition, execution timing, costs,
   funding, warnings, and source refs where available.
-- Evaluation panels may show equity, drawdown, exposure, turnover, cost drag,
-  funding drag, benchmark comparison, parameter heatmaps or candidate tables,
-  walk-forward windows, gate outcomes, lifecycle state, warnings, and source
-  refs.
+- Evaluation panels show bounded equity, drawdown, marker/trade, cost/funding,
+  optimization candidate, walk-forward, gate, lifecycle, warning, and source-ref
+  evidence where artifacts provide it. Future panels may add richer exposure,
+  turnover, cost-drag, funding-drag, benchmark comparison, and heatmap views.
 - Empty, insufficient-data, degraded, and failed states must be visually
   distinct from successful evaluations.
 
