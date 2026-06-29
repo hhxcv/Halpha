@@ -78,6 +78,8 @@ Run the full pipeline:
 python -m halpha run --config config.example.yaml
 ```
 
+Full runs may require configured input sources and report-generation commands.
+
 Recommended first check:
 
 ```text
