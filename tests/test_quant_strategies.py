@@ -1578,6 +1578,127 @@ def test_signed_tsmom_trend_optional_funding_rate_filter_validates_params() -> N
         )
 
 
+def test_signed_tsmom_trend_optional_market_anomaly_filter_suppresses_exposure() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+    ]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 1,
+            "deadband_pct": 0.1,
+            "market_anomaly_filter_enabled": True,
+            "market_anomaly_filter_lookback_hours": 24.0,
+            "market_anomaly_filter_min_count": 1,
+        },
+        "event_features": {
+            "market_anomaly": {
+                "status": "available",
+                "records": [
+                    {
+                        "event_id": "anomaly:BTCUSDT:2026-06-02T12:00:00Z",
+                        "data_type": "market_anomaly",
+                        "event_time": "2026-06-02T12:00:00Z",
+                        "published_at": "2026-06-02T12:00:00Z",
+                        "collected_at": "2026-06-02T12:01:00Z",
+                        "first_seen_at": "2026-06-02T12:01:00Z",
+                        "source": "halpha_monitor_rules",
+                        "category": "volume_spike",
+                        "categories": ["market_anomaly", "volume_spike"],
+                        "class": "volume_spike",
+                        "severity": "high",
+                        "symbol": "BTCUSDT",
+                        "region": "",
+                        "title": "BTCUSDT volume spike",
+                        "summary": "BTCUSDT volume spike detected.",
+                        "keywords_text": "BTCUSDT volume spike",
+                        "quality": {"status": "available", "warnings": [], "errors": []},
+                        "source_artifacts": [],
+                    }
+                ],
+            }
+        },
+        "backtest": {"enabled": False},
+    }
+
+    strategy_run = definition.run(
+        strategy,
+        _view(rows),
+        rows,
+        engine=_engine(),
+        created_at="2026-06-03T00:00:00Z",
+    )
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["signals"]["latest_position_state"] == "flat"
+    assert strategy_run["signals"]["market_anomaly_filter"]["event_count"] == 1
+    assert strategy_run["signals"]["filter_suppression_reason"] == "event_count_at_or_above_min"
+    assert strategy_run["indicators"]["market_anomaly_filter_event_count"] == 1
+    assert strategy_run["warnings"][0]["code"] == "market_anomaly_filter_suppressed_signal"
+    assert (
+        signal_records["latest_record"]["indicator_context"]["market_anomaly_filter"]["suppression_reason"]
+        == "event_count_at_or_above_min"
+    )
+    json.dumps(strategy_run)
+    json.dumps(signal_records)
+
+
+def test_signed_tsmom_trend_optional_market_anomaly_filter_validates_params() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+    ]
+
+    with pytest.raises(ValueError, match="market_anomaly_filter_enabled must be a boolean"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "market_anomaly_filter_enabled": "yes",
+                },
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="market_anomaly_filter_lookback_hours must be a positive number"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "market_anomaly_filter_enabled": True,
+                    "market_anomaly_filter_lookback_hours": 0.0,
+                },
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="market_anomaly_filter_min_count must be a positive integer"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "market_anomaly_filter_enabled": True,
+                    "market_anomaly_filter_min_count": 0,
+                },
+            },
+            _view(rows),
+            rows,
+        )
+
+
 def test_sma_cross_long_short_signal_records_cover_long_short_flat_transitions() -> None:
     definition = get_strategy_definition("sma_cross_long_short")
     assert definition is not None

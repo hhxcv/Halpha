@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from ..derivatives_features import funding_rate_filter_contexts as derivatives_funding_rate_filter_contexts
+from ..event_features import event_count_filter_contexts
 from ..regime_filters import realized_volatility_filter_contexts
 from ..signal_records import insufficient_signed_strategy_signal_records, signed_strategy_signal_records
 from ..signed_strategy_support import signed_backtest_diagnostic, signed_transition_counts
@@ -175,6 +176,21 @@ def _params(raw: Any) -> dict[str, Any]:
                 ),
             }
         )
+    anomaly_filter_enabled = _bool(params.get("market_anomaly_filter_enabled", False), "market_anomaly_filter_enabled")
+    if anomaly_filter_enabled:
+        parsed.update(
+            {
+                "market_anomaly_filter_enabled": True,
+                "market_anomaly_filter_lookback_hours": _positive_number(
+                    params.get("market_anomaly_filter_lookback_hours", 24.0),
+                    "market_anomaly_filter_lookback_hours",
+                ),
+                "market_anomaly_filter_min_count": _positive_int(
+                    params.get("market_anomaly_filter_min_count", 1),
+                    "market_anomaly_filter_min_count",
+                ),
+            }
+        )
     return parsed
 
 
@@ -200,9 +216,14 @@ def _signal_state(
     base_target_exposure_series = _target_exposure_series(momentum_return, deadband_pct=deadband_pct)
     volatility_filter_contexts = _volatility_filter_contexts(close, view, params)
     funding_rate_filter_contexts = _funding_rate_filter_contexts(strategy, frame, params)
+    market_anomaly_filter_contexts = _market_anomaly_filter_contexts(strategy, frame, params)
     target_exposure_series = _apply_filters(
         base_target_exposure_series,
-        filter_context_groups=[volatility_filter_contexts, funding_rate_filter_contexts],
+        filter_context_groups=[
+            volatility_filter_contexts,
+            funding_rate_filter_contexts,
+            market_anomaly_filter_contexts,
+        ],
     )
     indicator_contexts = _signal_indicator_contexts(
         momentum_return,
@@ -210,6 +231,7 @@ def _signal_state(
         deadband_pct=deadband_pct,
         volatility_filter_contexts=volatility_filter_contexts,
         funding_rate_filter_contexts=funding_rate_filter_contexts,
+        market_anomaly_filter_contexts=market_anomaly_filter_contexts,
     )
     return {
         "frame": frame,
@@ -217,11 +239,13 @@ def _signal_state(
         "latest_close": float(close.iloc[-1]),
         "baseline_close": float(close.iloc[-return_window - 1]),
         "return_window_pct": float(momentum_return.iloc[-1]) * 100,
-        "filter_enabled": bool(volatility_filter_contexts or funding_rate_filter_contexts),
+        "filter_enabled": bool(volatility_filter_contexts or funding_rate_filter_contexts or market_anomaly_filter_contexts),
         "volatility_filter_contexts": volatility_filter_contexts,
         "funding_rate_filter_contexts": funding_rate_filter_contexts,
+        "market_anomaly_filter_contexts": market_anomaly_filter_contexts,
         "latest_volatility_filter": volatility_filter_contexts[-1] if volatility_filter_contexts else None,
         "latest_funding_rate_filter": funding_rate_filter_contexts[-1] if funding_rate_filter_contexts else None,
+        "latest_market_anomaly_filter": market_anomaly_filter_contexts[-1] if market_anomaly_filter_contexts else None,
         "target_exposure_series": target_exposure_series,
         "signal_records": signed_strategy_signal_records(
             strategy,
@@ -258,6 +282,7 @@ def _signal_indicator_contexts(
     deadband_pct: float,
     volatility_filter_contexts: list[dict[str, Any]],
     funding_rate_filter_contexts: list[dict[str, Any]],
+    market_anomaly_filter_contexts: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     contexts = []
     for position, (momentum_value, exposure) in enumerate(zip(momentum_return, target_exposure_series, strict=True)):
@@ -273,6 +298,8 @@ def _signal_indicator_contexts(
             context["volatility_filter"] = volatility_filter_contexts[position]
         if funding_rate_filter_contexts:
             context["funding_rate_filter"] = funding_rate_filter_contexts[position]
+        if market_anomaly_filter_contexts:
+            context["market_anomaly_filter"] = market_anomaly_filter_contexts[position]
         contexts.append(context)
     return contexts
 
@@ -311,6 +338,30 @@ def _funding_rate_feature_input(strategy: dict[str, Any]) -> dict[str, Any] | No
     if not isinstance(derivatives_features, dict):
         return None
     feature = derivatives_features.get("funding_rate")
+    return feature if isinstance(feature, dict) else None
+
+
+def _market_anomaly_filter_contexts(
+    strategy: dict[str, Any],
+    frame: pd.DataFrame,
+    params: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if params.get("market_anomaly_filter_enabled") is not True:
+        return []
+    return event_count_filter_contexts(
+        [str(item) for item in frame["open_time"].tolist()],
+        _market_anomaly_feature_input(strategy),
+        window_seconds=float(params["market_anomaly_filter_lookback_hours"]) * 3600,
+        min_event_count=int(params["market_anomaly_filter_min_count"]),
+        direction="lookback",
+    )
+
+
+def _market_anomaly_feature_input(strategy: dict[str, Any]) -> dict[str, Any] | None:
+    event_features = strategy.get("event_features")
+    if not isinstance(event_features, dict):
+        return None
+    feature = event_features.get("market_anomaly")
     return feature if isinstance(feature, dict) else None
 
 
@@ -356,6 +407,15 @@ def _filter_indicator_values(state: dict[str, Any]) -> dict[str, Any]:
                 "funding_rate_filter_max_abs_funding_rate": latest_funding_rate_filter.get("max_abs_funding_rate"),
             }
         )
+    latest_market_anomaly_filter = state.get("latest_market_anomaly_filter")
+    if isinstance(latest_market_anomaly_filter, dict):
+        values.update(
+            {
+                "market_anomaly_filter_status": latest_market_anomaly_filter.get("status"),
+                "market_anomaly_filter_event_count": latest_market_anomaly_filter.get("event_count"),
+                "market_anomaly_filter_min_count": latest_market_anomaly_filter.get("min_event_count"),
+            }
+        )
     return values
 
 
@@ -363,15 +423,20 @@ def _filter_signal_values(state: dict[str, Any]) -> dict[str, Any]:
     values = {}
     latest_volatility_filter = state.get("latest_volatility_filter")
     latest_funding_rate_filter = state.get("latest_funding_rate_filter")
+    latest_market_anomaly_filter = state.get("latest_market_anomaly_filter")
     if isinstance(latest_volatility_filter, dict):
         values["volatility_filter"] = latest_volatility_filter
     if isinstance(latest_funding_rate_filter, dict):
         values["funding_rate_filter"] = latest_funding_rate_filter
         values["funding_rate_filter_suppression_reason"] = latest_funding_rate_filter.get("suppression_reason")
+    if isinstance(latest_market_anomaly_filter, dict):
+        values["market_anomaly_filter"] = latest_market_anomaly_filter
+        values["market_anomaly_filter_suppression_reason"] = latest_market_anomaly_filter.get("suppression_reason")
     if values:
         values["filter_suppression_reason"] = _first_filter_suppression_reason(
             latest_volatility_filter,
             latest_funding_rate_filter,
+            latest_market_anomaly_filter,
         )
     return values
 
@@ -393,6 +458,14 @@ def _filter_evidence(state: dict[str, Any]) -> list[str]:
             f"{latest_funding_rate_filter.get('status')} with feature_value "
             f"{latest_funding_rate_filter.get('feature_value')} and max_abs_funding_rate "
             f"{latest_funding_rate_filter.get('max_abs_funding_rate')}."
+        )
+    latest_market_anomaly_filter = state.get("latest_market_anomaly_filter")
+    if isinstance(latest_market_anomaly_filter, dict):
+        evidence.append(
+            "market_anomaly_filter status is "
+            f"{latest_market_anomaly_filter.get('status')} with event_count "
+            f"{latest_market_anomaly_filter.get('event_count')} and min_event_count "
+            f"{latest_market_anomaly_filter.get('min_event_count')}."
         )
     return evidence
 
@@ -430,6 +503,25 @@ def _strategy_warnings(state: dict[str, Any]) -> list[dict[str, Any]]:
                     source="strategy_filter",
                 )
             )
+    latest_market_anomaly_filter = state.get("latest_market_anomaly_filter")
+    if isinstance(latest_market_anomaly_filter, dict):
+        reason = latest_market_anomaly_filter.get("suppression_reason")
+        if reason == "event_count_at_or_above_min":
+            warnings.append(
+                warning(
+                    "market_anomaly_filter_suppressed_signal",
+                    "Signed momentum exposure is suppressed because recent market anomaly count reached the configured minimum.",
+                    source="strategy_filter",
+                )
+            )
+        elif latest_market_anomaly_filter.get("suppressed") is True:
+            warnings.append(
+                warning(
+                    "market_anomaly_filter_unavailable",
+                    "Signed momentum exposure is suppressed because the market-anomaly event feature is unavailable.",
+                    source="strategy_filter",
+                )
+            )
     return warnings
 
 
@@ -441,7 +533,19 @@ def _first_filter_suppression_reason(*filters: Any) -> Any:
 
 
 def _input_uncertainty(state: dict[str, Any]) -> str:
-    if isinstance(state.get("latest_funding_rate_filter"), dict):
+    has_market_anomaly_filter = isinstance(state.get("latest_market_anomaly_filter"), dict)
+    has_funding_rate_filter = isinstance(state.get("latest_funding_rate_filter"), dict)
+    if has_market_anomaly_filter and has_funding_rate_filter:
+        return (
+            "Strategy uses OHLCV close prices, configured derivatives funding-rate feature input, "
+            "and configured event feature input; it excludes text-event semantic inference."
+        )
+    if has_market_anomaly_filter:
+        return (
+            "Strategy uses OHLCV close prices and configured event feature input; "
+            "it excludes text-event semantic inference."
+        )
+    if has_funding_rate_filter:
         return (
             "Strategy uses OHLCV close prices and configured derivatives funding-rate feature input; "
             "it excludes text events."

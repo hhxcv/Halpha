@@ -112,6 +112,8 @@ def test_registry_returns_complete_spec_records() -> None:
             assert record["supported_filters"][0]["required"] is False
             assert record["supported_features"][0]["feature_id"] == "derivatives_feature:funding_rate:funding_rate_v1"
             assert record["supported_features"][0]["time_alignment"] == "as_of_and_first_seen_no_lookahead"
+            assert record["supported_features"][1]["feature_id"] == "event_feature:market_anomaly:count_filter_v1"
+            assert record["supported_features"][1]["time_alignment"] == "event_time_and_first_seen_no_lookahead"
         else:
             assert record["supported_filters"] == []
             assert record["supported_features"] == []

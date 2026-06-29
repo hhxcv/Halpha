@@ -150,6 +150,9 @@ SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
         "max_realized_volatility_pct",
         "funding_rate_filter_enabled",
         "max_abs_funding_rate",
+        "market_anomaly_filter_enabled",
+        "market_anomaly_filter_lookback_hours",
+        "market_anomaly_filter_min_count",
     },
     "tsmom_vol_scaled": {"return_window", "volatility_window", "target_volatility"},
     "breakout_atr_trend": {"breakout_window", "exit_window", "atr_window"},
@@ -886,6 +889,16 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
             _require_bool(params, "funding_rate_filter_enabled", f"{path}.funding_rate_filter_enabled")
         if "max_abs_funding_rate" in params:
             _require_positive_number(params, "max_abs_funding_rate", f"{path}.max_abs_funding_rate")
+        if "market_anomaly_filter_enabled" in params:
+            _require_bool(params, "market_anomaly_filter_enabled", f"{path}.market_anomaly_filter_enabled")
+        if "market_anomaly_filter_lookback_hours" in params:
+            _require_positive_number(
+                params,
+                "market_anomaly_filter_lookback_hours",
+                f"{path}.market_anomaly_filter_lookback_hours",
+            )
+        if "market_anomaly_filter_min_count" in params:
+            _require_positive_int(params, "market_anomaly_filter_min_count", f"{path}.market_anomaly_filter_min_count")
     if name == "tsmom_vol_scaled":
         if "return_window" in params:
             _require_positive_int(params, "return_window", f"{path}.return_window")
@@ -1098,6 +1111,13 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
                 raise ConfigError(f"{path} must be a boolean.")
         if param_name == "max_abs_funding_rate":
             _require_positive_number_value(value, path)
+        if param_name == "market_anomaly_filter_enabled":
+            if not isinstance(value, bool):
+                raise ConfigError(f"{path} must be a boolean.")
+        if param_name == "market_anomaly_filter_lookback_hours":
+            _require_positive_number_value(value, path)
+        if param_name == "market_anomaly_filter_min_count":
+            _require_positive_int_value(value, path)
     if name == "tsmom_vol_scaled":
         if param_name in {"return_window", "volatility_window"}:
             _require_positive_int_value(value, path)
