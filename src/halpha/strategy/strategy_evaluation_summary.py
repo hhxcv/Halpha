@@ -18,6 +18,10 @@ from halpha.strategy.strategy_evaluation_material import (
     STRATEGY_EVALUATION_MATERIAL_ARTIFACT,
     render_strategy_evaluation_material,
 )
+from halpha.strategy.strategy_evaluation_history import (
+    STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+    register_report_strategy_evaluations,
+)
 from halpha.storage import resolve_runtime_path, write_json
 
 
@@ -77,7 +81,13 @@ def build_strategy_evaluation_summary(
     )
     run.manifest["artifacts"]["strategy_evaluation_summary"] = STRATEGY_EVALUATION_ARTIFACT
     run.manifest["artifacts"]["strategy_evaluation_material"] = STRATEGY_EVALUATION_MATERIAL_ARTIFACT
+    run.manifest["artifacts"]["strategy_evaluation_history"] = STRATEGY_EVALUATION_HISTORY_ARTIFACT
     run.manifest["counts"]["strategy_evaluation_material_records"] = len(records)
+    run.manifest["counts"]["strategy_evaluation_history_records_upserted"] = register_report_strategy_evaluations(
+        run,
+        artifact,
+        now=created_at,
+    )
     _record_manifest_counts(run, records)
     _record_manifest_summary(run, records, warnings=warnings, errors=errors)
     return [STRATEGY_EVALUATION_ARTIFACT, STRATEGY_EVALUATION_MATERIAL_ARTIFACT]

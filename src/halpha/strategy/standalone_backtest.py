@@ -9,6 +9,10 @@ from typing import Any
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
+from halpha.strategy.strategy_evaluation_history import (
+    STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+    register_standalone_strategy_backtest,
+)
 from halpha.storage import display_path, ensure_directory, resolve_runtime_path, runtime_root, write_json
 
 
@@ -128,7 +132,17 @@ def run_standalone_strategy_backtest(
         artifact_path=artifact_path,
         manifest_path=manifest_path,
     )
+    manifest["shared_artifacts"] = {"strategy_evaluation_history": STRATEGY_EVALUATION_HISTORY_ARTIFACT}
     write_json(manifest_path, manifest)
+    register_standalone_strategy_backtest(
+        config_path=config_path,
+        output_dir=target_dir,
+        manifest=manifest,
+        evaluation=evaluation,
+        artifact_path=artifact_path,
+        manifest_path=manifest_path,
+        now=clock_value,
+    )
 
     status = str(evaluation.get("status") or "failed")
     succeeded = status == "succeeded"
@@ -277,6 +291,7 @@ def _visualization_record(
         for marker in full_markers
         if str(marker["time"]) in visible_times
     ]
+    visible_markers = markers[:MAX_BACKTEST_VISUALIZATION_MARKERS]
     warnings = []
     if len(bars) < 2:
         warnings.append("Backtest visualization requires at least two OHLCV bars.")
@@ -291,7 +306,7 @@ def _visualization_record(
         "symbol": symbol,
         "timeframe": timeframe,
         "bars": visible_bars,
-        "markers": markers[:MAX_BACKTEST_VISUALIZATION_MARKERS],
+        "markers": visible_markers,
         "equity_curve": equity_curve,
         "limits": {
             "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
@@ -299,7 +314,7 @@ def _visualization_record(
         },
         "omitted": {
             "bars": max(0, len(bars) - len(visible_bars)),
-            "markers": max(0, len(markers) - MAX_BACKTEST_VISUALIZATION_MARKERS),
+            "markers": max(0, len(full_markers) - len(visible_markers)),
         },
         "warnings": warnings,
     }

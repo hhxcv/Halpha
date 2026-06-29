@@ -162,11 +162,17 @@ def test_ccxt_ohlcv_source_rejects_unsupported_source() -> None:
 
 
 def test_ccxt_ohlcv_source_maps_swap_symbol_and_monthly_timeframe() -> None:
+    captured_options: dict[str, Any] = {}
     exchange = _FakeExchange(
         {("BTC/USDT:USDT", "1M"): [_row("2026-05-01T00:00:00Z", 100)]},
         timeframes={"1M": "1M"},
     )
-    source = CCXTOHLCVSource("binance_usdm", exchange_factory=lambda options: exchange)
+
+    def factory(options: dict[str, Any]) -> _FakeExchange:
+        captured_options.update(options)
+        return exchange
+
+    source = CCXTOHLCVSource("binance_usdm", exchange_factory=factory)
 
     records = source.fetch_records(
         symbol="BTCUSDT",
@@ -174,6 +180,10 @@ def test_ccxt_ohlcv_source_maps_swap_symbol_and_monthly_timeframe() -> None:
         now="2026-06-02T00:00:00Z",
     )
 
+    assert captured_options == {
+        "enableRateLimit": True,
+        "options": {"defaultType": "swap", "fetchMarkets": {"types": ["linear"]}},
+    }
     assert exchange.calls == [
         {"symbol": "BTC/USDT:USDT", "timeframe": "1M", "since": None, "limit": None}
     ]

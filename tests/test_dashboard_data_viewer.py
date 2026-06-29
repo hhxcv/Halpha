@@ -163,6 +163,91 @@ def test_dashboard_data_viewer_preview_uses_query_boundaries(tmp_path: Path) -> 
     assert text["query"]["filter_diagnostics"]["as_of_excluded_record_count"] == 1
 
 
+def test_dashboard_data_viewer_ohlcv_preview_can_include_range_end(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _ohlcv_record(open_time="2026-06-01T00:00:00Z", close=101),
+            _ohlcv_record(open_time="2026-06-02T00:00:00Z", close=102),
+            _ohlcv_record(open_time="2026-06-03T00:00:00Z", close=103),
+        ]
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+    request = {
+        "data_type": "ohlcv",
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-06-03T00:00:00Z",
+        "limit": 10,
+    }
+
+    exclusive = client.post("/api/data/viewer/preview", json=request).json()
+    inclusive = client.post("/api/data/viewer/preview", json={**request, "end_inclusive": True}).json()
+
+    assert [record["open_time"] for record in exclusive["records"]] == [
+        "2026-06-01T00:00:00Z",
+        "2026-06-02T00:00:00Z",
+    ]
+    assert [record["open_time"] for record in inclusive["records"]] == [
+        "2026-06-01T00:00:00Z",
+        "2026-06-02T00:00:00Z",
+        "2026-06-03T00:00:00Z",
+    ]
+    assert exclusive["query"]["time_fields"]["end_inclusive"] is False
+    assert inclusive["query"]["time_fields"]["end_inclusive"] is True
+
+
+def test_dashboard_data_viewer_ohlcv_preview_supports_bounded_latest_lookback(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _ohlcv_record(open_time="2026-06-01T00:00:00Z", close=101),
+            _ohlcv_record(open_time="2026-06-02T00:00:00Z", close=102),
+            _ohlcv_record(open_time="2026-06-03T00:00:00Z", close=103),
+            _ohlcv_record(open_time="2026-06-04T00:00:00Z", close=104),
+        ]
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    latest = client.post(
+        "/api/data/viewer/preview",
+        json={
+            "data_type": "ohlcv",
+            "source": "binance",
+            "symbol": "BTCUSDT",
+            "timeframe": "1d",
+            "lookback": 2,
+        },
+    ).json()
+    too_wide = client.post(
+        "/api/data/viewer/preview",
+        json={
+            "data_type": "ohlcv",
+            "source": "binance",
+            "symbol": "BTCUSDT",
+            "timeframe": "1d",
+            "lookback": 361,
+        },
+    ).json()
+
+    assert latest["status"] == "ok"
+    assert latest["query"]["query_mode"] == "latest_lookback"
+    assert latest["query"]["requested_lookback"] == 2
+    assert [record["open_time"] for record in latest["records"]] == [
+        "2026-06-03T00:00:00Z",
+        "2026-06-04T00:00:00Z",
+    ]
+    assert latest["omitted"]["record_limit"] == 2
+    assert too_wide["status"] == "unsupported"
+    assert "less than or equal to 360" in too_wide["errors"][0]
+
+
 def test_dashboard_data_viewer_summary_uses_event_history_range_when_coverage_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

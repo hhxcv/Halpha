@@ -1093,19 +1093,19 @@
     }
 
     .strategy-backtest-controls {
-      grid-template-columns: 140px 130px 140px 120px 150px minmax(190px, 1fr) 130px auto;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     }
 
     .strategy-experiment-grid {
       display: grid;
-      grid-template-columns: minmax(180px, 0.4fr) minmax(260px, 1fr) minmax(220px, 0.8fr) auto;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 10px;
       align-items: end;
     }
 
     .strategy-optimize-grid {
       display: grid;
-      grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1fr) repeat(4, minmax(110px, 0.7fr)) minmax(180px, 0.8fr) auto;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 10px;
       align-items: end;
     }
@@ -1186,6 +1186,41 @@
 
     .strategy-choice-card input {
       margin-top: 3px;
+    }
+
+    .strategy-result-panel {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .strategy-result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .strategy-result-header strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .strategy-result-header span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .strategy-result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .strategy-result-messages {
+      min-width: 0;
     }
 
     .field label {
@@ -1425,6 +1460,7 @@
     .kline-panel {
       min-width: 0;
       min-height: 0;
+      align-self: start;
       overflow: hidden;
       background: #0d1b2a;
       color: #dbe7f3;
@@ -1479,8 +1515,8 @@
 
     .chart-wrap {
       position: relative;
-      min-height: 470px;
-      height: 52vh;
+      min-height: 360px;
+      height: clamp(360px, calc(100vh - 330px), 470px);
       padding: 0;
       background:
         linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
@@ -1657,8 +1693,12 @@
     .strategy-side {
       display: grid;
       gap: 12px;
+      align-self: start;
       align-content: start;
       min-width: 0;
+      max-height: calc(clamp(360px, calc(100vh - 330px), 470px) + 122px);
+      overflow-y: auto;
+      padding-right: 2px;
     }
 
     .kv-table {
@@ -3080,10 +3120,17 @@
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       }
 
+      .strategy-side {
+        max-height: none;
+        overflow-y: visible;
+        padding-right: 0;
+      }
+
       .strategy-controls,
       .strategy-experiment-grid,
       .strategy-optimize-grid,
       .strategy-spec-summary,
+      .strategy-result-grid,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,
@@ -3156,6 +3203,7 @@
       .strategy-experiment-grid,
       .strategy-optimize-grid,
       .strategy-spec-summary,
+      .strategy-result-grid,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,

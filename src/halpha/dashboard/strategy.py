@@ -14,6 +14,10 @@ from halpha.data.run_index import (
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
 from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
 from halpha.quant.registry import supported_strategy_specs
+from halpha.strategy.strategy_evaluation_history import (
+    STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+    read_strategy_evaluation_history,
+)
 from halpha.storage import (
     artifact_base as _artifact_base,
     read_json_object,
@@ -33,7 +37,7 @@ REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 MAX_SUMMARY_ITEMS = 20
 MAX_STANDALONE_RUNS = 50
 MAX_BACKTEST_VISUALIZATION_BARS = 120
-MAX_BACKTEST_VISUALIZATION_MARKERS = 80
+MAX_BACKTEST_VISUALIZATION_MARKERS = 1000
 MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS = 120
 MAX_WARNING_GROUPS = 12
 MAX_WARNING_GROUP_SOURCES = 5
@@ -57,23 +61,25 @@ def dashboard_strategy_research(
     selected_run = _selected_run(config_path, base=base, run_id=run_id)
     pipeline = _pipeline_strategy_section(selected_run, base=base)
     standalone = _standalone_strategy_section(config, config_path=config_path, base=base)
+    shared_history = _shared_strategy_history_section(config_path, base=base)
     source_artifacts = sorted(
         {
             artifact
-            for section in (pipeline, standalone)
+            for section in (pipeline, standalone, shared_history)
             for artifact in _string_list(section.get("source_artifacts"))
         }
     )
-    warnings = [*pipeline["warnings"], *standalone["warnings"]]
-    errors = [*pipeline["errors"], *standalone["errors"]]
+    warnings = [*pipeline["warnings"], *standalone["warnings"], *shared_history["warnings"]]
+    errors = [*pipeline["errors"], *standalone["errors"], *shared_history["errors"]]
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_strategy_research",
-        "status": _overall_status([pipeline["status"], standalone["status"]]),
+        "status": _overall_status([pipeline["status"], standalone["status"], shared_history["status"]]),
         "notice": STRATEGY_RESEARCH_NOTICE,
         "selected_run": selected_run["fields"],
         "pipeline": pipeline,
         "standalone": standalone,
+        "shared_history": shared_history,
         "commands": _strategy_command_options(config),
         "source_artifacts": source_artifacts,
         "warnings": warnings,
@@ -408,6 +414,73 @@ def _standalone_strategy_section(
         ],
         extra={"backtests": backtests, "experiments": experiments, "optimizations": optimizations},
     )
+
+
+def _shared_strategy_history_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    history = read_strategy_evaluation_history(config_path)
+    records = _list(history.get("records"))
+    backtests = [_shared_history_backtest(record, base=base) for record in records[:MAX_STANDALONE_RUNS]]
+    status = _normalize_status(str(history.get("status") or "missing"))
+    if records and status == "missing":
+        status = "available"
+    return _section(
+        "shared_strategy_evaluation_history",
+        status,
+        fields={
+            "history": STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+            "record_count": len(records),
+            "backtest_count": len(backtests),
+            "max_items": MAX_STANDALONE_RUNS,
+        },
+        source_artifacts=[STRATEGY_EVALUATION_HISTORY_ARTIFACT],
+        warnings=_messages(history.get("warnings")),
+        errors=_messages(history.get("errors")),
+        extra={"backtests": backtests},
+    )
+
+
+def _shared_history_backtest(record: Any, *, base: Path) -> dict[str, Any]:
+    item = _dict(record)
+    source_artifacts = _safe_source_artifacts(_string_list(item.get("source_artifacts")), base=base)
+    warnings = _messages(item.get("warnings"))
+    return {
+        "type": "strategy_backtest",
+        "status": _normalize_status(str(item.get("status") or "unknown")),
+        "output_dir": _shared_output_ref(item),
+        "fields": {
+            "created_at": item.get("created_at"),
+            "execution_source": _bounded_mapping(item.get("execution_source")),
+            "evaluation_id": item.get("evaluation_id"),
+            "strategy_name": item.get("strategy_name"),
+            "source": item.get("source"),
+            "symbol": item.get("symbol"),
+            "timeframe": item.get("timeframe"),
+            "input_window_start": item.get("input_window_start"),
+            "input_window_end": item.get("input_window_end"),
+            "latest_candle_time": item.get("latest_candle_time"),
+            "params": _bounded_mapping(item.get("params")),
+            "metrics": _backtest_metrics(_dict(item.get("metrics"))),
+        },
+        "records": {},
+        "visualization": _backtest_visualization(_dict(item)),
+        "source_artifacts": source_artifacts,
+        "warnings": warnings,
+        "warning_groups": _warning_groups(warnings, source_artifacts),
+        "errors": _messages(item.get("errors")),
+    }
+
+
+def _shared_output_ref(record: dict[str, Any]) -> str:
+    source = _dict(record.get("execution_source"))
+    return str(source.get("output_dir") or source.get("run_dir") or record.get("history_id") or "shared_history")
+
+
+def _safe_source_artifacts(values: list[str], *, base: Path) -> list[str]:
+    safe = []
+    for value in values:
+        path = _resolve_ref(value, base=base)
+        safe.append(_safe_ref(path, base=base))
+    return safe
 
 
 def _standalone_backtests(root: Path, *, base: Path) -> list[dict[str, Any]]:
@@ -857,8 +930,20 @@ def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
     bars = [item for item in bars if item]
     markers = [_bounded_marker(item) for item in _list(raw.get("markers"))]
     markers = [item for item in markers if item]
+    reconstructed_markers = _position_transition_markers(
+        artifact.get("equity_curve"),
+        raw_markers=markers,
+        execution_model=_dict(artifact.get("execution_model")),
+    )
+    if len(reconstructed_markers) > len(markers):
+        markers = reconstructed_markers
     equity_curve = [_bounded_equity_point(item) for item in _list(raw.get("equity_curve"))]
     equity_curve = [item for item in equity_curve if item]
+    visible_markers = markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:]
+    omitted = _bounded_mapping(raw.get("omitted"))
+    total_marker_count = len(markers) or _position_transition_marker_count(artifact.get("equity_curve"))
+    if total_marker_count:
+        omitted["markers"] = max(0, total_marker_count - len(visible_markers))
     return {
         "schema_version": raw.get("schema_version", 1),
         "chart_type": raw.get("chart_type", "candlestick_backtest"),
@@ -868,15 +953,92 @@ def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
         "symbol": raw.get("symbol"),
         "timeframe": raw.get("timeframe"),
         "bars": bars[-MAX_BACKTEST_VISUALIZATION_BARS:],
-        "markers": markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:],
+        "markers": visible_markers,
         "equity_curve": equity_curve[-MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS:],
         "limits": {
             "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
             "max_markers": MAX_BACKTEST_VISUALIZATION_MARKERS,
             "max_equity_points": MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS,
         },
-        "omitted": _bounded_mapping(raw.get("omitted")),
+        "omitted": omitted,
         "warnings": _messages(raw.get("warnings")),
+    }
+
+
+def _position_transition_marker_count(value: Any) -> int:
+    markers = 0
+    previous_position = 0.0
+    for point in _dict_items(value):
+        try:
+            position = float(point.get("position") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if position != previous_position:
+            markers += 1
+        previous_position = position
+    return markers
+
+
+def _position_transition_markers(
+    value: Any,
+    *,
+    raw_markers: list[dict[str, Any]],
+    execution_model: dict[str, Any],
+) -> list[dict[str, Any]]:
+    raw_by_time = {str(marker.get("time")): marker for marker in raw_markers if marker.get("time")}
+    execution_timing = execution_model.get("position_timing") or execution_model.get("execution_timing")
+    markers = []
+    previous_position = 0.0
+    for point in _dict_items(value):
+        try:
+            position = float(point.get("position") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if position == previous_position:
+            previous_position = position
+            continue
+        time = _equity_point_time(point)
+        if not time:
+            previous_position = position
+            continue
+        marker = _position_marker(time, previous_position=previous_position, position=position)
+        if execution_timing:
+            marker["execution_timing"] = execution_timing
+        raw_marker = raw_by_time.get(str(time), {})
+        for key in ("price", "cost", "funding", "source_ref"):
+            if raw_marker.get(key) is not None:
+                marker[key] = raw_marker[key]
+        if raw_marker.get("warnings"):
+            marker["warnings"] = raw_marker["warnings"]
+        markers.append(_bounded_marker(marker))
+        previous_position = position
+    return [marker for marker in markers if marker]
+
+
+def _equity_point_time(point: dict[str, Any]) -> Any:
+    return point.get("time") or point.get("open_time") or point.get("timestamp")
+
+
+def _position_marker(time: Any, *, previous_position: float, position: float) -> dict[str, Any]:
+    if position == 0:
+        side = "long" if previous_position > 0 else "short"
+        label = "Sell" if previous_position > 0 else "Cover"
+        kind = "exit"
+    elif previous_position == 0:
+        side = "long" if position > 0 else "short"
+        label = "Long" if position > 0 else "Short"
+        kind = "entry"
+    else:
+        side = "long" if position > 0 else "short"
+        label = "Long" if position > 0 else "Short"
+        kind = "rebalance"
+    return {
+        "time": time,
+        "kind": kind,
+        "label": label,
+        "side": side,
+        "position": position,
+        "exposure": abs(position),
     }
 
 
@@ -919,7 +1081,7 @@ def _bounded_equity_point(value: Any) -> dict[str, Any]:
     if not item:
         return {}
     return {
-        "time": item.get("time"),
+        "time": _equity_point_time(item),
         "net_equity": item.get("net_equity"),
         "gross_equity": item.get("gross_equity"),
         "position": item.get("position"),

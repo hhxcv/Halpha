@@ -84,6 +84,54 @@ def test_pipeline_collects_binance_market_data_and_writes_raw_artifact(tmp_path:
     assert _task(manifest, "collect_market_data")["artifacts"] == ["raw/market.json"]
 
 
+def test_pipeline_collects_binance_usdm_market_data_for_perpetual_default(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path, source="binance_usdm")
+    config = load_config(config_path)
+    requested_urls: list[str] = []
+
+    def fake_urlopen(request, timeout):
+        requested_urls.append(request.full_url)
+        return _FakeResponse(
+            {
+                "symbol": "BTCUSDT",
+                "lastPrice": "68100.00",
+                "priceChangePercent": "1.50",
+                "volume": "223.45",
+                "quoteVolume": "15224000.00",
+                "closeTime": _millis(datetime(2026, 6, 5, 0, 30, tzinfo=timezone.utc)),
+            }
+        )
+
+    monkeypatch.setattr("halpha.collectors.market.urlopen", fake_urlopen)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers={"collect_text_events": _failed_text_stage},
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "collect_text_events"
+    assert requested_urls == [
+        "https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BTCUSDT"
+    ]
+
+    raw = json.loads((result.run.raw_dir / "market.json").read_text(encoding="utf-8"))
+    assert raw["source"] == {
+        "name": "binance_usdm",
+        "url": "https://fapi.binance.com",
+    }
+    assert raw["errors"] == []
+    assert raw["items"][0]["id"] == "market:binance_usdm:BTCUSDT:2026-06-05T00:30:00Z"
+    assert raw["items"][0]["source"] == {
+        "name": "binance_usdm",
+        "url": "https://fapi.binance.com",
+    }
+
+
 def test_market_collection_failure_writes_error_artifact_without_fake_records(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -168,7 +216,7 @@ def test_market_collection_uses_configured_proxy(tmp_path: Path, monkeypatch) ->
     ]
 
 
-def _write_config(tmp_path: Path, *, proxy_url: str | None = None) -> Path:
+def _write_config(tmp_path: Path, *, proxy_url: str | None = None, source: str = "binance") -> Path:
     proxy_block = ""
     if proxy_url is not None:
         proxy_block = f"""
@@ -184,7 +232,7 @@ run:
   timezone: Asia/Shanghai
 market:
   enabled: true
-  source: binance
+  source: {source}
 {proxy_block.rstrip()}
   symbols:
     - BTCUSDT

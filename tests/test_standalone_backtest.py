@@ -54,6 +54,12 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
     manifest_path = run_dirs[0] / "manifest.json"
     backtest = json.loads(artifact.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    history = json.loads(
+        (tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    history_record = history["records"][0]
 
     assert exit_code == 0
     assert "Halpha backtest succeeded." in output
@@ -87,6 +93,16 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
         "manifest": "manifest.json",
         "strategy_backtest": "strategy_backtest.json",
     }
+    assert manifest["shared_artifacts"] == {
+        "strategy_evaluation_history": "data/research/strategy_evaluations/strategy_evaluation_history.json"
+    }
+    assert history["artifact_type"] == "strategy_evaluation_history"
+    assert history_record["execution_source"]["type"] == "standalone_backtest"
+    assert history_record["strategy_name"] == "tsmom_vol_scaled"
+    assert history_record["symbol"] == "BTCUSDT"
+    assert history_record["timeframe"] == "1d"
+    assert history_record["metrics"]["strategy_metrics"]["net_return_pct"] == backtest["strategy_metrics"]["net_return_pct"]
+    assert history_record["visualization"]["chart_type"] == "candlestick_backtest"
 
 
 def test_cli_backtest_reports_missing_history(
@@ -222,6 +238,7 @@ def test_backtest_visualization_does_not_create_entry_marker_after_chart_truncat
 
     assert len(visualization["bars"]) == 120
     assert visualization["omitted"]["bars"] == 10
+    assert visualization["omitted"]["markers"] == 1
     assert visualization["markers"] == []
 
 
@@ -262,6 +279,45 @@ def test_backtest_visualization_prefers_window_with_completed_trade_markers() ->
         rows[24]["open_time"],
         rows[48]["open_time"],
     ]
+    assert visualization["omitted"]["markers"] == 0
+
+
+def test_backtest_visualization_counts_operation_markers_omitted_by_chart_window() -> None:
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    rows = [
+        _record(
+            open_time=(start + timedelta(days=index)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            close=100 + index,
+        )
+        for index in range(180)
+    ]
+    equity_curve = []
+    for index, row in enumerate(rows):
+        position = 1.0 if 20 <= index < 32 or 168 <= index < 176 else 0.0
+        equity_curve.append(
+            {
+                "open_time": row["open_time"],
+                "net_equity": 1 + index * 0.001,
+                "position": position,
+                "turnover": 1.0 if index in {20, 32, 168, 176} else 0.0,
+            }
+        )
+
+    visualization = _visualization_record(
+        rows=rows,
+        evaluation={"equity_curve": equity_curve},
+        strategy_name="tsmom_vol_scaled",
+        source="binance",
+        symbol="BTCUSDT",
+        timeframe="1d",
+    )
+
+    assert len(visualization["bars"]) == 120
+    assert [marker["time"] for marker in visualization["markers"]] == [
+        rows[168]["open_time"],
+        rows[176]["open_time"],
+    ]
+    assert visualization["omitted"]["markers"] == 2
 
 
 def _write_config(tmp_path: Path) -> Path:

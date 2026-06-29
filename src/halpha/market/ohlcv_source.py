@@ -64,8 +64,8 @@ OHLCV_SOURCE_SPECS = {
     "binance_usdm": OHLCVSourceSpec(
         exchange_id="binance",
         market_type="swap",
-        default_type="future",
-        fetch_market_types=("future",),
+        default_type="swap",
+        fetch_market_types=("linear",),
     ),
     "okx_spot": OHLCVSourceSpec(exchange_id="okx", market_type="spot", default_type="spot"),
     "okx_swap": OHLCVSourceSpec(exchange_id="okx", market_type="swap", default_type="swap"),
