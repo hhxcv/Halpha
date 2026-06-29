@@ -1077,7 +1077,7 @@ Validation contract:
 - The product of grid value counts for each configured strategy must be less than or equal to `quant.parameter_diagnostics.max_combinations`.
 - Parameter diagnostics may record runtime-invalid combinations, such as combinations with insufficient input data, without failing the whole strategy run.
 - `quant.effectiveness_gates` may be omitted. If present, it must be a mapping of deterministic gate threshold overrides.
-- `quant.effectiveness_gates` supports only explicit threshold fields for benchmark coverage, performance, baseline comparison, drawdown, cost drag, trade count, sample rows, walk-forward evidence, parameter performance-stability requirement, and overfitting-risk downgrade behavior.
+- `quant.effectiveness_gates` supports only explicit threshold fields for benchmark coverage, performance, baseline comparison, drawdown, cost drag, turnover, funding drag, gross exposure, trade count, sample rows, walk-forward evidence, parameter performance-stability requirement, and overfitting-risk downgrade behavior.
 - Unknown `quant.effectiveness_gates` fields must fail config validation so gate threshold typos are not silently ignored.
 - Strategy-level `backtest.initial_cash` must be a positive number when present.
 - Strategy-level `backtest.fees_bps` and `backtest.slippage_bps` must be non-negative numbers when present.
@@ -2573,12 +2573,12 @@ Gate record rules:
 
 - One gate record must exist for every evaluated strategy candidate.
 - `status` must be one of `effective`, `watchlisted`, `rejected`, or `insufficient_evidence`.
-- Gate inputs must preserve benchmark coverage, net performance, buy-and-hold comparison, cost drag, drawdown, trade count, sample quality, bounded walk-forward stability, parameter signal-state stability, parameter performance stability, overfitting risk, warnings, and source artifacts.
+- Gate inputs must preserve benchmark coverage, net performance, buy-and-hold comparison, cost drag, drawdown, trade count, sample quality, bounded walk-forward stability, parameter signal-state stability, parameter performance stability, overfitting risk, position-model evidence, futures risk, multi-leg quality, feature availability, optimization robustness, warnings, and source artifacts.
 - Gate reasons must explicitly record pass, block, reject, downgrade, or informational reasons with observed values and thresholds.
 - Single-window profit alone must not produce `effective` status.
-- Insufficient samples, insufficient benchmarks, insufficient walk-forward evidence, or low trade count may produce `insufficient_evidence`.
+- Insufficient samples, insufficient benchmarks, insufficient walk-forward evidence, low trade count, misaligned multi-leg evidence, insufficient event or feature evidence, or failed optimization robustness evidence may produce `insufficient_evidence`.
 - Weak net performance, weak baseline comparison, or excessive drawdown may produce `rejected`.
-- Excessive cost drag, unstable walk-forward evidence, fragile parameter performance stability, or elevated overfitting risk may produce `watchlisted`.
+- Excessive cost drag, high turnover, excessive funding drag, missing funding evidence, weak short-side contribution, degraded multi-leg alignment, partial event or feature coverage, unstable walk-forward evidence, fragile parameter performance stability, fragile or overfit-risk optimization robustness, or elevated overfitting risk may produce `watchlisted`.
 - Gate outcomes must be deterministic and derived from Halpha-owned JSON artifacts, not Codex or another LLM.
 - Gate thresholds may be configured under `quant.effectiveness_gates`; omitted fields use conservative defaults.
 

@@ -19,6 +19,9 @@ DEFAULT_GATE_THRESHOLDS = {
     "min_positive_excess_return_benchmark_pct": 50.0,
     "max_abs_drawdown_pct": 35.0,
     "max_cost_drag_pct": 1.0,
+    "max_turnover": 10.0,
+    "max_abs_funding_drag_pct": 1.0,
+    "max_average_gross_exposure_pct": 150.0,
     "min_total_trade_count": 3,
     "min_min_sample_rows": 60,
     "min_walk_forward_succeeded_windows": 3,
@@ -116,6 +119,18 @@ def effectiveness_gate_thresholds(config: dict[str, Any]) -> dict[str, Any]:
             thresholds["max_cost_drag_pct"],
             "max_cost_drag_pct",
         ),
+        "max_turnover": _non_negative_number(
+            thresholds["max_turnover"],
+            "max_turnover",
+        ),
+        "max_abs_funding_drag_pct": _non_negative_number(
+            thresholds["max_abs_funding_drag_pct"],
+            "max_abs_funding_drag_pct",
+        ),
+        "max_average_gross_exposure_pct": _non_negative_number(
+            thresholds["max_average_gross_exposure_pct"],
+            "max_average_gross_exposure_pct",
+        ),
         "min_total_trade_count": _positive_int(
             thresholds["min_total_trade_count"],
             "min_total_trade_count",
@@ -191,6 +206,7 @@ def _gate_inputs(candidate: dict[str, Any], *, thresholds: dict[str, Any]) -> di
     benchmark_records = len(evaluations)
     benchmark_succeeded = len(succeeded)
     benchmark_success_rate = _pct(benchmark_succeeded / benchmark_records) if benchmark_records else None
+    advanced = _advanced_gate_inputs(candidate, evaluations=succeeded)
     inputs = {
         "candidate_status": candidate.get("status"),
         "benchmark_coverage": {
@@ -226,6 +242,11 @@ def _gate_inputs(candidate: dict[str, Any], *, thresholds: dict[str, Any]) -> di
         },
         "walk_forward_stability": _walk_forward_inputs(succeeded),
         "parameter_stability": _parameter_stability(candidate),
+        "position_model": advanced["position_model"],
+        "futures_risk": advanced["futures_risk"],
+        "multi_leg_quality": advanced["multi_leg_quality"],
+        "feature_availability": advanced["feature_availability"],
+        "optimization_robustness": advanced["optimization_robustness"],
     }
     inputs["overfitting_risk"] = _overfitting_risk(inputs, candidate, thresholds=thresholds)
     return inputs
@@ -436,7 +457,173 @@ def _gate_reasons(inputs: dict[str, Any], *, thresholds: dict[str, Any]) -> list
             "low",
         )
 
+    _add_advanced_reasons(reasons, inputs, thresholds=thresholds)
     return reasons
+
+
+def _add_advanced_reasons(
+    reasons: list[dict[str, Any]],
+    inputs: dict[str, Any],
+    *,
+    thresholds: dict[str, Any],
+) -> None:
+    futures = _mapping(inputs.get("futures_risk"))
+    if int(futures.get("records_with_futures_diagnostics") or 0):
+        funding_statuses = _mapping(futures.get("funding_status_counts"))
+        missing_funding_statuses = {
+            "degraded",
+            "failed",
+            "insufficient_data",
+            "not_provided",
+            "partial",
+            "stale",
+            "unavailable",
+        }
+        if any(int(funding_statuses.get(status) or 0) for status in missing_funding_statuses):
+            _add_reason(
+                reasons,
+                "missing_funding_evidence",
+                "downgrade",
+                "Futures evaluation has missing or degraded funding evidence.",
+                funding_statuses,
+                "available",
+            )
+        max_funding_drag = _number_or_none(futures.get("max_abs_funding_drag_pct"))
+        if max_funding_drag is not None and max_funding_drag > thresholds["max_abs_funding_drag_pct"]:
+            _add_reason(
+                reasons,
+                "excessive_funding_drag",
+                "downgrade",
+                "Futures funding drag is high enough to block effective status.",
+                max_funding_drag,
+                thresholds["max_abs_funding_drag_pct"],
+            )
+        max_gross_exposure = _number_or_none(futures.get("max_average_gross_exposure_pct"))
+        if max_gross_exposure is not None and max_gross_exposure > thresholds["max_average_gross_exposure_pct"]:
+            _add_reason(
+                reasons,
+                "excessive_gross_exposure",
+                "downgrade",
+                "Futures average gross exposure exceeds the gate threshold.",
+                max_gross_exposure,
+                thresholds["max_average_gross_exposure_pct"],
+            )
+        max_turnover = _number_or_none(futures.get("max_turnover"))
+        if max_turnover is not None and max_turnover > thresholds["max_turnover"]:
+            _add_reason(
+                reasons,
+                "high_advanced_turnover",
+                "downgrade",
+                "Advanced strategy turnover exceeds the gate threshold.",
+                max_turnover,
+                thresholds["max_turnover"],
+            )
+        short_time = _number_or_none(futures.get("max_short_time_pct"))
+        short_contribution = _number_or_none(futures.get("min_short_gross_contribution_pct"))
+        if short_time is not None and short_time > 0 and short_contribution is not None and short_contribution < 0:
+            _add_reason(
+                reasons,
+                "weak_short_side_contribution",
+                "downgrade",
+                "Short-side exposure contributed negative gross return in futures diagnostics.",
+                short_contribution,
+                0.0,
+            )
+
+    multi_leg = _mapping(inputs.get("multi_leg_quality"))
+    if int(multi_leg.get("records_with_multi_leg_evaluation") or 0):
+        alignment_statuses = _mapping(multi_leg.get("alignment_status_counts"))
+        failed_alignment = any(
+            int(alignment_statuses.get(status) or 0)
+            for status in ("failed", "insufficient_data", "not_aligned")
+        )
+        degraded_alignment = any(
+            int(alignment_statuses.get(status) or 0)
+            for status in ("degraded", "partial")
+        )
+        if failed_alignment:
+            _add_reason(
+                reasons,
+                "misaligned_multi_leg_evidence",
+                "block",
+                "Multi-leg evaluation does not have enough aligned leg evidence.",
+                alignment_statuses,
+                "aligned",
+            )
+        elif degraded_alignment or int(multi_leg.get("max_alignment_omitted_rows") or 0) > 0:
+            _add_reason(
+                reasons,
+                "degraded_multi_leg_alignment",
+                "downgrade",
+                "Multi-leg evaluation omitted rows during leg alignment.",
+                multi_leg.get("max_alignment_omitted_rows"),
+                0,
+            )
+        max_multi_leg_turnover = _number_or_none(multi_leg.get("max_turnover"))
+        if max_multi_leg_turnover is not None and max_multi_leg_turnover > thresholds["max_turnover"]:
+            _add_reason(
+                reasons,
+                "high_advanced_turnover",
+                "downgrade",
+                "Advanced strategy turnover exceeds the gate threshold.",
+                max_multi_leg_turnover,
+                thresholds["max_turnover"],
+            )
+        max_multi_leg_gross = _number_or_none(multi_leg.get("max_average_gross_exposure_pct"))
+        if max_multi_leg_gross is not None and max_multi_leg_gross > thresholds["max_average_gross_exposure_pct"]:
+            _add_reason(
+                reasons,
+                "excessive_gross_exposure",
+                "downgrade",
+                "Multi-leg average gross exposure exceeds the gate threshold.",
+                max_multi_leg_gross,
+                thresholds["max_average_gross_exposure_pct"],
+            )
+
+    feature = _mapping(inputs.get("feature_availability"))
+    if int(feature.get("records_with_feature_availability") or 0):
+        status_counts = _mapping(feature.get("status_counts"))
+        insufficient_statuses = {"failed", "insufficient_data", "unavailable"}
+        degraded_statuses = {"degraded", "partial", "skipped", "stale"}
+        if any(int(status_counts.get(status) or 0) for status in insufficient_statuses):
+            _add_reason(
+                reasons,
+                "event_feature_insufficient_evidence",
+                "block",
+                "Event or feature input evidence is unavailable or insufficient.",
+                status_counts,
+                "succeeded",
+            )
+        elif any(int(status_counts.get(status) or 0) for status in degraded_statuses):
+            _add_reason(
+                reasons,
+                "event_feature_coverage_gap",
+                "downgrade",
+                "Event or feature input evidence is partial, stale, or degraded.",
+                status_counts,
+                "succeeded",
+            )
+
+    optimization = _mapping(inputs.get("optimization_robustness"))
+    optimization_status = str(optimization.get("status") or "not_available")
+    if optimization_status in {"failed", "insufficient_data"}:
+        _add_reason(
+            reasons,
+            "optimization_robustness_insufficient",
+            "block",
+            "Optimization robustness evidence is unavailable or failed.",
+            optimization_status,
+            "robust",
+        )
+    elif optimization_status in {"fragile", "overfit_risk"}:
+        _add_reason(
+            reasons,
+            "optimization_robustness_not_robust",
+            "downgrade",
+            "Optimization walk-forward robustness is not robust.",
+            optimization_status,
+            "robust",
+        )
 
 
 def _gate_status(reasons: list[dict[str, Any]]) -> str:
@@ -448,6 +635,231 @@ def _gate_status(reasons: list[dict[str, Any]]) -> str:
     if "downgrade" in severities:
         return "watchlisted"
     return "effective"
+
+
+def _advanced_gate_inputs(candidate: dict[str, Any], *, evaluations: list[dict[str, Any]]) -> dict[str, Any]:
+    single_windows = [
+        _mapping(evaluation.get("single_window"))
+        for evaluation in evaluations
+        if isinstance(evaluation.get("single_window"), dict)
+    ]
+    multi_leg_records = _multi_leg_records(candidate, evaluations)
+    futures_records = [
+        _mapping(record.get("futures_diagnostics"))
+        for record in single_windows
+        if isinstance(record.get("futures_diagnostics"), dict)
+    ]
+    execution_model_ids = _execution_model_ids(single_windows, multi_leg_records)
+    feature_records = _feature_availability_records(candidate, evaluations, single_windows, multi_leg_records)
+    return {
+        "position_model": {
+            "signed_single_leg": _has_signed_single_leg(single_windows),
+            "multi_leg": bool(multi_leg_records),
+            "execution_model_ids": execution_model_ids,
+        },
+        "futures_risk": _futures_risk_inputs(futures_records),
+        "multi_leg_quality": _multi_leg_quality_inputs(multi_leg_records),
+        "feature_availability": _feature_availability_inputs(feature_records),
+        "optimization_robustness": _optimization_robustness(candidate),
+    }
+
+
+def _execution_model_ids(single_windows: list[dict[str, Any]], multi_leg_records: list[dict[str, Any]]) -> list[str]:
+    values = []
+    for record in [*single_windows, *multi_leg_records]:
+        model = _mapping(record.get("execution_model"))
+        model_id = model.get("execution_model_id")
+        if isinstance(model_id, str) and model_id:
+            values.append(model_id)
+    return sorted(set(values))
+
+
+def _has_signed_single_leg(single_windows: list[dict[str, Any]]) -> bool:
+    for record in single_windows:
+        model = _mapping(record.get("execution_model"))
+        model_id = str(model.get("execution_model_id") or "")
+        trade = _mapping(record.get("trade_summary"))
+        diagnostics = _mapping(record.get("futures_diagnostics"))
+        exposure = _mapping(diagnostics.get("exposure"))
+        if "signed" in model_id:
+            return True
+        if any(key in trade for key in ("long_trade_count", "short_trade_count", "side_flip_count")):
+            return True
+        if _number_or_none(exposure.get("short_time_pct")) is not None:
+            return True
+    return False
+
+
+def _futures_risk_inputs(records: list[dict[str, Any]]) -> dict[str, Any]:
+    funding_records = [_mapping(record.get("funding")) for record in records if isinstance(record.get("funding"), dict)]
+    exposure_records = [_mapping(record.get("exposure")) for record in records if isinstance(record.get("exposure"), dict)]
+    contribution_records = [
+        _mapping(record.get("contribution"))
+        for record in records
+        if isinstance(record.get("contribution"), dict)
+    ]
+    turnover_records = [_mapping(record.get("turnover")) for record in records if isinstance(record.get("turnover"), dict)]
+    funding_drags = [
+        value
+        for value in (_number_or_none(record.get("funding_drag_pct")) for record in funding_records)
+        if value is not None
+    ]
+    return {
+        "records_with_futures_diagnostics": len(records),
+        "status_counts": _status_counts(records),
+        "funding_status_counts": _status_counts(funding_records),
+        "max_average_gross_exposure_pct": _max_number(
+            _number_or_none(record.get("average_gross_exposure_pct")) for record in exposure_records
+        ),
+        "max_short_time_pct": _max_number(
+            _number_or_none(record.get("short_time_pct")) for record in exposure_records
+        ),
+        "min_short_gross_contribution_pct": _min_number(
+            _number_or_none(record.get("short_gross_contribution_pct")) for record in contribution_records
+        ),
+        "max_abs_funding_drag_pct": max((abs(value) for value in funding_drags), default=None),
+        "max_turnover": _max_number(_number_or_none(record.get("total_turnover")) for record in turnover_records),
+        "warning_codes": _warning_codes(records),
+    }
+
+
+def _multi_leg_records(candidate: dict[str, Any], evaluations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    records = []
+    for value in [
+        candidate.get("multi_leg_evaluation"),
+        candidate.get("multi_leg"),
+        *_multi_leg_values(evaluations),
+    ]:
+        if isinstance(value, dict):
+            if value.get("record_type") == "multi_leg_backtest" or "alignment" in value or "leg_summaries" in value:
+                records.append(value)
+        elif isinstance(value, list):
+            records.extend(item for item in value if isinstance(item, dict))
+    return records
+
+
+def _multi_leg_values(evaluations: list[dict[str, Any]]) -> list[Any]:
+    values = []
+    for evaluation in evaluations:
+        values.extend(
+            [
+                evaluation.get("multi_leg_evaluation"),
+                evaluation.get("multi_leg"),
+            ]
+        )
+        if evaluation.get("record_type") == "multi_leg_backtest":
+            values.append(evaluation)
+    return values
+
+
+def _multi_leg_quality_inputs(records: list[dict[str, Any]]) -> dict[str, Any]:
+    alignments = [_mapping(record.get("alignment")) for record in records if isinstance(record.get("alignment"), dict)]
+    metrics = [
+        _mapping(record.get("strategy_metrics"))
+        for record in records
+        if isinstance(record.get("strategy_metrics"), dict)
+    ]
+    return {
+        "records_with_multi_leg_evaluation": len(records),
+        "status_counts": _status_counts(records),
+        "alignment_status_counts": _status_counts(alignments),
+        "max_alignment_omitted_rows": max((_alignment_omitted_rows(item) for item in alignments), default=0),
+        "max_average_gross_exposure_pct": _max_number(
+            _exposure_as_pct(_number_or_none(item.get("average_gross_exposure"))) for item in metrics
+        ),
+        "max_abs_average_net_exposure_pct": _max_number(
+            abs(value)
+            for value in (
+                _exposure_as_pct(_number_or_none(item.get("average_net_exposure"))) for item in metrics
+            )
+            if value is not None
+        ),
+        "max_turnover": _max_number(_number_or_none(item.get("turnover")) for item in metrics),
+        "warning_codes": _warning_codes(records),
+    }
+
+
+def _alignment_omitted_rows(alignment: dict[str, Any]) -> int:
+    omitted = alignment.get("omitted_rows")
+    if isinstance(omitted, list):
+        return sum(int(item.get("omitted_rows") or 0) for item in omitted if isinstance(item, dict))
+    return 0
+
+
+def _feature_availability_records(
+    candidate: dict[str, Any],
+    evaluations: list[dict[str, Any]],
+    single_windows: list[dict[str, Any]],
+    multi_leg_records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    records = []
+    for owner in [candidate, *evaluations, *single_windows, *multi_leg_records]:
+        for key in (
+            "feature_availability",
+            "event_feature_availability",
+            "event_feature_input",
+            "event_features",
+            "feature_inputs",
+            "strategy_event_features",
+        ):
+            records.extend(_feature_records_from(owner.get(key)))
+    return records
+
+
+def _feature_records_from(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [record for item in value for record in _feature_records_from(item)]
+    if not isinstance(value, dict):
+        return []
+    records = []
+    if any(key in value for key in ("status", "coverage_status", "availability_status", "query_status")):
+        records.append(value)
+    for key in ("records", "features", "inputs", "sources"):
+        records.extend(_feature_records_from(value.get(key)))
+    return records
+
+
+def _feature_availability_inputs(records: list[dict[str, Any]]) -> dict[str, Any]:
+    normalized = [{"status": _feature_status(record)} for record in records]
+    return {
+        "records_with_feature_availability": len(records),
+        "status_counts": _status_counts(normalized),
+        "warning_codes": _warning_codes(records),
+    }
+
+
+def _feature_status(record: dict[str, Any]) -> str:
+    for key in ("status", "coverage_status", "availability_status", "query_status"):
+        value = record.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return "unknown"
+
+
+def _optimization_robustness(candidate: dict[str, Any]) -> dict[str, Any]:
+    for value in (
+        candidate.get("optimization_robustness"),
+        candidate.get("robustness"),
+        candidate.get("strategy_optimization"),
+        candidate.get("optimization"),
+    ):
+        if not isinstance(value, dict):
+            continue
+        robustness = _mapping(value.get("robustness")) or value
+        status = robustness.get("status")
+        if isinstance(status, str) and status:
+            return {
+                "status": status,
+                "warnings": _dict_list(robustness.get("warnings")),
+                "errors": _dict_list(robustness.get("errors")),
+                "summary": _mapping(robustness.get("summary")),
+            }
+    return {
+        "status": "not_available",
+        "warnings": [],
+        "errors": [],
+        "summary": {},
+    }
 
 
 def _walk_forward_inputs(evaluations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -643,6 +1055,35 @@ def _sample_rows(evaluations: list[dict[str, Any]]) -> list[int]:
         if isinstance(value, int) and not isinstance(value, bool):
             rows.append(value)
     return rows
+
+
+def _max_number(values: Any) -> float | None:
+    numbers = [value for value in values if value is not None]
+    return max(numbers) if numbers else None
+
+
+def _min_number(values: Any) -> float | None:
+    numbers = [value for value in values if value is not None]
+    return min(numbers) if numbers else None
+
+
+def _exposure_as_pct(value: float | None) -> float | None:
+    if value is None:
+        return None
+    if abs(value) <= 2.0:
+        return round(value * 100, 6)
+    return value
+
+
+def _warning_codes(records: list[dict[str, Any]]) -> list[str]:
+    codes = []
+    for record in records:
+        for key in ("warnings", "risk_warnings"):
+            for item in _dict_list(record.get(key)):
+                code = item.get("code")
+                if isinstance(code, str) and code:
+                    codes.append(code)
+    return sorted(set(codes))
 
 
 def _status_counts(items: list[dict[str, Any]]) -> dict[str, int]:

@@ -570,6 +570,9 @@ def test_load_config_accepts_effectiveness_gate_thresholds(tmp_path: Path) -> No
                 "    min_succeeded_benchmarks: 3\n"
                 "    min_benchmark_success_rate_pct: 75.0\n"
                 "    max_cost_drag_pct: 1.5\n"
+                "    max_turnover: 12.0\n"
+                "    max_abs_funding_drag_pct: 2.0\n"
+                "    max_average_gross_exposure_pct: 150.0\n"
                 "    require_parameter_stability: true"
             ),
         ),
@@ -582,6 +585,9 @@ def test_load_config_accepts_effectiveness_gate_thresholds(tmp_path: Path) -> No
         "min_succeeded_benchmarks": 3,
         "min_benchmark_success_rate_pct": 75.0,
         "max_cost_drag_pct": 1.5,
+        "max_turnover": 12.0,
+        "max_abs_funding_drag_pct": 2.0,
+        "max_average_gross_exposure_pct": 150.0,
         "require_parameter_stability": True,
     }
 
