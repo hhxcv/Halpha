@@ -85,6 +85,29 @@ def test_pipeline_logging_records_stage_lifecycle_without_info_noise(tmp_path: P
     assert by_event["pipeline.run.succeeded"]["run_id"] == result.run.run_id
 
 
+def test_pipeline_default_logging_records_product_stage_and_task_progress(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    log_path = configure_local_logging(config_path=config_path, config=config)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="refresh_data",
+        now=datetime(2026, 6, 20, tzinfo=timezone.utc),
+        stage_handlers={"collect_market_data": lambda config, run: []},
+    )
+
+    assert result.succeeded is True
+    events = _log_events(log_path)
+    product_stage_events = [event for event in events if event.get("event") == "pipeline.product_stage.start"]
+    task_events = [event for event in events if event.get("event") == "pipeline.task.start"]
+    assert product_stage_events[0]["stage"] == "refresh_data"
+    assert product_stage_events[0]["level"] == "INFO"
+    assert any(event["stage"] == "collect_market_data" and event["level"] == "INFO" for event in task_events)
+    assert all(str(tmp_path) not in json.dumps(event) for event in events)
+
+
 def test_validate_command_logging_records_failure_without_private_values(tmp_path: Path, capsys) -> None:
     config_path = _write_config(tmp_path, proxy_url="http://private-proxy.example:7890")
 
@@ -101,6 +124,35 @@ def test_validate_command_logging_records_failure_without_private_values(tmp_pat
     assert failed["stage"] == "product_validation"
     assert failed["exit_code"] == 3
     assert "private-proxy.example" not in log_text
+    assert str(config_path) not in log_text
+    assert str(tmp_path) not in log_text
+
+
+def test_cli_outer_crash_logging_records_bounded_diagnostic(tmp_path: Path, monkeypatch, capsys) -> None:
+    secret = "http://private-proxy.example:7890"
+    config_path = _write_config(tmp_path, proxy_url=secret)
+
+    def fail_validation(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise RuntimeError(f"validation crashed through {secret} at {config_path}")
+
+    monkeypatch.setattr("halpha.cli.inspect_product_validation", fail_validation)
+
+    exit_code = main(["validate", "--config", str(config_path)])
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "inspect local logs" in captured.out
+    log_path = tmp_path / "logs" / "halpha.log"
+    log_text = log_path.read_text(encoding="utf-8")
+    crashed = next(event for event in _log_events(log_path) if event.get("event") == "cli.command.crashed")
+    assert crashed["command"] == "validate"
+    assert crashed["exception_type"] == "RuntimeError"
+    assert crashed["diagnostic"] == {
+        "exception_type": "RuntimeError",
+        "traceback_embedded": False,
+        "context": {"phase": "cli_dispatch"},
+    }
+    assert secret not in log_text
     assert str(config_path) not in log_text
     assert str(tmp_path) not in log_text
 

@@ -99,6 +99,36 @@ def test_sync_ohlcv_history_initial_backfill_stores_latest_lookback(tmp_path: Pa
     assert (tmp_path / "data" / "research" / "metadata" / "research_data_catalog.json").is_file()
 
 
+def test_sync_ohlcv_history_rebuilds_metadata_once_for_batch_sync(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(
+        tmp_path,
+        symbols=["BTCUSDT", "ETHUSDT"],
+        timeframes=["1d", "1h"],
+        lookback=2,
+    )
+    config = load_config(config_path)
+    source = _EchoSource()
+    summarize_calls = 0
+    original_summarize = OHLCVParquetStore.summarize
+
+    def counted_summarize(self: OHLCVParquetStore) -> dict[str, Any]:
+        nonlocal summarize_calls
+        summarize_calls += 1
+        return original_summarize(self)
+
+    monkeypatch.setattr(OHLCVParquetStore, "summarize", counted_summarize)
+
+    result = _run_pipeline_with_sync(config, config_path, source)
+
+    manifest = _manifest(result)
+    assert result.succeeded is True
+    assert manifest["counts"]["ohlcv_sync_items"] == 4
+    assert summarize_calls == 1
+
+
 def test_sync_ohlcv_history_uses_runtime_root_for_external_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -231,17 +261,29 @@ def _run_pipeline_with_sync(config: dict[str, Any], config_path: Path, source) -
     )
 
 
-def _write_config(tmp_path: Path, *, include_ohlcv: bool = True, lookback: int = 2) -> Path:
+def _write_config(
+    tmp_path: Path,
+    *,
+    include_ohlcv: bool = True,
+    lookback: int = 2,
+    symbols: list[str] | None = None,
+    timeframes: list[str] | None = None,
+) -> Path:
+    configured_symbols = symbols or ["BTCUSDT"]
+    configured_timeframes = timeframes or ["1d"]
     ohlcv = ""
     if include_ohlcv:
+        timeframe_lines = "\n".join(f"      - {timeframe}" for timeframe in configured_timeframes)
+        lookback_lines = "\n".join(f"      {timeframe}: {lookback}" for timeframe in configured_timeframes)
         ohlcv = f"""
   ohlcv:
     storage_dir: data/market/ohlcv
     timeframes:
-      - 1d
+{timeframe_lines}
     lookback:
-      1d: {lookback}
+{lookback_lines}
 """
+    symbol_lines = "\n".join(f"    - {symbol}" for symbol in configured_symbols)
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -252,7 +294,7 @@ market:
   enabled: true
   source: binance
   symbols:
-    - BTCUSDT
+{symbol_lines}
 {ohlcv.rstrip()}
 text:
   enabled: false
@@ -339,6 +381,34 @@ class _FakeSource:
             }
         )
         return list(self.records)
+
+
+class _EchoSource:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def fetch_records(
+        self,
+        *,
+        symbol: str,
+        timeframe: str,
+        since: datetime | str | None = None,
+        limit: int | None = None,
+        now: datetime | str | None = None,
+    ) -> list[dict[str, object]]:
+        self.calls.append(
+            {
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "since": _format_since(since),
+                "limit": limit,
+                "now": _format_since(now),
+            }
+        )
+        return [
+            _record(symbol=symbol, timeframe=timeframe, open_time="2026-06-01T00:00:00Z", close=101),
+            _record(symbol=symbol, timeframe=timeframe, open_time="2026-06-02T00:00:00Z", close=102),
+        ]
 
 
 class _FailingSource(_FakeSource):
