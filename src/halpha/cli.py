@@ -74,6 +74,12 @@ from halpha.strategy.standalone_backtest import StandaloneBacktestError, run_sta
 from halpha.text.standalone_text_intelligence import run_standalone_text_intelligence
 from halpha.storage import display_path
 from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
+from halpha.strategy.strategy_optimization import (
+    DEFAULT_MAX_COMBINATIONS,
+    StrategyOptimizationError,
+    parse_optimization_grid_args,
+    run_strategy_optimization,
+)
 from halpha.text.text_event_collection import TextEventCollectionError
 from halpha.text.text_models import prepare_text_models
 from halpha.workbench.workbench import build_workbench_summary, inspect_workbench_summary
@@ -168,6 +174,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Configured strategy name to include. May be repeated. Defaults to all enabled strategies.",
     )
     experiment_parser.add_argument("--output-dir", help="Directory for strategy experiment output artifacts.")
+
+    optimize_parser = subparsers.add_parser("optimize", help="Run a bounded strategy parameter optimization.")
+    optimize_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
+    optimize_parser.add_argument("--strategy", required=True, help="Configured strategy name to optimize.")
+    optimize_parser.add_argument(
+        "--grid",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE[,VALUE]",
+        help="Optimization grid override. May be repeated. Defaults to the strategy spec optimization space.",
+    )
+    optimize_parser.add_argument(
+        "--max-combinations",
+        type=_positive_int_arg,
+        default=DEFAULT_MAX_COMBINATIONS,
+        help=f"Maximum grid combinations to evaluate. Defaults to {DEFAULT_MAX_COMBINATIONS}.",
+    )
+    optimize_parser.add_argument("--output-dir", help="Directory for strategy optimization output artifacts.")
 
     text_models_parser = subparsers.add_parser("text-models", help="Manage local text intelligence models.")
     text_models_subparsers = text_models_parser.add_subparsers(dest="text_models_command", required=True)
@@ -472,6 +496,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _experiment(
             args.config,
             strategy_names=args.strategy,
+            output_dir=args.output_dir,
+        )
+
+    if args.command == "optimize":
+        return _optimize(
+            args.config,
+            strategy_name=args.strategy,
+            grid_args=args.grid,
+            max_combinations=args.max_combinations,
             output_dir=args.output_dir,
         )
 
@@ -1118,6 +1151,69 @@ def _experiment(
             strategy_count=len(strategy_names or []),
             exit_code=result.exit_code,
         )
+    return result.exit_code
+
+
+def _optimize(
+    config_arg: str,
+    *,
+    strategy_name: str,
+    grid_args: list[str],
+    max_combinations: int,
+    output_dir: str | None,
+) -> int:
+    config_path = Path(config_arg)
+    _configure_logging(config_path=config_path)
+    _log_command_start(
+        "optimize",
+        strategy_name=strategy_name,
+        grid_overrides=len(grid_args),
+        max_combinations=max_combinations,
+        output_dir_requested=output_dir is not None,
+    )
+
+    try:
+        config = load_config(config_path)
+        grid = parse_optimization_grid_args(strategy_name, grid_args)
+    except ConfigError as exc:
+        _log_command_failed("optimize", stage="config", reason=str(exc), exit_code=2)
+        print("Halpha optimization failed.")
+        print("stage: config")
+        print(f"reason: {exc}")
+        return 2
+    except StrategyOptimizationError as exc:
+        _log_command_failed("optimize", stage="optimization", reason=str(exc), exit_code=exc.exit_code)
+        print("Halpha optimization failed.")
+        print("stage: optimization")
+        print(f"reason: {exc}")
+        return exc.exit_code
+
+    _configure_logging(config_path=config_path, config=config)
+    try:
+        result = run_strategy_optimization(
+            config,
+            config_path=config_path,
+            strategy_name=strategy_name,
+            grid=grid,
+            max_combinations=max_combinations,
+            output_dir=Path(output_dir) if output_dir else None,
+        )
+    except StrategyOptimizationError as exc:
+        _log_command_failed("optimize", stage="optimization", reason=str(exc), exit_code=exc.exit_code)
+        print("Halpha optimization failed.")
+        print("stage: optimization")
+        print(f"reason: {exc}")
+        return exc.exit_code
+
+    artifact = display_path(result.artifact_path)
+    benchmark_suite = display_path(result.benchmark_suite_path)
+    manifest = display_path(result.manifest_path)
+    print("Halpha optimization succeeded.")
+    print(f"status: {result.status}")
+    print(f"strategy_optimization: {artifact}")
+    print(f"strategy_benchmark_suite: {benchmark_suite}")
+    print(f"manifest: {manifest}")
+    _log_command_succeeded("optimize", status=result.status, strategy_name=strategy_name)
     return result.exit_code
 
 

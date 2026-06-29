@@ -610,8 +610,8 @@ Futures evaluation rules:
 
 ## Strategy Optimization Contract
 
-Status: current parameter diagnostics are implemented as bounded sensitivity
-context. Optimization artifacts and walk-forward optimization are planned.
+Status: standalone bounded grid optimization artifacts are implemented.
+Walk-forward optimization remains planned.
 
 Parameter diagnostics and optimization are different contracts:
 
@@ -634,19 +634,47 @@ Planned pipeline artifact, when optimization is integrated into a product run:
 runs/<run_id>/analysis/strategy_optimization.json
 ```
 
-Top-level planned contract:
+Standalone command:
+
+```bash
+python -m halpha optimize --config config.example.yaml --strategy tsmom_vol_scaled
+python -m halpha optimize --config config.example.yaml --strategy tsmom_vol_scaled --grid return_window=10,20 --grid volatility_window=10,20 --max-combinations 8
+```
+
+Top-level implemented contract:
 
 ```json
 {
   "schema_version": 1,
   "artifact_type": "strategy_optimization",
   "created_at": "2026-06-06T00:00:00Z",
+  "optimization_id": "20260606T000000Z_tsmom_vol_scaled_optimization",
   "strategy_name": "tsmom_vol_scaled",
   "instrument_identity": {},
-  "search_space": {},
-  "selection_policy": {
-    "name": "max_validation_net_return_with_risk_limits",
+  "inputs": {
+    "candidate_source": "bounded_grid_search",
+    "strategy_source": "configured_quant_strategy",
+    "benchmark_suite_artifact": "strategy_benchmark_suite.json"
+  },
+  "base_params": {},
+  "search_space": {
+    "source": "strategy_spec_optimization_space|cli_grid_override",
+    "strategy_spec_version": "1",
+    "grid": {},
+    "combination_count": 0,
+    "max_combinations": 50
+  },
+  "constraints": {
+    "max_combinations": 50,
+    "raw_ohlcv_history_embedded": false,
     "automatic_config_mutation": false
+  },
+  "selection_policy": {
+    "name": "max_mean_net_return_with_drawdown_tiebreak_research_only_v1",
+    "metric": "mean_net_return_pct",
+    "tie_breakers": ["worst_max_drawdown_pct", "mean_cost_drag_pct", "candidate_id"],
+    "automatic_config_mutation": false,
+    "research_only": true
   },
   "coverage": {
     "candidate_count": 0,
@@ -655,6 +683,7 @@ Top-level planned contract:
     "insufficient_data": 0
   },
   "candidates": [],
+  "failed_candidates": [],
   "selected_candidate": null,
   "walk_forward": {
     "enabled": false,
@@ -696,10 +725,16 @@ Optimization rules:
 - Search spaces must be bounded by explicit max-combination limits.
 - Failed and insufficient candidates must remain visible.
 - Selection policy must be recorded before selected-candidate interpretation.
+- Implemented standalone optimization uses strategy spec optimization spaces
+  unless CLI `--grid` overrides are supplied.
+- Candidate evaluation reuses Halpha strategy signal records and the canonical
+  single-window strategy evaluator.
 - Walk-forward optimization must record train and validation windows when
   enabled.
 - Optimization results are historical research evidence only. They are not
   trading instructions, return forecasts, or active configuration changes.
+- Optimization must not rewrite `quant.strategies`, lifecycle policy, active
+  strategy parameters, or local config files.
 
 ## Strategy Dashboard Read Model Contract
 
