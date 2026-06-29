@@ -15,6 +15,8 @@ from .strategy_specs import (
 StrategyRun = Callable[..., dict[str, Any]]
 StrategyParams = Callable[[dict[str, Any]], dict[str, Any]]
 StrategySignalRecords = Callable[[dict[str, Any], dict[str, Any], list[dict[str, Any]]], dict[str, Any]]
+MultiLegSignalRecords = Callable[[dict[str, Any], list[dict[str, Any]]], dict[str, Any]]
+MultiLegBacktest = Callable[..., dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,8 @@ class StrategyDefinition:
     run: StrategyRun
     failed_params: StrategyParams
     signal_records: StrategySignalRecords
+    multi_leg_signal_records: MultiLegSignalRecords | None = None
+    multi_leg_backtest: MultiLegBacktest | None = None
 
 
 SUPPORTED_STRATEGY_NAMES = frozenset(STRATEGY_SPEC_ORDER)
@@ -94,6 +98,18 @@ def get_strategy_definition(name: str) -> StrategyDefinition | None:
             run=bollinger_rsi_long_short.run,
             failed_params=bollinger_rsi_long_short.failed_params,
             signal_records=bollinger_rsi_long_short.signal_records,
+        )
+    if name == "pair_zscore_reversion":
+        from .strategies import pair_zscore_reversion
+
+        return StrategyDefinition(
+            name=pair_zscore_reversion.NAME,
+            spec=spec,
+            run=pair_zscore_reversion.run,
+            failed_params=pair_zscore_reversion.failed_params,
+            signal_records=pair_zscore_reversion.signal_records,
+            multi_leg_signal_records=pair_zscore_reversion.pair_signal_records,
+            multi_leg_backtest=pair_zscore_reversion.evaluate_pair_backtest,
         )
     if name == "sma_cross_long_short":
         from .strategies import sma_cross_long_short
