@@ -1255,6 +1255,14 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
             r"quant\.strategies\[0\]\.params\.max_realized_volatility_pct must be a positive number",
         ),
         (
+            "  engine: vectorbt\n  strategies:\n    - name: signed_tsmom_trend\n      params:\n        funding_rate_filter_enabled: \"yes\"",
+            r"quant\.strategies\[0\]\.params\.funding_rate_filter_enabled must be a boolean",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: signed_tsmom_trend\n      params:\n        max_abs_funding_rate: 0",
+            r"quant\.strategies\[0\]\.params\.max_abs_funding_rate must be a positive number",
+        ),
+        (
             "  engine: vectorbt\n  strategies:\n    - name: tsmom_vol_scaled\n      backtest: invalid",
             r"quant\.strategies\[0\]\.backtest",
         ),

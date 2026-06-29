@@ -43,6 +43,18 @@ REALIZED_VOLATILITY_FILTER = {
         "max_realized_volatility_pct": {"type": "positive_number", "default": 100.0},
     },
 }
+DERIVATIVES_FUNDING_RATE_FEATURE = {
+    "feature_id": "derivatives_feature:funding_rate:funding_rate_v1",
+    "input_type": "derivatives_market",
+    "data_class": "funding_rate",
+    "metric": "funding_rate",
+    "required": False,
+    "time_alignment": "as_of_and_first_seen_no_lookahead",
+    "parameters": {
+        "funding_rate_filter_enabled": {"type": "boolean", "default": False},
+        "max_abs_funding_rate": {"type": "positive_number", "default": 0.001},
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -60,6 +72,7 @@ class StrategySpec:
     minimum_rows_policy: dict[str, Any]
     risk_notes: tuple[str, ...]
     supported_filters: tuple[dict[str, Any], ...] = ()
+    supported_features: tuple[dict[str, Any], ...] = ()
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -83,6 +96,7 @@ class StrategySpec:
             "minimum_rows_policy": dict(self.minimum_rows_policy),
             "risk_notes": list(self.risk_notes),
             "supported_filters": [_copy_mapping(item) for item in self.supported_filters],
+            "supported_features": [_copy_mapping(item) for item in self.supported_features],
         }
 
 
@@ -264,6 +278,7 @@ STRATEGY_SPECS = {
             "Short exposure is research exposure only, not borrowing or account state.",
         ),
         supported_filters=(REALIZED_VOLATILITY_FILTER,),
+        supported_features=(DERIVATIVES_FUNDING_RATE_FEATURE,),
     ),
     "breakout_atr_trend": StrategySpec(
         name="breakout_atr_trend",

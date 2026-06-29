@@ -272,6 +272,8 @@ Purpose:
 - preserve reusable derivatives observations outside per-run report
   directories;
 - provide bounded current-run views for context generation;
+- provide no-lookahead strategy feature inputs for implemented strategy
+  consumers;
 - support data inspection and quality checks.
 
 Required record identity:
@@ -286,6 +288,8 @@ Required behavior:
 - warn on conflicting duplicates instead of silently replacing source evidence;
 - preserve source endpoint and source artifact references;
 - keep full reusable history outside Codex input;
+- support feature consumers through the shared event-like query boundary rather
+  than direct ad hoc file scans;
 - record implemented, skipped, unavailable, stale, partial, degraded, and failed
   data classes in state metadata.
 
