@@ -141,6 +141,7 @@ SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "sma_cross_trend": {"short_window", "long_window"},
     "sma_cross_long_short": {"short_window", "long_window", "neutral_band_pct"},
     "pair_zscore_reversion": {"lookback_window", "entry_zscore", "exit_zscore", "hedge_ratio"},
+    "cross_sectional_momentum": {"lookback_window", "long_count", "short_count", "min_instrument_count"},
     "signed_tsmom_trend": {
         "return_window",
         "deadband_pct",
@@ -929,6 +930,16 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
         if "hedge_ratio" in params:
             _require_positive_number(params, "hedge_ratio", f"{path}.hedge_ratio")
         _validate_pair_zscore_thresholds(params, path)
+    if name == "cross_sectional_momentum":
+        if "lookback_window" in params:
+            _require_positive_int(params, "lookback_window", f"{path}.lookback_window")
+        if "long_count" in params:
+            _require_positive_int(params, "long_count", f"{path}.long_count")
+        if "short_count" in params:
+            _require_positive_int(params, "short_count", f"{path}.short_count")
+        if "min_instrument_count" in params:
+            _require_positive_int(params, "min_instrument_count", f"{path}.min_instrument_count")
+        _validate_cross_sectional_counts(params, path)
 
 
 def _validate_bollinger_rsi_thresholds(params: dict[str, Any], path: str) -> None:
@@ -983,6 +994,24 @@ def _validate_pair_zscore_thresholds(params: dict[str, Any], path: str) -> None:
     exit_zscore = _require_non_negative_number(effective, "exit_zscore", f"{path}.exit_zscore")
     if exit_zscore >= entry_zscore:
         raise ConfigError(f"{path}.exit_zscore must be lower than {path}.entry_zscore.")
+
+
+def _validate_cross_sectional_counts(params: dict[str, Any], path: str) -> None:
+    effective = {
+        "long_count": 1,
+        "short_count": 1,
+        "min_instrument_count": 3,
+    }
+    effective.update(params)
+    long_count = _require_positive_int(effective, "long_count", f"{path}.long_count")
+    short_count = _require_positive_int(effective, "short_count", f"{path}.short_count")
+    min_instrument_count = _require_positive_int(
+        effective,
+        "min_instrument_count",
+        f"{path}.min_instrument_count",
+    )
+    if min_instrument_count < long_count + short_count:
+        raise ConfigError(f"{path}.min_instrument_count must be at least {path}.long_count + {path}.short_count.")
 
 
 def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> None:
@@ -1087,6 +1116,8 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
             _require_positive_number_value(value, path)
         if param_name == "exit_zscore":
             _require_bounded_number_value(value, path, minimum=0.0, maximum=100.0)
+    if name == "cross_sectional_momentum":
+        _require_positive_int_value(value, path)
 
 
 def _validate_quant_benchmark_suite(suite: dict[str, Any], path: str) -> None:

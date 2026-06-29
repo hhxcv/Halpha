@@ -9,6 +9,7 @@ LONG_FLAT_POLICY = "research_long_flat_target_exposure"
 SIGNED_POLICY = "research_signed_target_exposure"
 MULTI_LEG_POLICY = "research_multi_leg_target_exposure"
 SUPPORTED_MARKET_TYPES = ("spot", "swap")
+FUTURES_MARKET_TYPES = ("swap",)
 OHLCV_INPUT = {
     "input_type": "ohlcv",
     "required": True,
@@ -24,6 +25,11 @@ PAIR_OHLCV_INPUT_B = {
     **OHLCV_INPUT,
     "leg_id": "spread_leg_b",
     "leg_role": "spread_hedge",
+}
+CROSS_SECTIONAL_OHLCV_INPUT = {
+    **OHLCV_INPUT,
+    "instrument_role": "ranked_universe_member",
+    "minimum_instrument_count": 3,
 }
 RESEARCH_RISK_NOTE = "Historical strategy output is research material, not a forecast."
 REALIZED_VOLATILITY_FILTER = {
@@ -170,6 +176,7 @@ STRATEGY_SPEC_ORDER = (
     "sma_cross_trend",
     "sma_cross_long_short",
     "pair_zscore_reversion",
+    "cross_sectional_momentum",
     "bollinger_rsi_reversion",
     "bollinger_rsi_long_short",
 )
@@ -508,6 +515,56 @@ STRATEGY_SPECS = {
             RESEARCH_RISK_NOTE,
             "Pair strategy output is research exposure only, not market-neutral account construction.",
             "No pair discovery, cointegration testing, or hedge-ratio optimization is performed.",
+        ),
+    ),
+    "cross_sectional_momentum": StrategySpec(
+        name="cross_sectional_momentum",
+        family="cross_sectional",
+        version="1",
+        description="Futures-aware cross-sectional momentum strategy with ranked long-short research exposure.",
+        supported_market_types=FUTURES_MARKET_TYPES,
+        required_inputs=(CROSS_SECTIONAL_OHLCV_INPUT,),
+        output_position_policy=MULTI_LEG_POLICY,
+        default_params={
+            "lookback_window": 20,
+            "long_count": 1,
+            "short_count": 1,
+            "min_instrument_count": 3,
+        },
+        parameter_schema={
+            "lookback_window": _positive_integer_param(
+                20,
+                "Lookback bars used to rank instruments by close-to-close momentum return.",
+            ),
+            "long_count": _positive_integer_param(
+                1,
+                "Number of top-ranked instruments assigned positive research exposure.",
+            ),
+            "short_count": _positive_integer_param(
+                1,
+                "Number of bottom-ranked instruments assigned negative research exposure.",
+            ),
+            "min_instrument_count": _positive_integer_param(
+                3,
+                "Minimum aligned instrument count required before ranking evidence is sufficient.",
+                constraints=["min_instrument_count must be at least long_count + short_count"],
+            ),
+        },
+        optimization_space={
+            "lookback_window": _grid([10, 20, 40]),
+            "long_count": _grid([1]),
+            "short_count": _grid([1]),
+            "min_instrument_count": _grid([3, 5]),
+        },
+        minimum_rows_policy={
+            "formula": "lookback_window + 1 aligned universe rows",
+            "minimum_rows_with_default_params": 21,
+            "reason": "Requires momentum ranking warmup plus one next-bar evaluation row.",
+        },
+        risk_notes=(
+            RESEARCH_RISK_NOTE,
+            "Cross-sectional output is research exposure only, not portfolio allocation or account leverage.",
+            "Universe discovery, portfolio optimization, and execution modeling are not performed.",
         ),
     ),
     "bollinger_rsi_long_short": StrategySpec(
