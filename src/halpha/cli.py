@@ -76,6 +76,7 @@ from halpha.storage import display_path
 from halpha.strategy.strategy_experiment import StrategyExperimentError, run_strategy_experiment
 from halpha.strategy.strategy_optimization import (
     DEFAULT_MAX_COMBINATIONS,
+    DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY,
     StrategyOptimizationError,
     parse_optimization_grid_args,
     run_strategy_optimization,
@@ -190,6 +191,38 @@ def build_parser() -> argparse.ArgumentParser:
         type=_positive_int_arg,
         default=DEFAULT_MAX_COMBINATIONS,
         help=f"Maximum grid combinations to evaluate. Defaults to {DEFAULT_MAX_COMBINATIONS}.",
+    )
+    optimize_parser.add_argument(
+        "--walk-forward-train-rows",
+        type=_positive_int_arg,
+        help=(
+            "Training rows per walk-forward optimization window. "
+            f"Defaults to {DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY['train_rows']}."
+        ),
+    )
+    optimize_parser.add_argument(
+        "--walk-forward-validation-rows",
+        type=_positive_int_arg,
+        help=(
+            "Validation rows after each train window. "
+            f"Defaults to {DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY['validation_rows']}."
+        ),
+    )
+    optimize_parser.add_argument(
+        "--walk-forward-step-rows",
+        type=_positive_int_arg,
+        help=(
+            "Rows to advance between walk-forward windows. "
+            f"Defaults to {DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY['step_rows']}."
+        ),
+    )
+    optimize_parser.add_argument(
+        "--walk-forward-min-windows",
+        type=_positive_int_arg,
+        help=(
+            "Minimum successful validation windows required before walk-forward evidence is sufficient. "
+            f"Defaults to {DEFAULT_OPTIMIZATION_WALK_FORWARD_POLICY['min_windows']}."
+        ),
     )
     optimize_parser.add_argument("--output-dir", help="Directory for strategy optimization output artifacts.")
 
@@ -505,6 +538,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             strategy_name=args.strategy,
             grid_args=args.grid,
             max_combinations=args.max_combinations,
+            walk_forward_train_rows=args.walk_forward_train_rows,
+            walk_forward_validation_rows=args.walk_forward_validation_rows,
+            walk_forward_step_rows=args.walk_forward_step_rows,
+            walk_forward_min_windows=args.walk_forward_min_windows,
             output_dir=args.output_dir,
         )
 
@@ -1160,6 +1197,10 @@ def _optimize(
     strategy_name: str,
     grid_args: list[str],
     max_combinations: int,
+    walk_forward_train_rows: int | None,
+    walk_forward_validation_rows: int | None,
+    walk_forward_step_rows: int | None,
+    walk_forward_min_windows: int | None,
     output_dir: str | None,
 ) -> int:
     config_path = Path(config_arg)
@@ -1171,6 +1212,16 @@ def _optimize(
         max_combinations=max_combinations,
         output_dir_requested=output_dir is not None,
     )
+    walk_forward_policy = {
+        key: value
+        for key, value in {
+            "train_rows": walk_forward_train_rows,
+            "validation_rows": walk_forward_validation_rows,
+            "step_rows": walk_forward_step_rows,
+            "min_windows": walk_forward_min_windows,
+        }.items()
+        if value is not None
+    } or None
 
     try:
         config = load_config(config_path)
@@ -1196,6 +1247,7 @@ def _optimize(
             strategy_name=strategy_name,
             grid=grid,
             max_combinations=max_combinations,
+            walk_forward_policy=walk_forward_policy,
             output_dir=Path(output_dir) if output_dir else None,
         )
     except StrategyOptimizationError as exc:

@@ -610,8 +610,8 @@ Futures evaluation rules:
 
 ## Strategy Optimization Contract
 
-Status: standalone bounded grid optimization artifacts are implemented.
-Walk-forward optimization remains planned.
+Status: standalone bounded grid optimization and bounded walk-forward
+optimization artifacts are implemented.
 
 Parameter diagnostics and optimization are different contracts:
 
@@ -639,6 +639,7 @@ Standalone command:
 ```bash
 python -m halpha optimize --config config.example.yaml --strategy tsmom_vol_scaled
 python -m halpha optimize --config config.example.yaml --strategy tsmom_vol_scaled --grid return_window=10,20 --grid volatility_window=10,20 --max-combinations 8
+python -m halpha optimize --config config.example.yaml --strategy tsmom_vol_scaled --walk-forward-train-rows 120 --walk-forward-validation-rows 30 --walk-forward-step-rows 30 --walk-forward-min-windows 4
 ```
 
 Top-level implemented contract:
@@ -686,13 +687,42 @@ Top-level implemented contract:
   "failed_candidates": [],
   "selected_candidate": null,
   "walk_forward": {
-    "enabled": false,
-    "status": "skipped",
+    "enabled": true,
+    "status": "succeeded|insufficient_data|failed",
+    "method": {
+      "name": "bounded_train_validation_grid_walk_forward_v1",
+      "candidate_selection": "max_train_net_return_with_drawdown_tiebreak",
+      "validation_policy": "selected_candidate_evaluated_on_next_validation_window",
+      "params_optimized_per_window": true,
+      "automatic_config_mutation": false
+    },
+    "policy": {
+      "train_rows": 60,
+      "validation_rows": 20,
+      "step_rows": 20,
+      "min_windows": 3
+    },
+    "summary": {
+      "window_count": 0,
+      "succeeded_windows": 0,
+      "failed_windows": 0,
+      "insufficient_data_windows": 0,
+      "selected_candidate_counts": {},
+      "selected_candidate_variants": 0,
+      "mean_train_selected_net_return_pct": null,
+      "mean_validation_net_return_pct": null,
+      "mean_validation_cost_drag_pct": null,
+      "train_validation_gap_pct": null,
+      "positive_validation_net_return_window_pct": null,
+      "worst_validation_drawdown_pct": null
+    },
     "windows": []
   },
   "robustness": {
-    "status": "unknown",
-    "warnings": []
+    "status": "robust|fragile|overfit_risk|insufficient_data|failed",
+    "summary": {},
+    "warnings": [],
+    "errors": []
   },
   "source_artifacts": [],
   "warnings": [],
@@ -729,8 +759,16 @@ Optimization rules:
   unless CLI `--grid` overrides are supplied.
 - Candidate evaluation reuses Halpha strategy signal records and the canonical
   single-window strategy evaluator.
-- Walk-forward optimization must record train and validation windows when
-  enabled.
+- Walk-forward optimization is always represented in the standalone artifact.
+  If there are not enough rows, it must produce `insufficient_data` evidence
+  instead of omitting the section.
+- Walk-forward optimization must record deterministic train and validation
+  windows, per-window train candidate outcomes, selected candidate, validation
+  metrics, failed windows, data coverage, cost-drag evidence, and warnings.
+- Robustness status must be deterministic and limited to `robust`, `fragile`,
+  `overfit_risk`, `insufficient_data`, or `failed`. Parameter instability and
+  material train-validation performance gaps must produce explicit overfit-risk
+  warnings.
 - Optimization results are historical research evidence only. They are not
   trading instructions, return forecasts, or active configuration changes.
 - Optimization must not rewrite `quant.strategies`, lifecycle policy, active
