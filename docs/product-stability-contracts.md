@@ -334,7 +334,7 @@ Recommended backup groups:
 - `data/`: reusable local stores, run index, local history state, and research
   data metadata.
 - `.halpha/`: current dashboard control state and implemented runtime
-  state-store foundation, including Dashboard service lifecycle and UI
+  state-store foundation, including Core service lifecycle and Dashboard UI
   preference state. Back up `state.sqlite` together with its
   `state.sqlite-wal` and `state.sqlite-shm` side files when they exist.
   Backups should treat mutable runtime state as local operational state, not

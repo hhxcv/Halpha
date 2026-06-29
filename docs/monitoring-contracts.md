@@ -21,15 +21,17 @@ persists alert archive, cooldown, cycle, service-health, and source-cadence
 state in `.halpha/state.sqlite`, and exposes read-only monitor health
 inspection.
 
-The resident Monitor service is one of exactly three supported resident Halpha
-process roles: `dashboard`, `monitor`, and `schedule`. It is explicit, unique
-within one runtime root, and managed through the shared lifecycle contract in
+The resident Monitor service is one of exactly two supported resident Halpha
+process roles: `core` and `monitor`. It is explicit, unique within one runtime
+root, and managed through the shared lifecycle contract in
 `docs/dashboard-contracts.md` and `docs/artifact-governance.md`.
 
 Target Monitor responsibility:
 
-- remain the single continuous information-refresh and alert-reassessment
-  service for one runtime root;
+- remain the single lightweight checker for one runtime root;
+- trigger Core-owned monitor jobs rather than execute product tasks directly;
+- own daily schedule due checks and call Core for due dispatch;
+- check Core health and attempt Core start after stale or terminal Core state;
 - keep running through ordinary source, network, and collection failures by
   recording warnings or errors and retrying on the next cadence;
 - avoid Codex and report generation during resident cycles;
@@ -39,8 +41,8 @@ Target Monitor responsibility:
 - never trade, access accounts, access wallets, place orders, or compute
   position sizing.
 
-The resident Monitor must not be owned by Dashboard, Schedule, a hidden
-supervisor, a broker, a worker pool, or a fourth resident Halpha process.
+The resident Monitor must not be owned by Dashboard UI, a schedule process, a
+hidden supervisor, a broker, a worker pool, or another resident Halpha process.
 
 ## Configuration
 

@@ -447,8 +447,8 @@
       const health = state.monitor?.health?.fields || {};
       const latest = state.monitor?.latest_cycle || {};
       const services = state.services?.services || {};
+      const coreService = services.core || {};
       const monitorService = services.monitor || {};
-      const scheduleService = services.schedule || {};
       const status = monitorService.status || latest.status || health.latest_cycle_status || state.monitor?.status || "partial";
       const schedule = state.schedule || {};
       const scheduleLabel = schedule.enabled
@@ -456,12 +456,13 @@
         : "No daily report scheduled";
       setPill("#overview-monitor-pill", status, status);
       document.querySelector("#overview-monitor").innerHTML = [
+        detailRow("Core service", label(coreService.lifecycle_status || coreService.status || "unknown")),
+        detailRow("Core heartbeat", formatTimestamp(coreService.heartbeat_at)),
         detailRow("Monitor service", label(monitorService.lifecycle_status || status)),
         detailRow("Monitor heartbeat", formatTimestamp(monitorService.heartbeat_at)),
         detailRow("Latest cycle", label(latest.status || health.latest_cycle_status || "n/a")),
         detailRow("Cycle count", health.cycle_count ?? state.monitorCycles.length),
         detailRow("Last trigger time", formatTimestamp(latest.finished_at || latest.started_at)),
-        detailRow("Schedule service", label(scheduleService.lifecycle_status || "n/a")),
         detailRow("Next scheduled report", scheduleLabel),
         detailRow("Recent alerts", monitorWorkflow.alertCount(state.monitorAlerts)),
       ].join("");

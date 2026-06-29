@@ -35,12 +35,12 @@
           const dispatches = Array.isArray(schedule.dispatches) ? schedule.dispatches : [];
           const latestDispatch = dispatches[0] || {};
           const services = state.services?.services || {};
+          const coreService = services.core || {};
           const monitorService = services.monitor || {};
-          const scheduleService = services.schedule || {};
           document.querySelector("#monitor-hero").innerHTML = [
+            metricCell("Core service", label(coreService.lifecycle_status || coreService.status || "unknown"), "job owner"),
             metricCell("Monitor service", label(monitorService.lifecycle_status || monitorService.status || "unknown"), monitorService.config_conflict ? "config conflict" : "process health"),
             metricCell("Last cycle", formatTimestamp(latest.finished_at || latest.started_at), latest.status || "n/a"),
-            metricCell("Schedule service", label(scheduleService.lifecycle_status || scheduleService.status || "unknown"), schedule.enabled ? "schedule enabled" : "schedule config disabled"),
             metricCell("Next report", schedule.enabled ? formatTimestamp(schedule.next_run_at) : "Disabled", schedule.status || "schedule"),
             metricCell("Alerts today", alerts, "recent archive"),
             metricCell("Error state", health.error_count ? `${health.error_count} errors` : "None", "active errors"),
@@ -54,6 +54,12 @@
             `${label(source.status || "unknown")} / next ${formatTimestamp(source.next_attempt_at)}`,
           ));
           document.querySelector("#monitor-config").innerHTML = [
+            detailRow("Core process health", label(coreService.process_health || coreService.lifecycle_status || "unknown")),
+            detailRow("Core instance", coreService.instance_id || "n/a"),
+            detailRow("Core started", formatTimestamp(coreService.started_at)),
+            detailRow("Core heartbeat", formatTimestamp(coreService.heartbeat_at)),
+            detailRow("Core heartbeat freshness", label(coreService.heartbeat_freshness || "unknown")),
+            detailRow("Core last error", coreService.last_error?.message || "none"),
             detailRow("Monitor process health", label(monitorService.process_health || monitorService.lifecycle_status || "unknown")),
             detailRow("Monitor instance", monitorService.instance_id || "n/a"),
             detailRow("Monitor started", formatTimestamp(monitorService.started_at)),
@@ -69,15 +75,6 @@
             detailRow("Consecutive failures", text(service.consecutive_failures, "0")),
             detailRow("Alert cooldown", text(monitorSettings.cooldown_seconds ?? state.monitorAlerts?.cooldown?.fields?.cooldown_seconds, "n/a")),
             ...sourceRows,
-            detailRow("Schedule process health", label(scheduleService.process_health || scheduleService.lifecycle_status || "unknown")),
-            detailRow("Schedule instance", scheduleService.instance_id || "n/a"),
-            detailRow("Schedule started", formatTimestamp(scheduleService.started_at)),
-            detailRow("Schedule heartbeat", formatTimestamp(scheduleService.heartbeat_at)),
-            detailRow("Schedule heartbeat freshness", label(scheduleService.heartbeat_freshness || "unknown")),
-            detailRow("Schedule stop requested", formatTimestamp(scheduleService.stop_requested_at)),
-            detailRow("Schedule terminal state", formatTimestamp(scheduleService.terminal_at)),
-            detailRow("Schedule last error", scheduleService.last_error?.message || "none"),
-            detailRow("Schedule config conflict", scheduleService.config_conflict ? "yes" : "no"),
             detailRow("Daily report time", scheduleSettings.time_of_day || "n/a"),
             detailRow("Daily report timezone", scheduleSettings.timezone || "n/a"),
             detailRow("Daily report mode", reportGeneration.generates_report ? "Codex report" : "No-Codex run"),

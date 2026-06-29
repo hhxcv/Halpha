@@ -120,10 +120,10 @@ Rules:
 - Keep raw data, normalized data, deterministic analysis, AI-readable material, reports, run manifests, shared stores, and runtime state boundaries explicit.
 - Shared reusable data is not a per-run report artifact and is not AI context by default.
 - Runtime state should have one authoritative owner per fact.
-- Runtime root is one explicit local root shared by CLI, Dashboard, Monitor, and Schedule.
+- Runtime root is one explicit local root shared by CLI, Core, Dashboard UI, and Monitor.
 - Latest selections are derived or rebuildable views, not parallel authorities.
-- Exactly three target resident Halpha process roles exist: `dashboard`, `monitor`, and `schedule`.
-- Do not add a hidden supervisor, broker, worker pool, or fourth resident process.
+- Exactly two target resident Halpha process roles exist: `core` and `monitor`.
+- Do not add a hidden supervisor, broker, worker pool, or additional resident process.
 - Do not start resident services, background loops, or destructive migrations unless explicitly requested.
 
 ## Code Quality

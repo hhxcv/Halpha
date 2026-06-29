@@ -57,8 +57,8 @@ from halpha.time_display import configured_display_timezone
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
-DASHBOARD_SERVICE_NAME = "halpha_dashboard"
-DASHBOARD_SERVICE_ROLE = "dashboard"
+DASHBOARD_SERVICE_NAME = "halpha_core"
+DASHBOARD_SERVICE_ROLE = "core"
 DASHBOARD_HEALTH_TIMEOUT_SECONDS = 0.75
 DASHBOARD_RESTART_WAIT_SECONDS = 5.0
 DASHBOARD_RESTART_POLL_SECONDS = 0.1
@@ -102,8 +102,8 @@ class DashboardConfigContext:
             self.job_manager = CommandJobManager(
                 config,
                 config_path=config_path,
-                requested_by="Dashboard",
-                requester={"source": "dashboard_api"},
+                requested_by="Core",
+                requester={"source": "core_api"},
                 execution_mode="internal",
             )
             self.schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=self.job_manager)
@@ -545,6 +545,12 @@ def create_dashboard_app(
             return _unconfigured_payload("dashboard_daily_report_schedule_trigger", job=None)
         return context.schedule_manager.trigger_daily_report_schedule(request or {})
 
+    @app.post("/api/schedule/daily-report/dispatch-due")
+    def dispatch_due_daily_report_schedule_endpoint() -> dict[str, Any]:
+        if context.schedule_manager is None:
+            return _unconfigured_payload("dashboard_daily_report_dispatch", job=None)
+        return context.schedule_manager.dispatch_due_daily_report()
+
     return app
 
 
@@ -667,7 +673,7 @@ def start_dashboard_service(
 
     if not endpoint_can_bind:
         health = _read_dashboard_endpoint_health(host, port)
-        if _is_halpha_dashboard_health(health):
+        if _is_halpha_core_health(health):
             existing = _dashboard_existing_result_from_health(health, repository=repository, host=host, port=port)
             if existing is not None:
                 return existing
@@ -712,7 +718,7 @@ def dashboard_service_status(
         "instance_id": lifecycle.instance_id,
         "pid": _dashboard_lifecycle_pid(lifecycle),
         "endpoint": _dashboard_endpoint_metadata(host, port),
-        "health": "ok" if _is_halpha_dashboard_health(health) else "unavailable",
+        "health": "ok" if _is_halpha_core_health(health) else "unavailable",
         "lifecycle": _dashboard_lifecycle_payload(lifecycle),
     }
 
@@ -804,7 +810,7 @@ def _dashboard_service_config_ref(config_path: Path | None) -> str:
 
 
 def _dashboard_service_config_digest(*, host: str, port: int) -> str:
-    material = f"dashboard-service-v1|host={host}|port={int(port)}"
+    material = f"core-service-v1|host={host}|port={int(port)}"
     return sha256(material.encode("utf-8")).hexdigest()
 
 
@@ -832,7 +838,7 @@ def _dashboard_start_blocking_result(
     if lifecycle.status == "unresponsive":
         return {
             "status": "unresponsive",
-            "reason": "dashboard service lock is held but heartbeat is stale; stop or inspect it before starting another service.",
+            "reason": "core service lock is held but heartbeat is stale; stop or inspect it before starting another service.",
             "lifecycle": _dashboard_lifecycle_payload(lifecycle),
         }
     if lifecycle.status not in {"running", "starting", "stop_requested"}:
@@ -840,7 +846,7 @@ def _dashboard_start_blocking_result(
     if not _dashboard_lifecycle_endpoint_matches(lifecycle, host=host, port=port) or state.get("config_digest") != config_digest:
         return {
             "status": "conflict",
-            "reason": "dashboard service is already active for a different endpoint or service configuration.",
+            "reason": "core service is already active for a different endpoint or service configuration.",
             "lifecycle": _dashboard_lifecycle_payload(lifecycle),
         }
     if lifecycle.status == "running" and endpoint_can_bind:
@@ -852,13 +858,13 @@ def _dashboard_start_blocking_result(
     if lifecycle.status == "starting":
         return {
             "status": "starting",
-            "reason": "dashboard service is already starting.",
+            "reason": "core service is already starting.",
             "lifecycle": _dashboard_lifecycle_payload(lifecycle),
         }
     if lifecycle.status == "stop_requested":
         return {
             "status": "stop_requested",
-            "reason": "dashboard service is stopping; wait for it to exit before starting another service.",
+            "reason": "core service is stopping; wait for it to exit before starting another service.",
             "lifecycle": _dashboard_lifecycle_payload(lifecycle),
         }
     return _dashboard_service_result("existing", lifecycle=lifecycle, host=host, port=port)
@@ -877,7 +883,7 @@ def _dashboard_existing_result_from_health(
     host: str,
     port: int,
 ) -> dict[str, Any] | None:
-    if not _is_halpha_dashboard_health(health):
+    if not _is_halpha_core_health(health):
         return None
     lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
     if lifecycle.instance_id is None or not _dashboard_lifecycle_endpoint_matches(lifecycle, host=host, port=port):
@@ -921,13 +927,13 @@ def _wait_for_dashboard_service_start(
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         health = _read_dashboard_endpoint_health(host, port)
-        if _is_halpha_dashboard_health(health):
+        if _is_halpha_core_health(health):
             lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
             return _dashboard_service_result("started", lifecycle=lifecycle, host=host, port=port)
         if process.poll() is not None:
-            raise DashboardError("dashboard service exited before the health endpoint became available.")
+            raise DashboardError("core service exited before the health endpoint became available.")
         time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
-    raise DashboardError("dashboard service did not become healthy before the startup timeout.")
+    raise DashboardError("core service did not become healthy before the startup timeout.")
 
 
 def _wait_for_existing_dashboard_service(
@@ -940,11 +946,11 @@ def _wait_for_existing_dashboard_service(
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         health = _read_dashboard_endpoint_health(host, port)
-        if _is_halpha_dashboard_health(health):
+        if _is_halpha_core_health(health):
             lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
             return _dashboard_service_result("existing", lifecycle=lifecycle, host=host, port=port)
         time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
-    raise DashboardError("dashboard service is starting, but the health endpoint is not available yet.")
+    raise DashboardError("core service is starting, but the health endpoint is not available yet.")
 
 
 def _wait_for_dashboard_service_stop(
@@ -997,7 +1003,7 @@ def _dashboard_lifecycle_pid(lifecycle: ServiceLifecycleResult) -> int | None:
 def _dashboard_lifecycle_start_message(result: ServiceLifecycleResult) -> str:
     if result.reason:
         return result.reason
-    return f"dashboard service could not start because lifecycle status is {result.status}."
+    return f"core service could not start because lifecycle status is {result.status}."
 
 
 def _dashboard_endpoint_can_bind(host: str, port: int) -> bool:
@@ -1030,7 +1036,7 @@ def _read_dashboard_endpoint_health(host: str, port: int) -> dict[str, Any] | No
     return loaded if isinstance(loaded, dict) else None
 
 
-def _is_halpha_dashboard_health(health: dict[str, Any] | None) -> bool:
+def _is_halpha_core_health(health: dict[str, Any] | None) -> bool:
     return isinstance(health, dict) and health.get("service") == DASHBOARD_SERVICE_NAME
 
 
@@ -1051,7 +1057,7 @@ def dashboard_health(
     validate_dashboard_port(port)
     return {
         "artifact_type": "dashboard_health",
-        "service": "halpha_dashboard",
+        "service": DASHBOARD_SERVICE_NAME,
         "status": "ok" if config is not None and config_path is not None else "unconfigured",
         "local_only": True,
         "host": host,

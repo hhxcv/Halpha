@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from halpha.runtime.monitor_service import _monitor_service_config_digest
-from halpha.runtime.schedule_service import _schedule_service_config_digest
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository
 
 
@@ -25,11 +24,10 @@ def test_dashboard_services_endpoint_reports_exact_service_roles_without_config(
 
     assert payload["artifact_type"] == "dashboard_services"
     assert payload["status"] == "unconfigured"
-    assert set(payload["services"]) == {"dashboard", "monitor", "schedule"}
-    assert payload["services"]["dashboard"]["role"] == "dashboard"
-    assert payload["services"]["dashboard"]["status"] == "unmanaged"
+    assert set(payload["services"]) == {"core", "monitor"}
+    assert payload["services"]["core"]["role"] == "core"
+    assert payload["services"]["core"]["status"] == "unmanaged"
     assert payload["services"]["monitor"]["status"] == "unconfigured"
-    assert payload["services"]["schedule"]["status"] == "unconfigured"
 
 
 @pytest.mark.parametrize(
@@ -48,14 +46,6 @@ def test_dashboard_services_endpoint_reports_exact_service_roles_without_config(
             "halpha_monitor",
             "/api/services/monitor/start",
             id="monitor",
-        ),
-        pytest.param(
-            "schedule",
-            _schedule_service_config_digest,
-            "halpha.runtime.schedule_service._launch_schedule_service_process",
-            "halpha_schedule",
-            "/api/services/schedule/start",
-            id="schedule",
         ),
     ],
 )
@@ -125,37 +115,7 @@ def test_dashboard_service_action_surfaces_monitor_config_conflict_without_launc
     assert str(tmp_path) not in str(payload)
 
 
-def test_dashboard_service_actions_delegate_schedule_stop_and_restart(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    calls: list[tuple[str, str]] = []
-
-    def fake_stop(config_arg: str) -> dict[str, Any]:
-        calls.append(("stop", config_arg))
-        return _service_result("schedule", "halpha_schedule", status="stop_requested", instance_id="schedule-1")
-
-    def fake_restart(config_arg: str) -> dict[str, Any]:
-        calls.append(("restart", config_arg))
-        return _service_result("schedule", "halpha_schedule", status="started", instance_id="schedule-2")
-
-    monkeypatch.setattr("halpha.dashboard.services.stop_schedule_service", fake_stop)
-    monkeypatch.setattr("halpha.dashboard.services.restart_schedule_service", fake_restart)
-    client = TestClient(create_dashboard_app(config, config_path=config_path))
-
-    stopped = client.post("/api/services/schedule/stop").json()
-    restarted = client.post("/api/services/schedule/restart").json()
-
-    assert calls == [("stop", str(config_path)), ("restart", str(config_path))]
-    assert stopped["status"] == "stop_requested"
-    assert stopped["service"]["role"] == "schedule"
-    assert restarted["status"] == "started"
-    assert restarted["service"]["instance_id"] == "schedule-2"
-
-
-def test_dashboard_schedule_can_be_enabled_while_schedule_service_is_stopped(tmp_path: Path) -> None:
+def test_dashboard_schedule_can_be_enabled_without_schedule_service_role(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
@@ -166,8 +126,7 @@ def test_dashboard_schedule_can_be_enabled_while_schedule_service_is_stopped(tmp
 
     assert enabled["enabled"] is True
     assert schedule["enabled"] is True
-    assert services["services"]["schedule"]["lifecycle_status"] == "not_found"
-    assert services["services"]["schedule"]["process_health"] == "not_found"
+    assert "schedule" not in services["services"]
 
 
 def test_dashboard_config_switch_does_not_stop_existing_monitor_service(tmp_path: Path) -> None:
@@ -204,15 +163,15 @@ def test_dashboard_config_switch_does_not_stop_existing_monitor_service(tmp_path
     )
 
 
-def test_dashboard_rejects_dashboard_role_action_without_lifecycle_side_effect(tmp_path: Path) -> None:
+def test_dashboard_rejects_core_role_action_without_lifecycle_side_effect(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
-    payload = client.post("/api/services/dashboard/stop").json()
+    payload = client.post("/api/services/core/stop").json()
 
     assert payload["status"] == "blocked"
-    assert payload["role"] == "dashboard"
+    assert payload["role"] == "core"
     assert payload["service"] is None
 
 
@@ -237,7 +196,7 @@ def _service_result(role: str, service: str, *, status: str, instance_id: str) -
 
 
 def _fail_launch(*args: Any, **kwargs: Any) -> Any:
-    raise AssertionError("dashboard service controls must use the existing shared lifecycle instance")
+    raise AssertionError("dashboard controls must use the existing shared lifecycle instance")
 
 
 def _write_config(

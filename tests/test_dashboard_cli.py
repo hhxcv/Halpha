@@ -127,7 +127,7 @@ def test_dashboard_health_endpoint_uses_bounded_config_ref() -> None:
     assert response.headers["cache-control"] == "no-store, max-age=0"
     payload = response.json()
     assert payload["artifact_type"] == "dashboard_health"
-    assert payload["service"] == "halpha_dashboard"
+    assert payload["service"] == "halpha_core"
     assert payload["status"] == "ok"
     assert payload["local_only"] is True
     assert payload["host"] == "127.0.0.1"

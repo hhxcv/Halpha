@@ -95,7 +95,7 @@ These operations must not create a product run archive:
 - no-due Monitor cycle;
 - no-change source refresh;
 - all-source no-change Monitor cycle;
-- Monitor, Dashboard, or Schedule health check;
+- Monitor or Core health check;
 - read-only inspection command;
 - read-only validation command;
 - schedule tick that does not dispatch a due report;
@@ -116,9 +116,10 @@ New run archives are expected to record these minimum fields in
   `validation_run`, `standalone_backtest`, `standalone_experiment`, or
   `unknown`.
 - `trigger`: bounded trigger object with `source` and `intent`.
-- `trigger.job_id`: command job id when a Dashboard command job created the
+- `trigger.job_id`: command job id when a Core command job created the
   run.
-- `trigger.schedule_id`: schedule id when Schedule dispatched the run.
+- `trigger.schedule_id`: schedule id when Monitor triggered a scheduled run
+  through Core.
 - `trigger.monitor_cycle_id`: Monitor cycle id when a Monitor reassessment
   created the run.
 - `trigger.source_keys`: bounded changed source keys for Monitor
