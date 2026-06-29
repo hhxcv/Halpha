@@ -723,6 +723,9 @@
       fillSelect("#strategy-family", ["all", ...families], {"all": "All families"});
       fillSelect("#strategy-name", strategiesForFamily(document.querySelector("#strategy-family")?.value || "all").map((spec) => spec.name));
       fillSelect("#strategy-experiment-family", ["all", ...families], {"all": "All families"});
+      setInputValue("#strategy-optimize-source", defaultStrategySource(), true);
+      fillSelect("#strategy-optimize-symbol", symbols);
+      fillSelect("#strategy-optimize-timeframe", timeframes);
       fillSelect("#strategy-optimize-family", ["all", ...families], {"all": "All families"});
       fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
       fillSelect("#strategy-chart-symbol", symbols);
@@ -755,6 +758,9 @@
         renderStrategyOptimizationSpace();
       };
       document.querySelector("#strategy-optimize-name").onchange = renderStrategyOptimizationSpace;
+      ["#strategy-optimize-symbol", "#strategy-optimize-timeframe"].forEach((selector) => {
+        document.querySelector(selector).onchange = renderStrategyOptimizationSpace;
+      });
       queueStrategyChartRefresh();
     }
 
@@ -767,6 +773,9 @@
       setInputValue("#strategy-chart-timeframe", timeframe, force);
       setInputValue("#strategy-export-symbol", symbol, force);
       setInputValue("#strategy-export-timeframe", timeframe, force);
+      setInputValue("#strategy-optimize-source", source, false);
+      setInputValue("#strategy-optimize-symbol", symbol, force);
+      setInputValue("#strategy-optimize-timeframe", timeframe, force);
       setInputValue("#strategy-collect-source", source, false);
       setInputValue("#strategy-export-source", source, false);
     }
@@ -894,7 +903,23 @@
         panel.innerHTML = `<div class="message">This strategy does not expose an optimization grid.</div>`;
         return;
       }
-      panel.innerHTML = Object.entries(space).map(([name, config]) => {
+      const target = {
+        source: document.querySelector("#strategy-optimize-source")?.value || "",
+        symbol: document.querySelector("#strategy-optimize-symbol")?.value || "",
+        timeframe: document.querySelector("#strategy-optimize-timeframe")?.value || "",
+      };
+      const targetedProfiles = Array.isArray(spec.targeted_params) ? spec.targeted_params : [];
+      const matchedProfile = targetedProfiles.find((profile) => String(profile.source || "") === target.source
+        && String(profile.symbol || "") === target.symbol
+        && String(profile.timeframe || "") === target.timeframe);
+      const profileRows = Object.entries(matchedProfile?.params || {}).map(([name, value]) => [name, value]);
+      panel.innerHTML = `
+        <div class="strategy-space-card">
+          <label>Target parameter profile</label>
+          <p>${escapeHtml(target.source || "source")} ${escapeHtml(target.symbol || "symbol")} ${escapeHtml(target.timeframe || "timeframe")}</p>
+          ${profileRows.length ? table(["Parameter", "Current target value"], profileRows) : `<p>No targeted params configured for this exact target; optimization starts from base params.</p>`}
+        </div>
+        ${Object.entries(space).map(([name, config]) => {
         const values = Array.isArray(config.values) ? config.values.join(", ") : "";
         const schema = spec.parameter_schema?.[name] || {};
         return `
@@ -903,7 +928,7 @@
             <input id="strategy-grid-${escapeHtml(name)}" class="text-input" type="text" value="${escapeHtml(values)}" data-strategy-grid-param="${escapeHtml(name)}">
             <p>${escapeHtml(schema.description || "Comma-separated grid values.")}</p>
           </div>`;
-      }).join("");
+      }).join("")}`;
     }
 
     function ensureStrategyCollectTargets(symbols, timeframes) {
@@ -1798,7 +1823,10 @@
       const selected = fields.selected_candidate || {};
       const robustness = fields.robustness || {};
       const walkForward = fields.walk_forward || {};
+      const target = fields.target || {};
+      const recommended = fields.recommended_targeted_params || {};
       const paramRows = Object.entries(selected.params || {}).map(([name, value]) => [name, value]);
+      const recommendedRows = Object.entries(recommended.params || {}).map(([name, value]) => [name, value]);
       const failedRows = (latest.records?.failed_candidates || []).slice(0, 6).map((candidate) => [
         candidate.candidate_id || "n/a",
         candidate.error_type || "n/a",
@@ -1811,6 +1839,7 @@
         </div>
         <div class="summary-strip">
           ${metricCell("Strategy", fields.strategy_name || "n/a", "target")}
+          ${metricCell("Target", [target.symbol, target.timeframe].filter(Boolean).join(" ") || "n/a", target.source || "source")}
           ${metricCell("Combinations", search.combination_count ?? coverage.candidate_count, "grid")}
           ${metricCell("Succeeded", coverage.succeeded, "candidates")}
           ${metricCell("Robustness", robustness.status || "n/a", "walk-forward")}
@@ -1825,6 +1854,16 @@
               ${detailRow("Walk-forward", walkForward.status)}
             </div>
             ${paramRows.length ? table(["Parameter", "Value"], paramRows) : `<div class="message">No selected candidate parameters are recorded.</div>`}
+          </section>
+          <section>
+            <h3 class="subsection-title">Recommended targeted config</h3>
+            <div class="strategy-eval-kv">
+              ${detailRow("Source", recommended.source)}
+              ${detailRow("Symbol", recommended.symbol)}
+              ${detailRow("Timeframe", recommended.timeframe)}
+              ${detailRow("Mutation", recommended.automatic_config_mutation)}
+            </div>
+            ${recommendedRows.length ? table(["Parameter", "Value"], recommendedRows) : `<div class="message">No targeted recommendation is available for this optimization.</div>`}
           </section>
           <section>
             <h3 class="subsection-title">Failed candidates</h3>
@@ -2244,8 +2283,15 @@
       }
       const params = {
         strategy_name: strategyName,
+        source: document.querySelector("#strategy-optimize-source")?.value || "",
+        symbol: document.querySelector("#strategy-optimize-symbol")?.value || "",
+        timeframe: document.querySelector("#strategy-optimize-timeframe")?.value || "",
         grid: selectedOptimizationGrid(),
       };
+      if (!params.symbol || !params.timeframe) {
+        showToast("Select a symbol and timeframe to optimize.");
+        return;
+      }
       const maxCombinations = positiveIntegerInput("#strategy-optimize-max-combinations");
       if (maxCombinations) params.max_combinations = maxCombinations;
       const trainRows = positiveIntegerInput("#strategy-optimize-train-rows");
@@ -2255,8 +2301,8 @@
       if (validationRows) params.walk_forward_validation_rows = validationRows;
       if (stepRows) params.walk_forward_step_rows = stepRows;
       await runStrategyAction("optimize", params, {
-        headline: `Optimize ${strategyName}`,
-        submitLog: `Submitting optimization for ${strategyName}.`,
+        headline: `Optimize ${params.symbol} ${params.timeframe}`,
+        submitLog: `Submitting optimization for ${strategyName} on ${params.symbol} ${params.timeframe}.`,
       });
     }
 

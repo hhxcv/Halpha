@@ -1066,7 +1066,24 @@ Validation contract:
 - `quant.signals` is retired and must fail with an actionable validation error when `quant.enabled` is true.
 - `quant.strategies` must be a non-empty list when quant is enabled.
 - Supported strategy names are narrow and explicit. Unknown names fail with an actionable error.
-- Strategy records may include per-strategy `params`, `backtest`, and enabled state.
+- Strategy records may include per-strategy `params`, `targeted_params`,
+  `backtest`, and enabled state.
+- `quant.strategies[].targeted_params` is an optional list of exact
+  source/symbol/timeframe parameter overrides. Each item must include
+  non-empty `source`, `symbol`, `timeframe`, and a `params` mapping that passes
+  the same strategy parameter validation as base `params`.
+- Targeted parameter overrides merge over base `params` only for matching
+  `source + symbol + timeframe`. Direct standalone backtests and optimizations
+  continue using base params when no matching override exists.
+- Pipeline strategy research changes selection mode when any enabled strategy
+  defines `targeted_params`: benchmark generation, strategy runs, and strategy
+  experiments are restricted to the configured targeted source/symbol/timeframe
+  profiles. This prevents unoptimized strategy/symbol/timeframe matrix rows from
+  entering report evidence. Configs without any targeted profiles preserve the
+  legacy configured strategy/view matrix behavior.
+- Optimization artifacts may emit `recommended_targeted_params` for the selected
+  target candidate. This is research evidence and a copyable config fragment,
+  not an automatic active-config mutation.
 - Strategy-level `backtest` and global `parameter_diagnostics` are optional, bounded research diagnostics, not trading or return-forecast settings.
 - `quant.parameter_diagnostics` may be omitted. If present, `quant.parameter_diagnostics.enabled` must be a boolean.
 - `quant.parameter_diagnostics.max_combinations` must be a positive integer when present and is required when parameter diagnostics are enabled.

@@ -705,6 +705,84 @@ def test_quant_strategy_runner_records_manifest_diagnostics_for_mixed_strategy_s
     ]
 
 
+def test_quant_strategy_runner_uses_only_targeted_strategy_profiles(tmp_path: Path) -> None:
+    config_path = _write_targeted_matrix_strategy_config(tmp_path)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(
+                source="binance",
+                symbol="BTCUSDT",
+                timeframe="1d",
+                open_time="2026-06-01T00:00:00Z",
+                close=100,
+                volume=10,
+            ),
+            _record(
+                source="binance",
+                symbol="BTCUSDT",
+                timeframe="1d",
+                open_time="2026-06-02T00:00:00Z",
+                close=102,
+                volume=11,
+            ),
+            _record(
+                source="binance",
+                symbol="BTCUSDT",
+                timeframe="1d",
+                open_time="2026-06-03T00:00:00Z",
+                close=104,
+                volume=12,
+            ),
+            _record(
+                source="binance",
+                symbol="BTCUSDT",
+                timeframe="4h",
+                open_time="2026-06-01T00:00:00Z",
+                close=100,
+                volume=10,
+            ),
+            _record(
+                source="binance",
+                symbol="BTCUSDT",
+                timeframe="4h",
+                open_time="2026-06-01T04:00:00Z",
+                close=102,
+                volume=11,
+            ),
+            _record(
+                source="binance",
+                symbol="BTCUSDT",
+                timeframe="4h",
+                open_time="2026-06-01T08:00:00Z",
+                close=101,
+                volume=12,
+            ),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    runs = _strategy_runs(result)["runs"]
+    manifest = _manifest(result)
+    identities = sorted((item["strategy_name"], item["symbol"], item["timeframe"]) for item in runs)
+
+    assert result.succeeded is True
+    assert identities == [
+        ("signed_tsmom_trend", "BTCUSDT", "4h"),
+        ("tsmom_vol_scaled", "BTCUSDT", "1d"),
+    ]
+    assert all(item["parameter_profile"]["source"] == "targeted_params" for item in runs)
+    assert {item["symbol"] for item in runs} == {"BTCUSDT"}
+    assert manifest["counts"]["quant_strategy_runs"] == 2
+    assert manifest["counts"]["quant_strategies_enabled"] == 3
+    assert manifest["quant_strategies"]["selection_policy"] == {
+        "source": "targeted_params",
+        "unmatched_target_combinations_embedded": False,
+    }
+
+
 def test_quant_strategy_runner_writes_breakout_atr_trend_artifacts(tmp_path: Path) -> None:
     config_path = _write_breakout_strategy_config(tmp_path, lookback=6)
     config = load_config(config_path)
@@ -2444,6 +2522,95 @@ quant:
         return_window: 2
         volatility_window: 2
         target_volatility: 0.2
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_targeted_matrix_strategy_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+      - 4h
+    lookback:
+      1d: 3
+      4h: 3
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
+      targeted_params:
+        - source: binance
+          symbol: BTCUSDT
+          timeframe: 1d
+          params:
+            return_window: 1
+            volatility_window: 1
+            target_volatility: 0.2
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+    - name: signed_tsmom_trend
+      enabled: true
+      params:
+        return_window: 2
+        deadband_pct: 1.0
+      targeted_params:
+        - source: binance
+          symbol: BTCUSDT
+          timeframe: 4h
+          params:
+            return_window: 1
+            deadband_pct: 0.0
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+    - name: sma_cross_trend
+      enabled: true
+      params:
+        short_window: 1
+        long_window: 2
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
 text:
   enabled: false
 report:

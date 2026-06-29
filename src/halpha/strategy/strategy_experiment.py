@@ -22,6 +22,13 @@ from halpha.strategy.strategy_experiment_material import (
     render_strategy_experiment_material,
 )
 from halpha.strategy.strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
+from halpha.strategy.strategy_config import (
+    configured_targeted_parameter_profiles,
+    has_matching_targeted_parameter_profile,
+    has_targeted_parameter_profiles,
+    parameter_profile_record,
+    resolve_strategy_for_target,
+)
 from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
 
 
@@ -77,14 +84,13 @@ def build_strategy_experiment(
     except StrategyExperimentError as exc:
         raise PipelineError(str(exc), stage=PIPELINE_STAGE_NAME, exit_code=exc.exit_code) from exc
 
-    candidates = [
-        _candidate_record(
-            strategy=strategy,
-            benchmarks=benchmark_suite["benchmarks"],
-            storage_dir=storage_dir,
-        )
-        for strategy in strategies
-    ]
+    targeted_only = any(has_targeted_parameter_profiles(strategy) for strategy in strategies)
+    candidates = _candidate_records(
+        strategies=strategies,
+        benchmarks=benchmark_suite["benchmarks"],
+        storage_dir=storage_dir,
+        targeted_only=targeted_only,
+    )
     coverage = _coverage(candidates, benchmark_suite)
     warnings = _unique_items(
         item
@@ -105,6 +111,10 @@ def build_strategy_experiment(
         "experiment_id": f"{run.run_id}_strategy_experiment",
         "inputs": {
             "candidate_source": "configured_quant_strategies",
+            "selection_policy": {
+                "source": "targeted_params" if targeted_only else "configured_strategy_benchmark_matrix",
+                "unmatched_target_combinations_embedded": False,
+            },
             "strategy_names": [str(strategy.get("name")) for strategy in strategies],
             "benchmark_suite_artifact": "analysis/strategy_benchmark_suite.json",
         },
@@ -180,14 +190,13 @@ def run_strategy_experiment(
     benchmark_suite_path = target_dir / STRATEGY_EXPERIMENT_BENCHMARK_ARTIFACT
     write_json(benchmark_suite_path, benchmark_suite)
 
-    candidates = [
-        _candidate_record(
-            strategy=strategy,
-            benchmarks=benchmark_suite["benchmarks"],
-            storage_dir=storage_dir,
-        )
-        for strategy in strategies
-    ]
+    targeted_only = any(has_targeted_parameter_profiles(strategy) for strategy in strategies)
+    candidates = _candidate_records(
+        strategies=strategies,
+        benchmarks=benchmark_suite["benchmarks"],
+        storage_dir=storage_dir,
+        targeted_only=targeted_only,
+    )
     coverage = _coverage(candidates, benchmark_suite)
     warnings = _unique_items(
         item
@@ -208,6 +217,10 @@ def run_strategy_experiment(
         "experiment_id": _experiment_id(clock_value),
         "inputs": {
             "candidate_source": "configured_quant_strategies",
+            "selection_policy": {
+                "source": "targeted_params" if targeted_only else "configured_strategy_benchmark_matrix",
+                "unmatched_target_combinations_embedded": False,
+            },
             "strategy_names": [str(strategy.get("name")) for strategy in strategies],
             "benchmark_suite_artifact": STRATEGY_EXPERIMENT_BENCHMARK_ARTIFACT,
         },
@@ -459,6 +472,48 @@ def _record_pipeline_summary(
     }
 
 
+def _candidate_records(
+    *,
+    strategies: list[dict[str, Any]],
+    benchmarks: list[dict[str, Any]],
+    storage_dir: Path,
+    targeted_only: bool,
+) -> list[dict[str, Any]]:
+    records = []
+    for strategy in strategies:
+        strategy_benchmarks = _benchmarks_for_strategy(strategy, benchmarks, targeted_only=targeted_only)
+        if targeted_only and not strategy_benchmarks:
+            continue
+        records.append(
+            _candidate_record(
+                strategy=strategy,
+                benchmarks=strategy_benchmarks,
+                storage_dir=storage_dir,
+            )
+        )
+    return records
+
+
+def _benchmarks_for_strategy(
+    strategy: dict[str, Any],
+    benchmarks: list[dict[str, Any]],
+    *,
+    targeted_only: bool,
+) -> list[dict[str, Any]]:
+    if not targeted_only:
+        return list(benchmarks)
+    return [
+        benchmark
+        for benchmark in benchmarks
+        if has_matching_targeted_parameter_profile(
+            strategy,
+            source=str(benchmark.get("source") or ""),
+            symbol=str(benchmark.get("symbol") or ""),
+            timeframe=str(benchmark.get("timeframe") or ""),
+        )
+    ]
+
+
 def _candidate_record(
     *,
     strategy: dict[str, Any],
@@ -507,6 +562,7 @@ def _candidate_record(
     return {
         "strategy_name": name,
         "params": strategy.get("params") if isinstance(strategy.get("params"), dict) else {},
+        "targeted_params": configured_targeted_parameter_profiles(strategy),
         "status": _candidate_status(evaluations),
         "summary": _summary(evaluations),
         "evaluations": evaluations,
@@ -522,7 +578,14 @@ def _evaluation_record(
     storage_dir: Path,
     definition: Any,
 ) -> dict[str, Any]:
-    identity = _evaluation_identity(strategy, benchmark)
+    effective_strategy = resolve_strategy_for_target(
+        strategy,
+        source=str(benchmark.get("source") or ""),
+        symbol=str(benchmark.get("symbol") or ""),
+        timeframe=str(benchmark.get("timeframe") or ""),
+    )
+    identity = _evaluation_identity(effective_strategy, benchmark)
+    identity["parameter_profile"] = parameter_profile_record(effective_strategy)
     if benchmark.get("status") != "succeeded":
         return {
             **identity,
@@ -551,9 +614,9 @@ def _evaluation_record(
                 benchmark,
                 f"Loaded {len(rows)} rows, expected benchmark row_count {benchmark.get('row_count')}.",
             )
-        signals = definition.signal_records(strategy, _view_from_benchmark(benchmark), rows)
+        signals = definition.signal_records(effective_strategy, _view_from_benchmark(benchmark), rows)
         evaluation = evaluate_single_window_backtest(
-            strategy=strategy,
+            strategy=effective_strategy,
             market_identity={
                 "source": benchmark.get("source"),
                 "symbol": benchmark.get("symbol"),
@@ -561,10 +624,10 @@ def _evaluation_record(
             },
             ohlcv_rows=rows,
             signal_records=signals,
-            cost_assumptions=_cost_assumptions(strategy),
+            cost_assumptions=_cost_assumptions(effective_strategy),
         )
         walk_forward = evaluate_walk_forward_backtest(
-            strategy=strategy,
+            strategy=effective_strategy,
             market_identity={
                 "source": benchmark.get("source"),
                 "symbol": benchmark.get("symbol"),
@@ -572,7 +635,7 @@ def _evaluation_record(
             },
             ohlcv_rows=rows,
             signal_records=signals,
-            cost_assumptions=_cost_assumptions(strategy),
+            cost_assumptions=_cost_assumptions(effective_strategy),
         )
     except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
         return _failed_record(identity, type(exc).__name__, str(exc))

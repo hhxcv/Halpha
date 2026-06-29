@@ -11,6 +11,12 @@ from halpha.quant.parameter_diagnostics import bounded_parameter_diagnostic, par
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_records import failed_strategy_run
 from halpha.quant.vectorbt_engine import engine_metadata
+from halpha.strategy.strategy_config import (
+    has_matching_targeted_parameter_profile,
+    has_targeted_parameter_profiles,
+    parameter_profile_record,
+    resolve_strategy_for_target,
+)
 from halpha.storage import resolve_runtime_path, write_json
 
 
@@ -36,11 +42,15 @@ def evaluate_quant_strategies(
     enabled, disabled = _configured_strategies(quant)
     engine = engine_metadata()
     parameter_config = parameter_diagnostic_config(quant)
+    targeted_only = any(has_targeted_parameter_profiles(strategy) for strategy in enabled)
     runs = []
 
     for view in views_artifact.get("views", []):
+        view_strategies = _strategies_for_view(enabled, view, targeted_only=targeted_only)
+        if not view_strategies:
+            continue
         rows = load_market_data_view_records(view, storage_dir=storage_dir)
-        for strategy in enabled:
+        for strategy in view_strategies:
             runs.append(
                 _run_strategy(
                     strategy,
@@ -72,6 +82,7 @@ def evaluate_quant_strategies(
         enabled=enabled,
         disabled=disabled,
         parameter_config=parameter_config,
+        targeted_only=targeted_only,
         runs=runs,
     )
     return [QUANT_STRATEGY_RUNS_ARTIFACT]
@@ -93,6 +104,26 @@ def _configured_strategies(quant: dict[str, Any]) -> tuple[list[dict[str, Any]],
     return enabled, disabled
 
 
+def _strategies_for_view(
+    strategies: list[dict[str, Any]],
+    view: dict[str, Any],
+    *,
+    targeted_only: bool,
+) -> list[dict[str, Any]]:
+    if not targeted_only:
+        return list(strategies)
+    return [
+        strategy
+        for strategy in strategies
+        if has_matching_targeted_parameter_profile(
+            strategy,
+            source=str(view.get("source") or ""),
+            symbol=str(view.get("symbol") or ""),
+            timeframe=str(view.get("timeframe") or ""),
+        )
+    ]
+
+
 def _run_strategy(
     strategy: dict[str, Any],
     view: dict[str, Any],
@@ -102,6 +133,12 @@ def _run_strategy(
     created_at: str,
     parameter_config: dict[str, Any],
 ) -> dict[str, Any]:
+    strategy = resolve_strategy_for_target(
+        strategy,
+        source=str(view.get("source") or ""),
+        symbol=str(view.get("symbol") or ""),
+        timeframe=str(view.get("timeframe") or ""),
+    )
     name = str(strategy["name"])
     definition = get_strategy_definition(name)
     if definition is None:
@@ -116,6 +153,7 @@ def _run_strategy(
         )
     try:
         strategy_run = definition.run(strategy, view, rows, engine=engine, created_at=created_at)
+        strategy_run["parameter_profile"] = parameter_profile_record(strategy)
         strategy_run["parameter_diagnostic"] = bounded_parameter_diagnostic(
             strategy,
             view,
@@ -226,12 +264,17 @@ def _record_manifest_summary(
     enabled: list[dict[str, Any]],
     disabled: list[str],
     parameter_config: dict[str, Any],
+    targeted_only: bool,
     runs: list[dict[str, Any]],
 ) -> None:
     run.manifest["quant_strategies"] = {
         "engine": engine,
         "enabled": [str(strategy["name"]) for strategy in enabled],
         "disabled": disabled,
+        "selection_policy": {
+            "source": "targeted_params" if targeted_only else "configured_strategy_view_matrix",
+            "unmatched_target_combinations_embedded": False,
+        },
         "backtest_diagnostics_enabled": any(
             isinstance(strategy.get("backtest"), dict) and strategy["backtest"].get("enabled") is True
             for strategy in enabled

@@ -128,6 +128,72 @@ def test_cli_experiment_runs_candidates_against_benchmark_suite(
     assert manifest["failures"] == []
 
 
+def test_cli_experiment_uses_only_targeted_strategy_candidates(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config_path = _write_config(
+        tmp_path,
+        symbols=["BTCUSDT", "ETHUSDT"],
+        lookback=3,
+        strategy_extra_yaml="""
+      targeted_params:
+        - source: binance
+          symbol: BTCUSDT
+          timeframe: 1d
+          params:
+            return_window: 1
+            volatility_window: 1
+            target_volatility: 0.2
+""",
+        extra_strategy_yaml="""
+    - name: sma_cross_trend
+      enabled: true
+      params:
+        short_window: 1
+        long_window: 2
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+""",
+    )
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(symbol="BTCUSDT", open_time="2026-06-01T00:00:00Z", close=100),
+            _record(symbol="BTCUSDT", open_time="2026-06-02T00:00:00Z", close=102),
+            _record(symbol="BTCUSDT", open_time="2026-06-03T00:00:00Z", close=104),
+        ]
+    )
+    output_dir = tmp_path / "experiments"
+
+    exit_code = main(["experiment", "--config", str(config_path), "--output-dir", str(output_dir)])
+
+    capsys.readouterr()
+    run_dir = next(output_dir.iterdir())
+    experiment = json.loads((run_dir / "strategy_experiment.json").read_text(encoding="utf-8"))
+    benchmark_suite = json.loads((run_dir / "strategy_benchmark_suite.json").read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert benchmark_suite["selection_policy"]["source"] == "configured_targeted_strategy_params"
+    assert benchmark_suite["selection_policy"]["target_filter"] == [
+        {"source": "binance", "symbol": "BTCUSDT", "timeframe": "1d"}
+    ]
+    assert experiment["inputs"]["selection_policy"] == {
+        "source": "targeted_params",
+        "unmatched_target_combinations_embedded": False,
+    }
+    assert [candidate["strategy_name"] for candidate in experiment["candidates"]] == [
+        "tsmom_vol_scaled"
+    ]
+    assert experiment["candidates"][0]["evaluations"][0]["parameter_profile"]["source"] == (
+        "targeted_params"
+    )
+
+
 def test_cli_experiment_records_failed_evaluation_without_stopping(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -230,6 +296,8 @@ def _write_config(
     *,
     symbols: list[str],
     lookback: int,
+    strategy_extra_yaml: str = "",
+    extra_strategy_yaml: str = "",
     benchmark_suite_yaml: str = "",
 ) -> Path:
     config_path = tmp_path / "config.yaml"
@@ -266,6 +334,8 @@ quant:
         fees_bps: 10
         slippage_bps: 5
         mode: long_flat
+{strategy_extra_yaml.rstrip()}
+{extra_strategy_yaml.rstrip()}
   parameter_diagnostics:
     enabled: false
     max_combinations: 50

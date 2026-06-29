@@ -126,6 +126,42 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     )
 
 
+def test_pipeline_applies_targeted_strategy_params_to_report_backtests(tmp_path: Path) -> None:
+    config_path = _write_strategy_config(tmp_path, lookback=5, targeted_params_enabled=True)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=102),
+            _record(open_time="2026-06-03T00:00:00Z", close=104),
+            _record(open_time="2026-06-04T00:00:00Z", close=106),
+            _record(open_time="2026-06-05T00:00:00Z", close=109),
+        ]
+    )
+
+    result = _run_pipeline(config, config_path)
+
+    quant_run = _quant_strategy_runs(result)["runs"][0]
+    evaluation_record = _strategy_evaluation(result)["records"][0]
+
+    assert result.succeeded is True
+    assert quant_run["params"] == {
+        "return_window": 3,
+        "target_volatility": 0.3,
+        "volatility_window": 2,
+    }
+    assert quant_run["parameter_profile"]["source"] == "targeted_params"
+    assert quant_run["parameter_profile"]["matched"] is True
+    assert quant_run["parameter_profile"]["target"] == {
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+    }
+    assert evaluation_record["params"] == quant_run["params"]
+    assert evaluation_record["parameter_profile"] == quant_run["parameter_profile"]
+
+
 def test_strategy_evaluation_history_counts_markers_omitted_by_bounded_curve() -> None:
     start = datetime(2026, 1, 1, tzinfo=timezone.utc)
     equity_curve = []
@@ -368,6 +404,7 @@ def _write_strategy_config(
     quant_enabled: bool = True,
     parameter_diagnostics_enabled: bool = False,
     parameter_grid_return_windows: list[int] | None = None,
+    targeted_params_enabled: bool = False,
 ) -> Path:
     config_path = tmp_path / "config.yaml"
     return_windows = parameter_grid_return_windows or [2]
@@ -389,6 +426,20 @@ def _write_strategy_config(
         if parameter_diagnostics_enabled
         else ""
     )
+    targeted_params_yaml = (
+        """
+      targeted_params:
+        - source: binance
+          symbol: BTCUSDT
+          timeframe: 1d
+          params:
+            return_window: 3
+            volatility_window: 2
+            target_volatility: 0.3
+"""
+        if targeted_params_enabled
+        else ""
+    )
     strategies = (
         f"""
   strategies:
@@ -398,6 +449,7 @@ def _write_strategy_config(
         return_window: 2
         volatility_window: 2
         target_volatility: 0.2
+{targeted_params_yaml.rstrip()}
       backtest:
         enabled: true
         initial_cash: 10000
@@ -444,6 +496,10 @@ codex:
 
 def _strategy_evaluation(result) -> dict[str, Any]:
     return json.loads((result.run.analysis_dir / "strategy_evaluation_summary.json").read_text(encoding="utf-8"))
+
+
+def _quant_strategy_runs(result) -> dict[str, Any]:
+    return json.loads((result.run.analysis_dir / "quant_strategy_runs.json").read_text(encoding="utf-8"))
 
 
 def _strategy_evaluation_history(tmp_path: Path) -> dict[str, Any]:
