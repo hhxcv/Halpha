@@ -190,6 +190,94 @@ def test_config_example_loads_successfully() -> None:
     assert config["report"]["language"] == "zh-CN"
 
 
+def test_load_config_accepts_targeted_strategy_params(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "      params:\n        return_window: 20\n        volatility_window: 20\n        target_volatility: 0.2",
+            (
+                "      params:\n        return_window: 20\n        volatility_window: 20\n        target_volatility: 0.2\n"
+                "      targeted_params:\n"
+                "        - source: binance_usdm\n"
+                "          symbol: BTCUSDT\n"
+                "          timeframe: 4h\n"
+                "          params:\n"
+                "            return_window: 80\n"
+                "            volatility_window: 40"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    profile = config["quant"]["strategies"][0]["targeted_params"][0]
+    assert profile == {
+        "source": "binance_usdm",
+        "symbol": "BTCUSDT",
+        "timeframe": "4h",
+        "params": {"return_window": 80, "volatility_window": 40},
+    }
+
+
+@pytest.mark.parametrize(
+    ("targeted_block", "expected"),
+    [
+        ("targeted_params: invalid", r"targeted_params must be a list"),
+        (
+            "targeted_params:\n"
+            "        - source: binance\n"
+            "          symbol: BTCUSDT\n"
+            "          timeframe: 1d\n"
+            "          params: invalid",
+            r"targeted_params\[0\]\.params must be a mapping",
+        ),
+        (
+            "targeted_params:\n"
+            "        - source: binance\n"
+            "          symbol: BTCUSDT\n"
+            "          timeframe: 1d\n"
+            "          params:\n"
+            "            return_window: 0",
+            r"targeted_params\[0\]\.params\.return_window",
+        ),
+        (
+            "targeted_params:\n"
+            "        - source: binance\n"
+            "          symbol: BTCUSDT\n"
+            "          timeframe: 1d\n"
+            "          params:\n"
+            "            return_window: 20\n"
+            "        - source: binance\n"
+            "          symbol: BTCUSDT\n"
+            "          timeframe: 1d\n"
+            "          params:\n"
+            "            return_window: 30",
+            r"duplicates targeted params",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_targeted_strategy_params(
+    tmp_path: Path,
+    targeted_block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "      params:\n        return_window: 20\n        volatility_window: 20\n        target_volatility: 0.2",
+            (
+                "      params:\n        return_window: 20\n        volatility_window: 20\n"
+                f"        target_volatility: 0.2\n      {targeted_block}"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
 def test_load_config_rejects_non_mapping_root(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yaml"
     config_path.write_text("- run\n- market\n", encoding="utf-8")

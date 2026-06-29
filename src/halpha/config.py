@@ -849,6 +849,8 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
                 raise ConfigError(f"{path}.params must be a mapping.")
             if isinstance(strategy.get("params"), dict):
                 _validate_quant_strategy_params(name, strategy["params"], f"{path}.params")
+            if "targeted_params" in strategy:
+                _validate_quant_strategy_targeted_params(name, strategy["targeted_params"], f"{path}.targeted_params")
             if "backtest" in strategy:
                 backtest = strategy["backtest"]
                 if not isinstance(backtest, dict):
@@ -962,6 +964,29 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
         if "min_instrument_count" in params:
             _require_positive_int(params, "min_instrument_count", f"{path}.min_instrument_count")
         _validate_cross_sectional_counts(params, path)
+
+
+def _validate_quant_strategy_targeted_params(name: str, profiles: Any, path: str) -> None:
+    if not isinstance(profiles, list):
+        raise ConfigError(f"{path} must be a list.")
+    seen: set[tuple[str, str, str]] = set()
+    for index, profile in enumerate(profiles):
+        profile_path = f"{path}[{index}]"
+        if not isinstance(profile, dict):
+            raise ConfigError(f"{profile_path} must be a mapping.")
+        source = _require_non_empty_string(profile, "source", f"{profile_path}.source")
+        symbol = _require_non_empty_string(profile, "symbol", f"{profile_path}.symbol")
+        timeframe = _require_non_empty_string(profile, "timeframe", f"{profile_path}.timeframe")
+        identity = (source, symbol, timeframe)
+        if identity in seen:
+            raise ConfigError(
+                f"{profile_path} duplicates targeted params for source={source}, symbol={symbol}, timeframe={timeframe}."
+            )
+        seen.add(identity)
+        params = profile.get("params")
+        if not isinstance(params, dict):
+            raise ConfigError(f"{profile_path}.params must be a mapping.")
+        _validate_quant_strategy_params(name, params, f"{profile_path}.params")
 
 
 def _validate_bollinger_rsi_thresholds(params: dict[str, Any], path: str) -> None:

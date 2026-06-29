@@ -157,8 +157,12 @@ Strategy actions are also available through
 `POST /api/strategies/actions/{backtest|experiment|optimize}`. The strategy
 action API creates the same internal allowlisted command jobs as the generic
 jobs API and returns bounded job refs, progress/log metadata, warnings, and
-errors. Other command actions are available through the dashboard jobs API and
-remain explicit allowlisted jobs.
+errors. Backtest and optimize strategy actions accept the selected market
+source, symbol, and timeframe so CLI and Dashboard requests resolve the same
+targeted strategy parameter profile. Optimize summaries may expose bounded
+`recommended_targeted_params` research evidence for manual config review, but
+must not mutate active config automatically. Other command actions are
+available through the dashboard jobs API and remain explicit allowlisted jobs.
 
 Mutating product command jobs contend for the runtime-root mutation lease in
 `.halpha/state.sqlite` before starting a subprocess. The protected job kinds
@@ -267,8 +271,9 @@ Dashboard pages should expose the current product shape through bounded views:
   runs and standalone backtests also register bounded records in
   `data/research/strategy_evaluations/strategy_evaluation_history.json` with
   `execution_source.type` set to `report_run` or `standalone_backtest`. The
-  dashboard must not reconstruct charts by dumping full reusable OHLCV history
-  by default.
+  strategy controls expose configured strategy specs plus any exact
+  source/symbol/timeframe `targeted_params` profiles. The dashboard must not
+  reconstruct charts by dumping full reusable OHLCV history by default.
 - Monitor: monitor control, configured loop parameters, state-store cycle
   history, linked runs, alert archive aggregates, cooldown state, warnings,
   errors, and explicit daily-report schedule state.

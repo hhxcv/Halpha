@@ -164,6 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
     backtest_parser = subparsers.add_parser("backtest", help="Run one standalone strategy backtest.")
     backtest_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
     backtest_parser.add_argument("--strategy", required=True, help="Configured strategy name to evaluate.")
+    backtest_parser.add_argument("--source", help="Configured OHLCV source to evaluate. Defaults to market.source.")
     backtest_parser.add_argument("--symbol", required=True, help="Configured market symbol to evaluate.")
     backtest_parser.add_argument("--timeframe", required=True, help="Configured OHLCV timeframe to evaluate.")
     backtest_parser.add_argument("--output-dir", help="Directory for standalone backtest output artifacts.")
@@ -180,6 +181,9 @@ def build_parser() -> argparse.ArgumentParser:
     optimize_parser = subparsers.add_parser("optimize", help="Run a bounded strategy parameter optimization.")
     optimize_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
     optimize_parser.add_argument("--strategy", required=True, help="Configured strategy name to optimize.")
+    optimize_parser.add_argument("--source", help="Configured OHLCV source to optimize. Defaults to market.source.")
+    optimize_parser.add_argument("--symbol", help="Configured market symbol to optimize.")
+    optimize_parser.add_argument("--timeframe", help="Configured OHLCV timeframe to optimize.")
     optimize_parser.add_argument(
         "--grid",
         action="append",
@@ -527,6 +531,7 @@ def _dispatch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
         return _backtest(
             args.config,
             strategy_name=args.strategy,
+            source=args.source,
             symbol=args.symbol,
             timeframe=args.timeframe,
             output_dir=args.output_dir,
@@ -543,6 +548,9 @@ def _dispatch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
         return _optimize(
             args.config,
             strategy_name=args.strategy,
+            source=args.source,
+            symbol=args.symbol,
+            timeframe=args.timeframe,
             grid_args=args.grid,
             max_combinations=args.max_combinations,
             walk_forward_train_rows=args.walk_forward_train_rows,
@@ -1087,6 +1095,7 @@ def _backtest(
     config_arg: str,
     *,
     strategy_name: str,
+    source: str | None,
     symbol: str,
     timeframe: str,
     output_dir: str | None,
@@ -1096,6 +1105,7 @@ def _backtest(
     _log_command_start(
         "backtest",
         strategy_name=strategy_name,
+        source=source,
         symbol=symbol,
         timeframe=timeframe,
         output_dir_requested=output_dir is not None,
@@ -1115,6 +1125,7 @@ def _backtest(
         config,
         config_path=config_path,
         strategy_name=strategy_name,
+        source=source,
         symbol=symbol,
         timeframe=timeframe,
         output_dir=Path(output_dir) if output_dir else None,
@@ -1125,6 +1136,7 @@ def _backtest(
             "backtest",
             status=result.status,
             strategy_name=strategy_name,
+            source=source,
             symbol=symbol,
             timeframe=timeframe,
         )
@@ -1136,6 +1148,7 @@ def _backtest(
         reason="; ".join(result.errors) or result.status,
         status=result.status,
         strategy_name=strategy_name,
+        source=source,
         symbol=symbol,
         timeframe=timeframe,
         exit_code=result.exit_code,
@@ -1192,6 +1205,9 @@ def _optimize(
     config_arg: str,
     *,
     strategy_name: str,
+    source: str | None,
+    symbol: str | None,
+    timeframe: str | None,
     grid_args: list[str],
     max_combinations: int,
     walk_forward_train_rows: int | None,
@@ -1205,6 +1221,9 @@ def _optimize(
     _log_command_start(
         "optimize",
         strategy_name=strategy_name,
+        source=source,
+        symbol=symbol,
+        timeframe=timeframe,
         grid_overrides=len(grid_args),
         max_combinations=max_combinations,
         output_dir_requested=output_dir is not None,
@@ -1234,6 +1253,9 @@ def _optimize(
         config,
         config_path=config_path,
         strategy_name=strategy_name,
+        source=source,
+        symbol=symbol,
+        timeframe=timeframe,
         grid_args=grid_args,
         max_combinations=max_combinations,
         walk_forward_policy=walk_forward_policy,
@@ -1241,7 +1263,14 @@ def _optimize(
     )
     print(result.stdout, end="")
     if result.succeeded:
-        _log_command_succeeded("optimize", status=result.status, strategy_name=strategy_name)
+        _log_command_succeeded(
+            "optimize",
+            status=result.status,
+            strategy_name=strategy_name,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
+        )
     else:
         _log_command_failed(
             "optimize",
@@ -1249,6 +1278,9 @@ def _optimize(
             reason="; ".join(result.errors) or result.status,
             status=result.status,
             strategy_name=strategy_name,
+            source=source,
+            symbol=symbol,
+            timeframe=timeframe,
             exit_code=result.exit_code,
         )
     return result.exit_code

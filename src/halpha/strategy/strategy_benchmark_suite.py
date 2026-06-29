@@ -54,6 +54,7 @@ def create_strategy_benchmark_suite_artifact(
     run_output_dir: Path,
     manifest_artifacts: dict[str, Any] | None = None,
     market_data_views: dict[str, Any] | None = None,
+    targets: list[dict[str, str]] | None = None,
     now: datetime | str | None = None,
 ) -> dict[str, Any]:
     quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
@@ -61,7 +62,6 @@ def create_strategy_benchmark_suite_artifact(
     ohlcv = market.get("ohlcv") if isinstance(market.get("ohlcv"), dict) else {}
     suite_config = quant.get("benchmark_suite") if isinstance(quant.get("benchmark_suite"), dict) else {}
 
-    source = str(market["source"])
     storage_dir = _storage_dir(ohlcv, config_path)
     source_artifact = _sync_state_artifact(
         storage_dir,
@@ -73,33 +73,36 @@ def create_strategy_benchmark_suite_artifact(
 
     records = []
     base = runtime_root(config_path)
+    target_specs = _target_specs(market, ohlcv, targets=targets)
     try:
-        for symbol in _configured_symbols(market):
-            for timeframe in _configured_timeframes(ohlcv):
-                for window in windows:
-                    records.append(
-                        _benchmark_record(
-                            storage_dir=storage_dir,
-                            config_path=config_path,
-                            run_output_dir=run_output_dir,
-                            config_base=base,
-                            source=source,
-                            symbol=symbol,
-                            timeframe=timeframe,
-                            lookback=_configured_lookback(ohlcv, timeframe),
-                            window=window,
-                            source_artifact=source_artifact,
-                            quality_reference_time=None,
-                            view_quality=view_quality,
-                        )
+        for target in target_specs:
+            source = str(target["source"])
+            symbol = str(target["symbol"])
+            timeframe = str(target["timeframe"])
+            for window in windows:
+                records.append(
+                    _benchmark_record(
+                        storage_dir=storage_dir,
+                        config_path=config_path,
+                        run_output_dir=run_output_dir,
+                        config_base=base,
+                        source=source,
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        lookback=_configured_lookback(ohlcv, timeframe),
+                        window=window,
+                        source_artifact=source_artifact,
+                        quality_reference_time=None,
+                        view_quality=view_quality,
                     )
+                )
     except OHLCVQueryError as exc:
         raise PipelineError(str(exc), stage=STAGE_NAME, exit_code=exc.exit_code) from exc
 
     coverage = _coverage(
         records,
-        symbols=_configured_symbols(market),
-        timeframes=_configured_timeframes(ohlcv),
+        symbols=sorted({str(target["symbol"]) for target in target_specs}),
+        timeframes=sorted({str(target["timeframe"]) for target in target_specs}),
         windows=windows,
     )
     warnings = _unique_items(
@@ -114,15 +117,19 @@ def create_strategy_benchmark_suite_artifact(
         for error in record.get("errors", [])
         if isinstance(error, dict)
     ]
+    selection_policy = {
+        "source": "configured_symbols_timeframes_and_windows",
+        "raw_ohlcv_history_embedded": False,
+        "supported_window_selections": sorted(SUPPORTED_WINDOW_SELECTIONS),
+    }
+    if targets is not None:
+        selection_policy["source"] = "targeted_symbols_timeframes_and_windows"
+        selection_policy["target_filter"] = target_specs
     artifact = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": "strategy_benchmark_suite",
         "created_at": _format_utc(now),
-        "selection_policy": {
-            "source": "configured_symbols_timeframes_and_windows",
-            "raw_ohlcv_history_embedded": False,
-            "supported_window_selections": sorted(SUPPORTED_WINDOW_SELECTIONS),
-        },
+        "selection_policy": selection_policy,
         "source_artifacts": [source_artifact],
         "coverage": coverage,
         "benchmarks": records,
@@ -467,6 +474,59 @@ def _configured_symbols(market: dict[str, Any]) -> list[str]:
 
 def _configured_timeframes(ohlcv: dict[str, Any]) -> list[str]:
     return sorted({str(timeframe) for timeframe in ohlcv.get("timeframes", [])})
+
+
+def _configured_sources(market: dict[str, Any], ohlcv: dict[str, Any]) -> list[str]:
+    values = ohlcv.get("sources") if isinstance(ohlcv.get("sources"), list) else []
+    sources = {str(value) for value in values if isinstance(value, str) and value}
+    market_source = market.get("source")
+    if isinstance(market_source, str) and market_source:
+        sources.add(market_source)
+    return sorted(sources)
+
+
+def _target_specs(
+    market: dict[str, Any],
+    ohlcv: dict[str, Any],
+    *,
+    targets: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
+    configured_sources = _configured_sources(market, ohlcv)
+    configured_symbols = _configured_symbols(market)
+    configured_timeframes = _configured_timeframes(ohlcv)
+    if targets is None:
+        default_source = str(market["source"])
+        return [
+            {"source": default_source, "symbol": symbol, "timeframe": timeframe}
+            for symbol in configured_symbols
+            for timeframe in configured_timeframes
+        ]
+    result = []
+    seen: set[tuple[str, str, str]] = set()
+    for index, target in enumerate(targets):
+        if not isinstance(target, dict):
+            raise PipelineError(f"benchmark target[{index}] must be a mapping.", stage=STAGE_NAME, exit_code=3)
+        source = str(target.get("source") or market.get("source") or "")
+        symbol = str(target.get("symbol") or "")
+        timeframe = str(target.get("timeframe") or "")
+        if source not in configured_sources:
+            raise PipelineError(f"benchmark target source is not configured: {source}", stage=STAGE_NAME, exit_code=3)
+        if symbol not in configured_symbols:
+            raise PipelineError(f"benchmark target symbol is not configured: {symbol}", stage=STAGE_NAME, exit_code=3)
+        if timeframe not in configured_timeframes:
+            raise PipelineError(
+                f"benchmark target timeframe is not configured: {timeframe}",
+                stage=STAGE_NAME,
+                exit_code=3,
+            )
+        identity = (source, symbol, timeframe)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        result.append({"source": source, "symbol": symbol, "timeframe": timeframe})
+    if not result:
+        raise PipelineError("benchmark target filter did not contain any targets.", stage=STAGE_NAME, exit_code=3)
+    return result
 
 
 def _configured_lookback(ohlcv: dict[str, Any], timeframe: str) -> int:

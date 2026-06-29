@@ -105,6 +105,74 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
     assert history_record["visualization"]["chart_type"] == "candlestick_backtest"
 
 
+def test_cli_backtest_applies_targeted_strategy_params(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config_path = _write_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "      params:\n        return_window: 1\n        volatility_window: 1\n        target_volatility: 0.2",
+            (
+                "      params:\n        return_window: 1\n        volatility_window: 1\n        target_volatility: 0.2\n"
+                "      targeted_params:\n"
+                "        - source: binance\n"
+                "          symbol: BTCUSDT\n"
+                "          timeframe: 1d\n"
+                "          params:\n"
+                "            return_window: 2\n"
+                "            volatility_window: 2"
+            ),
+        ),
+        encoding="utf-8",
+    )
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=101),
+            _record(open_time="2026-06-03T00:00:00Z", close=99),
+            _record(open_time="2026-06-04T00:00:00Z", close=102),
+        ]
+    )
+    output_dir = tmp_path / "backtests"
+
+    exit_code = main(
+        [
+            "backtest",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--source",
+            "binance",
+            "--symbol",
+            "BTCUSDT",
+            "--timeframe",
+            "1d",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    capsys.readouterr()
+    run_dir = next(output_dir.iterdir())
+    backtest = json.loads((run_dir / "strategy_backtest.json").read_text(encoding="utf-8"))
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert backtest["params"]["return_window"] == 2
+    assert backtest["params"]["volatility_window"] == 2
+    assert backtest["params"]["target_volatility"] == 0.2
+    assert backtest["parameter_profile"]["matched"] is True
+    assert backtest["parameter_profile"]["source"] == "targeted_params"
+    assert manifest["inputs"]["parameter_profile"]["target"] == {
+        "source": "binance",
+        "symbol": "BTCUSDT",
+        "timeframe": "1d",
+    }
+
+
 def test_cli_backtest_reports_missing_history(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

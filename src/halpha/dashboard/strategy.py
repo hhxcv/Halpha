@@ -14,6 +14,7 @@ from halpha.data.run_index import (
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
 from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
 from halpha.quant.registry import supported_strategy_specs
+from halpha.strategy.strategy_config import configured_targeted_parameter_profiles
 from halpha.strategy.strategy_evaluation_history import (
     STRATEGY_EVALUATION_HISTORY_ARTIFACT,
     read_strategy_evaluation_history,
@@ -155,6 +156,7 @@ def _configured_strategy_specs(config: dict[str, Any]) -> list[dict[str, Any]]:
             strategy_config = strategy_configs.get(spec.name, {})
             params = strategy_config.get("params") if isinstance(strategy_config.get("params"), dict) else {}
             record["configured_params"] = dict(params)
+            record["targeted_params"] = configured_targeted_parameter_profiles(strategy_config)
             records.append(record)
     return records
 
@@ -654,11 +656,14 @@ def _standalone_optimization_summary(path: Path, *, base: Path) -> dict[str, Any
             "created_at": manifest.get("created_at"),
             "status": manifest.get("status"),
             "strategy_name": optimization.get("strategy_name"),
+            "target": _bounded_mapping(optimization.get("target")),
+            "parameter_profile": _bounded_mapping(optimization.get("parameter_profile")),
             "counts": _bounded_mapping(manifest.get("counts")),
             "search_space": _bounded_mapping(optimization.get("search_space")),
             "coverage": _bounded_mapping(optimization.get("coverage")),
             "benchmark_coverage": _bounded_mapping(benchmark.get("coverage")),
             "selected_candidate": _optimization_selected_candidate(optimization.get("selected_candidate")),
+            "recommended_targeted_params": _bounded_mapping(optimization.get("recommended_targeted_params")),
             "robustness": _bounded_mapping(robustness),
             "walk_forward": _walk_forward_summary(walk_forward),
         },
@@ -839,6 +844,9 @@ def _optimization_selected_candidate(value: Any) -> dict[str, Any]:
         "status": item.get("status"),
         "strategy_name": item.get("strategy_name"),
         "params": _bounded_mapping(item.get("params")),
+        "changed_params": _bounded_mapping(item.get("changed_params")),
+        "metrics": _bounded_mapping(item.get("metrics")),
+        "parameter_profile": _bounded_mapping(item.get("parameter_profile")),
         "summary": _bounded_mapping(item.get("summary")),
         "automatic_config_mutation": item.get("automatic_config_mutation"),
     }

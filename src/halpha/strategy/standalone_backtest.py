@@ -9,6 +9,7 @@ from typing import Any
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
+from halpha.strategy.strategy_config import parameter_profile_record, resolve_strategy_for_target
 from halpha.strategy.strategy_evaluation_history import (
     STRATEGY_EVALUATION_HISTORY_ARTIFACT,
     register_standalone_strategy_backtest,
@@ -46,6 +47,7 @@ def run_standalone_strategy_backtest(
     strategy_name: str,
     symbol: str,
     timeframe: str,
+    source: str | None = None,
     output_dir: Path | None = None,
     now: datetime | None = None,
 ) -> StandaloneBacktestResult:
@@ -53,9 +55,11 @@ def run_standalone_strategy_backtest(
     strategy = _configured_strategy(config, strategy_name)
     market = _market_config(config)
     ohlcv = _ohlcv_config(market)
-    source = str(market["source"])
+    source = str(source or market["source"])
+    _require_configured_source(market, ohlcv, source)
     _require_configured_symbol(market, symbol)
     _require_configured_timeframe(ohlcv, timeframe)
+    strategy = resolve_strategy_for_target(strategy, source=source, symbol=symbol, timeframe=timeframe)
 
     storage_dir = _storage_dir(ohlcv, config_path)
     rows = _history_rows(
@@ -103,6 +107,7 @@ def run_standalone_strategy_backtest(
 
     evaluation = {
         **evaluation,
+        "parameter_profile": parameter_profile_record(strategy),
         "visualization": _visualization_record(
             rows=window,
             evaluation=evaluation,
@@ -198,6 +203,16 @@ def _require_configured_symbol(market: dict[str, Any], symbol: str) -> None:
     symbols = [str(value) for value in market.get("symbols", [])]
     if symbol not in symbols:
         raise StandaloneBacktestError(f"symbol is not configured: {symbol}", exit_code=2)
+
+
+def _require_configured_source(market: dict[str, Any], ohlcv: dict[str, Any], source: str) -> None:
+    values = ohlcv.get("sources") if isinstance(ohlcv.get("sources"), list) else []
+    sources = {str(value) for value in values if isinstance(value, str) and value}
+    market_source = market.get("source")
+    if isinstance(market_source, str) and market_source:
+        sources.add(market_source)
+    if source not in sources:
+        raise StandaloneBacktestError(f"source is not configured: {source}", exit_code=2)
 
 
 def _require_configured_timeframe(ohlcv: dict[str, Any], timeframe: str) -> None:
@@ -483,6 +498,7 @@ def _manifest(
             "symbol": symbol,
             "timeframe": timeframe,
             "params": strategy.get("params") if isinstance(strategy.get("params"), dict) else {},
+            "parameter_profile": parameter_profile_record(strategy),
             "storage_dir": display_path(storage_dir, base=runtime_root(config_path)),
             "input_view_id": view.get("view_id"),
         },

@@ -12,6 +12,7 @@ from halpha.market.ohlcv_query import OHLCVQueryError, query_ohlcv_records
 from halpha.quant.registry import get_strategy_definition, get_supported_strategy_spec
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
 from halpha.strategy.strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
+from halpha.strategy.strategy_config import parameter_profile_record, resolve_strategy_for_target
 from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
 
 
@@ -52,6 +53,9 @@ def run_strategy_optimization(
     *,
     config_path: Path,
     strategy_name: str,
+    source: str | None = None,
+    symbol: str | None = None,
+    timeframe: str | None = None,
     grid: dict[str, list[Any]] | None = None,
     max_combinations: int = DEFAULT_MAX_COMBINATIONS,
     walk_forward_policy: dict[str, Any] | None = None,
@@ -71,6 +75,15 @@ def run_strategy_optimization(
     _require_benchmark_suite_enabled(config)
     storage_dir = _storage_dir(ohlcv, config_path)
     base_output_dir = _base_output_dir(config, config_path=config_path, output_dir=output_dir)
+    targets = _optimization_targets(market, source=source, symbol=symbol, timeframe=timeframe)
+    target = targets[0] if targets else None
+    if target is not None:
+        strategy = resolve_strategy_for_target(
+            strategy,
+            source=target["source"],
+            symbol=target["symbol"],
+            timeframe=target["timeframe"],
+        )
     search_space = _search_space(strategy_name, explicit_grid=grid)
     combinations = _parameter_combinations(search_space["grid"])
     if len(combinations) > max_combinations:
@@ -87,6 +100,7 @@ def run_strategy_optimization(
             config,
             config_path=config_path,
             run_output_dir=base_output_dir,
+            targets=targets,
             now=clock_value,
         )
     except Exception as exc:
@@ -138,12 +152,14 @@ def run_strategy_optimization(
         "optimization_id": _optimization_id(clock_value, strategy_name),
         "strategy_name": strategy_name,
         "instrument_identity": _instrument_identity(config, benchmark_suite),
+        "target": target,
         "inputs": {
             "candidate_source": "bounded_grid_search",
             "strategy_source": "configured_quant_strategy",
             "benchmark_suite_artifact": STRATEGY_OPTIMIZATION_BENCHMARK_ARTIFACT,
         },
         "base_params": base_params,
+        "parameter_profile": parameter_profile_record(strategy),
         "search_space": {
             **search_space,
             "combination_count": len(combinations),
@@ -165,6 +181,12 @@ def run_strategy_optimization(
         "candidates": candidates,
         "failed_candidates": _failed_candidates(candidates),
         "selected_candidate": selected_candidate,
+        "recommended_targeted_params": _recommended_targeted_params(
+            selected_candidate,
+            target=target,
+            robustness=robustness,
+            walk_forward=walk_forward,
+        ),
         "walk_forward": walk_forward,
         "robustness": robustness,
         "source_artifacts": [STRATEGY_OPTIMIZATION_BENCHMARK_ARTIFACT],
@@ -302,6 +324,7 @@ def _candidate_record(
     return {
         "candidate_id": f"candidate:{index:04d}",
         "params": params,
+        "parameter_profile": parameter_profile_record(strategy),
         "changed_params": candidate_params,
         "status": _candidate_status(evaluations),
         "metrics": _candidate_metrics(evaluations),
@@ -324,6 +347,7 @@ def _evaluation_record(
             **identity,
             "status": "insufficient_data",
             "benchmark_status": benchmark.get("status"),
+            "parameter_profile": parameter_profile_record(strategy),
             "metrics": {},
             "warnings": [
                 _warning(
@@ -360,6 +384,7 @@ def _evaluation_record(
             },
         ),
         "benchmark_status": benchmark.get("status"),
+        "parameter_profile": parameter_profile_record(strategy),
     }
 
 
@@ -548,6 +573,7 @@ def _walk_forward_candidate_outcome(
     return {
         "candidate_id": candidate.get("candidate_id"),
         "params": candidate.get("params"),
+        "parameter_profile": parameter_profile_record(strategy),
         "changed_params": candidate.get("changed_params"),
         **result,
     }
@@ -715,11 +741,38 @@ def _selected_candidate(candidates: list[dict[str, Any]]) -> dict[str, Any] | No
     return {
         "candidate_id": selected.get("candidate_id"),
         "params": selected.get("params"),
+        "parameter_profile": selected.get("parameter_profile"),
         "changed_params": selected.get("changed_params"),
         "status": selected.get("status"),
         "metrics": selected.get("metrics"),
         "selection_reason": "highest_mean_net_return_with_drawdown_and_cost_tiebreak",
         "automatic_config_mutation": False,
+    }
+
+
+def _recommended_targeted_params(
+    selected_candidate: dict[str, Any] | None,
+    *,
+    target: dict[str, str] | None,
+    robustness: dict[str, Any],
+    walk_forward: dict[str, Any],
+) -> dict[str, Any] | None:
+    if selected_candidate is None or target is None:
+        return None
+    params = selected_candidate.get("params")
+    if not isinstance(params, dict):
+        return None
+    return {
+        "source": target.get("source"),
+        "symbol": target.get("symbol"),
+        "timeframe": target.get("timeframe"),
+        "params": dict(params),
+        "candidate_id": selected_candidate.get("candidate_id"),
+        "selection_reason": selected_candidate.get("selection_reason"),
+        "robustness_status": robustness.get("status"),
+        "walk_forward_status": walk_forward.get("status"),
+        "automatic_config_mutation": False,
+        "config_path": "quant.strategies[].targeted_params[]",
     }
 
 
@@ -1049,6 +1102,7 @@ def _manifest(
         "config_path": display_path(config_path, base=config_path.parent),
         "inputs": {
             "strategy_name": artifact.get("strategy_name"),
+            "target": artifact.get("target"),
             "candidate_count": artifact.get("coverage", {}).get("candidate_count"),
             "output_dir": display_path(output_dir, base=manifest_path.parent),
         },
@@ -1059,6 +1113,7 @@ def _manifest(
         },
         "counts": artifact.get("coverage", {}),
         "selected_candidate": artifact.get("selected_candidate"),
+        "recommended_targeted_params": artifact.get("recommended_targeted_params"),
         "failures": _failure_summaries(artifact),
         "warnings": artifact.get("warnings", []),
         "errors": artifact.get("errors", []),
@@ -1108,6 +1163,32 @@ def _ohlcv_config(market: dict[str, Any]) -> dict[str, Any]:
     return ohlcv
 
 
+def _optimization_targets(
+    market: dict[str, Any],
+    *,
+    source: str | None,
+    symbol: str | None,
+    timeframe: str | None,
+) -> list[dict[str, str]] | None:
+    if source is None and symbol is None and timeframe is None:
+        return None
+    if not symbol or not timeframe:
+        raise StrategyOptimizationError(
+            "targeted strategy optimization requires --symbol and --timeframe.",
+            exit_code=2,
+        )
+    target_source = str(source or market.get("source") or "")
+    if not target_source:
+        raise StrategyOptimizationError("targeted strategy optimization requires a source.", exit_code=2)
+    return [
+        {
+            "source": target_source,
+            "symbol": str(symbol),
+            "timeframe": str(timeframe),
+        }
+    ]
+
+
 def _require_benchmark_suite_enabled(config: dict[str, Any]) -> None:
     quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
     suite_config = quant.get("benchmark_suite") if isinstance(quant.get("benchmark_suite"), dict) else {}
@@ -1121,8 +1202,11 @@ def _require_benchmark_suite_enabled(config: dict[str, Any]) -> None:
 def _instrument_identity(config: dict[str, Any], benchmark_suite: dict[str, Any]) -> dict[str, Any]:
     market = config.get("market") if isinstance(config.get("market"), dict) else {}
     coverage = benchmark_suite.get("coverage") if isinstance(benchmark_suite.get("coverage"), dict) else {}
+    benchmarks = _dict_list(benchmark_suite.get("benchmarks"))
+    sources = sorted({str(item.get("source")) for item in benchmarks if item.get("source")})
     return {
-        "source": market.get("source"),
+        "source": sources[0] if len(sources) == 1 else market.get("source"),
+        "sources": sources,
         "symbols": coverage.get("configured_symbols") or [],
         "timeframes": coverage.get("configured_timeframes") or [],
         "windows": coverage.get("configured_windows") or [],

@@ -22,6 +22,7 @@ from halpha.strategy.strategy_evaluation_history import (
     STRATEGY_EVALUATION_HISTORY_ARTIFACT,
     register_report_strategy_evaluations,
 )
+from halpha.strategy.strategy_config import resolve_strategy_for_target
 from halpha.storage import resolve_runtime_path, write_json
 
 
@@ -279,6 +280,9 @@ def _base_record(
         "input_window_end": strategy_run.get("input_window_end"),
         "latest_candle_time": strategy_run.get("latest_candle_time"),
         "params": strategy_run.get("params") if isinstance(strategy_run.get("params"), dict) else {},
+        "parameter_profile": strategy_run.get("parameter_profile")
+        if isinstance(strategy_run.get("parameter_profile"), dict)
+        else {},
         "single_window": single_window,
         "walk_forward": walk_forward,
         "parameter_stability": parameter_stability,
@@ -294,11 +298,24 @@ def _base_record(
 def _strategy_input(config: dict[str, Any], strategy_run: dict[str, Any]) -> dict[str, Any]:
     name = str(strategy_run.get("strategy_name"))
     configured = _configured_strategy(config, name)
-    return {
+    strategy = {
         "name": name,
         "params": strategy_run.get("params") if isinstance(strategy_run.get("params"), dict) else {},
         "backtest": configured.get("backtest") if isinstance(configured.get("backtest"), dict) else {},
     }
+    if isinstance(strategy_run.get("parameter_profile"), dict):
+        strategy["parameter_profile"] = strategy_run["parameter_profile"]
+        return strategy
+    return resolve_strategy_for_target(
+        {
+            **configured,
+            "name": name,
+            "params": strategy["params"],
+        },
+        source=str(strategy_run.get("source") or ""),
+        symbol=str(strategy_run.get("symbol") or ""),
+        timeframe=str(strategy_run.get("timeframe") or ""),
+    )
 
 
 def _configured_strategy(config: dict[str, Any], name: str) -> dict[str, Any]:

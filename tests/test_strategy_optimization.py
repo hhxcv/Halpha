@@ -111,6 +111,92 @@ def test_cli_optimize_writes_bounded_strategy_optimization_artifact(
     }
 
 
+def test_cli_optimize_targets_symbol_timeframe_and_recommends_targeted_params(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config_path = _write_config(tmp_path, lookback=5)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        .replace("  symbols:\n    - BTCUSDT", "  symbols:\n    - BTCUSDT\n    - ETHUSDT")
+        .replace("    timeframes:\n      - 1d", "    timeframes:\n      - 1d\n      - 1h")
+        .replace("      1d: 5", "      1d: 5\n      1h: 5")
+        .replace(
+            "      params:\n        return_window: 1\n        volatility_window: 1\n        target_volatility: 0.2",
+            (
+                "      params:\n        return_window: 1\n        volatility_window: 1\n        target_volatility: 0.2\n"
+                "      targeted_params:\n"
+                "        - source: binance\n"
+                "          symbol: BTCUSDT\n"
+                "          timeframe: 1d\n"
+                "          params:\n"
+                "            return_window: 2"
+            ),
+        ),
+        encoding="utf-8",
+    )
+    _write_records(tmp_path, [100, 102, 101, 104, 106])
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(symbol="ETHUSDT", timeframe="1h", open_time=f"2026-06-01T0{hour}:00:00Z", close=50 + hour)
+            for hour in range(5)
+        ]
+    )
+    output_dir = tmp_path / "optimizations"
+
+    exit_code = main(
+        [
+            "optimize",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--source",
+            "binance",
+            "--symbol",
+            "BTCUSDT",
+            "--timeframe",
+            "1d",
+            "--grid",
+            "return_window=1,2",
+            "--grid",
+            "volatility_window=1",
+            "--grid",
+            "target_volatility=0.2",
+            "--max-combinations",
+            "4",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    capsys.readouterr()
+    run_dir = next(output_dir.iterdir())
+    artifact = json.loads((run_dir / "strategy_optimization.json").read_text(encoding="utf-8"))
+    benchmark_suite = json.loads((run_dir / "strategy_benchmark_suite.json").read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert artifact["target"] == {"source": "binance", "symbol": "BTCUSDT", "timeframe": "1d"}
+    assert artifact["base_params"] == {
+        "return_window": 2,
+        "target_volatility": 0.2,
+        "volatility_window": 1,
+    }
+    assert artifact["parameter_profile"]["matched"] is True
+    assert artifact["coverage"]["evaluations"] == 2
+    assert benchmark_suite["coverage"]["benchmark_records"] == 1
+    assert benchmark_suite["selection_policy"]["source"] == "targeted_symbols_timeframes_and_windows"
+    assert benchmark_suite["selection_policy"]["target_filter"] == [
+        {"source": "binance", "symbol": "BTCUSDT", "timeframe": "1d"}
+    ]
+    assert artifact["recommended_targeted_params"]["source"] == "binance"
+    assert artifact["recommended_targeted_params"]["symbol"] == "BTCUSDT"
+    assert artifact["recommended_targeted_params"]["timeframe"] == "1d"
+    assert artifact["recommended_targeted_params"]["params"] == artifact["selected_candidate"]["params"]
+    assert artifact["recommended_targeted_params"]["automatic_config_mutation"] is False
+
+
 def test_cli_optimize_records_stable_walk_forward_evidence(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

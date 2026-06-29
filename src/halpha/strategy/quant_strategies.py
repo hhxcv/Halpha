@@ -11,6 +11,7 @@ from halpha.quant.parameter_diagnostics import bounded_parameter_diagnostic, par
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_records import failed_strategy_run
 from halpha.quant.vectorbt_engine import engine_metadata
+from halpha.strategy.strategy_config import parameter_profile_record, resolve_strategy_for_target
 from halpha.storage import resolve_runtime_path, write_json
 
 
@@ -102,6 +103,12 @@ def _run_strategy(
     created_at: str,
     parameter_config: dict[str, Any],
 ) -> dict[str, Any]:
+    strategy = resolve_strategy_for_target(
+        strategy,
+        source=str(view.get("source") or ""),
+        symbol=str(view.get("symbol") or ""),
+        timeframe=str(view.get("timeframe") or ""),
+    )
     name = str(strategy["name"])
     definition = get_strategy_definition(name)
     if definition is None:
@@ -116,6 +123,7 @@ def _run_strategy(
         )
     try:
         strategy_run = definition.run(strategy, view, rows, engine=engine, created_at=created_at)
+        strategy_run["parameter_profile"] = parameter_profile_record(strategy)
         strategy_run["parameter_diagnostic"] = bounded_parameter_diagnostic(
             strategy,
             view,

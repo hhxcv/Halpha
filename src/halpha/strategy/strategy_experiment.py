@@ -22,6 +22,11 @@ from halpha.strategy.strategy_experiment_material import (
     render_strategy_experiment_material,
 )
 from halpha.strategy.strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
+from halpha.strategy.strategy_config import (
+    configured_targeted_parameter_profiles,
+    parameter_profile_record,
+    resolve_strategy_for_target,
+)
 from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
 
 
@@ -507,6 +512,7 @@ def _candidate_record(
     return {
         "strategy_name": name,
         "params": strategy.get("params") if isinstance(strategy.get("params"), dict) else {},
+        "targeted_params": configured_targeted_parameter_profiles(strategy),
         "status": _candidate_status(evaluations),
         "summary": _summary(evaluations),
         "evaluations": evaluations,
@@ -522,7 +528,14 @@ def _evaluation_record(
     storage_dir: Path,
     definition: Any,
 ) -> dict[str, Any]:
-    identity = _evaluation_identity(strategy, benchmark)
+    effective_strategy = resolve_strategy_for_target(
+        strategy,
+        source=str(benchmark.get("source") or ""),
+        symbol=str(benchmark.get("symbol") or ""),
+        timeframe=str(benchmark.get("timeframe") or ""),
+    )
+    identity = _evaluation_identity(effective_strategy, benchmark)
+    identity["parameter_profile"] = parameter_profile_record(effective_strategy)
     if benchmark.get("status") != "succeeded":
         return {
             **identity,
@@ -551,9 +564,9 @@ def _evaluation_record(
                 benchmark,
                 f"Loaded {len(rows)} rows, expected benchmark row_count {benchmark.get('row_count')}.",
             )
-        signals = definition.signal_records(strategy, _view_from_benchmark(benchmark), rows)
+        signals = definition.signal_records(effective_strategy, _view_from_benchmark(benchmark), rows)
         evaluation = evaluate_single_window_backtest(
-            strategy=strategy,
+            strategy=effective_strategy,
             market_identity={
                 "source": benchmark.get("source"),
                 "symbol": benchmark.get("symbol"),
@@ -561,10 +574,10 @@ def _evaluation_record(
             },
             ohlcv_rows=rows,
             signal_records=signals,
-            cost_assumptions=_cost_assumptions(strategy),
+            cost_assumptions=_cost_assumptions(effective_strategy),
         )
         walk_forward = evaluate_walk_forward_backtest(
-            strategy=strategy,
+            strategy=effective_strategy,
             market_identity={
                 "source": benchmark.get("source"),
                 "symbol": benchmark.get("symbol"),
@@ -572,7 +585,7 @@ def _evaluation_record(
             },
             ohlcv_rows=rows,
             signal_records=signals,
-            cost_assumptions=_cost_assumptions(strategy),
+            cost_assumptions=_cost_assumptions(effective_strategy),
         )
     except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
         return _failed_record(identity, type(exc).__name__, str(exc))
