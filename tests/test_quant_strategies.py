@@ -1478,6 +1478,106 @@ def test_signed_tsmom_trend_optional_volatility_filter_insufficient_and_invalid_
     json.dumps(signal_records)
 
 
+def test_signed_tsmom_trend_optional_funding_rate_filter_suppresses_exposure() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+        _record(open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+    ]
+    strategy = {
+        "name": "signed_tsmom_trend",
+        "params": {
+            "return_window": 1,
+            "deadband_pct": 0.1,
+            "funding_rate_filter_enabled": True,
+            "max_abs_funding_rate": 0.001,
+        },
+        "derivatives_features": {
+            "funding_rate": {
+                "status": "available",
+                "records": [
+                    {
+                        "feature_time": "2026-06-02T00:00:00Z",
+                        "as_of": "2026-06-02T00:00:00Z",
+                        "first_seen_at": "2026-06-02T00:00:00Z",
+                        "source": "binance_usdm",
+                        "symbol": "BTCUSDT",
+                        "period": "8h",
+                        "data_class": "funding_rate",
+                        "metric": "funding_rate",
+                        "value": 0.002,
+                        "unit": "ratio",
+                        "quality": {"status": "available", "warnings": [], "errors": []},
+                        "source_artifacts": [],
+                    }
+                ],
+            }
+        },
+        "backtest": {"enabled": False},
+    }
+
+    strategy_run = definition.run(
+        strategy,
+        _view(rows),
+        rows,
+        engine=_engine(),
+        created_at="2026-06-03T00:00:00Z",
+    )
+    signal_records = definition.signal_records(strategy, _view(rows), rows)
+
+    assert strategy_run["status"] == "succeeded"
+    assert strategy_run["signals"]["latest_position_state"] == "flat"
+    assert strategy_run["signals"]["funding_rate_filter"]["status"] == "suppressed"
+    assert strategy_run["signals"]["filter_suppression_reason"] == "funding_rate_abs_above_max"
+    assert strategy_run["indicators"]["funding_rate_filter_value"] == 0.002
+    assert strategy_run["warnings"][0]["code"] == "funding_rate_filter_suppressed_signal"
+    assert (
+        signal_records["latest_record"]["indicator_context"]["funding_rate_filter"]["suppression_reason"]
+        == "funding_rate_abs_above_max"
+    )
+    json.dumps(strategy_run)
+    json.dumps(signal_records)
+
+
+def test_signed_tsmom_trend_optional_funding_rate_filter_validates_params() -> None:
+    definition = get_strategy_definition("signed_tsmom_trend")
+    assert definition is not None
+    rows = [
+        _record(open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+        _record(open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+    ]
+
+    with pytest.raises(ValueError, match="funding_rate_filter_enabled must be a boolean"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "funding_rate_filter_enabled": "yes",
+                },
+            },
+            _view(rows),
+            rows,
+        )
+    with pytest.raises(ValueError, match="max_abs_funding_rate must be a positive number"):
+        definition.signal_records(
+            {
+                "name": "signed_tsmom_trend",
+                "params": {
+                    "return_window": 1,
+                    "deadband_pct": 0.1,
+                    "funding_rate_filter_enabled": True,
+                    "max_abs_funding_rate": 0.0,
+                },
+            },
+            _view(rows),
+            rows,
+        )
+
+
 def test_sma_cross_long_short_signal_records_cover_long_short_flat_transitions() -> None:
     definition = get_strategy_definition("sma_cross_long_short")
     assert definition is not None

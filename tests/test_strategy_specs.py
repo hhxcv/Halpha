@@ -106,11 +106,15 @@ def test_registry_returns_complete_spec_records() -> None:
         assert record["minimum_rows_policy"]["minimum_rows_with_default_params"] > 0
         assert record["risk_notes"]
         assert isinstance(record["supported_filters"], list)
+        assert isinstance(record["supported_features"], list)
         if record["name"] == "signed_tsmom_trend":
             assert record["supported_filters"][0]["filter_id"] == "realized_volatility_max_pct_v1"
             assert record["supported_filters"][0]["required"] is False
+            assert record["supported_features"][0]["feature_id"] == "derivatives_feature:funding_rate:funding_rate_v1"
+            assert record["supported_features"][0]["time_alignment"] == "as_of_and_first_seen_no_lookahead"
         else:
             assert record["supported_filters"] == []
+            assert record["supported_features"] == []
 
 
 def test_strategy_spec_records_are_json_serializable() -> None:

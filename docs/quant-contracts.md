@@ -268,7 +268,8 @@ Strategy spec record:
   "risk_notes": [
     "Historical strategy output is research material, not a forecast."
   ],
-  "supported_filters": []
+  "supported_filters": [],
+  "supported_features": []
 }
 ```
 
@@ -304,6 +305,9 @@ Rules:
 - Strategy specs may declare reusable optional filter inputs with
   `supported_filters`; implemented filter inputs must include explicit
   parameter names and `closed_bar_no_lookahead` alignment.
+- Strategy specs may declare reusable optional non-OHLCV feature inputs with
+  `supported_features`; implemented feature inputs must include explicit
+  data type, data class, metric, parameter names, and no-lookahead alignment.
 - `optimization_space` is a bounded research search space. It is not an
   instruction to optimize active configuration automatically.
 - Strategy Lab should prefer strategy spec metadata for controls and hints when
@@ -466,6 +470,47 @@ Implemented funding-cost input shape:
 }
 ```
 
+Implemented derivatives strategy feature input shape:
+
+```json
+{
+  "schema_version": 1,
+  "artifact_type": "strategy_derivatives_feature_input",
+  "status": "available",
+  "feature_id": "derivatives_feature:funding_rate:funding_rate:binance_usdm:BTCUSDT:8h:2026-06-05T00:00:00Z",
+  "data_type": "derivatives_market",
+  "data_class": "funding_rate",
+  "metric": "funding_rate",
+  "source": "binance_usdm",
+  "symbol": "BTCUSDT",
+  "period": "8h",
+  "requested_start": "2026-06-01T00:00:00Z",
+  "requested_end": "2026-06-05T00:00:00Z",
+  "as_of_boundary": "2026-06-05T00:00:00Z",
+  "record_count": 1,
+  "matched_record_count": 1,
+  "skipped_record_count": 0,
+  "records": [
+    {
+      "feature_time": "2026-06-04T08:00:00Z",
+      "first_seen_at": "2026-06-04T08:01:00Z",
+      "data_class": "funding_rate",
+      "metric": "funding_rate",
+      "value": 0.0001,
+      "unit": "ratio",
+      "quality": {
+        "status": "available",
+        "warnings": [],
+        "errors": []
+      }
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "source_artifacts": []
+}
+```
+
 Implemented futures diagnostic shape:
 
 ```json
@@ -531,6 +576,12 @@ Futures evaluation rules:
 
 - Funding adapters must read reusable derivatives history through the
   derivatives event-like query boundary, not direct ad hoc file scans.
+- Derivatives feature adapters must preserve explicit unavailable, stale,
+  partial, degraded, skipped, and failed states; missing data must not be
+  silently converted into neutral factor values.
+- Strategy feature adapters must enforce the requested time range, the
+  configured `as_of_boundary`, and `first_seen_at` visibility when the reusable
+  history records contain first-seen evidence.
 - Funding costs may be applied only when source data is available and aligned
   to the evaluated instrument and time range.
 - Futures diagnostics are emitted only when market identity has explicit

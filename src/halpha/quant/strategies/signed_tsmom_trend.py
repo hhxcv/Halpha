@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from ..derivatives_features import funding_rate_filter_contexts as derivatives_funding_rate_filter_contexts
 from ..regime_filters import realized_volatility_filter_contexts
 from ..signal_records import insufficient_signed_strategy_signal_records, signed_strategy_signal_records
 from ..signed_strategy_support import signed_backtest_diagnostic, signed_transition_counts
@@ -103,7 +104,7 @@ def run(
                 *_filter_evidence(state),
             ],
             "uncertainty": [
-                "Strategy uses OHLCV close prices only and excludes text events.",
+                _input_uncertainty(state),
                 "Signed exposure is research exposure, not borrowing, margin, or account state.",
             ],
         },
@@ -163,6 +164,17 @@ def _params(raw: Any) -> dict[str, Any]:
                 ),
             }
         )
+    funding_filter_enabled = _bool(params.get("funding_rate_filter_enabled", False), "funding_rate_filter_enabled")
+    if funding_filter_enabled:
+        parsed.update(
+            {
+                "funding_rate_filter_enabled": True,
+                "max_abs_funding_rate": _positive_number(
+                    params.get("max_abs_funding_rate", 0.001),
+                    "max_abs_funding_rate",
+                ),
+            }
+        )
     return parsed
 
 
@@ -186,26 +198,30 @@ def _signal_state(
     deadband_pct = float(params["deadband_pct"])
     momentum_return = close.pct_change(return_window)
     base_target_exposure_series = _target_exposure_series(momentum_return, deadband_pct=deadband_pct)
-    filter_contexts = _filter_contexts(close, view, params)
+    volatility_filter_contexts = _volatility_filter_contexts(close, view, params)
+    funding_rate_filter_contexts = _funding_rate_filter_contexts(strategy, frame, params)
     target_exposure_series = _apply_filters(
         base_target_exposure_series,
-        filter_contexts=filter_contexts,
+        filter_context_groups=[volatility_filter_contexts, funding_rate_filter_contexts],
     )
     indicator_contexts = _signal_indicator_contexts(
         momentum_return,
         target_exposure_series,
         deadband_pct=deadband_pct,
-        filter_contexts=filter_contexts,
+        volatility_filter_contexts=volatility_filter_contexts,
+        funding_rate_filter_contexts=funding_rate_filter_contexts,
     )
-    latest_filter = filter_contexts[-1] if filter_contexts else None
     return {
         "frame": frame,
         "close": close,
         "latest_close": float(close.iloc[-1]),
         "baseline_close": float(close.iloc[-return_window - 1]),
         "return_window_pct": float(momentum_return.iloc[-1]) * 100,
-        "filter_enabled": bool(filter_contexts),
-        "latest_filter": latest_filter,
+        "filter_enabled": bool(volatility_filter_contexts or funding_rate_filter_contexts),
+        "volatility_filter_contexts": volatility_filter_contexts,
+        "funding_rate_filter_contexts": funding_rate_filter_contexts,
+        "latest_volatility_filter": volatility_filter_contexts[-1] if volatility_filter_contexts else None,
+        "latest_funding_rate_filter": funding_rate_filter_contexts[-1] if funding_rate_filter_contexts else None,
         "target_exposure_series": target_exposure_series,
         "signal_records": signed_strategy_signal_records(
             strategy,
@@ -240,7 +256,8 @@ def _signal_indicator_contexts(
     target_exposure_series: pd.Series,
     *,
     deadband_pct: float,
-    filter_contexts: list[dict[str, Any]],
+    volatility_filter_contexts: list[dict[str, Any]],
+    funding_rate_filter_contexts: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     contexts = []
     for position, (momentum_value, exposure) in enumerate(zip(momentum_return, target_exposure_series, strict=True)):
@@ -252,13 +269,15 @@ def _signal_indicator_contexts(
             "target_exposure": float(exposure),
             "position_state": _position_state(float(exposure)),
         }
-        if filter_contexts:
-            context["volatility_filter"] = filter_contexts[position]
+        if volatility_filter_contexts:
+            context["volatility_filter"] = volatility_filter_contexts[position]
+        if funding_rate_filter_contexts:
+            context["funding_rate_filter"] = funding_rate_filter_contexts[position]
         contexts.append(context)
     return contexts
 
 
-def _filter_contexts(
+def _volatility_filter_contexts(
     close: pd.Series,
     view: dict[str, Any],
     params: dict[str, Any],
@@ -273,16 +292,42 @@ def _filter_contexts(
     )
 
 
+def _funding_rate_filter_contexts(
+    strategy: dict[str, Any],
+    frame: pd.DataFrame,
+    params: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if params.get("funding_rate_filter_enabled") is not True:
+        return []
+    return derivatives_funding_rate_filter_contexts(
+        [str(item) for item in frame["open_time"].tolist()],
+        _funding_rate_feature_input(strategy),
+        max_abs_funding_rate=float(params["max_abs_funding_rate"]),
+    )
+
+
+def _funding_rate_feature_input(strategy: dict[str, Any]) -> dict[str, Any] | None:
+    derivatives_features = strategy.get("derivatives_features")
+    if not isinstance(derivatives_features, dict):
+        return None
+    feature = derivatives_features.get("funding_rate")
+    return feature if isinstance(feature, dict) else None
+
+
 def _apply_filters(
     target_exposure_series: pd.Series,
     *,
-    filter_contexts: list[dict[str, Any]],
+    filter_context_groups: list[list[dict[str, Any]]],
 ) -> pd.Series:
-    if not filter_contexts:
+    active_groups = [group for group in filter_context_groups if group]
+    if not active_groups:
         return target_exposure_series
+    for group in active_groups:
+        if len(group) != len(target_exposure_series):
+            raise ValueError("filter context length must match target exposure length.")
     values = []
-    for exposure, context in zip(target_exposure_series, filter_contexts, strict=True):
-        if context.get("suppressed") is True:
+    for position, exposure in enumerate(target_exposure_series):
+        if any(group[position].get("suppressed") is True for group in active_groups):
             values.append(0.0)
         else:
             values.append(float(exposure))
@@ -290,53 +335,118 @@ def _apply_filters(
 
 
 def _filter_indicator_values(state: dict[str, Any]) -> dict[str, Any]:
-    latest_filter = state.get("latest_filter")
-    if not isinstance(latest_filter, dict):
-        return {}
-    return {
-        "volatility_filter_status": latest_filter.get("status"),
-        "volatility_filter_realized_volatility_pct": latest_filter.get("realized_volatility_pct"),
-        "volatility_filter_max_realized_volatility_pct": latest_filter.get("max_realized_volatility_pct"),
-    }
+    values = {}
+    latest_volatility_filter = state.get("latest_volatility_filter")
+    if isinstance(latest_volatility_filter, dict):
+        values.update(
+            {
+                "volatility_filter_status": latest_volatility_filter.get("status"),
+                "volatility_filter_realized_volatility_pct": latest_volatility_filter.get("realized_volatility_pct"),
+                "volatility_filter_max_realized_volatility_pct": latest_volatility_filter.get(
+                    "max_realized_volatility_pct"
+                ),
+            }
+        )
+    latest_funding_rate_filter = state.get("latest_funding_rate_filter")
+    if isinstance(latest_funding_rate_filter, dict):
+        values.update(
+            {
+                "funding_rate_filter_status": latest_funding_rate_filter.get("status"),
+                "funding_rate_filter_value": latest_funding_rate_filter.get("feature_value"),
+                "funding_rate_filter_max_abs_funding_rate": latest_funding_rate_filter.get("max_abs_funding_rate"),
+            }
+        )
+    return values
 
 
 def _filter_signal_values(state: dict[str, Any]) -> dict[str, Any]:
-    latest_filter = state.get("latest_filter")
-    if not isinstance(latest_filter, dict):
-        return {}
-    return {
-        "volatility_filter": latest_filter,
-        "filter_suppression_reason": latest_filter.get("suppression_reason"),
-    }
+    values = {}
+    latest_volatility_filter = state.get("latest_volatility_filter")
+    latest_funding_rate_filter = state.get("latest_funding_rate_filter")
+    if isinstance(latest_volatility_filter, dict):
+        values["volatility_filter"] = latest_volatility_filter
+    if isinstance(latest_funding_rate_filter, dict):
+        values["funding_rate_filter"] = latest_funding_rate_filter
+        values["funding_rate_filter_suppression_reason"] = latest_funding_rate_filter.get("suppression_reason")
+    if values:
+        values["filter_suppression_reason"] = _first_filter_suppression_reason(
+            latest_volatility_filter,
+            latest_funding_rate_filter,
+        )
+    return values
 
 
 def _filter_evidence(state: dict[str, Any]) -> list[str]:
-    latest_filter = state.get("latest_filter")
-    if not isinstance(latest_filter, dict):
-        return []
-    return [
-        (
+    evidence = []
+    latest_volatility_filter = state.get("latest_volatility_filter")
+    if isinstance(latest_volatility_filter, dict):
+        evidence.append(
             "volatility_filter status is "
-            f"{latest_filter.get('status')} with realized_volatility_pct "
-            f"{latest_filter.get('realized_volatility_pct')} and max_realized_volatility_pct "
-            f"{latest_filter.get('max_realized_volatility_pct')}."
+            f"{latest_volatility_filter.get('status')} with realized_volatility_pct "
+            f"{latest_volatility_filter.get('realized_volatility_pct')} and max_realized_volatility_pct "
+            f"{latest_volatility_filter.get('max_realized_volatility_pct')}."
         )
-    ]
+    latest_funding_rate_filter = state.get("latest_funding_rate_filter")
+    if isinstance(latest_funding_rate_filter, dict):
+        evidence.append(
+            "funding_rate_filter status is "
+            f"{latest_funding_rate_filter.get('status')} with feature_value "
+            f"{latest_funding_rate_filter.get('feature_value')} and max_abs_funding_rate "
+            f"{latest_funding_rate_filter.get('max_abs_funding_rate')}."
+        )
+    return evidence
 
 
 def _strategy_warnings(state: dict[str, Any]) -> list[dict[str, Any]]:
-    latest_filter = state.get("latest_filter")
-    if not isinstance(latest_filter, dict):
-        return []
-    if latest_filter.get("suppression_reason") == "realized_volatility_above_max":
-        return [
+    warnings = []
+    latest_volatility_filter = state.get("latest_volatility_filter")
+    if (
+        isinstance(latest_volatility_filter, dict)
+        and latest_volatility_filter.get("suppression_reason") == "realized_volatility_above_max"
+    ):
+        warnings.append(
             warning(
                 "realized_volatility_filter_suppressed_signal",
                 "Signed momentum exposure is suppressed because realized volatility is above the configured maximum.",
                 source="strategy_filter",
             )
-        ]
-    return []
+        )
+    latest_funding_rate_filter = state.get("latest_funding_rate_filter")
+    if isinstance(latest_funding_rate_filter, dict):
+        reason = latest_funding_rate_filter.get("suppression_reason")
+        if reason == "funding_rate_abs_above_max":
+            warnings.append(
+                warning(
+                    "funding_rate_filter_suppressed_signal",
+                    "Signed momentum exposure is suppressed because funding rate exceeds the configured absolute maximum.",
+                    source="strategy_filter",
+                )
+            )
+        elif latest_funding_rate_filter.get("suppressed") is True:
+            warnings.append(
+                warning(
+                    "funding_rate_filter_unavailable",
+                    "Signed momentum exposure is suppressed because the funding-rate feature is unavailable or stale.",
+                    source="strategy_filter",
+                )
+            )
+    return warnings
+
+
+def _first_filter_suppression_reason(*filters: Any) -> Any:
+    for item in filters:
+        if isinstance(item, dict) and item.get("suppression_reason"):
+            return item.get("suppression_reason")
+    return None
+
+
+def _input_uncertainty(state: dict[str, Any]) -> str:
+    if isinstance(state.get("latest_funding_rate_filter"), dict):
+        return (
+            "Strategy uses OHLCV close prices and configured derivatives funding-rate feature input; "
+            "it excludes text events."
+        )
+    return "Strategy uses OHLCV close prices only and excludes text events."
 
 
 def _direction(position_state: str) -> str:
