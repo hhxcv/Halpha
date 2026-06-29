@@ -7,9 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from halpha.cli import main
+from halpha.cli import _require_monitor_startup, main
 from halpha.config import load_config
 from halpha.monitor.monitoring import run_monitor_cycle
+from halpha.runtime.monitor_service import MonitorServiceError
 
 
 @pytest.fixture(autouse=True)
@@ -79,6 +80,11 @@ def test_monitor_start_rejects_invalid_config(tmp_path: Path, capsys) -> None:
     assert exit_code == 2
     assert "Halpha monitor failed." in output
     assert "stage: config" in output
+
+
+def test_monitor_service_startup_guard_uses_explicit_error() -> None:
+    with pytest.raises(MonitorServiceError, match="monitor startup config was not loaded for start"):
+        _require_monitor_startup(None, action="start")
 
 
 def test_monitor_run_dry_run_uses_defaults_without_running_pipeline(

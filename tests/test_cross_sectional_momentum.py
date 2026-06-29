@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
+
 from halpha.quant.strategies import cross_sectional_momentum
 
 
@@ -127,6 +129,23 @@ def test_cross_sectional_momentum_reports_insufficient_aligned_rows() -> None:
         item["code"] for item in result["signal_records"]["warnings"]
     }
     json.dumps(result)
+
+
+def test_cross_sectional_momentum_missing_alignment_returns_insufficient_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cross_sectional_momentum, "_universe_warnings", lambda params, legs, aligned: [])
+
+    signals = cross_sectional_momentum.universe_signal_records(
+        _strategy(),
+        [_leg("BTCUSDT", [100, 101, 102])],
+    )
+
+    assert signals["status"] == "insufficient_data"
+    assert signals["record_count"] == 0
+    assert signals["alignment"]["status"] == "not_aligned"
+    assert "insufficient_aligned_universe_rows" in {item["code"] for item in signals["warnings"]}
+    json.dumps(signals)
 
 
 def _strategy() -> dict[str, Any]:
