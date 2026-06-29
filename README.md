@@ -1,58 +1,32 @@
 # Halpha
 
-Halpha is a personal market research pipeline. It collects public market data and
-public text sources, builds source-aware research artifacts, prepares local
-context for Codex CLI, and writes a Simplified Chinese Markdown research report.
+**Market research pipeline with Dashboard GUI and CLI.**
 
-The project is designed for reviewable research, not trading execution. It keeps
-raw data, deterministic analysis material, Codex context, generated reports, and
-run manifests as plain files so each run can be inspected after it finishes.
+Halpha can be operated through a browser interface or terminal commands.
 
-## What It Does
+## Overview
 
-- Collects public Binance ticker data for configured symbols.
-- Collects configured public macro/calendar evidence when enabled.
-- Collects configured public on-chain flow evidence when enabled.
-- Collects public RSS text events from configured sources.
-- Normalizes raw text events into source-aware event records for later text intelligence stages.
-- Extracts traceable entity evidence and configured-asset relevance from normalized text events.
-- Validates optional local text-intelligence model settings and explicit model preparation metadata.
-- Syncs reusable OHLCV history into a shared local Parquet store.
-- Builds deterministic current-run OHLCV data views.
-- Builds fixed strategy benchmark window suites from shared local OHLCV history.
-- Evaluates configured quantitative strategies with bounded diagnostics.
-- Runs standalone single-strategy backtests from shared local OHLCV history.
-- Runs standalone strategy experiments against fixed benchmark suites and deterministic effectiveness gates.
-- Writes pipeline strategy evaluation summaries with single-window, bounded walk-forward, parameter-stability, and overfitting-risk evidence.
-- Normalizes strategy outputs into market signal artifacts and AI-readable signal material.
-- Builds deterministic regime, risk, recommendation, watch trigger, and previous-run delta artifacts.
-- Builds event-quant confluence records and deterministic event intelligence assessments.
-- Builds deterministic alert decision artifacts for event attention priority.
-- Builds bounded AI-readable alert decision material for report generation.
-- Builds bounded AI-readable event intelligence material.
-- Builds AI-readable decision material from deterministic JSON artifacts.
-- Builds bounded AI-readable derivatives market material from deterministic derivatives context.
-- Extracts deterministic outcome targets from the latest previous successful run.
-- Evaluates matured market, strategy, event, alert, decision, and watch outcome targets.
-- Persists reusable local outcome history outside per-run report directories.
-- Builds research context and Codex prompt artifacts.
-- Runs Codex CLI to generate a Simplified Chinese report.
-- Inserts deterministic strategy output and strategy effectiveness tables into the final report.
-- Records lifecycle status, artifacts, counts, warnings, errors, and Codex status in `run_manifest.json`.
-- Validates product contract health through a deterministic artifact and read-only CLI inspection.
-- Validates local monitor configuration without starting hidden background execution.
-- Runs one bounded local monitor cycle and writes a monitor cycle manifest.
-- Archives emitted and suppressed monitor alert decisions in `.halpha/state.sqlite`.
-- Runs a local web dashboard service as the primary local user entry point for
-  overview, report review, strategy research, monitor control, intelligence
-  review, settings, bounded artifact previews, command jobs, storage cleanup,
-  and daily report schedule state.
-- Builds local workbench delivery snapshots, Markdown indexes, and static HTML
-  index files from existing artifacts as CLI inspection and recovery aids.
+| Entry | Use it for |
+|---|---|
+| Dashboard GUI | Start, inspect, and operate Halpha from a browser interface. |
+| CLI | Run pipelines, validate outputs, inspect data, rerun stages, and script workflows from the terminal. |
 
-Halpha does not implement account access, exchange trading, order placement,
-portfolio automation, real-time alert delivery, hosted dashboards, or hosted
-services.
+A run writes artifacts and `run_manifest.json` under `runs/`.
+
+## Workflow
+
+```mermaid
+flowchart LR
+    Config[Config] --> Run[Run pipeline]
+    Run --> Data[Data and event material]
+    Data --> Analysis[Research and analysis]
+    Analysis --> Artifacts[Artifacts]
+    Artifacts --> Context[Report context]
+    Context --> Report[Report output]
+    Artifacts --> Dashboard[Dashboard GUI]
+    Artifacts --> CLI[CLI inspection]
+    Run --> Manifest[run_manifest.json]
+```
 
 ## Install
 
@@ -62,808 +36,113 @@ python -m pip install -e ".[dev]"
 
 Python 3.11 or newer is required.
 
-Install optional local NLP model preparation and runtime dependencies only when
-text intelligence model preparation is intended:
+## Dashboard GUI
 
-```bash
-python -m pip install -e ".[dev,nlp]"
-```
-
-## Run
-
-Run the full report pipeline:
-
-```bash
-python -m halpha run --config config.example.yaml
-```
-
-Run all pre-Codex steps and skip final Codex report generation:
-
-```bash
-python -m halpha run --config config.example.yaml --no-codex
-```
-
-Run through a named pipeline stage and mark later stages as not run:
-
-```bash
-python -m halpha run --config config.example.yaml --until build_materials
-```
-
-Run a dependency-aware stage rerun from an existing run directory:
-
-```bash
-python -m halpha stage build_materials --config config.example.yaml --run-dir runs/<run_id>
-```
-
-For a completed successful parent run, this creates a new derived run directory
-and records `parent_run_id`, lineage, reused upstream artifacts, and the
-recomputed downstream closure in the child `run_manifest.json`. Failed runs may
-resume in place only from the recorded failed stage.
-
-Inspect product contract health for the latest indexed run or one selected run
-without collection, pipeline stages, report generation, or Codex:
-
-```bash
-python -m halpha validate --config config.example.yaml
-python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
-```
-
-Run the local web dashboard:
+Start the browser interface:
 
 ```bash
 python -m halpha dashboard
+```
+
+Or start with an explicit config:
+
+```bash
 python -m halpha dashboard --config config.example.yaml
-python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
+```
+
+Common commands:
+
+```bash
 python -m halpha dashboard status
 python -m halpha dashboard stop
 python -m halpha dashboard restart
 ```
 
-The dashboard is the primary local user entry point and is local-only by
-default. Open the printed local URL in a browser to inspect overview state, run
-history, report previews, local data store metadata, strategy outputs, monitor
-health, recent monitor cycles, alert samples, and command job history.
+## CLI
 
-The dashboard can start without a config. On first startup with no selected
-config it serves the shell in an unconfigured state and opens the Settings flow
-so a config can be loaded. A valid `--config` argument or Settings load records
-the last selected config under local dashboard state and later dashboard
-startups reuse it when it still validates.
-
-Dashboard startup is managed through the shared resident-service lifecycle
-controller in `.halpha/state.sqlite`. Duplicate start for the same endpoint
-returns the existing matching Dashboard instance. A conflicting endpoint returns
-an explicit conflict, and restart is an explicit stop plus start. If the port is
-occupied by a non-Halpha or unresponsive local service, startup fails with an
-actionable error instead of killing an unrelated process. Dashboard no longer
-writes `.halpha/dashboard/service_state.json`.
-
-Dashboard artifact previews are bounded and allowlisted to local Halpha runtime
-roots. Private values such as proxy URLs, credentials, tokens, private notes,
-raw user-state files, machine paths, and private endpoints are rejected or
-redacted from dashboard responses and job logs where the dashboard can identify
-them.
-
-Local command execution is explicit and allowlisted. Product run, stage,
-validation, data inspection, outcome inspection, workbench, strategy, text,
-monitor, and schedule trigger actions run through shared command jobs. Codex-capable
-report jobs require explicit confirmation before they can start. The dashboard
-does not expose arbitrary shell execution.
-
-Dashboard Monitor controls start, stop, restart, and inspect the same Monitor
-and Schedule resident service instances as the CLI. One-cycle monitor
-validation and manual schedule triggers remain bounded command jobs.
-
-Daily report schedule configuration and dispatch history are explicit local
-runtime state in `.halpha/state.sqlite`. The implemented schedule API can
-inspect, enable, disable, update, and manually trigger daily report jobs
-through shared command jobs. Automatic due dispatch belongs to the independent
-`schedule` resident service, not the Dashboard process. It does not install an
-OS scheduler, hosted scheduler, startup task, cron job, workflow engine, or
-fourth resident process.
-
-Manage the local Schedule service through the shared lifecycle controller:
+Run without final report generation:
 
 ```bash
-python -m halpha schedule --config config.example.yaml
-python -m halpha schedule status --config config.example.yaml
-python -m halpha schedule stop --config config.example.yaml
-python -m halpha schedule restart --config config.example.yaml
+python -m halpha run --config config.example.yaml --no-codex
 ```
 
-Codex-capable unattended schedules require persisted confirmation tied to the
-current schedule revision, selected config ref, and config digest. No-Codex
-scheduled runs are labeled as no-report runs.
-
-The target runtime contract defines one runtime root and exactly three
-resident Halpha services: `dashboard`, `monitor`, and `schedule`. Current
-runtime state keeps the run index, local command-job lifecycle, and daily
-report schedule dispatch state, monitor cycle indexes, alert archive records,
-cooldown state, monitor service health query state, and shared resident-service
-lifecycle state in `.halpha/state.sqlite`; selected dashboard config preference
-also lives in the runtime state store. Dashboard read models, health summaries,
-workbench outputs, and latest selections are derived views, not parallel
-authorities.
-
-Inspect the monitor command surface and validate local monitor configuration
-without running collection, pipeline stages, or Codex:
+Validate the latest product state:
 
 ```bash
-python -m halpha monitor --help
-python -m halpha monitor run --config config.example.yaml --dry-run
+python -m halpha validate --config config.example.yaml
 ```
 
-Start, inspect, stop, or restart the independent Monitor resident service:
-
-```bash
-python -m halpha monitor start --config config.example.yaml
-python -m halpha monitor status --config config.example.yaml
-python -m halpha monitor stop --config config.example.yaml
-python -m halpha monitor restart --config config.example.yaml
-```
-
-Run exactly one bounded local monitor cycle:
-
-```bash
-python -m halpha monitor run --config config.example.yaml --once
-```
-
-Run a finite diagnostic local monitor loop:
-
-```bash
-python -m halpha monitor run --config config.example.yaml --max-cycles 3 --interval-seconds 300
-```
-
-Inspect local monitor health without collection, pipeline execution, or Codex:
-
-```bash
-python -m halpha monitor inspect --config config.example.yaml
-```
-
-The resident Monitor service owns the continuous path. It is unique per runtime
-root, runs no-Codex cycles until explicit stop, persists service health in
-`.halpha/state.sqlite`, and retries recoverable cycle failures with bounded
-backoff. The one-cycle and finite-loop commands are local validation paths, not
-Dashboard-owned resident workers.
-
-The default monitor cycle reuses the configured product pipeline through the
-configured monitor target stage and stops before Codex report generation unless
-monitor config explicitly changes that boundary. Resident Monitor cycles always
-force the no-Codex boundary. Cycles also update state-store alert archive
-records and cooldown state from generated alert decisions. Dashboard service
-behavior is provided by the separate `dashboard` command.
-
-Inspect local research data and data-quality state without collection or Codex:
-
-```bash
-python -m halpha data inspect --config config.example.yaml
-python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
-```
-
-The inspection command summarizes shared OHLCV, derivatives, macro/calendar,
-on-chain flow, text-event, run-index, intelligence-fusion, strategy-lifecycle,
-product-validation, and data-quality state, plus workbench output refs when
-available, without dumping full reusable histories or raw records.
-
-Plan local data collection without report generation or Codex:
-
-```bash
-python -m halpha data collect --config config.example.yaml --data-type ohlcv --source binance --symbol BTCUSDT --timeframe 1d --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --dry-run
-python -m halpha data collect --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --dry-run
-```
-
-Apply mode updates the implemented shared store, collection coverage state, and
-research data catalog snapshot without creating a report run:
-
-```bash
-python -m halpha data collect --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --apply
-```
-
-Export bounded reusable data through the same no-lookahead query boundary used
-by quantitative consumers:
-
-```bash
-python -m halpha data export --config config.example.yaml --data-type ohlcv --source binance --symbol BTCUSDT --timeframe 1d --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --as-of 2026-06-03T00:00:00Z --format csv --output exports/ohlcv.csv
-python -m halpha data export --config config.example.yaml --data-type text_event --source all --start 2026-06-01T00:00:00Z --end 2026-06-03T00:00:00Z --format json --output exports/text_events.json
-```
-
-CSV and Parquet exports write sidecar metadata next to the data file. JSON
-exports embed metadata and records in one bounded artifact. Export metadata
-includes query parameters, `as_of`, row counts, truncation state, coverage
-diagnostics, warnings, errors, and source refs.
-
-Inspect legacy local state without mutating files:
-
-```bash
-python -m halpha data migrate-state --config config.example.yaml --dry-run
-```
-
-Apply supported legacy local state imports explicitly:
-
-```bash
-python -m halpha data migrate-state --config config.example.yaml --apply
-python -m halpha data migrate-state --config config.example.yaml --apply --replace-schedule
-```
-
-Legacy migration scans documented legacy run-index, Dashboard job, Dashboard
-schedule, selected-config, service-state, monitor cycle, alert archive,
-cooldown, archive metadata, and health files. Dry-run does not create or update
-`.halpha/state.sqlite`. Apply records source fingerprints for idempotency,
-creates bounded backups under `.halpha/legacy_state_backups/`, imports only
-supported safe records, reports conflicts and invalid records, and leaves
-legacy files unchanged. Cleanup is a separate explicit action.
-
-Rebuild the current run-index projection from existing run manifests without
-importing mutable legacy service, job, schedule, or alert state:
-
-```bash
-python -m halpha data rebuild-index --config config.example.yaml
-```
-
-Plan explicit local run archive cleanup without deleting files:
-
-```bash
-python -m halpha data cleanup-runs --config config.example.yaml
-```
-
-Apply cleanup only to selected approved disposable run archives:
-
-```bash
-python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id>
-```
-
-Report-bearing archives are protected unless explicitly included with stronger
-confirmation:
-
-```bash
-python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id> --include-report-runs --confirm-report-runs "DELETE REPORT RUNS"
-```
-
-Run archive cleanup deletes only selected `runs/<run_id>/` directories. It does
-not delete shared data under `data/`, runtime state under `.halpha/state.sqlite`,
-or config files. After a deletion, Halpha rebuilds the run-index projection from
-remaining run manifests so deleted archives no longer appear as healthy latest
-or report-bearing runs.
-
-Inspect outcome tracking artifacts and shared outcome history state without
-collection or Codex:
-
-```bash
-python -m halpha outcomes inspect --config config.example.yaml
-python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
-```
-
-Build local workbench delivery snapshot outputs from existing artifacts:
-
-```bash
-python -m halpha workbench build --config config.example.yaml
-python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
-```
-
-Inspect the latest workbench summary as a CLI inspection and recovery fallback
-without running collection, pipeline stages, monitor cycles, or Codex:
-
-```bash
-python -m halpha workbench inspect --config config.example.yaml
-```
-
-Workbench outputs are local delivery snapshot artifacts under
-`runs/workbench/latest/`. They summarize and link to existing deterministic
-artifacts, including bounded product-validation health when available. They are
-not the primary UI, not a replacement for dashboard views, and not upstream
-decision inputs or Codex context by default.
-
-Run one configured strategy backtest from shared local OHLCV history:
-
-```bash
-python -m halpha backtest --config config.example.yaml --strategy tsmom_vol_scaled --symbol BTCUSDT --timeframe 1d
-```
-
-Standalone backtests write inspectable artifacts under
-`runs/strategy_backtests/` by default. Use `--output-dir <dir>` to choose a
-different local output directory. This command does not run the report pipeline
-or Codex CLI. The backtest artifact includes a bounded candlestick
-visualization payload for local dashboard review; it does not copy the full
-shared OHLCV history into the artifact.
-
-Run enabled strategy candidates against the fixed benchmark suite:
-
-```bash
-python -m halpha experiment --config config.example.yaml
-```
-
-Use `--strategy <strategy_name>` one or more times to limit candidates, and
-`--output-dir <dir>` to choose a different local output directory. Standalone
-experiments write inspectable artifacts under `runs/strategy_experiments/` by
-default and do not run the report pipeline or Codex CLI.
-
-Prepare configured text-intelligence models explicitly:
-
-```bash
-python -m halpha text-models prepare --config config.example.yaml
-```
-
-With the portable example config, `allow_model_download: false` records a local
-metadata manifest and skips downloads. Actual model downloads require a
-gitignored local config that sets `allow_model_download: true`, explicit model
-revisions, and the optional `nlp` dependencies.
-
-Run standalone text intelligence processing from configured text sources:
-
-```bash
-python -m halpha text-intel --config config.example.yaml
-```
-
-Process an existing raw text artifact without collecting public sources:
-
-```bash
-python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
-```
-
-Use `--output-dir <dir>` to choose the standalone output root. The command
-writes implemented text-intelligence artifacts and a manifest under a unique
-local subdirectory. It does not run the full report pipeline or Codex CLI.
-
-Supported public stage names:
-
-```text
-refresh_data
-build_source_evidence
-run_strategy_research
-synthesize_intelligence
-build_materials
-generate_report
-finalize_run
-```
-
-`run_manifest.json` records nested task lifecycle details under these public
-stages.
-
-`build_materials` first writes the final structured data-quality summary, then
-writes report-facing material files from completed upstream evidence.
-`finalize_run` writes shared outcome history state, refreshes the research data
-catalog, writes product contract validation, then publishes the terminal
-manifest before committing the runtime-state run, stage, task, and artifact
-projection.
-
-## Configuration
-
-`config.example.yaml` is a portable public-source example. It configures:
-
-- Binance public market data.
-- Public RSS text sources.
-- Optional text-intelligence model roles, revisions, download policy, and thresholds.
-- Shared OHLCV history storage under `data/market/`.
-- Built-in quantitative strategies:
-  `tsmom_vol_scaled`, `signed_tsmom_trend`, `breakout_atr_trend`,
-  `sma_cross_trend`, `sma_cross_long_short`, `bollinger_rsi_reversion`,
-  and `bollinger_rsi_long_short`.
-- Bounded backtest and parameter diagnostics.
-- Optional Federal Reserve FOMC public calendar collection.
-- Optional public on-chain flow collection.
-- Optional deterministic strategy effectiveness gate thresholds.
-- Codex CLI command and arguments for final report generation.
-- Runtime output roots for `runs/` and `logs/`.
-
-Full report runs require public network access, configured public sources, a
-working Codex CLI on `PATH`, and Codex CLI authentication outside this
-repository. The generated local prompt is sent to Codex CLI through stdin.
-
-Relative runtime artifact directories, reusable data roots, standalone output
-directories, and model cache paths resolve from the current working directory,
-not from the config file location. The portable example keeps local outputs
-under `runs/`, `logs/`, `data/`, and `.halpha/` through relative config values.
-Gitignored local configs should set those fields explicitly when they need the
-same repo-root output layout.
-
-If a local proxy is needed, keep it in a gitignored local config file:
-
-```yaml
-market:
-  proxy:
-    enabled: true
-    url: http://proxy.example:8080
-```
-
-Do not commit machine-local proxy values, credentials, hostnames, ports, paths,
-tokens, cookies, or account identifiers.
-
-## Output Artifacts
-
-A successful configured run can write:
-
-- `raw/market.json`: public market observations.
-- `raw/derivatives_market.json`: public derivatives and market-structure observations.
-- `raw/macro_calendar.json`: public macro and scheduled-event observations when enabled.
-- `raw/onchain_flow.json`: public on-chain flow observations when enabled.
-- `raw/macro_calendar_views.json`: current-run macro/calendar input window metadata and bounded records.
-- `raw/onchain_flow_views.json`: current-run on-chain flow input window metadata and bounded records.
-- `analysis/onchain_flow_context.json`: deterministic on-chain flow context when enabled.
-- `analysis/onchain_flow_material.md`: bounded AI-readable on-chain flow context for Codex and report generation.
-- `analysis/macro_calendar_context.json`: deterministic macro/calendar timing, source-availability, and catalyst context.
-- `analysis/macro_calendar_material.md`: bounded AI-readable macro/calendar context for Codex and report generation.
-- `raw/text_events.json`: public RSS text events.
-- `analysis/text_event_records.json`: normalized source-aware text event records.
-- `analysis/text_entity_evidence.json`: entity and configured-asset relevance evidence.
-- `analysis/text_event_classification_evidence.json`: event category candidates and financial tone evidence.
-- `analysis/text_event_topics.json`: duplicate, same-topic, related-context, and distinct event grouping evidence.
-- `analysis/text_event_signals.json`: deterministic report-facing text event signals.
-- `raw/market_data_views.json`: current-run OHLCV input window metadata.
-- `raw/derivatives_market_views.json`: current-run derivatives input window metadata.
-- `data/market/ohlcv/`: shared finalized OHLCV history.
-- `data/market/derivatives/`: shared reusable derivatives market history.
-- `data/macro/calendar/`: shared reusable macro/calendar history.
-- `data/onchain/flow/`: shared reusable on-chain flow history.
-- `data/market/metadata/ohlcv_schema.json`: shared OHLCV schema metadata.
-- `data/market/metadata/ohlcv_sync_state.json`: shared OHLCV stored-range metadata.
-- `data/market/metadata/derivatives_market_schema.json`: shared derivatives history schema metadata.
-- `data/market/metadata/derivatives_market_state.json`: shared derivatives history state metadata.
-- `data/macro/metadata/macro_calendar_schema.json`: shared macro/calendar history schema metadata.
-- `data/macro/metadata/macro_calendar_state.json`: shared macro/calendar history state metadata.
-- `data/onchain/metadata/onchain_flow_schema.json`: shared on-chain flow history schema metadata.
-- `data/onchain/metadata/onchain_flow_state.json`: shared on-chain flow history state metadata.
-- `data/research/metadata/research_data_catalog.json`: shared local research data catalog.
-- `.halpha/state.sqlite`: local runtime-state store with schema migrations, run-index metadata, local command-job lifecycle metadata, daily report schedule dispatch metadata, dashboard UI preferences, resident-service lifecycle state, and future migrated operational state.
-- `data/research/metadata/text_event_history_state.json`: shared text-event history state metadata.
-- `data/research/text_events/`: shared deduplicated text-event history.
-- `data/research/metadata/outcome_history_state.json`: shared outcome history state metadata.
-- `data/research/outcomes/outcome_history.json`: shared reusable outcome history.
-- `analysis/strategy_benchmark_suite.json`: fixed strategy benchmark window metadata.
-- `analysis/quant_strategy_runs.json`: configured strategy run outputs.
-- `analysis/strategy_evaluation_summary.json`: strategy evaluation summaries.
-- `analysis/strategy_evaluation_material.md`: AI-readable strategy evaluation material.
-- `analysis/strategy_experiment.json`: current-run strategy experiment output.
-- `analysis/strategy_effectiveness_gates.json`: deterministic strategy gate output.
-- `analysis/strategy_experiment_material.md`: AI-readable strategy experiment and gate material.
-- `analysis/strategy_lifecycle_state.json`: deterministic strategy lifecycle health, degradation, version, and explicit retirement state.
-- `analysis/strategy_lifecycle_material.md`: bounded AI-readable strategy lifecycle material for Codex and report generation.
-- `analysis/market_signals.json`: normalized report-facing market signals.
-- `analysis/market_signal_material.md`: AI-readable market signal material.
-- `analysis/derivatives_market_context.json`: deterministic funding, open-interest, premium, basis, bounded liquidity-depth, and liquidation-availability derivatives context records.
-- `analysis/derivatives_market_material.md`: bounded AI-readable derivatives market material for Codex context.
-- `analysis/market_regime_assessment.json`: deterministic market regime assessment.
-- `analysis/risk_assessment.json`: deterministic risk assessment.
-- `analysis/decision_recommendations.json`: deterministic decision-support recommendations with source-aware risk, downgrade, fusion, and optional personalized constraint context.
-- `analysis/watch_triggers.json`: deterministic watch triggers, including supported risk escalation, risk relief, and optional personalized constraint conditions.
-- `analysis/event_market_confluence.json`: deterministic event-quant and event-decision relationship records.
-- `analysis/event_intelligence_assessment.json`: deterministic event relevance, severity, market response, and decision-impact assessment records.
-- `analysis/alert_decisions.json`: deterministic event attention-priority decisions with supported derivatives, fusion, and optional personalized constraint context, not alert delivery.
-- `analysis/alert_decision_material.md`: AI-readable alert priority, downgrade, suppression, and uncertainty material.
-- `analysis/event_intelligence_material.md`: AI-readable event evidence, topic, signal, and confluence material.
-- `analysis/decision_intelligence_delta.json`: previous-run decision-intelligence changes.
-- `analysis/decision_intelligence_material.md`: AI-readable decision material.
-- `analysis/data_quality_summary.json`: current-run market, text, derivatives, macro/calendar, on-chain flow, feature/factor, intelligence-fusion, personalized-risk, shared-store, and structured-evidence quality checks.
-- `analysis/data_quality_material.md`: AI-readable data quality status and local store references.
-- `analysis/outcome_targets.json`: source-linked outcome target records from the latest previous successful run.
-- `analysis/outcome_evaluations.json`: deterministic market, strategy, event, alert, decision, and watch outcome evaluations.
-- `analysis/outcome_tracking_material.md`: AI-readable bounded outcome accountability material.
-- `analysis/feature_snapshots.json`: normalized source-aware feature records and source coverage from implemented current-run evidence.
-- `analysis/factor_states.json`: deterministic factor states, bounded scores, directions, confidence, and degraded-state evidence from feature snapshots.
-- `analysis/multi_source_signals.json`: conservative normalized research signals derived from factor states.
-- `analysis/intelligence_fusion.json`: deterministic cross-source fusion records for confluence, conflict, risk overrides, event overrides, outcome feedback, uncertainty, and source refs.
-- `analysis/intelligence_fusion_material.md`: AI-readable bounded fusion material for Codex/report input.
-- `analysis/user_state_context.json`: optional sanitized local user-state context with privacy boundary metadata.
-- `analysis/personalized_risk_constraints.json`: deterministic personalized risk constraint records from sanitized user state and current-run intelligence.
-- `analysis/personalized_risk_material.md`: bounded AI-readable personalized-risk material for Codex/report input.
-- `analysis/market_material.md`: AI-readable market material.
-- `analysis/text_material.md`: AI-readable text material.
-- `analysis/research_context.md`: structured local research context.
-- `codex_context/context.md`: Codex-readable context artifact.
-- `codex_context/prompt.md`: prompt sent to Codex CLI.
-- `report/report.md`: Simplified Chinese Markdown report from Codex stdout.
-- `analysis/product_contract_validation.json`: deterministic product contract validation, manifest health, artifact contract checks, Codex/report boundary checks, and operational diagnostics.
-- `run_manifest.json`: run lifecycle, stage status, artifact paths, counts, Codex status, and errors.
-- `runs/strategy_backtests/<id>/strategy_backtest.json`: standalone strategy backtest output.
-- `runs/strategy_backtests/<id>/manifest.json`: standalone backtest manifest.
-- `runs/strategy_experiments/<id>/strategy_experiment.json`: standalone strategy experiment output.
-- `runs/strategy_experiments/<id>/strategy_benchmark_suite.json`: benchmark suite used by a standalone experiment.
-- `runs/strategy_experiments/<id>/strategy_effectiveness_gates.json`: deterministic strategy gate output.
-- `runs/strategy_experiments/<id>/manifest.json`: standalone strategy experiment manifest.
-- `runs/text_intelligence/<id>/raw/text_events.json`: standalone text raw artifact.
-- `runs/text_intelligence/<id>/analysis/text_event_records.json`: standalone normalized text event records.
-- `runs/text_intelligence/<id>/analysis/text_entity_evidence.json`: standalone entity and asset relevance evidence.
-- `runs/text_intelligence/<id>/analysis/text_event_classification_evidence.json`: standalone event category and financial tone evidence.
-- `runs/text_intelligence/<id>/analysis/text_event_topics.json`: standalone event topic grouping evidence.
-- `runs/text_intelligence/<id>/analysis/text_event_signals.json`: standalone text event signals.
-- `runs/text_intelligence/<id>/analysis/event_intelligence_material.md`: standalone AI-readable event intelligence material.
-- `runs/text_intelligence/<id>/manifest.json`: standalone text intelligence manifest.
-- `data/models/text/model_prepare_manifest.json`: local text model preparation metadata when `text-models prepare` is run with the example cache directory.
-- `runs/workbench/latest/workbench_summary.json`: bounded local delivery snapshot summary with latest run, report, decision, alert, monitor, outcome, strategy, product-validation, data-quality, source-ref, warning, error, and Codex-boundary metadata.
-- `runs/workbench/latest/index.md`: local Markdown workbench index generated from the summary.
-- `runs/workbench/latest/index.html`: local static HTML workbench index generated from the summary.
-
-Failed runs preserve artifacts created before the failure and record errors in
-`run_manifest.json`. The product command must not emit fake raw data, fake
-analysis, or placeholder reports.
-
-Feature, factor, and multi-source signal contracts are defined in
-`docs/feature-factor-contracts.md`. Product runs generate
-`analysis/feature_snapshots.json`, `analysis/factor_states.json`,
-`analysis/multi_source_signals.json`, and bounded
-`analysis/factor_signal_material.md` for Codex/report input.
-
-## Quantitative Research
-
-Built-in strategies use vectorbt as an implementation helper for indicator,
-signal, and bounded diagnostic calculations. Persisted artifacts contain only
-Halpha-owned fields such as strategy name, version, params, source, symbol,
-timeframe, input window, data quality, indicators, signals, assessment,
-diagnostic assumptions, scalar metrics, warnings, and source artifacts.
-
-Backtest diagnostics are historical research material only. They are not
-forecasts, trading instructions, investment advice, or performance guarantees.
-Strategy evaluation summaries include cost assumptions, gross and net metrics,
-baseline comparison, relative metrics, bounded walk-forward summaries, and
-research limitation, parameter-stability, and overfitting-risk warnings.
-Strategy benchmark suites define reusable OHLCV windows for later strategy
-experiments without embedding raw OHLCV history in AI-readable context.
-Standalone strategy experiments evaluate configured strategy candidates across
-those windows using the same single-window strategy evaluation semantics as the
-main pipeline, add bounded walk-forward summaries, and classify candidates with
-deterministic effectiveness gates. Product runs also write bounded strategy
-experiment material into the report context so the final report can discuss
-effective, watchlisted, rejected, or insufficient-evidence candidates without
-asking Codex to generate gate outcomes.
-Strategy lifecycle material carries deterministic strategy health,
-degradation, watchlist, rejection, retirement, insufficient-evidence, and
-source-availability context into report generation without asking Codex to
-create lifecycle states or governance decisions.
-Downstream fusion can reference lifecycle state to qualify degraded or retired
-strategies before decision material and final report context are built.
-AI-readable strategy evaluation material carries those deterministic evaluation
-fields into research context and report generation without asking Codex to
-calculate new metrics.
-
-## Codex Report Generation
-
-Codex consumes generated research context and prompt artifacts. It does not
-generate action levels, strategy signals, structured decision artifacts,
-derivatives states, macro/calendar states, on-chain records, flow states,
-address labels, risk levels, user state, personalized constraints, holdings,
-allocations, position sizes, event categories, event impacts, event-market
-relationships, strategy lifecycle states, policy records, promotion decisions,
-retirement decisions, parameter optimization, strategy selection, or price forecasts. Those are produced
-deterministically before report generation.
-
-Codex input is governed by `docs/artifact-governance.md`: complete evidence
-artifacts stay inspectable on disk, while Codex receives bounded report-facing
-material plus explicit budget metadata in `run_manifest.json`.
-Derivatives, macro/calendar, on-chain flow, personalized risk, and data-quality
-evidence follow the same rule: Codex receives concise report-facing material
-files, not full local histories, raw archives, current-run views, raw
-user-state files, private notes, catalog contents, SQLite tables, Parquet data,
-full lifecycle JSON, local lifecycle policy input, or full context JSON.
-
-The final report is generated from Codex stdout. When strategy run artifacts are
-available, Halpha inserts the complete strategy output table after Codex output
-validation so Codex does not need to recreate every row. When strategy gate
-artifacts are available, Halpha also inserts a deterministic strategy
-effectiveness table from `analysis/strategy_effectiveness_gates.json`.
-When derivatives market material exists, Halpha inserts a bounded derivatives
-and market-structure evidence section from deterministic artifacts after Codex
-output validation. Macro/calendar and on-chain flow material follow the same
-pattern with bounded deterministic evidence sections.
-
-## Validation
-
-`config.example.yaml` is a portable public example. Real local acceptance should
-use a gitignored machine-local config file and should not print or commit local
-proxy values, credentials, machine paths, user-state files, private policy
-values, or other local privacy values.
-
-Run automated tests:
-
-```bash
-python -m pytest
-```
-
-Each pytest invocation writes temporary test output under
-`test-output/pytest/<timestamp>/`. The test harness keeps the latest 10 pytest
-output directories and prunes older timestamped directories when a new pytest
-session starts.
-
-Run the local lint gate used by CI:
-
-```bash
-python -m ruff check .
-```
-
-For code changes, run the narrowest focused tests that cover the touched module
-before or alongside the full suite.
-
-Run real-source product acceptance without Codex CLI:
-
-```bash
-python -m halpha run --config <local-config.yaml> --no-codex
-```
-
-Inspect product contract health without collection, pipeline execution, report
-generation, or Codex CLI:
-
-```bash
-python -m halpha validate --config <local-config.yaml>
-python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>
-```
-
-The validate command prints bounded status, check counts, failed check names,
-source refs, and recovery hints. It does not write
-`analysis/product_contract_validation.json`; product runs write that artifact
-as part of the pipeline.
-
-Inspect local data lake state without collection or Codex CLI:
-
-```bash
-python -m halpha data inspect --config <local-config.yaml>
-python -m halpha data inspect --config <local-config.yaml> --run-dir runs/<run_id>
-```
-
-Use this output to check on-chain flow history state, current-run on-chain view
-coverage, feature/factor artifact status, intelligence-fusion status,
-strategy-lifecycle status, personalized-risk aggregate status,
-product-validation status, Codex input budget state, and latest data-quality
-counts without exposing reusable record contents, full lifecycle records, policy
-values, product validation checks, or raw local user-state values.
-
-Inspect outcome tracking state without collection or Codex CLI:
-
-```bash
-python -m halpha outcomes inspect --config <local-config.yaml>
-python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>
-```
-
-Build and inspect local workbench delivery snapshots as CLI inspection and
-recovery aids without collection, pipeline execution, monitor cycles, or Codex
-CLI:
-
-```bash
-python -m halpha workbench build --config <local-config.yaml>
-python -m halpha workbench build --config <local-config.yaml> --run-dir runs/<run_id>
-python -m halpha workbench inspect --config <local-config.yaml>
-```
-
-Inspect local monitor health without collection, pipeline execution, or Codex
-CLI:
-
-```bash
-python -m halpha monitor status --config <local-config.yaml>
-python -m halpha monitor start --config <local-config.yaml>
-python -m halpha monitor stop --config <local-config.yaml>
-python -m halpha monitor inspect --config <local-config.yaml>
-```
-
-Run full Codex report acceptance only when Codex context, prompt construction,
-report generation, report post-processing, or final report content changed:
-
-```bash
-python -m halpha run --config <local-config.yaml>
-```
-
-Run standalone strategy experiment acceptance:
-
-```bash
-python -m halpha experiment --config config.example.yaml
-```
-
-Inspect the generated `runs/strategy_experiments/<id>/manifest.json` and
-`strategy_effectiveness_gates.json` files for benchmark, experiment, and gate
-counts. The portable example config is expected to produce at least three
-`effective` research candidates under the deterministic gate policy.
-
-Run text model preparation metadata acceptance without downloads:
-
-```bash
-python -m halpha text-models prepare --config config.example.yaml
-```
-
-Run standalone text intelligence acceptance:
-
-```bash
-python -m halpha text-intel --config config.example.yaml
-```
-
-Run standalone text intelligence from an existing raw text artifact:
-
-```bash
-python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
-```
-
-For event-intelligence review, inspect recent `analysis/text_event_records.json`,
-`analysis/text_entity_evidence.json`,
-`analysis/text_event_classification_evidence.json`,
-`analysis/text_event_topics.json`, `analysis/text_event_signals.json`,
-`analysis/event_market_confluence.json`,
-`analysis/event_intelligence_assessment.json`,
-`analysis/alert_decisions.json`,
-`analysis/alert_decision_material.md`, and
-`analysis/event_intelligence_material.md` artifacts. High-confidence accepted
-outputs should have source references, model or rule evidence, threshold checks,
-and conservative unknown or low-confidence states for ambiguous inputs.
-
-For alert-decision review, run through `build_alert_decision_material` when a
-bounded check is enough:
-
-```bash
-python -m halpha run --config config.example.yaml --until build_alert_decision_material
-```
-
-Inspect `analysis/event_intelligence_assessment.json`,
-`analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and
-`run_manifest.json`. Alert priority, event severity, decision impact, downgrade
-reasons, and no-alert states must come from generated Halpha artifacts. Codex
-may explain those fields in the final report, but must not create or revise
-them.
-
-For Codex input-budget review, inspect `run_manifest.json` `codex_input`,
-`analysis/research_context.md`, `codex_context/context.md`, and
-`codex_context/prompt.md`. Complete intermediate JSON artifacts should be
-referenced by path and summarized through bounded material, not embedded
-wholesale. Personalized risk review should include
-`analysis/user_state_context.json`, `analysis/personalized_risk_constraints.json`,
-and `analysis/personalized_risk_material.md` while confirming raw local
-user-state files, private notes, account identifiers, holdings, allocations,
-and position sizes are not embedded in Codex input. For data-quality review, inspect
-`analysis/data_quality_summary.json` as the structured evidence and
-`analysis/data_quality_material.md` as the bounded Codex-facing summary. When
-on-chain flow is enabled, data-quality review should include
-`raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`,
-`raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, and
-`analysis/onchain_flow_material.md` status checks.
-Strategy lifecycle review should include `analysis/strategy_lifecycle_state.json`
-as deterministic evidence and `analysis/strategy_lifecycle_material.md` as the
-bounded Codex-facing summary.
-
-To recompute the report-facing alert material after inspecting or regenerating
-upstream artifacts:
-
-```bash
-python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>
-```
-
-When the selected run is complete, this writes a derived run rather than
-mutating the original run.
-
-Run full report acceptance when Codex CLI use is intended:
+Run the full pipeline:
 
 ```bash
 python -m halpha run --config config.example.yaml
 ```
 
-This sends generated local research context to Codex CLI through stdin and
-writes the final report to `report/report.md`.
+Full runs may require configured input sources and report-generation commands.
 
-Mocks, fixtures, and fake Codex subprocesses are useful for automated tests, but
-they are not proof of a real-source product run.
+Recommended first check:
 
-## Project Structure
+```text
+install
+-> run with --no-codex
+-> validate
+-> inspect through Dashboard GUI or CLI
+```
 
-- `AGENTS.md`: root instructions for AI agents.
-- `config.example.yaml`: portable public-source configuration.
-- `data/`: shared local market history area; generated contents are ignored by git.
-- `docs/`: durable project documentation and implementation contracts.
-  - `docs/artifact-governance.md`: artifact map, runtime state authority, layer rules, Codex input policy, and documentation index.
-  - `docs/storage-contracts.md`: run archive, shared data, runtime state, derived/cache, and deletion boundary contracts.
-  - `docs/research-data-contracts.md`: shared local research data, current run index, text-event history, and data-quality contracts.
-  - `docs/quant-contracts.md`: quantitative research contracts.
-  - `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.
-  - `docs/derivatives-market-contracts.md`: derivatives and market-structure data contracts.
-  - `docs/macro-calendar-contracts.md`: macro and scheduled-event data contracts.
-  - `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data contracts.
-  - `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
-  - `docs/intelligence-fusion-contracts.md`: fusion artifact, material, final-artifact application, and Codex-boundary contracts.
-  - `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, final-artifact application, and Codex-boundary contracts.
-  - `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, resident-service target, privacy, and Codex-boundary contracts.
-  - `docs/delivery-workbench-contracts.md`: local delivery snapshot and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
-  - `docs/product-stability-contracts.md`: product validation, workflow stability, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
-  - `docs/logging-standards.md`: local JSON logging levels, event shape, privacy boundaries, context fields, and anti-noise rules.
-  - `docs/dashboard-contracts.md`: local web dashboard, shared service lifecycle, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
-  - `docs/event-intelligence-contracts.md`: event intelligence contracts.
-  - `docs/decision-intelligence-contracts.md`: decision intelligence contracts.
-  - `docs/outcome-tracking-contracts.md`: outcome target, evaluation, history, material, and Codex-boundary contracts.
-- `src/halpha/`: Python package.
-- `tests/`: automated tests.
-- `runs/`: per-run artifact area; generated contents are ignored by git.
+## Outputs
 
-## Disclaimer
+Runs are written under `runs/`.
 
-Halpha is a personal research project. It does not provide financial advice,
-investment recommendations, trading instructions, or trading signals.
+Check run status first:
+
+```bash
+cat runs/<run_id>/run_manifest.json
+```
+
+Typical output areas:
+
+```text
+runs/<run_id>/
+├── raw/
+├── analysis/
+├── codex_context/
+├── report/
+└── run_manifest.json
+```
+
+Not every run produces every file. Outputs depend on configuration, enabled stages, available inputs, and whether report generation is included.
+
+## Common CLI operations
+
+```bash
+# Stop after a named stage
+python -m halpha run --config config.example.yaml --until build_materials
+
+# Rerun a stage from an existing run
+python -m halpha stage build_materials --config config.example.yaml --run-dir runs/<run_id>
+
+# Validate a selected run
+python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
+
+# Inspect data state
+python -m halpha data inspect --config config.example.yaml
+```
+
+## Configuration
+
+Use the example configuration for the first run:
+
+```bash
+python -m halpha run --config config.example.yaml --no-codex
+```
+
+For a private config, copy it first:
+
+```bash
+cp config.example.yaml config.local.yaml
+python -m halpha run --config config.local.yaml --no-codex
+```
+
+## License
+
+MIT.
