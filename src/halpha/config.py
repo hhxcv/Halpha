@@ -140,6 +140,7 @@ SUPPORTED_LIFECYCLE_POLICY_SCOPE_FIELDS = {"symbol", "timeframe"}
 SUPPORTED_QUANT_STRATEGY_PARAM_NAMES = {
     "sma_cross_trend": {"short_window", "long_window"},
     "sma_cross_long_short": {"short_window", "long_window", "neutral_band_pct"},
+    "pair_zscore_reversion": {"lookback_window", "entry_zscore", "exit_zscore", "hedge_ratio"},
     "signed_tsmom_trend": {
         "return_window",
         "deadband_pct",
@@ -918,6 +919,16 @@ def _validate_quant_strategy_params(name: str, params: dict[str, Any], path: str
         if "neutral_band_pct" in params:
             _require_bounded_number(params, "neutral_band_pct", f"{path}.neutral_band_pct", minimum=0.0, maximum=100.0)
         _validate_sma_cross_windows(params, path)
+    if name == "pair_zscore_reversion":
+        if "lookback_window" in params:
+            _require_positive_int(params, "lookback_window", f"{path}.lookback_window")
+        if "entry_zscore" in params:
+            _require_positive_number(params, "entry_zscore", f"{path}.entry_zscore")
+        if "exit_zscore" in params:
+            _require_non_negative_number(params, "exit_zscore", f"{path}.exit_zscore")
+        if "hedge_ratio" in params:
+            _require_positive_number(params, "hedge_ratio", f"{path}.hedge_ratio")
+        _validate_pair_zscore_thresholds(params, path)
 
 
 def _validate_bollinger_rsi_thresholds(params: dict[str, Any], path: str) -> None:
@@ -960,6 +971,18 @@ def _validate_sma_cross_windows(params: dict[str, Any], path: str) -> None:
     long_window = _require_positive_int(effective, "long_window", f"{path}.long_window")
     if short_window >= long_window:
         raise ConfigError(f"{path}.short_window must be lower than {path}.long_window.")
+
+
+def _validate_pair_zscore_thresholds(params: dict[str, Any], path: str) -> None:
+    effective = {
+        "entry_zscore": 2.0,
+        "exit_zscore": 0.5,
+    }
+    effective.update(params)
+    entry_zscore = _require_positive_number(effective, "entry_zscore", f"{path}.entry_zscore")
+    exit_zscore = _require_non_negative_number(effective, "exit_zscore", f"{path}.exit_zscore")
+    if exit_zscore >= entry_zscore:
+        raise ConfigError(f"{path}.exit_zscore must be lower than {path}.entry_zscore.")
 
 
 def _validate_quant_strategy_backtest(backtest: dict[str, Any], path: str) -> None:
@@ -1056,6 +1079,13 @@ def _validate_quant_parameter_grid_value(name: str, param_name: str, value: Any,
         if param_name in {"short_window", "long_window"}:
             _require_positive_int_value(value, path)
         if param_name == "neutral_band_pct":
+            _require_bounded_number_value(value, path, minimum=0.0, maximum=100.0)
+    if name == "pair_zscore_reversion":
+        if param_name == "lookback_window":
+            _require_positive_int_value(value, path)
+        if param_name in {"entry_zscore", "hedge_ratio"}:
+            _require_positive_number_value(value, path)
+        if param_name == "exit_zscore":
             _require_bounded_number_value(value, path, minimum=0.0, maximum=100.0)
 
 

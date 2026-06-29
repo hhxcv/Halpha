@@ -7,12 +7,23 @@ from typing import Any
 OHLCV_REQUIRED_FIELDS = ("open_time", "open", "high", "low", "close", "volume")
 LONG_FLAT_POLICY = "research_long_flat_target_exposure"
 SIGNED_POLICY = "research_signed_target_exposure"
+MULTI_LEG_POLICY = "research_multi_leg_target_exposure"
 SUPPORTED_MARKET_TYPES = ("spot", "swap")
 OHLCV_INPUT = {
     "input_type": "ohlcv",
     "required": True,
     "time_alignment": "closed_bar_no_lookahead",
     "fields": list(OHLCV_REQUIRED_FIELDS),
+}
+PAIR_OHLCV_INPUT_A = {
+    **OHLCV_INPUT,
+    "leg_id": "spread_leg_a",
+    "leg_role": "spread_primary",
+}
+PAIR_OHLCV_INPUT_B = {
+    **OHLCV_INPUT,
+    "leg_id": "spread_leg_b",
+    "leg_role": "spread_hedge",
 }
 RESEARCH_RISK_NOTE = "Historical strategy output is research material, not a forecast."
 REALIZED_VOLATILITY_FILTER = {
@@ -158,6 +169,7 @@ STRATEGY_SPEC_ORDER = (
     "breakout_atr_trend",
     "sma_cross_trend",
     "sma_cross_long_short",
+    "pair_zscore_reversion",
     "bollinger_rsi_reversion",
     "bollinger_rsi_long_short",
 )
@@ -443,6 +455,59 @@ STRATEGY_SPECS = {
         risk_notes=(
             RESEARCH_RISK_NOTE,
             "Mean-reversion strategies can fail during persistent directional trends.",
+        ),
+    ),
+    "pair_zscore_reversion": StrategySpec(
+        name="pair_zscore_reversion",
+        family="statistical_arbitrage",
+        version="1",
+        description="Pair spread z-score reversion strategy with explicit two-leg research exposure.",
+        supported_market_types=SUPPORTED_MARKET_TYPES,
+        required_inputs=(PAIR_OHLCV_INPUT_A, PAIR_OHLCV_INPUT_B),
+        output_position_policy=MULTI_LEG_POLICY,
+        default_params={
+            "lookback_window": 20,
+            "entry_zscore": 2.0,
+            "exit_zscore": 0.5,
+            "hedge_ratio": 1.0,
+        },
+        parameter_schema={
+            "lookback_window": _positive_integer_param(
+                20,
+                "Rolling aligned-pair bars used to estimate spread mean and dispersion.",
+            ),
+            "entry_zscore": _positive_number_param(
+                2.0,
+                "Absolute spread z-score threshold used to enter long-spread or short-spread exposure.",
+                constraints=["entry_zscore must be greater than exit_zscore"],
+            ),
+            "exit_zscore": _bounded_number_param(
+                0.5,
+                "Absolute spread z-score threshold below which active pair exposure exits to flat.",
+                minimum=0.0,
+                maximum=100.0,
+                constraints=["exit_zscore must be lower than entry_zscore"],
+            ),
+            "hedge_ratio": _positive_number_param(
+                1.0,
+                "Fixed configured hedge ratio applied to the second leg in the log-price spread.",
+            ),
+        },
+        optimization_space={
+            "lookback_window": _grid([20, 40, 60]),
+            "entry_zscore": _grid([1.5, 2.0, 2.5]),
+            "exit_zscore": _grid([0.25, 0.5, 0.75]),
+            "hedge_ratio": _grid([0.5, 1.0, 1.5]),
+        },
+        minimum_rows_policy={
+            "formula": "lookback_window + 1 aligned pair rows",
+            "minimum_rows_with_default_params": 21,
+            "reason": "Requires rolling spread z-score warmup plus one next-bar evaluation row.",
+        },
+        risk_notes=(
+            RESEARCH_RISK_NOTE,
+            "Pair strategy output is research exposure only, not market-neutral account construction.",
+            "No pair discovery, cointegration testing, or hedge-ratio optimization is performed.",
         ),
     ),
     "bollinger_rsi_long_short": StrategySpec(

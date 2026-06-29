@@ -480,6 +480,30 @@ def test_load_config_accepts_quant_strategy_config(tmp_path: Path) -> None:
     assert config["quant"]["strategies"][0]["name"] == "tsmom_vol_scaled"
 
 
+def test_load_config_accepts_pair_zscore_reversion_strategy_config(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "    - name: tsmom_vol_scaled",
+            (
+                "    - name: pair_zscore_reversion\n"
+                "      params:\n"
+                "        lookback_window: 20\n"
+                "        entry_zscore: 2.0\n"
+                "        exit_zscore: 0.5\n"
+                "        hedge_ratio: 1.0\n"
+                "    - name: tsmom_vol_scaled"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["quant"]["strategies"][0]["name"] == "pair_zscore_reversion"
+    assert config["quant"]["strategies"][0]["params"]["hedge_ratio"] == 1.0
+
+
 def test_load_config_accepts_enabled_parameter_diagnostics_config(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
@@ -1265,6 +1289,26 @@ def test_load_config_rejects_retired_m1_quant_signal_names(tmp_path: Path, signa
         (
             "  engine: vectorbt\n  strategies:\n    - name: sma_cross_long_short\n      params:\n        neutral_band_pct: -1",
             r"quant\.strategies\[0\]\.params\.neutral_band_pct must be a number between 0.0 and 100.0",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: pair_zscore_reversion\n      params:\n        lookback_window: 0",
+            r"quant\.strategies\[0\]\.params\.lookback_window must be a positive integer",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: pair_zscore_reversion\n      params:\n        entry_zscore: 0",
+            r"quant\.strategies\[0\]\.params\.entry_zscore must be a positive number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: pair_zscore_reversion\n      params:\n        exit_zscore: -1",
+            r"quant\.strategies\[0\]\.params\.exit_zscore must be a non-negative number",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: pair_zscore_reversion\n      params:\n        entry_zscore: 1.0\n        exit_zscore: 1.0",
+            r"quant\.strategies\[0\]\.params\.exit_zscore must be lower than quant\.strategies\[0\]\.params\.entry_zscore",
+        ),
+        (
+            "  engine: vectorbt\n  strategies:\n    - name: pair_zscore_reversion\n      params:\n        hedge_ratio: 0",
+            r"quant\.strategies\[0\]\.params\.hedge_ratio must be a positive number",
         ),
         (
             "  engine: vectorbt\n  strategies:\n    - name: bollinger_rsi_reversion\n      params:\n        bollinger_window: 0",
