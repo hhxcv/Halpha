@@ -21,15 +21,15 @@ from halpha.runtime.state_store import open_runtime_state_connection
 def test_service_lifecycle_rejects_unknown_roles(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
 
-    assert SERVICE_ROLES == frozenset({"dashboard", "monitor", "schedule"})
-    with pytest.raises(ValueError, match="service role must be one of: dashboard, monitor, schedule"):
+    assert SERVICE_ROLES == frozenset({"core", "monitor"})
+    with pytest.raises(ValueError, match="service role must be one of: core, monitor"):
         repository.inspect("worker")
 
 
 def test_service_lifecycle_start_reports_existing_and_config_conflict(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="config.yaml",
         config_digest="digest-a",
         endpoint={"host": "127.0.0.1", "port": 8765},
@@ -37,16 +37,16 @@ def test_service_lifecycle_start_reports_existing_and_config_conflict(tmp_path: 
     )
     assert ownership is not None
     try:
-        repository.register_started("dashboard", instance_id=result.instance_id or "", now="2026-06-05T00:00:01Z")
+        repository.register_started("core", instance_id=result.instance_id or "", now="2026-06-05T00:00:01Z")
 
         same, same_ownership = repository.attempt_start_ownership(
-            "dashboard",
+            "core",
             config_ref="config.yaml",
             config_digest="digest-a",
             now="2026-06-05T00:00:02Z",
         )
         conflict, conflict_ownership = repository.attempt_start_ownership(
-            "dashboard",
+            "core",
             config_ref="other.yaml",
             config_digest="digest-b",
             now="2026-06-05T00:00:03Z",
@@ -66,15 +66,15 @@ def test_service_lifecycle_start_reports_existing_and_config_conflict(tmp_path: 
 def test_service_lifecycle_inspect_reports_owned_service_state(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="config.yaml",
         config_digest="digest-a",
         now="2026-06-05T00:00:00Z",
     )
     assert ownership is not None
     try:
-        repository.register_started("dashboard", instance_id=result.instance_id or "", now="2026-06-05T00:00:01Z")
-        inspected = repository.inspect("dashboard", now="2026-06-05T00:00:02Z")
+        repository.register_started("core", instance_id=result.instance_id or "", now="2026-06-05T00:00:01Z")
+        inspected = repository.inspect("core", now="2026-06-05T00:00:02Z")
     finally:
         ownership.release()
 
@@ -116,7 +116,7 @@ def test_service_lifecycle_reconciles_stale_running_state_when_lock_is_free(tmp_
 def test_service_lifecycle_reports_unresponsive_when_lock_is_held_with_stale_heartbeat(tmp_path: Path) -> None:
     process, ready, release = _start_service_process(
         tmp_path,
-        role="schedule",
+        role="core",
         config_digest="digest-a",
         heartbeat_timeout_seconds=1,
     )
@@ -125,7 +125,7 @@ def test_service_lifecycle_reports_unresponsive_when_lock_is_held_with_stale_hea
         repository = ServiceLifecycleRepository(runtime_root=tmp_path, heartbeat_timeout_seconds=1)
 
         result, ownership = repository.attempt_start_ownership(
-            "schedule",
+            "core",
             config_ref="config.yaml",
             config_digest="digest-a",
             now="2026-06-05T00:00:10Z",
@@ -185,7 +185,7 @@ def test_service_lifecycle_lock_reports_existing_or_conflict_across_processes(tm
 def test_service_lifecycle_stop_request_targets_instance_id_not_pid(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="config.yaml",
         config_digest="digest-a",
         now="2026-06-05T00:00:00Z",
@@ -193,21 +193,21 @@ def test_service_lifecycle_stop_request_targets_instance_id_not_pid(tmp_path: Pa
     assert ownership is not None
     instance_id = result.instance_id or ""
     try:
-        repository.register_started("dashboard", instance_id=instance_id, now="2026-06-05T00:00:01Z")
+        repository.register_started("core", instance_id=instance_id, now="2026-06-05T00:00:01Z")
 
         mismatch = repository.request_graceful_stop(
-            "dashboard",
-            instance_id="dashboard-reused-pid",
+            "core",
+            instance_id="core-reused-pid",
             now="2026-06-05T00:00:02Z",
         )
         requested = repository.request_graceful_stop(
-            "dashboard",
+            "core",
             instance_id=instance_id,
             now="2026-06-05T00:00:03Z",
         )
-        observed = repository.observe_stop_request("dashboard", instance_id=instance_id)
+        observed = repository.observe_stop_request("core", instance_id=instance_id)
         terminal = repository.record_terminal_exit(
-            "dashboard",
+            "core",
             instance_id=instance_id,
             status="stopped",
             exit_code=0,
@@ -226,7 +226,7 @@ def test_service_lifecycle_stop_request_targets_instance_id_not_pid(tmp_path: Pa
 def test_service_lifecycle_requires_explicit_restart_after_terminal_state(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "schedule",
+        "core",
         config_ref="config.yaml",
         config_digest="digest-a",
         now="2026-06-05T00:00:00Z",
@@ -234,9 +234,9 @@ def test_service_lifecycle_requires_explicit_restart_after_terminal_state(tmp_pa
     assert ownership is not None
     instance_id = result.instance_id or ""
     try:
-        repository.register_started("schedule", instance_id=instance_id, now="2026-06-05T00:00:01Z")
+        repository.register_started("core", instance_id=instance_id, now="2026-06-05T00:00:01Z")
         terminal = repository.record_terminal_exit(
-            "schedule",
+            "core",
             instance_id=instance_id,
             status="stopped",
             exit_code=0,
@@ -246,20 +246,20 @@ def test_service_lifecycle_requires_explicit_restart_after_terminal_state(tmp_pa
         ownership.release()
 
     blocked, blocked_ownership = repository.attempt_start_ownership(
-        "schedule",
+        "core",
         config_ref="config.yaml",
         config_digest="digest-a",
         now="2026-06-05T00:00:03Z",
     )
     mismatch, mismatch_ownership = repository.attempt_restart_ownership(
-        "schedule",
-        previous_instance_id="schedule-reused-pid",
+        "core",
+        previous_instance_id="core-reused-pid",
         config_ref="config.yaml",
         config_digest="digest-a",
         now="2026-06-05T00:00:04Z",
     )
     restarted, restart_ownership = repository.attempt_restart_ownership(
-        "schedule",
+        "core",
         previous_instance_id=instance_id,
         config_ref="config.yaml",
         config_digest="digest-a",
@@ -310,7 +310,7 @@ def test_service_lifecycle_redacts_private_error_values(tmp_path: Path) -> None:
 def test_service_lifecycle_rejects_traversal_like_config_ref(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="../private/config.yaml",
         config_digest="digest-a",
         now="2026-06-05T00:00:00Z",

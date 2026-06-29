@@ -39,7 +39,7 @@ def test_dashboard_foreground_records_shared_lifecycle_without_legacy_state(
 
     run_dashboard_service(None, config_path=None, host="127.0.0.1", port=8765)
 
-    lifecycle = ServiceLifecycleRepository(runtime_root=tmp_path).inspect("dashboard")
+    lifecycle = ServiceLifecycleRepository(runtime_root=tmp_path).inspect("core")
     assert lifecycle.status == "stopped"
     assert lifecycle.instance_id is not None
     assert health_payload["lifecycle"]["status"] == "running"
@@ -59,18 +59,18 @@ def test_dashboard_start_returns_existing_shared_instance(
 ) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="dashboard-service-unconfigured",
         config_digest=_dashboard_digest("127.0.0.1", 8765),
         endpoint={"host": "127.0.0.1", "port": 8765, "health_url": "http://127.0.0.1:8765/api/health"},
     )
     assert ownership is not None
     try:
-        repository.register_started("dashboard", instance_id=result.instance_id or "")
+        repository.register_started("core", instance_id=result.instance_id or "")
         monkeypatch.setattr("halpha.dashboard.app._dashboard_endpoint_can_bind", lambda host, port: False)
         monkeypatch.setattr(
             "halpha.dashboard.app._read_dashboard_endpoint_health",
-            lambda host, port: {"service": "halpha_dashboard"},
+            lambda host, port: {"service": "halpha_core"},
         )
         monkeypatch.setattr("halpha.dashboard.app.subprocess.Popen", _fail_popen)
 
@@ -88,14 +88,14 @@ def test_dashboard_start_conflicting_endpoint_does_not_launch_process(
 ) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="dashboard-service-unconfigured",
         config_digest=_dashboard_digest("127.0.0.1", 8765),
         endpoint={"host": "127.0.0.1", "port": 8765, "health_url": "http://127.0.0.1:8765/api/health"},
     )
     assert ownership is not None
     try:
-        repository.register_started("dashboard", instance_id=result.instance_id or "")
+        repository.register_started("core", instance_id=result.instance_id or "")
         monkeypatch.setattr("halpha.dashboard.app._dashboard_endpoint_can_bind", lambda host, port: True)
         monkeypatch.setattr("halpha.dashboard.app.subprocess.Popen", _fail_popen)
 
@@ -123,7 +123,7 @@ def test_dashboard_restart_stops_then_starts_with_previous_instance_id(
 ) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(
-        "dashboard",
+        "core",
         config_ref="dashboard-service-unconfigured",
         config_digest=_dashboard_digest("127.0.0.1", 8765),
         endpoint={"host": "127.0.0.1", "port": 8765, "health_url": "http://127.0.0.1:8765/api/health"},
@@ -140,7 +140,7 @@ def test_dashboard_restart_stops_then_starts_with_previous_instance_id(
         return {"status": "started", "instance_id": "dashboard-next", "endpoint": {"host": host, "port": port}}
 
     try:
-        repository.register_started("dashboard", instance_id=result.instance_id or "")
+        repository.register_started("core", instance_id=result.instance_id or "")
         monkeypatch.setattr("halpha.dashboard.app.stop_dashboard_service", fake_stop)
         monkeypatch.setattr("halpha.dashboard.app.start_dashboard_service", fake_start)
 
@@ -173,7 +173,7 @@ def test_dashboard_selected_config_uses_runtime_state_store(tmp_path: Path) -> N
 def _dashboard_digest(host: str, port: int) -> str:
     from hashlib import sha256
 
-    return sha256(f"dashboard-service-v1|host={host}|port={int(port)}".encode("utf-8")).hexdigest()
+    return sha256(f"core-service-v1|host={host}|port={int(port)}".encode("utf-8")).hexdigest()
 
 
 def _fail_popen(*args: Any, **kwargs: Any) -> Any:

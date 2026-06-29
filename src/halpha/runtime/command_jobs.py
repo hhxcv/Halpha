@@ -45,7 +45,7 @@ EXTERNAL_ARTIFACT_REF = "<external-artifact>"
 REDACTED_ARTIFACT_REF = "<redacted-artifact>"
 RESULT_REF_PLACEHOLDERS = {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}
 JOB_PROCESS_STATUSES = {"running", "cancel_requested"}
-JOB_REQUESTED_BY_VALUES = {"CLI", "Dashboard", "Monitor", "Schedule"}
+JOB_REQUESTED_BY_VALUES = {"CLI", "Core", "Dashboard", "Monitor"}
 COMMAND_JOB_ID_RE = re.compile(r"^\d{8}T\d{6}Z_[0-9a-f]{8}$")
 RESULT_ARTIFACT_KEYS = {
     "collection_coverage",

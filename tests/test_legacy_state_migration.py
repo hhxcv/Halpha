@@ -136,7 +136,7 @@ def test_migration_reports_invalid_and_diagnostic_sources_without_service_resurr
 
     dry_run = legacy_state_migration_dry_run(config, config_path=config_path)
     applied = apply_legacy_state_migration(config, config_path=config_path, now="2026-06-24T00:00:00Z")
-    service = ServiceLifecycleRepository(runtime_root=tmp_path).inspect("dashboard")
+    service = ServiceLifecycleRepository(runtime_root=tmp_path).inspect("core")
 
     selected_source = next(source for source in dry_run["sources"] if source["source_type"] == "legacy_dashboard_selected_config")
     run_index_source = next(source for source in dry_run["sources"] if source["source_type"] == "legacy_run_index")

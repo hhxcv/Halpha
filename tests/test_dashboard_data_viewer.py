@@ -493,7 +493,7 @@ def test_dashboard_data_viewer_collection_plan_and_job_use_planner_and_allowlist
     assert job_payload["artifact_type"] == "dashboard_data_collection_job"
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "data_collect"
-    assert completed["requested_by"] == "Dashboard"
+    assert completed["requested_by"] == "Core"
     assert completed["command"] == ["internal", "data_collect"]
     assert completed["pid"] is None
     assert completed["cancellable"] is False

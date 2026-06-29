@@ -28,10 +28,10 @@ SERVICE_LIFECYCLE_ARTIFACT = STATE_STORE_REF
 SERVICE_LIFECYCLE_SCHEMA_VERSION = 1
 SERVICE_LIFECYCLE_MIGRATION_VERSION = 7
 SERVICE_EVENT_LIMIT = 50
-SERVICE_ROLES = frozenset({"dashboard", "monitor", "schedule"})
+SERVICE_ROLES = frozenset({"core", "monitor"})
 RUNNING_STATUSES = {"starting", "running", "stop_requested"}
 TERMINAL_STATUSES = {"stopped", "failed", "crashed"}
-ServiceRole = Literal["dashboard", "monitor", "schedule"]
+ServiceRole = Literal["core", "monitor"]
 _PROCESS_LOCKS_GUARD = Lock()
 _PROCESS_LOCKS: set[Path] = set()
 

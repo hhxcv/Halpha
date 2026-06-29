@@ -37,3 +37,13 @@ def test_run_trigger_metadata_keeps_display_timezone_run_ids() -> None:
     )
 
     assert trigger["parent_run_id"] == "20260605T083000+0800"
+
+
+def test_run_trigger_metadata_accepts_core_source() -> None:
+    trigger = normalize_run_trigger(
+        {"source": "Core", "intent": "run_no_codex"},
+        default_source="CLI",
+        default_intent="run",
+    )
+
+    assert trigger["source"] == "Core"

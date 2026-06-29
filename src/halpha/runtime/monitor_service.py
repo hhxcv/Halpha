@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -10,27 +11,30 @@ import subprocess
 import sys
 import time
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from halpha.config import load_config
 from halpha.dashboard.settings import dashboard_config_ref, sanitize_dashboard_message
 from halpha.monitor.monitoring import (
-    PipelineRunner,
     Sleeper,
-    SourceRefresher,
     load_monitor_config,
-    run_monitor_source_cycle,
 )
 from halpha.monitor.state_store import MonitorStateRepository
-from halpha.pipeline import run_pipeline
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
 from halpha.storage import artifact_base, display_path
 
 
 MONITOR_SERVICE_ROLE = "monitor"
 MONITOR_SERVICE_NAME = "halpha_monitor"
+CORE_SERVICE_ROLE = "core"
+CORE_SERVICE_NAME = "halpha_core"
 MONITOR_CONTROL_POLL_SECONDS = 0.25
 MONITOR_START_WAIT_SECONDS = 10.0
 MONITOR_STOP_WAIT_SECONDS = 5.0
+CORE_HEALTH_TIMEOUT_SECONDS = 0.75
+CORE_API_TIMEOUT_SECONDS = 5.0
+CORE_START_TIMEOUT_SECONDS = 15.0
 
 
 class MonitorServiceError(Exception):
@@ -39,10 +43,85 @@ class MonitorServiceError(Exception):
         self.exit_code = exit_code
 
 
+class MonitorCoreClientError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class MonitorStartupConfig:
     config: dict[str, Any]
     config_path: Path
+
+
+class LocalCoreServiceClient:
+    def __init__(self, *, config_path: Path, repository: ServiceLifecycleRepository | None = None) -> None:
+        self.config_path = Path(config_path)
+        self.repository = repository or ServiceLifecycleRepository(runtime_root=artifact_base(self.config_path))
+
+    def ensure_running(self) -> dict[str, Any]:
+        lifecycle = self.repository.inspect(CORE_SERVICE_ROLE)
+        if lifecycle.status == "running" and self._health_available(lifecycle):
+            return _core_lifecycle_summary("running", lifecycle)
+        if lifecycle.status in {"not_found", "stale", "stopped", "failed", "crashed"}:
+            self._start_core_service()
+            lifecycle = self.repository.inspect(CORE_SERVICE_ROLE)
+            if lifecycle.status == "running" and self._health_available(lifecycle):
+                return _core_lifecycle_summary("started", lifecycle)
+        if lifecycle.status == "running":
+            raise MonitorCoreClientError("core service lifecycle is running, but the health endpoint is unavailable.")
+        raise MonitorCoreClientError(f"core service is not ready: {lifecycle.status}.")
+
+    def dispatch_due_daily_report(self) -> dict[str, Any]:
+        return self._post_json("/api/schedule/daily-report/dispatch-due", {})
+
+    def create_monitor_cycle_job(self, *, instance_id: str, cycle_sequence: int) -> dict[str, Any]:
+        return self._post_json(
+            "/api/jobs",
+            {
+                "intent": "monitor_once",
+                "params": {},
+                "requested_by": "Monitor",
+                "requester": {
+                    "source": "monitor_service",
+                    "service_instance_id": instance_id,
+                    "monitor_cycle_sequence": cycle_sequence,
+                },
+            },
+        )
+
+    def _start_core_service(self) -> None:
+        command = [sys.executable, "-m", "halpha", "dashboard", "start", "--config", str(self.config_path)]
+        try:
+            completed = subprocess.run(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=Path.cwd(),
+                timeout=CORE_START_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise MonitorCoreClientError("core service could not be started by monitor supervision.") from exc
+        if completed.returncode != 0:
+            raise MonitorCoreClientError("core service start command failed.")
+
+    def _health_available(self, lifecycle: ServiceLifecycleResult) -> bool:
+        health_url = _core_health_url(lifecycle)
+        if health_url is None:
+            return False
+        try:
+            payload = _request_json("GET", health_url, None, timeout=CORE_HEALTH_TIMEOUT_SECONDS)
+        except MonitorCoreClientError:
+            return False
+        return payload.get("service") == CORE_SERVICE_NAME and payload.get("status") in {"ok", "unconfigured"}
+
+    def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        lifecycle = self.repository.inspect(CORE_SERVICE_ROLE)
+        base_url = _core_base_url(lifecycle)
+        if base_url is None:
+            raise MonitorCoreClientError("core service endpoint is unavailable.")
+        return _request_json("POST", f"{base_url}{path}", payload, timeout=CORE_API_TIMEOUT_SECONDS)
 
 
 def load_monitor_startup_config(config_arg: str) -> MonitorStartupConfig:
@@ -56,9 +135,8 @@ def run_monitor_service(
     config_path: Path,
     restart_from_instance_id: str | None = None,
     max_cycles: int | None = None,
-    pipeline_runner: PipelineRunner = run_pipeline,
-    source_refresher: SourceRefresher | None = None,
     sleeper: Sleeper = time.sleep,
+    core_client: LocalCoreServiceClient | None = None,
 ) -> None:
     repository = _monitor_lifecycle_repository(config_path)
     state_repository = MonitorStateRepository(config_path=config_path)
@@ -94,6 +172,7 @@ def run_monitor_service(
     latest_run_id: str | None = None
     latest_run_manifest: str | None = None
     latest_last_error: dict[str, Any] = {}
+    client = core_client or LocalCoreServiceClient(config_path=config_path)
     try:
         repository.register_started(MONITOR_SERVICE_ROLE, instance_id=instance_id, endpoint=_monitor_endpoint_metadata())
         _save_service_health(
@@ -107,48 +186,47 @@ def run_monitor_service(
                 break
             repository.update_heartbeat(MONITOR_SERVICE_ROLE, instance_id=instance_id)
             cycle_sequence = completed_cycles + 1
-            cycle_id = _monitor_service_cycle_id(instance_id, cycle_sequence)
             _save_service_health(
                 state_repository,
                 monitor_output_dir=output_ref,
                 instance_id=instance_id,
-                status="running_cycle",
-                current_cycle_id=cycle_id,
+                status="checking_core",
+                current_cycle_id=None,
                 latest_cycle_id=latest_cycle_id,
                 latest_run_id=latest_run_id,
                 latest_run_manifest=latest_run_manifest,
                 consecutive_failures=consecutive_failures,
             )
-            result_cycle = run_monitor_source_cycle(
-                service_config,
-                config_path=config_path,
-                pipeline_runner=pipeline_runner,
-                source_refresher=source_refresher,
-                loop_id=instance_id,
-                cycle_sequence=cycle_sequence,
-                cycle_id=cycle_id,
-                trigger_source="monitor_service",
-            )
             completed_cycles += 1
-            latest_cycle_id = result_cycle.cycle_id
-            if result_cycle.run_id is not None:
-                latest_run_id = result_cycle.run_id
-            if result_cycle.run_manifest_path is not None:
-                latest_run_manifest = _monitor_run_manifest_ref(result_cycle.run_manifest_path, config_path=config_path)
             wait_seconds = settings.interval_seconds
             next_retry_at = None
             last_error: dict[str, Any] = {}
-            if result_cycle.succeeded:
+            try:
+                core_status = client.ensure_running()
+                schedule_dispatch = client.dispatch_due_daily_report()
+                monitor_job = client.create_monitor_cycle_job(
+                    instance_id=instance_id,
+                    cycle_sequence=cycle_sequence,
+                )
+                wait_seconds = min(wait_seconds, _next_schedule_wait_seconds(schedule_dispatch, default=wait_seconds))
                 consecutive_failures = 0
                 latest_last_error = {}
                 status = "waiting"
-            else:
+                warnings = _monitor_supervision_warnings(
+                    core_status=core_status,
+                    schedule_dispatch=schedule_dispatch,
+                    monitor_job=monitor_job,
+                )
+                errors: list[str] = []
+            except Exception as exc:
                 consecutive_failures += 1
                 wait_seconds = _monitor_backoff_seconds(settings.interval_seconds, settings.failure_backoff_max_seconds, consecutive_failures)
                 next_retry_at = _future_timestamp(wait_seconds)
-                last_error = _last_error(result_cycle.reason or "monitor cycle failed")
+                last_error = _last_error(str(exc) or "monitor supervision failed")
                 latest_last_error = last_error
                 status = "retry_waiting"
+                warnings = []
+                errors = [last_error["message"]] if last_error else []
             _save_service_health(
                 state_repository,
                 monitor_output_dir=output_ref,
@@ -161,8 +239,10 @@ def run_monitor_service(
                 consecutive_failures=consecutive_failures,
                 next_retry_at=next_retry_at,
                 last_error=last_error,
-                errors=[last_error["message"]] if last_error else [],
-                error_count=1 if last_error else 0,
+                warnings=warnings,
+                errors=errors,
+                warning_count=len(warnings),
+                error_count=len(errors),
             )
             if max_cycles is not None and completed_cycles >= max_cycles:
                 break
@@ -300,6 +380,91 @@ def restart_monitor_service(config_arg: str) -> dict[str, Any]:
 
 def _monitor_lifecycle_repository(config_path: Path) -> ServiceLifecycleRepository:
     return ServiceLifecycleRepository(runtime_root=artifact_base(config_path))
+
+
+def _core_lifecycle_summary(status: str, lifecycle: ServiceLifecycleResult) -> dict[str, Any]:
+    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
+    return {
+        "status": status,
+        "lifecycle_status": lifecycle.status,
+        "instance_id": lifecycle.instance_id,
+        "heartbeat_at": state.get("heartbeat_at"),
+        "endpoint": state.get("endpoint") if isinstance(state.get("endpoint"), dict) else {},
+    }
+
+
+def _core_health_url(lifecycle: ServiceLifecycleResult) -> str | None:
+    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
+    endpoint = state.get("endpoint") if isinstance(state.get("endpoint"), dict) else {}
+    value = endpoint.get("health_url")
+    return value if isinstance(value, str) and value.startswith("http://") else None
+
+
+def _core_base_url(lifecycle: ServiceLifecycleResult) -> str | None:
+    health_url = _core_health_url(lifecycle)
+    if health_url and health_url.endswith("/api/health"):
+        return health_url[: -len("/api/health")]
+    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
+    endpoint = state.get("endpoint") if isinstance(state.get("endpoint"), dict) else {}
+    host = endpoint.get("host")
+    port = endpoint.get("port")
+    if isinstance(host, str) and isinstance(port, int):
+        display_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
+        return f"http://{display_host}:{port}"
+    return None
+
+
+def _request_json(method: str, url: str, payload: dict[str, Any] | None, *, timeout: float) -> dict[str, Any]:
+    data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = Request(
+        url,
+        data=data,
+        method=method,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            body = response.read(65_536)
+    except (HTTPError, OSError, TimeoutError, URLError, ValueError) as exc:
+        raise MonitorCoreClientError("core service API request failed.") from exc
+    try:
+        loaded = json.loads(body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
+        raise MonitorCoreClientError("core service API returned invalid JSON.") from exc
+    if not isinstance(loaded, dict):
+        raise MonitorCoreClientError("core service API returned an invalid payload.")
+    return loaded
+
+
+def _next_schedule_wait_seconds(payload: dict[str, Any], *, default: float) -> float:
+    schedule = payload.get("schedule") if isinstance(payload.get("schedule"), dict) else {}
+    next_run_at = schedule.get("next_run_at")
+    if not isinstance(next_run_at, str) or not next_run_at:
+        return float(default)
+    with suppress(ValueError):
+        parsed = datetime.fromisoformat(next_run_at.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return max(0.0, min(float(default), (parsed.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds()))
+    return float(default)
+
+
+def _monitor_supervision_warnings(
+    *,
+    core_status: dict[str, Any],
+    schedule_dispatch: dict[str, Any],
+    monitor_job: dict[str, Any],
+) -> list[str]:
+    warnings: list[str] = []
+    if core_status.get("status") == "started":
+        warnings.append("core service was started by monitor supervision.")
+    dispatch_status = str(schedule_dispatch.get("status") or "")
+    if dispatch_status in {"failed", "blocked"}:
+        warnings.extend(str(item) for item in schedule_dispatch.get("errors") or [] if item)
+    job_status = str(monitor_job.get("status") or "")
+    if job_status in {"failed", "blocked", "unsupported"}:
+        warnings.extend(str(item) for item in monitor_job.get("errors") or [] if item)
+    return warnings[:10]
 
 
 def _monitor_service_config_digest(config: dict[str, Any], *, config_path: Path) -> str:

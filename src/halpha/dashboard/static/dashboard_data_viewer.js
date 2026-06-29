@@ -1117,7 +1117,7 @@
           const status = label(job?.status || "created");
           lines.push(`${status} collection job ${job?.job_id || "pending"}.`);
           if (job?.intent) lines.push(`intent: ${job.intent}`);
-          if (job?.command?.[0] === "internal") lines.push("execution: internal dashboard service");
+          if (job?.command?.[0] === "internal") lines.push("execution: internal core service");
           refRows.forEach(([key, value]) => lines.push(`${key}: ${value}`));
           logRows.forEach(([key, value]) => lines.push(`${key}: ${value}`));
           (Array.isArray(job?.warnings) ? job.warnings : []).slice(0, 6).forEach((warning) => lines.push(`warning: ${warning}`));

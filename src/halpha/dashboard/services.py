@@ -15,20 +15,11 @@ from halpha.runtime.monitor_service import (
     start_monitor_service,
     stop_monitor_service,
 )
-from halpha.runtime.schedule_service import (
-    SCHEDULE_SERVICE_NAME,
-    ScheduleServiceError,
-    _schedule_service_config_digest,
-    restart_schedule_service,
-    schedule_service_status,
-    start_schedule_service,
-    stop_schedule_service,
-)
 
 
-DASHBOARD_SERVICE_NAME = "halpha_dashboard"
-DASHBOARD_SERVICE_ROLES = ("dashboard", "monitor", "schedule")
-CONTROLLED_SERVICE_ROLES = ("monitor", "schedule")
+CORE_SERVICE_NAME = "halpha_core"
+DASHBOARD_SERVICE_ROLES = ("core", "monitor")
+CONTROLLED_SERVICE_ROLES = ("monitor",)
 SERVICE_ACTIONS = ("start", "stop", "restart", "status")
 ACTIVE_LIFECYCLE_STATUSES = {"starting", "running", "stop_requested", "unresponsive"}
 
@@ -40,9 +31,8 @@ def dashboard_services_summary(
     dashboard_lifecycle: dict[str, Any] | None,
 ) -> dict[str, Any]:
     services = {
-        "dashboard": _dashboard_service_from_lifecycle(dashboard_lifecycle),
+        "core": _core_service_from_lifecycle(dashboard_lifecycle),
         "monitor": _unconfigured_service("monitor", MONITOR_SERVICE_NAME),
-        "schedule": _unconfigured_service("schedule", SCHEDULE_SERVICE_NAME),
     }
     warnings: list[str] = []
     errors: list[str] = []
@@ -52,20 +42,10 @@ def dashboard_services_summary(
             config_path=config_path,
             digest_fn=_monitor_service_config_digest,
         )
-        schedule_digest = _expected_digest(
-            config,
-            config_path=config_path,
-            digest_fn=_schedule_service_config_digest,
-        )
         monitor_result = _safe_status(
             "monitor",
             config_path=config_path,
             status_fn=monitor_service_status,
-        )
-        schedule_result = _safe_status(
-            "schedule",
-            config_path=config_path,
-            status_fn=schedule_service_status,
         )
         services["monitor"] = _runtime_service_from_result(
             "monitor",
@@ -74,15 +54,7 @@ def dashboard_services_summary(
             config_path=config_path,
             expected_config_digest=monitor_digest,
         )
-        services["schedule"] = _runtime_service_from_result(
-            "schedule",
-            SCHEDULE_SERVICE_NAME,
-            schedule_result,
-            config_path=config_path,
-            expected_config_digest=schedule_digest,
-        )
         errors.extend(services["monitor"].get("errors") or [])
-        errors.extend(services["schedule"].get("errors") or [])
 
     return {
         "schema_version": 1,
@@ -104,14 +76,14 @@ def dashboard_service_action(
     role_id = role.strip().lower()
     action_id = action.strip().lower()
     if role_id not in CONTROLLED_SERVICE_ROLES:
-        return _blocked_action(role_id, action_id, "dashboard controls only start, stop, or restart monitor and schedule services.")
+        return _blocked_action(role_id, action_id, "core is managed by the local dashboard process; dashboard controls only start, stop, or restart monitor.")
     if action_id not in SERVICE_ACTIONS:
         return _blocked_action(role_id, action_id, f"unsupported service action: {action_id}.")
 
     expected_digest = _action_expected_digest(config, config_path=config_path, role=role_id)
     try:
         result = _run_service_action(config_path, role=role_id, action=action_id)
-    except (MonitorServiceError, ScheduleServiceError) as exc:
+    except MonitorServiceError as exc:
         message = _safe_message(str(exc), config_path=config_path)
         status = "conflict" if "different service configuration" in message else "failed"
         service = _latest_service_after_error(
@@ -131,10 +103,9 @@ def dashboard_service_action(
             "errors": [message],
         }
 
-    service_name = MONITOR_SERVICE_NAME if role_id == "monitor" else SCHEDULE_SERVICE_NAME
     service = _runtime_service_from_result(
         role_id,
-        service_name,
+        MONITOR_SERVICE_NAME,
         result,
         config_path=config_path,
         expected_config_digest=expected_digest,
@@ -161,13 +132,7 @@ def _run_service_action(config_path: Path, *, role: str, action: str) -> dict[st
             "status": monitor_service_status,
         }
         return actions[action](config_arg)
-    actions = {
-        "start": start_schedule_service,
-        "stop": stop_schedule_service,
-        "restart": restart_schedule_service,
-        "status": schedule_service_status,
-    }
-    return actions[action](config_arg)
+    raise MonitorServiceError(f"unsupported service role: {role}.")
 
 
 def _safe_status(
@@ -179,10 +144,9 @@ def _safe_status(
     try:
         return status_fn(str(config_path))
     except Exception as exc:  # pragma: no cover - defensive API boundary
-        service_name = MONITOR_SERVICE_NAME if role == "monitor" else SCHEDULE_SERVICE_NAME
         return {
             "status": "failed",
-            "service": service_name,
+            "service": MONITOR_SERVICE_NAME,
             "instance_id": None,
             "pid": None,
             "lifecycle": {"role": role, "status": "failed", "instance_id": None, "last_error": {}},
@@ -240,13 +204,13 @@ def _runtime_service_from_result(
     }
 
 
-def _dashboard_service_from_lifecycle(lifecycle: dict[str, Any] | None) -> dict[str, Any]:
+def _core_service_from_lifecycle(lifecycle: dict[str, Any] | None) -> dict[str, Any]:
     payload = lifecycle if isinstance(lifecycle, dict) else {}
     status = str(payload.get("status") or "unmanaged")
     heartbeat_at = _string_or_none(payload.get("heartbeat_at"))
     return {
-        "role": "dashboard",
-        "service": DASHBOARD_SERVICE_NAME,
+        "role": "core",
+        "service": CORE_SERVICE_NAME,
         "status": status,
         "lifecycle_status": status,
         "process_health": _process_health(status),
@@ -262,7 +226,7 @@ def _dashboard_service_from_lifecycle(lifecycle: dict[str, Any] | None) -> dict[
         "stop_requested_at": _string_or_none(payload.get("stop_requested_at")),
         "terminal_at": _string_or_none(payload.get("terminal_at")),
         "last_error": {},
-        "actionable": "dashboard service is managed by the current process." if status == "unmanaged" else "",
+        "actionable": "core service is managed by the current process." if status == "unmanaged" else "",
         "warnings": [],
         "errors": [],
     }
@@ -300,17 +264,15 @@ def _latest_service_after_error(
     expected_config_digest: str | None,
     error_message: str,
 ) -> dict[str, Any]:
-    status_fn = monitor_service_status if role == "monitor" else schedule_service_status
-    service_name = MONITOR_SERVICE_NAME if role == "monitor" else SCHEDULE_SERVICE_NAME
     with suppress(Exception):
         return _runtime_service_from_result(
             role,
-            service_name,
-            status_fn(str(config_path)),
+            MONITOR_SERVICE_NAME,
+            monitor_service_status(str(config_path)),
             config_path=config_path,
             expected_config_digest=expected_config_digest,
         )
-    service = _unconfigured_service(role, service_name)
+    service = _unconfigured_service(role, MONITOR_SERVICE_NAME)
     service["status"] = "failed"
     service["lifecycle_status"] = "failed"
     service["process_health"] = "failed"
@@ -347,7 +309,7 @@ def _expected_digest(
 def _action_expected_digest(config: dict[str, Any], *, config_path: Path, role: str) -> str | None:
     if role == "monitor":
         return _expected_digest(config, config_path=config_path, digest_fn=_monitor_service_config_digest)
-    return _expected_digest(config, config_path=config_path, digest_fn=_schedule_service_config_digest)
+    return None
 
 
 def _safe_last_error(value: Any, *, config_path: Path) -> dict[str, Any]:

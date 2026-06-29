@@ -32,7 +32,7 @@ LEASE_OWNER_KIND_ENV = "HALPHA_MUTATION_LEASE_OWNER_KIND"
 LEASE_BLOCKED_MESSAGE = (
     "another mutating Halpha workflow is already running for this runtime root; retry after it finishes."
 )
-REQUESTED_BY_VALUES = frozenset({"CLI", "Dashboard", "Monitor", "Schedule"})
+REQUESTED_BY_VALUES = frozenset({"CLI", "Core", "Dashboard", "Monitor"})
 _ACTIVE_LEASE = threading.local()
 
 

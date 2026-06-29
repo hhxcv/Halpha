@@ -361,7 +361,7 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "Creating bounded export under data/exports." in script
 
 
-def test_dashboard_monitor_and_schedule_service_controls_expose_dom_contracts(tmp_path: Path) -> None:
+def test_dashboard_monitor_service_controls_expose_dom_contracts(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     parser = DashboardShellParser()
     parser.feed(html)
@@ -370,7 +370,7 @@ def test_dashboard_monitor_and_schedule_service_controls_expose_dom_contracts(tm
     assert "data-service-role" in parser.data_attrs
     assert "data-service-action" in parser.data_attrs
     assert 'data-service-role="monitor"' in html
-    assert 'data-service-role="schedule"' in html
+    assert 'data-service-role="schedule"' not in html
     assert 'data-service-action="restart"' in html
     assert "cancelRunningMonitorJobs" not in _script_block(html)
     assert "stop-monitor-button" not in html
@@ -457,13 +457,6 @@ def test_dashboard_monitor_workflow_contracts_are_present(tmp_path: Path) -> Non
     assert 'data-service-role="monitor"' in html
     assert 'data-service-action="restart"' in html
     assert "stop-monitor-button" not in html
-
-
-def test_dashboard_schedule_service_contracts_are_present(tmp_path: Path) -> None:
-    html = _dashboard_html(tmp_path)
-
-    assert 'data-service-role="schedule"' in html
-    assert 'data-service-action="restart"' in html
 
 
 def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) -> None:
@@ -587,7 +580,7 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert 'metricCell("Records"' not in script
     assert 'metricCell("Coverage states"' not in script
     assert 'metricCell("Issues"' not in script
-    assert "execution: internal dashboard service" in script
+    assert "execution: internal core service" in script
     assert "data-intel-jump-date" in script
     assert "data-strategy-window" in html
     assert ">USDT</span>" not in html

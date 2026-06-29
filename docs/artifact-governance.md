@@ -103,7 +103,7 @@ still use the real configured `Path`.
 | --- | --- | --- |
 | Completed run lifecycle and research evidence | `runs/<run_id>/run_manifest.json` and files under that run directory | Runtime state may index refs, but must not replace the run manifest or artifacts. |
 | Reusable market and research history | Physical local store plus store-local schema and state metadata | Examples include `data/market/`, `data/macro/`, `data/onchain/`, and `data/research/` history stores. |
-| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, runtime-root mutation lease, current run-index projection, local command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, monitor service health query state, shared resident-service lifecycle controller state, Dashboard service adoption, and Dashboard UI preferences are implemented. Later domain migrations own searchable run or artifact indexes. |
+| Mutable operational state | Runtime SQLite store at `.halpha/state.sqlite` under the runtime root | The foundation, schema migration table, runtime-root mutation lease, current run-index projection, local command-job lifecycle, daily report schedule dispatch state, monitor-cycle indexes, alert archive records, cooldowns, finite-loop summaries, monitor service health query state, shared resident-service lifecycle controller state, Core service lifecycle state, and Dashboard UI preferences are implemented. Later domain migrations own searchable run or artifact indexes. |
 | Process exclusivity | OS-level exclusive lock plus persisted instance identity, process metadata, and heartbeat | A persisted `running` value alone must not prove that a process is alive. |
 | Derived summaries and read models | Rebuilt from authoritative artifacts and state | Workbench summaries, dashboard read models, health summaries, and `latest` selections must not become parallel authorities. |
 
@@ -111,15 +111,14 @@ Current implemented mutable operational state is centered on
 `.halpha/state.sqlite`. The runtime-root mutation lease, run-index projection,
 local command-job lifecycle, daily report schedule dispatch state, monitor
 cycle index, alert archive records, cooldown state, monitor service health
-query state, shared resident-service lifecycle state, Dashboard service state,
+query state, shared resident-service lifecycle state, Core service state,
 and Dashboard UI preference state live in `.halpha/state.sqlite`. New contracts
 must avoid adding another authority for the same fact.
 
 The only supported resident Halpha process roles are:
 
-- `dashboard`
+- `core`
 - `monitor`
-- `schedule`
 
 Each role is unique within one runtime root and must be independently startable
 and stoppable through one shared lifecycle contract. CLI and Dashboard controls
@@ -127,12 +126,13 @@ must address the same service instance. Duplicate start must return the
 existing matching instance. Config mismatch must return an explicit conflict.
 Restart must be explicit, not an implicit process replacement.
 
-Dashboard serves UI and local APIs, reads product state, submits bounded jobs,
-and sends lifecycle requests. It must not own a private monitor loop or
-daily-report dispatcher. Monitor is the single long-running information-refresh
-and alert-reassessment service. Schedule is the single time-trigger service for
-report jobs. Halpha must not introduce a hidden supervisor, broker, worker
-pool, or fourth resident process role.
+Core serves the local Dashboard UI and APIs, reads product state, owns
+allowlisted command-job execution, and remains the single resident process that
+executes product tasks. Monitor is the lightweight resident checker: it owns
+schedule due checks, core health checks, core restart attempts after terminal or
+stale core state, and core job triggers. Schedule is not a resident process
+role. Halpha must not introduce a hidden supervisor, broker, worker pool, or
+additional resident process role.
 
 The target workflow hierarchy is:
 
@@ -516,7 +516,7 @@ Runtime state-store foundation:
 The SQLite file stores schema migrations, current run-index projections,
 local command-job lifecycle records, process identity and termination
 metadata, transition events, daily report schedule configuration, due dispatch
-claims, dispatch history refs, Dashboard service lifecycle state, Dashboard UI
+claims, dispatch history refs, Core service lifecycle state, Dashboard UI
 preferences, monitor cycle indexes, alert archive records, cooldown state,
 monitor service health query state, and shared resident-service lifecycle rows.
 WAL and SHM side files are SQLite runtime companions and should be backed up
@@ -532,7 +532,7 @@ state domain has moved to the runtime store.
 ### Local Dashboard Control State
 
 Dashboard contracts are defined in `docs/dashboard-contracts.md`. Dashboard
-state records local web UI control metadata such as dashboard service state,
+state records local web UI control metadata such as Core service state,
 selected product-config preference, UI-submitted command job refs, bounded
 logs, schedule state, and linked source refs.
 It is control and delivery state, not upstream research evidence, validation
@@ -541,7 +541,7 @@ context by default.
 
 Implemented dashboard control artifacts include:
 
-- `.halpha/state.sqlite` Dashboard service lifecycle rows
+- `.halpha/state.sqlite` Core service lifecycle rows
 - `.halpha/state.sqlite` Dashboard UI preference rows
 - `.halpha/command_jobs/job_logs/<job_id>/stdout.log`
 - `.halpha/command_jobs/job_logs/<job_id>/stderr.log`
@@ -626,7 +626,7 @@ Codex input policy:
 - Do not embed full reusable outcome history.
 - Do not embed full strategy lifecycle JSON or local lifecycle policy input.
 - Do not embed full workbench summaries or generated workbench indexes.
-- Do not embed full dashboard service state, job histories, logs, or schedule
+- Do not embed full Core service state, job histories, logs, or schedule
   state by default.
 - Do not embed full product contract validation artifacts by default.
 - Do not embed full reusable on-chain flow history.

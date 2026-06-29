@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 from halpha.config import load_config
-from halpha.monitor.monitoring import MonitorSourceRefreshResult
 from halpha.monitor.state_store import MonitorStateRepository
 from halpha.runtime.monitor_service import (
     MonitorServiceError,
@@ -128,33 +125,30 @@ def test_monitor_restart_launches_with_previous_terminal_instance_id(
     }
 
 
-def test_monitor_service_continues_after_failed_cycle_and_resets_backoff(tmp_path: Path) -> None:
+def test_monitor_service_triggers_core_schedule_and_monitor_jobs(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, no_codex=False, text_enabled=True)
     config = load_config(config_path)
-    pipeline_calls: list[dict[str, Any]] = []
-    source_calls: list[str] = []
+    core_client = _FakeCoreClient()
     sleeps: list[float] = []
 
     run_monitor_service(
         config,
         config_path=config_path,
         max_cycles=2,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=[], calls=pipeline_calls),
-        source_refresher=_source_refresher_factory(statuses=["failed"], calls=source_calls),
         sleeper=lambda seconds: sleeps.append(seconds),
+        core_client=core_client,
     )
 
     health_state = _health_state(config_path)
-    manifests = _cycle_manifests(tmp_path)
 
-    assert len(manifests) == 1
-    assert [manifest["status"] for manifest in manifests] == ["partial"]
-    assert {manifest["cycle_mode"] for manifest in manifests} == {"source_cadence"}
-    assert {manifest["trigger_source"] for manifest in manifests} == {"monitor_service"}
-    assert pipeline_calls == []
-    assert source_calls == ["text"]
-    assert health_state["cycle_count"] == 2
-    assert health_state["latest_cycle_status"] == "no_due_sources"
+    assert core_client.ensure_calls == 2
+    assert core_client.dispatch_calls == 2
+    assert core_client.monitor_job_calls == [
+        {"instance_id": health_state["service"]["service_instance_id"], "cycle_sequence": 1},
+        {"instance_id": health_state["service"]["service_instance_id"], "cycle_sequence": 2},
+    ]
+    assert health_state["cycle_count"] == 0
+    assert health_state["latest_cycle_status"] == "missing"
     assert health_state["service"]["status"] == "stopped"
     assert sum(sleeps) == pytest.approx(1.0)
     assert not (tmp_path / "monitor" / "monitor_health_state.json").exists()
@@ -164,6 +158,7 @@ def test_monitor_service_observes_graceful_stop_during_wait(tmp_path: Path) -> N
     config_path = _write_config(tmp_path, interval_seconds=5, text_enabled=True)
     config = load_config(config_path)
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
+    core_client = _FakeCoreClient()
     sleep_calls = 0
 
     def request_stop(seconds: float) -> None:
@@ -176,16 +171,40 @@ def test_monitor_service_observes_graceful_stop_during_wait(tmp_path: Path) -> N
     run_monitor_service(
         config,
         config_path=config_path,
-        pipeline_runner=_pipeline_factory(tmp_path, statuses=["succeeded"]),
-        source_refresher=_source_refresher_factory(statuses=["succeeded"]),
         sleeper=request_stop,
+        core_client=core_client,
     )
 
     health_state = _health_state(config_path)
 
-    assert health_state["cycle_count"] == 1
+    assert core_client.ensure_calls == 1
+    assert core_client.dispatch_calls == 1
+    assert health_state["cycle_count"] == 0
     assert health_state["service"]["status"] == "stopped"
     assert sleep_calls == 1
+
+
+def test_monitor_service_records_core_dispatch_failure(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, interval_seconds=1, text_enabled=True)
+    config = load_config(config_path)
+    core_client = _FakeCoreClient(fail_dispatch=True)
+    sleeps: list[float] = []
+
+    run_monitor_service(
+        config,
+        config_path=config_path,
+        max_cycles=1,
+        sleeper=lambda seconds: sleeps.append(seconds),
+        core_client=core_client,
+    )
+
+    health_state = _health_state(config_path)
+
+    assert core_client.ensure_calls == 1
+    assert core_client.dispatch_calls == 1
+    assert core_client.monitor_job_calls == []
+    assert health_state["service"]["status"] == "stopped"
+    assert health_state["service"]["last_error"]["message"] == "core dispatch failed"
 
 
 class _FakeProcess:
@@ -195,6 +214,34 @@ class _FakeProcess:
 
 def _fail_launch(*args: Any, **kwargs: Any) -> Any:
     raise AssertionError("monitor service start must not launch a process")
+
+
+class _FakeCoreClient:
+    def __init__(self, *, fail_dispatch: bool = False) -> None:
+        self.fail_dispatch = fail_dispatch
+        self.ensure_calls = 0
+        self.dispatch_calls = 0
+        self.monitor_job_calls: list[dict[str, Any]] = []
+
+    def ensure_running(self) -> dict[str, Any]:
+        self.ensure_calls += 1
+        return {"status": "running", "instance_id": "core-1"}
+
+    def dispatch_due_daily_report(self) -> dict[str, Any]:
+        self.dispatch_calls += 1
+        if self.fail_dispatch:
+            raise RuntimeError("core dispatch failed")
+        return {
+            "status": "skipped",
+            "schedule": {"enabled": False, "next_run_at": None},
+            "job": None,
+            "warnings": ["daily report schedule is disabled."],
+            "errors": [],
+        }
+
+    def create_monitor_cycle_job(self, *, instance_id: str, cycle_sequence: int) -> dict[str, Any]:
+        self.monitor_job_calls.append({"instance_id": instance_id, "cycle_sequence": cycle_sequence})
+        return {"status": "queued", "job_id": f"job-{cycle_sequence}"}
 
 
 def _write_config(
@@ -241,113 +288,6 @@ monitor:
         encoding="utf-8",
     )
     return path
-
-
-def _pipeline_factory(
-    tmp_path: Path,
-    *,
-    statuses: list[str],
-    calls: list[dict[str, Any]] | None = None,
-):
-    state = {"count": 0}
-
-    def pipeline(config, *, config_path, until_stage, skip_codex, run_trigger=None):  # noqa: ANN001
-        state["count"] += 1
-        source_key = _enabled_source(config)
-        if calls is not None:
-            calls.append(
-                {
-                    "until_stage": until_stage,
-                    "skip_codex": skip_codex,
-                    "monitor": dict(config.get("monitor", {})),
-                    "source_key": source_key,
-                }
-            )
-        status = statuses[state["count"] - 1]
-        run_id = f"run-{state['count']}"
-        run_dir = tmp_path / "runs" / run_id
-        run_dir.mkdir(parents=True, exist_ok=True)
-        artifacts = {source_key: f"raw/{source_key}.json"} if status == "succeeded" else {}
-        return SimpleNamespace(
-            succeeded=status == "succeeded",
-            exit_code=0 if status == "succeeded" else 3,
-            failed_stage=None if status == "succeeded" else "collect_market_data",
-            reason=None if status == "succeeded" else "simulated source failure",
-            run=SimpleNamespace(
-                run_id=run_id,
-                run_dir=run_dir,
-                manifest_path=run_dir / "run_manifest.json",
-                manifest={
-                    "status": status,
-                    "artifacts": artifacts,
-                    "stages": [],
-                    "monitor_source_revision": f"{source_key}-revision-{state['count']}" if status == "succeeded" else None,
-                },
-            ),
-        )
-
-    return pipeline
-
-
-def _source_refresher_factory(
-    *,
-    statuses: list[str],
-    calls: list[str] | None = None,
-):
-    state = {"count": 0}
-
-    def refresh(config, *, config_path, group, started_at):  # noqa: ANN001
-        state["count"] += 1
-        source_key = _enabled_source(config)
-        assert group.source_key == source_key
-        if calls is not None:
-            calls.append(source_key)
-        status = statuses[state["count"] - 1]
-        if status != "succeeded":
-            return MonitorSourceRefreshResult(
-                succeeded=False,
-                exit_code=3,
-                failed_stage="refresh_data",
-                reason="simulated source failure",
-                revision=None,
-                source_artifacts={},
-                counts={},
-                warnings=[],
-            )
-        return MonitorSourceRefreshResult(
-            succeeded=True,
-            exit_code=0,
-            failed_stage=None,
-            reason=None,
-            revision=f"{source_key}-revision-{state['count']}",
-            source_artifacts={},
-            counts={f"{source_key}_items": 1},
-            warnings=[],
-        )
-
-    return refresh
-
-
-def _enabled_source(config: dict[str, Any]) -> str:
-    if config.get("text", {}).get("enabled"):
-        return "text"
-    if config.get("macro_calendar", {}).get("enabled"):
-        return "macro_calendar"
-    if config.get("onchain_flow", {}).get("enabled"):
-        return "onchain_flow"
-    derivatives = config.get("market", {}).get("derivatives")
-    if isinstance(derivatives, dict) and derivatives.get("enabled"):
-        return "derivatives"
-    if config.get("market", {}).get("enabled"):
-        return "market"
-    raise AssertionError("one source group must be enabled")
-
-
-def _cycle_manifests(tmp_path: Path) -> list[dict[str, Any]]:
-    return [
-        json.loads(path.read_text(encoding="utf-8"))
-        for path in sorted((tmp_path / "monitor" / "cycles").glob("*/monitor_cycle_manifest.json"))
-    ]
 
 
 def _health_state(config_path: Path) -> dict[str, Any]:

@@ -37,7 +37,7 @@ Primary sources:
 - `.halpha/state.sqlite`: implemented runtime-root SQLite state-store
   foundation, current run-index projection, and local command-job
   lifecycle plus daily report schedule configuration, dispatch history,
-  Dashboard service lifecycle, Dashboard UI preferences, monitor cycle indexes,
+  Core service lifecycle, Dashboard UI preferences, monitor cycle indexes,
   alert archive records, cooldown state, and monitor service health query state.
 - `runs/<run_id>/run_manifest.json`: per-run classification, trigger,
   lifecycle, stage, artifact, count, Codex, warning, and error state.
@@ -55,7 +55,7 @@ Primary sources:
   no-due and all-source no-change polling state lives in `.halpha/state.sqlite`.
 - `.halpha/state.sqlite`: run index, local command jobs, daily report schedule
   dispatches, monitor cycle indexes, alert archive records, cooldown state,
-  monitor service health query state, Dashboard service lifecycle, and Dashboard UI
+  monitor service health query state, Core service lifecycle, and Dashboard UI
   preference state.
 - `runs/workbench/latest/`: bounded delivery snapshot summaries and local
   indexes for inspection and recovery fallback, not replacements for dashboard
@@ -91,7 +91,7 @@ python -m halpha dashboard --config config.example.yaml
 python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
 ```
 
-The dashboard service validates that the bind host is local-only. It is a local
+The Core service validates that the bind host is local-only. It is a local
 operator UI, not a hosted service.
 
 `--config` is optional for dashboard startup. If omitted, startup loads the
@@ -103,11 +103,11 @@ runtime directory. The Settings view can load or switch the active config; a
 successful selection updates the in-process dashboard config and records the
 last selected config in runtime UI preference state.
 
-Dashboard startup uses the shared resident-service lifecycle controller in
-`.halpha/state.sqlite`; it does not write
+Core startup through the dashboard command uses the shared resident-service
+lifecycle controller in `.halpha/state.sqlite`; it does not write
 `.halpha/dashboard/service_state.json` or `.halpha/dashboard/selected_config.json`.
 Before binding, startup checks the requested local endpoint. Duplicate start for
-the same endpoint returns the existing matching dashboard instance. A
+the same endpoint returns the existing matching Core instance. A
 conflicting endpoint/runtime setting returns an explicit conflict and does not
 alter the running service. Restart is an explicit stop plus start. If the port
 is occupied by a non-Halpha or unresponsive local service, startup fails with an
@@ -171,43 +171,43 @@ holds the lease, the command job is persisted as `blocked` with an actionable
 diagnostic and no product subprocess is started. Read-only and inspection jobs
 remain available while the mutation lease is held.
 
-The dashboard services API exposes one bounded read model for exactly
-`dashboard`, `monitor`, and `schedule`. Monitor and Schedule service controls
-delegate start, stop, restart, and status actions to the same shared lifecycle
+The dashboard services API exposes one bounded read model for exactly `core`
+and `monitor`. Core is the main local backend process serving the Dashboard UI
+and executing allowlisted command jobs. Monitor service controls delegate
+start, stop, restart, and status actions to the same shared lifecycle
 controller used by the CLI. Repeated starts return the existing matching
 instance. Config conflicts are visible and do not replace the running service.
 
 Implemented schedule controls are API-backed runtime state for the daily report
 schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
 disable, update, and manually trigger daily report jobs. Automatic due dispatch
-is owned by the independent `schedule` resident service, not the Dashboard
-lifespan. The Schedule service checks the persisted daily report schedule,
-claims due occurrences, marks older bounded catch-up occurrences as missed, and
-creates visible allowlisted command jobs for due runs. It is not a hosted
-scheduler, OS scheduler, startup task, cron integration, external workflow
-engine, or fourth resident process.
+is owned by Monitor, which calls Core to claim due occurrences and create
+visible allowlisted command jobs for due runs. The daily schedule is not owned
+by the Dashboard UI lifespan, and it is not a hosted scheduler, OS scheduler,
+startup task, cron integration, external workflow engine, or separate resident
+process.
 
 ## Target Service Lifecycle
 
 The target lifecycle contract is scoped to one runtime root. Runtime root is the
 resolved local root used by CLI and all resident services for `.halpha/`,
 `runs/`, `logs/`, and relative data roots. It must be selected explicitly by
-the command/config contract and shared by CLI, Dashboard, Monitor, and Schedule.
+the command/config contract and shared by CLI, Core, Dashboard UI, and Monitor.
 It must not be inferred independently from the config-file directory or
 dashboard port.
 
 The only supported resident Halpha process roles are:
 
-- `dashboard`
+- `core`
 - `monitor`
-- `schedule`
 
 Each role is unique within one runtime root and independently startable,
 stoppable, inspectable, and restartable. CLI commands and Dashboard controls
-must address the same Monitor and Schedule instances. Dashboard must not create
-a private Monitor process or a private daily-report dispatcher. CLI and
-Dashboard controls must not create duplicate Monitor or Schedule processes for
-the same runtime root.
+must address the same Monitor instance. Core must remain the only resident
+process that executes allowlisted product tasks. Monitor must not execute
+product tasks directly; it should trigger Core jobs and supervise Core health.
+Dashboard controls must not create duplicate Monitor processes for the same
+runtime root.
 
 Lifecycle state must combine:
 
@@ -220,7 +220,7 @@ Lifecycle state must combine:
 Implemented shared controller state lives in `.halpha/state.sqlite` and records
 bounded service role, instance id, PID, config ref, config digest, status,
 heartbeat, endpoint metadata, stop request, terminal exit, and bounded error
-metadata. It recognizes only `dashboard`, `monitor`, and `schedule`. Ordinary
+metadata. It recognizes only `core` and `monitor`. Ordinary
 start reports terminal records; explicit restart requires the previous instance
 id.
 
@@ -243,11 +243,11 @@ Start, stop, force-stop, and restart semantics:
 - restart is explicit stop plus start, not implicit replacement during ordinary
   `start`.
 
-Dashboard only serves UI/API, reads product state, submits bounded jobs, and
-sends lifecycle requests. Monitor is the single continuous information-refresh
-and alert-reassessment service. Schedule is the single time-trigger service for
-report jobs. Halpha must not add a hidden supervisor, broker, worker pool, or
-fourth resident process role.
+Core serves UI/API, reads product state, submits and executes bounded jobs, and
+sends lifecycle requests. Monitor is the lightweight resident checker for
+schedule due checks, Core health, Core restart after stale or terminal state,
+and Core job triggers. Halpha must not add a hidden supervisor, broker, worker
+pool, or additional resident process role.
 
 ## View Contract
 
@@ -610,7 +610,7 @@ They include bounded metadata, safe relative log refs, result refs, warnings,
 errors, and transition events. New jobs must not write
 `.halpha/dashboard/jobs/index.json` or per-job `job.json`; those files are
 legacy storage for `data migrate-state` import or separate cleanup work only.
-Normal Dashboard, Schedule, and CLI job readers must not use them as fallback
+Normal Dashboard, Monitor, Core, and CLI job readers must not use them as fallback
 authorities.
 
 One-shot command jobs may execute as allowlisted subprocesses or as internal
@@ -639,10 +639,10 @@ Codex context by default.
 
 ## Schedule Contract
 
-Daily report scheduling is current shared runtime state. The target owner is
-the independent `schedule` resident service using the unified runtime state
-store. Dashboard schedule APIs should become control and read-model surfaces
-for that service, not a dashboard-owned dispatcher.
+Daily report scheduling is current shared runtime state. Monitor owns automatic
+due checks, and Core owns the command jobs created for due runs. Dashboard
+schedule APIs are control and read-model surfaces over the same state, not a
+Dashboard UI lifespan dispatcher and not a separate resident service.
 
 Schedule state should record:
 
@@ -666,7 +666,7 @@ Implemented daily report schedule state lives in:
 The legacy `.halpha/dashboard/schedules/daily_report_schedule.json` path is no
 longer written for new schedule state. It remains legacy storage until explicit
 `data migrate-state` import or separate cleanup work. Normal Dashboard and
-Schedule readers must not use it as a fallback authority.
+Monitor readers must not use it as a fallback authority.
 
 The schedule API supports:
 
@@ -674,7 +674,8 @@ The schedule API supports:
 - `POST /api/schedule/daily-report`;
 - `POST /api/schedule/daily-report/enable`;
 - `POST /api/schedule/daily-report/disable`;
-- `POST /api/schedule/daily-report/trigger`.
+- `POST /api/schedule/daily-report/trigger`;
+- `POST /api/schedule/daily-report/dispatch-due`.
 
 Manual schedule triggers create visible command jobs and persisted dispatch
 records. The default trigger is the explicit request `job_intent`, then the
@@ -682,7 +683,7 @@ persisted schedule mode, then the Codex-capable `run` fallback. Codex-capable
 `run` triggers require `confirm_codex: true`.
 
 Enabling a schedule requires an explicit `job_intent`. The dashboard enable
-control records `run_no_codex`, which the Schedule service can execute without
+control records `run_no_codex`, which Monitor can dispatch through Core without
 Codex. Enabling or changing a Codex-capable `run` schedule requires
 `confirm_codex: true` and persists authorization with timestamp, schedule
 revision, selected config ref, and config digest. Changing the report mode,
@@ -695,7 +696,7 @@ job, so repeated due checks for the same scheduled time create at most one
 dispatch record and one linked job. After downtime, automatic dispatch claims
 at most one latest due occurrence and records older due occurrences as missed
 within the bounded catch-up policy. Schedule remains active when Dashboard is
-stopped.
+stopped as long as Monitor and Core can use the shared runtime state.
 
 ## Monitor Boundary
 
@@ -708,11 +709,10 @@ Dashboard monitor controls must preserve `docs/monitoring-contracts.md`:
 - no Codex execution by default.
 
 The Monitor service is an independent resident role addressed through the
-shared lifecycle contract. Dashboard service controls start, stop, inspect, or
-restart the shared Monitor and Schedule instances. Short validation jobs remain
-bounded command jobs. Dashboard controls must not create duplicate Monitor or
-Schedule processes, and they must not run the monitor loop inside the Dashboard
-process.
+shared lifecycle contract. Dashboard controls start, stop, inspect, or
+restart the shared Monitor instance. Short validation jobs remain bounded Core
+command jobs. Dashboard controls must not create duplicate Monitor processes,
+and Monitor must not run product tasks directly inside the Monitor process.
 
 ## Privacy Boundary
 
@@ -766,7 +766,7 @@ Codex must not generate:
 The dashboard must preserve the existing rule that Codex receives bounded
 report-facing material, not full raw artifacts, reusable histories, private
 user-state files, full workbench summaries, full command job histories, or
-full dashboard service or schedule state by default.
+full Core service or schedule state by default.
 
 ## Validation
 

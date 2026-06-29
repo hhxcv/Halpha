@@ -1021,13 +1021,13 @@ def test_command_job_api_starts_product_run_intent(tmp_path: Path, monkeypatch) 
     assert create_response.status_code == 200
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
-    assert completed["requested_by"] == "Dashboard"
-    assert completed["requester"] == {"source": "dashboard_api"}
+    assert completed["requested_by"] == "Core"
+    assert completed["requester"] == {"source": "core_api"}
     assert completed["command"] == ["internal", "run_no_codex"]
     assert completed["pid"] is None
     assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
     assert captured_calls[0]["spec"].intent == "run_no_codex"
-    assert captured_calls[0]["run_trigger"]["source"] == "Dashboard"
+    assert captured_calls[0]["run_trigger"]["source"] == "Core"
     assert captured_calls[0]["run_trigger"]["intent"] == "run_no_codex"
     assert captured_calls[0]["run_trigger"]["job_id"] == completed["job_id"]
     assert str(tmp_path) not in create_response.text

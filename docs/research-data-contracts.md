@@ -574,7 +574,7 @@ Authority boundary:
   invalid rows remain diagnostics.
 - `python -m halpha data rebuild-index --config <config>` clears and rebuilds
   the current run-index projection from current `runs/*/run_manifest.json`
-  files only. It does not import mutable legacy Dashboard, Schedule, Monitor,
+  files only. It does not import mutable legacy Dashboard schedule, Monitor,
   job, alert, cooldown, or service state.
 
 Required tables:

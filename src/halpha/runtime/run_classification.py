@@ -26,7 +26,7 @@ RUN_TRIGGER_ENV_FIELDS = {
 }
 RUN_TRIGGER_ENV_VARS = tuple(RUN_TRIGGER_ENV_FIELDS) + (RUN_TRIGGER_SOURCE_KEYS_ENV,)
 
-RUN_TRIGGER_SOURCES = {"CLI", "Dashboard", "Monitor", "Schedule", "unknown"}
+RUN_TRIGGER_SOURCES = {"CLI", "Core", "Dashboard", "Monitor", "Schedule", "unknown"}
 RUN_KIND_PRODUCT_REPORT = "product_report"
 RUN_KIND_SCHEDULED_REPORT = "scheduled_report"
 RUN_KIND_MONITOR_REASSESSMENT = "monitor_reassessment"
@@ -189,7 +189,7 @@ def classification_from_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
 
 def run_trigger_requested_by(trigger: Mapping[str, Any] | None, *, default: str = "CLI") -> str:
     source = normalize_run_trigger(trigger, default_source=default, default_intent="run")["source"]
-    return source if source in {"CLI", "Dashboard", "Monitor", "Schedule"} else default
+    return source if source in {"CLI", "Core", "Dashboard", "Monitor", "Schedule"} else default
 
 
 def _default_run_intent(until_stage: str | None, skip_codex: bool) -> str:
