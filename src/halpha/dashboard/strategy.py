@@ -14,6 +14,10 @@ from halpha.data.run_index import (
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
 from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
 from halpha.quant.registry import supported_strategy_specs
+from halpha.strategy.strategy_evaluation_history import (
+    STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+    read_strategy_evaluation_history,
+)
 from halpha.storage import (
     artifact_base as _artifact_base,
     read_json_object,
@@ -57,23 +61,25 @@ def dashboard_strategy_research(
     selected_run = _selected_run(config_path, base=base, run_id=run_id)
     pipeline = _pipeline_strategy_section(selected_run, base=base)
     standalone = _standalone_strategy_section(config, config_path=config_path, base=base)
+    shared_history = _shared_strategy_history_section(config_path, base=base)
     source_artifacts = sorted(
         {
             artifact
-            for section in (pipeline, standalone)
+            for section in (pipeline, standalone, shared_history)
             for artifact in _string_list(section.get("source_artifacts"))
         }
     )
-    warnings = [*pipeline["warnings"], *standalone["warnings"]]
-    errors = [*pipeline["errors"], *standalone["errors"]]
+    warnings = [*pipeline["warnings"], *standalone["warnings"], *shared_history["warnings"]]
+    errors = [*pipeline["errors"], *standalone["errors"], *shared_history["errors"]]
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_strategy_research",
-        "status": _overall_status([pipeline["status"], standalone["status"]]),
+        "status": _overall_status([pipeline["status"], standalone["status"], shared_history["status"]]),
         "notice": STRATEGY_RESEARCH_NOTICE,
         "selected_run": selected_run["fields"],
         "pipeline": pipeline,
         "standalone": standalone,
+        "shared_history": shared_history,
         "commands": _strategy_command_options(config),
         "source_artifacts": source_artifacts,
         "warnings": warnings,
@@ -408,6 +414,73 @@ def _standalone_strategy_section(
         ],
         extra={"backtests": backtests, "experiments": experiments, "optimizations": optimizations},
     )
+
+
+def _shared_strategy_history_section(config_path: Path, *, base: Path) -> dict[str, Any]:
+    history = read_strategy_evaluation_history(config_path)
+    records = _list(history.get("records"))
+    backtests = [_shared_history_backtest(record, base=base) for record in records[:MAX_STANDALONE_RUNS]]
+    status = _normalize_status(str(history.get("status") or "missing"))
+    if records and status == "missing":
+        status = "available"
+    return _section(
+        "shared_strategy_evaluation_history",
+        status,
+        fields={
+            "history": STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+            "record_count": len(records),
+            "backtest_count": len(backtests),
+            "max_items": MAX_STANDALONE_RUNS,
+        },
+        source_artifacts=[STRATEGY_EVALUATION_HISTORY_ARTIFACT],
+        warnings=_messages(history.get("warnings")),
+        errors=_messages(history.get("errors")),
+        extra={"backtests": backtests},
+    )
+
+
+def _shared_history_backtest(record: Any, *, base: Path) -> dict[str, Any]:
+    item = _dict(record)
+    source_artifacts = _safe_source_artifacts(_string_list(item.get("source_artifacts")), base=base)
+    warnings = _messages(item.get("warnings"))
+    return {
+        "type": "strategy_backtest",
+        "status": _normalize_status(str(item.get("status") or "unknown")),
+        "output_dir": _shared_output_ref(item),
+        "fields": {
+            "created_at": item.get("created_at"),
+            "execution_source": _bounded_mapping(item.get("execution_source")),
+            "evaluation_id": item.get("evaluation_id"),
+            "strategy_name": item.get("strategy_name"),
+            "source": item.get("source"),
+            "symbol": item.get("symbol"),
+            "timeframe": item.get("timeframe"),
+            "input_window_start": item.get("input_window_start"),
+            "input_window_end": item.get("input_window_end"),
+            "latest_candle_time": item.get("latest_candle_time"),
+            "params": _bounded_mapping(item.get("params")),
+            "metrics": _backtest_metrics(_dict(item.get("metrics"))),
+        },
+        "records": {},
+        "visualization": _backtest_visualization(_dict(item)),
+        "source_artifacts": source_artifacts,
+        "warnings": warnings,
+        "warning_groups": _warning_groups(warnings, source_artifacts),
+        "errors": _messages(item.get("errors")),
+    }
+
+
+def _shared_output_ref(record: dict[str, Any]) -> str:
+    source = _dict(record.get("execution_source"))
+    return str(source.get("output_dir") or source.get("run_dir") or record.get("history_id") or "shared_history")
+
+
+def _safe_source_artifacts(values: list[str], *, base: Path) -> list[str]:
+    safe = []
+    for value in values:
+        path = _resolve_ref(value, base=base)
+        safe.append(_safe_ref(path, base=base))
+    return safe
 
 
 def _standalone_backtests(root: Path, *, base: Path) -> list[dict[str, Any]]:

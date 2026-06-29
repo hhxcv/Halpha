@@ -691,7 +691,14 @@
 
     function strategyOutputs() {
       const standalone = state.strategies?.standalone || {};
-      const backtests = Array.isArray(standalone.backtests) ? standalone.backtests : [];
+      const shared = state.strategies?.shared_history || {};
+      const sharedBacktests = Array.isArray(shared.backtests) ? shared.backtests : [];
+      const standaloneBacktests = Array.isArray(standalone.backtests) ? standalone.backtests : [];
+      const sharedBacktestRefs = new Set(sharedBacktests.map((item) => item?.output_dir || item?.fields?.execution_source?.output_dir || ""));
+      const backtests = [
+        ...sharedBacktests,
+        ...standaloneBacktests.filter((item) => !sharedBacktestRefs.has(item?.output_dir || "")),
+      ];
       const pipeline = state.strategies?.pipeline?.artifacts || [];
       return [...backtests, ...pipeline].filter(Boolean);
     }
@@ -1475,7 +1482,11 @@
 
     function backtestVisualization(item) {
       const vis = item?.visualization || {};
-      if (Array.isArray(vis.bars) && vis.bars.length) return vis;
+      if ((Array.isArray(vis.bars) && vis.bars.length)
+        || (Array.isArray(vis.markers) && vis.markers.length)
+        || (Array.isArray(vis.equity_curve) && vis.equity_curve.length)) {
+        return vis;
+      }
       const identity = strategyIdentity(item);
       return {
         status: item?.status || "missing",

@@ -256,14 +256,17 @@ Dashboard pages should expose the current product shape through bounded views:
   deletion.
 - Strategy lab: OHLCV shared-store review through the reusable candlestick
   chart, pipeline strategy artifacts, standalone backtests, standalone
-  experiments, standalone optimizations, gates, lifecycle state, warnings, and
-  limitations. The top
+  experiments, standalone optimizations, shared strategy evaluation history,
+  gates, lifecycle state, warnings, and limitations. The top
   workbench separates Backtest, Collect, and Export controls into tabs. Without
   a selected backtest, the candlestick chart is an OHLCV data viewer. With a
   selected backtest, deterministic exposure markers are overlaid on the same
   chart for the matching symbol and timeframe. Standalone backtests may also
   provide bounded candlestick bars, deterministic exposure markers, and an
-  equity curve from the `strategy_backtest.json` `visualization` block. The
+  equity curve from the `strategy_backtest.json` `visualization` block. Report
+  runs and standalone backtests also register bounded records in
+  `data/research/strategy_evaluations/strategy_evaluation_history.json` with
+  `execution_source.type` set to `report_run` or `standalone_backtest`. The
   dashboard must not reconstruct charts by dumping full reusable OHLCV history
   by default.
 - Monitor: monitor control, configured loop parameters, state-store cycle
@@ -356,7 +359,9 @@ Boundary rules:
   metrics, optimization results, gate statuses, lifecycle states, forecasts, or
   trading instructions.
 - Strategy Lab must not persist a second authority for strategy results.
-  Durable artifacts and runtime job state remain the source of truth.
+  Durable per-run artifacts, standalone artifacts, shared evaluation-history
+  records, and runtime job state remain the source of truth for their own
+  scopes.
 
 ## Data Viewer And Collection Boundary
 

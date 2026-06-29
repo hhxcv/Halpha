@@ -2471,6 +2471,37 @@ Standalone output rules:
   `python -m halpha backtest --config <config> --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>`.
 - The optional `--output-dir <dir>` argument overrides the default `runs/strategy_backtests/` output directory.
 - Each standalone command run writes `strategy_backtest.json` with the reusable core output contract and `manifest.json` with command inputs, artifact paths, warnings, and errors.
+- Each standalone backtest also registers a bounded record in `data/research/strategy_evaluations/strategy_evaluation_history.json` with `execution_source.type: standalone_backtest`. Report-run strategy evaluations register into the same shared history with `execution_source.type: report_run`. Shared history records copy review-critical fields such as strategy identity, input window, status, key metrics, warnings, and bounded visualization data when available, and reference the source artifacts instead of embedding full source histories.
+
+Shared strategy evaluation history:
+
+```text
+data/research/strategy_evaluations/strategy_evaluation_history.json
+```
+
+Shared history record contract:
+
+```json
+{
+  "history_id": "strategy_evaluation_history:report_run:<run_id>:<evaluation_id>",
+  "record_type": "strategy_evaluation_history_record",
+  "execution_source": {
+    "type": "report_run",
+    "run_id": "<run_id>"
+  },
+  "strategy_name": "tsmom_vol_scaled",
+  "source": "binance",
+  "symbol": "BTCUSDT",
+  "timeframe": "1d",
+  "input_window_start": "2026-06-01T00:00:00Z",
+  "input_window_end": "2026-06-05T00:00:00Z",
+  "metrics": {},
+  "visualization": {},
+  "source_artifacts": [
+    "runs/<run_id>/analysis/strategy_evaluation_summary.json"
+  ]
+}
+```
 
 Standalone strategy experiment output:
 

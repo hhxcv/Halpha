@@ -54,6 +54,12 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
     manifest_path = run_dirs[0] / "manifest.json"
     backtest = json.loads(artifact.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    history = json.loads(
+        (tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    history_record = history["records"][0]
 
     assert exit_code == 0
     assert "Halpha backtest succeeded." in output
@@ -87,6 +93,16 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
         "manifest": "manifest.json",
         "strategy_backtest": "strategy_backtest.json",
     }
+    assert manifest["shared_artifacts"] == {
+        "strategy_evaluation_history": "data/research/strategy_evaluations/strategy_evaluation_history.json"
+    }
+    assert history["artifact_type"] == "strategy_evaluation_history"
+    assert history_record["execution_source"]["type"] == "standalone_backtest"
+    assert history_record["strategy_name"] == "tsmom_vol_scaled"
+    assert history_record["symbol"] == "BTCUSDT"
+    assert history_record["timeframe"] == "1d"
+    assert history_record["metrics"]["strategy_metrics"]["net_return_pct"] == backtest["strategy_metrics"]["net_return_pct"]
+    assert history_record["visualization"]["chart_type"] == "candlestick_backtest"
 
 
 def test_cli_backtest_reports_missing_history(

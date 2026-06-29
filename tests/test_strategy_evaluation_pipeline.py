@@ -10,6 +10,7 @@ import pytest
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
+from halpha.strategy.strategy_evaluation_history import STRATEGY_EVALUATION_HISTORY_ARTIFACT
 
 
 @pytest.fixture(autouse=True)
@@ -34,9 +35,11 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     result = _run_pipeline(config, config_path)
 
     artifact = _strategy_evaluation(result)
+    history = _strategy_evaluation_history(tmp_path)
     material = _strategy_evaluation_material(result)
     manifest = _manifest(result)
     record = artifact["records"][0]
+    history_record = history["records"][0]
 
     assert result.succeeded is True
     assert artifact["artifact_type"] == "strategy_evaluation_summary"
@@ -73,7 +76,9 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert manifest["artifacts"]["strategy_evaluation_material"] == (
         "analysis/strategy_evaluation_material.md"
     )
+    assert manifest["artifacts"]["strategy_evaluation_history"] == STRATEGY_EVALUATION_HISTORY_ARTIFACT
     assert manifest["counts"]["strategy_evaluation_records"] == 1
+    assert manifest["counts"]["strategy_evaluation_history_records_upserted"] == 1
     assert manifest["counts"]["strategy_evaluation_material_records"] == 1
     assert manifest["counts"]["strategy_evaluation_succeeded"] == 1
     assert manifest["counts"]["strategy_evaluation_failed"] == 0
@@ -90,6 +95,17 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
         "analysis/strategy_evaluation_summary.json",
         "analysis/strategy_evaluation_material.md",
     ]
+    assert history["artifact_type"] == "strategy_evaluation_history"
+    assert history_record["execution_source"]["type"] == "report_run"
+    assert history_record["execution_source"]["run_id"] == result.run.run_id
+    assert history_record["strategy_name"] == "tsmom_vol_scaled"
+    assert history_record["symbol"] == "BTCUSDT"
+    assert history_record["timeframe"] == "1d"
+    assert history_record["input_window_start"] == "2026-06-01T00:00:00Z"
+    assert history_record["input_window_end"] == "2026-06-05T00:00:00Z"
+    assert history_record["metrics"]["strategy_metrics"]["net_return_pct"] == record["single_window"]["strategy_metrics"]["net_return_pct"]
+    assert "runs/" in history_record["source_artifacts"][0]
+    assert history_record["visualization"]["chart_type"] == "candlestick_backtest"
     assert "artifact_type: analysis_strategy_evaluation_material" in material
     assert "cost_assumptions:" in material
     assert "baseline_comparison:" in material
@@ -397,6 +413,14 @@ codex:
 
 def _strategy_evaluation(result) -> dict[str, Any]:
     return json.loads((result.run.analysis_dir / "strategy_evaluation_summary.json").read_text(encoding="utf-8"))
+
+
+def _strategy_evaluation_history(tmp_path: Path) -> dict[str, Any]:
+    return json.loads(
+        (tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def _strategy_evaluation_material(result) -> str:

@@ -1602,6 +1602,7 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     run = _write_run(tmp_path, config_path)
     _write_dashboard_strategy_artifacts(run)
     _write_standalone_strategy_outputs(tmp_path)
+    _write_strategy_evaluation_history(tmp_path)
     write_run_index(run, now="2026-06-20T00:05:00Z")
     client = TestClient(create_dashboard_app(config, config_path=config_path))
 
@@ -1613,6 +1614,8 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert payload["selected_run"]["run_id"] == "run-1"
     assert payload["pipeline"]["status"] == "warning"
     assert payload["standalone"]["status"] == "failed"
+    assert payload["shared_history"]["status"] == "available"
+    assert payload["shared_history"]["fields"]["record_count"] == 1
     assert payload["commands"]["backtest"] == "available"
     assert payload["commands"]["experiment"] == "available"
     assert payload["commands"]["optimize"] == "available"
@@ -1654,6 +1657,12 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert backtest["visualization"]["markers"][0]["warnings"] == ["small marker sample"]
     assert len(backtest["visualization"]["equity_curve"]) == 2
     assert backtest["visualization"]["limits"]["max_bars"] == 120
+    shared_backtest = payload["shared_history"]["backtests"][0]
+    assert shared_backtest["fields"]["execution_source"]["type"] == "report_run"
+    assert shared_backtest["fields"]["execution_source"]["run_id"] == "run-1"
+    assert shared_backtest["fields"]["strategy_name"] == "tsmom_vol_scaled"
+    assert shared_backtest["fields"]["metrics"]["strategy_metrics"]["net_return_pct"] == 4.2
+    assert shared_backtest["visualization"]["markers"][0]["kind"] == "entry"
 
     experiment = payload["standalone"]["experiments"][0]
     assert experiment["status"] == "available"
@@ -2777,6 +2786,73 @@ def _write_standalone_strategy_outputs(tmp_path: Path) -> None:
                 "strategy_benchmark_suite": "strategy_benchmark_suite.json",
                 "manifest": "manifest.json",
             },
+            "warnings": [],
+            "errors": [],
+        },
+    )
+
+
+def _write_strategy_evaluation_history(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_history",
+            "status": "ok",
+            "record_count": 1,
+            "records": [
+                {
+                    "history_id": "strategy_evaluation_history:report_run:run-1:evaluation:tsmom_vol_scaled:BTCUSDT:1d",
+                    "record_type": "strategy_evaluation_history_record",
+                    "created_at": "2026-06-20T00:04:00Z",
+                    "execution_source": {
+                        "type": "report_run",
+                        "run_id": "run-1",
+                        "run_dir": "runs/run-1",
+                    },
+                    "evaluation_id": "evaluation:tsmom_vol_scaled:BTCUSDT:1d",
+                    "status": "succeeded",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "input_window_start": "2026-06-01T00:00:00Z",
+                    "input_window_end": "2026-06-05T00:00:00Z",
+                    "latest_candle_time": "2026-06-05T00:00:00Z",
+                    "metrics": {
+                        "strategy_metrics": {"net_return_pct": 4.2},
+                        "baseline_metrics": {"buy_and_hold_return_pct": 2.0},
+                        "relative_metrics": {"excess_return_vs_buy_and_hold_pct": 2.2},
+                        "trade_summary": {"trade_count": 3},
+                    },
+                    "visualization": {
+                        "schema_version": 1,
+                        "chart_type": "candlestick_backtest",
+                        "status": "available",
+                        "strategy_name": "tsmom_vol_scaled",
+                        "source": "binance",
+                        "symbol": "BTCUSDT",
+                        "timeframe": "1d",
+                        "bars": [],
+                        "markers": [
+                            {
+                                "time": "2026-06-02T00:00:00Z",
+                                "kind": "entry",
+                                "label": "Long",
+                                "side": "long",
+                                "position": 1.0,
+                            }
+                        ],
+                        "equity_curve": [],
+                    },
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "runs/run-1/analysis/strategy_evaluation_summary.json",
+                        "runs/run-1/analysis/quant_strategy_runs.json",
+                    ],
+                }
+            ],
             "warnings": [],
             "errors": [],
         },
