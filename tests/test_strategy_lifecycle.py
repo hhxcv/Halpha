@@ -130,6 +130,7 @@ def test_strategy_lifecycle_state_records_degradation_and_versions(tmp_path: Pat
 def test_strategy_lifecycle_policy_explicit_retirement_without_reason_leak(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
     _write_minimal_upstream(run, gate_status="effective")
+    _write_optimization(run, robustness_status="overfit_risk", selected_params={"return_window": 30})
     config = {
         "quant": {
             "enabled": True,
@@ -153,6 +154,7 @@ def test_strategy_lifecycle_policy_explicit_retirement_without_reason_leak(tmp_p
 
     assert record["lifecycle_status"] == "retired"
     assert record["retirement"]["state"] == "explicitly_retired"
+    assert record["optimization_evidence"]["robustness_status"] == "overfit_risk"
     assert record["retirement"]["policy_refs"]
     assert record["promotion"] == {"state": "not_requested", "policy_refs": []}
     assert "config:quant.lifecycle_policy.records" in record["source_artifacts"]
@@ -160,6 +162,98 @@ def test_strategy_lifecycle_policy_explicit_retirement_without_reason_leak(tmp_p
     assert "private local review note" not in serialized
     assert run.manifest["counts"]["strategy_lifecycle_retired"] == 1
     assert run.manifest["counts"]["strategy_lifecycle_policy_records"] == 1
+
+
+def test_strategy_lifecycle_references_robust_optimization_without_mutating_active_params(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_minimal_upstream(run, gate_status="effective")
+    _write_optimization(run, robustness_status="robust", selected_params={"return_window": 30})
+
+    build_strategy_lifecycle_state(
+        {"quant": {"enabled": True, "strategies": [{"name": "tsmom_vol_scaled"}]}},
+        run,
+        now="2026-06-06T00:00:00Z",
+    )
+
+    record = _read_lifecycle(run)["records"][0]
+    optimization = record["optimization_evidence"]
+
+    assert record["lifecycle_status"] == "effective"
+    assert record["parameter_digest"] != optimization["selected_candidate_parameter_digest"]
+    assert optimization["status"] == "available"
+    assert optimization["selected_candidate_id"] == "candidate:0001"
+    assert optimization["robustness_status"] == "robust"
+    assert optimization["walk_forward_status"] == "succeeded"
+    assert optimization["walk_forward_succeeded_windows"] == 3
+    assert optimization["active_config_mutated"] is False
+    assert "analysis/strategy_optimization.json" in record["source_artifacts"]
+    assert "optimization:tsmom_vol_scaled:20260606000000Z" in record["source_record_refs"]
+    assert "candidate:0001" in record["source_record_refs"]
+    assert any(item.startswith("optimization_selected_candidate_parameter_digest=") for item in record["evidence"])
+
+
+def test_strategy_lifecycle_watchlists_fragile_optimization(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_minimal_upstream(run, gate_status="effective")
+    _write_optimization(run, robustness_status="fragile", selected_params={"return_window": 30})
+
+    build_strategy_lifecycle_state(
+        {"quant": {"enabled": True, "strategies": [{"name": "tsmom_vol_scaled"}]}},
+        run,
+        now="2026-06-06T00:00:00Z",
+    )
+
+    record = _read_lifecycle(run)["records"][0]
+
+    assert record["lifecycle_status"] == "watchlisted"
+    assert record["degradation"]["state"] == "warning"
+    assert "Optimization robustness status is fragile." in record["degradation"]["reasons"]
+    assert record["health_state"]["state"] == "watch"
+
+
+def test_strategy_lifecycle_marks_failed_optimization_as_insufficient_evidence(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_minimal_upstream(run, gate_status="effective")
+    _write_optimization(run, robustness_status="failed", selected_params={"return_window": 30})
+
+    build_strategy_lifecycle_state(
+        {"quant": {"enabled": True, "strategies": [{"name": "tsmom_vol_scaled"}]}},
+        run,
+        now="2026-06-06T00:00:00Z",
+    )
+
+    record = _read_lifecycle(run)["records"][0]
+
+    assert record["lifecycle_status"] == "insufficient_evidence"
+    assert record["degradation"]["state"] == "insufficient_evidence"
+    assert "Optimization robustness evidence is unavailable or failed." in record["degradation"]["reasons"]
+
+
+def test_strategy_lifecycle_marks_advanced_gate_downgrade_as_watchlisted(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_minimal_upstream(run, gate_status="effective")
+    gate_path = run.analysis_dir / "strategy_effectiveness_gates.json"
+    gates = json.loads(gate_path.read_text(encoding="utf-8"))
+    gates["records"][0]["reasons"].append(
+        {
+            "code": "missing_funding_evidence",
+            "severity": "downgrade",
+            "message": "Futures evaluation has missing or degraded funding evidence.",
+        }
+    )
+    write_json(gate_path, gates)
+
+    build_strategy_lifecycle_state(
+        {"quant": {"enabled": True, "strategies": [{"name": "tsmom_vol_scaled"}]}},
+        run,
+        now="2026-06-06T00:00:00Z",
+    )
+
+    record = _read_lifecycle(run)["records"][0]
+
+    assert record["lifecycle_status"] == "watchlisted"
+    assert record["degradation"]["state"] == "warning"
+    assert "missing_funding_evidence" in ",".join(record["evidence"])
 
 
 def test_strategy_lifecycle_records_missing_upstream_as_degraded_artifact(tmp_path: Path) -> None:
@@ -262,6 +356,48 @@ def _write_minimal_upstream(run: RunContext, *, gate_status: str) -> None:
             "warnings": [],
             "errors": [],
             "source_artifacts": [],
+        },
+    )
+
+
+def _write_optimization(
+    run: RunContext,
+    *,
+    robustness_status: str,
+    selected_params: dict[str, Any],
+) -> None:
+    write_json(
+        run.analysis_dir / "strategy_optimization.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_optimization",
+            "created_at": "2026-06-06T00:00:00Z",
+            "optimization_id": "optimization:tsmom_vol_scaled:20260606000000Z",
+            "strategy_name": "tsmom_vol_scaled",
+            "instrument_identity": {"symbols": [], "timeframes": []},
+            "base_params": {"return_window": 20},
+            "selected_candidate": {
+                "candidate_id": "candidate:0001",
+                "params": selected_params,
+                "automatic_config_mutation": False,
+            },
+            "walk_forward": {
+                "status": "succeeded",
+                "summary": {
+                    "succeeded_windows": 3,
+                    "selected_candidate_variants": 1,
+                },
+                "warnings": [],
+                "errors": [],
+            },
+            "robustness": {
+                "status": robustness_status,
+                "warnings": [],
+                "errors": [],
+            },
+            "source_artifacts": ["strategy_benchmark_suite.json"],
+            "warnings": [],
+            "errors": [],
         },
     )
 

@@ -62,16 +62,16 @@ Lifecycle state may use implemented current-run artifacts when present:
 - `analysis/strategy_evaluation_summary.json`
 - `analysis/strategy_experiment.json`
 - `analysis/strategy_effectiveness_gates.json`
+- `analysis/strategy_optimization.json`
 - `analysis/outcome_evaluations.json`
 - `analysis/market_regime_assessment.json`
 - `analysis/risk_assessment.json`
 - `analysis/intelligence_fusion.json`
 - `analysis/data_quality_summary.json`
 
-Planned expanded strategy evidence may also include these artifacts when the
-quant contracts implement them:
+Standalone optimization artifacts may also be referenced as source artifacts
+when the current-run optimization summary links to them:
 
-- `analysis/strategy_optimization.json`
 - standalone `runs/strategy_optimizations/<id>/strategy_optimization.json`
 
 Lifecycle state may also use explicit local lifecycle policy records when the
@@ -94,9 +94,12 @@ Rules:
 ## Expanded Strategy Evidence
 
 Status: current lifecycle consumes implemented strategy runs, evaluation,
-experiment, gate, outcome, regime, risk, fusion, data-quality, and policy
-evidence. Optimization, signed long-short, futures-aware, and multi-leg
-evidence consumption is planned.
+experiment, gate, optimization, outcome, regime, risk, fusion, data-quality,
+and policy evidence. Signed long-short, futures-aware, multi-leg, event-feature,
+and optimization robustness evidence can qualify lifecycle records through
+implemented strategy gate reasons when upstream gate inputs provide them.
+Direct expanded strategy evidence beyond those implemented summaries remains
+planned.
 
 Rules:
 
@@ -109,13 +112,18 @@ Rules:
 - Lifecycle may summarize multi-leg evaluation evidence only from explicit
   multi-leg artifacts. It must preserve leg-alignment warnings and insufficient
   leg coverage.
-- Lifecycle may reference optimization artifacts as research evidence. It must
-  not treat selected optimization candidates as active configuration unless an
-  explicit lifecycle policy record says so.
-- Optimization evidence may qualify lifecycle records with reasons such as
-  `optimized_candidate_available`, `optimization_fragile`,
-  `optimization_overfit_risk`, `optimization_insufficient_data`, and
-  `optimization_unavailable`.
+- Lifecycle references implemented optimization artifacts as research evidence.
+  It records selected candidate identity and selected-candidate parameter digest
+  separately from the active strategy parameter digest.
+- Lifecycle must not treat selected optimization candidates as active
+  configuration unless an explicit lifecycle policy record says so.
+- Optimization evidence may qualify lifecycle records with availability,
+  selected-candidate, robustness, walk-forward, and active-config-mutation
+  evidence strings.
+- Optimization robustness states `fragile` and `overfit_risk` watchlist an
+  otherwise effective or active candidate. States `failed` and
+  `insufficient_data` make an otherwise effective or active candidate
+  insufficient evidence.
 - Walk-forward robustness evidence may downgrade or qualify a strategy as
   watchlisted, degraded, rejected, or insufficient-evidence through
   deterministic gate and lifecycle rules.
@@ -192,6 +200,22 @@ Record contract:
     "state": "not_retired|requested|explicitly_retired|blocked|unknown",
     "policy_refs": []
   },
+  "optimization_evidence": {
+    "status": "available|not_available",
+    "optimization_id": "optional",
+    "strategy_name": "optional",
+    "selected_candidate_id": "optional",
+    "selected_candidate_parameter_digest": "optional",
+    "selected_candidate_automatic_config_mutation": false,
+    "active_config_mutated": false,
+    "robustness_status": "robust|fragile|overfit_risk|insufficient_data|failed|not_available",
+    "walk_forward_status": "succeeded|insufficient_data|failed|not_available",
+    "walk_forward_succeeded_windows": 0,
+    "walk_forward_selected_candidate_variants": 0,
+    "source_artifacts": [],
+    "warnings": [],
+    "errors": []
+  },
   "evidence": [],
   "uncertainty": [],
   "warnings": [],
@@ -231,6 +255,9 @@ Rules:
   retire it.
 - Promotion state must be explicit. Lifecycle code must not silently promote
   strategies into active status without a reviewable policy record.
+- Optimization selected-candidate parameter digests are evidence only. They
+  must not replace `parameter_digest` for the active lifecycle record without an
+  explicit policy-controlled configuration change.
 - Lifecycle state may summarize upstream evidence. It must not copy full
   upstream JSON records into every lifecycle record.
 
@@ -380,6 +407,7 @@ Tests should cover:
 - insufficient evidence;
 - strategy contract version changes;
 - parameter digest changes;
+- optimization selected-candidate evidence without active config mutation;
 - explicit retirement policy records;
 - watchlisted and rejected strategy preservation;
 - material bounds and omission counts;
