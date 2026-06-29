@@ -78,6 +78,45 @@ def configured_targeted_parameter_profiles(strategy: dict[str, Any]) -> list[dic
     return records
 
 
+def has_targeted_parameter_profiles(strategy: dict[str, Any]) -> bool:
+    return bool(configured_targeted_parameter_profiles(strategy))
+
+
+def has_matching_targeted_parameter_profile(
+    strategy: dict[str, Any],
+    *,
+    source: str | None,
+    symbol: str | None,
+    timeframe: str | None,
+) -> bool:
+    return _matching_targeted_params(
+        strategy,
+        source=source,
+        symbol=symbol,
+        timeframe=timeframe,
+    ) is not None
+
+
+def configured_targeted_parameter_targets(strategies: list[dict[str, Any]]) -> list[dict[str, str]]:
+    records = []
+    seen: set[tuple[str, str, str]] = set()
+    for strategy in strategies:
+        if not isinstance(strategy, dict) or strategy.get("enabled", True) is False:
+            continue
+        for profile in configured_targeted_parameter_profiles(strategy):
+            source = str(profile.get("source") or "")
+            symbol = str(profile.get("symbol") or "")
+            timeframe = str(profile.get("timeframe") or "")
+            if not source or not symbol or not timeframe:
+                continue
+            identity = (source, symbol, timeframe)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            records.append({"source": source, "symbol": symbol, "timeframe": timeframe})
+    return records
+
+
 def parameter_profile_record(strategy: dict[str, Any]) -> dict[str, Any]:
     profile = strategy.get(RESOLVED_PARAMETER_PROFILE_KEY)
     if isinstance(profile, dict):

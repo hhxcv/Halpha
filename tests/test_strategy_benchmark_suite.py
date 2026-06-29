@@ -199,6 +199,59 @@ def test_strategy_benchmark_suite_expands_configured_history_with_stable_order(t
     ]
 
 
+def test_strategy_benchmark_suite_uses_targeted_strategy_profiles_when_configured(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(
+        tmp_path,
+        symbols=["ETHUSDT", "BTCUSDT"],
+        timeframes=["1h", "1d"],
+        strategy_extra_yaml="""
+      targeted_params:
+        - source: binance
+          symbol: BTCUSDT
+          timeframe: 1d
+          params:
+            return_window: 2
+""",
+    )
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(
+                symbol="BTCUSDT",
+                timeframe="1d",
+                open_time="2026-06-01T00:00:00Z",
+                close=100,
+            ),
+            _record(
+                symbol="BTCUSDT",
+                timeframe="1d",
+                open_time="2026-06-02T00:00:00Z",
+                close=101,
+            ),
+        ]
+    )
+
+    result = _run_until_benchmark_suite(config, config_path)
+
+    artifact = _benchmark_suite(result)
+    records = artifact["benchmarks"]
+
+    assert result.succeeded is True
+    assert artifact["selection_policy"] == {
+        "source": "configured_targeted_strategy_params",
+        "raw_ohlcv_history_embedded": False,
+        "supported_window_selections": ["configured_lookback", "date_window", "latest_lookback"],
+        "target_filter": [{"source": "binance", "symbol": "BTCUSDT", "timeframe": "1d"}],
+    }
+    assert artifact["coverage"]["configured_symbols"] == ["BTCUSDT"]
+    assert artifact["coverage"]["configured_timeframes"] == ["1d"]
+    assert artifact["coverage"]["benchmark_records"] == 1
+    assert [(item["symbol"], item["timeframe"]) for item in records] == [("BTCUSDT", "1d")]
+
+
 def test_strategy_benchmark_suite_supports_explicit_date_window(tmp_path: Path) -> None:
     config_path = _write_config(
         tmp_path,
@@ -322,6 +375,7 @@ def _write_config(
     *,
     symbols: list[str] | None = None,
     timeframes: list[str] | None = None,
+    strategy_extra_yaml: str = "",
     benchmark_suite_yaml: str = "",
     quant_enabled: bool = True,
 ) -> Path:
@@ -340,6 +394,7 @@ def _write_config(
         return_window: 2
         volatility_window: 2
         target_volatility: 0.2
+{strategy_extra_yaml.rstrip()}
 {benchmark_suite_yaml.rstrip()}
 """
         if quant_enabled

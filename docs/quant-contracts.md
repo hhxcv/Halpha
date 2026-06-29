@@ -1073,8 +1073,14 @@ Validation contract:
   non-empty `source`, `symbol`, `timeframe`, and a `params` mapping that passes
   the same strategy parameter validation as base `params`.
 - Targeted parameter overrides merge over base `params` only for matching
-  `source + symbol + timeframe`. Non-matching backtests, experiments, and
-  optimizations continue using base params.
+  `source + symbol + timeframe`. Direct standalone backtests and optimizations
+  continue using base params when no matching override exists.
+- Pipeline strategy research changes selection mode when any enabled strategy
+  defines `targeted_params`: benchmark generation, strategy runs, and strategy
+  experiments are restricted to the configured targeted source/symbol/timeframe
+  profiles. This prevents unoptimized strategy/symbol/timeframe matrix rows from
+  entering report evidence. Configs without any targeted profiles preserve the
+  legacy configured strategy/view matrix behavior.
 - Optimization artifacts may emit `recommended_targeted_params` for the selected
   target candidate. This is research evidence and a copyable config fragment,
   not an automatic active-config mutation.

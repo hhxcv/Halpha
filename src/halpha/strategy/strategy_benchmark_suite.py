@@ -8,6 +8,7 @@ from typing import Any
 from halpha.market.ohlcv_quality import quality_warning_messages
 from halpha.market.ohlcv_query import OHLCVQueryError, query_latest_ohlcv_records, query_ohlcv_records
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
+from halpha.strategy.strategy_config import configured_targeted_parameter_targets
 from halpha.storage import display_path, resolve_runtime_path, runtime_root, write_json
 
 
@@ -73,7 +74,7 @@ def create_strategy_benchmark_suite_artifact(
 
     records = []
     base = runtime_root(config_path)
-    target_specs = _target_specs(market, ohlcv, targets=targets)
+    target_specs, target_selection_source = _target_specs(quant, market, ohlcv, targets=targets)
     try:
         for target in target_specs:
             source = str(target["source"])
@@ -118,12 +119,11 @@ def create_strategy_benchmark_suite_artifact(
         if isinstance(error, dict)
     ]
     selection_policy = {
-        "source": "configured_symbols_timeframes_and_windows",
+        "source": target_selection_source,
         "raw_ohlcv_history_embedded": False,
         "supported_window_selections": sorted(SUPPORTED_WINDOW_SELECTIONS),
     }
-    if targets is not None:
-        selection_policy["source"] = "targeted_symbols_timeframes_and_windows"
+    if target_selection_source != "configured_symbols_timeframes_and_windows":
         selection_policy["target_filter"] = target_specs
     artifact = {
         "schema_version": SCHEMA_VERSION,
@@ -486,21 +486,59 @@ def _configured_sources(market: dict[str, Any], ohlcv: dict[str, Any]) -> list[s
 
 
 def _target_specs(
+    quant: dict[str, Any],
     market: dict[str, Any],
     ohlcv: dict[str, Any],
     *,
     targets: list[dict[str, str]] | None,
-) -> list[dict[str, str]]:
+) -> tuple[list[dict[str, str]], str]:
     configured_sources = _configured_sources(market, ohlcv)
     configured_symbols = _configured_symbols(market)
     configured_timeframes = _configured_timeframes(ohlcv)
     if targets is None:
+        configured_targets = configured_targeted_parameter_targets(
+            quant.get("strategies") if isinstance(quant.get("strategies"), list) else []
+        )
+        if configured_targets:
+            return (
+                _validated_target_specs(
+                    configured_targets,
+                    market=market,
+                    configured_sources=configured_sources,
+                    configured_symbols=configured_symbols,
+                    configured_timeframes=configured_timeframes,
+                ),
+                "configured_targeted_strategy_params",
+            )
         default_source = str(market["source"])
-        return [
-            {"source": default_source, "symbol": symbol, "timeframe": timeframe}
-            for symbol in configured_symbols
-            for timeframe in configured_timeframes
-        ]
+        return (
+            [
+                {"source": default_source, "symbol": symbol, "timeframe": timeframe}
+                for symbol in configured_symbols
+                for timeframe in configured_timeframes
+            ],
+            "configured_symbols_timeframes_and_windows",
+        )
+    return (
+        _validated_target_specs(
+            targets,
+            market=market,
+            configured_sources=configured_sources,
+            configured_symbols=configured_symbols,
+            configured_timeframes=configured_timeframes,
+        ),
+        "targeted_symbols_timeframes_and_windows",
+    )
+
+
+def _validated_target_specs(
+    targets: list[dict[str, str]],
+    *,
+    market: dict[str, Any],
+    configured_sources: list[str],
+    configured_symbols: list[str],
+    configured_timeframes: list[str],
+) -> list[dict[str, str]]:
     result = []
     seen: set[tuple[str, str, str]] = set()
     for index, target in enumerate(targets):
