@@ -1,612 +1,281 @@
 # AGENTS.md
 
-Telegraph style. Root rules only. Read scoped `AGENTS.md` before subtree work.
+Telegraph style. Root rules only. Keep this file short, factual, and stable.
 
-Keep future edits in this style.
+## Purpose
 
-## Start
+This file defines repository-wide rules for AI coding agents and human contributors.
+It should contain only high-signal project constraints that should be loaded for nearly every task.
 
-* Repo: `https://github.com/hhxcv/Halpha`
-* Inspect the repo before changing files.
-* Do not assume implementation exists.
-* Do not invent commands, APIs, modules, paths, or behavior.
-* Replies use repo-root paths only: `README.md`, `src/halpha/cli.py`.
-* No absolute paths.
-* No `~/`.
-* Keep changes small.
-* Touch only relevant files.
-* Prefer source-backed answers.
-* Never print secrets.
-* Never commit secrets.
-* Market output is research material, not financial advice.
+Keep task workflows in `.agents/skills/`.
+Keep durable contracts and explanations in `docs/`.
+Keep current and completed milestone state in `MILESTONES.md`.
+Do not use this file as a roadmap, artifact catalog, or implementation reference dump.
 
-## Governance
+## Scope
 
-* Root rules live here.
-* Scoped rules live in subtree `AGENTS.md`.
-* Read scoped `AGENTS.md` before subtree work.
-* Nearest scoped rule owns subtree implementation details.
-* Root safety, privacy, and financial-disclaimer rules always apply.
-* If rules conflict, stop and report the conflict.
+These rules apply to the whole repository unless a closer `AGENTS.md` exists in a subtree.
+Before working in a subtree, read the closest scoped `AGENTS.md` if present.
+If root and scoped rules conflict, stop and report the conflict.
 
-## Map
+Use repo-root relative paths in reports and PR text.
+Do not use absolute machine paths or `~/` paths.
 
-Current repo may be empty or incomplete.
+## Source of Truth
 
-Expected areas, when present:
+Treat these as source of truth for current behavior, in this order:
 
-* Package code: `src/halpha/`
-* Tests: `tests/`
-* Docs: `README.md`, `AGENTS.md`, `docs/`
-* Examples: `config.example.yaml`
-* Run artifacts: `runs/`
+1. executable code on the working branch;
+2. tests and validation output;
+3. schemas, typed contracts, and generated artifacts used by the implementation;
+4. accepted ADRs or durable contract documents;
+5. README and other prose docs.
 
-Do not create this structure unless the task requires it.
+If prose docs conflict with code, tests, schemas, or real artifacts, do not treat the prose as current behavior.
+Report the mismatch or fix the docs if the task is documentation-related.
 
-Do not treat planned paths as existing paths.
+Do not invent commands, modules, APIs, files, paths, config keys, artifacts, or behavior.
 
-## Direction
+## Current vs Planned
 
-Halpha is an early-stage personal research project.
+A claim is current only when it is backed by code, tests, CLI behavior, generated artifacts, schemas/contracts, or an accepted ADR.
 
-Target direction:
+A claim is planned, draft, or future when it exists only in roadmap notes, long-term vision docs, issue discussion, milestone text, design notes, or unmerged PRs.
 
-```text
-market data + public information
--> online data collection
--> materials
--> structured research context
--> Codex-ready context
--> Simplified Chinese research report
--> archive
-```
+Rules:
 
-Current bias:
+- Do not describe planned work as implemented.
+- Do not convert roadmap or milestone goals into README/current-doc claims.
+- Mark future-facing material with `planned`, `draft`, `intended`, or `not implemented yet`.
+- If a document is a planning draft, keep it visibly non-authoritative for current behavior.
 
-* readable artifacts
-* source-aware materials
-* simple pipeline
-* narrow implementation steps
-* no premature architecture
+## Product Boundary
 
-## Milestone Evolution
+Halpha is a local-first personal market research and decision-support system.
+It collects public market and event evidence, preserves inspectable artifacts, runs deterministic research and validation, prepares bounded AI-readable context, and generates Simplified Chinese research reports unless requested otherwise.
 
-* Milestones are slices of the long-term goal, not disposable design eras.
-* Current-milestone work should fit the durable product shape where practical.
-* Milestone scope usually limits current content, coverage, implementation depth, and supported cases.
-* Milestone scope should not make reusable artifacts milestone-local in name, title, structure, or contract identity.
-* Do not mark reusable docs, protocols, contracts, schemas, modules, commands, or artifact names with current milestone labels.
-* Use milestone labels only for milestone records, planning notes, issue traces, or truly local transition bridges.
-* Prefer incremental evolution: add content, fill sections, deepen implementations, and stack modules on established structure.
-* Avoid disposable designs that assume a later milestone will replace or rebuild the current artifact.
-* If a current-milestone shortcut is unavoidable, mark it temporary, keep it narrow, and name the replacement requirement.
+Halpha is not a trading execution system.
+Do not add or imply:
 
-## Architecture
+- exchange, broker, wallet, or account operations;
+- order placement, deposits, withdrawals, or live trading;
+- portfolio automation or position sizing from real balances;
+- hosted SaaS, multi-user platform, or remote-control assumptions;
+- guaranteed forecasts, risk-free strategies, or unsupported market conclusions.
 
-* Python-first unless requested otherwise.
-* Configured collection and plain artifacts by default.
-* Plain files first: Markdown, JSON, YAML, CSV, text.
-* Keep raw data separate from processed material.
-* Keep processed material separate from generated narrative.
-* Preserve source metadata where practical.
-* Codex context is an artifact, not hidden state.
-* Final reports are Simplified Chinese unless requested otherwise.
-* Prefer explicit names over abstractions.
-* Prefer one narrow working path over a framework.
-* No trading execution.
-* No exchange account operations.
-* No portfolio automation.
-* No hosted SaaS assumptions.
-* No database until plain files are insufficient.
-* No background service unless requested.
+Market outputs must remain evidence-backed research material.
+Use cautious language when evidence is incomplete, stale, conflicting, or uncertain.
 
-## Local Privacy
+## AI Boundary
 
-* Public config files stay portable.
-* Machine-local config lives in gitignored local config files.
-* Keep local privacy values out of code, tests, docs, commits, PRs, issues, comments, release notes, screenshots, and logs.
-* Local privacy values include proxy URLs, ports, hostnames, credentials, tokens, cookies, account IDs, machine paths, usernames, and private endpoints.
-* Do not hardcode local privacy values.
-* Do not print local privacy values.
-* Do not summarize local privacy values in network-visible text.
-* Use placeholders for examples.
-* Support local variations through config fields, not hardcoded branches or environment-only behavior.
-* Support both configured and omitted local values where practical.
-* If `config.example.yaml` changes, sync required local config copies before local runs.
-* Use local config files for local-only validation.
+AI/Codex is an explanation and report-writing layer, not the decision engine.
+
+Deterministic code owns:
+
+- data collection and data quality;
+- feature, factor, signal, strategy, gate, lifecycle, and outcome calculations;
+- regime, risk, decision, watch trigger, event intelligence, alert, and fusion states;
+- validation, artifact contracts, and run manifests.
+
+Do not ask AI/Codex to generate or decide:
+
+- source facts, raw records, coverage state, duplicate state, or data-quality state;
+- strategy signals, feature values, factor scores, optimization results, gates, lifecycle states, or fusion states;
+- action levels, alert priorities, forecasts, trading instructions, or position sizing.
+
+AI-readable context must be bounded and source-aware.
+Do not embed full raw streams, full reusable histories, SQLite contents, Parquet tables, full intermediate JSON evidence, private user-state files, or local private values in Codex context by default.
+
+## Milestone Fit
+
+Read `MILESTONES.md` before issue, requirement, architecture, feature, or broad documentation work.
+
+Rules:
+
+- Serve the active milestone unless the user explicitly requests planning outside it.
+- Preserve implemented product paths while extending them.
+- Prefer the smallest useful end-to-end slice.
+- Build process skeletons before deep implementation detail.
+- Do not create speculative frameworks, future-phase placeholders, or broad rewrites.
+- Do not make reusable contracts, schemas, modules, commands, or artifact names milestone-local unless they are truly transitional.
+- If a temporary bridge is unavoidable, mark it explicitly and name the replacement requirement.
 
 ## Compatibility
 
-* Compatibility is opt-in.
-* No compatibility layers before shipped behavior exists.
-* No aliases, shims, migrations, or fallbacks for imagined users.
-* Keep old behavior only when a real public contract exists.
-* If no release exists, prefer the clean current shape.
-* Delete dead paths when replacing them.
-* Tests alone do not make an internal API public.
+- Compatibility is opt-in.
+- Do not add aliases, shims, migrations, or fallbacks for imagined users.
+- Keep old behavior only when a real public contract or shipped behavior exists.
+- Delete dead paths when replacing behavior.
+- Tests alone do not make an internal API public.
 
-## Code
+## Architecture Rules
 
-* One task, one focused change.
-* No unrelated rewrites.
-* No broad abstractions for future guesses.
-* No casual dependencies.
-* No silent behavior changes.
-* No dead code.
-* No generated clutter.
-* No hidden network calls.
-* No real credentials in tests or examples.
-* Use deterministic ordering when generating context files.
-* Comments explain intent, not syntax.
-* Error messages should be actionable.
+- Python-first modular monolith.
+- Local-first runtime, local artifacts, and local state by default.
+- Halpha-owned artifacts are the stable integration boundary.
+- Convert third-party objects, including vectorbt outputs, into Halpha contracts before downstream use.
+- Do not persist third-party framework objects as long-term contracts.
+- Reuse mature libraries for common data and quant work when needed now.
+- Do not add heavy frameworks for architecture display.
+- Keep raw data, normalized data, deterministic analysis, AI-readable material, reports, run manifests, shared stores, and runtime state boundaries explicit.
+- Shared reusable data is not a per-run report artifact and is not AI context by default.
+- Runtime state should have one authoritative owner per fact.
+- Runtime root is one explicit local root shared by CLI, Dashboard, Monitor, and Schedule.
+- Latest selections are derived or rebuildable views, not parallel authorities.
+- Exactly three target resident Halpha process roles exist: `dashboard`, `monitor`, and `schedule`.
+- Do not add a hidden supervisor, broker, worker pool, or fourth resident process.
+- Do not start resident services, background loops, or destructive migrations unless explicitly requested.
+
+## Code Quality
+
+- One task, one focused change.
+- No unrelated rewrites, silent behavior changes, dead code, generated clutter, or hidden network calls.
+- Use deterministic ordering when generating artifacts, context, reports, indexes, or other reproducible outputs.
+- Comments explain intent, not syntax.
+- Error messages should be actionable.
+- Prefer explicit names over abstractions.
+- Prefer one narrow working path over broad framework scaffolding.
 
 ## Dependencies
 
-* Standard library first.
-* Add a dependency only when it is needed now.
-* Prefer small, maintained packages.
-* Do not add heavy frameworks for early scaffolding.
-* For dependency-backed behavior, check official docs or source.
-* Do not rely on memory for external API details.
-* Document new runtime dependencies when introduced.
+- Standard library first.
+- Add dependencies only when needed now.
+- Prefer small, maintained packages.
+- Check official docs or source for dependency-backed behavior.
+- Document new runtime dependencies when introduced.
+- Do not add heavy runtime, workflow, database, or UI frameworks for future guesses.
 
-## Data
+## Data and Artifact Rules
 
-* Treat collected data as evidence.
-* Keep source names visible.
-* Keep timestamps where practical.
-* Keep raw inputs inspectable.
-* Do not fabricate market events.
-* Do not fabricate sources.
-* Do not silently rewrite source material into conclusions.
-* Generated analysis must distinguish facts, assumptions, and judgment.
+- Production paths use real data, real artifacts, and real flow.
+- Fixtures, mocked HTTP responses, fake market data, fake signals, and fake Codex subprocesses are test-only.
+- Preserve source names, timestamps, source refs, warning states, error states, and no-lookahead or as-of boundaries where applicable.
+- Missing, stale, partial, skipped, degraded, unavailable, failed, and insufficient-evidence states are valid outputs.
+- Do not hide failed collection, empty intervals, source disagreement, or weak evidence behind optimistic summaries.
+- Keep source material inspectable when practical.
+- Do not silently rewrite evidence into conclusions.
+- Update durable contract docs only when implemented artifact semantics change.
+- Do not duplicate the full artifact catalog in this file.
 
-## Artifact Expectations
+## Documentation Rules
 
-* Artifact map, runtime state authority, layer rules, and Codex input policy live in `docs/artifact-governance.md`.
-* Local research data contracts and current run-index boundary live in `docs/research-data-contracts.md`.
-* Outcome tracking contracts live in `docs/outcome-tracking-contracts.md`.
-* On-chain and exchange-flow contracts live in `docs/onchain-flow-contracts.md`.
-* User-state and personalized-risk contracts live in `docs/user-state-contracts.md`.
-* Local monitoring contracts and target resident Monitor boundary live in `docs/monitoring-contracts.md`.
-* Local delivery and workbench contracts live in `docs/delivery-workbench-contracts.md`.
-* Product stability and workflow stability contracts live in `docs/product-stability-contracts.md`.
-* Local logging standards live in `docs/logging-standards.md`.
-* Local dashboard and shared service lifecycle contracts live in `docs/dashboard-contracts.md`.
-* Product runs preserve raw market and text artifacts.
-* Shared OHLCV history lives outside per-run report directories.
-* Shared OHLCV history is reusable input data, not AI context.
-* `data/research/metadata/research_data_catalog.json` records implemented reusable local stores, schema refs, state refs, counts, warnings, errors, and consumers.
-* Runtime state authority uses one authoritative owner per fact.
-* Runtime root is one explicit local root shared by CLI, Dashboard, Monitor, and Schedule.
-* Exactly three target resident process roles exist: `dashboard`, `monitor`, and `schedule`.
-* No hidden supervisor, broker, worker pool, or fourth resident Halpha process.
-* `.halpha/state.sqlite` records the implemented runtime-state foundation and future migrated mutable operational state; it is not research evidence or Codex input.
-* `.halpha/state.sqlite-wal` and `.halpha/state.sqlite-shm` are SQLite side files; back them up with `state.sqlite` when present.
-* `.halpha/state.sqlite` records current run, stage, artifact, and derived latest-run index metadata; it stores references, not artifact contents.
-* `.halpha/state.sqlite` records current local command-job lifecycle metadata, requester metadata, bounded parameter/result refs, and transition events; it stores references, not stdout or stderr contents.
-* `.halpha/state.sqlite` records current daily report schedule configuration, due dispatch claims, dispatch history refs, and bounded diagnostics.
-* `.halpha/command_jobs/job_logs/` stores bounded local command-job stdout and stderr logs.
-* `.halpha/dashboard/jobs/index.json` and `.halpha/dashboard/jobs/<job_id>/job.json` are legacy dashboard job storage; do not write them for new jobs outside explicit legacy migration or cleanup work.
-* `.halpha/dashboard/schedules/daily_report_schedule.json` is legacy dashboard schedule storage; do not write new schedule state there outside explicit legacy migration or cleanup work.
-* `data/research/index.sqlite` is legacy run-index storage; do not write it outside explicit legacy migration or cleanup work.
-* Latest selections are derived or rebuildable views, not parallel authorities.
-* `data/research/metadata/text_event_history_state.json` records shared text-event history state, counts, duplicates, conflicts, warnings, and source refs.
-* `data/research/text_events/` stores reusable text-event history; it is input data, not AI context.
-* `data/research/metadata/outcome_history_state.json` records shared outcome history state, counts, duplicates, conflicts, warnings, and source refs.
-* `data/research/outcomes/outcome_history.json` stores reusable outcome history; it is input data, not AI context.
-* `raw/market_data_views.json` records current-run OHLCV input windows and storage refs, not full raw history.
-* `raw/derivatives_market.json` records current-run public derivatives and market-structure observations, endpoint availability, warnings, and errors.
-* `raw/macro_calendar.json` records current-run public macro and scheduled-event observations, endpoint availability, warnings, and errors.
-* `data/macro/calendar/` stores reusable macro/calendar history; it is input data, not AI context.
-* `data/macro/metadata/macro_calendar_schema.json` records reusable macro/calendar history schema and logical keys.
-* `data/macro/metadata/macro_calendar_state.json` records reusable macro/calendar history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
-* `raw/macro_calendar_views.json` records current-run macro/calendar input windows, bounded records, and storage refs, not full reusable macro/calendar history.
-* `analysis/macro_calendar_context.json` records deterministic macro/calendar scheduled-catalyst, recent-catalyst, no-event, stale, unavailable, partial, degraded, failed, source-availability, uncertainty, and realized-impact-not-evaluated context states, not forecasts or trading signals.
-* `analysis/macro_calendar_material.md` records bounded AI-readable macro/calendar context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
-* `raw/onchain_flow.json` records current-run public on-chain and exchange-flow observations, endpoint availability, warnings, and errors.
-* `data/onchain/flow/` stores reusable on-chain flow history; it is input data, not AI context.
-* `data/onchain/metadata/onchain_flow_schema.json` records reusable on-chain flow history schema and logical keys.
-* `data/onchain/metadata/onchain_flow_state.json` records reusable on-chain flow history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
-* `raw/onchain_flow_views.json` records current-run on-chain flow input windows and storage refs, not full reusable on-chain flow history.
-* `analysis/onchain_flow_context.json` records deterministic stablecoin liquidity, chain activity, network congestion, exchange-flow source-availability, stale, unavailable, partial, degraded, insufficient-data, warning, and failed context states, not forecasts or trading signals.
-* `analysis/onchain_flow_material.md` records bounded AI-readable on-chain flow context, source availability, selected high-signal records, omission counts, and Codex/report boundaries.
-* `data/market/derivatives/` stores reusable derivatives market history; it is input data, not AI context.
-* `data/market/metadata/derivatives_market_schema.json` records reusable derivatives history schema and logical keys.
-* `data/market/metadata/derivatives_market_state.json` records reusable derivatives history state, groups, ranges, counts, duplicates, conflicts, warnings, errors, and source refs.
-* `raw/derivatives_market_views.json` records current-run derivatives input windows and storage refs, not full reusable derivatives history.
-* `analysis/derivatives_market_context.json` records deterministic funding, open-interest, premium, basis, bounded liquidity-depth, and liquidation-availability context states, evidence, thresholds, uncertainty, warnings, and errors, not trading signals.
-* `analysis/derivatives_market_material.md` records bounded AI-readable derivatives market context, source availability, data-quality limits, selected high-signal records, and omission counts for Codex/report use.
-* `analysis/text_event_records.json` records normalized source-aware text event records.
-* `analysis/text_entity_evidence.json` records deterministic and optional model-backed entity and asset relevance evidence.
-* `analysis/text_event_classification_evidence.json` records event taxonomy candidates and financial tone evidence, not trading signals.
-* `analysis/text_event_topics.json` records duplicate, same-topic, related-context, and distinct event grouping evidence.
-* `analysis/text_event_signals.json` records deterministic report-facing text event signals, not trading instructions.
-* `analysis/strategy_benchmark_suite.json` records fixed strategy benchmark window metadata, coverage, storage refs, warnings, errors, and source artifacts, not full raw history.
-* `analysis/quant_strategy_runs.json` records configured strategy run outputs, status, params, diagnostics, evidence, uncertainty, warnings, and source artifacts.
-* `analysis/strategy_evaluation_summary.json` records pipeline strategy evaluation outputs from configured strategy runs and current-run OHLCV views.
-* `analysis/strategy_evaluation_material.md` records AI-readable strategy evaluation material from strategy evaluation summaries.
-* `analysis/strategy_experiment.json` records current-run strategy experiment outputs for configured candidates.
-* `analysis/strategy_effectiveness_gates.json` records deterministic current-run strategy gate outcomes.
-* `analysis/strategy_experiment_material.md` records AI-readable strategy experiment and gate material.
-* Strategy lifecycle contracts live in `docs/strategy-lifecycle-contracts.md`.
-* `analysis/strategy_lifecycle_state.json` records deterministic strategy identity, contract version, parameter version, parameter digest, lifecycle status, degradation, insufficient-evidence, watchlist, rejection, retirement, policy, warnings, errors, and source refs from existing strategy and outcome evidence when quant strategy evidence is enabled.
-* `analysis/strategy_lifecycle_material.md` records bounded AI-readable lifecycle status, selected high-signal lifecycle records, omission counts, source refs, and Codex/report boundaries.
-* `analysis/market_signals.json` records normalized report-facing market signals.
-* `analysis/market_signal_material.md` is bounded AI-readable signal material.
-* Feature/factor contracts live in `docs/feature-factor-contracts.md`.
-* `analysis/feature_snapshots.json` records normalized source-aware feature records and source coverage from implemented current-run evidence.
-* `analysis/factor_states.json` records deterministic factor states, bounded scores, directions, confidence, warnings, errors, and degraded or insufficient-evidence states from feature snapshots.
-* `analysis/multi_source_signals.json` records conservative normalized research signals derived from factor states, not trading instructions.
-* `analysis/intelligence_fusion.json` records deterministic cross-source confluence, conflict, risk override, event override, strategy-lifecycle qualification, outcome feedback, uncertainty, and source-ref evidence, not trading instructions or Codex-generated states.
-* `analysis/factor_signal_material.md` records bounded AI-readable feature, factor, and multi-source signal evidence, selected records, omission counts, and Codex/report boundaries.
-* `analysis/intelligence_fusion_material.md` records bounded AI-readable fusion confluence, conflict, risk override, event override, outcome feedback, uncertainty, selected records, omission counts, and Codex/report boundaries.
-* `analysis/user_state_context.json` records optional local user-state status, sanitized watchlist, disabled asset, risk, timeframe, strategy preference, exposure-summary fields, omitted-private-value counts, privacy boundaries, warnings, and errors; not account state or trading instructions.
-* `analysis/personalized_risk_constraints.json` records deterministic general, watchlist, disabled asset, risk-limit, timeframe, strategy-preference, insufficient-user-state, skipped, degraded, and failed constraint states from sanitized user-state context and current-run intelligence; not trading instructions, holdings, allocations, or position sizing.
-* `analysis/personalized_risk_material.md` records bounded AI-readable personalized-risk constraints, selected records, omission counts, privacy boundaries, and Codex/report rules; it must not embed raw local user-state files, private notes, account identifiers, holdings, allocations, position sizes, or full personalized-risk JSON.
-* `analysis/market_regime_assessment.json` records deterministic market-state assessment.
-* `analysis/risk_assessment.json` records deterministic risk-state assessment, including optional derivatives, macro/calendar, and on-chain flow context references.
-* `analysis/decision_recommendations.json` records deterministic decision-support recommendations, risk conditions, downgrade reasons, optional derivatives, macro/calendar, on-chain flow context links, optional fusion context, and optional personalized constraint fields, not trading instructions.
-* `analysis/watch_triggers.json` records deterministic static watch triggers, including supported derivatives, macro/calendar, on-chain flow observation, risk escalation, risk relief conditions, and optional personalized constraint fields, not monitoring or alerts.
-* `analysis/event_market_confluence.json` records deterministic event-quant and event-decision relationship records.
-* `analysis/event_intelligence_assessment.json` records deterministic event relevance, severity, market response, decision-impact, optional macro/calendar proximity, and optional on-chain flow relevance assessment records.
-* `analysis/alert_decisions.json` records deterministic event attention-priority decisions and optional derivatives, macro/calendar, on-chain flow relevance links, optional fusion context, and optional personalized constraint fields, not alert delivery or trading execution.
-* `analysis/alert_decision_material.md` records bounded AI-readable alert priority, downgrade, suppression, and uncertainty material.
-* `analysis/event_intelligence_material.md` records bounded AI-readable event evidence, topic, signal, and confluence material.
-* `analysis/decision_intelligence_delta.json` records previous-run decision-intelligence changes or `no_previous_run` status.
-* `analysis/decision_intelligence_material.md` records AI-readable decision material from deterministic decision-intelligence JSON artifacts.
-* `analysis/data_quality_summary.json` records current-run market, text, derivatives, macro/calendar, on-chain flow, feature/factor, intelligence-fusion, shared-store, schema, timestamp, duplicate, stale, partial-collection, and degraded quality checks.
-* `analysis/data_quality_material.md` records bounded AI-readable data quality status and local store references from `analysis/data_quality_summary.json`.
-* `analysis/outcome_targets.json` records deterministic source-linked outcome targets extracted from the latest previous successful run.
-* `analysis/outcome_evaluations.json` records deterministic market and strategy outcome evaluations from shared OHLCV history with no-lookahead observation windows, plus event, alert, decision, and watch follow-through evaluations from later Halpha artifacts.
-* `analysis/outcome_tracking_material.md` records bounded AI-readable outcome accountability material from targets, evaluations, and outcome history summaries.
-* `runs/monitor/cycles/<cycle_id>/monitor_cycle_manifest.json` records file-backed explicit, diagnostic, changed, or failed monitor cycle status, target stage, no-Codex state, linked product run refs, source artifact refs, warnings, and errors; routine no-due and all-source no-change polling cycles live in `.halpha/state.sqlite` only.
-* `.halpha/state.sqlite` records monitor cycle indexes, alert archive records, deterministic cooldown state, latest finite-loop status, and monitor service health query state.
-* `runs/monitor/alert_archive.jsonl`, `runs/monitor/alert_cooldown_state.json`, `runs/monitor/alert_archive_state.json`, and `runs/monitor/monitor_health_state.json` are legacy monitor state files; new monitor cycles do not write them.
-* `runs/workbench/latest/workbench_summary.json` records bounded local delivery state, source artifact refs, latest report refs, decision/risk/watch summaries, alert archive status, monitor health, outcome state, strategy state, product-validation state, data-quality state, warnings, errors, and Codex-boundary metadata; it is delivery output, not upstream decision input or Codex input by default.
-* `runs/workbench/latest/index.md` records the human-readable local Markdown workbench index generated from `workbench_summary.json`.
-* `runs/workbench/latest/index.html` records the static local HTML workbench index generated from `workbench_summary.json`.
-* `run_manifest.json` records run classification, trigger metadata, lifecycle, stage status, produced artifacts, counts, warnings, errors, Codex status, and Codex input budget metadata.
-* `analysis/product_contract_validation.json` records deterministic product contract validation, manifest health, artifact contract checks, Codex/report boundary checks, privacy boundaries, warnings, errors, and source refs.
-* Standalone strategy backtests write `strategy_backtest.json` and `manifest.json` under a local backtest output directory.
-* Standalone strategy experiments write `strategy_experiment.json`, `strategy_benchmark_suite.json`, `strategy_effectiveness_gates.json`, and `manifest.json` under a local experiment output directory.
-* Codex context may include bounded signal, strategy evaluation, strategy experiment, strategy lifecycle, derivatives market, macro/calendar, on-chain flow, feature/factor, intelligence fusion, personalized risk, decision, alert, event intelligence, data quality, and outcome tracking material, not shared OHLCV history, raw derivatives observations, raw macro/calendar observations, raw on-chain flow observations, reusable derivatives history, reusable macro/calendar history, reusable on-chain flow history, derivatives views, macro/calendar views, on-chain flow views, full macro/calendar context JSON, full derivatives context JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, raw local user-state files, or full on-chain flow context JSON.
-* Codex context must not embed full raw streams, full raw derivatives artifacts, full raw macro/calendar artifacts, full raw on-chain flow artifacts, full local user-state files, private user notes, account identifiers, exact holdings, balances, full shared OHLCV history, full reusable derivatives history, full reusable macro/calendar history, full reusable on-chain flow history, full feature snapshots JSON, full factor states JSON, full multi-source signals JSON, full intelligence fusion JSON, full user-state context JSON, full personalized-risk constraints JSON, full macro/calendar context JSON, full derivatives context JSON, full on-chain flow context JSON, full strategy lifecycle JSON, full local lifecycle policy input, full reusable text-event history, full reusable outcome history, full catalog contents, SQLite contents, Parquet tables, full intermediate JSON evidence, full pairwise topic decisions, full walk-forward diagnostics, full workbench summaries or indexes, or full run manifests by default.
-* Codex context must not embed full product contract validation artifacts by default.
-* Codex input should prioritize high-signal decision, risk, alert, fusion, strategy gate, derivatives, macro/calendar, on-chain flow, event, and data-quality evidence over low-priority record dumps.
-* Low-confidence, unknown, duplicate, stale, no-alert, or insufficient-evidence records should be summarized or omitted from Codex input with counts or reasons when material budgets require it.
-* Codex prompt may ask for decision-intelligence report sections when decision material exists.
-* Codex prompt may ask for derivatives market explanation when derivatives material exists.
-* Codex prompt may ask for macro/calendar scheduled-catalyst, no-event, source-availability, freshness, time-zone, and realized-impact-not-evaluated explanation when macro calendar material exists.
-* Codex prompt may ask for on-chain flow explanation when on-chain flow material exists.
-* Codex prompt may ask for feature, factor, and multi-source signal explanation when factor signal material exists.
-* Codex prompt may ask for intelligence fusion confluence, conflict, risk override, event override, outcome feedback, and uncertainty explanation when intelligence fusion material exists.
-* Codex prompt may ask for personalized-risk constraint explanation when personalized risk material exists.
-* Codex prompt may ask for strategy lifecycle health, degradation, watchlist, rejection, retirement, insufficient-evidence, and source-availability explanation when strategy lifecycle material exists.
-* Codex prompt may ask for event evidence, topic grouping, and event-quant relationship explanation when event intelligence material exists.
-* Codex prompt may ask for data-quality status explanation when data quality material exists.
-* Codex prompt must not ask Codex to generate event categories, event impacts, event-market relationships, action levels, trading advice, or price forecasts.
-* Codex prompt must not ask Codex to generate derivatives states, risk levels, signals, source availability, liquidation summaries, price forecasts, trading instructions, or position sizing.
-* Codex prompt must not ask Codex to generate macro/calendar events, states, source availability, risk levels, watch triggers, alert priorities, release outcomes, policy outcomes, price forecasts, trading instructions, or position sizing.
-* Codex prompt must not ask Codex to generate on-chain records, flow states, address labels, source availability, risk levels, watch triggers, alert priorities, price forecasts, trading instructions, wallet actions, or position sizing.
-* Codex prompt must not ask Codex to generate feature records, factor scores, normalized signal states, action levels, price forecasts, trading instructions, or position sizing.
-* Codex prompt must not ask Codex to generate fusion states, risk overrides, event overrides, alert priorities, action levels, price forecasts, trading instructions, or position sizing.
-* Codex prompt must not ask Codex to generate user state, hidden preferences, holdings, allocations, personalized constraints, action levels, alert priorities, price forecasts, trading instructions, or position sizing.
-* Codex prompt must not ask Codex to generate strategy lifecycle states, strategy versions, parameter digests, policy records, promotion decisions, retirement decisions, parameter optimization, strategy selection, price forecasts, trading instructions, or position sizing.
-* Codex prompt must not ask Codex to generate data-quality checks, validation results, catalog contents, run-index contents, or reusable history contents.
-* Final reports may include a deterministic quant strategy output table inserted from `analysis/quant_strategy_runs.json` after Codex stdout validation.
-* Final reports may include a deterministic strategy effectiveness table inserted from `analysis/strategy_effectiveness_gates.json` after Codex stdout validation.
-* Final reports may include a deterministic derivatives and market-structure evidence section inserted from `analysis/derivatives_market_context.json` when `analysis/derivatives_market_material.md` exists after Codex stdout validation.
-* Final reports may include a deterministic macro/calendar evidence section inserted from `analysis/macro_calendar_context.json` when `analysis/macro_calendar_material.md` exists after Codex stdout validation.
-* Final reports may include a deterministic on-chain flow evidence section inserted from `analysis/onchain_flow_context.json` when `analysis/onchain_flow_material.md` exists after Codex stdout validation.
-* Codex prompt should not ask Codex to recreate the complete strategy run table.
-* Codex prompt should not ask Codex to recreate the complete derivatives context table.
-* Codex prompt should not ask Codex to recreate the complete macro/calendar context table.
-* Reports come from Codex stdout, not placeholder text.
-* Fake market data, fake signals, and fake Codex output stay test-only.
+- Docs must match current repository state.
+- README is for human project orientation.
+- `AGENTS.md` is for repository-wide AI rules.
+- `.agents/skills/` is for task-specific AI workflows.
+- `docs/` is for durable project documentation and implementation contracts.
+- `MILESTONES.md` records the active and completed milestones only; it is not a roadmap.
+- Do not document commands, config keys, files, artifacts, modules, or APIs that do not exist.
+- Prefer generated or schema-backed reference docs over hand-written duplicated reference material.
+- Keep public docs concise.
+- Do not add large roadmaps unless requested.
+- Update docs when user-visible behavior, interfaces, commands, or artifact semantics change.
+- If behavior changes and docs are intentionally not updated, state why in the PR.
 
-## Docs
+## Configuration, Privacy, and Security
 
-* Docs match current repo state.
-* README is for humans.
-* AGENTS.md is for AI agents.
-* `docs/` is for durable project documentation and reusable implementation contracts.
-* Documentation index:
-* `docs/artifact-governance.md`: artifact map, runtime state authority, artifact layer rules, Codex input policy, and doc index.
-* `docs/storage-contracts.md`: run archive, shared data, runtime state, derived/cache, and deletion boundary contracts.
-* `docs/quant-contracts.md`: quantitative data, strategy, evaluation, signal, and strategy material contracts.
-* `docs/strategy-lifecycle-contracts.md`: strategy lifecycle state, policy, material, downstream, and Codex-boundary contracts.
-* `docs/macro-calendar-contracts.md`: macro and scheduled-event data, context, material, and Codex-boundary contracts.
-* `docs/onchain-flow-contracts.md`: on-chain and exchange-flow data, context, material, and Codex-boundary contracts.
-* `docs/feature-factor-contracts.md`: feature, factor, multi-source signal, material, and Codex-boundary contracts.
-* `docs/intelligence-fusion-contracts.md`: fusion artifact, planned material, integration, and Codex-boundary contracts.
-* `docs/user-state-contracts.md`: optional local user-state, personalized-risk, privacy, material, and Codex-boundary contracts.
-* `docs/monitoring-contracts.md`: local monitor configuration, cycle, alert archive, health, target resident Monitor boundary, privacy, and Codex-boundary contracts.
-* `docs/delivery-workbench-contracts.md`: local delivery and workbench summary, index, source-ref, privacy, and Codex-boundary contracts.
-* `docs/product-stability-contracts.md`: product validation, workflow stability, run health, backup boundary, operational acceptance, privacy, and Codex-boundary contracts.
-* `docs/logging-standards.md`: local JSON logging levels, event shape, privacy boundaries, context fields, and anti-noise rules.
-* `docs/dashboard-contracts.md`: local web dashboard, shared service lifecycle, command, job, schedule, artifact preview, privacy, and Codex-boundary contracts.
-* `docs/event-intelligence-contracts.md`: text event, NLP evidence, topic, event signal, confluence, and event material contracts.
-* `docs/decision-intelligence-contracts.md`: regime, risk, recommendation, watch trigger, delta, and decision material contracts.
-* `docs/outcome-tracking-contracts.md`: planned outcome target, evaluation, history, material, and Codex-boundary contracts.
-* `runs/README.md`: run artifact directory purpose.
-* Directory descriptions state long-term purpose, not just current file inventory.
-* Prefer stable contract files.
-* Update existing contract files as behavior evolves.
-* Do not title or name reusable docs and contracts with current milestone labels.
-* Do not create milestone-numbered successor contract files unless the contract is truly milestone-local.
-* Do not describe planned work as implemented.
-* Use `planned`, `intended`, or `not implemented yet` for future work.
-* Keep public docs concise.
-* Do not add large roadmaps unless requested.
-* Do not document commands that do not exist.
-* Update docs when user-visible behavior changes.
+- Public config files stay portable.
+- Machine-local config lives in gitignored local config files.
+- Support local variations through config fields, not hardcoded branches or environment-only behavior.
+- Support both configured and omitted local values where practical.
 
-## Commands
+Never commit, print, summarize, or expose:
 
-Use existing repo commands only.
+- secrets, API keys, tokens, cookies, credentials, or account identifiers;
+- real local proxy URLs, hostnames, ports, usernames, private endpoints, or machine paths;
+- private user-state files, private policy files, private notes, holdings, balances, or exact position data.
 
-If no command exists, say so.
+Use placeholders in examples.
+Do not add telemetry or send research material to remote services unless explicitly requested.
 
-Implemented setup command:
+## Commands and Validation
+
+Use existing repository commands only.
+If a command does not exist or cannot be run in the current environment, say so.
+Do not invent replacements.
+
+Setup:
 
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-Implemented commands:
+General validation:
 
 ```bash
 python -m pytest
-python -m halpha run --config config.example.yaml
+python -m ruff check .
+```
+
+Product validation and smoke paths:
+
+```bash
+python -m halpha validate --config config.example.yaml
 python -m halpha run --config config.example.yaml --no-codex
 python -m halpha run --config config.example.yaml --until <stage_name>
 python -m halpha stage <stage_name> --config config.example.yaml --run-dir runs/<run_id>
-python -m halpha validate --config config.example.yaml
-python -m halpha validate --config config.example.yaml --run-dir runs/<run_id>
-python -m halpha dashboard
-python -m halpha dashboard status
-python -m halpha dashboard stop
-python -m halpha dashboard restart
-python -m halpha dashboard --config config.example.yaml
-python -m halpha dashboard --config config.example.yaml --host 127.0.0.1 --port 8765
-python -m halpha schedule --config config.example.yaml
-python -m halpha schedule status --config config.example.yaml
-python -m halpha schedule stop --config config.example.yaml
-python -m halpha schedule restart --config config.example.yaml
-python -m halpha monitor --help
-python -m halpha monitor start --config config.example.yaml
-python -m halpha monitor status --config config.example.yaml
-python -m halpha monitor stop --config config.example.yaml
-python -m halpha monitor restart --config config.example.yaml
-python -m halpha monitor run --config config.example.yaml --dry-run
-python -m halpha monitor run --config config.example.yaml --once
-python -m halpha monitor run --config config.example.yaml --max-cycles <n> --interval-seconds <seconds>
-python -m halpha monitor inspect --config config.example.yaml
-python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>
-python -m halpha experiment --config config.example.yaml
-python -m halpha text-models prepare --config config.example.yaml
-python -m halpha text-intel --config config.example.yaml
-python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json
-python -m halpha data inspect --config config.example.yaml
-python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>
-python -m halpha data migrate-state --config config.example.yaml --dry-run
-python -m halpha data migrate-state --config config.example.yaml --apply
-python -m halpha data migrate-state --config config.example.yaml --apply --replace-schedule
-python -m halpha data rebuild-index --config config.example.yaml
-python -m halpha data cleanup-runs --config config.example.yaml
-python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id>
-python -m halpha data cleanup-runs --config config.example.yaml --apply --run-id <run_id> --include-report-runs --confirm-report-runs "DELETE REPORT RUNS"
-python -m halpha outcomes inspect --config config.example.yaml
-python -m halpha outcomes inspect --config config.example.yaml --run-dir runs/<run_id>
-python -m halpha workbench build --config config.example.yaml
-python -m halpha workbench build --config config.example.yaml --run-dir runs/<run_id>
-python -m halpha workbench inspect --config config.example.yaml
 ```
 
-The run command is the implemented product path.
+For the full CLI surface, read `README.md` and `python -m halpha <command> --help`.
+Keep this root file limited to setup, test, and common validation commands.
 
-The `--no-codex`, `--until`, and `stage` commands are validation helpers.
+Full report runs require public network access, configured public sources, a working Codex CLI, and Codex CLI authentication outside this repository.
+`--no-codex`, `--until`, `stage`, `validate`, `data inspect`, `outcomes inspect`, and `workbench inspect/build` are useful bounded validation paths.
 
-They must not fabricate skipped artifacts.
+Run the narrowest relevant check for every change.
+Prefer tests for changed behavior and smoke checks for early scaffolding.
+For docs-only changes, run the narrowest available docs or formatting check.
+When a local checkout is available, use:
 
-`--no-codex` requires public network access and configured public sources, but not Codex CLI execution.
+```bash
+git diff --check
+```
 
-`--until` runs through the named stage and records later stages as not run.
+Do not claim success without command output or other concrete evidence.
+If validation is blocked, state what was not run and why.
 
-`stage` runs one named stage against an existing run directory.
+## Git and PR Rules
 
-`validate` is read-only. It selects the latest indexed run or an explicit run directory, evaluates product contract health, prints bounded status, check counts, failed check names, source refs, and recovery hints, and does not write validation artifacts by default.
+- Check worktree state before editing when using a local checkout.
+- Do not overwrite user changes.
+- Do not reformat unrelated files.
+- Do not rename files casually.
+- Do not change license text casually.
+- Create branches, commits, PRs, issue mutations, or public comments only when explicitly requested.
+- Keep one focused change per PR.
+- Do not mix unrelated refactors with documentation changes.
+- Do not add dependencies without current need and explicit PR justification.
 
-`validate` does not collect network data, run processors, run pipeline stages, run Codex CLI, generate reports, repair stores, mutate decision artifacts, or print raw artifact contents or local private values.
+PR descriptions must state:
 
-`monitor --help` exposes the local monitor command family.
+- what changed;
+- why it changed;
+- validation run or not run;
+- documentation impact;
+- known gaps or follow-ups.
 
-`monitor start`, `monitor status`, `monitor stop`, and `monitor restart` control one independent Monitor resident service through the shared local service lifecycle state.
+Use the Halpha PR-writing skill when drafting PR title or body content.
 
-The resident Monitor service is unique per runtime root. It runs no-Codex monitor cycles continuously until explicit stop, persists service health in `.halpha/state.sqlite`, and retries recoverable cycle failures with bounded backoff.
+## Task Skills
 
-`monitor run --dry-run` validates effective monitor configuration and prints `cycle_execution: not_run`.
+Use task-specific skills when they exist.
+Do not copy their workflows into this root file.
 
-`monitor run --dry-run` does not collect network data, run processors, run pipeline stages, run Codex CLI, write monitor artifacts, or start a background process.
+Known repository skills include:
 
-`monitor run --once` runs exactly one bounded local monitor cycle through the configured product pipeline target stage, writes a monitor cycle manifest, and updates monitor alert/cooldown state in `.halpha/state.sqlite` when generated alert decisions exist.
+- issue metadata work: `.agents/skills/halpha-general-issue-skill/SKILL.md`;
+- requirement analysis: `.agents/skills/halpha-requirements-analysis-skill/SKILL.md`;
+- PR title/body writing: `.agents/skills/halpha-pr-writing-skill/SKILL.md`.
 
-`monitor run --once` defaults to no Codex report generation through `monitor.no_codex: true`.
-
-`monitor run --once` does not start a background process, run a multi-cycle loop, deliver notifications, trade, or access accounts.
-
-`monitor run --max-cycles <n> --interval-seconds <seconds>` runs a finite local monitor loop and stops after the configured cycle count or the first failed cycle.
-
-`monitor inspect` is read-only. It summarizes resident service status, latest cycle status, linked run refs, alert archive counts, cooldown counts, warning counts, error counts, and latest diagnostic loop status without collection, pipeline execution, Codex CLI, notification delivery, raw alert dumps, private user-state values, trading, or account access.
-
-`backtest` runs one configured strategy against shared local OHLCV history.
-
-`backtest` does not run the full report pipeline or Codex CLI.
-
-`experiment` runs configured strategy candidates against fixed benchmark suite windows from shared local OHLCV history.
-
-`experiment` does not run the full report pipeline or Codex CLI.
-
-`text-models prepare` explicitly prepares configured local text-intelligence models or records skipped/unavailable model states.
-
-`text-models prepare` must not be treated as permission for hidden model downloads during normal product runs.
-
-`text-intel` runs standalone text intelligence processing from configured text sources or an existing raw text artifact.
-
-`text-intel` does not run the full report pipeline or Codex CLI.
-
-`data inspect` summarizes local store metadata, run index state, text-event history state, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, Codex input budget state, and data-quality summaries.
-
-`data inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
-
-`data migrate-state --dry-run` scans documented legacy local state and prints a bounded import plan without creating or updating runtime state.
-
-`data migrate-state --apply` explicitly imports supported legacy local state into `.halpha/state.sqlite`, records source fingerprints, creates bounded local backups, and leaves legacy files unchanged.
-
-`data migrate-state --apply --replace-schedule` is required to replace an existing unified daily report schedule with a legacy schedule.
-
-`data migrate-state` must not auto-migrate, dual-write, delete legacy files, resurrect running service state, or keep legacy files as runtime fallback authorities.
-
-`data rebuild-index` rebuilds the current run-index projection from current run manifests only. It does not import mutable legacy service, job, schedule, alert, cooldown, or dashboard state.
-
-`data cleanup-runs` plans explicit local run archive cleanup. Dry-run is default.
-
-`data cleanup-runs --apply --run-id <run_id>` deletes only selected approved run archive directories, then rebuilds the run-index projection. It does not delete `data/`, `.halpha/state.sqlite`, config files, or files outside the selected run archive.
-
-Report-bearing run archive deletion requires `--include-report-runs --confirm-report-runs "DELETE REPORT RUNS"`.
-
-`outcomes inspect` summarizes outcome targets, outcome evaluations, outcome material, and shared outcome history state.
-
-`outcomes inspect` is read-only. It does not collect network data, run processors, run strategy evaluation, run Codex CLI, repair stores, or export raw records.
-
-`workbench build` builds `runs/workbench/latest/workbench_summary.json`, `runs/workbench/latest/index.md`, and `runs/workbench/latest/index.html` from existing local artifacts, including bounded strategy-lifecycle and product-validation status when available.
-
-`workbench build` does not collect network data, run processors, run pipeline stages, run monitor cycles, run Codex CLI, generate reports, change decision artifacts, or feed workbench output back into Codex context.
-
-`workbench build --run-dir runs/<run_id>` builds the workbench outputs from an explicit run directory instead of latest run-index selection.
-
-`workbench inspect` is read-only. It summarizes the latest workbench summary and index refs without collection, pipeline execution, Codex CLI, raw artifact dumps, private user-state values, trading, or account access.
-
-Full report runs require public network access, configured public sources, and a working Codex CLI.
-
-Do not claim success without running the relevant command.
-
-## Validation
-
-* Run the narrowest relevant check.
-* Prefer tests for changed behavior.
-* Use smoke checks for early scaffolding.
-* Use `python -m pytest` for automated validation.
-* `config.example.yaml` is public demonstration config; use a gitignored machine-local config file for real local acceptance.
-* Never print or commit local config paths when they reveal machine-local details, proxy values, credentials, user-state paths, private policy files, or other local privacy values.
-* Use `python -m halpha run --config <local-config.yaml> --no-codex` for real-source product acceptance when Codex CLI use is not needed.
-* Use `python -m halpha run --config <local-config.yaml> --until <stage_name>` for bounded stage-through acceptance.
-* Use `python -m halpha stage <stage_name> --config <local-config.yaml> --run-dir runs/<run_id>` for dependency-aware stage reruns; completed parent runs create derived runs, while failed runs may resume in place only from the recorded failed stage.
-* Use `python -m halpha validate --config <local-config.yaml>` to validate latest product contract health from existing artifacts without collection, pipeline stages, reports, or Codex CLI.
-* Use `python -m halpha validate --config <local-config.yaml> --run-dir runs/<run_id>` to validate product contract health for a selected run directory.
-* Use `python -m halpha schedule status --config <local-config.yaml>` to inspect the independent Schedule service without starting Dashboard, Monitor, collection, pipeline stages, or Codex CLI.
-* Use `python -m halpha schedule --config <local-config.yaml>` to start the independent Schedule service for configured daily report dispatch.
-* Use `python -m halpha schedule stop --config <local-config.yaml>` and `python -m halpha schedule restart --config <local-config.yaml>` for explicit Schedule lifecycle control.
-* Use `python -m halpha monitor status --config <local-config.yaml>` to inspect the independent Monitor service without starting Dashboard, Schedule, collection, pipeline stages, or Codex CLI.
-* Use `python -m halpha monitor start --config <local-config.yaml>` to start the independent Monitor service for continuous no-Codex reassessment.
-* Use `python -m halpha monitor stop --config <local-config.yaml>` and `python -m halpha monitor restart --config <local-config.yaml>` for explicit Monitor lifecycle control.
-* Use `python -m halpha monitor run --config <local-config.yaml> --dry-run` to validate the monitor command surface and effective config without running collection, pipeline stages, Codex CLI, or background execution.
-* Use `python -m halpha monitor run --config <local-config.yaml> --once` to validate one bounded monitor cycle, monitor cycle manifest, and state-store alert/cooldown state when public network access and configured public sources are available; this does not run Codex CLI by default.
-* Use `python -m halpha monitor run --config <local-config.yaml> --max-cycles <n> --interval-seconds <seconds>` to validate finite local monitor loop behavior when public network access and configured public sources are available; this does not run Codex CLI by default.
-* Use `python -m halpha monitor inspect --config <local-config.yaml>` to validate read-only monitor health output without running collection, pipeline stages, Codex CLI, or raw archive export.
-* Use `python -m halpha backtest --config config.example.yaml --strategy <strategy_name> --symbol <symbol> --timeframe <timeframe>` to validate one standalone strategy backtest when shared OHLCV history exists.
-* Use `python -m halpha experiment --config config.example.yaml` to validate standalone strategy experiment and gate artifacts when shared OHLCV history exists.
-* Use `python -m halpha text-models prepare --config config.example.yaml` to validate configured text model metadata without downloads when `allow_model_download` is false.
-* Use `python -m halpha text-intel --config config.example.yaml` to validate standalone text intelligence collection and implemented processors.
-* Use `python -m halpha text-intel --config config.example.yaml --input runs/<run_id>/raw/text_events.json` to validate standalone text intelligence from existing raw text artifacts.
-* Use `python -m halpha data inspect --config <local-config.yaml>` to validate local research data catalog, run index, text-event history, OHLCV metadata, derivatives metadata, macro/calendar metadata, on-chain flow metadata, feature/factor artifact status, intelligence-fusion status, strategy-lifecycle aggregate status, personalized-risk aggregate status, product-validation status, workbench output state, Codex input budget state, and latest data-quality state without Codex CLI.
-* Use `python -m halpha data inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect data-quality and strategy-lifecycle state for a specific run.
-* Use `python -m halpha data migrate-state --config <local-config.yaml> --dry-run` to inspect legacy local state before import without mutating files.
-* Use `python -m halpha data migrate-state --config <local-config.yaml> --apply` only after dry-run review to import supported legacy state explicitly.
-* Use `python -m halpha data rebuild-index --config <local-config.yaml>` to rebuild the current run-index projection from run manifests without importing mutable legacy state.
-* Use `python -m halpha data cleanup-runs --config <local-config.yaml>` to review disposable run archive cleanup candidates without deleting files.
-* Use `python -m halpha data cleanup-runs --config <local-config.yaml> --apply --run-id <run_id>` only after dry-run review to delete selected approved run archives.
-* Use `python -m halpha outcomes inspect --config <local-config.yaml>` to validate latest outcome target, evaluation, material, and history state without Codex CLI.
-* Use `python -m halpha outcomes inspect --config <local-config.yaml> --run-dir runs/<run_id>` to inspect outcome state for a specific run.
-* Use `python -m halpha workbench build --config <local-config.yaml>` to generate local delivery summary and index outputs from existing artifacts without running collection, pipeline stages, or Codex CLI.
-* Use `python -m halpha workbench build --config <local-config.yaml> --run-dir runs/<run_id>` to generate workbench outputs from a specific run directory.
-* Use `python -m halpha workbench inspect --config <local-config.yaml>` to validate read-only workbench visibility without raw artifact dumps or Codex CLI.
-* For event-intelligence acceptance, inspect recent text event records, entity evidence, classification evidence, topic grouping, event signals, event-market confluence, and event intelligence material.
-* For alert-decision acceptance, use `python -m halpha run --config config.example.yaml --until build_alert_decision_material` when final Codex output is not needed.
-* For alert-decision acceptance, inspect `analysis/event_intelligence_assessment.json`, `analysis/alert_decisions.json`, `analysis/alert_decision_material.md`, and `run_manifest.json`.
-* Alert priority, event severity, decision impact, downgrade reasons, and no-alert states must come from generated artifacts, not Codex wording.
-* Use `python -m halpha stage build_alert_decision_material --config config.example.yaml --run-dir runs/<run_id>` to recompute report-facing alert material through the dependency-aware stage rerun path.
-* For Codex input acceptance, inspect `run_manifest.json` `codex_input`, `analysis/research_context.md`, `codex_context/context.md`, and `codex_context/prompt.md`.
-* For Codex input acceptance, verify full intermediate JSON, raw streams, shared OHLCV history, and full run manifests are referenced by path, not embedded wholesale.
-* For on-chain flow acceptance, inspect `raw/onchain_flow.json`, `data/onchain/metadata/onchain_flow_state.json`, `raw/onchain_flow_views.json`, `analysis/onchain_flow_context.json`, `analysis/onchain_flow_material.md`, `analysis/data_quality_summary.json`, and `python -m halpha data inspect --config config.example.yaml`.
-* For intelligence-fusion acceptance, inspect `analysis/intelligence_fusion.json`, `analysis/intelligence_fusion_material.md`, decision and alert fusion fields, `analysis/data_quality_summary.json`, `python -m halpha data inspect --config config.example.yaml --run-dir runs/<run_id>`, Codex context boundaries, and the final report when Codex CLI validation is allowed.
-* Treat critical asset-mapping errors, false duplicate merges, missing traceability, or unsafe event upgrades as regression-fixture candidates.
-* Treat unsafe alert escalation, missing no-alert suppression, or Codex-boundary leakage as regression-fixture candidates.
-* For strategy experiment acceptance, inspect `runs/strategy_experiments/<id>/manifest.json` and `strategy_effectiveness_gates.json` for benchmark, experiment, and gate counts.
-* For current default strategy acceptance, expect at least three `effective` research candidates under deterministic gates.
-* Use `python -m halpha run --config <local-config.yaml>` for real-source product acceptance when the user permits Codex CLI use and Codex context, prompt construction, report generation, report post-processing, or final report content changed.
-* State before a real Codex CLI run that generated local research context will be sent to Codex CLI.
-* Do not treat fixtures, mocked HTTP responses, or fake Codex subprocesses as product acceptance.
-* For docs-only changes, use `git diff --check` when available.
-* Do not claim success without proof.
-* If validation is blocked, state what was not run and why.
-* If a failure is unrelated, say why it is unrelated.
-
-## Git
-
-* Check worktree state before editing.
-* Do not overwrite user changes.
-* Do not reformat unrelated files.
-* Do not rename files casually.
-* Do not change license text casually.
-* Do not create branches, commits, tags, or releases unless requested.
-
-## GitHub / PRs
-
-* No surprise public writes.
-* Do not open issues unless requested.
-* Do not open PRs unless requested.
-* Do not comment on issues or PRs unless requested.
-* If reviewing a PR, inspect the relevant code, tests, and docs before verdict.
-* Diff-only review is insufficient for behavior claims.
-* Findings need evidence.
-* If unsure, state the gap instead of guessing.
-
-## Security
-
-* Never commit secrets, API keys, tokens, cookies, or credentials.
-* Use placeholders in examples.
-* Prefer `.env.example` over real `.env`.
-* Do not log secrets.
-* Do not print secrets.
-* Do not add telemetry unless requested.
-* Do not send research material to remote services unless requested.
-
-## Financial Boundary
-
-Halpha is a personal research project.
-
-Do not present generated content as:
-
-* conclusions without sufficient investigation
-* claims not backed by available evidence
-* speculative assertions presented as facts
-* analysis based on unreliable or unverified online information
-* guaranteed forecast
-* risk-free strategy
-
-Use cautious language for uncertain market conclusions.
+If a requested workflow has no skill yet, keep the implementation narrow and source-backed.
 
 ## Reporting
 
 Final task reports should include:
 
-* files changed
-* change summary
-* validation run
-* known gaps
+- files changed;
+- change summary;
+- validation run;
+- known gaps.
 
-Keep reports brief.
-
-No long narratives.
+Keep reports brief. No long narratives.
