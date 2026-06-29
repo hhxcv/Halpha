@@ -291,6 +291,7 @@ def _visualization_record(
         for marker in full_markers
         if str(marker["time"]) in visible_times
     ]
+    visible_markers = markers[:MAX_BACKTEST_VISUALIZATION_MARKERS]
     warnings = []
     if len(bars) < 2:
         warnings.append("Backtest visualization requires at least two OHLCV bars.")
@@ -305,7 +306,7 @@ def _visualization_record(
         "symbol": symbol,
         "timeframe": timeframe,
         "bars": visible_bars,
-        "markers": markers[:MAX_BACKTEST_VISUALIZATION_MARKERS],
+        "markers": visible_markers,
         "equity_curve": equity_curve,
         "limits": {
             "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
@@ -313,7 +314,7 @@ def _visualization_record(
         },
         "omitted": {
             "bars": max(0, len(bars) - len(visible_bars)),
-            "markers": max(0, len(markers) - MAX_BACKTEST_VISUALIZATION_MARKERS),
+            "markers": max(0, len(full_markers) - len(visible_markers)),
         },
         "warnings": warnings,
     }

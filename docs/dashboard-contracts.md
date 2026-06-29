@@ -348,6 +348,10 @@ Visualization contract:
   optimization candidate, walk-forward, gate, lifecycle, warning, and source-ref
   evidence where artifacts provide it. Future panels may add richer exposure,
   turnover, cost-drag, funding-drag, benchmark comparison, and heatmap views.
+- Strategy Lab must distinguish full evaluation trade counts from bounded
+  visualization operation markers. Marker tables and recent-operation cards are
+  chart evidence, not complete per-trade ledgers unless a future artifact stores
+  explicit per-trade rows.
 - Empty, insufficient-data, degraded, and failed states must be visually
   distinct from successful evaluations.
 

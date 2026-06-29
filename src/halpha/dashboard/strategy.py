@@ -37,7 +37,7 @@ REJECTED_EXTERNAL_REF_NAME = ".halpha_external_ref_rejected"
 MAX_SUMMARY_ITEMS = 20
 MAX_STANDALONE_RUNS = 50
 MAX_BACKTEST_VISUALIZATION_BARS = 120
-MAX_BACKTEST_VISUALIZATION_MARKERS = 80
+MAX_BACKTEST_VISUALIZATION_MARKERS = 1000
 MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS = 120
 MAX_WARNING_GROUPS = 12
 MAX_WARNING_GROUP_SOURCES = 5
@@ -930,8 +930,20 @@ def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
     bars = [item for item in bars if item]
     markers = [_bounded_marker(item) for item in _list(raw.get("markers"))]
     markers = [item for item in markers if item]
+    reconstructed_markers = _position_transition_markers(
+        artifact.get("equity_curve"),
+        raw_markers=markers,
+        execution_model=_dict(artifact.get("execution_model")),
+    )
+    if len(reconstructed_markers) > len(markers):
+        markers = reconstructed_markers
     equity_curve = [_bounded_equity_point(item) for item in _list(raw.get("equity_curve"))]
     equity_curve = [item for item in equity_curve if item]
+    visible_markers = markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:]
+    omitted = _bounded_mapping(raw.get("omitted"))
+    total_marker_count = len(markers) or _position_transition_marker_count(artifact.get("equity_curve"))
+    if total_marker_count:
+        omitted["markers"] = max(0, total_marker_count - len(visible_markers))
     return {
         "schema_version": raw.get("schema_version", 1),
         "chart_type": raw.get("chart_type", "candlestick_backtest"),
@@ -941,15 +953,92 @@ def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
         "symbol": raw.get("symbol"),
         "timeframe": raw.get("timeframe"),
         "bars": bars[-MAX_BACKTEST_VISUALIZATION_BARS:],
-        "markers": markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:],
+        "markers": visible_markers,
         "equity_curve": equity_curve[-MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS:],
         "limits": {
             "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
             "max_markers": MAX_BACKTEST_VISUALIZATION_MARKERS,
             "max_equity_points": MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS,
         },
-        "omitted": _bounded_mapping(raw.get("omitted")),
+        "omitted": omitted,
         "warnings": _messages(raw.get("warnings")),
+    }
+
+
+def _position_transition_marker_count(value: Any) -> int:
+    markers = 0
+    previous_position = 0.0
+    for point in _dict_items(value):
+        try:
+            position = float(point.get("position") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if position != previous_position:
+            markers += 1
+        previous_position = position
+    return markers
+
+
+def _position_transition_markers(
+    value: Any,
+    *,
+    raw_markers: list[dict[str, Any]],
+    execution_model: dict[str, Any],
+) -> list[dict[str, Any]]:
+    raw_by_time = {str(marker.get("time")): marker for marker in raw_markers if marker.get("time")}
+    execution_timing = execution_model.get("position_timing") or execution_model.get("execution_timing")
+    markers = []
+    previous_position = 0.0
+    for point in _dict_items(value):
+        try:
+            position = float(point.get("position") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if position == previous_position:
+            previous_position = position
+            continue
+        time = _equity_point_time(point)
+        if not time:
+            previous_position = position
+            continue
+        marker = _position_marker(time, previous_position=previous_position, position=position)
+        if execution_timing:
+            marker["execution_timing"] = execution_timing
+        raw_marker = raw_by_time.get(str(time), {})
+        for key in ("price", "cost", "funding", "source_ref"):
+            if raw_marker.get(key) is not None:
+                marker[key] = raw_marker[key]
+        if raw_marker.get("warnings"):
+            marker["warnings"] = raw_marker["warnings"]
+        markers.append(_bounded_marker(marker))
+        previous_position = position
+    return [marker for marker in markers if marker]
+
+
+def _equity_point_time(point: dict[str, Any]) -> Any:
+    return point.get("time") or point.get("open_time") or point.get("timestamp")
+
+
+def _position_marker(time: Any, *, previous_position: float, position: float) -> dict[str, Any]:
+    if position == 0:
+        side = "long" if previous_position > 0 else "short"
+        label = "Sell" if previous_position > 0 else "Cover"
+        kind = "exit"
+    elif previous_position == 0:
+        side = "long" if position > 0 else "short"
+        label = "Long" if position > 0 else "Short"
+        kind = "entry"
+    else:
+        side = "long" if position > 0 else "short"
+        label = "Long" if position > 0 else "Short"
+        kind = "rebalance"
+    return {
+        "time": time,
+        "kind": kind,
+        "label": label,
+        "side": side,
+        "position": position,
+        "exposure": abs(position),
     }
 
 
@@ -992,7 +1081,7 @@ def _bounded_equity_point(value: Any) -> dict[str, Any]:
     if not item:
         return {}
     return {
-        "time": item.get("time"),
+        "time": _equity_point_time(item),
         "net_equity": item.get("net_equity"),
         "gross_equity": item.get("gross_equity"),
         "position": item.get("position"),

@@ -2185,6 +2185,7 @@ Reusable core output contract:
     },
     "omitted": {
       "bars": 0,
+      "equity_points": 0,
       "markers": 0
     },
     "warnings": []
@@ -2206,6 +2207,11 @@ Reusable core output contract:
   "errors": []
 }
 ```
+
+`trade_summary.trade_count` is the complete evaluation-window trade count.
+`visualization.markers` is a bounded chart marker list and is not a complete
+per-trade ledger. `visualization.omitted.markers` counts operation markers from
+the full evaluation window that are not present in the bounded marker list.
 
 Allowed evaluation statuses:
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +10,10 @@ import pytest
 from halpha.config import load_config
 from halpha.market.ohlcv_store import OHLCVParquetStore
 from halpha.pipeline import run_pipeline
-from halpha.strategy.strategy_evaluation_history import STRATEGY_EVALUATION_HISTORY_ARTIFACT
+from halpha.strategy.strategy_evaluation_history import (
+    STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+    _visualization_from_evaluation,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -121,6 +124,34 @@ def test_pipeline_writes_strategy_evaluation_summary(tmp_path: Path) -> None:
     assert task_names.index("evaluate_strategy_evaluation") < task_names.index(
         "build_market_signals"
     )
+
+
+def test_strategy_evaluation_history_counts_markers_omitted_by_bounded_curve() -> None:
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    equity_curve = []
+    for index in range(180):
+        position = 1.0 if 20 <= index < 32 or 168 <= index < 176 else 0.0
+        equity_curve.append(
+            {
+                "open_time": (start + timedelta(days=index)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "net_equity": 1 + index * 0.001,
+                "position": position,
+                "turnover": 1.0 if index in {20, 32, 168, 176} else 0.0,
+            }
+        )
+
+    visualization = _visualization_from_evaluation(
+        {"strategy_name": "tsmom_vol_scaled", "source": "binance", "symbol": "BTCUSDT", "timeframe": "1d"},
+        {"equity_curve": equity_curve},
+    )
+
+    assert len(visualization["equity_curve"]) == 120
+    assert [marker["time"] for marker in visualization["markers"]] == [
+        equity_curve[168]["open_time"],
+        equity_curve[176]["open_time"],
+    ]
+    assert visualization["omitted"]["equity_points"] == 60
+    assert visualization["omitted"]["markers"] == 2
 
 
 def test_pipeline_writes_walk_forward_windows_when_history_is_sufficient(tmp_path: Path) -> None:

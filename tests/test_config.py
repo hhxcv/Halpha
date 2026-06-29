@@ -30,36 +30,14 @@ def test_config_example_loads_successfully() -> None:
 
     assert config["run"]["output_dir"] == "runs"
     assert config["logging"] == {"output_dir": "logs"}
-    assert config["market"]["source"] == "binance"
+    assert config["market"]["source"] == "binance_usdm"
     assert config["market"]["proxy"] == {"enabled": False}
-    assert config["market"]["symbols"] == [
-        "BTCUSDT",
-        "ETHUSDT",
-        "BNBUSDT",
-        "SOLUSDT",
-        "XRPUSDT",
-        "ADAUSDT",
-        "DOGEUSDT",
-        "AVAXUSDT",
-        "LINKUSDT",
-        "DOTUSDT",
-        "TRXUSDT",
-        "LTCUSDT",
-        "BCHUSDT",
-        "UNIUSDT",
-        "AAVEUSDT",
-        "NEARUSDT",
-        "ATOMUSDT",
-        "ETCUSDT",
-        "FILUSDT",
-        "ARBUSDT",
-        "OPUSDT",
-    ]
+    assert config["market"]["symbols"] == ["BTCUSDT"]
     assert config["market"]["ohlcv"]["storage_dir"] == "data/market/ohlcv"
     assert config["market"]["ohlcv"]["sources"] == [
+        "binance_usdm",
         "binance",
         "binance_spot",
-        "binance_usdm",
         "okx_spot",
         "okx_swap",
         "bybit_spot",
@@ -91,7 +69,21 @@ def test_config_example_loads_successfully() -> None:
         "1w": 260,
         "1month": 120,
     }
-    assert config["market"]["derivatives"] == {"enabled": False}
+    assert config["market"]["derivatives"] == {
+        "enabled": True,
+        "source": "binance_usdm",
+        "symbols": ["BTCUSDT"],
+        "data_classes": [
+            "funding_rate",
+            "open_interest",
+            "premium_index",
+            "basis",
+            "spread_depth",
+            "liquidation_summary",
+        ],
+        "periods": ["1h", "4h", "1d"],
+        "lookback": {"1h": 720, "4h": 180, "1d": 90},
+    }
     assert config["market"]["anomalies"] == {"enabled": False}
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
@@ -1043,7 +1035,7 @@ def test_load_config_rejects_unsupported_ohlcv_market_source(tmp_path: Path) -> 
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigError, match="market.source must be one of: binance"):
+    with pytest.raises(ConfigError, match="market.source must be one of: binance, binance_spot, binance_usdm"):
         load_config(config_path)
 
 

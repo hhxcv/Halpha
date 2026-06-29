@@ -237,8 +237,15 @@ def _metrics_from_evaluation(evaluation: dict[str, Any]) -> dict[str, Any]:
 
 
 def _visualization_from_evaluation(record: dict[str, Any], evaluation: dict[str, Any]) -> dict[str, Any]:
-    curve = _bounded_equity_curve(evaluation.get("equity_curve"))
-    markers = _markers_from_equity_curve(curve)
+    full_curve = _equity_curve_points(evaluation.get("equity_curve"))
+    curve = full_curve[-MAX_VISUALIZATION_POINTS:]
+    visible_times = {str(point["time"]) for point in curve}
+    full_markers = _markers_from_equity_curve(full_curve, limit=None)
+    markers = [
+        marker
+        for marker in full_markers
+        if str(marker.get("time")) in visible_times
+    ][-MAX_VISUALIZATION_MARKERS:]
     if not curve and not markers:
         return {}
     return {
@@ -256,7 +263,11 @@ def _visualization_from_evaluation(record: dict[str, Any], evaluation: dict[str,
             "max_markers": MAX_VISUALIZATION_MARKERS,
             "max_equity_points": MAX_VISUALIZATION_POINTS,
         },
-        "omitted": {"bars": 0},
+        "omitted": {
+            "bars": 0,
+            "equity_points": max(0, len(full_curve) - len(curve)),
+            "markers": max(0, len(full_markers) - len(markers)),
+        },
         "warnings": [],
     }
 
@@ -272,6 +283,10 @@ def _bounded_visualization(visualization: dict[str, Any]) -> dict[str, Any]:
 
 
 def _bounded_equity_curve(value: Any) -> list[dict[str, Any]]:
+    return _equity_curve_points(value)[-MAX_VISUALIZATION_POINTS:]
+
+
+def _equity_curve_points(value: Any) -> list[dict[str, Any]]:
     points = []
     for point in _dict_items(value):
         time_value = point.get("open_time") or point.get("timestamp") or point.get("time")
@@ -286,10 +301,10 @@ def _bounded_equity_curve(value: Any) -> list[dict[str, Any]]:
                 "turnover": point.get("turnover"),
             }
         )
-    return points[-MAX_VISUALIZATION_POINTS:]
+    return points
 
 
-def _markers_from_equity_curve(curve: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _markers_from_equity_curve(curve: list[dict[str, Any]], *, limit: int | None = MAX_VISUALIZATION_MARKERS) -> list[dict[str, Any]]:
     markers = []
     previous_position = 0.0
     for point in curve:
@@ -316,7 +331,9 @@ def _markers_from_equity_curve(curve: list[dict[str, Any]]) -> list[dict[str, An
                 }
             )
         previous_position = position
-    return markers[-MAX_VISUALIZATION_MARKERS:]
+    if limit is None:
+        return markers
+    return markers[-limit:]
 
 
 def _record_identity(record: dict[str, Any]) -> str:

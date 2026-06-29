@@ -42,7 +42,7 @@ CONFIG_SECTIONS = {
 }
 SUPPORTED_LOGGING_FIELDS = {"output_dir"}
 SUPPORTED_USER_STATE_FIELDS = {"enabled", "path"}
-SUPPORTED_OHLCV_MARKET_SOURCES = {"binance"}
+SUPPORTED_OHLCV_MARKET_SOURCES = {"binance", "binance_spot", "binance_usdm"}
 SUPPORTED_OHLCV_DATA_SOURCES = set(SUPPORTED_OHLCV_SOURCES)
 SUPPORTED_OHLCV_TIMEFRAMES = set(OHLCV_TIMEFRAME_DURATIONS)
 SUPPORTED_DERIVATIVES_FIELDS = {"data_classes", "enabled", "lookback", "periods", "source", "symbols"}

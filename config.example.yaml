@@ -10,37 +10,17 @@ dashboard:
 
 market:
   enabled: true
-  source: binance
+  source: binance_usdm
   proxy:
     enabled: false
   symbols:
     - BTCUSDT
-    - ETHUSDT
-    - BNBUSDT
-    - SOLUSDT
-    - XRPUSDT
-    - ADAUSDT
-    - DOGEUSDT
-    - AVAXUSDT
-    - LINKUSDT
-    - DOTUSDT
-    - TRXUSDT
-    - LTCUSDT
-    - BCHUSDT
-    - UNIUSDT
-    - AAVEUSDT
-    - NEARUSDT
-    - ATOMUSDT
-    - ETCUSDT
-    - FILUSDT
-    - ARBUSDT
-    - OPUSDT
   ohlcv:
     storage_dir: data/market/ohlcv
     sources:
+      - binance_usdm
       - binance
       - binance_spot
-      - binance_usdm
       - okx_spot
       - okx_swap
       - bybit_spot
@@ -70,7 +50,25 @@ market:
       1w: 260
       1month: 120
   derivatives:
-    enabled: false
+    enabled: true
+    source: binance_usdm
+    symbols:
+      - BTCUSDT
+    data_classes:
+      - funding_rate
+      - open_interest
+      - premium_index
+      - basis
+      - spread_depth
+      - liquidation_summary
+    periods:
+      - 1h
+      - 4h
+      - 1d
+    lookback:
+      1h: 720
+      4h: 180
+      1d: 90
   anomalies:
     enabled: false
 

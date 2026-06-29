@@ -59,6 +59,7 @@
     } = shared;
     const reportHelpers = reportsWorkflow.createReportHelpers({joinPath, unique});
     const {isAvailableReport, reportPath, reportSourceRefs} = reportHelpers;
+    const BACKTEST_CHART_MAX_CANDLES = 1000;
 
     const state = {
       view: "overview",
@@ -77,7 +78,7 @@
       selectedStrategyOutput: null,
       strategyDataVisualization: null,
       strategyOperationTab: "backtest",
-      strategyWindow: "all",
+      strategyWindow: "30",
       strategyChartPreviewTimer: null,
       strategyChartPreviewRequest: 0,
       strategyCollectTargets: [],
@@ -1345,6 +1346,8 @@
       renderStrategyParams(selected, vis);
       renderRecentTrades(vis);
       renderBacktestRuns(outputs);
+      renderStrategyExperimentResults();
+      renderStrategyOptimizeResults();
       renderStrategyTab("trades");
     }
 
@@ -1458,7 +1461,7 @@
       const fields = item?.fields || {};
       const metrics = fields.metrics || {};
       const strategy = metrics.strategy_metrics || fields.strategy_metrics || {};
-      const trade = metrics.trade_summary || fields.trade_summary || {};
+      const trade = strategyTradeSummary(item);
       return {
         totalReturn: metricPercent(strategy.net_return_pct ?? strategy.total_return_pct ?? item?.records?.summary?.net_return_pct),
         drawdown: metricPercent(strategy.max_drawdown_pct),
@@ -1471,6 +1474,21 @@
         bestTrade: metricPercent(trade.best_trade_pct ?? trade.best_trade_return_pct),
         worstTrade: metricPercent(trade.worst_trade_pct ?? trade.worst_trade_return_pct),
       };
+    }
+
+    function strategyTradeSummary(item) {
+      const fields = item?.fields || {};
+      const metrics = fields.metrics || {};
+      return metrics.trade_summary || fields.trade_summary || {};
+    }
+
+    function numericOrNull(value) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function omittedVisualizationMarkers(vis) {
+      return Math.max(0, numericOrNull(vis?.omitted?.markers) || 0);
     }
 
     function metricPercent(value) {
@@ -1500,6 +1518,9 @@
     }
 
     function visibleStrategyVisualization(item) {
+      if (item) {
+        return strategyVisualization(item);
+      }
       return applyStrategyWindow(strategyVisualization(item), state.strategyWindow);
     }
 
@@ -1509,6 +1530,13 @@
         return dataVis || emptyStrategyVisualization();
       }
       const backtestVis = backtestVisualization(item);
+      const sampleWindow = backtestSampleWindow(item);
+      if (sampleWindow && !dataVisualizationMatchesBacktestWindow(dataVis, sampleWindow)) {
+        return backtestVis;
+      }
+      if (Array.isArray(backtestVis.bars) && backtestVis.bars.length && !canOverlayBacktest(dataVis, backtestVis)) {
+        return backtestVis;
+      }
       if (canOverlayBacktest(dataVis, backtestVis)) {
         return {
           ...dataVis,
@@ -1575,16 +1603,24 @@
         equity_curve: [],
         warnings: payload?.warnings || [],
         query: payload?.query || {},
+        backtest_window: Boolean(request?.backtest_window),
+        request_start: request?.start || "",
+        request_end: request?.end || "",
       };
     }
 
     function visibleBacktestVisualization(item) {
-      return applyStrategyWindow(backtestVisualization(item), state.strategyWindow);
+      return backtestVisualization(item);
+    }
+
+    function strategyChartWindowValue(value) {
+      const normalized = String(value || "30");
+      return ["30", "90", "180", "360"].includes(normalized) ? normalized : "30";
     }
 
     function applyStrategyWindow(vis, windowValue) {
       const bars = Array.isArray(vis.bars) ? vis.bars : [];
-      const limit = windowValue === "all" ? 0 : Number(windowValue);
+      const limit = Number(strategyChartWindowValue(windowValue));
       if (!Number.isInteger(limit) || limit <= 0 || bars.length <= limit) {
         return vis;
       }
@@ -1597,13 +1633,16 @@
       return {...vis, bars: visibleBars, markers, equity_curve: curve};
     }
 
-    function setStrategyWindow(value) {
-      state.strategyWindow = ["all", "180", "90", "30"].includes(String(value)) ? String(value) : "all";
-      const range = document.querySelector("#strategy-range");
+    function setStrategyWindow(value, options = {}) {
+      state.strategyWindow = strategyChartWindowValue(value);
+      const range = document.querySelector("#strategy-chart-range");
       if (range) range.value = state.strategyWindow;
       syncStrategyWindowControls();
       strategyChart.resetCandlestickView("#backtest-chart");
       renderStrategies();
+      if (options.reload) {
+        queueStrategyChartRefresh({clearBacktest: options.clearBacktest});
+      }
     }
 
     function syncStrategyWindowControls() {
@@ -1646,16 +1685,16 @@
     }
 
     function renderBacktestRuns(outputs) {
-      const filtered = filteredStrategyOutputs(outputs);
+      const visibleRuns = outputs.slice(0, 8);
       const clearButton = `<button class="report-row ${state.selectedStrategyOutput ? "" : "active"}" type="button" data-backtest-clear="true">
           <span class="report-row-title">OHLCV only</span>
           <span class="report-row-meta">No backtest overlay</span>
         </button>`;
-      document.querySelector("#backtest-runs").innerHTML = clearButton + (filtered.slice(0, 4).map((item, index) => `
+      document.querySelector("#backtest-runs").innerHTML = clearButton + (visibleRuns.map((item, index) => `
         <button class="report-row ${item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${index}">
           <span class="report-row-title">${escapeHtml(strategyName(item))}</span>
-          <span class="report-row-meta">${escapeHtml(item.fields?.created_at || item.status || "latest")}</span>
-        </button>`).join("") || `<div class="message">No matching backtest runs.</div>`);
+          <span class="report-row-meta">${escapeHtml(backtestRunMeta(item))}</span>
+        </button>`).join("") || `<div class="message">No backtest runs recorded.</div>`);
       document.querySelector("[data-backtest-clear]")?.addEventListener("click", () => {
         state.selectedStrategyOutput = null;
         setSelectIfPresent("#strategy-name", "");
@@ -1665,8 +1704,11 @@
       });
       document.querySelectorAll("[data-backtest-index]").forEach((button) => {
         button.addEventListener("click", () => {
-          state.selectedStrategyOutput = filtered[Number(button.dataset.backtestIndex)];
+          state.selectedStrategyOutput = visibleRuns[Number(button.dataset.backtestIndex)];
           const identity = strategyIdentity(state.selectedStrategyOutput);
+          setSelectIfPresent("#strategy-name", identity.name);
+          setSelectIfPresent("#strategy-symbol", identity.symbol);
+          setSelectIfPresent("#strategy-timeframe", identity.timeframe);
           setSelectIfPresent("#strategy-chart-symbol", identity.symbol);
           setSelectIfPresent("#strategy-chart-timeframe", identity.timeframe);
           setInputValue("#strategy-chart-source", defaultStrategySource(), false);
@@ -1677,12 +1719,159 @@
       });
     }
 
+    function backtestRunMeta(item) {
+      const identity = strategyIdentity(item);
+      const created = item?.fields?.created_at || item?.created_at || item?.status || "latest";
+      const market = [identity.symbol, identity.timeframe].filter(Boolean).join(" ");
+      return [market, created].filter(Boolean).join(" / ");
+    }
+
+    function renderStrategyExperimentResults() {
+      const node = document.querySelector("#strategy-experiment-results");
+      if (!node) return;
+      const experiments = standaloneExperiments();
+      if (!experiments.length) {
+        node.innerHTML = `<div class="message">No standalone experiment results yet.</div>`;
+        return;
+      }
+      const latest = experiments[0];
+      const fields = latest.fields || {};
+      const coverage = fields.coverage || {};
+      const counts = fields.counts || {};
+      const candidates = latest.records?.candidates || [];
+      const gates = latest.records?.gates || [];
+      const benchmarks = latest.records?.benchmarks || [];
+      const candidateRows = candidates.map((candidate) => {
+        const gate = gates.find((item) => !candidate.strategy_name || item.strategy_name === candidate.strategy_name) || {};
+        return [
+          candidate.strategy_name || "n/a",
+          candidate.status || "n/a",
+          candidate.evaluation_count ?? "n/a",
+          statusCountsText(candidate.evaluation_status_counts),
+          gate.status || "n/a",
+          (gate.reason_codes || []).join(", ") || "n/a",
+        ];
+      });
+      const benchmarkRows = benchmarks.slice(0, 6).map((benchmark) => [
+        benchmark.symbol || "n/a",
+        benchmark.timeframe || "n/a",
+        benchmark.status || "n/a",
+        benchmark.row_count ?? "n/a",
+      ]);
+      node.innerHTML = `
+        <div class="strategy-result-header">
+          <div><strong>Latest experiment</strong><span>${escapeHtml(fields.created_at || latest.output_dir || "latest stored result")}</span></div>
+          <span class="status-pill ${escapeHtml(statusClass(latest.status))}">${escapeHtml(label(latest.status || "unknown"))}</span>
+        </div>
+        <div class="summary-strip">
+          ${metricCell("Candidates", coverage.strategy_candidates ?? counts.strategy_candidates, "strategies")}
+          ${metricCell("Evaluations", coverage.evaluations ?? counts.evaluations, "benchmark runs")}
+          ${metricCell("Succeeded", coverage.evaluations_succeeded ?? coverage.succeeded, "evaluations")}
+          ${metricCell("Effective", fields.gate_coverage?.effective ?? counts.strategy_gate_effective, "gates")}
+        </div>
+        <div class="strategy-result-grid">
+          <section>
+            <h3 class="subsection-title">Candidates and gates</h3>
+            ${candidateRows.length ? table(["Strategy", "Status", "Evaluations", "Counts", "Gate", "Reasons"], candidateRows) : `<div class="message">No candidate records are available.</div>`}
+          </section>
+          <section>
+            <h3 class="subsection-title">Benchmark windows</h3>
+            ${benchmarkRows.length ? table(["Symbol", "Timeframe", "Status", "Rows"], benchmarkRows) : `<div class="message">No benchmark records are available.</div>`}
+          </section>
+        </div>
+        ${strategyResultMessages(latest)}`;
+    }
+
+    function renderStrategyOptimizeResults() {
+      const node = document.querySelector("#strategy-optimize-results");
+      if (!node) return;
+      const optimizations = standaloneOptimizations();
+      if (!optimizations.length) {
+        node.innerHTML = `<div class="message">No standalone optimization results yet.</div>`;
+        return;
+      }
+      const selectedName = document.querySelector("#strategy-optimize-name")?.value || "";
+      const latest = optimizations.find((item) => !selectedName || item.fields?.strategy_name === selectedName) || optimizations[0];
+      const fields = latest.fields || {};
+      const search = fields.search_space || {};
+      const coverage = fields.coverage || {};
+      const selected = fields.selected_candidate || {};
+      const robustness = fields.robustness || {};
+      const walkForward = fields.walk_forward || {};
+      const paramRows = Object.entries(selected.params || {}).map(([name, value]) => [name, value]);
+      const failedRows = (latest.records?.failed_candidates || []).slice(0, 6).map((candidate) => [
+        candidate.candidate_id || "n/a",
+        candidate.error_type || "n/a",
+        candidate.message || "n/a",
+      ]);
+      node.innerHTML = `
+        <div class="strategy-result-header">
+          <div><strong>Latest optimization</strong><span>${escapeHtml(fields.created_at || latest.output_dir || "latest stored result")}</span></div>
+          <span class="status-pill ${escapeHtml(statusClass(latest.status))}">${escapeHtml(label(latest.status || "unknown"))}</span>
+        </div>
+        <div class="summary-strip">
+          ${metricCell("Strategy", fields.strategy_name || "n/a", "target")}
+          ${metricCell("Combinations", search.combination_count ?? coverage.candidate_count, "grid")}
+          ${metricCell("Succeeded", coverage.succeeded, "candidates")}
+          ${metricCell("Robustness", robustness.status || "n/a", "walk-forward")}
+        </div>
+        <div class="strategy-result-grid">
+          <section>
+            <h3 class="subsection-title">Selected candidate</h3>
+            <div class="strategy-eval-kv">
+              ${detailRow("Candidate", selected.candidate_id)}
+              ${detailRow("Status", selected.status)}
+              ${detailRow("Automatic config mutation", selected.automatic_config_mutation)}
+              ${detailRow("Walk-forward", walkForward.status)}
+            </div>
+            ${paramRows.length ? table(["Parameter", "Value"], paramRows) : `<div class="message">No selected candidate parameters are recorded.</div>`}
+          </section>
+          <section>
+            <h3 class="subsection-title">Failed candidates</h3>
+            ${failedRows.length ? table(["Candidate", "Error type", "Message"], failedRows) : `<div class="message">No failed candidates are recorded.</div>`}
+          </section>
+        </div>
+        ${strategyResultMessages(latest)}`;
+    }
+
+    function standaloneExperiments() {
+      const experiments = state.strategies?.standalone?.experiments;
+      return Array.isArray(experiments) ? experiments : [];
+    }
+
+    function standaloneOptimizations() {
+      const optimizations = state.strategies?.standalone?.optimizations;
+      return Array.isArray(optimizations) ? optimizations : [];
+    }
+
+    function statusCountsText(counts) {
+      if (!counts || typeof counts !== "object") return "n/a";
+      const parts = Object.entries(counts)
+        .filter(([, value]) => Number(value) > 0)
+        .map(([name, value]) => `${label(name)} ${formatNumber(value)}`);
+      return parts.join(", ") || "n/a";
+    }
+
+    function strategyResultMessages(item) {
+      const warnings = Array.isArray(item?.warnings) ? item.warnings : [];
+      const errors = Array.isArray(item?.errors) ? item.errors : [];
+      if (!warnings.length && !errors.length) return "";
+      const rows = [
+        ...errors.slice(0, 6).map((message) => ["Error", message]),
+        ...warnings.slice(0, 6).map((message) => ["Warning", message]),
+      ];
+      return `<section class="strategy-result-messages">
+        <h3 class="subsection-title">Warnings and errors</h3>
+        ${table(["Type", "Message"], rows)}
+      </section>`;
+    }
+
     function renderStrategyTab(tab) {
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.classList.toggle("active", button.dataset.strategyTab === tab));
       const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
       const metrics = strategyMetrics(state.selectedStrategyOutput);
       if (tab === "trades" || tab === "list") {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyTradesPanel(vis, metrics);
+        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyTradesPanel(state.selectedStrategyOutput, vis, metrics);
       } else if (tab === "equity") {
         document.querySelector("#strategy-tab-content").innerHTML = renderStrategyEquityPanel(vis);
       } else if (tab === "drawdown") {
@@ -1694,8 +1883,11 @@
       }
     }
 
-    function renderStrategyTradesPanel(vis, metrics) {
+    function renderStrategyTradesPanel(item, vis, metrics) {
+      const trade = strategyTradeSummary(item);
       const markers = Array.isArray(vis.markers) ? vis.markers : [];
+      const omittedMarkers = omittedVisualizationMarkers(vis);
+      const fullTradeCount = numericOrNull(trade.trade_count);
       const markerRows = markers.map((marker) => [
         formatTimestamp(marker.time),
         marker.label || marker.kind || "operation",
@@ -1704,16 +1896,32 @@
         marker.position ?? marker.exposure ?? "n/a",
         marker.execution_timing || "n/a",
       ]);
+      const scopeNotice = strategyOperationScopeNotice({
+        fullTradeCount,
+        visibleMarkerCount: markers.length,
+        omittedMarkers,
+      });
       return `
         <div class="summary-strip" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
-          ${metricCell("Total trades", metrics.trades, "")}
-          ${metricCell("Long", metrics.longTrades, "")}
-          ${metricCell("Short", metrics.shortTrades, "")}
-          ${metricCell("Win rate", metrics.winRate, "")}
-          ${metricCell("Best trade", metrics.bestTrade, "")}
-          ${metricCell("Worst trade", metrics.worstTrade, "")}
+          ${metricCell("Full trades", metrics.trades, "full evaluation")}
+          ${metricCell("Visible operations", markers.length, omittedMarkers ? `${formatNumber(omittedMarkers)} omitted` : "bounded chart")}
+          ${metricCell("Completed", text(trade.completed_trade_count), "")}
+          ${metricCell("Open", text(trade.open_trade_count), "")}
+          ${metricCell("Hit rate", metrics.winRate, "")}
+          ${metricCell("Turnover", text(trade.turnover), "")}
         </div>
-        ${markerRows.length ? table(["Time", "Marker", "Side", "Price", "Exposure", "Execution"], markerRows) : `<div class="message">No strategy markers are available for the selected chart window.</div>`}`;
+        ${scopeNotice}
+        ${markerRows.length ? table(["Time", "Marker", "Side", "Price", "Exposure", "Execution"], markerRows) : `<div class="message">No operation markers are available for the selected chart window.</div>`}`;
+    }
+
+    function strategyOperationScopeNotice({fullTradeCount, visibleMarkerCount, omittedMarkers}) {
+      if (omittedMarkers > 0) {
+        return `<div class="message">This table lists bounded visualization markers for the selected chart window. ${escapeHtml(formatNumber(omittedMarkers))} operation marker${omittedMarkers === 1 ? "" : "s"} from the full evaluation window are omitted.</div>`;
+      }
+      if (fullTradeCount !== null && visibleMarkerCount > 0 && visibleMarkerCount < fullTradeCount) {
+        return `<div class="message">The full evaluation reports ${escapeHtml(formatNumber(fullTradeCount))} trade${fullTradeCount === 1 ? "" : "s"}, while this table lists ${escapeHtml(formatNumber(visibleMarkerCount))} bounded visualization marker${visibleMarkerCount === 1 ? "" : "s"}. Full per-trade rows are not stored in this artifact.</div>`;
+      }
+      return "";
     }
 
     function renderStrategyEquityPanel(vis) {
@@ -2179,20 +2387,53 @@
       const source = String(document.querySelector("#strategy-chart-source")?.value || "").trim();
       const symbol = String(document.querySelector("#strategy-chart-symbol")?.value || "").trim();
       const timeframe = String(document.querySelector("#strategy-chart-timeframe")?.value || "").trim();
-      const range = document.querySelector("#strategy-chart-range")?.value || "all";
-      const dateRange = presetDateRange(range);
-      if (!source || !symbol || !timeframe || !dateRange?.start || !dateRange?.end) {
-        if (!silent) showToast("Chart requires source, symbol, timeframe, and a stored date range.");
+      const windowValue = strategyChartWindowValue(document.querySelector("#strategy-chart-range")?.value || state.strategyWindow);
+      if (!source || !symbol || !timeframe) {
+        if (!silent) showToast("Chart requires source, symbol, and timeframe.");
         return null;
+      }
+      const selected = state.strategyOperationTab === "backtest" ? state.selectedStrategyOutput : null;
+      const sampleWindow = backtestSampleWindow(selected);
+      if (sampleWindow) {
+        return {
+          data_type: "ohlcv",
+          source,
+          symbol,
+          timeframe,
+          start: sampleWindow.start,
+          end: sampleWindow.end,
+          end_inclusive: true,
+          limit: sampleWindow.limit,
+          backtest_window: true,
+        };
       }
       return {
         data_type: "ohlcv",
         source,
         symbol,
         timeframe,
-        start: dateRange.start,
-        end: dateRange.end,
+        lookback: Number(windowValue),
       };
+    }
+
+    function backtestSampleWindow(item) {
+      const sample = item?.fields?.metrics?.sample || {};
+      const start = String(sample.start || sample.input_window_start || "").trim();
+      const end = String(sample.end || sample.input_window_end || "").trim();
+      if (!start || !end) return null;
+      const rows = Number(sample.rows || sample.record_count || 0);
+      return {
+        start,
+        end,
+        limit: Math.min(BACKTEST_CHART_MAX_CANDLES, Number.isFinite(rows) && rows > 0 ? Math.ceil(rows) : BACKTEST_CHART_MAX_CANDLES),
+      };
+    }
+
+    function dataVisualizationMatchesBacktestWindow(dataVis, sampleWindow) {
+      if (!dataVis || !sampleWindow) return false;
+      return Boolean(dataVis.backtest_window)
+        && String(dataVis.request_start || "") === String(sampleWindow.start)
+        && String(dataVis.request_end || "") === String(sampleWindow.end);
     }
 
     async function loadStrategyChartPreview(options = {}) {
@@ -2205,7 +2446,11 @@
         meta.textContent = `Loading ${request.symbol} ${request.timeframe} candles.`;
       }
       try {
-        const payload = await postJson(endpoints.dataViewerPreview, {...request, limit: 1000, sort_order: "asc"});
+        const payload = await postJson(endpoints.dataViewerPreview, {
+          ...request,
+          limit: request.limit || request.lookback,
+          sort_order: "asc",
+        });
         if (requestId !== state.strategyChartPreviewRequest) return;
         state.dataViewerStrategyPreview = payload;
         const clearBacktest = options.clearBacktest ?? state.strategyOperationTab !== "backtest";
@@ -3456,7 +3701,7 @@
         });
       });
       document.querySelector("#strategy-chart-range").addEventListener("change", () => {
-        queueStrategyChartRefresh();
+        setStrategyWindow(document.querySelector("#strategy-chart-range")?.value, {reload: true});
       });
       document.querySelector("#strategy-collect-range").addEventListener("change", () => {
         applyRangePreset("#strategy-collect-range", "#strategy-collect-start", "#strategy-collect-end", true);
@@ -3473,7 +3718,9 @@
           if (!state.strategyCollectTargets.length) addStrategyCollectTarget();
         });
       });
-      document.querySelectorAll("[data-strategy-window]").forEach((button) => button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow)));
+      document.querySelectorAll("[data-strategy-window]").forEach((button) => {
+        button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow, {reload: true}));
+      });
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
       monitorWorkflow.wire();
       dataViewerWorkflow.wire();

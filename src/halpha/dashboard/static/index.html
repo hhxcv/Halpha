@@ -229,6 +229,7 @@
               </div>
               <div id="strategy-experiment-strategies" class="strategy-strategy-list"></div>
               <div id="strategy-experiment-progress" class="operation-progress hidden"></div>
+              <div id="strategy-experiment-results" class="strategy-result-panel"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="optimize">
@@ -244,6 +245,7 @@
               </div>
               <div id="strategy-optimization-space" class="strategy-optimization-space"></div>
               <div id="strategy-optimize-progress" class="operation-progress hidden"></div>
+              <div id="strategy-optimize-results" class="strategy-result-panel"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="collect">
@@ -310,17 +312,17 @@
                 <div class="field"><label for="strategy-chart-source">Source</label><input id="strategy-chart-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
                 <div class="field"><label for="strategy-chart-symbol">Symbol</label><select id="strategy-chart-symbol" class="select-input"></select></div>
                 <div class="field"><label for="strategy-chart-timeframe">Timeframe</label><select id="strategy-chart-timeframe" class="select-input"></select></div>
-                <div class="field"><label for="strategy-chart-range">Range</label><select id="strategy-chart-range" class="select-input"><option value="all">All stored</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option></select></div>
+                <div class="field"><label for="strategy-chart-range">Candles</label><select id="strategy-chart-range" class="select-input"><option value="30" selected>Latest 30 candles</option><option value="90">Latest 90 candles</option><option value="180">Latest 180 candles</option><option value="360">Latest 360 candles</option></select></div>
                 <button class="ghost-button chart-refresh-button" type="button" id="strategy-chart-refresh">Refresh candles</button>
                 <span id="strategy-quote-label" class="status-pill ok">n/a</span>
               </div>
             </div>
             <div class="chart-wrap">
               <div class="chart-tools" aria-label="Candlestick chart window">
-                <button class="tool-dot active" type="button" data-strategy-window="all" title="Show all available candles">All</button>
-                <button class="tool-dot" type="button" data-strategy-window="180" title="Show last 180 candles">180</button>
-                <button class="tool-dot" type="button" data-strategy-window="90" title="Show last 90 candles">90</button>
-                <button class="tool-dot" type="button" data-strategy-window="30" title="Show last 30 candles">30</button>
+                <button class="tool-dot active" type="button" data-strategy-window="30" title="Show latest 30 candles">30</button>
+                <button class="tool-dot" type="button" data-strategy-window="90" title="Show latest 90 candles">90</button>
+                <button class="tool-dot" type="button" data-strategy-window="180" title="Show latest 180 candles">180</button>
+                <button class="tool-dot" type="button" data-strategy-window="360" title="Show latest 360 candles">360</button>
               </div>
               <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="OHLCV candlestick chart"></svg>
             </div>
@@ -332,7 +334,7 @@
               <table id="strategy-params" class="kv-table"></table>
             </section>
             <section class="panel panel-pad" data-backtest-only="true">
-              <h2 class="panel-title">Recent trades</h2>
+              <h2 class="panel-title">Recent operations</h2>
               <div id="recent-trades"></div>
             </section>
             <section class="panel panel-pad" data-backtest-only="true">
@@ -346,7 +348,7 @@
               <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
               <button class="tab-button" type="button" data-strategy-tab="drawdown">Drawdown</button>
               <button class="tab-button" type="button" data-strategy-tab="summary">Performance summary</button>
-              <button class="tab-button" type="button" data-strategy-tab="list">List of trades</button>
+              <button class="tab-button" type="button" data-strategy-tab="list">Operation markers</button>
             </div>
             <div id="strategy-tab-content" style="padding-top: 14px;"></div>
           </section>

@@ -9,7 +9,7 @@ from halpha.data.collection_coverage import read_collection_coverage_state, summ
 from halpha.data.collection_planner import plan_collection_from_coverage
 from halpha.data.data_export import DataExportError, export_data
 from halpha.data.event_like_query import EventLikeQueryError, query_event_like_records
-from halpha.market.ohlcv_query import OHLCVQueryError, query_ohlcv_records
+from halpha.market.ohlcv_query import OHLCVQueryError, query_latest_ohlcv_records, query_ohlcv_records
 from halpha.macro.macro_calendar_history import read_macro_calendar_history_records
 from halpha.market.derivatives_history import read_derivatives_history_records
 from halpha.market.market_anomaly_history import read_market_anomaly_history_records
@@ -41,6 +41,7 @@ EXPORT_FORMATS = {
 }
 MAX_PREVIEW_RECORDS = 500
 MAX_OHLCV_PREVIEW_RECORDS = 1000
+MAX_OHLCV_CHART_LOOKBACK = 360
 MAX_TIMELINE_INTERVALS = 200
 EXPORT_ROOT_REF = "data/exports"
 
@@ -150,7 +151,12 @@ def dashboard_data_viewer_timeline(config: dict[str, Any], *, config_path: Path,
 def dashboard_data_viewer_preview(config: dict[str, Any], *, config_path: Path, request: dict[str, Any]) -> dict[str, Any]:
     data_type = str(request.get("data_type") or "").strip()
     default_limit = MAX_OHLCV_PREVIEW_RECORDS if data_type == "ohlcv" else MAX_PREVIEW_RECORDS
-    parsed, error = _parse_viewer_request(request, require_source=False, default_limit=default_limit)
+    parsed, error = _parse_viewer_request(
+        request,
+        require_source=False,
+        default_limit=default_limit,
+        allow_ohlcv_lookback=True,
+    )
     if error:
         return _error_payload("dashboard_data_preview", error)
     try:
@@ -162,17 +168,31 @@ def dashboard_data_viewer_preview(config: dict[str, Any], *, config_path: Path, 
             ]
             if missing:
                 return _error_payload("dashboard_data_preview", f"ohlcv preview requires {', '.join(missing)}.")
-            result = query_ohlcv_records(
-                _ohlcv_storage_dir(config, config_path=config_path),
-                source=str(parsed["source"]),
-                symbol=str(parsed["symbol"]),
-                timeframe=str(parsed["timeframe"]),
-                start=parsed["start"],
-                end=parsed["end"],
-                as_of=parsed.get("as_of"),
-                config_path=config_path,
-                limit=parsed["limit"],
-            )
+            storage_dir = _ohlcv_storage_dir(config, config_path=config_path)
+            if parsed.get("lookback") is not None:
+                result = query_latest_ohlcv_records(
+                    storage_dir,
+                    source=str(parsed["source"]),
+                    symbol=str(parsed["symbol"]),
+                    timeframe=str(parsed["timeframe"]),
+                    lookback=int(parsed["lookback"]),
+                    as_of=parsed.get("as_of"),
+                    config_path=config_path,
+                    limit=parsed["limit"],
+                )
+            else:
+                result = query_ohlcv_records(
+                    storage_dir,
+                    source=str(parsed["source"]),
+                    symbol=str(parsed["symbol"]),
+                    timeframe=str(parsed["timeframe"]),
+                    start=parsed["start"],
+                    end=parsed["end"],
+                    as_of=parsed.get("as_of"),
+                    config_path=config_path,
+                    limit=parsed["limit"],
+                    end_inclusive=bool(parsed.get("end_inclusive")),
+                )
         else:
             result = query_event_like_records(
                 config_path,
@@ -346,14 +366,23 @@ def _parse_viewer_request(
     *,
     require_source: bool,
     default_limit: int | None,
+    allow_ohlcv_lookback: bool = False,
 ) -> tuple[dict[str, Any], str | None]:
     data_type = str(request.get("data_type") or "").strip()
     if data_type not in SUPPORTED_DATA_TYPES:
         supported = ", ".join(SUPPORTED_DATA_TYPES)
         return {}, f"data_type must be one of: {supported}."
+    lookback: int | None = None
+    if allow_ohlcv_lookback and data_type == "ohlcv" and request.get("lookback") is not None:
+        try:
+            lookback = _positive_int(request.get("lookback"), default=30)
+        except (TypeError, ValueError) as exc:
+            return {}, str(exc)
+        if lookback > MAX_OHLCV_CHART_LOOKBACK:
+            return {}, f"ohlcv lookback must be less than or equal to {MAX_OHLCV_CHART_LOOKBACK}."
     start = str(request.get("start") or "").strip()
     end = str(request.get("end") or "").strip()
-    if not start or not end:
+    if lookback is None and (not start or not end):
         return {}, "start and end are required."
     source = _optional_text(request.get("source"))
     if require_source and not source:
@@ -367,6 +396,8 @@ def _parse_viewer_request(
         except (TypeError, ValueError) as exc:
             return {}, str(exc)
         limit = min(parsed_limit, default_limit) if default_limit is not None else parsed_limit
+        if lookback is not None:
+            limit = min(limit, lookback)
     sort_order = str(request.get("sort_order") or "asc").strip().lower()
     if sort_order not in {"asc", "desc"}:
         return {}, "sort_order must be asc or desc."
@@ -379,6 +410,8 @@ def _parse_viewer_request(
         "identity": identity,
         "start": start,
         "end": end,
+        "end_inclusive": _optional_bool(request.get("end_inclusive")),
+        "lookback": lookback,
         "as_of": _optional_text(request.get("as_of")),
         "limit": limit,
         "sort_order": sort_order,
@@ -641,8 +674,10 @@ def _isoformat_utc(value: datetime) -> str:
 def _query_summary(result: dict[str, Any]) -> dict[str, Any]:
     keys = (
         "status",
+        "query_mode",
         "requested_start",
         "requested_end",
+        "requested_lookback",
         "as_of",
         "time_fields",
         "range",
@@ -753,6 +788,14 @@ def _optional_text(value: Any) -> str | None:
         return None
     text = value.strip()
     return text or None
+
+
+def _optional_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
 
 
 def _normalized_identity(value: Any) -> dict[str, str]:

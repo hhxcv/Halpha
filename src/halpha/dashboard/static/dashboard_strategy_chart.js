@@ -176,7 +176,7 @@
       function chartView(selector, key, totalBars) {
         let view = chartViews.get(selector);
         if (!view || view.key !== key || view.end >= totalBars) {
-          view = {key, start: 0, end: Math.max(0, totalBars - 1)};
+          view = {key, start: 0, end: Math.max(0, totalBars - 1), drag: null};
           chartViews.set(selector, view);
         }
         return view;
@@ -338,28 +338,60 @@
           resetCandlestickView(selector);
           renderCandlestickSvg(selector, vis, options);
         };
-        let drag = null;
         svg.onpointerdown = (event) => {
           if (event.button !== 0) return;
           const view = chartViews.get(selector);
           if (!view) return;
-          drag = {clientX: event.clientX, start: view.start, end: view.end};
+          view.drag = {
+            clientX: event.clientX,
+            start: view.start,
+            end: view.end,
+            lastDeltaBars: 0,
+            renderFrame: 0,
+          };
           svg.classList.add("dragging");
           svg.setPointerCapture?.(event.pointerId);
         };
+        svg.onpointermove = (event) => {
+          const view = chartViews.get(selector);
+          const drag = view?.drag;
+          if (!drag) return;
+          const rect = svg.getBoundingClientRect();
+          const visible = drag.end - drag.start + 1;
+          const pxPerBar = Math.max(1, rect.width / Math.max(1, visible));
+          const deltaBars = Math.round((drag.clientX - event.clientX) / pxPerBar);
+          if (deltaBars === drag.lastDeltaBars) return;
+          drag.lastDeltaBars = deltaBars;
+          setViewport(selector, drag.start + deltaBars, drag.end + deltaBars, totalBars);
+          if (!drag.renderFrame) {
+            drag.renderFrame = requestAnimationFrame(() => {
+              drag.renderFrame = 0;
+              renderCandlestickSvg(selector, vis, options);
+            });
+          }
+        };
         svg.onpointerup = (event) => {
+          const view = chartViews.get(selector);
+          const drag = view?.drag;
           if (!drag) return;
           const rect = svg.getBoundingClientRect();
           const visible = drag.end - drag.start + 1;
           const pxPerBar = Math.max(1, rect.width / Math.max(1, visible));
           const deltaBars = Math.round((drag.clientX - event.clientX) / pxPerBar);
           setViewport(selector, drag.start + deltaBars, drag.end + deltaBars, totalBars);
-          drag = null;
+          if (drag.renderFrame) {
+            cancelAnimationFrame(drag.renderFrame);
+          }
+          view.drag = null;
           svg.classList.remove("dragging");
           renderCandlestickSvg(selector, vis, options);
         };
         svg.onpointercancel = () => {
-          drag = null;
+          const view = chartViews.get(selector);
+          if (view?.drag?.renderFrame) {
+            cancelAnimationFrame(view.drag.renderFrame);
+          }
+          if (view) view.drag = null;
           svg.classList.remove("dragging");
         };
       }

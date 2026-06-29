@@ -19,6 +19,14 @@ MARKET_ARTIFACT = "raw/market.json"
 BINANCE_SOURCE_NAME = "binance"
 BINANCE_BASE_URL = "https://data-api.binance.vision"
 BINANCE_TICKER_PATH = "/api/v3/ticker/24hr"
+BINANCE_USDM_SOURCE_NAME = "binance_usdm"
+BINANCE_USDM_BASE_URL = "https://fapi.binance.com"
+BINANCE_USDM_TICKER_PATH = "/fapi/v1/ticker/24hr"
+SUPPORTED_MARKET_TICKER_SOURCES = {
+    BINANCE_SOURCE_NAME: (BINANCE_BASE_URL, BINANCE_TICKER_PATH),
+    "binance_spot": (BINANCE_BASE_URL, BINANCE_TICKER_PATH),
+    BINANCE_USDM_SOURCE_NAME: (BINANCE_USDM_BASE_URL, BINANCE_USDM_TICKER_PATH),
+}
 REQUEST_TIMEOUT_SECONDS = 20
 LOGGER = logging.getLogger(__name__)
 
@@ -112,11 +120,13 @@ def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
     collected_at = _utc_timestamp()
     raw = _raw_artifact(source_name, collected_at)
 
-    if source_name != BINANCE_SOURCE_NAME:
+    source_spec = SUPPORTED_MARKET_TICKER_SOURCES.get(str(source_name))
+    if source_spec is None:
+        supported = ", ".join(sorted(SUPPORTED_MARKET_TICKER_SOURCES))
         raw["errors"].append(
             {
                 "source": source_name,
-                "message": f"unsupported market.source: {source_name}",
+                "message": f"unsupported market.source: {source_name}. Supported sources: {supported}.",
             }
         )
         return raw
@@ -134,13 +144,13 @@ def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
 
     for symbol in market.get("symbols", []):
         try:
-            ticker = _request_binance_ticker(symbol, urlopen_func=urlopen_func)
-            raw["items"].append(_market_item(ticker, collected_at))
+            ticker = _request_ticker(symbol, source_name=str(source_name), urlopen_func=urlopen_func)
+            raw["items"].append(_market_item(ticker, source_name=str(source_name), collected_at=collected_at))
         except MarketCollectionError as exc:
             raw["errors"].append(
                 {
                     "symbol": symbol,
-                    "source": BINANCE_SOURCE_NAME,
+                    "source": source_name,
                     "message": str(exc),
                 }
             )
@@ -149,7 +159,8 @@ def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
 
 
 def _raw_artifact(source_name: Any, collected_at: str) -> dict[str, Any]:
-    source_url = BINANCE_BASE_URL if source_name == BINANCE_SOURCE_NAME else None
+    source_spec = SUPPORTED_MARKET_TICKER_SOURCES.get(str(source_name))
+    source_url = source_spec[0] if source_spec is not None else None
     return {
         "schema_version": 1,
         "artifact_type": "market_raw",
@@ -165,32 +176,36 @@ def _raw_artifact(source_name: Any, collected_at: str) -> dict[str, Any]:
     }
 
 
-def _request_binance_ticker(symbol: str, *, urlopen_func) -> dict[str, Any]:
-    url = _ticker_url(symbol)
+def _request_ticker(symbol: str, *, source_name: str, urlopen_func) -> dict[str, Any]:
+    url = _ticker_url(source_name, symbol)
     request = Request(url, headers={"User-Agent": "Halpha/0.0.0"})
     try:
         with urlopen_func(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read().decode("utf-8")
     except HTTPError as exc:
         detail = _read_error_detail(exc)
-        raise MarketCollectionError(f"binance request failed for {symbol}: HTTP {exc.code}{detail}") from exc
+        raise MarketCollectionError(f"{source_name} request failed for {symbol}: HTTP {exc.code}{detail}") from exc
     except URLError as exc:
-        raise MarketCollectionError(f"binance request failed for {symbol}: {exc.reason}") from exc
+        raise MarketCollectionError(f"{source_name} request failed for {symbol}: {exc.reason}") from exc
     except TimeoutError as exc:
-        raise MarketCollectionError(f"binance request timed out for {symbol}") from exc
+        raise MarketCollectionError(f"{source_name} request timed out for {symbol}") from exc
 
     try:
         data = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise MarketCollectionError(f"binance returned invalid JSON for {symbol}") from exc
+        raise MarketCollectionError(f"{source_name} returned invalid JSON for {symbol}") from exc
     if not isinstance(data, dict):
-        raise MarketCollectionError(f"binance returned unexpected payload for {symbol}")
+        raise MarketCollectionError(f"{source_name} returned unexpected payload for {symbol}")
     return data
 
 
-def _ticker_url(symbol: str) -> str:
+def _ticker_url(source_name: str, symbol: str) -> str:
+    source_spec = SUPPORTED_MARKET_TICKER_SOURCES.get(source_name)
+    if source_spec is None:
+        raise MarketCollectionError(f"unsupported market.source: {source_name}")
+    base_url, ticker_path = source_spec
     query = urlencode({"symbol": symbol})
-    return f"{BINANCE_BASE_URL}{BINANCE_TICKER_PATH}?{query}"
+    return f"{base_url}{ticker_path}?{query}"
 
 
 def _urlopen_from_market_config(market: dict[str, Any]):
@@ -217,13 +232,15 @@ def _proxy_url_from_market_config(market: dict[str, Any]) -> str | None:
     )
 
 
-def _market_item(ticker: dict[str, Any], collected_at: str) -> dict[str, Any]:
+def _market_item(ticker: dict[str, Any], *, source_name: str, collected_at: str) -> dict[str, Any]:
     symbol = _required_text(ticker, "symbol")
     close_time = ticker.get("closeTime")
     as_of = _timestamp_from_millis(close_time) if isinstance(close_time, int) else collected_at
-    source = {"name": BINANCE_SOURCE_NAME, "url": BINANCE_BASE_URL}
+    source_spec = SUPPORTED_MARKET_TICKER_SOURCES.get(source_name)
+    source_url = source_spec[0] if source_spec is not None else None
+    source = {"name": source_name, "url": source_url}
     return {
-        "id": f"market:{BINANCE_SOURCE_NAME}:{symbol}:{as_of}",
+        "id": f"market:{source_name}:{symbol}:{as_of}",
         "symbol": symbol,
         "as_of": as_of,
         "metrics": {
@@ -239,7 +256,7 @@ def _market_item(ticker: dict[str, Any], collected_at: str) -> dict[str, Any]:
 def _required_text(data: dict[str, Any], key: str) -> str:
     value = data.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise MarketCollectionError(f"binance response missing {key}")
+        raise MarketCollectionError(f"market ticker response missing {key}")
     return value
 
 

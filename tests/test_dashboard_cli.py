@@ -1677,6 +1677,91 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert str(tmp_path) not in response.text
 
 
+def test_dashboard_strategies_endpoint_rebuilds_full_backtest_markers_from_equity_curve(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    backtest_dir = tmp_path / "runs" / "strategy_backtests" / "20260620T000000Z_tsmom_binance_BTCUSDT_4h"
+    write_json(
+        backtest_dir / "strategy_backtest.json",
+        {
+            "artifact_type": "strategy_backtest",
+            "status": "ok",
+            "sample": {
+                "start": "2026-06-01T00:00:00Z",
+                "end": "2026-06-02T00:00:00Z",
+                "rows": 6,
+            },
+            "execution_model": {"position_timing": "next_bar"},
+            "trade_summary": {"trade_count": 2},
+            "equity_curve": [
+                {"open_time": "2026-06-01T00:00:00Z", "position": 0.0, "net_equity": 1.0},
+                {"open_time": "2026-06-01T04:00:00Z", "position": 1.0, "net_equity": 1.01},
+                {"open_time": "2026-06-01T08:00:00Z", "position": 1.0, "net_equity": 1.02},
+                {"open_time": "2026-06-01T12:00:00Z", "position": 0.0, "net_equity": 1.0},
+                {"open_time": "2026-06-01T16:00:00Z", "position": -1.0, "net_equity": 1.03},
+                {"open_time": "2026-06-01T20:00:00Z", "position": 0.0, "net_equity": 1.04},
+            ],
+            "visualization": {
+                "schema_version": 1,
+                "chart_type": "candlestick_backtest",
+                "status": "available",
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "4h",
+                "bars": [],
+                "markers": [
+                    {
+                        "time": "2026-06-01T20:00:00Z",
+                        "kind": "exit",
+                        "label": "Cover",
+                        "side": "short",
+                        "position": 0.0,
+                        "price": 94.0,
+                    }
+                ],
+                "equity_curve": [],
+                "omitted": {"markers": 24},
+            },
+        },
+    )
+    write_json(
+        backtest_dir / "manifest.json",
+        {
+            "artifact_type": "standalone_strategy_backtest_manifest",
+            "created_at": "2026-06-20T00:00:00Z",
+            "status": "succeeded",
+            "evaluation_status": "succeeded",
+            "inputs": {
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "4h",
+            },
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    payload = response.json()
+    backtest = payload["standalone"]["backtests"][0]
+    markers = backtest["visualization"]["markers"]
+    assert [marker["time"] for marker in markers] == [
+        "2026-06-01T04:00:00Z",
+        "2026-06-01T12:00:00Z",
+        "2026-06-01T16:00:00Z",
+        "2026-06-01T20:00:00Z",
+    ]
+    assert [marker["kind"] for marker in markers] == ["entry", "exit", "entry", "exit"]
+    assert [marker["label"] for marker in markers] == ["Long", "Sell", "Short", "Cover"]
+    assert markers[-1]["price"] == 94.0
+    assert markers[0]["execution_timing"] == "next_bar"
+    assert backtest["visualization"]["omitted"]["markers"] == 0
+    assert backtest["visualization"]["limits"]["max_markers"] == 1000
+
+
 def test_dashboard_strategies_endpoint_groups_repeated_warnings(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -1807,7 +1892,7 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
         "kraken_spot",
         "coinbase_spot",
     ]
-    assert payload["commands"]["options"]["symbols"][:4] == ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"]
+    assert payload["commands"]["options"]["symbols"] == ["BTCUSDT"]
     assert payload["commands"]["options"]["timeframes"] == [
         "1m",
         "5m",

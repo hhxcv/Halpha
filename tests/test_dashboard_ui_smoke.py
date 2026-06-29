@@ -208,6 +208,8 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
             "strategy-evaluation-window",
             "strategy-ohlcv-source-options",
             "strategy-backtest-progress",
+            "strategy-experiment-results",
+            "strategy-optimize-results",
         "strategy-chart-source",
         "strategy-chart-symbol",
         "strategy-chart-timeframe",
@@ -311,6 +313,8 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert 'scope === "strategy" && payload.data_type === "ohlcv"' in script
     assert "Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy Lab chart." in script
     assert "runStrategyCollectBatch" in script
+    assert "renderStrategyExperimentResults" in script
+    assert "renderStrategyOptimizeResults" in script
     assert "renderCollectTimelineResults" in script
     assert "runStrategyExport" in script
     assert "renderOperationProgress" in script
@@ -502,18 +506,45 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "markerDetailRows" in script
     assert "markerTone" in script
     assert "Operations" in script
+    assert "Visible operations" in script
+    assert "Full per-trade rows are not stored in this artifact." in script
+    assert "Operation markers" in html
+    assert "Recent operations" in html
+    assert "backtestRunMeta" in script
+    assert "No backtest runs recorded." in script
     assert "Cost and Funding" in script
     assert "Walk-forward" in script
     assert "renderStrategyEvaluationPanels" in script
     assert "renderStrategyDrawdownPanel" in script
     assert "onwheel" in script
     assert "onpointerdown" in script
+    assert "onpointermove" in script
+    assert "drag.lastDeltaBars" in script
+    assert "requestAnimationFrame" in script
     assert "downloadSelectedOhlcv" not in html
     assert "sampleVisualization" not in script
     assert "sampleIntelItems" not in script
     assert 'id="strategy-evaluation-window"' in html
     assert "chart-tools" in html
     assert "tool-dot" in html
+    chart_controls = html[html.index('id="strategy-chart-range"') : html.index('id="backtest-chart"')]
+    assert 'value="all"' not in chart_controls
+    assert 'data-strategy-window="all"' not in chart_controls
+    assert "Latest 30 candles" in chart_controls
+    assert "Latest 360 candles" in chart_controls
+    assert 'data-strategy-window="30"' in chart_controls
+    assert 'data-strategy-window="360"' in chart_controls
+    assert 'strategyWindow: "30"' in script
+    assert '["30", "90", "180", "360"]' in script
+    assert "lookback: Number(windowValue)" in script
+    assert "BACKTEST_CHART_MAX_CANDLES" in script
+    assert "backtestSampleWindow" in script
+    assert "limit: request.limit || request.lookback" in script
+    assert "height: 52vh" not in css
+    assert "align-self: start;" in css
+    assert "max-height: calc(clamp(360px, calc(100vh - 330px), 470px) + 122px);" in css
+    assert "function visibleBacktestVisualization(item)" in script
+    assert "return backtestVisualization(item);" in script
 
 
 def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Path) -> None:
