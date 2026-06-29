@@ -120,7 +120,26 @@ def universe_signal_records(strategy: dict[str, Any], legs: list[dict[str, Any]]
             alignment=aligned,
         )
 
-    assert aligned is not None
+    if aligned is None:
+        return _signal_record_set(
+            params=params,
+            legs=universe,
+            status="insufficient_data",
+            records=[],
+            ranking_summary={},
+            warnings=[
+                *leg_warnings,
+                warning(
+                    "insufficient_aligned_universe_rows",
+                    (
+                        "cross_sectional_momentum has 0 aligned rows; "
+                        f"requires at least {_minimum_rows(params)} rows."
+                    ),
+                    source="data_quality",
+                ),
+            ],
+            alignment=None,
+        )
     records = _records_from_aligned_universe(params=params, legs=universe, aligned=aligned)
     warnings = [*leg_warnings, *_alignment_warnings(aligned), *_tie_warnings(records)]
     if not any(record["gross_exposure"] > 0 for record in records):

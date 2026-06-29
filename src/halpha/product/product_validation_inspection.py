@@ -181,8 +181,9 @@ def _read_manifest(path: Path) -> tuple[dict[str, Any], str | None]:
 
 
 def _run_context(selection: _RunSelection, manifest: dict[str, Any], *, config_path: Path) -> RunContext:
-    assert selection.run_dir is not None
     run_dir = selection.run_dir
+    if run_dir is None:
+        raise ValueError("product validation run selection must include a run directory.")
     return RunContext(
         run_id=str(manifest.get("run_id") or selection.run_id or run_dir.name),
         run_dir=run_dir,

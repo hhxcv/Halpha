@@ -8,6 +8,7 @@ import pytest
 from halpha.cli import main
 from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
+from halpha.product.product_validation_inspection import _RunSelection, _run_context
 from halpha.storage import write_json
 
 
@@ -150,6 +151,20 @@ def test_validate_failed_contract_outputs_bounded_diagnostics(tmp_path: Path, ca
     assert "source_artifacts: run_manifest.json, analysis/risk_assessment.json" in output
     assert "next_steps: Rerun the producer stage" in output
     assert "artifact_written: false" in output
+
+
+def test_product_validation_context_requires_selected_run_dir(tmp_path: Path) -> None:
+    selection = _RunSelection(
+        mode="latest_run_index",
+        status="available",
+        run_dir=None,
+        run_id="run-1",
+        source_artifact=".halpha/state.sqlite",
+        reason=None,
+    )
+
+    with pytest.raises(ValueError, match="run directory"):
+        _run_context(selection, {"run_id": "run-1"}, config_path=tmp_path / "config.yaml")
 
 
 def _write_config(tmp_path: Path, *, proxy: str | None = None) -> Path:

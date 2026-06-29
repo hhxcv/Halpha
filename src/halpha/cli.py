@@ -47,6 +47,7 @@ from halpha.monitor.monitoring import (
 )
 from halpha.runtime.monitor_service import (
     MonitorServiceError,
+    MonitorStartupConfig,
     load_monitor_startup_config,
     monitor_service_error_message,
     monitor_service_status,
@@ -2088,7 +2089,7 @@ def _monitor_service(
 
     try:
         if action == "service":
-            assert startup is not None
+            startup = _require_monitor_startup(startup, action=action)
             LOGGER.info(
                 "Halpha monitor service foreground starting.",
                 extra={"event": "monitor.service.foreground.start"},
@@ -2104,7 +2105,7 @@ def _monitor_service(
             )
             return 0
         if action == "start":
-            assert startup is not None
+            _require_monitor_startup(startup, action=action)
             result = start_monitor_service(config_arg)
             _print_monitor_service_result("Halpha monitor started.", result)
             return 0
@@ -2117,7 +2118,7 @@ def _monitor_service(
             _print_monitor_service_result("Halpha monitor stop requested.", result)
             return 0
         if action == "restart":
-            assert startup is not None
+            _require_monitor_startup(startup, action=action)
             result = restart_monitor_service(config_arg)
             _print_monitor_service_result("Halpha monitor restarted.", result)
             return 0
@@ -2136,6 +2137,12 @@ def _monitor_service(
         print("Halpha monitor stopped.")
         return 0
     return 0
+
+
+def _require_monitor_startup(startup: MonitorStartupConfig | None, *, action: str) -> MonitorStartupConfig:
+    if startup is None:
+        raise MonitorServiceError(f"monitor startup config was not loaded for {action}.")
+    return startup
 
 
 def _print_monitor_service_result(title: str, result: dict) -> None:
