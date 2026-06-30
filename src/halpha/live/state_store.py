@@ -19,6 +19,7 @@ from halpha.runtime.state_store import (
 
 
 LIVE_COLLECTION_STATE_MIGRATION_VERSION = 17
+LIVE_TRIGGER_STATE_MIGRATION_VERSION = 18
 LIVE_COLLECTION_STATE_MIGRATIONS = (
     StateStoreMigration(
         version=LIVE_COLLECTION_STATE_MIGRATION_VERSION,
@@ -49,6 +50,47 @@ LIVE_COLLECTION_STATE_MIGRATIONS = (
             """,
             "CREATE INDEX IF NOT EXISTS idx_live_collection_state_type ON live_collection_state(data_type, target_key)",
             "CREATE INDEX IF NOT EXISTS idx_live_collection_state_next_attempt ON live_collection_state(next_attempt_at)",
+        ),
+    ),
+)
+LIVE_TRIGGER_STATE_MIGRATIONS = (
+    StateStoreMigration(
+        version=LIVE_TRIGGER_STATE_MIGRATION_VERSION,
+        name="live_trigger_state",
+        statements=(
+            """
+            CREATE TABLE IF NOT EXISTS live_trigger_decisions (
+              decision_id TEXT PRIMARY KEY,
+              trigger_id TEXT NOT NULL,
+              status TEXT NOT NULL,
+              evaluated_at TEXT NOT NULL,
+              source_data_types_json TEXT NOT NULL,
+              source_refs_json TEXT NOT NULL,
+              reason_codes_json TEXT NOT NULL,
+              threshold_params_json TEXT NOT NULL,
+              matched_evidence_json TEXT NOT NULL,
+              cooldown_until TEXT,
+              linked_collection_job_ids_json TEXT NOT NULL,
+              linked_report_job_id TEXT,
+              linked_report_job_status TEXT,
+              linked_run_id TEXT,
+              linked_report_ref TEXT,
+              warnings_json TEXT NOT NULL,
+              errors_json TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_live_trigger_decisions_trigger ON live_trigger_decisions(trigger_id, evaluated_at)",
+            "CREATE INDEX IF NOT EXISTS idx_live_trigger_decisions_status ON live_trigger_decisions(status, evaluated_at)",
+            "CREATE INDEX IF NOT EXISTS idx_live_trigger_decisions_report_job ON live_trigger_decisions(linked_report_job_id)",
+            """
+            CREATE TABLE IF NOT EXISTS live_trigger_cooldowns (
+              trigger_id TEXT PRIMARY KEY,
+              cooldown_until TEXT NOT NULL,
+              decision_id TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+            """,
         ),
     ),
 )
@@ -159,6 +201,189 @@ class LiveCollectionStateRepository:
             )
 
 
+@dataclass(frozen=True)
+class LiveTriggerStateRepository:
+    config_path: Path
+
+    @property
+    def database_path(self) -> Path:
+        return runtime_state_path(config_path=self.config_path)
+
+    def upsert_decision(self, decision: dict[str, Any]) -> dict[str, Any]:
+        self._ensure_tables()
+        decision_id = _required_decision_text(decision, "decision_id")
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                with runtime_state_transaction(connection):
+                    connection.execute(
+                        """
+                        INSERT OR REPLACE INTO live_trigger_decisions (
+                          decision_id,
+                          trigger_id,
+                          status,
+                          evaluated_at,
+                          source_data_types_json,
+                          source_refs_json,
+                          reason_codes_json,
+                          threshold_params_json,
+                          matched_evidence_json,
+                          cooldown_until,
+                          linked_collection_job_ids_json,
+                          linked_report_job_id,
+                          linked_report_job_status,
+                          linked_run_id,
+                          linked_report_ref,
+                          warnings_json,
+                          errors_json,
+                          updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            decision_id,
+                            _required_decision_text(decision, "trigger_id"),
+                            _required_decision_text(decision, "status"),
+                            _required_decision_text(decision, "evaluated_at"),
+                            _dumps_list(decision.get("source_data_types")),
+                            _dumps_list(decision.get("source_refs")),
+                            _dumps_list(decision.get("reason_codes")),
+                            _dumps_mapping(decision.get("threshold_params")),
+                            _dumps_mapping(decision.get("matched_evidence")),
+                            _optional_str(decision.get("cooldown_until")),
+                            _dumps_list(decision.get("linked_collection_job_ids")),
+                            _optional_str(decision.get("linked_report_job_id")),
+                            _optional_str(decision.get("linked_report_job_status")),
+                            _optional_str(decision.get("linked_run_id")),
+                            _optional_str(decision.get("linked_report_ref")),
+                            _dumps_list(decision.get("warnings")),
+                            _dumps_list(decision.get("errors")),
+                            _required_decision_text(decision, "updated_at"),
+                        ),
+                    )
+        except sqlite3.Error as exc:
+            return _trigger_state_error(exc, operation="write Live trigger decision")
+        return self.get_decision(decision_id) or dict(decision)
+
+    def get_decision(self, decision_id: str) -> dict[str, Any] | None:
+        self._ensure_tables()
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                row = connection.execute(
+                    """
+                    SELECT *
+                    FROM live_trigger_decisions
+                    WHERE decision_id = ?
+                    """,
+                    (decision_id,),
+                ).fetchone()
+        except sqlite3.Error as exc:
+            return _trigger_state_error(exc, operation="read Live trigger decision")
+        return _row_to_trigger_decision(row) if row else None
+
+    def list_decisions(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        self._ensure_tables()
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                rows = connection.execute(
+                    """
+                    SELECT *
+                    FROM live_trigger_decisions
+                    ORDER BY evaluated_at DESC, decision_id DESC
+                    LIMIT ?
+                    """,
+                    (max(1, int(limit)),),
+                ).fetchall()
+        except (sqlite3.Error, ValueError) as exc:
+            if isinstance(exc, sqlite3.Error):
+                return [_trigger_state_error(exc, operation="list Live trigger decisions")]
+            return []
+        return [_row_to_trigger_decision(row) for row in rows]
+
+    def latest_decisions(self) -> dict[str, dict[str, Any]]:
+        latest: dict[str, dict[str, Any]] = {}
+        for decision in self.list_decisions(limit=500):
+            trigger_id = str(decision.get("trigger_id") or "")
+            if not trigger_id or trigger_id in latest:
+                continue
+            latest[trigger_id] = decision
+        return latest
+
+    def get_cooldown(self, trigger_id: str) -> dict[str, Any] | None:
+        self._ensure_tables()
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                row = connection.execute(
+                    """
+                    SELECT trigger_id, cooldown_until, decision_id, updated_at
+                    FROM live_trigger_cooldowns
+                    WHERE trigger_id = ?
+                    """,
+                    (trigger_id,),
+                ).fetchone()
+        except sqlite3.Error as exc:
+            return _trigger_state_error(exc, operation="read Live trigger cooldown")
+        return _row_to_cooldown(row) if row else None
+
+    def list_cooldowns(self) -> list[dict[str, Any]]:
+        self._ensure_tables()
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                rows = connection.execute(
+                    """
+                    SELECT trigger_id, cooldown_until, decision_id, updated_at
+                    FROM live_trigger_cooldowns
+                    ORDER BY trigger_id
+                    """
+                ).fetchall()
+        except sqlite3.Error as exc:
+            return [_trigger_state_error(exc, operation="list Live trigger cooldowns")]
+        return [_row_to_cooldown(row) for row in rows]
+
+    def upsert_cooldown(
+        self,
+        *,
+        trigger_id: str,
+        cooldown_until: str,
+        decision_id: str,
+        updated_at: str,
+    ) -> dict[str, Any]:
+        self._ensure_tables()
+        try:
+            with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+                with runtime_state_transaction(connection):
+                    connection.execute(
+                        """
+                        INSERT OR REPLACE INTO live_trigger_cooldowns (
+                          trigger_id,
+                          cooldown_until,
+                          decision_id,
+                          updated_at
+                        )
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (trigger_id, cooldown_until, decision_id, updated_at),
+                    )
+        except sqlite3.Error as exc:
+            return _trigger_state_error(exc, operation="write Live trigger cooldown")
+        return self.get_cooldown(trigger_id) or {
+            "trigger_id": trigger_id,
+            "cooldown_until": cooldown_until,
+            "decision_id": decision_id,
+            "updated_at": updated_at,
+        }
+
+    def _ensure_tables(self) -> None:
+        with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:
+            apply_runtime_state_migrations(
+                connection,
+                migrations=(
+                    *RUNTIME_STATE_MIGRATIONS,
+                    *LIVE_COLLECTION_STATE_MIGRATIONS,
+                    *LIVE_TRIGGER_STATE_MIGRATIONS,
+                ),
+            )
+
+
 def _row_to_state(row: Any) -> dict[str, Any]:
     return {
         "target_key": row[0],
@@ -180,6 +405,38 @@ def _row_to_state(row: Any) -> dict[str, Any]:
         "warnings": _loads_list(row[16]),
         "errors": _loads_list(row[17]),
         "updated_at": row[18],
+    }
+
+
+def _row_to_trigger_decision(row: Any) -> dict[str, Any]:
+    return {
+        "decision_id": row[0],
+        "trigger_id": row[1],
+        "status": row[2],
+        "evaluated_at": row[3],
+        "source_data_types": _loads_list(row[4]),
+        "source_refs": _loads_list(row[5]),
+        "reason_codes": _loads_list(row[6]),
+        "threshold_params": _loads_mapping(row[7]),
+        "matched_evidence": _loads_mapping(row[8]),
+        "cooldown_until": row[9],
+        "linked_collection_job_ids": _loads_list(row[10]),
+        "linked_report_job_id": row[11],
+        "linked_report_job_status": row[12],
+        "linked_run_id": row[13],
+        "linked_report_ref": row[14],
+        "warnings": _loads_list(row[15]),
+        "errors": _loads_list(row[16]),
+        "updated_at": row[17],
+    }
+
+
+def _row_to_cooldown(row: Any) -> dict[str, Any]:
+    return {
+        "trigger_id": row[0],
+        "cooldown_until": row[1],
+        "decision_id": row[2],
+        "updated_at": row[3],
     }
 
 
@@ -209,10 +466,42 @@ def _state_error(exc: sqlite3.Error, *, operation: str) -> dict[str, Any]:
     }
 
 
+def _trigger_state_error(exc: sqlite3.Error, *, operation: str) -> dict[str, Any]:
+    diagnostic = runtime_state_error_diagnostic(exc, operation=operation)
+    return {
+        "decision_id": "__live_trigger_state_error__",
+        "trigger_id": "live",
+        "status": "failed",
+        "evaluated_at": "",
+        "source_data_types": [],
+        "source_refs": [],
+        "reason_codes": ["runtime_state_error"],
+        "threshold_params": {},
+        "matched_evidence": {},
+        "cooldown_until": None,
+        "linked_collection_job_ids": [],
+        "linked_report_job_id": None,
+        "linked_report_job_status": None,
+        "linked_run_id": None,
+        "linked_report_ref": None,
+        "warnings": [],
+        "errors": [diagnostic.get("message") or "Live trigger runtime state could not be read."],
+        "updated_at": "",
+        "diagnostic": diagnostic,
+    }
+
+
 def _required_text(state: dict[str, Any], key: str) -> str:
     value = state.get(key)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Live collection state requires {key}.")
+    return value.strip()
+
+
+def _required_decision_text(state: dict[str, Any], key: str) -> str:
+    value = state.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Live trigger decision requires {key}.")
     return value.strip()
 
 

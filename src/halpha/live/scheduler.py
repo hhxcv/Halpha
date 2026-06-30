@@ -8,6 +8,7 @@ from typing import Any, Protocol
 from halpha.live.config import LiveCollectionConfig, LiveSettings, load_live_settings
 from halpha.live.contracts import LIVE_DATA_TYPES
 from halpha.live.state_store import LiveCollectionStateRepository
+from halpha.live.triggers import LiveTriggerEvaluator
 from halpha.runtime.command_job_store import JOB_TERMINAL_STATUSES, JOB_TRANSIENT_STATUSES
 
 
@@ -69,6 +70,7 @@ class LiveScheduler:
                 "reason": "live.enabled is false.",
                 "created_jobs": [],
                 "collections": self._disabled_collections(settings, now_text=now_text),
+                "trigger_evaluation": None,
                 "warnings": [],
                 "errors": [],
             }
@@ -132,6 +134,20 @@ class LiveScheduler:
             updated_states.append(self.state_repository.upsert_state(state))
         errors.extend(_collection_errors(updated_states))
         warnings.extend(_collection_warnings(updated_states))
+        trigger_evaluation = LiveTriggerEvaluator(
+            self.config,
+            config_path=self.config_path,
+            job_manager=self.job_manager,
+            now=self.now,
+        ).evaluate(
+            tick_id=tick_id,
+            live_read_model={
+                "status": "available" if not errors else "degraded",
+                "collections": updated_states,
+            },
+        )
+        errors.extend(_strings(trigger_evaluation.get("errors")))
+        warnings.extend(_strings(trigger_evaluation.get("warnings")))
         return {
             "schema_version": 1,
             "artifact_type": LIVE_SCHEDULER_ARTIFACT,
@@ -141,6 +157,7 @@ class LiveScheduler:
             "reason": None,
             "created_jobs": created_jobs,
             "collections": sorted(updated_states, key=lambda item: str(item.get("target_key") or "")),
+            "trigger_evaluation": trigger_evaluation,
             "warnings": _bounded_unique(warnings),
             "errors": _bounded_unique(errors),
         }
@@ -176,7 +193,7 @@ class LiveScheduler:
         recent_jobs = [job for job in jobs if str(job.get("status") or "") in JOB_TERMINAL_STATUSES][:LIVE_RECENT_JOB_LIMIT]
         errors = _collection_errors(collections)
         warnings = _collection_warnings(collections)
-        return {
+        payload = {
             "schema_version": 1,
             "artifact_type": LIVE_READ_MODEL_ARTIFACT,
             "status": "disabled" if not settings.enabled else "available" if not errors else "degraded",
@@ -191,6 +208,18 @@ class LiveScheduler:
             "warnings": _bounded_unique(warnings),
             "errors": _bounded_unique(errors),
         }
+        triggers = LiveTriggerEvaluator(
+            self.config,
+            config_path=self.config_path,
+            job_manager=self.job_manager,
+            now=self.now,
+        ).read_model(live_read_model=payload)
+        payload["triggers"] = triggers
+        payload["warnings"] = _bounded_unique([*payload["warnings"], *_strings(triggers.get("warnings"))])
+        payload["errors"] = _bounded_unique([*payload["errors"], *_strings(triggers.get("errors"))])
+        if payload["errors"] and payload["status"] != "disabled":
+            payload["status"] = "degraded"
+        return payload
 
     def _disabled_collections(self, settings: LiveSettings, *, now_text: str) -> list[dict[str, Any]]:
         return [

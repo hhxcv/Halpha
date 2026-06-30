@@ -81,6 +81,15 @@ rejected with actionable errors.
 | `live.reports.daily.enabled` | Defaults to `false`. | Boolean only. Links the existing daily report schedule state into the Live page; it must not create a second daily scheduler authority. |
 | `live.reports.triggers.<trigger_id>.enabled` | Defaults to `false` for every supported trigger. | Boolean only. Unknown `trigger_id` keys are unsupported. |
 | `live.reports.triggers.<trigger_id>.cooldown_seconds` | Required when that trigger is enabled. | Positive integer. Prevents duplicate report dispatch for equivalent trigger decisions within the cooldown window. |
+| `live.reports.triggers.<trigger_id>.job_intent` | Defaults to `run_no_codex`. | Must be `run_no_codex` or `run`. `run` requires valid persisted unattended Live trigger authorization. |
+| `live.reports.triggers.<trigger_id>.min_priority` | Optional. | Must be `low`, `medium`, `high`, or `critical` when present. Used only by priority-like trigger evidence. |
+| `live.reports.triggers.<trigger_id>.window_seconds` | Optional trigger lookback window. | Positive integer when present. |
+| `live.reports.triggers.<trigger_id>.price_change_pct` | Optional major-market-move price threshold. | Positive number when present. |
+| `live.reports.triggers.<trigger_id>.volume_change_pct` | Optional major-market-move volume threshold. | Positive number when present. |
+| `live.reports.triggers.<trigger_id>.lookahead_seconds` | Optional scheduled-catalyst lookahead window. | Positive integer when present. |
+| `live.reports.triggers.<trigger_id>.min_failed_targets` | Optional degraded-data threshold. | Positive integer when present. |
+| `live.reports.triggers.<trigger_id>.min_stale_targets` | Optional degraded-data threshold. | Positive integer when present. |
+| `live.reports.triggers.<trigger_id>.codex_authorization` | Optional persisted authorization metadata for unattended `run` trigger jobs. | Mapping only. It must match trigger id, trigger revision, config ref, config digest, job intent, and authorization scope before automatic Codex-capable report dispatch is allowed. |
 
 Unsupported Live config fields must not be silently ignored.
 
@@ -99,11 +108,11 @@ shared-data types through visible `data_collect` command jobs:
 Other data types are unsupported until their shared-store contract and Live
 read model are explicitly implemented.
 
-## Initial Trigger IDs
+## Trigger Decisions and Report Dispatch
 
-The config parser currently validates these deterministic trigger ids so future
-trigger settings cannot drift. Trigger decision generation and report dispatch
-from these triggers remain planned follow-up work.
+Core evaluates deterministic Live trigger decisions from the Live scheduler
+path after collection state reconciliation. Trigger decisions are stored in
+`.halpha/state.sqlite` and exposed through the Dashboard Live read model.
 
 - `market_breakout`
 - `major_market_move`
@@ -112,9 +121,27 @@ from these triggers remain planned follow-up work.
 - `derivatives_stress`
 - `data_quality_degraded`
 
-Each trigger decision must preserve source refs, data quality state, cooldown
-state, and no-action reasons. Trigger decisions must not be generated or
-revised by AI/Codex.
+Supported decision statuses:
+
+- `triggered`
+- `suppressed_cooldown`
+- `skipped_disabled`
+- `skipped_no_match`
+- `skipped_insufficient_evidence`
+- `blocked_authorization`
+- `failed`
+
+Each trigger decision preserves decision id, trigger id, evaluated time, source
+data types, source refs, reason codes, threshold params, matched evidence
+summary, cooldown state, linked collection job ids, linked report job id,
+reconciled run/report refs, warnings, and errors.
+
+Trigger-created report jobs use the existing command-job manager. `run_no_codex`
+jobs may be created without Codex authorization. `run` jobs require valid
+persisted unattended Live trigger authorization. Missing or invalid authorization
+records `blocked_authorization` and does not create a Codex-capable job.
+
+Trigger decisions must not be generated or revised by AI/Codex.
 
 ## Current Source-Refresh Read Model
 

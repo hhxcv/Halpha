@@ -24,9 +24,11 @@ from halpha.live.contracts import (
     LIVE_CONFIG_FIELDS,
     LIVE_DAILY_REPORT_FIELDS,
     LIVE_DATA_TYPES,
+    LIVE_REPORT_TRIGGER_JOB_INTENTS,
     LIVE_REPORT_TRIGGER_FIELDS,
     LIVE_REPORTS_FIELDS,
     LIVE_TRIGGER_IDS,
+    LIVE_TRIGGER_PRIORITY_LEVELS,
 )
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS
 from halpha.market.ohlcv_source import SUPPORTED_OHLCV_SOURCES
@@ -525,6 +527,28 @@ def _validate_live_reports_config(reports: Any) -> None:
                 _require_bool(trigger, "enabled", f"{path}.enabled")
             if enabled or "cooldown_seconds" in trigger:
                 _require_positive_int(trigger, "cooldown_seconds", f"{path}.cooldown_seconds")
+            if "job_intent" in trigger:
+                _require_choice(
+                    trigger,
+                    "job_intent",
+                    f"{path}.job_intent",
+                    choices=LIVE_REPORT_TRIGGER_JOB_INTENTS,
+                )
+            if "min_priority" in trigger:
+                _require_choice(
+                    trigger,
+                    "min_priority",
+                    f"{path}.min_priority",
+                    choices=LIVE_TRIGGER_PRIORITY_LEVELS,
+                )
+            for field in ("window_seconds", "lookahead_seconds", "min_failed_targets", "min_stale_targets"):
+                if field in trigger:
+                    _require_positive_int(trigger, field, f"{path}.{field}")
+            for field in ("price_change_pct", "volume_change_pct"):
+                if field in trigger:
+                    _require_positive_number(trigger, field, f"{path}.{field}")
+            if "codex_authorization" in trigger and not isinstance(trigger["codex_authorization"], dict):
+                raise ConfigError(f"{path}.codex_authorization must be a mapping.")
 
 
 def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:
@@ -653,6 +677,14 @@ def _require_positive_number(data: dict[str, Any], key: str, path: str) -> float
     ):
         raise ConfigError(f"{path} must be a positive number.")
     return float(value)
+
+
+def _require_choice(data: dict[str, Any], key: str, path: str, *, choices: tuple[str, ...]) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or value not in choices:
+        supported = ", ".join(choices)
+        raise ConfigError(f"{path} must be one of: {supported}.")
+    return value
 
 
 def _require_unit_interval_number(data: dict[str, Any], key: str, path: str) -> float:
