@@ -88,7 +88,11 @@ def test_config_example_loads_successfully() -> None:
     assert config["macro_calendar"] == {"enabled": False}
     assert config["onchain_flow"] == {"enabled": False}
     assert config["user_state"] == {"enabled": False, "path": "user_state.local.yaml"}
-    assert config["dashboard"] == {"display_timezone": "Asia/Shanghai"}
+    assert config["dashboard"] == {
+        "display_timezone": "Asia/Shanghai",
+        "timestamp_hour_cycle": "24h",
+        "timestamp_date_order": "year_first",
+    }
     assert config["monitor"] == {
         "enabled": False,
         "interval_seconds": 300,

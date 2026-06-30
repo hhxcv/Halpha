@@ -1,5 +1,9 @@
     const app = document.querySelector("#halpha-dashboard-app");
-    const displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";
+    let displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";
+    const timestampDisplay = {
+      hourCycle: normalizeTimestampHourCycle(app.dataset.timestampHourCycle),
+      dateOrder: normalizeTimestampDateOrder(app.dataset.timestampDateOrder),
+    };
     const endpoints = {
       overview: app.dataset.overviewEndpoint,
       health: app.dataset.healthEndpoint,
@@ -58,10 +62,24 @@
       markdownToHtml,
     } = shared;
     const reportHelpers = reportsWorkflow.createReportHelpers({joinPath, unique});
-    const {isAvailableReport, reportPath, reportSourceRefs} = reportHelpers;
+    const {isAvailableReport, reportArtifactFiles, reportArtifactGroups, reportPath, reportSourceRefs} = reportHelpers;
+    shared.configureTimestampFormat({
+      timeZone: displayTimezone,
+      hourCycle: timestampDisplay.hourCycle,
+      dateOrder: timestampDisplay.dateOrder,
+    });
     const BACKTEST_CHART_MAX_CANDLES = 1000;
     const VIEW_REFRESH_TTL_MS = 15000;
     const HEALTH_REFRESH_TTL_MS = 15000;
+    const SIDEBAR_COLLAPSED_STORAGE_KEY = "halpha.dashboard.sidebarCollapsed";
+    const VIEW_TITLES = {
+      overview: "Overview",
+      reports: "Reports",
+      strategies: "Strategy",
+      monitor: "Monitor",
+      intelligence: "Intelligence",
+      settings: "Settings",
+    };
 
     const state = {
       view: "overview",
@@ -75,6 +93,9 @@
       selectedReport: null,
       selectedReportDetail: null,
       selectedReportPreview: null,
+      selectedReportArtifact: null,
+      selectedReportArtifactPreview: null,
+      reportDetailsDrawerOpen: false,
       reportJob: null,
       generatedReportRunId: null,
       reportSearchTerm: "",
@@ -124,6 +145,14 @@
       intelPreviewFilterTimer: null,
       intelDatePickerOpen: false,
       intelCalendarMonth: null,
+      macroCalendarView: "month",
+      macroCalendarMonth: null,
+      macroCalendarYear: null,
+      macroCalendarHighlightedDate: "",
+      macroCalendarDetailIndex: null,
+      onchainDataClass: "",
+      onchainMetricKey: "",
+      onchainSelectedIndex: null,
       dateRangePickerGlobalWired: false,
       intelligenceViewerTimer: null,
       settingsProfile: null,
@@ -169,6 +198,37 @@
       renderStrategyOhlcvPreview,
       syncDateRangePicker: syncDateRangePickerByInputs,
     });
+
+    function normalizeTimestampHourCycle(value) {
+      return value === "12h" ? "12h" : "24h";
+    }
+
+    function normalizeTimestampDateOrder(value) {
+      return value === "year_last" ? "year_last" : "year_first";
+    }
+
+    function applyTimestampDisplayOptions(options = {}) {
+      if (typeof options.timeZone === "string" && options.timeZone.trim()) {
+        displayTimezone = options.timeZone.trim();
+      }
+      timestampDisplay.hourCycle = normalizeTimestampHourCycle(options.hourCycle || timestampDisplay.hourCycle);
+      timestampDisplay.dateOrder = normalizeTimestampDateOrder(options.dateOrder || timestampDisplay.dateOrder);
+      shared.configureTimestampFormat({
+        timeZone: displayTimezone,
+        hourCycle: timestampDisplay.hourCycle,
+        dateOrder: timestampDisplay.dateOrder,
+      });
+    }
+
+    function applyTimestampDisplayOptionsFromProfile(profile) {
+      const fields = Array.isArray(profile?.fields) ? profile.fields : [];
+      const valueForPath = (path) => fields.find((field) => field.path === path)?.value;
+      applyTimestampDisplayOptions({
+        timeZone: valueForPath("dashboard.display_timezone"),
+        hourCycle: valueForPath("dashboard.timestamp_hour_cycle"),
+        dateOrder: valueForPath("dashboard.timestamp_date_order"),
+      });
+    }
 
     function label(value) {
       return text(value, "unknown").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -222,7 +282,11 @@
     }
 
     function formatTimestamp(value) {
-      return shared.formatTimestamp(value, displayTimezone);
+      return shared.formatTimestamp(value, {
+        timeZone: displayTimezone,
+        hourCycle: timestampDisplay.hourCycle,
+        dateOrder: timestampDisplay.dateOrder,
+      });
     }
 
     function durationBetween(start, end) {
@@ -345,7 +409,149 @@
           node.removeAttribute("aria-current");
         }
       });
+      renderGlobalTopbar();
       refreshCurrentView();
+    }
+
+    function renderGlobalTopbar() {
+      const titleText = VIEW_TITLES[state.view] || VIEW_TITLES.overview;
+      const title = document.querySelector("#global-page-title");
+      if (title) title.textContent = titleText;
+      const intelTabs = document.querySelector("#intel-tabs");
+      const strategyTabs = document.querySelector("#strategy-operation-tabs");
+      const reportGenerate = document.querySelector("#topbar-report-generate");
+      intelTabs?.classList.toggle("hidden", state.view !== "intelligence");
+      strategyTabs?.classList.toggle("hidden", state.view !== "strategies");
+      reportGenerate?.classList.toggle("hidden", state.view !== "reports");
+      intelTabs?.setAttribute("aria-hidden", state.view === "intelligence" ? "false" : "true");
+      strategyTabs?.setAttribute("aria-hidden", state.view === "strategies" ? "false" : "true");
+      refreshTopbarTabHints();
+    }
+
+    function setSidebarCollapsed(collapsed, options = {}) {
+      const shouldPersist = options.persist !== false;
+      app.classList.toggle("sidebar-collapsed", collapsed);
+      const button = document.querySelector("#sidebar-collapse-toggle");
+      const logoButton = document.querySelector("#brand-logo-toggle");
+      if (button) {
+        const labelText = collapsed ? "Expand navigation" : "Collapse navigation";
+        button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        button.setAttribute("aria-label", labelText);
+        button.title = labelText;
+      }
+      if (logoButton) {
+        const labelText = collapsed ? "Expand navigation" : "Collapse navigation";
+        logoButton.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        logoButton.setAttribute("aria-label", labelText);
+        logoButton.title = labelText;
+      }
+      if (shouldPersist) {
+        try {
+          window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
+        } catch (error) {
+          // Local storage can be unavailable in hardened browser modes.
+        }
+      }
+      refreshTopbarTabHints();
+    }
+
+    function initializeSidebarCollapse() {
+      let collapsed = false;
+      try {
+        collapsed = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1";
+      } catch (error) {
+        collapsed = false;
+      }
+      setSidebarCollapsed(collapsed, {persist: false});
+      document.querySelector("#sidebar-collapse-toggle")?.addEventListener("click", () => {
+        setSidebarCollapsed(!app.classList.contains("sidebar-collapsed"));
+      });
+      document.querySelector("#brand-logo-toggle")?.addEventListener("click", () => {
+        setSidebarCollapsed(!app.classList.contains("sidebar-collapsed"));
+      });
+    }
+
+    function updateTopbarTabHints(scroller) {
+      if (!scroller || scroller.classList.contains("hidden")) {
+        return;
+      }
+      const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      const canScroll = maxScroll > 2;
+      const canScrollLeft = canScroll && scroller.scrollLeft > 2;
+      const canScrollRight = canScroll && scroller.scrollLeft < maxScroll - 2;
+      scroller.classList.toggle("is-scrollable", canScroll);
+      scroller.classList.toggle("can-scroll-left", canScrollLeft);
+      scroller.classList.toggle("can-scroll-right", canScrollRight);
+    }
+
+    function refreshTopbarTabHints() {
+      window.requestAnimationFrame(() => {
+        document.querySelectorAll(".topbar-secondary").forEach(updateTopbarTabHints);
+      });
+    }
+
+    function wireTopbarTabDragging() {
+      document.querySelectorAll(".topbar-secondary").forEach((scroller) => {
+        let isDragging = false;
+        let didDrag = false;
+        let startX = 0;
+        let lastX = 0;
+        let startScrollLeft = 0;
+        scroller.addEventListener("scroll", () => updateTopbarTabHints(scroller), {passive: true});
+        scroller.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0 || scroller.scrollWidth <= scroller.clientWidth + 2) {
+            return;
+          }
+          isDragging = true;
+          didDrag = false;
+          startX = event.clientX;
+          lastX = event.clientX;
+          startScrollLeft = scroller.scrollLeft;
+        });
+        scroller.addEventListener("pointermove", (event) => {
+          if (!isDragging) {
+            return;
+          }
+          const delta = event.clientX - startX;
+          if (!didDrag && Math.abs(delta) > 3) {
+            didDrag = true;
+            scroller.classList.add("is-dragging");
+            scroller.setPointerCapture?.(event.pointerId);
+          }
+          lastX = event.clientX;
+          if (!didDrag) {
+            return;
+          }
+          event.preventDefault();
+          scroller.scrollLeft = startScrollLeft - delta;
+          updateTopbarTabHints(scroller);
+        });
+        const endDrag = (event) => {
+          if (!isDragging) {
+            return;
+          }
+          const moved = Math.abs((event?.clientX ?? lastX) - startX);
+          if (moved <= 3) {
+            didDrag = false;
+          }
+          isDragging = false;
+          scroller.classList.remove("is-dragging");
+          if (didDrag) {
+            scroller.releasePointerCapture?.(event.pointerId);
+          }
+          updateTopbarTabHints(scroller);
+        };
+        scroller.addEventListener("pointerup", endDrag);
+        scroller.addEventListener("pointercancel", endDrag);
+        scroller.addEventListener("click", (event) => {
+          if (!didDrag) {
+            return;
+          }
+          didDrag = false;
+          event.preventDefault();
+          event.stopPropagation();
+        }, true);
+      });
     }
 
     async function refreshCurrentView(options = {}) {
@@ -424,8 +630,7 @@
       setHtml("#report-library-groups", skeletonList(4));
       setHtml("#report-reader", `<article class="markdown-reader loading-surface">${skeletonLine("68%")}${skeletonLine("96%")}${skeletonLine("92%")}${skeletonLine("88%")}${skeletonLine("52%")}</article>`);
       setHtml("#report-outline", skeletonListItems(3));
-      setHtml("#report-details", skeletonRows(6));
-      setHtml("#report-sources", skeletonListItems(3));
+      setHtml("#report-details-drawer-body", skeletonRows(6));
     }
 
     function renderStrategiesLoading() {
@@ -482,7 +687,6 @@
           renderHealth();
           return state.health;
         } catch (error) {
-          document.querySelector("#config-ref").textContent = "unavailable";
           throw error;
         } finally {
           state.healthRequest = null;
@@ -493,8 +697,6 @@
 
     function renderHealth() {
       const loaded = state.health?.config?.loaded !== false;
-      const ref = loaded ? (state.health?.config?.ref || "Current config") : "not configured";
-      document.querySelector("#config-ref").textContent = ref;
       if (!loaded && state.view !== "settings") {
         setHashView("settings");
       }
@@ -558,7 +760,6 @@
       try {
         await loadHealth();
       } catch (error) {
-        document.querySelector("#config-ref").textContent = "unavailable";
       }
     }
 
@@ -779,11 +980,16 @@
       const reports = reportRecords();
       if (!reports.length) {
         state.selectedReport = null;
+        state.selectedReportDetail = null;
+        state.selectedReportPreview = null;
+        state.selectedReportArtifact = null;
+        state.selectedReportArtifactPreview = null;
         document.querySelector("#selected-report-kicker").textContent = "No report selected";
+        document.querySelector("#report-details-button").disabled = true;
         document.querySelector("#report-reader").innerHTML = `<div class="empty-state">No generated reports are available yet. Use Generate report to create a new report.</div>`;
-        document.querySelector("#report-details").innerHTML = "";
         document.querySelector("#report-outline").innerHTML = "";
-        document.querySelector("#report-sources").innerHTML = "";
+        document.querySelector("#report-source-files").innerHTML = "";
+        renderReportDetails(null, null);
       } else if (!state.selectedReport || !reports.some((item) => item.run_id === state.selectedReport.run_id)) {
         await selectReport(reports[0].run_id);
       } else {
@@ -797,19 +1003,17 @@
 
     function renderReportLibrary() {
       const query = document.querySelector("#report-search").value.trim().toLowerCase();
-      const records = reportRecords().filter((item) => !query || `${item.title} ${item.run_id}`.toLowerCase().includes(query));
-      const groups = ["Daily", "Monitor-triggered", "Manual"];
-      document.querySelector("#report-library-groups").innerHTML = groups.map((group) => {
-        const items = records.filter((item) => item.type === group);
-        return `<section><h3 class="group-title"><span>${escapeHtml(group)}</span><span class="tag">${items.length}</span></h3>${items.slice(0, 12).map((item) => {
+      const records = reportRecords().filter((item) => !query || `${item.type} ${item.title} ${item.run_id}`.toLowerCase().includes(query));
+      document.querySelector("#report-library-groups").innerHTML = records.length
+        ? `<div class="report-library-list">${records.slice(0, 36).map((item) => {
           const generated = item.run_id === state.generatedReportRunId;
           return `
           <button class="report-row ${state.selectedReport?.run_id === item.run_id ? "active" : ""}" type="button" data-report-run-id="${escapeHtml(item.run_id)}">
-            <span class="report-row-title"><span class="health-dot"></span>${escapeHtml(item.title)}${generated ? ` <span class="tag">new</span>` : ""}</span>
+            <span class="report-row-title"><span class="report-source-chip">${escapeHtml(item.type || "Report")}</span><span class="report-row-name">${escapeHtml(item.title)}${generated ? ` <span class="tag">new</span>` : ""}</span></span>
             <span class="report-row-meta">${escapeHtml(formatTimestamp(item.finished_at || item.started_at))}</span>
           </button>`;
-        }).join("") || `<div class="message">No ${escapeHtml(group.toLowerCase())} reports.</div>`}</section>`;
-      }).join("");
+        }).join("")}</div>`
+        : `<div class="message">No reports matched the current search.</div>`;
       document.querySelectorAll("[data-report-run-id]").forEach((button) => button.addEventListener("click", () => selectReport(button.dataset.reportRunId)));
     }
 
@@ -817,28 +1021,110 @@
       const run = reportRecords().find((item) => item.run_id === runId) || {run_id: runId};
       state.selectedReport = run;
       state.selectedReportDetail = null;
+      state.selectedReportPreview = null;
+      state.selectedReportArtifact = null;
+      state.selectedReportArtifactPreview = null;
       renderReportLibrary();
       document.querySelector("#selected-report-kicker").textContent = `${run.type || "Report"} - ${formatTimestamp(run.finished_at || run.started_at)}`;
+      document.querySelector("#report-details-button").disabled = false;
       document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Loading rendered report.</div>`;
+      document.querySelector("#report-source-files").innerHTML = `<div class="message">Loading report sources.</div>`;
       try {
         state.selectedReportDetail = await fetchJson(`${endpoints.runs}/${encodeURIComponent(runId)}`);
       } catch (_error) {
         state.selectedReportDetail = null;
       }
       renderReportDetails(run, state.selectedReportDetail);
-      const path = run.report_path || reportPath(run);
+      const reportArtifact = reportArtifactFiles(run, state.selectedReportDetail).find((file) => file.pinned || file.category === "report")
+        || {ref: run.report_path || reportPath(run), path: "report/report.md", title: "Report", category: "report", category_label: "Report", preview_kind: "markdown", pinned: true};
+      renderReportSourceFiles();
+      await selectReportArtifact(reportArtifact);
+    }
+
+    function renderReportSourceFiles() {
+      const target = document.querySelector("#report-source-files");
+      if (!target) return;
+      if (!state.selectedReport) {
+        target.innerHTML = `<div class="message">Select a report to inspect its sources.</div>`;
+        return;
+      }
+      const files = reportArtifactFiles(state.selectedReport, state.selectedReportDetail);
+      if (!files.length) {
+        target.innerHTML = `<div class="message">No report source files were recorded for this run.</div>`;
+        return;
+      }
+      const selectedRef = state.selectedReportArtifact?.ref || "";
+      const pinned = files.filter((file) => file.pinned || file.category === "report").slice(0, 1);
+      const groups = reportArtifactGroups(files);
+      target.innerHTML = `
+        ${pinned.map((file) => reportSourceButton(file, selectedRef, {pinned: true})).join("")}
+        ${groups.map((group) => `
+          <section class="report-source-group">
+            <h3>${escapeHtml(group.label)} <span>${escapeHtml(String(group.items.length))}</span></h3>
+            <div class="report-source-group-list">
+              ${group.items.map((file) => reportSourceButton(file, selectedRef)).join("")}
+            </div>
+          </section>`).join("")}
+      `;
+      target.querySelectorAll("[data-report-artifact-ref]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const ref = button.dataset.reportArtifactRef || "";
+          const artifact = files.find((file) => file.ref === ref);
+          if (artifact) selectReportArtifact(artifact);
+        });
+      });
+    }
+
+    function reportSourceButton(file, selectedRef, options = {}) {
+      const active = file.ref === selectedRef;
+      const size = file.size_bytes ? formatFileSize(file.size_bytes) : file.preview_kind;
+      return `
+        <button class="report-source-row ${active ? "active" : ""} ${options.pinned ? "pinned" : ""}" type="button" data-report-artifact-ref="${escapeHtml(file.ref)}">
+          <span class="report-source-row-main">
+            <span class="report-source-row-title">${escapeHtml(file.title || file.name)}</span>
+            <span class="report-source-row-path">${escapeHtml(file.path || file.ref)}</span>
+          </span>
+          <span class="report-source-row-meta">${escapeHtml(size || "file")}</span>
+        </button>`;
+    }
+
+    function formatFileSize(bytes) {
+      const value = Number(bytes || 0);
+      if (!Number.isFinite(value) || value <= 0) return "";
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+      return `${(value / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    async function selectReportArtifact(artifact) {
+      if (!artifact?.ref) return;
+      state.selectedReportArtifact = artifact;
+      renderReportSourceFiles();
+      document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Loading ${escapeHtml(artifact.title || artifact.name || "report source")}.</div>`;
       try {
-        const preview = await fetchJson(`${endpoints.preview}?path=${encodeURIComponent(path)}`);
-        state.selectedReportPreview = preview;
-        renderReportPreview(preview, run);
+        const preview = await fetchJson(`${endpoints.preview}?path=${encodeURIComponent(artifact.ref)}`);
+        state.selectedReportArtifactPreview = preview;
+        if (artifact.pinned || artifact.category === "report") {
+          state.selectedReportPreview = preview;
+          renderReportPreview(preview, state.selectedReport);
+        } else {
+          renderReportArtifactPreview(preview, artifact);
+        }
       } catch (error) {
-        document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Report preview is unavailable. ${escapeHtml(error.message)}</div>`;
+        document.querySelector("#report-reader").innerHTML = `<div class="empty-state">Report source preview is unavailable. ${escapeHtml(error.message)}</div>`;
+        renderOutline([]);
       }
     }
 
     function renderReportDetails(run, detail) {
+      const title = document.querySelector("#report-details-drawer-title");
+      if (title) title.textContent = run?.title || "Report details";
+      if (!run) {
+        setHtml("#report-details-drawer-body", `<div class="empty-state">Select a report to inspect its details.</div>`);
+        return;
+      }
       const refs = reportSourceRefs(run, detail);
-      document.querySelector("#report-details").innerHTML = [
+      const details = [
         detailRow("Type", run.type),
         detailRow("Run", run.run_id),
         detailRow("Run role", runRole(run)),
@@ -847,9 +1133,42 @@
         detailRow("Generated", formatTimestamp(run.finished_at || run.started_at)),
         detailRow("Origin", run.codex_status === "skipped" ? "Local pipeline" : "Codex report"),
       ].join("");
-      document.querySelector("#report-sources").innerHTML = refs.length
-        ? refs.slice(0, 12).map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("")
-        : `<li class="message">No source refs recorded for this report.</li>`;
+      setHtml("#report-details-drawer-body", `
+        <div class="artifact-summary">
+          <span class="report-source-chip">${escapeHtml(run.type || "Report")}</span>
+          ${statusPill(run.status || "unknown")}
+        </div>
+        <div class="report-detail-stack">${details}</div>
+        <section class="drawer-section">
+          <h3>Sources</h3>
+          <ul class="compact-list report-source-list">
+            ${refs.length ? refs.slice(0, 12).map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("") : `<li class="message">No source refs recorded for this report.</li>`}
+          </ul>
+        </section>
+      `);
+    }
+
+    function openReportDetailsDrawer() {
+      if (!state.selectedReport) {
+        showToast("Select a report first.");
+        return;
+      }
+      state.reportDetailsDrawerOpen = true;
+      renderReportDetails(state.selectedReport, state.selectedReportDetail);
+      document.querySelector("#report-details-drawer")?.classList.remove("hidden");
+      const backdrop = document.querySelector("#report-details-drawer-backdrop");
+      backdrop?.classList.remove("hidden");
+      backdrop?.setAttribute("aria-hidden", "false");
+      document.querySelector("#report-details-drawer-close")?.focus({preventScroll: true});
+    }
+
+    function closeReportDetailsDrawer(returnFocus = true) {
+      state.reportDetailsDrawerOpen = false;
+      document.querySelector("#report-details-drawer")?.classList.add("hidden");
+      const backdrop = document.querySelector("#report-details-drawer-backdrop");
+      backdrop?.classList.add("hidden");
+      backdrop?.setAttribute("aria-hidden", "true");
+      if (returnFocus) document.querySelector("#report-details-button")?.focus({preventScroll: true});
     }
 
     function runRole(run) {
@@ -865,20 +1184,223 @@
       if (!content) {
         const messages = [...(preview.warnings || []), ...(preview.errors || [])];
         document.querySelector("#report-reader").innerHTML = `<div class="empty-state">${escapeHtml(messages.join(" ") || "No readable report content is recorded for this run.")}</div>`;
-        renderOutline("");
+        renderOutline([]);
         return;
       }
       const markdown = typeof content === "string" ? content : JSON.stringify(content, null, 2);
       document.querySelector("#report-reader").innerHTML = `<article class="markdown-reader">${markdownToHtml(markdown, state.reportSearchTerm)}</article>`;
-      renderOutline(markdown);
+      renderOutline(annotateReportHeadings());
     }
 
-    function renderOutline(markdown) {
-      const headings = markdown.split(/\r?\n/).filter((line) => /^#{1,3}\s+/.test(line)).slice(0, 12);
-      document.querySelector("#report-outline").innerHTML = headings.length ? headings.map((line, index) => {
-        const title = line.replace(/^#{1,3}\s+/, "");
-        return `<li><a href="#" data-outline-index="${index}">${escapeHtml(title)}</a></li>`;
+    function renderReportArtifactPreview(preview, artifact) {
+      const messages = [...(preview?.warnings || []), ...(preview?.errors || [])];
+      if (!preview || preview.status !== "available") {
+        document.querySelector("#report-reader").innerHTML = `
+          <article class="artifact-document">
+            ${artifactDocumentHeader(artifact)}
+            <div class="empty-state">${escapeHtml(messages.join(" ") || "This report source cannot be rendered.")}</div>
+          </article>`;
+        renderOutline(annotateReportHeadings());
+        return;
+      }
+      const kind = preview.kind === "text" && artifact.preview_kind ? artifact.preview_kind : preview.kind;
+      const body = kind === "markdown"
+        ? `<div class="markdown-reader">${markdownToHtml(String(preview.preview || ""), state.reportSearchTerm)}</div>`
+        : kind === "json" || kind === "jsonl"
+          ? renderJsonArtifact(preview.preview)
+          : kind === "csv"
+            ? renderCsvArtifact(String(preview.preview || ""))
+            : renderTextArtifact(String(preview.preview || ""));
+      document.querySelector("#report-reader").innerHTML = `
+        <article class="artifact-document">
+          ${artifactDocumentHeader(artifact, preview)}
+          ${body}
+          ${preview.truncated ? `<div class="message">Preview is bounded and does not include the full file.</div>` : ""}
+        </article>`;
+      renderOutline(annotateReportHeadings());
+    }
+
+    function artifactDocumentHeader(artifact, preview = null) {
+      const size = artifact?.size_bytes ? formatFileSize(artifact.size_bytes) : "";
+      const meta = unique([artifact?.path || artifact?.ref, preview?.kind || artifact?.preview_kind, size]).join(" - ");
+      return `
+        <header class="artifact-document-header">
+          <div>
+            <span class="report-source-chip">${escapeHtml(artifact?.category_label || "Source")}</span>
+            <h1>${escapeHtml(artifact?.title || artifact?.name || "Report source")}</h1>
+            <p>${escapeHtml(meta)}</p>
+          </div>
+        </header>`;
+    }
+
+    function renderJsonArtifact(value) {
+      if (typeof value === "string") {
+        try {
+          return `<div class="artifact-structured">${renderJsonValue(JSON.parse(value), "Document")}</div>`;
+        } catch (_error) {
+          return `
+            <section class="artifact-section">
+              <h2>JSON preview</h2>
+              <div class="artifact-list-block">
+                <p>This JSON source is larger than the bounded preview and cannot be safely rendered as structured fields from the truncated sample.</p>
+              </div>
+            </section>`;
+        }
+      }
+      return `<div class="artifact-structured">${renderJsonValue(value, "Document")}</div>`;
+    }
+
+    function renderJsonValue(value, label) {
+      if (Array.isArray(value)) {
+        return renderArrayArtifact(value, label);
+      }
+      if (value && typeof value === "object") {
+        const entries = Object.entries(value);
+        const scalarRows = entries.filter(([, item]) => !item || typeof item !== "object");
+        const nested = entries.filter(([, item]) => item && typeof item === "object");
+        return `
+          <section class="artifact-section">
+            <h2>${escapeHtml(label)}</h2>
+            ${scalarRows.length ? `<div class="artifact-field-grid">${scalarRows.map(([key, item]) => artifactField(key, item)).join("")}</div>` : ""}
+            ${nested.map(([key, item]) => renderJsonValue(item, key)).join("")}
+          </section>`;
+      }
+      return `
+        <section class="artifact-section">
+          <h2>${escapeHtml(label)}</h2>
+          <p>${escapeHtml(text(value))}</p>
+        </section>`;
+    }
+
+    function renderArrayArtifact(values, label) {
+      const rows = values.slice(0, 40);
+      const objectRows = rows.filter((item) => item && typeof item === "object" && !Array.isArray(item));
+      if (objectRows.length && objectRows.length === rows.length) {
+        const headers = unique(objectRows.flatMap((item) => Object.keys(item))).slice(0, 8);
+        return `
+          <section class="artifact-section">
+            <h2>${escapeHtml(label)} <span>${escapeHtml(String(values.length))}</span></h2>
+            ${artifactTable(headers, objectRows.map((row) => headers.map((header) => formatArtifactCell(row[header]))))}
+          </section>`;
+      }
+      return `
+        <section class="artifact-section">
+          <h2>${escapeHtml(label)} <span>${escapeHtml(String(values.length))}</span></h2>
+          <div class="artifact-list-block">${rows.map((item) => `<p>${escapeHtml(text(item))}</p>`).join("")}</div>
+        </section>`;
+    }
+
+    function artifactField(key, value) {
+      return `
+        <div class="artifact-field-card">
+          <span>${escapeHtml(key)}</span>
+          <strong>${escapeHtml(formatArtifactCell(value))}</strong>
+        </div>`;
+    }
+
+    function renderCsvArtifact(content) {
+      const rows = parseCsvRows(content).slice(0, 60);
+      if (!rows.length) {
+        return `<div class="empty-state">No rows were available in this CSV preview.</div>`;
+      }
+      const headers = rows[0].map((header, index) => header || `Column ${index + 1}`);
+      return `
+        <section class="artifact-section">
+          <h2>CSV rows</h2>
+          ${artifactTable(headers, rows.slice(1).map((row) => headers.map((_, index) => row[index] || "")))}
+        </section>`;
+    }
+
+    function parseCsvRows(content) {
+      return String(content || "").split(/\r?\n/).filter((line) => line.trim()).map((line) => {
+        const cells = [];
+        let current = "";
+        let quoted = false;
+        for (let index = 0; index < line.length; index += 1) {
+          const char = line[index];
+          const next = line[index + 1];
+          if (char === '"' && quoted && next === '"') {
+            current += '"';
+            index += 1;
+          } else if (char === '"') {
+            quoted = !quoted;
+          } else if (char === "," && !quoted) {
+            cells.push(current.trim());
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        cells.push(current.trim());
+        return cells;
+      });
+    }
+
+    function renderTextArtifact(content) {
+      const blocks = String(content || "").split(/\n{2,}/).map((block) => block.trim()).filter(Boolean).slice(0, 80);
+      if (!blocks.length) {
+        return `<div class="empty-state">No text content was available in this preview.</div>`;
+      }
+      return `
+        <section class="artifact-section">
+          <h2>Text preview</h2>
+          <div class="artifact-text-blocks">
+            ${blocks.map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`).join("")}
+          </div>
+        </section>`;
+    }
+
+    function artifactTable(headers, rows) {
+      return `
+        <div class="markdown-table-wrap artifact-table-wrap">
+          <table>
+            <thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+            <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function formatArtifactCell(value) {
+      if (value === null || value === undefined) return "n/a";
+      if (typeof value === "object") return Array.isArray(value) ? `${value.length} items` : `${Object.keys(value).length} fields`;
+      return text(value);
+    }
+
+    function annotateReportHeadings() {
+      const headings = Array.from(document.querySelectorAll("#report-reader .markdown-reader h1, #report-reader .markdown-reader h2, #report-reader .markdown-reader h3")).slice(0, 12);
+      headings.forEach((heading, index) => {
+        heading.dataset.reportHeadingIndex = String(index);
+      });
+      return headings.map((heading, index) => ({
+        index,
+        title: heading.textContent.trim() || `Section ${index + 1}`,
+      }));
+    }
+
+    function renderOutline(headings) {
+      document.querySelector("#report-outline").innerHTML = headings.length ? headings.map((heading) => {
+        return `<li><a href="#" data-outline-index="${heading.index}">${escapeHtml(heading.title)}</a></li>`;
       }).join("") : `<li class="message">No outline extracted.</li>`;
+      wireReportOutline();
+    }
+
+    function wireReportOutline() {
+      document.querySelectorAll("[data-outline-index]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          const index = link.dataset.outlineIndex || "0";
+          const reader = document.querySelector("#report-reader");
+          const heading = document.querySelector(`#report-reader [data-report-heading-index="${CSS.escape(index)}"]`);
+          if (!reader || !heading) return;
+          const offset = heading.getBoundingClientRect().top - reader.getBoundingClientRect().top + reader.scrollTop - 14;
+          if (reader.scrollHeight > reader.clientHeight + 2) {
+            reader.scrollTo({top: Math.max(0, offset), behavior: "smooth"});
+          } else {
+            heading.scrollIntoView({block: "start", behavior: "smooth"});
+          }
+          document.querySelectorAll("[data-outline-index]").forEach((item) => item.classList.toggle("active", item === link));
+        });
+      });
     }
 
     async function deleteSelectedReport() {
@@ -905,21 +1427,6 @@
       } catch (error) {
         showToast(`Delete failed: ${error.message}`);
       }
-    }
-
-    function downloadSelectedReport() {
-      const preview = state.selectedReportPreview;
-      if (!preview || typeof preview.preview !== "string") {
-        showToast("No report text is available to download.");
-        return;
-      }
-      const blob = new Blob([preview.preview], {type: "text/markdown"});
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${state.selectedReport?.run_id || "report"}.md`;
-      link.click();
-      URL.revokeObjectURL(url);
     }
 
     async function refreshStrategies() {
@@ -1406,7 +1913,6 @@
           <label>End time<input class="text-input" type="time" step="1" data-range-end-time value="${escapeHtml(normalizeTime(field.dataset.pendingEndTime, "23:59:59"))}"></label>
         </div>
         <div class="range-picker-actions">
-          <span class="range-picker-hint">Click two dates to set one UTC range.</span>
           <button class="ghost-button compact-button" type="button" data-range-cancel>Cancel</button>
           <button class="primary-button compact-button" type="button" data-range-apply>Apply</button>
         </div>
@@ -3237,6 +3743,7 @@
 
     async function loadConfigProfile() {
       state.settingsProfile = await fetchJson(endpoints.settings);
+      applyTimestampDisplayOptionsFromProfile(state.settingsProfile);
       return state.settingsProfile;
     }
 
@@ -3608,6 +4115,7 @@
         const result = await postJson(endpoints.settings, {confirm: true, changes: state.settingsChanges});
         if (result.status === "succeeded") {
           state.settingsProfile = result.profile;
+          applyTimestampDisplayOptionsFromProfile(state.settingsProfile);
           state.settingsChanges = {};
           renderSettings();
         }
@@ -3644,6 +4152,7 @@
         const result = await postJson(endpoints.configSelect, {config_path: configPath});
         if (result.status === "succeeded") {
           state.settingsProfile = result.profile;
+          applyTimestampDisplayOptionsFromProfile(state.settingsProfile);
           state.settingsChanges = {};
           await loadHealth();
           document.querySelector("#validation-results").innerHTML = `<div class="message"><strong>Config loaded</strong><br>${escapeHtml(result.config?.ref || configPath)}</div>`;
@@ -3966,21 +4475,26 @@
 
     function wireGlobalEvents() {
       dialogs.wire();
+      initializeSidebarCollapse();
+      wireTopbarTabDragging();
       wireDateRangePickers();
       document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
         event.preventDefault();
         setHashView(node.dataset.viewTarget);
       }));
-      document.querySelector("#global-refresh").addEventListener("click", () => refreshCurrentView({force: true}));
       document.querySelector("#report-search").addEventListener("input", renderReportLibrary);
       document.querySelector("#report-reader-search").addEventListener("input", () => {
         state.reportSearchTerm = document.querySelector("#report-reader-search").value;
-        if (state.selectedReportPreview && state.selectedReport) {
+        if (state.selectedReportArtifactPreview && state.selectedReportArtifact && !(state.selectedReportArtifact.pinned || state.selectedReportArtifact.category === "report")) {
+          renderReportArtifactPreview(state.selectedReportArtifactPreview, state.selectedReportArtifact);
+        } else if (state.selectedReportPreview && state.selectedReport) {
           renderReportPreview(state.selectedReportPreview, state.selectedReport);
         }
       });
       document.querySelector("#delete-report-button").addEventListener("click", deleteSelectedReport);
-      document.querySelector("#download-report-button").addEventListener("click", downloadSelectedReport);
+      document.querySelector("#report-details-button").addEventListener("click", openReportDetailsDrawer);
+      document.querySelector("#report-details-drawer-close").addEventListener("click", () => closeReportDetailsDrawer());
+      document.querySelector("#report-details-drawer-backdrop").addEventListener("click", () => closeReportDetailsDrawer());
       document.querySelector("#run-backtest-button").addEventListener("click", startBacktest);
       document.querySelector("#run-experiment-button").addEventListener("click", startStrategyExperiment);
       document.querySelector("#run-optimize-button").addEventListener("click", startStrategyOptimize);
@@ -4026,6 +4540,11 @@
       dataViewerWorkflow.wire();
       document.querySelectorAll("[data-report-job]").forEach((button) => button.addEventListener("click", startReportJob));
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && state.reportDetailsDrawerOpen) {
+          closeReportDetailsDrawer();
+        }
+      });
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {
         state.selectedIntelTab = button.dataset.intelTab;
         state.selectedIntelItem = null;
@@ -4037,12 +4556,21 @@
         state.intelPreviewCategory = "";
         state.intelDatePickerOpen = false;
         state.intelCalendarMonth = null;
+        state.macroCalendarView = "month";
+        state.macroCalendarMonth = null;
+        state.macroCalendarYear = null;
+        state.macroCalendarHighlightedDate = "";
+        state.macroCalendarDetailIndex = null;
+        state.onchainDataClass = "";
+        state.onchainMetricKey = "";
+        state.onchainSelectedIndex = null;
         renderIntelligence();
       }));
       document.querySelector("#settings-save").addEventListener("click", saveSettings);
       document.querySelector("#settings-backup").addEventListener("click", backupSettings);
       document.querySelector("#settings-load-config").addEventListener("click", loadSelectedConfig);
       window.addEventListener("hashchange", () => setView(viewFromHash()));
+      window.addEventListener("resize", refreshTopbarTabHints);
       wireShortcutButtons();
     }
 

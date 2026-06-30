@@ -20,6 +20,8 @@ from halpha.dashboard.settings import (
 EXPECTED_EDITABLE_CONFIG_PATHS = {
     "codex.enabled",
     "dashboard.display_timezone",
+    "dashboard.timestamp_date_order",
+    "dashboard.timestamp_hour_cycle",
     "macro_calendar.data_classes",
     "macro_calendar.enabled",
     "macro_calendar.lookahead_days",
@@ -223,12 +225,25 @@ def test_dashboard_settings_save_cleans_temp_and_updates_config(tmp_path: Path) 
     result = dashboard_save_config_profile(
         config,
         config_path=config_path,
-        request={"confirm": True, "changes": {"dashboard.display_timezone": "UTC"}},
+        request={
+            "confirm": True,
+            "changes": {
+                "dashboard.display_timezone": "UTC",
+                "dashboard.timestamp_hour_cycle": "12h",
+                "dashboard.timestamp_date_order": "year_last",
+            },
+        },
     )
 
     assert result["status"] == "succeeded"
-    assert result["changed_paths"] == ["dashboard.display_timezone"]
+    assert result["changed_paths"] == [
+        "dashboard.display_timezone",
+        "dashboard.timestamp_date_order",
+        "dashboard.timestamp_hour_cycle",
+    ]
     assert config["dashboard"]["display_timezone"] == "UTC"
+    assert config["dashboard"]["timestamp_hour_cycle"] == "12h"
+    assert config["dashboard"]["timestamp_date_order"] == "year_last"
     assert not list(tmp_path.glob(".config.local.yaml.*.dashboard-save.tmp"))
     assert not (tmp_path / ".config.local.yaml.dashboard-save.tmp").exists()
     assert str(tmp_path) not in str(result)

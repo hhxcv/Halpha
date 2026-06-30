@@ -198,6 +198,10 @@ spacing:
   page-x: 24px
   card-padding: 20px
   grid-gap: 16px
+  topbar-height: 64px
+  sidebar-width: 236px
+  sidebar-collapsed-width: 72px
+  tab-scroll-fade: 18px
 motion:
   instant: 90ms
   fast: 150ms
@@ -213,9 +217,34 @@ components:
   sidebar:
     backgroundColor: "{colors.surface-inverse}"
     textColor: "{colors.text-inverse}"
+    width: "{spacing.sidebar-width}"
+  sidebar-collapsed:
+    backgroundColor: "{colors.surface-inverse}"
+    textColor: "{colors.text-inverse}"
+    width: "{spacing.sidebar-collapsed-width}"
+  sidebar-toggle:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.md}"
+    size: "34px"
   topbar:
     backgroundColor: "{colors.topbar-bg}"
     textColor: "{colors.text-primary}"
+    height: "{spacing.topbar-height}"
+    padding: "0 20px"
+  topbar-tabs:
+    backgroundColor: "{colors.surface-muted}"
+    textColor: "{colors.text-secondary}"
+    rounded: "{rounded.md}"
+    padding: "3px"
+    gap: "3px"
+  topbar-tab-active:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.sm}"
+    padding: "7px 9px"
+  topbar-scroll-fade:
+    maskImage: "linear-gradient(to right, transparent, #000 {spacing.tab-scroll-fade}, #000 calc(100% - {spacing.tab-scroll-fade}), transparent)"
   panel:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.text-primary}"
@@ -412,6 +441,26 @@ components:
   rail-separator:
     backgroundColor: "{colors.rail-border}"
     size: "1px"
+  report-source-row:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.md}"
+    padding: "9px 10px"
+  report-source-row-active:
+    backgroundColor: "#FFF4C2"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.md}"
+    borderColor: "{colors.primary}"
+  artifact-document:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.text-primary}"
+    rounded: "0"
+    padding: "0"
+  artifact-field-card:
+    backgroundColor: "{colors.surface-muted}"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.md}"
 ---
 
 # Halpha DESIGN.md
@@ -591,8 +640,9 @@ The left rail contains:
 
 * formal Halpha logo lockup;
 * primary navigation;
-* compact local pipeline state when useful;
-* latest run freshness when useful.
+* compact monitor or pipeline state when useful;
+* latest run freshness when useful;
+* a collapse control for dense review work.
 
 Navigation order:
 
@@ -611,6 +661,11 @@ Rules:
 * Use icon plus text navigation.
 * Active navigation uses `primary`.
 * Keep rail cards compact. They should not compete with main content.
+* The rail must support a collapsed icon-only state on desktop and tablet.
+* The collapsed state uses the same active navigation style, hides labels and rail copy, and preserves the monitor status dot.
+* The collapse state may persist locally in browser storage. It is display state, not product data or runtime authority.
+* The collapse toggle lives in the rail header, uses a current-color chevron, and must not look like a primary action.
+* In collapsed or responsive compact rail state, do not show a separate expand chevron button. The Halpha logo mark becomes the rail header control.
 
 ### Main area
 
@@ -622,6 +677,43 @@ Use a disciplined 12-column desktop grid:
 20px panel padding
 main content plus right context rail when needed
 ```
+
+Every page title belongs in the persistent top bar, not inside the page body.
+The body should begin with the actual workflow content, filters, summary,
+preview, chart, or artifact review surface.
+
+The top bar is a page header:
+
+```text
+Left: current page title and optional short subtitle
+Middle/right: contextual secondary tabs when the current page has them
+No persistent runtime status text
+No global refresh button
+```
+
+Secondary page tabs, such as Intelligence data types or Strategy operations,
+sit in the top bar to the right of the title but remain left-aligned within
+their available region. Do not push them to the far right.
+
+If secondary tabs are wider than the available region:
+
+* allow horizontal drag or trackpad scrolling;
+* hide the scrollbar;
+* show edge fade hints when more tabs are available;
+* keep each tab label on one line;
+* do not shrink labels until they truncate or wrap awkwardly.
+
+The top bar must not show:
+
+```text
+Local mode
+Timezone
+Config path
+Global refresh
+```
+
+Those values may exist in internal state or settings views, but they are not
+persistent header content.
 
 Overview priority:
 
@@ -823,23 +915,32 @@ The app shell should establish identity immediately:
 Light operating rail
 Formal logo
 Bright main surface
-Compact top status bar
+Persistent page-title top bar
 Evidence-first content
 ```
 
-Top status may show:
+The top bar should show:
 
 ```text
-Timezone
-Active config
-Latest run
-Data freshness
-Pipeline state
-Theme switcher
-Primary global action
+Current page title
+Optional short subtitle
+Contextual secondary tabs
 ```
 
-Keep the top bar quiet. It must not cover centered feedback.
+The top bar should not show:
+
+```text
+Local mode
+Timezone
+Active config path
+Global refresh button
+Long status copy
+```
+
+Keep the top bar quiet. It must not cover centered feedback, and it must not
+become a runtime telemetry strip. Runtime state belongs in Overview, Monitor,
+Settings, page-local status controls, issue drawers, or workflow progress
+surfaces.
 
 ### Buttons and actions
 
@@ -874,6 +975,8 @@ Rules:
 * Do not use green CTA buttons by default.
 * Busy buttons show a local moving progress strip. The strip should travel left to right or cleanly sweep across the full button, not oscillate in a cramped corner.
 * Long-running actions must also set `aria-busy`.
+* Refresh actions are page-local or region-local. Do not add a persistent global refresh button to the top bar.
+* Collection, export, backtest, and report actions live with the workflow they operate on, not in global navigation.
 
 ### Navigation and selection
 
@@ -889,6 +992,18 @@ Rules:
 * Do not use unrelated accent colors for nested navigation. A green active state is invalid in the solar theme unless it carries a semantic success meaning.
 * Chevron, caret, and disclosure icons must inherit current text color and use the same stroke style as the rest of the shell icons.
 * Active navigation, active tabs, active segmented controls, and selected settings sections must look related.
+* Page-level secondary tabs belong in the top bar when they switch major sections inside a page, such as Intelligence data types or Strategy operation modes.
+* Top-bar tabs are left-aligned in the tab region. Do not right-align the tab group.
+* Top-bar tabs use a bordered neutral group with `primary` selected state.
+* Top-bar tabs may scroll horizontally when space is limited, but visible scrollbars are not allowed.
+* Use an edge fade or equivalent subtle mask to communicate hidden tabs. Do not use arrows unless the tab set cannot be dragged or trackpad-scrolled.
+* Dragging a tab strip must not accidentally activate a tab. Activation occurs on click or keyboard selection, not on drag.
+* Page-level tab labels should be short enough for the header. The full semantic name remains in the panel title or content when the tab label is abbreviated.
+* Do not place refresh buttons, source selectors, or workflow inputs in the page-level tab group.
+* Primary side navigation must support expanded and collapsed states. Expanded uses icon plus text; collapsed uses icons only and preserves active state.
+* Collapsing the side rail is a local view preference. It must not change routes, reset filters, reload data, or create product state.
+* In a collapsed or responsive compact rail, the logo mark is the only rail header target. Avoid placing an expand arrow beside or on top of the mark.
+* Settings and similar vertical subsection selectors use the same tab visual language instead of colored list menus.
 
 ### Sliders, switches, and inputs
 
@@ -931,6 +1046,9 @@ Rules:
 * In-range days use `info-bg` and `info-text`.
 * Time wheels use the same selected and hover language as the calendar.
 * Presets use segmented control styling.
+* Date and range popovers use one outer surface only. Preset rows, time rows, and action rows must not add their own gray panel backgrounds, nested borders, or shadows.
+* Separate popover internals with `gap` and whitespace, not adjacent borders or zero-gap seams.
+* Action rows contain actions only. Do not place helper text beside action buttons where it can be clipped; use labels, tooltips, or clear control copy instead.
 * The summary should state the actual window and candle interval.
 
 ### Toasts and feedback surfaces
@@ -974,6 +1092,19 @@ Drawers and command palettes should:
 * return the user to the previous context after close.
 
 Artifact drawers must show summaries first and bounded source detail second. Do not dump full raw artifacts by default.
+
+Properties and metadata panels should be right-side drawers when they would
+steal horizontal room from the main reading surface. This is the default for
+Intelligence record properties.
+
+Rules:
+
+* Keep the main content area wide enough for readable text, charts, or previews.
+* Place the properties entry in the local title or header action area.
+* The drawer starts with a human summary, then structured attributes.
+* Long values wrap inside the drawer body, not in small badges or table cells.
+* Do not keep a permanent right properties column when the same information can live in a drawer.
+* Collection configuration that is not part of ordinary browsing opens in a dialog. Preview filters stay on the page; collection parameters and coverage timeline stay in the collection dialog.
 
 ### Badges and status language
 
@@ -1166,6 +1297,58 @@ Open report action
 
 Use well-spaced metadata rows. Do not crowd vertical separators against text.
 
+### Report review surfaces
+
+The Reports view is an artifact review workflow, not a file explorer. It should
+let the user read the final report and inspect the bounded evidence files that
+support it without leaving the report context.
+
+Required layout:
+
+```text
+Left rail: report library
+Main surface: selected report or selected source file reader
+Right rail: report outline first, report source files second
+```
+
+Rules:
+
+* The generated report file is pinned at the top of the source list and is the
+  way back to the report body.
+* The outline remains a navigation aid for the currently rendered main reader.
+* Source files are grouped by durable run-local categories such as Report,
+  Analysis, Codex context, Raw inputs, Run metadata, and Other.
+* Source rows show a readable title, bounded run-relative path, and compact size
+  or kind metadata.
+* Selected source rows use the same `primary` selected-state language as tabs
+  and navigation. Do not use green active states unless the row itself is a
+  semantic success state.
+* Report details stay in a right-side drawer. Do not reserve a permanent
+  metadata column that narrows the report reader.
+* Source browsing must not expose absolute machine paths, private config
+  locations, or raw local private values.
+
+### Artifact readers
+
+Artifact readers convert bounded source previews into human-readable evidence
+surfaces. They must not dump raw files into the main reader by default.
+
+Rules:
+
+* Markdown is rendered as reading content.
+* JSON and JSONL are rendered as structured fields, tables, and summaries when
+  the bounded preview can be parsed.
+* CSV is rendered as a table with bounded rows.
+* Text, YAML, and logs are rendered as paragraph or line blocks, not as a raw
+  full-file code dump.
+* Oversized or truncated structured files show a bounded-preview explanation
+  instead of displaying invalid partial JSON as raw text.
+* Unsupported binary or database-like files show an explicit unsupported state.
+* The reader header shows category, title, source ref, kind, and size where
+  available.
+* Long source refs, URLs, JSON keys, and paths wrap inside the reader without
+  overlapping buttons, badges, or adjacent columns.
+
 ### Monitor cards
 
 Monitor states:
@@ -1296,6 +1479,13 @@ Link to manifest or logs
 * Prefer borders over heavy shadows.
 * Use mature chart components for K-line interaction.
 * Treat AI as explanation, not primary judgment.
+* Put page titles in the persistent top bar.
+* Put page-level secondary tabs next to the title, left-aligned within the top bar.
+* Hide horizontal tab scrollbars and use edge fades to show there is more content.
+* Preserve a collapsible side rail for dense analysis workflows.
+* Use the logo mark as the collapsed rail's expand control.
+* Use drawers for secondary properties so the main reading area stays wide.
+* Put collection setup in a dialog when it is not the primary browsing task.
 
 ### Don't
 
@@ -1315,3 +1505,10 @@ Link to manifest or logs
 * Do not display sensitive config values unnecessarily.
 * Do not brand runtime or deployment mode as a product feature.
 * Do not add visual complexity before the intelligence contract is clear.
+* Do not show `Local mode`, timezone, or config path in the persistent top bar.
+* Do not add a persistent global refresh button to the top bar.
+* Do not right-align page-level tab groups.
+* Do not show visible scrollbars for top-bar tab overflow.
+* Do not place preview filters and collection parameters in the same control band.
+* Do not reserve permanent columns for metadata that can live in a drawer.
+* Do not show a separate expand chevron button in the collapsed or responsive compact rail header.

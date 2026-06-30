@@ -34,17 +34,24 @@
     data-config-select-endpoint="/api/config/select"
     data-text-intelligence-endpoint="/api/text-intelligence"
     data-display-timezone="__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__"
+    data-timestamp-hour-cycle="__HALPHA_DASHBOARD_TIMESTAMP_HOUR_CYCLE__"
+    data-timestamp-date-order="__HALPHA_DASHBOARD_TIMESTAMP_DATE_ORDER__"
   >
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M24 5v38M5 24h38M11 11l26 26M37 11 11 37"></path>
-          <circle cx="24" cy="24" r="12"></circle>
-        </svg>
-        <div class="brand-copy">
-          <div class="brand-name">Halpha</div>
-          <div class="brand-subtitle">Market Intelligence</div>
-        </div>
+        <button class="brand-main brand-logo-toggle" type="button" id="brand-logo-toggle" aria-label="Collapse navigation" aria-expanded="true" title="Collapse navigation">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M24 5v38M5 24h38M11 11l26 26M37 11 11 37"></path>
+            <circle cx="24" cy="24" r="12"></circle>
+          </svg>
+          <span class="brand-copy">
+            <span class="brand-name">Halpha</span>
+            <span class="brand-subtitle">Market Intelligence</span>
+          </span>
+        </button>
+        <button class="sidebar-toggle" type="button" id="sidebar-collapse-toggle" aria-label="Collapse navigation" aria-expanded="true" title="Collapse navigation">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+        </button>
       </div>
       <nav class="nav">
         <a class="nav-item active" href="#overview" data-view-target="overview" aria-current="page">
@@ -76,19 +83,33 @@
     </aside>
 
     <main class="main-shell">
-      <header class="global-topbar" aria-label="Global dashboard status">
-        <span class="top-status-item">Timezone: <strong id="display-timezone">__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__</strong></span>
-        <span class="top-status-item">Config: <strong id="config-ref">Loading</strong></span>
-        <button class="icon-button" type="button" id="global-refresh" title="Refresh current page">R</button>
+      <header class="global-topbar" aria-label="Dashboard page header">
+        <div class="topbar-title-group">
+          <h1 id="global-page-title">Overview</h1>
+        </div>
+        <div class="topbar-secondary">
+          <div class="tabs topbar-secondary-tabs hidden" id="intel-tabs" aria-label="Intelligence data sections">
+            <button class="tab-button active" type="button" data-intel-tab="overview">Overview</button>
+            <button class="tab-button" type="button" data-intel-tab="text_event">Text events</button>
+            <button class="tab-button" type="button" data-intel-tab="macro_calendar">Macro calendar</button>
+            <button class="tab-button" type="button" data-intel-tab="onchain_flow">On-chain</button>
+            <button class="tab-button" type="button" data-intel-tab="derivatives_market">Derivatives</button>
+            <button class="tab-button" type="button" data-intel-tab="market_anomaly">Anomalies</button>
+          </div>
+          <div class="tabs strategy-operation-tabs topbar-secondary-tabs hidden" id="strategy-operation-tabs" aria-label="Strategy operations">
+            <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtest</button>
+            <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiment</button>
+            <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
+            <button class="tab-button" type="button" data-strategy-operation-tab="collect">Collect</button>
+            <button class="tab-button" type="button" data-strategy-operation-tab="export">Export</button>
+          </div>
+        </div>
+        <div class="topbar-actions" id="global-page-actions">
+          <button class="primary-button compact-button hidden" type="button" id="topbar-report-generate" data-report-job="generate">Generate report</button>
+        </div>
       </header>
 
       <section id="overview-view" class="view" data-view="overview">
-        <div class="page-title-row">
-          <div class="page-title">
-            <h1>Overview</h1>
-            <p>System status, reports, monitor, and data health</p>
-          </div>
-        </div>
         <div class="overview-layout">
           <div class="overview-main">
             <section class="panel panel-pad">
@@ -159,9 +180,8 @@
             <div class="report-toolbar">
               <div id="selected-report-kicker" class="muted">Select a report</div>
               <div class="toolbar-actions">
-                <button class="primary-button" type="button" data-report-job="generate">Generate report</button>
                 <button class="danger-button" type="button" id="delete-report-button">Delete report</button>
-                <button class="ghost-button" type="button" id="download-report-button">Download</button>
+                <button class="ghost-button" type="button" id="report-details-button">Details</button>
                 <input id="report-reader-search" class="search-input" type="search" placeholder="Search in report..." style="width: 210px;">
               </div>
             </div>
@@ -175,32 +195,17 @@
               <h2 class="panel-title">Report outline</h2>
               <ul id="report-outline" class="outline-list"></ul>
             </section>
-            <section class="panel panel-pad">
-              <h2 class="panel-title">Report details</h2>
-              <div id="report-details"></div>
-            </section>
-            <section class="panel panel-pad">
-              <h2 class="panel-title">Sources</h2>
-              <ul id="report-sources" class="compact-list"></ul>
+            <section class="panel panel-pad report-source-panel">
+              <h2 class="panel-title">Report sources</h2>
+              <div id="report-source-files" class="report-source-files"></div>
             </section>
           </aside>
         </div>
       </section>
 
       <section id="strategies-view" class="view hidden" data-view="strategies">
-        <div class="page-title-row">
-          <div class="page-title"><h1>Strategy</h1></div>
-        </div>
         <div class="strategy-layout">
           <section class="panel strategy-workbench" id="strategy-workbench">
-            <div class="tabs strategy-operation-tabs" id="strategy-operation-tabs" aria-label="Strategy operations">
-              <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtest</button>
-              <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiment</button>
-              <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
-              <button class="tab-button" type="button" data-strategy-operation-tab="collect">Collect</button>
-              <button class="tab-button" type="button" data-strategy-operation-tab="export">Export</button>
-            </div>
-
             <div class="strategy-operation-panel" data-strategy-operation-panel="backtest">
               <div class="strategy-controls strategy-backtest-controls strategy-action-grid">
                 <div class="field"><label for="strategy-source">Source <button class="hint-icon" type="button" aria-label="Source help" title="Strategy actions use the configured market source. The chart viewer below can inspect any configured stored source independently.">?</button></label><input id="strategy-source" class="text-input" type="text" readonly></div>
@@ -357,9 +362,6 @@
       </section>
 
       <section id="monitor-view" class="view hidden" data-view="monitor">
-        <div class="page-title-row">
-          <div class="page-title"><h1>Monitor</h1></div>
-        </div>
         <div class="monitor-layout">
           <section class="panel monitor-hero" id="monitor-hero"></section>
           <section class="panel panel-pad">
@@ -397,20 +399,7 @@
       </section>
 
       <section id="intelligence-view" class="view hidden" data-view="intelligence">
-        <div class="page-title-row">
-          <div class="page-title"><h1>Intelligence</h1></div>
-        </div>
         <div class="intelligence-layout">
-          <section class="panel panel-pad">
-            <div class="tabs" id="intel-tabs">
-              <button class="tab-button active" type="button" data-intel-tab="overview">Overview</button>
-              <button class="tab-button" type="button" data-intel-tab="text_event">Text events</button>
-              <button class="tab-button" type="button" data-intel-tab="macro_calendar">Macro calendar</button>
-              <button class="tab-button" type="button" data-intel-tab="onchain_flow">On-chain flow</button>
-              <button class="tab-button" type="button" data-intel-tab="derivatives_market">Derivatives market</button>
-              <button class="tab-button" type="button" data-intel-tab="market_anomaly">Market anomalies</button>
-            </div>
-          </section>
           <datalist id="strategy-ohlcv-source-options"></datalist>
 
           <section id="intel-overview-panel" class="intel-overview-panel">
@@ -421,55 +410,38 @@
           <section class="panel panel-pad data-viewer-panel hidden" id="intel-data-viewer">
             <div class="data-viewer-header">
               <h2 class="panel-title">Intelligence shared stores <span id="intel-data-status" class="status-pill pending">loading</span></h2>
-              <div id="intel-data-issues" class="data-viewer-issues"></div>
-            </div>
-            <div class="data-viewer-controls intel-data-controls">
-              <select id="intel-data-type" class="hidden" aria-hidden="true"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option><option value="market_anomaly">Market anomalies</option></select>
-              <div class="field"><label for="intel-collect-range">Collection range</label><select id="intel-collect-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
-              <div class="field date-range-field" data-date-range-picker data-start-input="intel-collect-start" data-end-input="intel-collect-end" data-preset-input="intel-collect-range">
-                <label for="intel-collect-date-range">Collection time window</label>
-                <button class="range-picker-trigger" type="button" id="intel-collect-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
-                <input id="intel-collect-start" class="hidden" type="text" aria-hidden="true">
-                <input id="intel-collect-end" class="hidden" type="text" aria-hidden="true">
-                <div class="range-picker-popover hidden" role="dialog" aria-label="Intelligence collection time window"></div>
+              <div class="data-viewer-header-actions">
+                <button class="primary-button compact-button" type="button" id="intel-collect-open">Collect</button>
+                <div id="intel-data-issues" class="data-viewer-issues"></div>
               </div>
-              <button class="ghost-button" type="button" id="intel-collect-reset">Reset</button>
-              <button class="primary-button" type="button" id="intel-data-collect" data-data-viewer-action="intel-collect">Collect</button>
+            </div>
+            <div class="data-viewer-controls intel-preview-controls intel-view-filter-controls">
+              <select id="intel-data-type" class="hidden" aria-hidden="true"><option value="text_event">Text events</option><option value="macro_calendar">Macro calendar</option><option value="onchain_flow">On-chain flow</option><option value="derivatives_market">Derivatives market</option><option value="market_anomaly">Market anomalies</option></select>
+              <div class="filter-panel-title">Filter</div>
+              <select id="intel-preview-range" class="hidden" aria-hidden="true" tabindex="-1"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select>
+              <div class="field date-range-field" data-date-range-picker data-start-input="intel-preview-start" data-end-input="intel-preview-end" data-preset-input="intel-preview-range">
+                <label for="intel-preview-date-range">Date range</label>
+                <button class="range-picker-trigger" type="button" id="intel-preview-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+                <input id="intel-preview-start" class="hidden" type="text" aria-hidden="true">
+                <input id="intel-preview-end" class="hidden" type="text" aria-hidden="true">
+                <div class="range-picker-popover hidden" role="dialog" aria-label="Intelligence preview date range"></div>
+              </div>
+              <div class="field"><label for="intel-preview-category-filter">Category</label><select id="intel-preview-category-filter" class="select-input"><option value="">All categories</option></select></div>
+              <div class="field intel-filter-search-field"><label for="intel-preview-keyword">Search loaded records</label><input id="intel-preview-keyword" class="text-input" type="search" placeholder="filter title, source, or content"></div>
+              <div class="filter-actions">
+                <button class="ghost-button compact-button" type="button" id="intel-preview-clear-filters">Clear</button>
+                <button class="ghost-button compact-button" type="button" id="intel-preview-apply-filters">Apply</button>
+              </div>
             </div>
             <div id="intel-data-summary" class="summary-strip data-viewer-summary"></div>
-            <section>
-              <h3 class="subsection-title">Coverage timeline</h3>
-              <div id="intel-data-coverage" class="data-viewer-timeline"><div class="message">Coverage timeline loads automatically for the selected data type and range.</div></div>
-            </section>
-            <section>
-              <h3 class="subsection-title">Preview</h3>
-              <div class="data-viewer-controls intel-preview-controls">
-                <div class="field"><label for="intel-preview-range">Preview range</label><select id="intel-preview-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
-                <div class="field date-range-field" data-date-range-picker data-start-input="intel-preview-start" data-end-input="intel-preview-end" data-preset-input="intel-preview-range">
-                  <label for="intel-preview-date-range">Preview time window</label>
-                  <button class="range-picker-trigger" type="button" id="intel-preview-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
-                  <input id="intel-preview-start" class="hidden" type="text" aria-hidden="true">
-                  <input id="intel-preview-end" class="hidden" type="text" aria-hidden="true">
-                  <div class="range-picker-popover hidden" role="dialog" aria-label="Intelligence preview time window"></div>
-                </div>
-                <div class="field">
-                  <label for="intel-preview-as-of-mode">Point-in-time view <button class="hint-icon" type="button" aria-label="Point-in-time help" title="Optional no-lookahead cutoff for preview only. Latest stored data shows the current view. Range end shows only records known by the preview window end. Custom cutoff lets you choose a UTC timestamp.">?</button></label>
-                  <select id="intel-preview-as-of-mode" class="select-input"><option value="">Latest stored data</option><option value="range_end">At preview range end</option><option value="custom">Custom cutoff</option></select>
-                </div>
-                <div class="field hidden" id="intel-preview-as-of-custom-field"><label for="intel-preview-as-of">Custom cutoff UTC</label><input id="intel-preview-as-of" class="text-input" type="datetime-local" step="1"></div>
-                <button class="ghost-button" type="button" id="intel-preview-reset">Reset preview</button>
-              </div>
+            <section class="intel-preview-section">
               <div id="intel-data-preview-panel" class="data-viewer-preview intelligence-preview"><div class="message">Preview loads automatically for the selected data type and range.</div></div>
             </section>
-            <div id="intel-data-job-panel" class="data-viewer-job hidden"></div>
           </section>
         </div>
       </section>
 
       <section id="settings-view" class="view hidden" data-view="settings">
-        <div class="page-title-row">
-          <div class="page-title"><h1>Settings</h1></div>
-        </div>
         <div class="settings-layout">
           <section class="panel settings-top">
             <div class="field"><label>Config file</label><div id="config-profile" class="readonly-value">Current config</div></div>
@@ -525,6 +497,83 @@
         </div>
       </section>
     </div>
+    <div id="intel-collect-dialog-backdrop" class="dialog-backdrop hidden" aria-hidden="true">
+      <section
+        id="intel-collect-dialog"
+        class="dialog intelligence-collect-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="intel-collect-dialog-title"
+      >
+        <div class="dialog-body">
+          <div class="dialog-title-row">
+            <div>
+              <p class="drawer-kicker">Collection setup</p>
+              <h2 id="intel-collect-dialog-title">Collect intelligence data</h2>
+            </div>
+            <button class="icon-button" type="button" id="intel-collect-dialog-close" aria-label="Close collection setup">
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="data-viewer-controls intel-data-controls intel-collect-dialog-controls">
+            <div class="field"><label for="intel-collect-range">Collection range</label><select id="intel-collect-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
+            <div class="field date-range-field" data-date-range-picker data-start-input="intel-collect-start" data-end-input="intel-collect-end" data-preset-input="intel-collect-range">
+              <label for="intel-collect-date-range">Collection time window</label>
+              <button class="range-picker-trigger" type="button" id="intel-collect-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+              <input id="intel-collect-start" class="hidden" type="text" aria-hidden="true">
+              <input id="intel-collect-end" class="hidden" type="text" aria-hidden="true">
+              <div class="range-picker-popover hidden" role="dialog" aria-label="Intelligence collection time window"></div>
+            </div>
+            <button class="ghost-button" type="button" id="intel-collect-reset">Reset</button>
+          </div>
+          <section>
+            <h3 class="subsection-title">Coverage timeline</h3>
+            <div id="intel-data-coverage" class="data-viewer-timeline"><div class="message">Coverage timeline loads automatically for the selected data type and range.</div></div>
+          </section>
+          <div id="intel-data-job-panel" class="data-viewer-job hidden"></div>
+        </div>
+        <div class="dialog-actions">
+          <button class="ghost-button" type="button" id="intel-collect-dialog-cancel">Close</button>
+          <button class="primary-button" type="button" id="intel-data-collect" data-data-viewer-action="intel-collect">Collect</button>
+        </div>
+      </section>
+    </div>
+    <div id="intel-properties-drawer-backdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+    <aside id="intel-properties-drawer" class="artifact-drawer intel-properties-drawer hidden" aria-label="Intelligence record properties">
+      <div class="drawer-header">
+        <div>
+          <p class="drawer-kicker">Intelligence record</p>
+          <h2 id="intel-properties-drawer-title">Properties</h2>
+        </div>
+        <button class="icon-button" type="button" id="intel-properties-drawer-close" aria-label="Close properties drawer">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="intel-properties-drawer-body" class="drawer-body">
+        <div class="empty-state">Select an intelligence record to inspect its properties.</div>
+      </div>
+    </aside>
+    <div id="report-details-drawer-backdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+    <aside id="report-details-drawer" class="artifact-drawer report-details-drawer hidden" aria-label="Report details">
+      <div class="drawer-header">
+        <div>
+          <p class="drawer-kicker">Report metadata</p>
+          <h2 id="report-details-drawer-title">Report details</h2>
+        </div>
+        <button class="icon-button" type="button" id="report-details-drawer-close" aria-label="Close report details drawer">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="report-details-drawer-body" class="drawer-body">
+        <div class="empty-state">Select a report to inspect its details.</div>
+      </div>
+    </aside>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
 

@@ -43,7 +43,32 @@
         return new Intl.NumberFormat("en-US").format(number);
       }
 
-      function formatTimestamp(value, timeZone = "Asia/Shanghai") {
+      const timestampFormatDefaults = {
+        timeZone: "Asia/Shanghai",
+        hourCycle: "24h",
+        dateOrder: "year_first",
+      };
+
+      function configureTimestampFormat(options = {}) {
+        const normalized = timestampFormatOptions(options);
+        timestampFormatDefaults.timeZone = normalized.timeZone;
+        timestampFormatDefaults.hourCycle = normalized.hourCycle;
+        timestampFormatDefaults.dateOrder = normalized.dateOrder;
+      }
+
+      function timestampFormatOptions(timeZoneOrOptions = {}, overrides = {}) {
+        const base = typeof timeZoneOrOptions === "string"
+          ? {timeZone: timeZoneOrOptions, ...overrides}
+          : {...timeZoneOrOptions, ...overrides};
+        const timeZone = typeof base.timeZone === "string" && base.timeZone.trim()
+          ? base.timeZone.trim()
+          : timestampFormatDefaults.timeZone;
+        const hourCycle = base.hourCycle === "12h" ? "12h" : base.hourCycle === "24h" ? "24h" : timestampFormatDefaults.hourCycle;
+        const dateOrder = base.dateOrder === "year_last" ? "year_last" : base.dateOrder === "year_first" ? "year_first" : timestampFormatDefaults.dateOrder;
+        return {timeZone, hourCycle, dateOrder};
+      }
+
+      function formatTimestamp(value, timeZoneOrOptions = {}, overrides = {}) {
         if (!value) {
           return "n/a";
         }
@@ -51,15 +76,31 @@
         if (Number.isNaN(date.getTime())) {
           return String(value);
         }
+        const options = timestampFormatOptions(timeZoneOrOptions, overrides);
         try {
-          return new Intl.DateTimeFormat("en-US", {
-            timeZone,
+          const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: options.timeZone,
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
-          }).format(date);
+            hour12: options.hourCycle === "12h",
+            hourCycle: options.hourCycle === "12h" ? "h12" : "h23",
+          }).formatToParts(date).reduce((memo, part) => {
+            if (part.type !== "literal") {
+              memo[part.type] = part.value;
+            }
+            return memo;
+          }, {});
+          const year = parts.year || "0000";
+          const month = parts.month || "00";
+          const day = parts.day || "00";
+          const hour = options.hourCycle === "24h" && parts.hour === "24" ? "00" : parts.hour || "00";
+          const minute = parts.minute || "00";
+          const dayPeriod = parts.dayPeriod ? ` ${parts.dayPeriod}` : "";
+          const dateText = options.dateOrder === "year_last" ? `${month}/${day}/${year}` : `${year}-${month}-${day}`;
+          return `${dateText} ${hour}:${minute}${options.hourCycle === "12h" ? dayPeriod : ""}`;
         } catch (_error) {
           return date.toISOString();
         }
@@ -140,6 +181,7 @@
       }
 
       window.HalphaDashboardShared = {
+        configureTimestampFormat,
         escapeHtml,
         text,
         statusClass,

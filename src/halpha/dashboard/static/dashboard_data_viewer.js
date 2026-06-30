@@ -107,6 +107,8 @@
             resetIntelligencePreviewState();
             state.intelPreviewKeyword = "";
             state.intelPreviewCategory = "";
+            updateIntelligencePropertiesSelection(null, null);
+            closeIntelligenceCollectDialog(false);
             applyIntelligenceRangePreset("intel-collect", true);
             applyIntelligenceRangePreset("intel-preview", true);
           } else {
@@ -117,6 +119,7 @@
           renderCapabilityState("intel", dataType);
           setHtml("#intel-data-coverage", timelineSkeleton());
           setHtml("#intel-data-preview-panel", loadingSkeleton(4));
+          syncIntelligencePreviewFilterControls([], 0, 0);
           queueIntelligenceDataLoad();
         }
 
@@ -131,11 +134,14 @@
           const dataType = selectedIntelligenceDataType();
           const collectable = COLLECTABLE_TYPES.includes(dataType);
           setDisabled("#intel-data-collect", !collectable);
+          node("#intel-data-viewer")?.classList.toggle("macro-calendar-mode", dataType === "macro_calendar");
+          node("#intel-data-viewer")?.classList.toggle("onchain-flow-mode", dataType === "onchain_flow");
+          node("#intel-data-viewer")?.classList.toggle("derivatives-market-mode", dataType === "derivatives_market");
+          node("#intel-data-viewer")?.classList.toggle("market-anomaly-mode", dataType === "market_anomaly");
           const title = node("#intel-data-viewer .panel-title");
           if (title) {
             title.innerHTML = `${escapeHtml(TYPE_LABELS[dataType] || dataType)} <span id="intel-data-status" class="status-pill pending">loading</span>`;
           }
-          syncIntelPreviewAsOfControls();
         }
 
         function resetIntelligencePreviewState() {
@@ -145,6 +151,20 @@
           state.intelPreviewLoadingMore = false;
           state.intelDatePickerOpen = false;
           state.intelCalendarMonth = null;
+          state.macroCalendarView = "month";
+          state.macroCalendarMonth = null;
+          state.macroCalendarYear = null;
+          state.macroCalendarHighlightedDate = "";
+          state.macroCalendarDetailIndex = null;
+          state.onchainDataClass = "";
+          state.onchainMetricKey = "";
+          state.onchainSelectedIndex = null;
+          state.derivativesDataClass = "";
+          state.derivativesMetricKey = "";
+          state.derivativesSelectedIndex = null;
+          state.anomalySeverityFilter = "";
+          state.anomalySourceKindFilter = "";
+          state.anomalySelectedIndex = null;
         }
 
         function selectedIntelligenceDataType() {
@@ -214,7 +234,7 @@
             : `<div class="empty-state">No current issues for this data store.</div>`;
           target.innerHTML = `
             <div class="data-viewer-issue-widget">
-              <button class="ghost-button data-viewer-issue-button ${escapeHtml(statusClass(issueStatus))}" type="button" data-data-viewer-issues="${escapeHtml(scope)}" aria-expanded="false">
+              <button class="ghost-button compact-button data-viewer-issue-button ${escapeHtml(statusClass(issueStatus))}" type="button" data-data-viewer-issues="${escapeHtml(scope)}" aria-expanded="false">
                 Issues <span class="data-viewer-issue-count">${escapeHtml(formatNumber(issues.length))}</span>
               </button>
               <div class="data-viewer-issue-popover hidden" data-data-viewer-issue-panel="${escapeHtml(scope)}" role="dialog" aria-label="${escapeHtml(issueCopy)}">
@@ -380,7 +400,10 @@
           const request = viewerRequest("intel");
           if (!request) return;
           setHtml("#intel-data-preview-panel", loadingSkeleton(5));
-          const previewLimit = Math.min(INTEL_PREVIEW_MAX_LIMIT, Math.max(INTEL_PREVIEW_PAGE_SIZE, Number(state.intelPreviewFetchLimit) || INTEL_PREVIEW_FETCH_STEP));
+          const previewDataType = selectedIntelligenceDataType();
+          const previewLimit = ["onchain_flow", "derivatives_market", "market_anomaly"].includes(previewDataType)
+            ? INTEL_PREVIEW_MAX_LIMIT
+            : Math.min(INTEL_PREVIEW_MAX_LIMIT, Math.max(INTEL_PREVIEW_PAGE_SIZE, Number(state.intelPreviewFetchLimit) || INTEL_PREVIEW_FETCH_STEP));
           const previewRequest = {...request, limit: previewLimit, sort_order: "desc"};
           try {
             const payload = await postJson(endpoints.dataViewerPreview, previewRequest);
@@ -427,7 +450,6 @@
             data_type: selectedIntelligenceDataType(),
             start: value("#intel-preview-start"),
             end: value("#intel-preview-end"),
-            as_of: intelligencePreviewAsOf(),
           });
         }
 
@@ -561,6 +583,22 @@
         }
 
         function renderIntelligencePreview(selector, payload, records, header) {
+          if (payload.data_type === "macro_calendar") {
+            renderMacroCalendarPreview(selector, payload, records);
+            return;
+          }
+          if (payload.data_type === "onchain_flow") {
+            renderOnchainFlowPreview(selector, payload, records);
+            return;
+          }
+          if (payload.data_type === "derivatives_market") {
+            renderDerivativesMarketPreview(selector, payload, records);
+            return;
+          }
+          if (payload.data_type === "market_anomaly") {
+            renderMarketAnomalyPreview(selector, payload, records);
+            return;
+          }
           const categoryOptions = previewCategoryOptions(records, payload.data_type);
           if (state.intelPreviewCategory && !categoryOptions.some((option) => option.value === state.intelPreviewCategory)) {
             state.intelPreviewCategory = "";
@@ -573,10 +611,11 @@
             return JSON.stringify(record || {}).toLowerCase().includes(keyword);
           });
           if (!filtered.length) {
+            updateIntelligencePropertiesSelection(null, payload);
+            syncIntelligencePreviewFilterControls(categoryOptions, 0, records.length);
             setHtml(selector, `
               <div class="intelligence-preview-layout">
                 <aside class="intel-preview-sidebar">
-                  ${previewFilterControls(categoryOptions, 0, records.length)}
                   <div class="intel-list-toolbar">
                     <button class="ghost-button compact-button" type="button" id="intel-date-jump-toggle">Jump date</button>
                     <span>0 / ${escapeHtml(formatNumber(records.length))} records</span>
@@ -589,12 +628,8 @@
                 <article class="intel-preview-main">
                   <div class="empty-state">No selected record.</div>
                 </article>
-                <aside class="intel-preview-properties">
-                  <h3 class="subsection-title">Properties</h3>
-                  <div class="empty-state">No record properties.</div>
-                </aside>
               </div>`);
-            wireIntelligencePreviewFilters(selector, payload, records, header);
+            wireIntelligencePreviewList(selector, payload, records, header, filtered, false);
             return;
           }
           state.selectedIntelPreviewIndex = Math.min(Math.max(0, Number(state.selectedIntelPreviewIndex) || 0), filtered.length - 1);
@@ -611,10 +646,11 @@
           const canFetchMore = Boolean(query.truncated) && fetchLimit < INTEL_PREVIEW_MAX_LIMIT;
           const moreAvailable = state.intelPreviewDisplayLimit < filtered.length || canFetchMore;
           const limited = Boolean(query.truncated) && !canFetchMore;
+          updateIntelligencePropertiesSelection(selected, payload);
+          syncIntelligencePreviewFilterControls(categoryOptions, filtered.length, records.length);
           setHtml(selector, `
             <div class="intelligence-preview-layout">
               <aside class="intel-preview-sidebar">
-                ${previewFilterControls(categoryOptions, filtered.length, records.length)}
                 <div class="intel-list-toolbar">
                   <button class="ghost-button compact-button" type="button" id="intel-date-jump-toggle">Jump date</button>
                   <span>${escapeHtml(formatNumber(visible.length))} / ${escapeHtml(formatNumber(matched))} records</span>
@@ -628,12 +664,1365 @@
               <article class="intel-preview-main">
                 ${previewRecordBody(selected, payload.data_type)}
               </article>
-              <aside class="intel-preview-properties">
-                ${previewRecordProperties(selected, payload)}
-              </aside>
             </div>`);
+          wireIntelligencePreviewList(selector, payload, records, header, filtered, canFetchMore);
+        }
+
+        function renderMacroCalendarPreview(selector, payload, records) {
+          const events = macroCalendarRecords(records);
+          syncIntelligencePreviewFilterControls([], events.length, records.length);
+          if (!events.length) {
+            updateIntelligencePropertiesSelection(null, payload);
+            setHtml(selector, `
+              <div class="macro-calendar-preview empty">
+                <aside class="intel-preview-sidebar macro-event-sidebar">
+                  <div class="intel-list-toolbar"><strong>Events</strong><span>0 events</span></div>
+                  <div class="intel-preview-list" aria-label="Macro calendar events">
+                    <div class="empty-state">No macro calendar events are available for the current preview range.</div>
+                  </div>
+                </aside>
+                <article class="macro-calendar-main">
+                  <div class="empty-state">Collect or extend macro calendar data to populate this calendar.</div>
+                </article>
+              </div>`);
+            return;
+          }
+          state.selectedIntelPreviewIndex = Math.min(Math.max(0, Number(state.selectedIntelPreviewIndex) || 0), events.length - 1);
+          ensureMacroCalendarViewport(events);
+          const selected = events[state.selectedIntelPreviewIndex];
+          updateIntelligencePropertiesSelection(selected, payload);
+          setHtml(selector, `
+            <div class="macro-calendar-preview">
+              <aside class="intel-preview-sidebar macro-event-sidebar">
+                <div class="intel-list-toolbar"><strong>Events</strong><span>${escapeHtml(formatNumber(events.length))} events</span></div>
+                <div class="intel-preview-list macro-event-list" aria-label="Macro calendar events">
+                  ${macroEventListItemsWithDates(events)}
+                </div>
+              </aside>
+              <article class="macro-calendar-main">
+                ${renderMacroCalendarMain(events)}
+              </article>
+              ${renderMacroEventDialog(events, payload)}
+            </div>`);
+          wireMacroCalendarPreview(selector, payload, events);
+        }
+
+        function renderOnchainFlowPreview(selector, payload, records) {
+          const groups = onchainFlowGroups(records);
+          syncIntelligencePreviewFilterControls([], records.length, records.length);
+          if (!groups.length) {
+            updateIntelligencePropertiesSelection(null, payload);
+            setHtml(selector, `
+              <div class="onchain-flow-preview empty">
+                <div class="empty-state">No on-chain flow records are available for the current preview window.</div>
+              </div>`);
+            return;
+          }
+          if (!groups.some((group) => group.key === state.onchainDataClass)) {
+            state.onchainDataClass = groups[0].key;
+            state.onchainMetricKey = "";
+            state.onchainSelectedIndex = null;
+          }
+          const group = groups.find((item) => item.key === state.onchainDataClass) || groups[0];
+          const metricKeys = onchainMetricKeys(group.records);
+          if (!metricKeys.length) {
+            updateIntelligencePropertiesSelection(group.records[0] || null, payload);
+            setHtml(selector, `
+              <div class="onchain-flow-preview">
+                ${renderOnchainFlowTabs(groups, group.key)}
+                <div class="empty-state">This on-chain class does not expose numeric metrics that can be charted.</div>
+              </div>`);
+            wireOnchainFlowPreview(selector, payload, records, groups, [], []);
+            return;
+          }
+          if (!metricKeys.includes(state.onchainMetricKey)) {
+            state.onchainMetricKey = metricKeys[0];
+            state.onchainSelectedIndex = null;
+          }
+          const series = onchainMetricSeries(group.records, state.onchainMetricKey);
+          if (!series.length) {
+            updateIntelligencePropertiesSelection(group.records[0] || null, payload);
+            setHtml(selector, `
+              <div class="onchain-flow-preview">
+                ${renderOnchainFlowTabs(groups, group.key)}
+                ${renderOnchainMetricTabs(metricKeys, state.onchainMetricKey, group.records)}
+                <div class="empty-state">No numeric observations matched the selected metric.</div>
+              </div>`);
+            wireOnchainFlowPreview(selector, payload, records, groups, metricKeys, series);
+            return;
+          }
+          const selectedIndex = ensureOnchainSelectedIndex(series);
+          const selectedPoint = series[selectedIndex] || series[series.length - 1];
+          updateIntelligencePropertiesSelection(selectedPoint?.record || null, payload);
+          setHtml(selector, `
+            <div class="onchain-flow-preview">
+              ${renderOnchainFlowTabs(groups, group.key)}
+              <section class="onchain-chart-card">
+                <div class="onchain-chart-top">
+                  <div class="onchain-title-stack">
+                    <span>${escapeHtml(group.label)}</span>
+                    <strong>${escapeHtml(metricLabel(state.onchainMetricKey))}</strong>
+                    <small>${escapeHtml(formatNumber(series.length))} loaded observations / ${escapeHtml(onchainRangeLabel(series))}</small>
+                  </div>
+                  <div class="onchain-date-jump">
+                    <label for="onchain-date-jump">Jump time</label>
+                    <input id="onchain-date-jump" class="text-input" type="datetime-local" step="60" value="${escapeHtml(onchainDateInputValue(selectedPoint?.time))}">
+                    <span class="range-picker-badge">UTC</span>
+                    <button class="ghost-button compact-button" type="button" data-onchain-jump>Jump</button>
+                  </div>
+                </div>
+                ${renderOnchainMetricTabs(metricKeys, state.onchainMetricKey, group.records)}
+                ${renderOnchainMetricSummary(series, selectedPoint, state.onchainMetricKey)}
+                <div class="onchain-chart-frame">
+                  <div class="onchain-chart-scroll" aria-label="${escapeHtml(group.label)} ${escapeHtml(metricLabel(state.onchainMetricKey))} time series">
+                    ${renderOnchainChart(series, state.onchainMetricKey, selectedIndex)}
+                  </div>
+                </div>
+                <div class="onchain-chart-foot">
+                  <span>Drag horizontally to inspect dense observations.</span>
+                  <span>Y-axis rescales to the loaded ${escapeHtml(metricLabel(state.onchainMetricKey))} range.</span>
+                </div>
+              </section>
+              ${renderOnchainSelectedPoint(selectedPoint, payload)}
+            </div>`);
+          wireOnchainFlowPreview(selector, payload, records, groups, metricKeys, series);
+        }
+
+        function onchainFlowGroups(records) {
+          const groups = new Map();
+          (Array.isArray(records) ? records : []).forEach((record) => {
+            if (!record || typeof record !== "object") return;
+            const key = recordCategory(record, "onchain_flow");
+            if (!groups.has(key)) {
+              groups.set(key, {key, label: categoryLabel(key), records: [], latestTime: 0});
+            }
+            const group = groups.get(key);
+            group.records.push(record);
+            const timestamp = Date.parse(recordTime(record, "onchain_flow"));
+            if (Number.isFinite(timestamp)) group.latestTime = Math.max(group.latestTime, timestamp);
+          });
+          return Array.from(groups.values())
+            .map((group) => ({
+              ...group,
+              metrics: onchainMetricKeys(group.records),
+              count: group.records.length,
+            }))
+            .filter((group) => group.count > 0)
+            .sort((left, right) => {
+              if (right.latestTime !== left.latestTime) return right.latestTime - left.latestTime;
+              return left.label.localeCompare(right.label);
+            });
+        }
+
+        function onchainMetricKeys(records) {
+          const keys = [];
+          const seen = new Set();
+          (Array.isArray(records) ? records : []).forEach((record) => {
+            const metrics = record?.metrics && typeof record.metrics === "object" ? record.metrics : {};
+            Object.entries(metrics).forEach(([key, value]) => {
+              const numeric = Number(value);
+              if (!Number.isFinite(numeric) || seen.has(key)) return;
+              seen.add(key);
+              keys.push(key);
+            });
+          });
+          return keys;
+        }
+
+        function onchainMetricSeries(records, metricKey) {
+          return (Array.isArray(records) ? records : [])
+            .map((record) => {
+              const timestamp = Date.parse(recordTime(record, "onchain_flow"));
+              const value = Number(record?.metrics?.[metricKey]);
+              return {record, time: recordTime(record, "onchain_flow"), timestamp, value};
+            })
+            .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value))
+            .sort((left, right) => {
+              if (left.timestamp !== right.timestamp) return left.timestamp - right.timestamp;
+              return left.value - right.value;
+            });
+        }
+
+        function ensureOnchainSelectedIndex(series) {
+          if (state.onchainSelectedIndex === null || state.onchainSelectedIndex === undefined || state.onchainSelectedIndex === "") {
+            state.onchainSelectedIndex = Math.max(0, series.length - 1);
+            return state.onchainSelectedIndex;
+          }
+          const requested = Number(state.onchainSelectedIndex);
+          if (Number.isInteger(requested) && requested >= 0 && requested < series.length) {
+            return requested;
+          }
+          state.onchainSelectedIndex = Math.max(0, series.length - 1);
+          return state.onchainSelectedIndex;
+        }
+
+        function renderOnchainFlowTabs(groups, selectedKey) {
+          return `
+            <div class="onchain-subtabs" role="tablist" aria-label="On-chain data classes">
+              ${groups.map((group) => `
+                <button class="tab-button ${group.key === selectedKey ? "active" : ""}" type="button" role="tab" aria-selected="${group.key === selectedKey ? "true" : "false"}" data-onchain-class="${escapeHtml(group.key)}">
+                  <span>${escapeHtml(group.label)}</span>
+                  <small>${escapeHtml(formatNumber(group.count))}</small>
+                </button>
+              `).join("")}
+            </div>`;
+        }
+
+        function renderOnchainMetricTabs(metricKeys, selectedMetric, records) {
+          return `
+            <div class="onchain-metric-tabs" role="tablist" aria-label="On-chain metrics">
+              ${metricKeys.map((key) => {
+                const count = onchainMetricSeries(records, key).length;
+                return `
+                  <button class="ghost-button compact-button ${key === selectedMetric ? "active" : ""}" type="button" role="tab" aria-selected="${key === selectedMetric ? "true" : "false"}" data-onchain-metric="${escapeHtml(key)}">
+                    ${escapeHtml(metricLabel(key))}
+                    <span>${escapeHtml(formatNumber(count))}</span>
+                  </button>`;
+              }).join("")}
+            </div>`;
+        }
+
+        function renderOnchainMetricSummary(series, selectedPoint, metricKey) {
+          const values = series.map((point) => point.value);
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          const avg = values.reduce((total, value) => total + value, 0) / Math.max(1, values.length);
+          const unit = selectedPoint?.record?.units?.[metricKey] || "";
+          return `
+            <div class="onchain-metric-summary">
+              ${onchainMetricCard("Selected", selectedPoint?.value, metricKey, unit, formatTimestamp(selectedPoint?.time))}
+              ${onchainMetricCard("Min", min, metricKey, unit, "loaded range")}
+              ${onchainMetricCard("Max", max, metricKey, unit, "loaded range")}
+              ${onchainMetricCard("Average", avg, metricKey, unit, "loaded range")}
+            </div>`;
+        }
+
+        function onchainMetricCard(title, value, key, unit, note) {
+          return `
+            <div class="onchain-metric-card">
+              <span>${escapeHtml(title)}</span>
+              <strong>${escapeHtml(formatMetricValue(value, key, unit))}</strong>
+              <small>${escapeHtml(note || unit || "value")}</small>
+            </div>`;
+        }
+
+        function renderOnchainChart(series, metricKey, selectedIndex) {
+          const values = series.map((point) => point.value);
+          let min = Math.min(...values);
+          let max = Math.max(...values);
+          const rawMin = min;
+          if (!Number.isFinite(min) || !Number.isFinite(max)) return `<div class="empty-state">Chart data is not numeric.</div>`;
+          if (min === max) {
+            const padding = Math.abs(max || 1) * 0.05;
+            min -= padding;
+            max += padding;
+          } else {
+            const padding = (max - min) * 0.08;
+            min -= padding;
+            max += padding;
+          }
+          if (rawMin >= 0) min = Math.max(0, min);
+          const height = 320;
+          const left = 76;
+          const right = 28;
+          const top = 24;
+          const bottom = 48;
+          const step = series.length > 1 ? Math.max(7, Math.min(18, 1600 / series.length)) : 12;
+          const width = Math.max(900, Math.min(5200, left + right + Math.max(1, series.length - 1) * step));
+          const plotWidth = width - left - right;
+          const plotHeight = height - top - bottom;
+          const unit = series[selectedIndex]?.record?.units?.[metricKey] || "";
+          const xFor = (index) => left + (series.length <= 1 ? plotWidth / 2 : (index / (series.length - 1)) * plotWidth);
+          const yFor = (value) => top + ((max - value) / (max - min)) * plotHeight;
+          const path = series.map((point, index) => `${index === 0 ? "M" : "L"}${xFor(index).toFixed(2)},${yFor(point.value).toFixed(2)}`).join(" ");
+          const area = `${path} L${xFor(series.length - 1).toFixed(2)},${(top + plotHeight).toFixed(2)} L${xFor(0).toFixed(2)},${(top + plotHeight).toFixed(2)} Z`;
+          const yTicks = Array.from({length: 5}, (_, index) => min + ((max - min) * index) / 4).reverse();
+          const xTickIndexes = Array.from(new Set(Array.from({length: Math.min(6, series.length)}, (_, index) => (
+            Math.round((index * (series.length - 1)) / Math.max(1, Math.min(6, series.length) - 1))
+          ))));
+          const visibleEvery = Math.max(1, Math.ceil(series.length / 120));
+          const selectedPoint = series[selectedIndex];
+          const selectedX = xFor(selectedIndex);
+          const selectedY = yFor(selectedPoint.value);
+          return `
+            <svg class="onchain-chart-svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeHtml(metricLabel(metricKey))} chart">
+              <defs>
+                <linearGradient id="onchain-area-gradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#ffd438" stop-opacity="0.28"></stop>
+                  <stop offset="100%" stop-color="#ffd438" stop-opacity="0"></stop>
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+              ${yTicks.map((tick) => {
+                const y = yFor(tick);
+                return `<g class="onchain-chart-grid"><line x1="${left}" x2="${width - right}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line><text x="${left - 10}" y="${(y + 4).toFixed(2)}">${escapeHtml(formatChartAxisValue(tick, metricKey, unit))}</text></g>`;
+              }).join("")}
+              ${xTickIndexes.map((index) => {
+                const point = series[index];
+                const x = xFor(index);
+                return `<g class="onchain-chart-x-tick"><line x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${top}" y2="${top + plotHeight}"></line><text x="${x.toFixed(2)}" y="${height - 14}">${escapeHtml(shortTime(point.time))}</text></g>`;
+              }).join("")}
+              <path class="onchain-chart-area" d="${area}"></path>
+              <path class="onchain-chart-line" d="${path}"></path>
+              ${series.map((point, index) => {
+                const x = xFor(index);
+                const y = yFor(point.value);
+                const selected = index === selectedIndex;
+                const visible = selected || index % visibleEvery === 0;
+                return `
+                  ${visible ? `<circle class="onchain-chart-dot ${selected ? "selected" : ""}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${selected ? 4.5 : 2.2}"></circle>` : ""}
+                  <circle class="onchain-chart-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="8" data-onchain-point-index="${index}">
+                    <title>${escapeHtml(formatTimestamp(point.time))}: ${escapeHtml(formatMetricValue(point.value, metricKey, unit))}</title>
+                  </circle>`;
+              }).join("")}
+              <line class="onchain-chart-selected-line" x1="${selectedX.toFixed(2)}" x2="${selectedX.toFixed(2)}" y1="${top}" y2="${top + plotHeight}"></line>
+              <circle class="onchain-chart-dot selected" cx="${selectedX.toFixed(2)}" cy="${selectedY.toFixed(2)}" r="5.5" data-onchain-selected-point></circle>
+            </svg>`;
+        }
+
+        function renderOnchainSelectedPoint(point, payload) {
+          if (!point) return `<section class="onchain-selected-card"><div class="empty-state">Select a chart point to inspect its observation.</div></section>`;
+          const record = point.record || {};
+          const metrics = recordMetricFacts(record);
+          const facts = recordPrimaryFacts(record, "onchain_flow");
+          return `
+            <section class="onchain-selected-card">
+              <div class="intel-preview-main-head">
+                <div class="intel-preview-title-stack">
+                  <div class="muted">${escapeHtml(formatTimestamp(point.time))}</div>
+                  <h2>${escapeHtml(recordTitle(record, "onchain_flow"))}</h2>
+                </div>
+                <button class="ghost-button compact-button intel-properties-trigger" type="button" id="intel-properties-button" title="Open properties for this observation">Properties</button>
+              </div>
+              ${metrics.length ? `<section class="intel-record-section"><h3>Observation metrics</h3><div class="intel-metric-grid">${metrics.map(([key, val, unit]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(formatMetricValue(val, key, unit))}</strong>${unit ? `<small>${escapeHtml(unit)}</small>` : ""}</div>`).join("")}</div></section>` : ""}
+              ${facts.length ? `<section class="intel-record-section"><h3>Record context</h3><div class="intel-fact-grid">${facts.map(([key, val]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(text(val))}</strong></div>`).join("")}</div></section>` : ""}
+            </section>`;
+        }
+
+        function renderDerivativesMarketPreview(selector, payload, records) {
+          const groups = derivativesMarketGroups(records);
+          syncIntelligencePreviewFilterControls([], records.length, records.length);
+          if (!groups.length) {
+            updateIntelligencePropertiesSelection(null, payload);
+            setHtml(selector, `
+              <div class="derivatives-market-preview empty">
+                <div class="empty-state">No derivatives market records are available for the current preview window.</div>
+              </div>`);
+            return;
+          }
+          if (!groups.some((group) => group.key === state.derivativesDataClass)) {
+            state.derivativesDataClass = groups[0].key;
+            state.derivativesMetricKey = "";
+            state.derivativesSelectedIndex = null;
+          }
+          const group = groups.find((item) => item.key === state.derivativesDataClass) || groups[0];
+          const metricKeys = numericMetricKeys(group.records);
+          if (!metricKeys.length) {
+            updateIntelligencePropertiesSelection(group.records[0] || null, payload);
+            setHtml(selector, `
+              <div class="derivatives-market-preview">
+                ${renderDerivativesMarketTabs(groups, group.key)}
+                <div class="empty-state">This derivatives class does not expose numeric metrics that can be charted.</div>
+              </div>`);
+            wireDerivativesMarketPreview(selector, payload, records, groups, [], []);
+            return;
+          }
+          if (!metricKeys.includes(state.derivativesMetricKey)) {
+            state.derivativesMetricKey = derivativesDefaultMetric(group.key, metricKeys);
+            state.derivativesSelectedIndex = null;
+          }
+          const series = metricSeries(group.records, state.derivativesMetricKey, "derivatives_market");
+          if (!series.length) {
+            updateIntelligencePropertiesSelection(group.records[0] || null, payload);
+            setHtml(selector, `
+              <div class="derivatives-market-preview">
+                ${renderDerivativesMarketTabs(groups, group.key)}
+                ${renderDerivativesMetricTabs(metricKeys, state.derivativesMetricKey, group.records)}
+                <div class="empty-state">No numeric observations matched the selected derivatives metric.</div>
+              </div>`);
+            wireDerivativesMarketPreview(selector, payload, records, groups, metricKeys, series);
+            return;
+          }
+          const selectedIndex = ensureMetricSelectedIndex("derivativesSelectedIndex", series);
+          const selectedPoint = series[selectedIndex] || series[series.length - 1];
+          updateIntelligencePropertiesSelection(selectedPoint?.record || null, payload);
+          setHtml(selector, `
+            <div class="derivatives-market-preview">
+              ${renderDerivativesMarketTabs(groups, group.key)}
+              <section class="derivatives-board-card">
+                <div class="derivatives-board-top">
+                  <div class="onchain-title-stack">
+                    <span>${escapeHtml(group.label)}</span>
+                    <strong>${escapeHtml(metricLabel(state.derivativesMetricKey))}</strong>
+                    <small>${escapeHtml(formatNumber(series.length))} loaded observations / ${escapeHtml(onchainRangeLabel(series))}</small>
+                  </div>
+                  <div class="derivatives-context-strip">
+                    ${derivativesContextChip("Symbol", selectedPoint?.record?.symbol || group.symbols.join(", "))}
+                    ${derivativesContextChip("Market", selectedPoint?.record?.market_type || "futures")}
+                    ${derivativesContextChip("Period", selectedPoint?.record?.period || "snapshot")}
+                  </div>
+                </div>
+                ${renderDerivativesMetricTabs(metricKeys, state.derivativesMetricKey, group.records)}
+                ${renderDerivativesMetricSummary(series, selectedPoint, state.derivativesMetricKey)}
+                <div class="onchain-chart-frame derivatives-chart-frame">
+                  <div class="onchain-chart-scroll derivatives-chart-scroll" aria-label="${escapeHtml(group.label)} ${escapeHtml(metricLabel(state.derivativesMetricKey))} time series">
+                    ${renderOnchainChart(series, state.derivativesMetricKey, selectedIndex)}
+                  </div>
+                </div>
+                <div class="onchain-chart-foot">
+                  <span>Drag horizontally to inspect snapshots and interval records.</span>
+                  <span>Use metric tabs to switch OI, funding, basis, premium, spread, or depth measures.</span>
+                </div>
+              </section>
+              ${renderDerivativesSelectedPoint(selectedPoint, payload)}
+            </div>`);
+          wireDerivativesMarketPreview(selector, payload, records, groups, metricKeys, series);
+        }
+
+        function derivativesMarketGroups(records) {
+          const groups = new Map();
+          (Array.isArray(records) ? records : []).forEach((record) => {
+            if (!record || typeof record !== "object") return;
+            const key = recordCategory(record, "derivatives_market");
+            if (!groups.has(key)) {
+              groups.set(key, {key, label: categoryLabel(key), records: [], latestTime: 0, symbols: new Set()});
+            }
+            const group = groups.get(key);
+            group.records.push(record);
+            if (record?.symbol) group.symbols.add(String(record.symbol));
+            const timestamp = Date.parse(recordTime(record, "derivatives_market"));
+            if (Number.isFinite(timestamp)) group.latestTime = Math.max(group.latestTime, timestamp);
+          });
+          return Array.from(groups.values())
+            .map((group) => ({
+              ...group,
+              symbols: Array.from(group.symbols).sort(),
+              metrics: numericMetricKeys(group.records),
+              count: group.records.length,
+            }))
+            .filter((group) => group.count > 0)
+            .sort((left, right) => {
+              if (right.latestTime !== left.latestTime) return right.latestTime - left.latestTime;
+              return left.label.localeCompare(right.label);
+            });
+        }
+
+        function renderDerivativesMarketTabs(groups, selectedKey) {
+          return `
+            <div class="onchain-subtabs derivatives-subtabs" role="tablist" aria-label="Derivatives data classes">
+              ${groups.map((group) => `
+                <button class="tab-button ${group.key === selectedKey ? "active" : ""}" type="button" role="tab" aria-selected="${group.key === selectedKey ? "true" : "false"}" data-derivatives-class="${escapeHtml(group.key)}">
+                  <span>${escapeHtml(group.label)}</span>
+                  <small>${escapeHtml(formatNumber(group.count))}</small>
+                </button>
+              `).join("")}
+            </div>`;
+        }
+
+        function renderDerivativesMetricTabs(metricKeys, selectedMetric, records) {
+          return `
+            <div class="onchain-metric-tabs derivatives-metric-tabs" role="tablist" aria-label="Derivatives metrics">
+              ${metricKeys.map((key) => {
+                const count = metricSeries(records, key, "derivatives_market").length;
+                return `
+                  <button class="ghost-button compact-button ${key === selectedMetric ? "active" : ""}" type="button" role="tab" aria-selected="${key === selectedMetric ? "true" : "false"}" data-derivatives-metric="${escapeHtml(key)}">
+                    ${escapeHtml(metricLabel(key))}
+                    <span>${escapeHtml(formatNumber(count))}</span>
+                  </button>`;
+              }).join("")}
+            </div>`;
+        }
+
+        function renderDerivativesMetricSummary(series, selectedPoint, metricKey) {
+          const values = series.map((point) => point.value);
+          const latest = series[series.length - 1];
+          const previous = series.length > 1 ? series[series.length - 2] : null;
+          const change = previous ? latest.value - previous.value : null;
+          const min = Math.min(...values);
+          const max = Math.max(...values);
+          const unit = selectedPoint?.record?.units?.[metricKey] || latest?.record?.units?.[metricKey] || "";
+          return `
+            <div class="derivatives-summary-grid">
+              ${onchainMetricCard("Selected", selectedPoint?.value, metricKey, unit, formatTimestamp(selectedPoint?.time))}
+              ${onchainMetricCard("Latest", latest?.value, metricKey, unit, formatTimestamp(latest?.time))}
+              ${onchainMetricCard("Range low", min, metricKey, unit, "loaded range")}
+              ${onchainMetricCard("Last step", change, metricKey, unit, previous ? "latest minus previous" : "n/a")}
+            </div>`;
+        }
+
+        function renderDerivativesSelectedPoint(point, payload) {
+          if (!point) return `<section class="derivatives-selected-card"><div class="empty-state">Select a chart point to inspect its derivatives snapshot.</div></section>`;
+          const record = point.record || {};
+          const metrics = recordMetricFacts(record);
+          const facts = recordPrimaryFacts(record, "derivatives_market");
+          return `
+            <section class="derivatives-selected-card">
+              <div class="intel-preview-main-head">
+                <div class="intel-preview-title-stack">
+                  <div class="muted">${escapeHtml(formatTimestamp(point.time))}</div>
+                  <h2>${escapeHtml(recordTitle(record, "derivatives_market"))}</h2>
+                </div>
+                <button class="ghost-button compact-button intel-properties-trigger" type="button" id="intel-properties-button" title="Open properties for this derivatives record">Properties</button>
+              </div>
+              ${renderDerivativesPressure(record)}
+              ${metrics.length ? `<section class="intel-record-section"><h3>Market metrics</h3><div class="intel-metric-grid">${metrics.map(([key, val, unit]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(formatMetricValue(val, key, unit))}</strong>${unit ? `<small>${escapeHtml(unit)}</small>` : ""}</div>`).join("")}</div></section>` : ""}
+              ${facts.length ? `<section class="intel-record-section"><h3>Record context</h3><div class="intel-fact-grid">${facts.map(([key, val]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(text(val))}</strong></div>`).join("")}</div></section>` : ""}
+            </section>`;
+        }
+
+        function renderDerivativesPressure(record) {
+          const metrics = record?.metrics || {};
+          const bid = Number(metrics.bid_depth_notional ?? metrics.bid_depth_quantity);
+          const ask = Number(metrics.ask_depth_notional ?? metrics.ask_depth_quantity);
+          const hasDepth = Number.isFinite(bid) && Number.isFinite(ask) && bid + ask > 0;
+          const basis = Number(metrics.basis_rate ?? metrics.premium_rate ?? metrics.funding_rate ?? metrics.last_funding_rate);
+          if (!hasDepth && !Number.isFinite(basis)) return "";
+          const bidShare = hasDepth ? Math.max(0, Math.min(100, (bid / (bid + ask)) * 100)) : 50;
+          const askShare = hasDepth ? 100 - bidShare : 50;
+          const tone = Number.isFinite(basis) ? (basis > 0 ? "positive" : basis < 0 ? "negative" : "neutral") : "neutral";
+          return `
+            <section class="derivatives-pressure-panel ${escapeHtml(tone)}">
+              <div>
+                <span>Book pressure</span>
+                <strong>${hasDepth ? `${bidShare.toFixed(1)}% bid / ${askShare.toFixed(1)}% ask` : "n/a"}</strong>
+              </div>
+              ${hasDepth ? `<div class="depth-balance" aria-label="Bid and ask depth balance"><span class="bid" style="width:${bidShare.toFixed(2)}%"></span><span class="ask" style="width:${askShare.toFixed(2)}%"></span></div>` : ""}
+              <div>
+                <span>Carry / premium signal</span>
+                <strong>${Number.isFinite(basis) ? formatMetricValue(basis, "rate", "ratio") : "n/a"}</strong>
+              </div>
+            </section>`;
+        }
+
+        function wireDerivativesMarketPreview(selector, payload, records, groups, metricKeys, series) {
           const root = node(selector);
-          wireIntelligencePreviewFilters(selector, payload, records, header);
+          root?.querySelectorAll("[data-derivatives-class]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.derivativesDataClass = button.dataset.derivativesClass || "";
+              state.derivativesMetricKey = "";
+              state.derivativesSelectedIndex = null;
+              renderDerivativesMarketPreview(selector, payload, records);
+            });
+          });
+          root?.querySelectorAll("[data-derivatives-metric]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.derivativesMetricKey = button.dataset.derivativesMetric || "";
+              state.derivativesSelectedIndex = null;
+              renderDerivativesMarketPreview(selector, payload, records);
+            });
+          });
+          root?.querySelectorAll("[data-onchain-point-index]").forEach((point) => {
+            point.addEventListener("click", () => {
+              state.derivativesSelectedIndex = Number(point.dataset.onchainPointIndex) || 0;
+              renderDerivativesMarketPreview(selector, payload, records);
+            });
+          });
+          wireOnchainChartDragScroll(root);
+          window.requestAnimationFrame(() => {
+            root?.querySelector("[data-onchain-selected-point]")?.scrollIntoView({block: "nearest", inline: "center"});
+          });
+        }
+
+        function renderMarketAnomalyPreview(selector, payload, records) {
+          const anomalies = marketAnomalyRecords(records);
+          syncIntelligencePreviewFilterControls([], anomalies.length, records.length);
+          if (!anomalies.length) {
+            updateIntelligencePropertiesSelection(null, payload);
+            setHtml(selector, `
+              <div class="market-anomaly-preview empty">
+                <div class="empty-state">No market anomaly records are available for the current preview window.</div>
+              </div>`);
+            return;
+          }
+          const filtered = anomalies.filter((record) => {
+            const severity = String(state.anomalySeverityFilter || "");
+            const sourceKind = String(state.anomalySourceKindFilter || "");
+            if (severity && String(record?.severity || "unknown") !== severity) return false;
+            if (sourceKind && String(record?.source_kind || "unknown") !== sourceKind) return false;
+            return true;
+          });
+          const selectedList = filtered.length ? filtered : anomalies;
+          const selectedIndex = ensureAnomalySelectedIndex(selectedList);
+          const selected = selectedList[selectedIndex] || selectedList[0];
+          updateIntelligencePropertiesSelection(selected || null, payload);
+          setHtml(selector, `
+            <div class="market-anomaly-preview">
+              <section class="anomaly-radar-header">
+                <div class="onchain-title-stack">
+                  <span>Market anomaly radar</span>
+                  <strong>${escapeHtml(formatNumber(filtered.length || anomalies.length))} active signals</strong>
+                  <small>${escapeHtml(anomalyRangeLabel(anomalies))}</small>
+                </div>
+                ${renderAnomalySeverityTabs(anomalies)}
+                ${renderAnomalySourceKindTabs(anomalies)}
+              </section>
+              ${renderAnomalyStats(anomalies)}
+              <div class="anomaly-radar-layout">
+                <aside class="anomaly-leaderboard">
+                  <div class="intel-list-toolbar"><strong>Ranked signals</strong><span>${escapeHtml(formatNumber(selectedList.length))}</span></div>
+                  <div class="anomaly-list">${selectedList.slice(0, 80).map((record, index) => renderAnomalyRow(record, index, selectedIndex)).join("")}</div>
+                </aside>
+                <article class="anomaly-radar-main">
+                  ${renderAnomalyHeatmap(selectedList, selectedIndex)}
+                  ${renderAnomalyDetail(selected, payload)}
+                </article>
+              </div>
+            </div>`);
+          wireMarketAnomalyPreview(selector, payload, records);
+        }
+
+        function marketAnomalyRecords(records) {
+          return (Array.isArray(records) ? records : []).slice().sort((left, right) => {
+            const severityDelta = severityScore(right?.severity) - severityScore(left?.severity);
+            if (severityDelta) return severityDelta;
+            const valueDelta = anomalyMagnitude(right) - anomalyMagnitude(left);
+            if (valueDelta) return valueDelta;
+            const rightTime = Date.parse(recordTime(right, "market_anomaly"));
+            const leftTime = Date.parse(recordTime(left, "market_anomaly"));
+            return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+          });
+        }
+
+        function renderAnomalyStats(records) {
+          const severities = countBy(records, (record) => String(record?.severity || "unknown"));
+          const symbols = new Set(records.map((record) => record?.symbol).filter(Boolean));
+          const highCount = (severities.get("high") || 0) + (severities.get("critical") || 0);
+          const top = records[0];
+          return `
+            <div class="anomaly-stat-grid">
+              ${anomalyStatCard("High severity", highCount, "needs review")}
+              ${anomalyStatCard("Symbols", symbols.size, "affected markets")}
+              ${anomalyStatCard("Top signal", top ? `${text(top.symbol, "n/a")} ${formatAnomalyMagnitude(top)}` : "n/a", top ? categoryLabel(recordCategory(top, "market_anomaly")) : "none")}
+              ${anomalyStatCard("Sources", countBy(records, (record) => record?.source_kind || record?.source || "unknown").size, "dedupe-aware")}
+            </div>`;
+        }
+
+        function anomalyStatCard(title, value, note) {
+          return `
+            <div class="anomaly-stat-card">
+              <span>${escapeHtml(title)}</span>
+              <strong>${escapeHtml(text(value))}</strong>
+              <small>${escapeHtml(note || "")}</small>
+            </div>`;
+        }
+
+        function renderAnomalySeverityTabs(records) {
+          const counts = countBy(records, (record) => String(record?.severity || "unknown"));
+          const severities = ["", "critical", "high", "medium", "low", "unknown"].filter((severity) => severity === "" || counts.has(severity));
+          return `
+            <div class="anomaly-filter-tabs" role="tablist" aria-label="Anomaly severity filter">
+              ${severities.map((severity) => {
+                const active = String(state.anomalySeverityFilter || "") === severity;
+                const labelText = severity ? label(severity) : "All";
+                const count = severity ? counts.get(severity) || 0 : records.length;
+                return `<button class="ghost-button compact-button ${active ? "active" : ""}" type="button" data-anomaly-severity="${escapeHtml(severity)}">${escapeHtml(labelText)} <span>${escapeHtml(formatNumber(count))}</span></button>`;
+              }).join("")}
+            </div>`;
+        }
+
+        function renderAnomalySourceKindTabs(records) {
+          const counts = countBy(records, (record) => String(record?.source_kind || "unknown"));
+          if (counts.size <= 1) return "";
+          const entries = [["", records.length], ...Array.from(counts.entries()).sort(([left], [right]) => label(left).localeCompare(label(right)))];
+          return `
+            <div class="anomaly-source-tabs" role="tablist" aria-label="Anomaly source filter">
+              ${entries.map(([sourceKind, count]) => {
+                const active = String(state.anomalySourceKindFilter || "") === sourceKind;
+                return `<button class="ghost-button compact-button ${active ? "active" : ""}" type="button" data-anomaly-source-kind="${escapeHtml(sourceKind)}">${escapeHtml(sourceKind ? label(sourceKind) : "All sources")} <span>${escapeHtml(formatNumber(count))}</span></button>`;
+              }).join("")}
+            </div>`;
+        }
+
+        function renderAnomalyRow(record, index, selectedIndex) {
+          const severity = String(record?.severity || "unknown");
+          return `
+            <button class="anomaly-row ${index === selectedIndex ? "active" : ""} severity-${escapeHtml(severity)}" type="button" data-anomaly-index="${index}">
+              <span class="anomaly-row-rank">${escapeHtml(String(index + 1).padStart(2, "0"))}</span>
+              <span class="anomaly-row-main">
+                <strong>${escapeHtml(recordTitle(record, "market_anomaly"))}</strong>
+                <small>${escapeHtml(formatTimestamp(recordTime(record, "market_anomaly")))} / ${escapeHtml(record?.source || "source")}</small>
+              </span>
+              <span class="anomaly-row-score">${escapeHtml(formatAnomalyMagnitude(record))}</span>
+            </button>`;
+        }
+
+        function renderAnomalyHeatmap(records, selectedIndex) {
+          const top = records.slice(0, 36);
+          if (!top.length) return `<section class="anomaly-heatmap-card"><div class="empty-state">No signals matched the current radar filters.</div></section>`;
+          return `
+            <section class="anomaly-heatmap-card">
+              <div class="anomaly-section-head">
+                <div>
+                  <strong>Signal heatmap</strong>
+                  <span>Ranked by severity and observed magnitude.</span>
+                </div>
+              </div>
+              <div class="anomaly-heatmap">
+                ${top.map((record, index) => `
+                  <button class="anomaly-heatmap-tile severity-${escapeHtml(record?.severity || "unknown")} ${index === selectedIndex ? "active" : ""}" type="button" data-anomaly-index="${index}">
+                    <strong>${escapeHtml(record?.symbol || "n/a")}</strong>
+                    <span>${escapeHtml(formatAnomalyMagnitude(record))}</span>
+                    <small>${escapeHtml(label(record?.timeframe || record?.data_class || "signal"))}</small>
+                  </button>
+                `).join("")}
+              </div>
+            </section>`;
+        }
+
+        function renderAnomalyDetail(record, payload) {
+          if (!record) return `<section class="anomaly-detail-card"><div class="empty-state">Select an anomaly signal to inspect details.</div></section>`;
+          const metrics = recordMetricFacts(record);
+          const facts = recordPrimaryFacts(record, "market_anomaly");
+          const severity = String(record?.severity || "unknown");
+          return `
+            <section class="anomaly-detail-card severity-${escapeHtml(severity)}">
+              <div class="intel-preview-main-head">
+                <div class="intel-preview-title-stack">
+                  <div class="muted">${escapeHtml(formatTimestamp(recordTime(record, "market_anomaly")))}</div>
+                  <h2>${escapeHtml(recordTitle(record, "market_anomaly"))}</h2>
+                </div>
+                <button class="ghost-button compact-button intel-properties-trigger" type="button" id="intel-properties-button" title="Open properties for this anomaly">Properties</button>
+              </div>
+              <div class="anomaly-detail-banner">
+                <span class="status-pill ${escapeHtml(anomalySeverityStatus(severity))}">${escapeHtml(label(severity))}</span>
+                <span>${escapeHtml(label(record?.direction || "unknown"))}</span>
+                <strong>${escapeHtml(formatAnomalyMagnitude(record))}</strong>
+              </div>
+              <p>${escapeHtml(recordSummary(record, "market_anomaly") || "No anomaly summary is recorded for this signal.")}</p>
+              ${metrics.length ? `<section class="intel-record-section"><h3>Signal metrics</h3><div class="intel-metric-grid">${metrics.map(([key, val, unit]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(formatMetricValue(val, key, unit))}</strong>${unit ? `<small>${escapeHtml(unit)}</small>` : ""}</div>`).join("")}</div></section>` : ""}
+              ${facts.length ? `<section class="intel-record-section"><h3>Signal context</h3><div class="intel-fact-grid">${facts.map(([key, val]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(text(val))}</strong></div>`).join("")}</div></section>` : ""}
+            </section>`;
+        }
+
+        function wireMarketAnomalyPreview(selector, payload, records) {
+          const root = node(selector);
+          root?.querySelectorAll("[data-anomaly-severity]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.anomalySeverityFilter = button.dataset.anomalySeverity || "";
+              state.anomalySelectedIndex = null;
+              renderMarketAnomalyPreview(selector, payload, records);
+            });
+          });
+          root?.querySelectorAll("[data-anomaly-source-kind]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.anomalySourceKindFilter = button.dataset.anomalySourceKind || "";
+              state.anomalySelectedIndex = null;
+              renderMarketAnomalyPreview(selector, payload, records);
+            });
+          });
+          root?.querySelectorAll("[data-anomaly-index]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.anomalySelectedIndex = Number(button.dataset.anomalyIndex) || 0;
+              renderMarketAnomalyPreview(selector, payload, records);
+            });
+          });
+        }
+
+        function numericMetricKeys(records) {
+          const keys = [];
+          const seen = new Set();
+          (Array.isArray(records) ? records : []).forEach((record) => {
+            const metrics = record?.metrics && typeof record.metrics === "object" ? record.metrics : {};
+            Object.entries(metrics).forEach(([key, value]) => {
+              const numeric = Number(value);
+              if (!Number.isFinite(numeric) || seen.has(key)) return;
+              seen.add(key);
+              keys.push(key);
+            });
+          });
+          return keys;
+        }
+
+        function metricSeries(records, metricKey, dataType) {
+          return (Array.isArray(records) ? records : [])
+            .map((record) => {
+              const timestamp = Date.parse(recordTime(record, dataType));
+              const value = Number(record?.metrics?.[metricKey]);
+              return {record, time: recordTime(record, dataType), timestamp, value};
+            })
+            .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value))
+            .sort((left, right) => {
+              if (left.timestamp !== right.timestamp) return left.timestamp - right.timestamp;
+              return left.value - right.value;
+            });
+        }
+
+        function ensureMetricSelectedIndex(stateKey, series) {
+          if (state[stateKey] === null || state[stateKey] === undefined || state[stateKey] === "") {
+            state[stateKey] = Math.max(0, series.length - 1);
+            return state[stateKey];
+          }
+          const requested = Number(state[stateKey]);
+          if (Number.isInteger(requested) && requested >= 0 && requested < series.length) return requested;
+          state[stateKey] = Math.max(0, series.length - 1);
+          return state[stateKey];
+        }
+
+        function ensureAnomalySelectedIndex(records) {
+          const length = Array.isArray(records) ? records.length : 0;
+          if (!length) return 0;
+          const requested = Number(state.anomalySelectedIndex);
+          if (Number.isInteger(requested) && requested >= 0 && requested < length) return requested;
+          state.anomalySelectedIndex = 0;
+          return 0;
+        }
+
+        function derivativesDefaultMetric(groupKey, metricKeys) {
+          const preferred = {
+            funding_rate: ["funding_rate", "last_funding_rate"],
+            premium_index: ["premium_rate", "last_funding_rate", "mark_price"],
+            basis: ["basis_rate", "basis", "futures_price"],
+            open_interest: ["open_interest_value", "open_interest_contracts"],
+            spread_depth: ["spread_bps", "depth_imbalance", "bid_depth_notional"],
+          }[groupKey] || [];
+          return preferred.find((key) => metricKeys.includes(key)) || metricKeys[0];
+        }
+
+        function derivativesContextChip(title, value) {
+          return `
+            <span class="derivatives-context-chip">
+              <small>${escapeHtml(title)}</small>
+              <strong>${escapeHtml(text(value, "n/a"))}</strong>
+            </span>`;
+        }
+
+        function countBy(records, getter) {
+          const counts = new Map();
+          (Array.isArray(records) ? records : []).forEach((record) => {
+            const key = String(getter(record) || "unknown");
+            counts.set(key, (counts.get(key) || 0) + 1);
+          });
+          return counts;
+        }
+
+        function severityScore(severity) {
+          const normalized = String(severity || "").toLowerCase();
+          if (normalized === "critical") return 4;
+          if (normalized === "high") return 3;
+          if (normalized === "medium") return 2;
+          if (normalized === "low") return 1;
+          return 0;
+        }
+
+        function anomalyMagnitude(record) {
+          const direct = Number(record?.value);
+          if (Number.isFinite(direct)) return Math.abs(direct);
+          const metricKey = record?.metric;
+          const metricValue = metricKey ? Number(record?.metrics?.[metricKey]) : Number.NaN;
+          if (Number.isFinite(metricValue)) return Math.abs(metricValue);
+          const metrics = Object.values(record?.metrics || {}).map((value) => Number(value)).filter(Number.isFinite);
+          return metrics.length ? Math.max(...metrics.map(Math.abs)) : 0;
+        }
+
+        function formatAnomalyMagnitude(record) {
+          const key = record?.metric || Object.keys(record?.metrics || {}).find((metricKey) => metricKey.includes("multiplier")) || record?.data_class || "value";
+          const value = record?.value ?? record?.metrics?.[key] ?? anomalyMagnitude(record);
+          const unit = record?.unit || record?.units?.[key] || "";
+          return formatMetricValue(value, key, unit);
+        }
+
+        function anomalyRangeLabel(records) {
+          if (!records.length) return "no range";
+          const sorted = records.slice().sort((left, right) => {
+            const leftTime = Date.parse(recordTime(left, "market_anomaly"));
+            const rightTime = Date.parse(recordTime(right, "market_anomaly"));
+            return (Number.isFinite(leftTime) ? leftTime : 0) - (Number.isFinite(rightTime) ? rightTime : 0);
+          });
+          return `${formatTimestamp(recordTime(sorted[0], "market_anomaly"))} to ${formatTimestamp(recordTime(sorted[sorted.length - 1], "market_anomaly"))}`;
+        }
+
+        function anomalySeverityStatus(severity) {
+          const normalized = String(severity || "").toLowerCase();
+          if (normalized === "critical" || normalized === "high") return "failed";
+          if (normalized === "medium") return "warning";
+          if (normalized === "low") return "collected";
+          return "unknown";
+        }
+
+        function wireOnchainFlowPreview(selector, payload, records, groups, metricKeys, series) {
+          const root = node(selector);
+          root?.querySelectorAll("[data-onchain-class]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.onchainDataClass = button.dataset.onchainClass || "";
+              state.onchainMetricKey = "";
+              state.onchainSelectedIndex = null;
+              renderOnchainFlowPreview(selector, payload, records);
+            });
+          });
+          root?.querySelectorAll("[data-onchain-metric]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.onchainMetricKey = button.dataset.onchainMetric || "";
+              state.onchainSelectedIndex = null;
+              renderOnchainFlowPreview(selector, payload, records);
+            });
+          });
+          root?.querySelectorAll("[data-onchain-point-index]").forEach((point) => {
+            point.addEventListener("click", () => {
+              state.onchainSelectedIndex = Number(point.dataset.onchainPointIndex) || 0;
+              renderOnchainFlowPreview(selector, payload, records);
+            });
+          });
+          const jump = () => {
+            const raw = String(root?.querySelector("#onchain-date-jump")?.value || "");
+            const target = parseDatetimeLocalUtc(raw);
+            if (!Number.isFinite(target) || !series.length) return;
+            state.onchainSelectedIndex = nearestOnchainPointIndex(series, target);
+            renderOnchainFlowPreview(selector, payload, records);
+          };
+          root?.querySelector("[data-onchain-jump]")?.addEventListener("click", jump);
+          root?.querySelector("#onchain-date-jump")?.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") jump();
+          });
+          wireOnchainChartDragScroll(root);
+          window.requestAnimationFrame(() => {
+            root?.querySelector("[data-onchain-selected-point]")?.scrollIntoView({block: "nearest", inline: "center"});
+          });
+        }
+
+        function wireOnchainChartDragScroll(root) {
+          const scroller = root?.querySelector(".onchain-chart-scroll");
+          if (!scroller) return;
+          let dragging = false;
+          let startX = 0;
+          let startScroll = 0;
+          scroller.addEventListener("pointerdown", (event) => {
+            if (event.target.closest("[data-onchain-point-index]")) return;
+            dragging = true;
+            startX = event.clientX;
+            startScroll = scroller.scrollLeft;
+            scroller.classList.add("dragging");
+            scroller.setPointerCapture?.(event.pointerId);
+          });
+          scroller.addEventListener("pointermove", (event) => {
+            if (!dragging) return;
+            scroller.scrollLeft = startScroll - (event.clientX - startX);
+          });
+          scroller.addEventListener("pointerup", (event) => {
+            dragging = false;
+            scroller.classList.remove("dragging");
+            scroller.releasePointerCapture?.(event.pointerId);
+          });
+          scroller.addEventListener("pointercancel", () => {
+            dragging = false;
+            scroller.classList.remove("dragging");
+          });
+        }
+
+        function nearestOnchainPointIndex(series, targetTimestamp) {
+          let bestIndex = 0;
+          let bestDistance = Infinity;
+          series.forEach((point, index) => {
+            const distance = Math.abs(point.timestamp - targetTimestamp);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestIndex = index;
+            }
+          });
+          return bestIndex;
+        }
+
+        function parseDatetimeLocalUtc(raw) {
+          if (!raw) return Number.NaN;
+          const normalized = raw.length === 16 ? `${raw}:00Z` : `${raw}Z`;
+          return Date.parse(normalized);
+        }
+
+        function onchainDateInputValue(isoValue) {
+          const timestamp = Date.parse(isoValue);
+          if (!Number.isFinite(timestamp)) return "";
+          return new Date(timestamp).toISOString().slice(0, 16);
+        }
+
+        function onchainRangeLabel(series) {
+          if (!series.length) return "no range";
+          return `${formatTimestamp(series[0].time)} to ${formatTimestamp(series[series.length - 1].time)}`;
+        }
+
+        function metricLabel(key) {
+          return label(key || "metric");
+        }
+
+        function formatChartAxisValue(value, key, unit) {
+          const numeric = Number(value);
+          if (!Number.isFinite(numeric)) return text(value);
+          const rawKey = String(key || "").toLowerCase();
+          const rawUnit = String(unit || "").toLowerCase();
+          if (rawUnit === "percent") return `${numeric.toFixed(2)}%`;
+          if (rawUnit === "ratio" || rawKey.includes("rate")) return `${(numeric * 100).toFixed(2)}%`;
+          const absolute = Math.abs(numeric);
+          const units = [
+            [1_000_000_000, "B"],
+            [1_000_000, "M"],
+            [1_000, "K"],
+          ];
+          const unitScale = units.find(([scale]) => absolute >= scale);
+          if (!unitScale) return numeric.toLocaleString("en-US", {maximumFractionDigits: 2});
+          const [scale, suffix] = unitScale;
+          return `${(numeric / scale).toLocaleString("en-US", {maximumFractionDigits: 2})}${suffix}`;
+        }
+
+        function macroCalendarRecords(records) {
+          return (Array.isArray(records) ? records : []).slice().sort((left, right) => {
+            const leftTime = Date.parse(recordTime(left, "macro_calendar"));
+            const rightTime = Date.parse(recordTime(right, "macro_calendar"));
+            const leftScore = Number.isFinite(leftTime) ? leftTime : 0;
+            const rightScore = Number.isFinite(rightTime) ? rightTime : 0;
+            if (rightScore !== leftScore) return rightScore - leftScore;
+            return recordTitle(left, "macro_calendar").localeCompare(recordTitle(right, "macro_calendar"));
+          });
+        }
+
+        function ensureMacroCalendarViewport(events) {
+          const selected = events[state.selectedIntelPreviewIndex] || events[0];
+          const selectedDate = recordDateKey(selected, "macro_calendar") || new Date().toISOString().slice(0, 10);
+          if (!state.macroCalendarView) state.macroCalendarView = "month";
+          if (!state.macroCalendarHighlightedDate) state.macroCalendarHighlightedDate = selectedDate;
+          if (!state.macroCalendarMonth) state.macroCalendarMonth = state.macroCalendarHighlightedDate.slice(0, 7);
+          if (!state.macroCalendarYear) state.macroCalendarYear = state.macroCalendarMonth.slice(0, 4);
+        }
+
+        function macroEventListItemsWithDates(events) {
+          let currentDate = "";
+          return events.map((record, index) => {
+            const dateKey = recordDateKey(record, "macro_calendar");
+            const heading = dateKey && dateKey !== currentDate
+              ? `<div class="intel-date-heading macro-date-heading" data-intel-date-heading="${escapeHtml(dateKey)}">${escapeHtml(formatDateHeading(dateKey))}</div>`
+              : "";
+            if (dateKey) currentDate = dateKey;
+            return `${heading}${macroEventListItem(record, index)}`;
+          }).join("");
+        }
+
+        function macroEventListItem(record, index) {
+          const active = index === state.selectedIntelPreviewIndex;
+          const temporalState = macroCalendarTemporalState(record, "macro_calendar");
+          const temporalClass = temporalState ? ` macro-event-${temporalState.key}` : "";
+          return `
+            <button class="intel-preview-row macro-event-row${temporalClass} ${active ? "active" : ""}" type="button" data-macro-list-index="${index}">
+              <strong class="macro-event-list-title"><span>${escapeHtml(recordTitle(record, "macro_calendar"))}</span>${macroEventChips(record)}</strong>
+              <span>${escapeHtml(formatTimestamp(recordTime(record, "macro_calendar")))}${temporalState ? `<em class="macro-event-state">${escapeHtml(temporalState.label)}</em>` : ""}</span>
+              <small>${escapeHtml([recordSource(record), record?.event_type || record?.data_class].filter(Boolean).join(" / ") || "Macro calendar")}</small>
+            </button>`;
+        }
+
+        function macroEventChips(record) {
+          const chips = [
+            record?.importance ? [record.importance, `importance-${macroImportanceClass(record.importance)}`] : null,
+            macroRegion(record) ? [macroRegion(record), "region"] : null,
+          ].filter(Boolean);
+          if (!chips.length) return "";
+          return `<span class="macro-event-chip-row">${chips.map(([value, className]) => `<span class="macro-event-chip ${escapeHtml(className)}">${escapeHtml(label(value))}</span>`).join("")}</span>`;
+        }
+
+        function renderMacroCalendarMain(events) {
+          const byDate = macroRecordsByDate(events);
+          const view = state.macroCalendarView === "year" ? "year" : "month";
+          return `
+            <div class="macro-calendar-shell ${escapeHtml(view)}">
+              <div class="macro-calendar-toolbar">
+                <div class="macro-calendar-nav">
+                  ${view === "month"
+                    ? `<button class="ghost-button compact-button" type="button" data-macro-month-shift="-1">Prev</button><strong>${escapeHtml(macroMonthLabel(state.macroCalendarMonth))}</strong><button class="ghost-button compact-button" type="button" data-macro-month-shift="1">Next</button>`
+                    : `<button class="ghost-button compact-button" type="button" data-macro-year-shift="-1">Prev</button><strong>${escapeHtml(state.macroCalendarYear || "")}</strong><button class="ghost-button compact-button" type="button" data-macro-year-shift="1">Next</button>`}
+                </div>
+                <div class="segmented-control macro-calendar-mode-toggle" role="tablist" aria-label="Calendar view">
+                  <button class="tab-button ${view === "month" ? "active" : ""}" type="button" data-macro-calendar-view="month">Month</button>
+                  <button class="tab-button ${view === "year" ? "active" : ""}" type="button" data-macro-calendar-view="year">Year</button>
+                </div>
+              </div>
+              ${view === "year" ? renderMacroCalendarYearView(events, byDate) : renderMacroCalendarMonthView(events, byDate)}
+            </div>`;
+        }
+
+        function renderMacroCalendarMonthView(events, byDate) {
+          const monthKey = state.macroCalendarMonth || new Date().toISOString().slice(0, 7);
+          const [year, month] = monthKey.split("-").map((part) => Number(part));
+          const first = new Date(Date.UTC(year, month - 1, 1));
+          const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+          const leading = first.getUTCDay();
+          const cells = [];
+          for (let index = 0; index < leading; index += 1) cells.push(`<div class="macro-month-day empty" aria-hidden="true"></div>`);
+          for (let day = 1; day <= daysInMonth; day += 1) {
+            const dateKey = `${monthKey}-${String(day).padStart(2, "0")}`;
+            cells.push(renderMacroMonthCell(dateKey, day, byDate.get(dateKey) || []));
+          }
+          return `
+            <div class="macro-calendar-weekdays">${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => `<span>${day}</span>`).join("")}</div>
+            <div class="macro-month-grid">${cells.join("")}</div>`;
+        }
+
+        function renderMacroMonthCell(dateKey, day, entries) {
+          const highlighted = dateKey === state.macroCalendarHighlightedDate;
+          const importance = macroHighestImportance(entries.map((entry) => entry.record));
+          return `
+            <div class="macro-month-day ${entries.length ? "has-events" : ""} ${highlighted ? "is-highlighted" : ""} ${escapeHtml(importance ? `importance-${macroImportanceClass(importance)}` : "")}" data-macro-date-cell="${escapeHtml(dateKey)}">
+              <button class="macro-day-head" type="button" data-macro-date="${escapeHtml(dateKey)}">
+                <span>${escapeHtml(String(day))}</span>
+                ${entries.length ? `<small>${escapeHtml(formatNumber(entries.length))}</small>` : ""}
+              </button>
+              <div class="macro-day-event-stack" aria-label="${escapeHtml(`${dateKey} macro events`)}">
+                ${entries.map(({record, index}) => {
+                  const tooltip = macroEventTooltip(record);
+                  return `
+                  <button class="macro-calendar-event importance-${escapeHtml(macroImportanceClass(record?.importance))}" type="button" data-macro-event-index="${index}" title="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}">
+                    <span>${escapeHtml(shortTime(recordTime(record, "macro_calendar")) || "time n/a")}</span>
+                    <strong>${escapeHtml(recordTitle(record, "macro_calendar"))}</strong>
+                  </button>`;
+                }).join("")}
+              </div>
+            </div>`;
+        }
+
+        function renderMacroCalendarYearView(events, byDate) {
+          const year = Number(state.macroCalendarYear) || new Date().getUTCFullYear();
+          return `
+            <div class="macro-year-grid">
+              ${Array.from({length: 12}, (_, index) => renderMacroYearMonth(year, index, byDate)).join("")}
+            </div>`;
+        }
+
+        function renderMacroYearMonth(year, monthIndex, byDate) {
+          const first = new Date(Date.UTC(year, monthIndex, 1));
+          const monthKey = first.toISOString().slice(0, 7);
+          const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+          const leading = first.getUTCDay();
+          const cells = [];
+          for (let index = 0; index < leading; index += 1) cells.push(`<span class="macro-year-day empty"></span>`);
+          for (let day = 1; day <= daysInMonth; day += 1) {
+            const dateKey = `${monthKey}-${String(day).padStart(2, "0")}`;
+            const entries = byDate.get(dateKey) || [];
+            const importance = macroHighestImportance(entries.map((entry) => entry.record));
+            const highlighted = dateKey === state.macroCalendarHighlightedDate;
+            cells.push(`
+              <button class="macro-year-day ${entries.length ? "has-events" : ""} ${highlighted ? "is-highlighted" : ""} ${escapeHtml(importance ? `importance-${macroImportanceClass(importance)}` : "")}" type="button" data-macro-year-date="${escapeHtml(dateKey)}" ${entries.length ? "" : "disabled"} title="${escapeHtml(`${dateKey}: ${entries.length} events${importance ? ` / highest ${importance}` : ""}`)}">
+                <span>${escapeHtml(String(day))}</span>
+                ${entries.length ? `<small>${escapeHtml(formatNumber(entries.length))}</small>` : ""}
+              </button>`);
+          }
+          return `
+            <section class="macro-year-month">
+              <h3>${escapeHtml(first.toLocaleString(undefined, {month: "short", timeZone: "UTC"}))}</h3>
+              <div class="macro-year-weekdays">${["S", "M", "T", "W", "T", "F", "S"].map((day) => `<span>${day}</span>`).join("")}</div>
+              <div class="macro-year-month-grid">${cells.join("")}</div>
+            </section>`;
+        }
+
+        function renderMacroEventDialog(events, payload) {
+          if (state.macroCalendarDetailIndex === null || state.macroCalendarDetailIndex === undefined || state.macroCalendarDetailIndex === "") return "";
+          const index = Number(state.macroCalendarDetailIndex);
+          if (!Number.isInteger(index) || index < 0 || index >= events.length) return "";
+          const record = events[index];
+          const facts = recordPrimaryFacts(record, "macro_calendar");
+          const metrics = recordMetricFacts(record);
+          return `
+            <div class="macro-event-dialog-backdrop" role="presentation" data-macro-dialog-close>
+              <section class="macro-event-dialog" role="dialog" aria-modal="true" aria-label="Macro event details">
+                <div class="macro-event-dialog-head">
+                  <div>
+                    <span class="muted">${escapeHtml(formatTimestamp(recordTime(record, "macro_calendar")))}</span>
+                    <h2>${escapeHtml(recordTitle(record, "macro_calendar"))}</h2>
+                  </div>
+                  <button class="icon-button" type="button" data-macro-dialog-close aria-label="Close macro event details">x</button>
+                </div>
+                ${macroCalendarTemporalBanner(record, "macro_calendar")}
+                <p>${escapeHtml(recordSummary(record, "macro_calendar") || "No narrative summary is recorded for this macro event.")}</p>
+                ${metrics.length ? `<section class="intel-record-section"><h3>Key metrics</h3><div class="intel-metric-grid">${metrics.map(([key, val, unit]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(formatMetricValue(val, key, unit))}</strong>${unit ? `<small>${escapeHtml(unit)}</small>` : ""}</div>`).join("")}</div></section>` : ""}
+                ${facts.length ? `<section class="intel-record-section"><h3>Event context</h3><div class="intel-fact-grid">${facts.map(([key, val]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(text(val))}</strong></div>`).join("")}</div></section>` : ""}
+                <section class="intel-record-section"><h3>Properties</h3>${previewRecordProperties(record, payload)}</section>
+              </section>
+            </div>`;
+        }
+
+        function wireMacroCalendarPreview(selector, payload, events) {
+          const root = node(selector);
+          if (!root) return;
+          root.querySelectorAll("[data-macro-list-index]").forEach((button) => {
+            button.addEventListener("click", () => {
+              selectMacroEvent(events, Number(button.dataset.macroListIndex) || 0, false);
+              renderMacroCalendarPreview(selector, payload, events);
+              window.requestAnimationFrame(() => {
+                root.querySelector(`[data-macro-date-cell="${state.macroCalendarHighlightedDate}"]`)?.scrollIntoView({block: "nearest", inline: "nearest"});
+              });
+            });
+          });
+          root.querySelectorAll("[data-macro-event-index]").forEach((button) => {
+            button.addEventListener("click", (event) => {
+              event.stopPropagation();
+              selectMacroEvent(events, Number(button.dataset.macroEventIndex) || 0, true);
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          root.querySelectorAll("[data-macro-date]").forEach((button) => {
+            button.addEventListener("click", () => {
+              selectMacroDate(events, button.dataset.macroDate || "");
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          root.querySelectorAll("[data-macro-year-date]").forEach((button) => {
+            button.addEventListener("click", () => {
+              const dateKey = button.dataset.macroYearDate || "";
+              state.macroCalendarView = "month";
+              state.macroCalendarMonth = dateKey.slice(0, 7);
+              selectMacroDate(events, dateKey);
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          root.querySelectorAll("[data-macro-month-shift]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.macroCalendarMonth = shiftCalendarMonth(state.macroCalendarMonth, Number(button.dataset.macroMonthShift) || 0);
+              state.macroCalendarYear = state.macroCalendarMonth.slice(0, 4);
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          root.querySelectorAll("[data-macro-year-shift]").forEach((button) => {
+            button.addEventListener("click", () => {
+              const year = Number(state.macroCalendarYear) || new Date().getUTCFullYear();
+              state.macroCalendarYear = String(year + (Number(button.dataset.macroYearShift) || 0));
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          root.querySelectorAll("[data-macro-calendar-view]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.macroCalendarView = button.dataset.macroCalendarView === "year" ? "year" : "month";
+              if (state.macroCalendarView === "year") state.macroCalendarYear = (state.macroCalendarMonth || "").slice(0, 4) || state.macroCalendarYear;
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          root.querySelectorAll("[data-macro-dialog-close]").forEach((target) => {
+            target.addEventListener("click", (event) => {
+              if (event.currentTarget !== event.target && !event.target.closest("[data-macro-dialog-close]")) return;
+              state.macroCalendarDetailIndex = null;
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
+          wireMacroCalendarDragScroll(root);
+        }
+
+        function selectMacroEvent(events, index, openDialog) {
+          const safeIndex = Math.min(Math.max(0, index), events.length - 1);
+          const record = events[safeIndex];
+          const dateKey = recordDateKey(record, "macro_calendar");
+          state.selectedIntelPreviewIndex = safeIndex;
+          if (dateKey) {
+            state.macroCalendarHighlightedDate = dateKey;
+            state.macroCalendarMonth = dateKey.slice(0, 7);
+            state.macroCalendarYear = dateKey.slice(0, 4);
+          }
+          state.macroCalendarView = "month";
+          state.macroCalendarDetailIndex = openDialog ? safeIndex : null;
+        }
+
+        function selectMacroDate(events, dateKey) {
+          if (!dateKey) return;
+          state.macroCalendarHighlightedDate = dateKey;
+          state.macroCalendarMonth = dateKey.slice(0, 7);
+          state.macroCalendarYear = dateKey.slice(0, 4);
+          const firstIndex = events.findIndex((record) => recordDateKey(record, "macro_calendar") === dateKey);
+          if (firstIndex >= 0) state.selectedIntelPreviewIndex = firstIndex;
+          state.macroCalendarDetailIndex = null;
+        }
+
+        function macroRecordsByDate(events) {
+          const byDate = new Map();
+          events.forEach((record, index) => {
+            const dateKey = recordDateKey(record, "macro_calendar");
+            if (!dateKey) return;
+            const entries = byDate.get(dateKey) || [];
+            entries.push({record, index});
+            byDate.set(dateKey, entries);
+          });
+          byDate.forEach((entries) => {
+            entries.sort((left, right) => {
+              const leftTime = Date.parse(recordTime(left.record, "macro_calendar"));
+              const rightTime = Date.parse(recordTime(right.record, "macro_calendar"));
+              return (Number.isFinite(leftTime) ? leftTime : 0) - (Number.isFinite(rightTime) ? rightTime : 0);
+            });
+          });
+          return byDate;
+        }
+
+        function macroHighestImportance(records) {
+          return records.reduce((highest, record) => {
+            const current = record?.importance || "";
+            return macroImportanceRank(current) > macroImportanceRank(highest) ? current : highest;
+          }, "");
+        }
+
+        function macroImportanceRank(value) {
+          const normalized = String(value || "").toLowerCase();
+          if (["critical", "highest", "very_high"].includes(normalized)) return 5;
+          if (["high", "important"].includes(normalized)) return 4;
+          if (["medium", "moderate"].includes(normalized)) return 3;
+          if (["low", "minor"].includes(normalized)) return 2;
+          return normalized ? 1 : 0;
+        }
+
+        function macroImportanceClass(value) {
+          const normalized = String(value || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          if (["critical", "highest", "very-high"].includes(normalized)) return "critical";
+          if (["high", "important"].includes(normalized)) return "high";
+          if (["medium", "moderate"].includes(normalized)) return "medium";
+          if (["low", "minor"].includes(normalized)) return "low";
+          return "unknown";
+        }
+
+        function macroRegion(record) {
+          return record?.region || record?.country || record?.currency || "";
+        }
+
+        function macroMonthLabel(monthKey) {
+          const parsed = Date.parse(`${monthKey || new Date().toISOString().slice(0, 7)}-01T00:00:00Z`);
+          if (!Number.isFinite(parsed)) return monthKey || "";
+          return new Date(parsed).toLocaleString(undefined, {month: "long", year: "numeric", timeZone: "UTC"});
+        }
+
+        function macroEventTooltip(record) {
+          const parts = [
+            shortTime(recordTime(record, "macro_calendar")),
+            recordTitle(record, "macro_calendar"),
+            macroRegion(record),
+            record?.importance ? label(record.importance) : "",
+          ].filter(Boolean);
+          return parts.join(" / ");
+        }
+
+        function shortTime(raw) {
+          const parsed = Date.parse(raw);
+          if (!Number.isFinite(parsed)) return "";
+          return new Date(parsed).toLocaleTimeString(undefined, {hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC"});
+        }
+
+        function wireMacroCalendarDragScroll(root) {
+          root.querySelectorAll(".macro-day-event-stack").forEach((stack) => {
+            let startY = 0;
+            let startScroll = 0;
+            let dragging = false;
+            stack.addEventListener("pointerdown", (event) => {
+              if (event.target.closest("button")) return;
+              dragging = true;
+              startY = event.clientY;
+              startScroll = stack.scrollTop;
+              stack.classList.add("dragging");
+              stack.setPointerCapture?.(event.pointerId);
+            });
+            stack.addEventListener("pointermove", (event) => {
+              if (!dragging) return;
+              stack.scrollTop = startScroll - (event.clientY - startY);
+            });
+            stack.addEventListener("pointerup", (event) => {
+              dragging = false;
+              stack.classList.remove("dragging");
+              stack.releasePointerCapture?.(event.pointerId);
+            });
+            stack.addEventListener("pointercancel", () => {
+              dragging = false;
+              stack.classList.remove("dragging");
+            });
+          });
+        }
+
+        function wireIntelligencePreviewList(selector, payload, records, header, filtered, canFetchMore) {
+          const root = node(selector);
           root?.querySelectorAll("[data-intel-preview-index]").forEach((button) => {
             button.addEventListener("click", () => {
               state.selectedIntelPreviewIndex = Number(button.dataset.intelPreviewIndex) || 0;
@@ -730,50 +2119,26 @@
             </button>`;
         }
 
-        function previewFilterControls(categoryOptions, filteredCount, totalCount) {
+        function syncIntelligencePreviewFilterControls(categoryOptions, filteredCount, totalCount) {
+          const options = categoryOptions || [];
           const categoryValue = String(state.intelPreviewCategory || "");
           const keywordValue = String(state.intelPreviewKeyword || "");
-          const categoryRows = [`<option value="">All categories</option>`].concat(categoryOptions.map((option) => (
+          const categoryRows = [`<option value="">All categories</option>`].concat(options.map((option) => (
             `<option value="${escapeHtml(option.value)}" ${option.value === categoryValue ? "selected" : ""}>${escapeHtml(option.label)} (${escapeHtml(formatNumber(option.count))})</option>`
           )));
-          return `
-            <div class="intel-list-filterbar">
-              <div class="field">
-                <label for="intel-preview-category-filter">Category</label>
-                <select id="intel-preview-category-filter" class="select-input">${categoryRows.join("")}</select>
-              </div>
-              <div class="field">
-                <label for="intel-preview-keyword">Search loaded records</label>
-                <input id="intel-preview-keyword" class="text-input" type="search" value="${escapeHtml(keywordValue)}" placeholder="filter title, source, or content">
-              </div>
-              <div class="intel-filter-actions">
-                <button class="ghost-button compact-button" type="button" id="intel-preview-clear-filters">Clear filters</button>
-                <span>${escapeHtml(formatNumber(filteredCount))} / ${escapeHtml(formatNumber(totalCount))} loaded</span>
-              </div>
-            </div>`;
+          const category = node("#intel-preview-category-filter");
+          if (category) {
+            category.innerHTML = categoryRows.join("");
+            category.value = options.some((option) => option.value === categoryValue) ? categoryValue : "";
+          }
+          const keyword = node("#intel-preview-keyword");
+          if (keyword && document.activeElement !== keyword) {
+            keyword.value = keywordValue;
+          }
         }
 
-        function wireIntelligencePreviewFilters(selector, payload, records, header) {
-          const root = node(selector);
-          root?.querySelector("#intel-preview-category-filter")?.addEventListener("change", (event) => {
-            state.intelPreviewCategory = event.target.value || "";
-            resetIntelligencePreviewListPosition();
-            renderIntelligencePreview(selector, payload, records, header);
-          });
-          root?.querySelector("#intel-preview-keyword")?.addEventListener("input", (event) => {
-            state.intelPreviewKeyword = event.target.value || "";
-            window.clearTimeout(state.intelPreviewFilterTimer);
-            state.intelPreviewFilterTimer = window.setTimeout(() => {
-              resetIntelligencePreviewListPosition();
-              renderIntelligencePreview(selector, payload, records, header);
-            }, 220);
-          });
-          root?.querySelector("#intel-preview-clear-filters")?.addEventListener("click", () => {
-            state.intelPreviewKeyword = "";
-            state.intelPreviewCategory = "";
-            resetIntelligencePreviewListPosition();
-            renderIntelligencePreview(selector, payload, records, header);
-          });
+        function refreshIntelligencePreviewFromState() {
+          if (state.dataViewerIntelPreview) renderPreview("intel", state.dataViewerIntelPreview);
         }
 
         function resetIntelligencePreviewListPosition() {
@@ -820,8 +2185,13 @@
           return `
             <div class="intel-readable-record">
               ${macroCalendarTemporalBanner(record, dataType)}
-              <div class="muted">${escapeHtml(formatTimestamp(time))}</div>
-              <h2>${escapeHtml(title)}</h2>
+              <div class="intel-preview-main-head">
+                <div class="intel-preview-title-stack">
+                  <div class="muted">${escapeHtml(formatTimestamp(time))}</div>
+                  <h2>${escapeHtml(title)}</h2>
+                </div>
+                <button class="ghost-button compact-button intel-properties-trigger" type="button" id="intel-properties-button" title="Open properties for this record">Properties</button>
+              </div>
               <p>${escapeHtml(summary || "No narrative summary is recorded for this item.")}</p>
               ${metrics.length ? `<section class="intel-record-section"><h3>Key metrics</h3><div class="intel-metric-grid">${metrics.map(([key, val, unit]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(formatMetricValue(val, key, unit))}</strong>${unit ? `<small>${escapeHtml(unit)}</small>` : ""}</div>`).join("")}</div></section>` : ""}
               ${facts.length ? `<section class="intel-record-section"><h3>Record context</h3><div class="intel-fact-grid">${facts.map(([key, val]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(text(val))}</strong></div>`).join("")}</div></section>` : ""}
@@ -884,7 +2254,80 @@
             ["Source", recordSource(record) || payload.source || "n/a"],
             ...entries,
           ];
-          return `<h3 class="subsection-title">Properties</h3><table class="kv-table">${rows.map(([key, val]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text(val))}</td></tr>`).join("")}</table>`;
+          return `
+            <div class="artifact-summary">
+              <span class="status-pill pending">${escapeHtml(TYPE_LABELS[payload.data_type] || payload.data_type || "record")}</span>
+              <span class="status-pill ${escapeHtml(statusClass(payload.status || "unknown"))}">${escapeHtml(label(payload.status || "unknown"))}</span>
+            </div>
+            <table class="kv-table">${rows.map(([key, val]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text(val))}</td></tr>`).join("")}</table>`;
+        }
+
+        function updateIntelligencePropertiesSelection(record, payload) {
+          state.intelPropertiesRecord = record || null;
+          state.intelPropertiesPayload = record ? payload : null;
+          const button = node("#intel-properties-button");
+          if (button) {
+            button.disabled = !record;
+            button.title = record ? "Open properties for the selected intelligence record" : "Select a preview record to inspect properties";
+          }
+          if (!record) {
+            closeIntelligencePropertiesDrawer(false);
+            setHtml("#intel-properties-drawer-body", `<div class="empty-state">Select an intelligence record to inspect its properties.</div>`);
+            const title = node("#intel-properties-drawer-title");
+            if (title) title.textContent = "Properties";
+            return;
+          }
+          if (state.intelPropertiesDrawerOpen) {
+            renderIntelligencePropertiesDrawer();
+          }
+        }
+
+        function openIntelligencePropertiesDrawer() {
+          if (!state.intelPropertiesRecord) return;
+          state.intelPropertiesDrawerOpen = true;
+          renderIntelligencePropertiesDrawer();
+          node("#intel-properties-drawer")?.classList.remove("hidden");
+          const backdrop = node("#intel-properties-drawer-backdrop");
+          backdrop?.classList.remove("hidden");
+          backdrop?.setAttribute("aria-hidden", "false");
+          node("#intel-properties-drawer-close")?.focus({preventScroll: true});
+        }
+
+        function closeIntelligencePropertiesDrawer(returnFocus = true) {
+          state.intelPropertiesDrawerOpen = false;
+          node("#intel-properties-drawer")?.classList.add("hidden");
+          const backdrop = node("#intel-properties-drawer-backdrop");
+          backdrop?.classList.add("hidden");
+          backdrop?.setAttribute("aria-hidden", "true");
+          if (returnFocus) node("#intel-properties-button")?.focus({preventScroll: true});
+        }
+
+        function renderIntelligencePropertiesDrawer() {
+          const record = state.intelPropertiesRecord;
+          const payload = state.intelPropertiesPayload || {data_type: selectedIntelligenceDataType(), status: "unknown"};
+          const title = node("#intel-properties-drawer-title");
+          if (title) title.textContent = record ? recordTitle(record, payload.data_type) : "Properties";
+          setHtml(
+            "#intel-properties-drawer-body",
+            record ? previewRecordProperties(record, payload) : `<div class="empty-state">Select an intelligence record to inspect its properties.</div>`,
+          );
+        }
+
+        function openIntelligenceCollectDialog() {
+          state.intelCollectDialogOpen = true;
+          const backdrop = node("#intel-collect-dialog-backdrop");
+          backdrop?.classList.remove("hidden");
+          backdrop?.setAttribute("aria-hidden", "false");
+          queueIntelligenceCollectTimelineLoad();
+          node("#intel-data-collect")?.focus({preventScroll: true});
+        }
+
+        function closeIntelligenceCollectDialog(returnFocus = true) {
+          state.intelCollectDialogOpen = false;
+          const backdrop = node("#intel-collect-dialog-backdrop");
+          backdrop?.classList.add("hidden");
+          backdrop?.setAttribute("aria-hidden", "true");
+          if (returnFocus) node("#intel-collect-open")?.focus({preventScroll: true});
         }
 
         function recordTitle(record, dataType) {
@@ -978,6 +2421,9 @@
           const numeric = Number(value);
           if (!Number.isFinite(numeric)) return text(value);
           const rawKey = String(key || "").toLowerCase();
+          if (rawKey.includes("multiplier")) {
+            return `${numeric.toLocaleString(undefined, {maximumFractionDigits: 2})}x`;
+          }
           if (String(unit || "").toLowerCase() === "percent") {
             return `${numeric.toFixed(4)}%`;
           }
@@ -997,7 +2443,9 @@
 
         function formatDateHeading(dateKey) {
           const parsed = Date.parse(`${dateKey}T00:00:00Z`);
-          return Number.isFinite(parsed) ? formatTimestamp(new Date(parsed).toISOString()).split(",")[0] : dateKey;
+          if (!Number.isFinite(parsed)) return dateKey;
+          const formatted = formatTimestamp(new Date(parsed).toISOString());
+          return formatted.split(/\s+/)[0] || dateKey;
         }
 
         function ensureIntelCalendarMonth(records, dataType) {
@@ -1257,6 +2705,7 @@
         }
 
         function renderError(selector, message, kind = "error") {
+          if (selector === "#intel-data-preview-panel") updateIntelligencePropertiesSelection(null, null);
           setHtml(selector, `<div class="message ${kind === "warning" ? "warning" : "error"}">${escapeHtml(message)}</div>`);
         }
 
@@ -1350,27 +2799,6 @@
           return date.toISOString().replace(/\.\d{3}Z$/, "Z");
         }
 
-        function intelligencePreviewAsOf() {
-          const mode = value("#intel-preview-as-of-mode");
-          if (mode === "range_end") return value("#intel-preview-end");
-          if (mode === "custom") return datetimeLocalUtc("#intel-preview-as-of");
-          return "";
-        }
-
-        function datetimeLocalUtc(selector) {
-          const raw = value(selector);
-          if (!raw) return "";
-          if (raw.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(raw)) return raw;
-          const normalized = raw.length === 16 ? `${raw}:00` : raw;
-          return `${normalized}Z`;
-        }
-
-        function syncIntelPreviewAsOfControls() {
-          const customField = node("#intel-preview-as-of-custom-field");
-          const customMode = value("#intel-preview-as-of-mode") === "custom";
-          customField?.classList.toggle("hidden", !customMode);
-        }
-
         function setValueIfEmpty(selector, value) {
           const target = node(selector);
           if (target && !target.value && value) {
@@ -1412,7 +2840,15 @@
           node("#strategy-data-plan")?.addEventListener("click", () => loadCollectionPlan("strategy"));
           node("#strategy-data-collect")?.addEventListener("click", () => submitCollectionJob("strategy"));
           node("#strategy-data-export")?.addEventListener("click", () => exportData("strategy"));
+          node("#intel-collect-open")?.addEventListener("click", openIntelligenceCollectDialog);
+          node("#intel-collect-dialog-close")?.addEventListener("click", () => closeIntelligenceCollectDialog());
+          node("#intel-collect-dialog-cancel")?.addEventListener("click", () => closeIntelligenceCollectDialog());
+          node("#intel-collect-dialog-backdrop")?.addEventListener("click", (event) => {
+            if (event.target === event.currentTarget) closeIntelligenceCollectDialog();
+          });
           node("#intel-data-collect")?.addEventListener("click", () => submitCollectionJob("intel"));
+          node("#intel-properties-drawer-close")?.addEventListener("click", () => closeIntelligencePropertiesDrawer());
+          node("#intel-properties-drawer-backdrop")?.addEventListener("click", () => closeIntelligencePropertiesDrawer());
           node("#intel-data-type")?.addEventListener("change", () => {
             state.dataViewerIntelTimeline = null;
             state.dataViewerIntelPreview = null;
@@ -1445,30 +2881,44 @@
             applyIntelligenceRangePreset("intel-preview", true);
             queueIntelligencePreviewLoad();
           });
-          ["#intel-preview-start", "#intel-preview-end", "#intel-preview-as-of-mode", "#intel-preview-as-of"].forEach((selector) => {
+          ["#intel-preview-start", "#intel-preview-end"].forEach((selector) => {
             node(selector)?.addEventListener("change", () => {
-              syncIntelPreviewAsOfControls();
               resetIntelligencePreviewState();
               queueIntelligencePreviewLoad();
             });
           });
-          node("#intel-preview-reset")?.addEventListener("click", () => {
-            const range = node("#intel-preview-range");
-            if (range) range.value = "all";
-            ["#intel-preview-as-of-mode", "#intel-preview-as-of"].forEach((selector) => {
-              const target = node(selector);
-              if (target) target.value = "";
-            });
+          node("#intel-preview-category-filter")?.addEventListener("change", (event) => {
+            state.intelPreviewCategory = event.target.value || "";
+            resetIntelligencePreviewListPosition();
+            refreshIntelligencePreviewFromState();
+          });
+          node("#intel-preview-keyword")?.addEventListener("input", (event) => {
+            state.intelPreviewKeyword = event.target.value || "";
+            window.clearTimeout(state.intelPreviewFilterTimer);
+            state.intelPreviewFilterTimer = window.setTimeout(() => {
+              resetIntelligencePreviewListPosition();
+              refreshIntelligencePreviewFromState();
+            }, 220);
+          });
+          node("#intel-preview-clear-filters")?.addEventListener("click", () => {
             state.intelPreviewKeyword = "";
             state.intelPreviewCategory = "";
-            syncIntelPreviewAsOfControls();
-            applyIntelligenceRangePreset("intel-preview", true);
+            resetIntelligencePreviewListPosition();
+            refreshIntelligencePreviewFromState();
+          });
+          node("#intel-preview-apply-filters")?.addEventListener("click", () => {
             resetIntelligencePreviewState();
             queueIntelligencePreviewLoad();
           });
           document.addEventListener("click", (event) => {
             const eventTarget = event.target instanceof Element ? event.target : null;
             if (!eventTarget) return;
+            const propertiesButton = eventTarget.closest("#intel-properties-button");
+            if (propertiesButton) {
+              event.preventDefault();
+              openIntelligencePropertiesDrawer();
+              return;
+            }
             const issueButton = eventTarget.closest("[data-data-viewer-issues]");
             if (issueButton) {
               event.preventDefault();
@@ -1481,7 +2931,11 @@
             }
           });
           document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") closeIssuePopovers();
+            if (event.key === "Escape") {
+              closeIssuePopovers();
+              if (state.intelCollectDialogOpen) closeIntelligenceCollectDialog();
+              if (state.intelPropertiesDrawerOpen) closeIntelligencePropertiesDrawer();
+            }
           });
         }
 

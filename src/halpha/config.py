@@ -106,7 +106,7 @@ SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS = {
     "max_topic_window_hours",
     "same_topic_similarity",
 }
-SUPPORTED_DASHBOARD_FIELDS = {"display_timezone"}
+SUPPORTED_DASHBOARD_FIELDS = {"display_timezone", "timestamp_date_order", "timestamp_hour_cycle"}
 SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "elevated_overfitting_blocks_effective",
     "max_abs_drawdown_pct",
@@ -410,6 +410,22 @@ def _validate_dashboard_config(dashboard: Any) -> None:
             raise ConfigError(
                 f"dashboard.display_timezone is not an available IANA timezone: {timezone_name}."
             ) from exc
+    if "timestamp_hour_cycle" in dashboard:
+        value = _require_non_empty_string(
+            dashboard,
+            "timestamp_hour_cycle",
+            "dashboard.timestamp_hour_cycle",
+        )
+        if value not in {"24h", "12h"}:
+            raise ConfigError("dashboard.timestamp_hour_cycle must be one of: 24h, 12h.")
+    if "timestamp_date_order" in dashboard:
+        value = _require_non_empty_string(
+            dashboard,
+            "timestamp_date_order",
+            "dashboard.timestamp_date_order",
+        )
+        if value not in {"year_first", "year_last"}:
+            raise ConfigError("dashboard.timestamp_date_order must be one of: year_first, year_last.")
 
 
 def _validate_logging_config(logging_config: Any) -> None:

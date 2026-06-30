@@ -29,6 +29,22 @@ from halpha.utils.value_helpers import (
 
 MAX_STAGE_ARTIFACT_REFS = 20
 DEFAULT_REPORT_RUN_LIMIT = 100
+REPORT_FILE_CATEGORY_ORDER = {
+    "report": 0,
+    "analysis": 1,
+    "codex_context": 2,
+    "raw_input": 3,
+    "run_metadata": 4,
+    "other": 5,
+}
+REPORT_FILE_CATEGORY_LABELS = {
+    "report": "Report",
+    "analysis": "Analysis",
+    "codex_context": "Codex context",
+    "raw_input": "Raw inputs",
+    "run_metadata": "Run metadata",
+    "other": "Other",
+}
 
 
 def dashboard_runs(config_path: Path, *, limit: int = 100, report_limit: int = DEFAULT_REPORT_RUN_LIMIT) -> dict[str, Any]:
@@ -156,6 +172,7 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
         }
 
     report_state = _report_state(run_dir, manifest)
+    report_files, report_file_warnings = _report_file_catalog(run_dir, report_state=report_state, base=base)
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_run_detail",
@@ -172,7 +189,8 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
         },
         "stages": _stage_timeline(manifest),
         "artifacts": _manifest_artifacts(manifest),
-        "warnings": _string_list(manifest.get("warnings")),
+        "report_files": report_files,
+        "warnings": [*_string_list(manifest.get("warnings")), *report_file_warnings],
         "errors": _manifest_error_messages(manifest),
     }
 
@@ -528,6 +546,137 @@ def _manifest_artifacts(manifest: dict[str, Any]) -> list[dict[str, str]]:
         for path in _artifact_paths(value):
             records.append({"key": str(key), "path": path, "kind": _artifact_kind(path)})
     return records
+
+
+def _report_file_catalog(
+    run_dir: Path,
+    *,
+    report_state: dict[str, Any],
+    base: Path,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    if not run_dir.is_dir():
+        return [], ["run directory was not found; report reference files could not be listed."]
+    try:
+        run_root = run_dir.resolve()
+    except OSError as exc:
+        return [], [f"run directory could not be resolved: {exc}"]
+
+    report_ref = report_state.get("artifact")
+    report_path = _resolve_run_file_ref(str(report_ref), run_dir=run_dir, base=base) if isinstance(report_ref, str) and report_ref else None
+    records: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    try:
+        candidate_files = sorted(
+            (path for path in run_dir.rglob("*") if path.is_file()),
+            key=lambda path: _run_relative_file_ref(path, run_dir=run_dir),
+        )
+    except OSError as exc:
+        return [], [f"run directory files could not be listed: {exc}"]
+
+    for path in candidate_files:
+        try:
+            resolved = path.resolve()
+            resolved.relative_to(run_root)
+        except (OSError, ValueError):
+            warnings.append("one report reference file outside the run directory was omitted.")
+            continue
+        relative_ref = _run_relative_file_ref(path, run_dir=run_dir)
+        category = _report_file_category(relative_ref)
+        safe_ref = _safe_ref(path, base=base)
+        pinned = report_path is not None and _same_path(path, report_path)
+        records.append(
+            {
+                "ref": safe_ref,
+                "path": relative_ref,
+                "name": path.name,
+                "title": _report_file_title(relative_ref, pinned=pinned),
+                "category": category,
+                "category_label": REPORT_FILE_CATEGORY_LABELS.get(category, "Other"),
+                "preview_kind": _report_file_preview_kind(path),
+                "size_bytes": _file_size(path),
+                "pinned": pinned,
+            }
+        )
+    records.sort(key=_report_file_sort_key)
+    return records, warnings
+
+
+def _run_relative_file_ref(path: Path, *, run_dir: Path) -> str:
+    try:
+        return path.relative_to(run_dir).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _resolve_run_file_ref(ref: str, *, run_dir: Path, base: Path) -> Path:
+    path = Path(ref)
+    if path.is_absolute():
+        return path
+    if ref.startswith(("runs/", "data/")):
+        return base / path
+    return run_dir / path
+
+
+def _same_path(left: Path, right: Path) -> bool:
+    try:
+        return left.resolve() == right.resolve()
+    except OSError:
+        return left == right
+
+
+def _report_file_category(relative_ref: str) -> str:
+    if relative_ref == "run_manifest.json":
+        return "run_metadata"
+    first = Path(relative_ref).parts[0] if Path(relative_ref).parts else ""
+    if first == "report":
+        return "report"
+    if first == "analysis":
+        return "analysis"
+    if first == "codex_context":
+        return "codex_context"
+    if first == "raw":
+        return "raw_input"
+    return "other"
+
+
+def _report_file_title(relative_ref: str, *, pinned: bool) -> str:
+    if pinned:
+        return "Report"
+    if relative_ref == "run_manifest.json":
+        return "Run manifest"
+    stem = Path(relative_ref).stem.replace("_", " ").replace("-", " ").strip()
+    return stem.title() if stem else Path(relative_ref).name
+
+
+def _report_file_preview_kind(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".md", ".markdown"}:
+        return "markdown"
+    if suffix == ".json":
+        return "json"
+    if suffix == ".jsonl":
+        return "jsonl"
+    if suffix == ".csv":
+        return "csv"
+    if suffix in {".txt", ".log", ".yaml", ".yml"}:
+        return "text"
+    return "unsupported"
+
+
+def _file_size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def _report_file_sort_key(record: dict[str, Any]) -> tuple[int, int, str]:
+    category = str(record.get("category") or "other")
+    return (
+        0 if record.get("pinned") else 1,
+        REPORT_FILE_CATEGORY_ORDER.get(category, REPORT_FILE_CATEGORY_ORDER["other"]),
+        str(record.get("path") or ""),
+    )
 
 
 def _artifact_paths(value: Any) -> list[str]:
