@@ -614,6 +614,32 @@ def create_dashboard_app(
             job_manager=context.job_manager,
         ).read_model()
 
+    @app.get("/api/live/cycles")
+    def live_cycles_endpoint() -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_live_cycles", cycles=[])
+        active_config, active_config_path = active
+        payload = dashboard_monitor_cycles(active_config, config_path=active_config_path)
+        return {
+            **payload,
+            "artifact_type": "dashboard_live_cycles",
+            "source_artifact_type": payload.get("artifact_type"),
+        }
+
+    @app.get("/api/live/alerts")
+    def live_alerts_endpoint() -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_live_alerts", alerts=[])
+        active_config, active_config_path = active
+        payload = dashboard_monitor_alerts(active_config, config_path=active_config_path)
+        return {
+            **payload,
+            "artifact_type": "dashboard_live_alerts",
+            "source_artifact_type": payload.get("artifact_type"),
+        }
+
     @app.get("/api/jobs")
     def jobs_endpoint() -> dict[str, Any]:
         if context.job_manager is None:

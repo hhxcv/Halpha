@@ -19,9 +19,9 @@
       dataViewerCollectJobs: app.dataset.dataViewerCollectJobsEndpoint,
       strategies: app.dataset.strategiesEndpoint,
       strategyActions: app.dataset.strategyActionsEndpoint,
-      monitor: app.dataset.monitorEndpoint,
-      monitorCycles: app.dataset.monitorCyclesEndpoint,
-      monitorAlerts: app.dataset.monitorAlertsEndpoint,
+      live: app.dataset.liveEndpoint,
+      liveCycles: app.dataset.liveCyclesEndpoint,
+      liveAlerts: app.dataset.liveAlertsEndpoint,
       jobs: app.dataset.jobsEndpoint,
       schedule: app.dataset.scheduleEndpoint,
       services: app.dataset.servicesEndpoint,
@@ -46,9 +46,9 @@
     if (!reportsWorkflow) {
       throw new Error("Halpha dashboard report helpers did not load.");
     }
-    const monitorWorkflowModule = window.HalphaDashboardMonitor;
-    if (!monitorWorkflowModule) {
-      throw new Error("Halpha dashboard monitor helpers did not load.");
+    const liveWorkflowModule = window.HalphaDashboardLive;
+    if (!liveWorkflowModule) {
+      throw new Error("Halpha dashboard live helpers did not load.");
     }
     const dataViewerWorkflowModule = window.HalphaDashboardDataViewer;
     if (!dataViewerWorkflowModule) {
@@ -77,7 +77,7 @@
       overview: "Overview",
       reports: "Reports",
       strategies: "Strategy",
-      monitor: "Monitor",
+      live: "Live",
       intelligence: "Intelligence",
       settings: "Settings",
     };
@@ -126,9 +126,9 @@
       strategyOptimizeLogs: [],
       strategyCollectLogs: [],
       strategyBacktestDialogOpen: false,
-      monitor: null,
-      monitorCycles: [],
-      monitorAlerts: null,
+      live: null,
+      liveCycles: [],
+      liveAlerts: null,
       schedule: null,
       services: null,
       jobs: [],
@@ -178,16 +178,15 @@
       selectedSharedStores: [],
       validationJob: null,
     };
-    const monitorWorkflow = monitorWorkflowModule.createMonitorWorkflow({
+    const liveWorkflow = liveWorkflowModule.createLiveWorkflow({
       state,
       endpoints,
-      loadMonitorPayload,
-      postJson,
-      postJob,
+      loadLivePayload,
       showToast,
       escapeHtml,
       text,
       statusClass,
+      formatNumber,
       formatTimestamp,
       label,
       metricCell,
@@ -570,7 +569,7 @@
     }
 
     function setView(view) {
-      const valid = ["overview", "reports", "strategies", "monitor", "intelligence", "settings"];
+      const valid = ["overview", "reports", "strategies", "live", "intelligence", "settings"];
       state.view = valid.includes(view) ? view : "overview";
       document.querySelectorAll(".view").forEach((node) => node.classList.toggle("hidden", node.dataset.view !== state.view));
       document.querySelectorAll("[data-view-target]").forEach((node) => {
@@ -747,7 +746,7 @@
           if (view === "overview") await refreshOverview();
           if (view === "reports") await refreshReports();
           if (view === "strategies") await refreshStrategies();
-          if (view === "monitor") await monitorWorkflow.refreshMonitor();
+          if (view === "live") await liveWorkflow.refreshLive();
           if (view === "intelligence") await refreshIntelligence();
           if (view === "settings") await refreshSettings();
           state.viewLoadedAt[view] = Date.now();
@@ -766,7 +765,7 @@
       if (view === "overview" && !state.overview && !state.runs.length && !state.stores.length) renderOverviewLoading();
       if (view === "reports" && !state.runs.length) renderReportsLoading();
       if (view === "strategies" && !state.strategies) renderStrategiesLoading();
-      if (view === "monitor" && !state.monitor) renderMonitorLoading();
+      if (view === "live" && !state.live) renderLiveLoading();
       if (view === "intelligence" && !state.intelligence && !state.dataViewerSummary) renderIntelligenceLoading();
       if (view === "settings" && !state.settingsProfile) renderSettingsLoading();
     }
@@ -780,7 +779,7 @@
       renderOverviewLoading();
       renderReportsLoading();
       renderStrategiesLoading();
-      renderMonitorLoading();
+      renderLiveLoading();
       renderIntelligenceLoading();
       renderSettingsLoading();
     }
@@ -790,8 +789,8 @@
       setHtml("#overview-report-metrics", skeletonCards(4, "report-metric"));
       setHtml("#overview-latest-report", skeletonRows(6));
       setHtml("#overview-runtime", skeletonRows(7));
-      setPill("#overview-monitor-pill", "pending", "loading");
-      setHtml("#overview-monitor", skeletonRows(7));
+      setPill("#overview-system-monitor-pill", "pending", "loading");
+      setHtml("#overview-system-monitor", skeletonRows(7));
       setPill("#overview-data-pill", "pending", "loading");
       setHtml("#overview-data-cards", skeletonCards(6, "data-card"));
       setHtml("#overview-quality", `<div class="summary-strip columns-3">${skeletonCards(3, "summary-cell")}</div>`);
@@ -819,12 +818,13 @@
       document.querySelector("#strategy-chart-meta").textContent = "Loading market data.";
     }
 
-    function renderMonitorLoading() {
-      setHtml("#monitor-hero", skeletonCards(6, "summary-cell"));
-      setHtml("#monitor-timeline", `<li>${skeletonRows(5)}</li>`);
-      setHtml("#monitor-config", skeletonRows(8));
-      setHtml("#monitor-alert-table", skeletonMessage(3));
-      setHtml("#monitor-job-table", skeletonMessage(3));
+    function renderLiveLoading() {
+      setHtml("#live-summary", skeletonCards(6, "summary-cell"));
+      setHtml("#live-source-matrix", skeletonCards(6, "live-source-card"));
+      setHtml("#live-intelligence-stream", skeletonList(4));
+      setHtml("#live-report-history", skeletonRows(6));
+      setHtml("#live-system-runtime", skeletonRows(6));
+      setHtml("#live-operations-timeline", `<li>${skeletonRows(5)}</li>`);
     }
 
     function renderIntelligenceLoading() {
@@ -878,55 +878,52 @@
       }
     }
 
-    function monitorSidebarState() {
+    function systemMonitorSidebarState() {
       const services = state.services?.services || {};
       const service = services.monitor || {};
-      const healthService = state.monitor?.health?.fields?.service || {};
       const status = String(
         service.lifecycle_status
           || service.status
           || service.process_health
-          || healthService.status
-          || state.monitor?.status
           || "unknown",
       ).toLowerCase();
       const lastError = service.last_error?.message ? ` Last error: ${service.last_error.message}` : "";
       if (service.config_conflict) {
         return {
           tone: "warning",
-          title: "Monitor config conflict",
-          detail: service.actionable || "Monitor is running with a different active config.",
+          title: "System Monitor config conflict",
+          detail: service.actionable || "System Monitor is running with a different active config.",
         };
       }
       if (status === "running") {
-        return {tone: "running", title: "Monitor running", detail: "Monitoring is enabled and running."};
+        return {tone: "running", title: "System Monitor running", detail: "Runtime monitoring is enabled and running."};
       }
       if (status === "starting") {
-        return {tone: "warning", title: "Monitor starting", detail: "Monitoring is starting."};
+        return {tone: "warning", title: "System Monitor starting", detail: "Runtime monitoring is starting."};
       }
       if (status === "stop_requested") {
-        return {tone: "warning", title: "Monitor stopping", detail: service.actionable || "Monitoring is stopping."};
+        return {tone: "warning", title: "System Monitor stopping", detail: service.actionable || "Runtime monitoring is stopping."};
       }
       if (["unresponsive", "stale"].includes(status)) {
-        return {tone: "warning", title: "Monitor stale", detail: service.actionable || "Monitor heartbeat is stale."};
+        return {tone: "warning", title: "System Monitor stale", detail: service.actionable || "System Monitor heartbeat is stale."};
       }
       if (["failed", "crashed", "error"].includes(status)) {
-        return {tone: "failed", title: "Monitor failed", detail: `Monitoring needs attention.${lastError}`};
+        return {tone: "failed", title: "System Monitor failed", detail: `Runtime monitoring needs attention.${lastError}`};
       }
       if (["stopped", "not_found", "unconfigured", "unmanaged", "disabled"].includes(status)) {
-        return {tone: "stopped", title: "Monitor stopped", detail: "Monitoring is not running."};
+        return {tone: "stopped", title: "System Monitor stopped", detail: "Runtime monitoring is not running."};
       }
-      return {tone: "unknown", title: "Monitor status", detail: "Monitor status is unavailable."};
+      return {tone: "unknown", title: "System Monitor", detail: "Runtime monitor status is unavailable."};
     }
 
-    function renderSidebarMonitorStatus() {
-      const dot = document.querySelector("#sidebar-monitor-dot");
-      const title = document.querySelector("#sidebar-monitor-title");
-      const detail = document.querySelector("#sidebar-monitor-text");
+    function renderSidebarSystemMonitorStatus() {
+      const dot = document.querySelector("#sidebar-system-monitor-dot");
+      const title = document.querySelector("#sidebar-system-monitor-title");
+      const detail = document.querySelector("#sidebar-system-monitor-text");
       if (!dot || !title || !detail) {
         return;
       }
-      const monitorState = monitorSidebarState();
+      const monitorState = systemMonitorSidebarState();
       dot.className = `health-dot ${monitorState.tone}`;
       title.textContent = monitorState.title;
       detail.textContent = monitorState.detail;
@@ -940,7 +937,7 @@
     }
 
     async function refreshOverview() {
-      await Promise.allSettled([loadHealth(), loadRuns(), loadStores(), loadMonitorPayload()]);
+      await Promise.allSettled([loadHealth(), loadRuns(), loadStores(), loadLivePayload()]);
       try {
         state.overview = await fetchJson(endpoints.overview);
       } catch (error) {
@@ -972,22 +969,22 @@
       return state.deletionPlan;
     }
 
-    async function loadMonitorPayload() {
-      const [monitor, cycles, alerts, jobs, schedule, services] = await Promise.allSettled([
-        fetchJson(endpoints.monitor),
-        fetchJson(endpoints.monitorCycles),
-        fetchJson(endpoints.monitorAlerts),
+    async function loadLivePayload() {
+      const [live, cycles, alerts, jobs, schedule, services] = await Promise.allSettled([
+        fetchJson(endpoints.live),
+        fetchJson(endpoints.liveCycles),
+        fetchJson(endpoints.liveAlerts),
         loadJobs(),
         fetchJson(endpoints.schedule),
         fetchJson(endpoints.services),
       ]);
-      state.monitor = monitor.status === "fulfilled" ? monitor.value : null;
-      state.monitorCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
-      state.monitorAlerts = alerts.status === "fulfilled" ? alerts.value : null;
+      state.live = live.status === "fulfilled" ? live.value : null;
+      state.liveCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
+      state.liveAlerts = alerts.status === "fulfilled" ? alerts.value : null;
       state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
       state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
       state.services = services.status === "fulfilled" ? services.value : null;
-      renderSidebarMonitorStatus();
+      renderSidebarSystemMonitorStatus();
     }
 
     function renderOverview() {
@@ -1005,7 +1002,7 @@
       document.querySelector("#overview-report-metrics").innerHTML = [
         reportMetric("Total reports", totalReports, "All time"),
         reportMetric("Daily reports", reportRuns.filter((item) => item.type === "Daily").length, "All time"),
-        reportMetric("Monitor-triggered", reportRuns.filter((item) => item.type === "Monitor-triggered").length, "All time"),
+        reportMetric("Triggered reports", reportRuns.filter((item) => item.type === "Monitor-triggered").length, "All time"),
         reportMetric("Manual reports", reportRuns.filter((item) => item.type === "Manual").length, "All time"),
       ].join("");
       document.querySelector("#overview-latest-report").innerHTML = [
@@ -1029,7 +1026,7 @@
       renderReportJob(state.reportJob);
 
       renderRuntime(sections);
-      renderOverviewMonitor();
+      renderOverviewSystemMonitor();
       renderOverviewData();
       renderAttention();
     }
@@ -1067,28 +1064,26 @@
       ].join("");
     }
 
-    function renderOverviewMonitor() {
-      const health = state.monitor?.health?.fields || {};
-      const latest = state.monitor?.latest_cycle || {};
+    function renderOverviewSystemMonitor() {
       const services = state.services?.services || {};
       const coreService = services.core || {};
       const monitorService = services.monitor || {};
-      const status = monitorService.status || latest.status || health.latest_cycle_status || state.monitor?.status || "partial";
+      const status = monitorService.lifecycle_status || monitorService.status || state.live?.status || "partial";
       const schedule = state.schedule || {};
       const scheduleLabel = schedule.enabled
         ? formatTimestamp(schedule.next_run_at)
         : "No daily report scheduled";
-      setPill("#overview-monitor-pill", status, status);
-      document.querySelector("#overview-monitor").innerHTML = [
+      setPill("#overview-system-monitor-pill", status, status);
+      document.querySelector("#overview-system-monitor").innerHTML = [
         detailRow("Core service", label(coreService.lifecycle_status || coreService.status || "unknown")),
         detailRow("Core heartbeat", formatTimestamp(coreService.heartbeat_at)),
-        detailRow("Monitor service", label(monitorService.lifecycle_status || status)),
-        detailRow("Monitor heartbeat", formatTimestamp(monitorService.heartbeat_at)),
-        detailRow("Latest cycle", label(latest.status || health.latest_cycle_status || "n/a")),
-        detailRow("Cycle count", health.cycle_count ?? state.monitorCycles.length),
-        detailRow("Last trigger time", formatTimestamp(latest.finished_at || latest.started_at)),
+        detailRow("System Monitor service", label(monitorService.lifecycle_status || monitorService.status || "unknown")),
+        detailRow("System Monitor heartbeat", formatTimestamp(monitorService.heartbeat_at)),
+        detailRow("Live scheduler", label(state.live?.scheduler?.enabled ? state.live?.status || "available" : "disabled")),
+        detailRow("Live collection targets", Array.isArray(state.live?.collections) ? state.live.collections.length : 0),
+        detailRow("Recent historical cycles", state.liveCycles.length),
         detailRow("Next scheduled report", scheduleLabel),
-        detailRow("Recent alerts", monitorWorkflow.alertCount(state.monitorAlerts)),
+        detailRow("Recent alerts", liveWorkflow.alertCount(state.liveAlerts)),
       ].join("");
     }
 
@@ -1131,7 +1126,8 @@
         (store.warnings || []).slice(0, 1).forEach((warning) => items.push({severity: "warning", title: `${store.title || store.name}`, copy: warning, action: "Review data issues", view: "intelligence"}));
         (store.errors || []).slice(0, 1).forEach((error) => items.push({severity: "failed", title: `${store.title || store.name}`, copy: error, action: "Review data issues", view: "intelligence"}));
       });
-      (state.monitor?.warnings || []).slice(0, 1).forEach((warning) => items.push({severity: "warning", title: "Monitor warning", copy: warning, action: "Check monitor run", view: "monitor"}));
+      (state.live?.warnings || []).slice(0, 1).forEach((warning) => items.push({severity: "warning", title: "Live warning", copy: warning, action: "Open Live overview", view: "live"}));
+      (state.live?.errors || []).slice(0, 1).forEach((error) => items.push({severity: "failed", title: "Live error", copy: error, action: "Open Live overview", view: "live"}));
       if (!items.length) {
         items.push({severity: "available", title: "No urgent issues", copy: "Dashboard has no current high-priority attention item.", action: "Open reports", view: "reports"});
       }
@@ -4770,7 +4766,7 @@
       }
       document.querySelector("#settings-nav").innerHTML = sections.map((section) => `
         <button type="button" class="${section === state.settingsSection ? "active" : ""}" data-settings-section="${escapeHtml(section)}">
-          <span>${escapeHtml(section)}</span>
+          <span>${escapeHtml(settingsSectionLabel(section))}</span>
           <svg class="settings-nav-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4"></path></svg>
         </button>`).join("");
       document.querySelectorAll("[data-settings-section]").forEach((button) => button.addEventListener("click", () => {
@@ -4779,7 +4775,7 @@
       }));
       const loaded = state.settingsProfile?.config?.loaded !== false && state.settingsProfile?.status !== "unconfigured";
       renderSettingsConfigSelector();
-      document.querySelector("#settings-section-title").textContent = state.settingsSection;
+      document.querySelector("#settings-section-title").textContent = settingsSectionLabel(state.settingsSection);
       document.querySelector("#settings-form").innerHTML = settingsForm(state.settingsSection);
       const backupButton = document.querySelector("#settings-backup");
       if (backupButton) backupButton.disabled = !loaded;
@@ -4787,6 +4783,10 @@
       renderStorageMaintenance();
       wireSettingsControls();
       wireCleanupControls();
+    }
+
+    function settingsSectionLabel(section) {
+      return section === "Monitor" ? "System Monitor" : section;
     }
 
     function renderSettingsConfigSelector() {
@@ -5696,7 +5696,7 @@
         button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow, {reload: true}));
       });
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
-      monitorWorkflow.wire();
+      liveWorkflow.wire();
       dataViewerWorkflow.wire();
       document.querySelectorAll("[data-report-job]").forEach((button) => button.addEventListener("click", startReportJob));
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
@@ -5744,5 +5744,5 @@
     renderInitialLoadingPlaceholders();
     wireGlobalEvents();
     refreshHealthForView();
-    loadMonitorPayload().catch(() => renderSidebarMonitorStatus());
+    loadLivePayload().catch(() => renderSidebarSystemMonitorStatus());
     setView(viewFromHash());

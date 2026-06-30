@@ -25,6 +25,8 @@ def test_dashboard_monitor_api_summarizes_complete_state_without_dumping_alerts(
     summary_response = client.get("/api/monitor")
     cycles_response = client.get("/api/monitor/cycles")
     alerts_response = client.get("/api/monitor/alerts")
+    live_cycles_response = client.get("/api/live/cycles")
+    live_alerts_response = client.get("/api/live/alerts")
 
     assert summary_response.status_code == 200
     summary = summary_response.json()
@@ -67,6 +69,18 @@ def test_dashboard_monitor_api_summarizes_complete_state_without_dumping_alerts(
     assert "private evidence" not in alerts_response.text
     assert str(tmp_path) not in summary_response.text
     assert str(tmp_path) not in alerts_response.text
+
+    live_cycles = live_cycles_response.json()
+    assert live_cycles["artifact_type"] == "dashboard_live_cycles"
+    assert live_cycles["source_artifact_type"] == "dashboard_monitor_cycles"
+    assert live_cycles["status"] == "available"
+    assert live_cycles["cycles"][0]["cycle_id"] == "cycle-1"
+
+    live_alerts = live_alerts_response.json()
+    assert live_alerts["artifact_type"] == "dashboard_live_alerts"
+    assert live_alerts["source_artifact_type"] == "dashboard_monitor_alerts"
+    assert live_alerts["status"] == "available"
+    assert live_alerts["alert_archive"]["fields"]["sample_records"][0]["record_id"] == "record-24"
 
 
 def test_dashboard_monitor_api_reports_missing_state(tmp_path: Path) -> None:
