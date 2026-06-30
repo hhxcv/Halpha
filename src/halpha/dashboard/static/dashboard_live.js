@@ -24,7 +24,7 @@
         const TRANSIENT_JOB_STATUSES = new Set(["queued", "creating", "running", "cancel_requested", "pending"]);
         const FAILED_JOB_STATUSES = new Set(["failed", "error", "blocked"]);
         const SKIPPED_JOB_STATUSES = new Set(["skipped", "cancelled", "unsupported"]);
-        const ATTENTION_STATUSES = new Set(["failed", "warning", "stale", "missing", "partial"]);
+        const ATTENTION_STATUSES = new Set(["blocked", "cancelled", "degraded", "failed", "missing", "partial", "stale", "suppressed_cooldown", "suppressed_duplicate", "warning"]);
 
         async function refreshLive() {
           await loadLivePayload();
@@ -33,6 +33,9 @@
 
         function renderLive() {
           ensureLiveFilterDefaults();
+          ensureLiveHistoryFilterDefaults();
+          ensureLiveMode();
+          renderLiveModeTabs();
           renderLiveSummary();
           renderLiveSourceMatrix();
           renderLiveIntelligenceStrip();
@@ -40,8 +43,13 @@
           renderLiveReportHistory();
           renderLiveSystemRuntime();
           renderLiveTargetDetail();
+          renderLiveTriggeredReports();
+          renderLiveAlertArchive();
+          renderLiveHistoryFilters();
           renderLiveJobLane();
           renderLiveOperationsTimeline();
+          renderLiveEventDrawer();
+          applyLiveModeVisibility();
         }
 
         function renderLiveSummary() {
@@ -65,6 +73,24 @@
             metricCell("Next daily report", schedule.enabled ? formatTimestamp(schedule.next_run_at) : "disabled", schedule.status || "schedule"),
             metricCell("Triggered reports", triggeredReports, alertCounts.records ? `${formatNumber(alertCounts.records)} alert records` : "trigger rules pending"),
           ].join(""));
+        }
+
+        function renderLiveModeTabs() {
+          document.querySelectorAll("[data-live-mode]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.liveMode === state.liveMode);
+          });
+        }
+
+        function applyLiveModeVisibility() {
+          const mode = state.liveMode || "now";
+          document.querySelectorAll("[data-live-panel]").forEach((panel) => {
+            const panelName = panel.dataset.livePanel;
+            const visible = panelName === mode || (mode === "now" && panelName !== "sources" && panelName !== "reports" && panelName !== "history");
+            panel.hidden = !visible;
+          });
+          document.querySelector(".live-intelligence-strip-panel")?.toggleAttribute("hidden", mode !== "now");
+          document.querySelector(".live-stream-panel")?.toggleAttribute("hidden", mode !== "now");
+          document.querySelector(".live-side")?.toggleAttribute("hidden", mode !== "now" && mode !== "sources");
         }
 
         function renderLiveSourceMatrix() {
@@ -259,40 +285,206 @@
           ` : `<div class="empty-state">No Live collection jobs are available yet.</div>`);
         }
 
+        function renderLiveTriggeredReports() {
+          const history = state.liveHistory || {};
+          const rows = Array.isArray(history.triggered_reports) ? history.triggered_reports : [];
+          if (!rows.length) {
+            const empty = history.empty_states?.triggers_disabled
+              ? "Live trigger rules are disabled."
+              : "No trigger decisions or trigger-created reports are available yet.";
+            setHtml("#live-triggered-reports", `<div class="empty-state">${escapeHtml(empty)}</div>`);
+            return;
+          }
+          setHtml("#live-triggered-reports", `
+            <div class="live-review-table" role="table" aria-label="Live triggered report review">
+              <div class="live-review-row live-review-head" role="row">
+                <span>Trigger</span><span>Status</span><span>Evidence</span><span>Cooldown</span><span>Linked report</span><span>Issues</span>
+              </div>
+              ${rows.map((row) => {
+                const status = statusClass(row.status || "unknown");
+                const issues = [...(Array.isArray(row.errors) ? row.errors : []), ...(Array.isArray(row.warnings) ? row.warnings : [])];
+                const link = row.linked_report_ref || row.linked_run_id || row.linked_job_id || "missing";
+                return `<button class="live-review-row" type="button" data-live-trigger-decision="${escapeHtml(row.decision_id || "")}" role="row">
+                  <span><strong>${escapeHtml(row.trigger_id || "trigger")}</strong><small>${escapeHtml(formatTimestamp(row.evaluated_at))}</small></span>
+                  <span>${statusPill(status, row.status || "unknown")}</span>
+                  <span>${escapeHtml(row.evidence_summary || row.reason_summary || "n/a")}</span>
+                  <span>${escapeHtml(row.cooldown_until ? formatTimestamp(row.cooldown_until) : "n/a")}</span>
+                  <span class="${escapeHtml(row.artifact_state === "missing" ? "live-ref-missing" : "")}">${escapeHtml(link)}</span>
+                  <span>${issues.length ? escapeHtml(issues[0]) : "none"}</span>
+                </button>`;
+              }).join("")}
+            </div>
+          `);
+        }
+
+        function renderLiveAlertArchive() {
+          const archive = state.liveHistory?.alert_archive || {};
+          const counts = archive.counts || {};
+          const rows = Array.isArray(archive.records) ? archive.records : [];
+          const countHtml = `
+            <div class="summary-strip columns-4 live-alert-counts">
+              ${metricCell("Emitted", counts.emitted ?? 0, "alerts")}
+              ${metricCell("Duplicates", counts.suppressed_duplicate ?? 0, "suppressed")}
+              ${metricCell("Cooldown", counts.suppressed_cooldown ?? 0, "suppressed")}
+              ${metricCell("Skipped", counts.skipped ?? 0, "records")}
+            </div>`;
+          if (!rows.length) {
+            setHtml("#live-alert-archive", `${countHtml}<div class="empty-state">No alert archive records are available yet.</div>`);
+            return;
+          }
+          setHtml("#live-alert-archive", `
+            ${countHtml}
+            <div class="live-alert-list" aria-label="Recent alert archive records">
+              ${rows.slice(0, 16).map((record) => {
+                const status = statusClass(record.status || "unknown");
+                const reasons = Array.isArray(record.suppression_reasons) && record.suppression_reasons.length
+                  ? record.suppression_reasons.join(", ")
+                  : record.attention_decision || "n/a";
+                const ref = record.source_report_ref || record.source_run_id || (Array.isArray(record.source_artifacts) ? record.source_artifacts[0] : "") || "n/a";
+                return `<article class="live-alert-row">
+                  <div>${statusPill(status, record.status || "unknown")}<strong>${escapeHtml(record.alert_key || record.record_id || "alert")}</strong></div>
+                  <p>${escapeHtml([record.symbol, record.timeframe, record.priority].filter(Boolean).join(" / ") || "bounded alert record")}</p>
+                  <span>${escapeHtml(formatTimestamp(record.created_at))}</span>
+                  <span>${escapeHtml(reasons)}</span>
+                  <span>${escapeHtml(ref)}</span>
+                </article>`;
+              }).join("")}
+            </div>
+          `);
+        }
+
+        function renderLiveHistoryFilters() {
+          const options = state.liveHistory?.filter_options || {};
+          const filters = liveHistoryFilters();
+          fillSelect("#live-history-filter-data-type", "All data types", options.data_types, filters.dataType, DATA_TYPE_LABELS);
+          fillSelect("#live-history-filter-trigger", "All triggers", options.trigger_ids, filters.triggerId);
+          fillSelect("#live-history-filter-kind", "All events", options.event_kinds, filters.eventKind);
+          fillSelect("#live-history-filter-status", "All states", options.statuses, filters.status);
+          const start = document.querySelector("#live-history-filter-start");
+          const end = document.querySelector("#live-history-filter-end");
+          const reportLinked = document.querySelector("#live-history-filter-report-linked");
+          const attention = document.querySelector("#live-history-filter-attention");
+          if (start) start.value = filters.start || "";
+          if (end) end.value = filters.end || "";
+          if (reportLinked) reportLinked.checked = filters.reportLinkedOnly === true;
+          if (attention) attention.checked = filters.attentionOnly === true;
+        }
+
         function renderLiveOperationsTimeline() {
-          const jobs = liveJobs().map((job) => ({
-            time: job.finished_at || job.started_at || job.created_at,
-            status: job.status,
-            title: liveJobTitle(job),
-            detail: `${job.intent || "job"} / ${durationBetween(job.started_at, job.finished_at)}`,
-          }));
-          const cycles = (Array.isArray(state.liveCycles) ? state.liveCycles : []).slice(0, 8).map((cycle) => ({
-            time: cycle.finished_at || cycle.started_at,
-            status: cycle.status,
-            title: `Historical cycle ${cycle.cycle_id || ""}`.trim(),
-            detail: `Warnings ${text(cycle.warning_count, "0")} / Errors ${text(cycle.error_count, "0")}`,
-          }));
-          const stateRows = liveCollections().map((item) => {
-            const status = collectionStatus(item);
-            return {
-              time: item.updated_at || item.last_attempt_at || item.last_success_at,
-              status: status.status,
-              title: `${DATA_TYPE_LABELS[item.data_type] || label(item.data_type)} ${targetLabel(item)}`,
-              detail: status.reason || `next ${formatTimestamp(item.next_attempt_at)}`,
-            };
-          });
-          const rows = [...jobs, ...cycles, ...stateRows]
-            .sort((left, right) => timestampMs(right.time) - timestampMs(left.time))
-            .slice(0, 14);
-          setHtml("#live-operations-timeline", rows.length ? rows.map((row) => {
+          const rows = filteredLiveHistoryEvents();
+          setHtml("#live-operations-timeline", rows.length ? rows.slice(0, 200).map((row) => {
             const status = statusClass(row.status || "unknown");
-            return `<li class="timeline-row">
-              <div class="timeline-time">${escapeHtml(formatTimestamp(row.time).split(",")[1] || formatTimestamp(row.time))}</div>
-              <div class="timeline-node ${escapeHtml(status)}">${escapeHtml(status === "failed" ? "x" : status === "warning" || status === "stale" ? "!" : "ok")}</div>
-              <div class="timeline-body"><strong>${escapeHtml(row.title)}</strong><span>${escapeHtml(row.detail || "n/a")}</span></div>
+            const marker = status === "failed" ? "x" : status === "warning" || status === "stale" || status === "degraded" ? "!" : "ok";
+            const meta = [
+              row.event_kind ? label(row.event_kind) : null,
+              row.data_type ? (DATA_TYPE_LABELS[row.data_type] || label(row.data_type)) : null,
+              row.trigger_id,
+              row.job_id,
+              row.run_id,
+              row.report_ref,
+            ].filter(Boolean);
+            const refs = Array.isArray(row.artifact_refs) ? row.artifact_refs : [];
+            return `<li class="timeline-row live-history-row" data-live-event-id="${escapeHtml(row.event_id || "")}">
+              <div class="timeline-time">${escapeHtml(formatTimestamp(row.timestamp))}</div>
+              <div class="timeline-node ${escapeHtml(status)}">${escapeHtml(marker)}</div>
+              <button class="timeline-body live-history-event-button" type="button" data-live-event-id="${escapeHtml(row.event_id || "")}">
+                <strong>${escapeHtml(row.title || "Live event")}</strong>
+                <span>${escapeHtml(row.summary || "n/a")}</span>
+                <small>${escapeHtml(meta.join(" / ") || "bounded event")}</small>
+                ${refs.length ? `<div class="live-ref-list">${refs.slice(0, 3).map((ref) => `<span>${escapeHtml(ref)}</span>`).join("")}</div>` : ""}
+              </button>
               <span class="status-pill ${escapeHtml(status)}">${escapeHtml(row.status || "unknown")}</span>
             </li>`;
-          }).join("") : `<li class="empty-state">No Live refresh jobs or historical cycles are available yet.</li>`);
+          }).join("") : `<li class="empty-state">No Live history matches current filters.</li>`);
+        }
+
+        function renderLiveEventDrawer() {
+          if (!state.liveEventDrawerOpen) return;
+          const event = selectedLiveEvent();
+          const title = document.querySelector("#live-event-drawer-title");
+          if (title) title.textContent = event?.title || "Event details";
+          if (!event) {
+            setHtml("#live-event-drawer-body", `<div class="empty-state">The selected Live event is no longer in the bounded history payload.</div>`);
+            return;
+          }
+          const detail = event.detail || {};
+          const metadata = detail.metadata || {};
+          const refs = Array.isArray(detail.source_refs) ? detail.source_refs : [];
+          const warnings = Array.isArray(detail.warnings) ? detail.warnings : [];
+          const errors = Array.isArray(detail.errors) ? detail.errors : [];
+          const rows = [
+            ["Timestamp", formatTimestamp(event.timestamp)],
+            ["Event kind", label(event.event_kind)],
+            ["Status", event.status || "unknown"],
+            ["Data type", event.data_type ? DATA_TYPE_LABELS[event.data_type] || label(event.data_type) : "n/a"],
+            ["Trigger", event.trigger_id || "n/a"],
+            ["Job", event.job_id || "n/a"],
+            ["Run", event.run_id || "n/a"],
+            ["Report", event.report_ref || "n/a"],
+            ["Artifact state", event.artifact_state || "n/a"],
+          ];
+          setHtml("#live-event-drawer-body", `
+            <div class="drawer-chip-row">
+              ${statusPill(event.status || "unknown", event.status || "unknown")}
+              <span class="chip">${escapeHtml(label(event.event_kind || "event"))}</span>
+            </div>
+            <p class="drawer-summary">${escapeHtml(event.summary || "n/a")}</p>
+            <div class="compact-list">${rows.map(([key, value]) => detailRow(key, value)).join("")}</div>
+            ${renderMetadataBlock("Metadata", metadata)}
+            ${renderRefList("Source and artifact refs", refs)}
+            ${renderMessageList("Warnings", warnings, "warning")}
+            ${renderMessageList("Errors", errors, "failed")}
+          `);
+        }
+
+        function openLiveEventDrawer(eventId) {
+          state.selectedLiveEventId = eventId || "";
+          state.liveEventDrawerOpen = true;
+          renderLiveEventDrawer();
+          document.querySelector("#live-event-drawer")?.classList.remove("hidden");
+          const backdrop = document.querySelector("#live-event-drawer-backdrop");
+          if (backdrop) {
+            backdrop.classList.remove("hidden");
+            backdrop.setAttribute("aria-hidden", "false");
+          }
+        }
+
+        function closeLiveEventDrawer() {
+          state.liveEventDrawerOpen = false;
+          document.querySelector("#live-event-drawer")?.classList.add("hidden");
+          const backdrop = document.querySelector("#live-event-drawer-backdrop");
+          if (backdrop) {
+            backdrop.classList.add("hidden");
+            backdrop.setAttribute("aria-hidden", "true");
+          }
+        }
+
+        function selectedLiveEvent() {
+          const events = Array.isArray(state.liveHistory?.timeline) ? state.liveHistory.timeline : [];
+          return events.find((event) => event.event_id === state.selectedLiveEventId) || null;
+        }
+
+        function filteredLiveHistoryEvents() {
+          const events = Array.isArray(state.liveHistory?.timeline) ? state.liveHistory.timeline : [];
+          const filters = liveHistoryFilters();
+          const start = filters.start ? new Date(filters.start).getTime() : NaN;
+          const end = filters.end ? new Date(filters.end).getTime() : NaN;
+          return events.filter((event) => {
+            const time = timestampMs(event.timestamp);
+            if (Number.isFinite(start) && time < start) return false;
+            if (Number.isFinite(end) && time > end) return false;
+            if (filters.dataType !== "all" && event.data_type !== filters.dataType) return false;
+            if (filters.triggerId !== "all" && event.trigger_id !== filters.triggerId) return false;
+            if (filters.eventKind !== "all" && event.event_kind !== filters.eventKind) return false;
+            if (filters.status !== "all" && event.status !== filters.status) return false;
+            if (filters.reportLinkedOnly && !liveEventHasReportLink(event)) return false;
+            if (filters.attentionOnly && !ATTENTION_STATUSES.has(String(event.status || ""))) return false;
+            return true;
+          });
+        }
+
+        function liveEventHasReportLink(event) {
+          return Boolean(event.report_ref || event.run_id || event.event_kind === "trigger_report_job" || event.event_kind === "scheduled_report_job" || event.event_kind === "scheduled_report_dispatch");
         }
 
         function alertCount(payload) {
@@ -419,12 +611,36 @@
           return state.liveFilters;
         }
 
+        function liveHistoryFilters() {
+          ensureLiveHistoryFilterDefaults();
+          return state.liveHistoryFilters;
+        }
+
+        function ensureLiveMode() {
+          if (!["now", "sources", "reports", "history"].includes(state.liveMode)) {
+            state.liveMode = "now";
+          }
+        }
+
         function ensureLiveFilterDefaults() {
           state.liveFilters = {
             dataType: state.liveFilters?.dataType || "all",
             status: state.liveFilters?.status || "all",
             activeOnly: state.liveFilters?.activeOnly === true,
             attentionOnly: state.liveFilters?.attentionOnly === true,
+          };
+        }
+
+        function ensureLiveHistoryFilterDefaults() {
+          state.liveHistoryFilters = {
+            start: state.liveHistoryFilters?.start || "",
+            end: state.liveHistoryFilters?.end || "",
+            dataType: state.liveHistoryFilters?.dataType || "all",
+            triggerId: state.liveHistoryFilters?.triggerId || "all",
+            eventKind: state.liveHistoryFilters?.eventKind || "all",
+            status: state.liveHistoryFilters?.status || "all",
+            reportLinkedOnly: state.liveHistoryFilters?.reportLinkedOnly === true,
+            attentionOnly: state.liveHistoryFilters?.attentionOnly === true,
           };
         }
 
@@ -525,6 +741,33 @@
           return `<div class="live-detail-block"><strong>${escapeHtml(title)}</strong>${messages.slice(0, 5).map((message) => `<p class="live-message ${escapeHtml(statusClass(status))}">${escapeHtml(message)}</p>`).join("")}</div>`;
         }
 
+        function renderMetadataBlock(title, metadata) {
+          const entries = Object.entries(metadata || {}).slice(0, 24);
+          if (!entries.length) return "";
+          return `<div class="live-detail-block"><strong>${escapeHtml(title)}</strong><div class="compact-list">
+            ${entries.map(([key, value]) => detailRow(label(key), metadataValue(value))).join("")}
+          </div></div>`;
+        }
+
+        function metadataValue(value) {
+          if (value === null || value === undefined || value === "") return "n/a";
+          if (Array.isArray(value)) return value.map((item) => metadataValue(item)).join(", ") || "n/a";
+          if (typeof value === "object") return Object.entries(value).slice(0, 8).map(([key, item]) => `${label(key)}: ${metadataValue(item)}`).join(" / ") || "n/a";
+          return String(value);
+        }
+
+        function fillSelect(selector, allLabel, values, current, labels) {
+          const node = document.querySelector(selector);
+          if (!node) return;
+          const items = Array.isArray(values) ? values.filter(Boolean) : [];
+          const selected = current || "all";
+          node.innerHTML = [
+            `<option value="all">${escapeHtml(allLabel)}</option>`,
+            ...items.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml((labels && labels[value]) || label(value))}</option>`),
+          ].join("");
+          node.value = items.includes(selected) ? selected : "all";
+        }
+
         function liveJobTitle(job) {
           const requester = job.requester || {};
           const targetKey = requester.target_key || requester.data_type || job.kind || "Live job";
@@ -573,6 +816,13 @@
         }
 
         function wire() {
+          document.querySelector("#live-mode-tabs")?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-live-mode]");
+            if (!button) return;
+            state.liveMode = button.dataset.liveMode || "now";
+            renderLiveModeTabs();
+            applyLiveModeVisibility();
+          });
           document.querySelector("#live-filter-data-type")?.addEventListener("change", (event) => {
             state.liveFilters.dataType = event.currentTarget.value || "all";
             renderLive();
@@ -608,6 +858,49 @@
             renderLiveSourceMatrix();
             renderLiveTargetDetail();
           });
+          document.querySelector("#live-history-filter-bar")?.addEventListener("change", (event) => {
+            const target = event.target;
+            const filters = liveHistoryFilters();
+            if (target.id === "live-history-filter-start") filters.start = target.value || "";
+            if (target.id === "live-history-filter-end") filters.end = target.value || "";
+            if (target.id === "live-history-filter-data-type") filters.dataType = target.value || "all";
+            if (target.id === "live-history-filter-trigger") filters.triggerId = target.value || "all";
+            if (target.id === "live-history-filter-kind") filters.eventKind = target.value || "all";
+            if (target.id === "live-history-filter-status") filters.status = target.value || "all";
+            if (target.id === "live-history-filter-report-linked") filters.reportLinkedOnly = target.checked === true;
+            if (target.id === "live-history-filter-attention") filters.attentionOnly = target.checked === true;
+            renderLiveOperationsTimeline();
+          });
+          document.querySelector("#live-history-filter-clear")?.addEventListener("click", () => {
+            state.liveHistoryFilters = {
+              start: "",
+              end: "",
+              dataType: "all",
+              triggerId: "all",
+              eventKind: "all",
+              status: "all",
+              reportLinkedOnly: false,
+              attentionOnly: false,
+            };
+            renderLiveHistoryFilters();
+            renderLiveOperationsTimeline();
+          });
+          document.querySelector("#live-operations-timeline")?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-live-event-id]");
+            if (!button) return;
+            openLiveEventDrawer(button.dataset.liveEventId || "");
+          });
+          document.querySelector("#live-triggered-reports")?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-live-trigger-decision]");
+            if (!button) return;
+            const decisionId = button.dataset.liveTriggerDecision || "";
+            state.liveMode = "history";
+            renderLiveModeTabs();
+            applyLiveModeVisibility();
+            openLiveEventDrawer(decisionId ? `trigger_decision:${decisionId}` : "");
+          });
+          document.querySelector("#live-event-drawer-close")?.addEventListener("click", () => closeLiveEventDrawer());
+          document.querySelector("#live-event-drawer-backdrop")?.addEventListener("click", () => closeLiveEventDrawer());
         }
 
         return {
@@ -619,8 +912,13 @@
           renderLiveIntelligenceStrip,
           renderLiveIntelligenceStream,
           renderLiveReportHistory,
+          renderLiveTriggeredReports,
+          renderLiveAlertArchive,
+          renderLiveHistoryFilters,
           renderLiveJobLane,
           renderLiveOperationsTimeline,
+          renderLiveEventDrawer,
+          closeLiveEventDrawer,
           wire,
         };
       }

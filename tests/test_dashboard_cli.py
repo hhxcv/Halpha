@@ -297,6 +297,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-live-endpoint="/api/live"' in response.text
     assert 'data-live-cycles-endpoint="/api/live/cycles"' in response.text
     assert 'data-live-alerts-endpoint="/api/live/alerts"' in response.text
+    assert 'data-live-history-endpoint="/api/live/history"' in response.text
     assert 'data-monitor-endpoint="/api/monitor"' not in response.text
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
@@ -344,7 +345,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Storage maintenance" in script.text
     assert "DELETE RUN DATA" in script.text
     assert "empty-state" in response.text
-    assert "No Live refresh jobs or historical cycles are available yet." in live_script.text
+    assert "No Live history matches current filters." in live_script.text
     assert "Dry run" not in response.text
     assert "Run one cycle" not in response.text
     assert "Run backtest" in response.text

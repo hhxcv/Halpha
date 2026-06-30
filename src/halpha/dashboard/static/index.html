@@ -27,6 +27,7 @@
     data-live-endpoint="/api/live"
     data-live-cycles-endpoint="/api/live/cycles"
     data-live-alerts-endpoint="/api/live/alerts"
+    data-live-history-endpoint="/api/live/history"
     data-jobs-endpoint="/api/jobs"
     data-schedule-endpoint="/api/schedule/daily-report"
     data-services-endpoint="/api/services"
@@ -404,8 +405,14 @@
 
       <section id="live-view" class="view hidden" data-view="live">
         <div class="live-layout">
+          <nav class="segmented-control live-mode-tabs" id="live-mode-tabs" aria-label="Live review sections">
+            <button class="active" type="button" data-live-mode="now">Now</button>
+            <button type="button" data-live-mode="sources">Sources</button>
+            <button type="button" data-live-mode="reports">Reports</button>
+            <button type="button" data-live-mode="history">History</button>
+          </nav>
           <section class="summary-strip columns-6 live-summary" id="live-summary"></section>
-          <section class="panel panel-pad live-source-board">
+          <section class="panel panel-pad live-source-board" data-live-panel="sources">
             <div class="live-section-head">
               <h2 class="panel-title">Source refresh</h2>
               <span class="muted">Core-owned collection state across configured shared stores.</span>
@@ -471,10 +478,47 @@
               <div id="live-target-detail" class="live-target-detail"></div>
             </section>
           </aside>
-          <section class="panel panel-pad live-operations-panel">
+          <section class="panel panel-pad live-review-panel" data-live-panel="reports">
+            <div class="live-section-head">
+              <h2 class="panel-title">Triggered reports</h2>
+              <span class="muted">Trigger-created reports, schedule dispatches, and alert archive outcomes.</span>
+            </div>
+            <div id="live-triggered-reports" class="live-triggered-reports"></div>
+            <div id="live-alert-archive" class="live-alert-archive"></div>
+          </section>
+          <section class="panel panel-pad live-operations-panel" data-live-panel="history">
             <div class="live-section-head">
               <h2 class="panel-title">Operations timeline</h2>
-              <span class="muted">Recent Live refresh jobs and historical monitor-cycle evidence.</span>
+              <span class="muted">Bounded collection, schedule, trigger, report, and alert events.</span>
+            </div>
+            <div class="live-history-filter-bar" id="live-history-filter-bar">
+              <div class="field">
+                <label for="live-history-filter-start">Start</label>
+                <input id="live-history-filter-start" class="text-input" type="datetime-local">
+              </div>
+              <div class="field">
+                <label for="live-history-filter-end">End</label>
+                <input id="live-history-filter-end" class="text-input" type="datetime-local">
+              </div>
+              <div class="field">
+                <label for="live-history-filter-data-type">Data type</label>
+                <select id="live-history-filter-data-type" class="select-input"></select>
+              </div>
+              <div class="field">
+                <label for="live-history-filter-trigger">Trigger</label>
+                <select id="live-history-filter-trigger" class="select-input"></select>
+              </div>
+              <div class="field">
+                <label for="live-history-filter-kind">Event kind</label>
+                <select id="live-history-filter-kind" class="select-input"></select>
+              </div>
+              <div class="field">
+                <label for="live-history-filter-status">Status</label>
+                <select id="live-history-filter-status" class="select-input"></select>
+              </div>
+              <label class="chip choice-chip live-filter-chip"><input id="live-history-filter-report-linked" type="checkbox"><span class="choice-check" aria-hidden="true"></span><span>Report linked</span></label>
+              <label class="chip choice-chip live-filter-chip"><input id="live-history-filter-attention" type="checkbox"><span class="choice-check" aria-hidden="true"></span><span>Failed/warning</span></label>
+              <button class="ghost-button compact-button" type="button" id="live-history-filter-clear">Clear</button>
             </div>
             <div id="live-job-lane" class="live-job-lane"></div>
             <ul id="live-operations-timeline" class="live-timeline"></ul>
@@ -649,6 +693,23 @@
       </div>
       <div id="report-details-drawer-body" class="drawer-body">
         <div class="empty-state">Select a report to inspect its details.</div>
+      </div>
+    </aside>
+    <div id="live-event-drawer-backdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+    <aside id="live-event-drawer" class="artifact-drawer live-event-drawer hidden" aria-label="Live event details">
+      <div class="drawer-header">
+        <div>
+          <p class="drawer-kicker">Live event</p>
+          <h2 id="live-event-drawer-title">Event details</h2>
+        </div>
+        <button class="icon-button" type="button" id="live-event-drawer-close" aria-label="Close Live event details">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="live-event-drawer-body" class="drawer-body">
+        <div class="empty-state">Select a Live history row to inspect bounded details.</div>
       </div>
     </aside>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
