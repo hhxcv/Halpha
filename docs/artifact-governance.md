@@ -27,6 +27,9 @@ milestone plan.
 - `docs/monitoring-contracts.md`: local monitor configuration, cycle,
   alert archive, health, target resident Monitor boundary, privacy, and
   Codex-boundary contracts.
+- `docs/live-contracts.md`: planned user-facing Live workflow vocabulary,
+  Core-owned scheduling boundary, config contract, trigger ids, read model, and
+  Dashboard navigation language.
 - `docs/delivery-workbench-contracts.md`: local delivery and workbench summary,
   index, source-ref, privacy, and Codex-boundary contracts.
 - `docs/product-stability-contracts.md`: product validation, workflow
