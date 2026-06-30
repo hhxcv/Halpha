@@ -167,7 +167,17 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       await page.waitForSelector("#live-view:not(.hidden)", {timeout: 5000});
       await expect(page.locator("#live-summary")).toBeVisible();
       await expect(page.locator("#live-source-matrix")).toBeVisible();
+      await expect(page.locator("#live-filter-data-type")).toBeVisible();
+      await expect(page.locator("#live-filter-status")).toBeVisible();
+      await expect(page.locator("#live-intelligence-strip")).toBeVisible();
+      await expect(page.locator("#live-target-detail")).toBeVisible();
+      await expect(page.locator("#live-job-lane")).toBeVisible();
       await expect(page.locator("#live-operations-timeline")).toBeVisible();
+      await page.selectOption("#live-filter-data-type", "ohlcv");
+      await expect(page.locator('[data-live-source-card="ohlcv"]')).toBeVisible({timeout: 5000});
+      await expect(page.locator('[data-live-source-card="text_event"]')).toHaveCount(0);
+      await page.click("#live-filter-clear");
+      await expect(page.locator('[data-live-source-card="text_event"]')).toBeVisible({timeout: 5000});
       await expect(page.locator("#monitor-view")).toHaveCount(0);
       await expect(page.locator("[data-monitor-job]")).toHaveCount(0);
       await expect(page.locator('[data-service-role="monitor"]')).toHaveCount(0);

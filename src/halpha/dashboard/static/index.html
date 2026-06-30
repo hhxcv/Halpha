@@ -410,7 +410,45 @@
               <h2 class="panel-title">Source refresh</h2>
               <span class="muted">Core-owned collection state across configured shared stores.</span>
             </div>
+            <div class="live-filter-bar" id="live-filter-bar">
+              <div class="field">
+                <label for="live-filter-data-type">Data type</label>
+                <select id="live-filter-data-type" class="select-input">
+                  <option value="all">All data types</option>
+                  <option value="ohlcv">OHLCV</option>
+                  <option value="text_event">Text events</option>
+                  <option value="macro_calendar">Macro calendar</option>
+                  <option value="onchain_flow">On-chain flow</option>
+                  <option value="derivatives_market">Derivatives</option>
+                  <option value="market_anomaly">Anomalies</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="live-filter-status">Status</label>
+                <select id="live-filter-status" class="select-input">
+                  <option value="all">All states</option>
+                  <option value="available">Available</option>
+                  <option value="running">Running</option>
+                  <option value="pending">Pending</option>
+                  <option value="stale">Stale</option>
+                  <option value="warning">Warning</option>
+                  <option value="failed">Failed</option>
+                  <option value="missing">Missing</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <label class="chip choice-chip live-filter-chip"><input id="live-filter-active" type="checkbox"><span class="choice-check" aria-hidden="true"></span><span>Active jobs</span></label>
+              <label class="chip choice-chip live-filter-chip"><input id="live-filter-attention" type="checkbox"><span class="choice-check" aria-hidden="true"></span><span>Needs attention</span></label>
+              <button class="ghost-button compact-button" type="button" id="live-filter-clear">Clear</button>
+            </div>
             <div id="live-source-matrix" class="live-source-matrix"></div>
+          </section>
+          <section class="panel panel-pad live-intelligence-strip-panel">
+            <div class="live-section-head">
+              <h2 class="panel-title">Latest intelligence</h2>
+              <span class="muted">Most recent bounded signal per data type.</span>
+            </div>
+            <div id="live-intelligence-strip" class="live-intelligence-strip"></div>
           </section>
           <section class="panel panel-pad live-stream-panel">
             <div class="live-section-head">
@@ -428,12 +466,17 @@
               <h2 class="panel-title">System runtime</h2>
               <div id="live-system-runtime"></div>
             </section>
+            <section class="panel panel-pad">
+              <h2 class="panel-title">Target detail</h2>
+              <div id="live-target-detail" class="live-target-detail"></div>
+            </section>
           </aside>
           <section class="panel panel-pad live-operations-panel">
             <div class="live-section-head">
               <h2 class="panel-title">Operations timeline</h2>
               <span class="muted">Recent Live refresh jobs and historical monitor-cycle evidence.</span>
             </div>
+            <div id="live-job-lane" class="live-job-lane"></div>
             <ul id="live-operations-timeline" class="live-timeline"></ul>
           </section>
         </div>
