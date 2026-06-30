@@ -43,7 +43,7 @@ def test_dashboard_daily_report_schedule_reports_missing_state(tmp_path: Path) -
     assert payload["source_artifacts"] == [".halpha/state.sqlite"]
     assert payload["codex_authorization"]["valid"] is False
     assert payload["runtime_boundary"]["runs_only_while_dashboard_active"] is False
-    assert payload["runtime_boundary"]["automatic_dispatch"] == "monitor_service"
+    assert payload["runtime_boundary"]["automatic_dispatch"] == "core_scheduler"
     assert payload["runtime_boundary"]["hidden_service"] is False
     assert payload["runtime_boundary"]["hosted_scheduler"] is False
     assert str(tmp_path) not in response.text
@@ -316,7 +316,7 @@ def test_dashboard_daily_report_explicit_no_codex_enable_dispatches_due_job(
     assert enabled["report_generation"]["generates_report"] is False
     assert result["status"] == "available"
     assert result["job"]["intent"] == "run_no_codex"
-    assert completed["requested_by"] == "Monitor"
+    assert completed["requested_by"] == "Core"
     assert completed["requester"] == {
         "dispatch_kind": "automatic",
         "schedule_id": "daily_report",
@@ -536,7 +536,7 @@ def test_core_schedule_dispatch_due_endpoint_creates_due_no_codex_job(
     schedule = client.get("/api/schedule/daily-report").json()
     assert completed["status"] == "succeeded"
     assert completed["intent"] == "run_no_codex"
-    assert completed["requested_by"] == "Monitor"
+    assert completed["requested_by"] == "Core"
     assert schedule["last_run_at"] == "2026-06-20T00:02:00Z"
     assert schedule["linked_job_ids"] == [job_id]
     assert schedule["next_run_at"] == "2026-06-21T00:01:00Z"

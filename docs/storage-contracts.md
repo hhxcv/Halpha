@@ -118,8 +118,7 @@ New run archives are expected to record these minimum fields in
 - `trigger`: bounded trigger object with `source` and `intent`.
 - `trigger.job_id`: command job id when a Core command job created the
   run.
-- `trigger.schedule_id`: schedule id when Monitor triggered a scheduled run
-  through Core.
+- `trigger.schedule_id`: schedule id when Core triggered a scheduled run.
 - `trigger.monitor_cycle_id`: Monitor cycle id when a Monitor reassessment
   created the run.
 - `trigger.source_keys`: bounded changed source keys for Monitor

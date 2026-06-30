@@ -127,12 +127,13 @@ existing matching instance. Config mismatch must return an explicit conflict.
 Restart must be explicit, not an implicit process replacement.
 
 Core serves the local Dashboard UI and APIs, reads product state, owns
-allowlisted command-job execution, and remains the single resident process that
-executes product tasks. Monitor is the lightweight resident checker: it owns
-schedule due checks, core health checks, core restart attempts after terminal or
-stale core state, and core job triggers. Schedule is not a resident process
-role. Halpha must not introduce a hidden supervisor, broker, worker pool, or
-additional resident process role.
+allowlisted command-job execution, owns automatic schedule due checks, and
+remains the single resident process that executes product tasks. Monitor is the
+lightweight resident checker: it owns Core health checks and Core restart
+attempts after terminal or stale Core state. Monitor does not create command
+jobs or dispatch schedules. Schedule is not a resident process role. Halpha
+must not introduce a hidden supervisor, broker, worker pool, or additional
+resident process role.
 
 The target workflow hierarchy is:
 
@@ -478,10 +479,11 @@ Monitor artifacts:
 
 File-backed monitor cycle manifests are immutable local evidence for explicit,
 diagnostic, changed, or failed cycles. Routine no-due and all-source no-change
-resident polling cycles are runtime-state records only. Monitor indexes, alert
+source-cadence cycles are runtime-state records only. Monitor indexes, alert
 archive records, cooldown state, and health query state are mutable local
-operational state in `.halpha/state.sqlite`. They are not Codex input by
-default.
+operational state in `.halpha/state.sqlite`. Resident Monitor health checks are
+Core supervision state only and are not monitor cycle evidence. They are not
+Codex input by default.
 
 Legacy no-new-write monitor state files:
 

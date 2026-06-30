@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -33,7 +32,6 @@ MONITOR_CONTROL_POLL_SECONDS = 0.25
 MONITOR_START_WAIT_SECONDS = 10.0
 MONITOR_STOP_WAIT_SECONDS = 5.0
 CORE_HEALTH_TIMEOUT_SECONDS = 0.75
-CORE_API_TIMEOUT_SECONDS = 5.0
 CORE_START_TIMEOUT_SECONDS = 15.0
 
 
@@ -71,24 +69,6 @@ class LocalCoreServiceClient:
             raise MonitorCoreClientError("core service lifecycle is running, but the health endpoint is unavailable.")
         raise MonitorCoreClientError(f"core service is not ready: {lifecycle.status}.")
 
-    def dispatch_due_daily_report(self) -> dict[str, Any]:
-        return self._post_json("/api/schedule/daily-report/dispatch-due", {})
-
-    def create_monitor_cycle_job(self, *, instance_id: str, cycle_sequence: int) -> dict[str, Any]:
-        return self._post_json(
-            "/api/jobs",
-            {
-                "intent": "monitor_once",
-                "params": {},
-                "requested_by": "Monitor",
-                "requester": {
-                    "source": "monitor_service",
-                    "service_instance_id": instance_id,
-                    "monitor_cycle_sequence": cycle_sequence,
-                },
-            },
-        )
-
     def _start_core_service(self) -> None:
         command = [sys.executable, "-m", "halpha", "dashboard", "start", "--config", str(self.config_path)]
         try:
@@ -115,13 +95,6 @@ class LocalCoreServiceClient:
         except MonitorCoreClientError:
             return False
         return payload.get("service") == CORE_SERVICE_NAME and payload.get("status") in {"ok", "unconfigured"}
-
-    def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        lifecycle = self.repository.inspect(CORE_SERVICE_ROLE)
-        base_url = _core_base_url(lifecycle)
-        if base_url is None:
-            raise MonitorCoreClientError("core service endpoint is unavailable.")
-        return _request_json("POST", f"{base_url}{path}", payload, timeout=CORE_API_TIMEOUT_SECONDS)
 
 
 def load_monitor_startup_config(config_arg: str) -> MonitorStartupConfig:
@@ -185,7 +158,6 @@ def run_monitor_service(
             if _stop_requested(repository, instance_id):
                 break
             repository.update_heartbeat(MONITOR_SERVICE_ROLE, instance_id=instance_id)
-            cycle_sequence = completed_cycles + 1
             _save_service_health(
                 state_repository,
                 monitor_output_dir=output_ref,
@@ -203,20 +175,10 @@ def run_monitor_service(
             last_error: dict[str, Any] = {}
             try:
                 core_status = client.ensure_running()
-                schedule_dispatch = client.dispatch_due_daily_report()
-                monitor_job = client.create_monitor_cycle_job(
-                    instance_id=instance_id,
-                    cycle_sequence=cycle_sequence,
-                )
-                wait_seconds = min(wait_seconds, _next_schedule_wait_seconds(schedule_dispatch, default=wait_seconds))
                 consecutive_failures = 0
                 latest_last_error = {}
                 status = "waiting"
-                warnings = _monitor_supervision_warnings(
-                    core_status=core_status,
-                    schedule_dispatch=schedule_dispatch,
-                    monitor_job=monitor_job,
-                )
+                warnings = _monitor_supervision_warnings(core_status=core_status)
                 errors: list[str] = []
             except Exception as exc:
                 consecutive_failures += 1
@@ -412,20 +374,6 @@ def _core_health_url(lifecycle: ServiceLifecycleResult) -> str | None:
     return value if isinstance(value, str) and value.startswith("http://") else None
 
 
-def _core_base_url(lifecycle: ServiceLifecycleResult) -> str | None:
-    health_url = _core_health_url(lifecycle)
-    if health_url and health_url.endswith("/api/health"):
-        return health_url[: -len("/api/health")]
-    state = lifecycle.state if isinstance(lifecycle.state, dict) else {}
-    endpoint = state.get("endpoint") if isinstance(state.get("endpoint"), dict) else {}
-    host = endpoint.get("host")
-    port = endpoint.get("port")
-    if isinstance(host, str) and isinstance(port, int):
-        display_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
-        return f"http://{display_host}:{port}"
-    return None
-
-
 def _request_json(method: str, url: str, payload: dict[str, Any] | None, *, timeout: float) -> dict[str, Any]:
     data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
     request = Request(
@@ -448,34 +396,10 @@ def _request_json(method: str, url: str, payload: dict[str, Any] | None, *, time
     return loaded
 
 
-def _next_schedule_wait_seconds(payload: dict[str, Any], *, default: float) -> float:
-    schedule = payload.get("schedule") if isinstance(payload.get("schedule"), dict) else {}
-    next_run_at = schedule.get("next_run_at")
-    if not isinstance(next_run_at, str) or not next_run_at:
-        return float(default)
-    with suppress(ValueError):
-        parsed = datetime.fromisoformat(next_run_at.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return max(0.0, min(float(default), (parsed.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds()))
-    return float(default)
-
-
-def _monitor_supervision_warnings(
-    *,
-    core_status: dict[str, Any],
-    schedule_dispatch: dict[str, Any],
-    monitor_job: dict[str, Any],
-) -> list[str]:
+def _monitor_supervision_warnings(*, core_status: dict[str, Any]) -> list[str]:
     warnings: list[str] = []
     if core_status.get("status") == "started":
         warnings.append("core service was started by monitor supervision.")
-    dispatch_status = str(schedule_dispatch.get("status") or "")
-    if dispatch_status in {"failed", "blocked"}:
-        warnings.extend(str(item) for item in schedule_dispatch.get("errors") or [] if item)
-    job_status = str(monitor_job.get("status") or "")
-    if job_status in {"failed", "blocked", "unsupported"}:
-        warnings.extend(str(item) for item in monitor_job.get("errors") or [] if item)
     return warnings[:10]
 
 
@@ -765,22 +689,10 @@ def _monitor_backoff_seconds(interval_seconds: int, max_seconds: int, consecutiv
     return float(min(max_seconds, interval_seconds * (2**exponent)))
 
 
-def _monitor_service_cycle_id(instance_id: str, cycle_sequence: int) -> str:
-    short_instance = "".join(ch for ch in instance_id if ch.isalnum())[-12:] or "monitor"
-    return f"cycle-service-{short_instance}-{cycle_sequence:06d}"
-
-
 def _monitor_output_ref(output_dir: Path, *, config_path: Path) -> str:
     base = artifact_base(config_path)
     resolved = output_dir if output_dir.is_absolute() else base / output_dir
     return display_path(resolved, base=base)
-
-
-def _monitor_run_manifest_ref(path: Path | None, *, config_path: Path) -> str | None:
-    if path is None:
-        return None
-    base = artifact_base(config_path)
-    return display_path(path, base=base)
 
 
 def _future_timestamp(seconds: float) -> str:

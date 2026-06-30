@@ -185,9 +185,9 @@ instance. Config conflicts are visible and do not replace the running service.
 Implemented schedule controls are API-backed runtime state for the daily report
 schedule in `.halpha/state.sqlite`. The schedule API can inspect, enable,
 disable, update, and manually trigger daily report jobs. Automatic due dispatch
-is owned by Monitor, which calls Core to claim due occurrences and create
+is owned by Core's internal scheduler, which claims due occurrences and creates
 visible allowlisted command jobs for due runs. The daily schedule is not owned
-by the Dashboard UI lifespan, and it is not a hosted scheduler, OS scheduler,
+by the Dashboard UI lifespan, Monitor, a hosted scheduler, OS scheduler,
 startup task, cron integration, external workflow engine, or separate resident
 process.
 
@@ -208,10 +208,11 @@ The only supported resident Halpha process roles are:
 Each role is unique within one runtime root and independently startable,
 stoppable, inspectable, and restartable. CLI commands and Dashboard controls
 must address the same Monitor instance. Core must remain the only resident
-process that executes allowlisted product tasks. Monitor must not execute
-product tasks directly; it should trigger Core jobs and supervise Core health.
-Dashboard controls must not create duplicate Monitor processes for the same
-runtime root.
+process that executes allowlisted product tasks, owns schedule decisions, and
+creates automatic command jobs. Monitor must not execute product tasks directly
+or create command jobs; it supervises Core health and starts or retries Core
+when lifecycle state requires it. Dashboard controls must not create duplicate
+Monitor processes for the same runtime root.
 
 Lifecycle state must combine:
 
@@ -643,8 +644,8 @@ Codex context by default.
 
 ## Schedule Contract
 
-Daily report scheduling is current shared runtime state. Monitor owns automatic
-due checks, and Core owns the command jobs created for due runs. Dashboard
+Daily report scheduling is current shared runtime state. Core owns automatic
+due checks and the command jobs created for due runs. Dashboard
 schedule APIs are control and read-model surfaces over the same state, not a
 Dashboard UI lifespan dispatcher and not a separate resident service.
 
@@ -687,8 +688,8 @@ persisted schedule mode, then the Codex-capable `run` fallback. Codex-capable
 `run` triggers require `confirm_codex: true`.
 
 Enabling a schedule requires an explicit `job_intent`. The dashboard enable
-control records `run_no_codex`, which Monitor can dispatch through Core without
-Codex. Enabling or changing a Codex-capable `run` schedule requires
+control records `run_no_codex`, which Core can dispatch without Codex.
+Enabling or changing a Codex-capable `run` schedule requires
 `confirm_codex: true` and persists authorization with timestamp, schedule
 revision, selected config ref, and config digest. Changing the report mode,
 selected config ref, or relevant config digest invalidates unattended Codex
@@ -700,7 +701,8 @@ job, so repeated due checks for the same scheduled time create at most one
 dispatch record and one linked job. After downtime, automatic dispatch claims
 at most one latest due occurrence and records older due occurrences as missed
 within the bounded catch-up policy. Schedule remains active when Dashboard is
-stopped as long as Monitor and Core can use the shared runtime state.
+stopped only when a resident Core process is running and can use the shared
+runtime state.
 
 ## Monitor Boundary
 
@@ -716,7 +718,8 @@ The Monitor service is an independent resident role addressed through the
 shared lifecycle contract. Dashboard controls start, stop, inspect, or
 restart the shared Monitor instance. Short validation jobs remain bounded Core
 command jobs. Dashboard controls must not create duplicate Monitor processes,
-and Monitor must not run product tasks directly inside the Monitor process.
+and Monitor must not run product tasks, dispatch schedules, or create command
+jobs inside the Monitor process.
 
 ## Privacy Boundary
 
