@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from copy import deepcopy
 from datetime import datetime, timezone
+from hashlib import sha256
 import os
 from pathlib import Path
 import shutil
@@ -104,6 +105,8 @@ TEXT_INTELLIGENCE_THRESHOLD_DEFAULTS = {
     "entity_accept_score": 0.50,
     "max_topic_window_hours": 48,
 }
+DEFAULT_CONFIG_STORAGE_DIR = Path(".halpha") / "configs"
+CONFIG_IMPORT_MAX_BYTES = 512 * 1024
 CONFIG_PROFILE_SECTIONS = (
     "General",
     "Market data",
@@ -597,7 +600,12 @@ CONFIG_PROFILE_FIELDS = (
 )
 
 
-def dashboard_config_profile(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
+def dashboard_config_profile(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    config_history: list[str] | None = None,
+) -> dict[str, Any]:
     fields = [_config_profile_field(config, field) for field in CONFIG_PROFILE_FIELDS]
     return {
         "schema_version": 1,
@@ -608,6 +616,7 @@ def dashboard_config_profile(config: dict[str, Any], *, config_path: Path) -> di
             "editable": True,
             "requires_confirmation": True,
         },
+        "config_selection": dashboard_config_selection(config_path, config_history=config_history),
         "sections": list(CONFIG_PROFILE_SECTIONS),
         "fields": fields,
         "warnings": [],
@@ -619,6 +628,75 @@ def dashboard_config_profile(config: dict[str, Any], *, config_path: Path) -> di
             "raw_config_text_embedded": False,
         },
     }
+
+
+def dashboard_config_selection(config_path: Path | None, *, config_history: list[str] | None = None) -> dict[str, Any]:
+    records = _dashboard_config_candidate_records(config_path, config_history=config_history)
+    return {
+        "active_id": _config_candidate_id(config_path) if config_path is not None else None,
+        "default_storage_ref": DEFAULT_CONFIG_STORAGE_DIR.as_posix(),
+        "import_supported": True,
+        "candidates": [_public_config_candidate(record) for record in records],
+    }
+
+
+def resolve_dashboard_config_candidate(
+    candidate_id: str,
+    *,
+    active_config_path: Path | None,
+    config_history: list[str] | None = None,
+) -> Path | None:
+    wanted = str(candidate_id or "").strip()
+    if not wanted:
+        return None
+    for record in _dashboard_config_candidate_records(active_config_path, config_history=config_history):
+        if record["id"] == wanted:
+            return Path(str(record["_path"]))
+    return None
+
+
+def dashboard_import_config_file(request: dict[str, Any]) -> dict[str, Any]:
+    name = str(request.get("name") or "").strip()
+    content = request.get("content")
+    if not name:
+        return _config_import_result(status="failed", errors=["config file name is required."])
+    if not isinstance(content, str) or not content.strip():
+        return _config_import_result(status="failed", errors=["config file content is required."])
+    if len(content.encode("utf-8")) > CONFIG_IMPORT_MAX_BYTES:
+        return _config_import_result(status="failed", errors=["config file is larger than the dashboard import limit."])
+    safe_name = _safe_config_file_name(name)
+    if not safe_name:
+        return _config_import_result(status="failed", errors=["config file must be a YAML file."])
+
+    target_dir = Path.cwd() / DEFAULT_CONFIG_STORAGE_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = _unique_config_import_path(target_dir, safe_name)
+    temp_path = target_path.with_name(f".{target_path.name}.{uuid4().hex}.tmp")
+    try:
+        _write_text_for_validation(temp_path, content if content.endswith("\n") else f"{content}\n")
+        try:
+            load_config(temp_path)
+        except ConfigError as exc:
+            return _config_import_result(
+                status="failed",
+                errors=[sanitize_dashboard_message(str(exc), config_path=temp_path)],
+            )
+        os.replace(temp_path, target_path)
+    except OSError as exc:
+        return _config_import_result(
+            status="failed",
+            errors=[sanitize_dashboard_message(f"config file could not be imported: {exc}", config_path=temp_path)],
+        )
+    finally:
+        with suppress(OSError):
+            if temp_path.exists():
+                temp_path.unlink()
+
+    return _config_import_result(
+        status="succeeded",
+        config_path=safe_local_ref(target_path, base=Path.cwd()),
+        config={"loaded": True, "ref": safe_local_ref(target_path, base=Path.cwd())},
+    )
 
 
 def dashboard_backup_config(*, config_path: Path) -> dict[str, Any]:
@@ -990,6 +1068,113 @@ def _config_save_result(
         "omitted": {
             "absolute_local_paths_embedded": False,
             "raw_config_text_embedded": False,
+            "credentials_embedded": False,
+        },
+    }
+
+
+def _dashboard_config_candidate_records(config_path: Path | None, *, config_history: list[str] | None) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+
+    def add(path: Path, *, source: str, label: str | None = None) -> None:
+        candidate_id = _config_candidate_id(path)
+        if any(record["id"] == candidate_id for record in records):
+            return
+        ref = display_path(path, base=Path.cwd(), external_ref="<external-config>")
+        records.append(
+            {
+                "id": candidate_id,
+                "_path": str(path),
+                "label": label or _config_candidate_label(ref, source),
+                "ref": ref,
+                "source": source,
+                "active": config_path is not None and Path(path).resolve() == Path(config_path).resolve(),
+            }
+        )
+
+    if config_path is not None:
+        add(Path(config_path), source="current", label="Current config" if dashboard_config_ref(config_path) == "<external-config>" else None)
+
+    for path in _workspace_config_files():
+        add(path, source="workspace")
+
+    for item in config_history or []:
+        if not item:
+            continue
+        add(Path(item), source="history")
+
+    return records
+
+
+def _workspace_config_files() -> list[Path]:
+    root = Path.cwd()
+    candidates: list[Path] = []
+    for pattern in ("config*.yaml", "config*.yml"):
+        candidates.extend(path for path in root.glob(pattern) if path.is_file())
+    storage_dir = root / DEFAULT_CONFIG_STORAGE_DIR
+    for pattern in ("*.yaml", "*.yml"):
+        candidates.extend(path for path in storage_dir.glob(pattern) if path.is_file())
+    return sorted(set(candidates), key=lambda path: display_path(path, base=root, external_ref="<external-config>"))
+
+
+def _public_config_candidate(record: dict[str, Any]) -> dict[str, Any]:
+    return {key: record[key] for key in ("id", "label", "ref", "source", "active") if key in record}
+
+
+def _config_candidate_id(path: Path | None) -> str:
+    if path is None:
+        return ""
+    return sha256(str(Path(path).resolve()).encode("utf-8")).hexdigest()[:20]
+
+
+def _config_candidate_label(ref: str, source: str) -> str:
+    if ref == "<external-config>":
+        return "External config" if source != "current" else "Current external config"
+    return ref
+
+
+def _safe_config_file_name(name: str) -> str:
+    raw_name = Path(name.replace("\\", "/")).name.strip()
+    suffix = Path(raw_name).suffix.lower()
+    if suffix not in {".yaml", ".yml"}:
+        return ""
+    safe = "".join(char if char.isalnum() or char in {"-", "_", "."} else "-" for char in raw_name)
+    safe = safe.strip(".-")
+    return safe if safe.lower().endswith((".yaml", ".yml")) else ""
+
+
+def _unique_config_import_path(directory: Path, name: str) -> Path:
+    candidate = directory / name
+    if not candidate.exists():
+        return candidate
+    stem = candidate.stem
+    suffix = candidate.suffix
+    for index in range(2, 100):
+        next_candidate = directory / f"{stem}-{index}{suffix}"
+        if not next_candidate.exists():
+            return next_candidate
+    return directory / f"{stem}-{uuid4().hex[:8]}{suffix}"
+
+
+def _config_import_result(
+    *,
+    status: str,
+    config_path: str | None = None,
+    config: dict[str, Any] | None = None,
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_config_import",
+        "status": status,
+        "config_path": config_path,
+        "config": config or {"loaded": False, "ref": None},
+        "warnings": warnings or [],
+        "errors": errors or [],
+        "omitted": {
+            "absolute_local_paths_embedded": False,
+            "raw_config_text_embedded": True,
             "credentials_embedded": False,
         },
     }

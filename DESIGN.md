@@ -729,6 +729,40 @@ Overview priority:
 
 The top of the overview must not lead with report counts. Report operations belong below current intelligence and evidence.
 
+### Intelligence overview
+
+The Intelligence overview is a reader-facing intelligence briefing, not an
+operations coverage board.
+
+It must lead with recent stored intelligence from the data-type tabs:
+
+```text
+Text events
+Macro calendar
+On-chain flow
+Derivatives market
+Market anomalies
+```
+
+Rules:
+
+* Show actual recent records from the same preview/read APIs used by the
+  detail tabs.
+* Use the presentation that fits the data: headline rows for text events,
+  agenda rows for macro events, ranked rows or heat summaries for anomalies,
+  and labeled time-series charts for numeric on-chain or derivatives metrics.
+* Keep data health, warnings, coverage state, and store availability visible
+  but secondary. They should not dominate the first viewport.
+* Every overview section should offer a clear drill-down into the matching
+  detail tab.
+* Do not use artifact inventories, source counts, or coverage summaries as the
+  primary overview content unless no intelligence records are available.
+* Do not generate unsupported narrative conclusions in the overview. Use
+  source-backed records, deterministic summaries, and explicit empty or
+  degraded states.
+* Overview charts follow the chart rules: labeled metric, time window, hover
+  detail, vertical and horizontal crosshair, and y-axis value alignment.
+
 For dense dashboard regions:
 
 * Prefer table-like rows over nested cards.
@@ -1022,6 +1056,23 @@ Rules:
 * Checked state uses `primary` with dark `on-accent` mark for the solar theme.
 * Multi-select chip groups must wrap as a grid and preserve readable labels.
 
+### Settings and configuration
+
+Settings is a controlled product surface, not a developer console.
+
+Rules:
+
+* The active config is selected from a dropdown. The dropdown lists available workspace configs and previously used external configs without exposing absolute machine paths.
+* Provide a Browse action beside the dropdown for importing a config file into Halpha's local config storage.
+* Do not show a separate Load button. Selecting a config loads it immediately after confirming any unsaved edits.
+* Loading a config is the validation path. Do not expose a standalone Validate button, validation panel, Loaded badge, or Last validated timestamp.
+* If config loading or import fails, show a centered toast and an inline error below the config dropdown.
+* Field-level validation errors appear directly below the affected input, select, switch, or chip group.
+* Free-text settings must remain bounded by component-level hints, allowed options, and inline errors. Do not put free-form validation feedback in a side rail.
+* Save state is expressed by the Save button label, such as `Save 3 changes`. Do not dedicate a side panel to a change summary.
+* Settings layouts use the vertical tab component plus a single main form column. Do not add a right-side status rail unless it contains user-actionable content that cannot live with the relevant field.
+* Config selector payloads must not display raw config text, credentials, proxy values, or absolute local paths.
+
 ### Date, time, and range controls
 
 Date-time controls should feel like first-class product components, not browser defaults pasted into the dashboard.
@@ -1079,6 +1130,21 @@ Done
 Success
 Great
 ```
+
+### Tooltips
+
+Tooltips are project-owned UI components.
+
+Rules:
+
+* Do not rely on browser-native `title` popups for visible help, truncated labels, chart details, timeline segments, or dense metadata.
+* Hint icons, clipped event labels, compact chart controls, timeline segments, and short metadata controls use the same custom tooltip surface.
+* Tooltip triggers should expose `data-tooltip` or be migrated to it at runtime before display.
+* Tooltips use a paper surface, quiet border, primary left accent, subtle shadow, and no rounded shape larger than standard controls.
+* Tooltips open on hover and keyboard focus, close on blur, pointer leave, `Escape`, or when the triggering target disappears.
+* Tooltip text is explanatory, not instructional prose. If a workflow needs more than a short paragraph, use an inline description, drawer, popover, or details panel instead.
+* Tooltips must not capture pointer events or block the underlying workflow.
+* Preserve accessibility with `aria-label` for icon-only triggers and `aria-describedby` while a tooltip is visible.
 
 ### Drawers, command palette, and overlays
 
@@ -1200,13 +1266,70 @@ Rules:
 * Always show time window and source.
 * Label watch triggers, invalidation levels, and regime changes.
 * Use muted grid lines.
+* Time-series line charts must expose point hover detail for timestamp,
+  metric value, and the most useful identity or category available.
+* Hovering a line-chart point must show both vertical and horizontal
+  crosshair guides; the horizontal guide must align to a y-axis value label
+  that shows the current point value.
+* Long metric selectors, chart legends, and chart-local tab strips must use
+  horizontal drag or trackpad scrolling, hidden scrollbars, and edge-fade
+  hints. Dragging must not accidentally activate a selector.
 * Avoid 3D, gradients, and decorative animation.
 * Do not use unlabeled sparklines for important conclusions.
 * Use mature chart libraries for complex market interaction rather than hand-rolled canvas or SVG.
 
+### Strategy workspace
+
+The Strategy page is an evaluation and review surface, not a strategy
+development IDE. It should help a user quickly run a configured strategy,
+inspect whether it worked, compare configured candidates, and review bounded
+tuning evidence.
+
+Definitions:
+
+```text
+Strategy profile = strategy implementation + configured parameters + source + symbol + timeframe
+Backtest = one deterministic evaluation of one strategy profile over one selected date range
+Experiment = configured candidate comparison over the benchmark suite
+Optimization = bounded parameter review for one existing strategy profile
+```
+
+Backtest rules:
+
+* The default launch flow is a single `Run backtest` action that opens a modal.
+* The modal first asks for a strategy profile, then a date range.
+* The strategy profile already owns the strategy name, default source, symbol,
+  timeframe, and tuned parameter set.
+* Advanced overrides may expose source, symbol, and timeframe for temporary
+  experiments, but the controls must be collapsed by default and must not write
+  persistent strategy configuration.
+* The Backtest main surface groups saved runs by instrument, shows compact
+  performance summaries, and lets the user select a run for detailed review.
+* The selected run detail reuses the K-line component, operation sequence,
+  equity curve, drawdown, performance summary, warnings, and diagnostics.
+* Do not show an export tab in Strategy. Data export belongs to data-viewer
+  workflows, not strategy evaluation.
+
+Experiment rules:
+
+* Experiments compare configured strategy candidates and gates.
+* The dashboard may launch the deterministic experiment path, but it must not
+  invite ad hoc strategy development.
+* Show candidate status, benchmark coverage, gate reasons, and latest result
+  before exposing raw record tables.
+
+Optimization rules:
+
+* Optimization starts from one existing strategy profile.
+* The dashboard may adjust bounded run controls such as max combinations or
+  walk-forward rows, but it must clearly present the output as evidence, not an
+  automatically adopted production strategy.
+* Deep optimization, new strategy construction, and durable parameter design
+  are development work outside the dashboard.
+
 ### K-line chart
 
-The K-line component is a primary Strategy Lab surface and should follow a mature exchange-grade interaction model while retaining Halpha's research visual style.
+The K-line component is a primary Strategy surface and should follow a mature exchange-grade interaction model while retaining Halpha's research visual style.
 
 Required behavior:
 

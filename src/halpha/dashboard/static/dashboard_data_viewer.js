@@ -964,20 +964,70 @@
               }).join("")}
               <path class="onchain-chart-area" d="${area}"></path>
               <path class="onchain-chart-line" d="${path}"></path>
+              <line class="onchain-chart-selected-line" x1="${selectedX.toFixed(2)}" x2="${selectedX.toFixed(2)}" y1="${top}" y2="${top + plotHeight}"></line>
               ${series.map((point, index) => {
                 const x = xFor(index);
                 const y = yFor(point.value);
                 const selected = index === selectedIndex;
                 const visible = selected || index % visibleEvery === 0;
+                const valueLabel = formatChartAxisValue(point.value, metricKey, unit);
+                const tooltipLines = chartPointTooltipLines(point, metricKey, unit);
+                const ariaLabel = tooltipLines.join(", ");
                 return `
-                  ${visible ? `<circle class="onchain-chart-dot ${selected ? "selected" : ""}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${selected ? 4.5 : 2.2}"></circle>` : ""}
-                  <circle class="onchain-chart-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="8" data-onchain-point-index="${index}">
-                    <title>${escapeHtml(formatTimestamp(point.time))}: ${escapeHtml(formatMetricValue(point.value, metricKey, unit))}</title>
-                  </circle>`;
+                  <g class="onchain-chart-point" data-onchain-point-index="${index}" aria-label="${escapeHtml(ariaLabel)}">
+                    ${visible ? `<circle class="onchain-chart-dot ${selected ? "selected" : ""}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${selected ? 4.5 : 2.2}"></circle>` : ""}
+                    <circle class="onchain-chart-hit" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="10">
+                      <title>${escapeHtml(ariaLabel)}</title>
+                    </circle>
+                    ${renderChartPointHoverLayer({
+                      x,
+                      y,
+                      left,
+                      right,
+                      top,
+                      width,
+                      height,
+                      plotHeight,
+                      valueLabel,
+                      lines: tooltipLines,
+                    })}
+                  </g>`;
               }).join("")}
-              <line class="onchain-chart-selected-line" x1="${selectedX.toFixed(2)}" x2="${selectedX.toFixed(2)}" y1="${top}" y2="${top + plotHeight}"></line>
               <circle class="onchain-chart-dot selected" cx="${selectedX.toFixed(2)}" cy="${selectedY.toFixed(2)}" r="5.5" data-onchain-selected-point></circle>
             </svg>`;
+        }
+
+        function chartPointTooltipLines(point, metricKey, unit) {
+          const record = point?.record || {};
+          const lines = [
+            formatTimestamp(point?.time),
+            `${metricLabel(metricKey)}: ${formatMetricValue(point?.value, metricKey, unit)}`,
+          ];
+          const identity = record?.symbol || record?.asset || record?.chain || record?.source;
+          if (identity) lines.push(String(identity));
+          const dataClass = record?.data_class || record?.category || record?.endpoint;
+          if (dataClass) lines.push(label(dataClass));
+          return lines.slice(0, 4);
+        }
+
+        function renderChartPointHoverLayer({x, y, left, right, top, width, height, plotHeight, valueLabel, lines}) {
+          const tooltipWidth = 236;
+          const lineHeight = 16;
+          const tooltipHeight = 18 + Math.max(1, lines.length) * lineHeight;
+          const xText = x < width - right - tooltipWidth - 18 ? x + 14 : x - tooltipWidth - 14;
+          const tooltipX = Math.max(left + 8, Math.min(width - right - tooltipWidth - 8, xText));
+          const tooltipY = Math.max(top + 8, Math.min(height - tooltipHeight - 12, y - tooltipHeight - 12));
+          return `
+            <g class="onchain-chart-hover-layer">
+              <line class="onchain-chart-hover-line vertical" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${top}" y2="${top + plotHeight}"></line>
+              <line class="onchain-chart-hover-line horizontal" x1="${left}" x2="${width - right}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line>
+              <rect class="onchain-chart-axis-pill" x="6" y="${(y - 12).toFixed(2)}" width="${Math.max(54, left - 14)}" height="24" rx="6"></rect>
+              <text class="onchain-chart-axis-label" x="${left - 14}" y="${(y + 4).toFixed(2)}">${escapeHtml(valueLabel)}</text>
+              <rect class="onchain-chart-tooltip-box" x="${tooltipX.toFixed(2)}" y="${tooltipY.toFixed(2)}" width="${tooltipWidth}" height="${tooltipHeight}" rx="8"></rect>
+              ${lines.map((line, index) => `
+                <text class="onchain-chart-tooltip-text ${index === 0 ? "primary" : ""}" x="${(tooltipX + 12).toFixed(2)}" y="${(tooltipY + 19 + index * lineHeight).toFixed(2)}">${escapeHtml(line)}</text>
+              `).join("")}
+            </g>`;
         }
 
         function renderOnchainSelectedPoint(point, payload) {
@@ -1196,6 +1246,7 @@
 
         function wireDerivativesMarketPreview(selector, payload, records, groups, metricKeys, series) {
           const root = node(selector);
+          wireOnchainScrollableTabs(root);
           root?.querySelectorAll("[data-derivatives-class]").forEach((button) => {
             button.addEventListener("click", () => {
               state.derivativesDataClass = button.dataset.derivativesClass || "";
@@ -1541,6 +1592,7 @@
 
         function wireOnchainFlowPreview(selector, payload, records, groups, metricKeys, series) {
           const root = node(selector);
+          wireOnchainScrollableTabs(root);
           root?.querySelectorAll("[data-onchain-class]").forEach((button) => {
             button.addEventListener("click", () => {
               state.onchainDataClass = button.dataset.onchainClass || "";
@@ -1580,32 +1632,72 @@
         }
 
         function wireOnchainChartDragScroll(root) {
-          const scroller = root?.querySelector(".onchain-chart-scroll");
-          if (!scroller) return;
+          root?.querySelectorAll(".onchain-chart-scroll").forEach((scroller) => {
+            wireHorizontalDragScroll(scroller, {ignoreSelector: "[data-onchain-point-index]"});
+          });
+        }
+
+        function wireOnchainScrollableTabs(root) {
+          root?.querySelectorAll(".onchain-subtabs, .onchain-metric-tabs").forEach((scroller) => {
+            wireHorizontalDragScroll(scroller, {suppressClickAfterDrag: true});
+          });
+        }
+
+        function wireHorizontalDragScroll(scroller, options = {}) {
+          if (!scroller || scroller.dataset.dragScrollWired === "true") return;
+          scroller.dataset.dragScrollWired = "true";
           let dragging = false;
+          let tracking = false;
+          let moved = false;
           let startX = 0;
           let startScroll = 0;
           scroller.addEventListener("pointerdown", (event) => {
-            if (event.target.closest("[data-onchain-point-index]")) return;
-            dragging = true;
+            if (options.ignoreSelector && event.target.closest(options.ignoreSelector)) return;
+            if (event.button !== undefined && event.button !== 0) return;
+            tracking = true;
+            moved = false;
+            dragging = false;
             startX = event.clientX;
             startScroll = scroller.scrollLeft;
-            scroller.classList.add("dragging");
             scroller.setPointerCapture?.(event.pointerId);
           });
           scroller.addEventListener("pointermove", (event) => {
+            if (!tracking) return;
+            const delta = event.clientX - startX;
+            if (!dragging && Math.abs(delta) > 4) {
+              dragging = true;
+              moved = true;
+              scroller.classList.add("dragging");
+            }
             if (!dragging) return;
+            event.preventDefault();
             scroller.scrollLeft = startScroll - (event.clientX - startX);
           });
           scroller.addEventListener("pointerup", (event) => {
+            tracking = false;
             dragging = false;
             scroller.classList.remove("dragging");
             scroller.releasePointerCapture?.(event.pointerId);
+            if (options.suppressClickAfterDrag && moved) {
+              scroller.dataset.suppressNextClick = "true";
+              window.setTimeout(() => {
+                delete scroller.dataset.suppressNextClick;
+              }, 0);
+            }
           });
           scroller.addEventListener("pointercancel", () => {
+            tracking = false;
             dragging = false;
             scroller.classList.remove("dragging");
           });
+          if (options.suppressClickAfterDrag) {
+            scroller.addEventListener("click", (event) => {
+              if (scroller.dataset.suppressNextClick !== "true") return;
+              event.preventDefault();
+              event.stopPropagation();
+              delete scroller.dataset.suppressNextClick;
+            }, true);
+          }
         }
 
         function nearestOnchainPointIndex(series, targetTimestamp) {

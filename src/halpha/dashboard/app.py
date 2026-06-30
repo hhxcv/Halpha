@@ -45,12 +45,15 @@ from halpha.dashboard.schedule import DashboardScheduleManager
 from halpha.dashboard.services import dashboard_service_action, dashboard_services_summary
 from halpha.dashboard.settings import (
     dashboard_backup_config,
+    dashboard_config_selection,
     dashboard_config_profile,
     dashboard_config_ref,
+    dashboard_import_config_file,
+    resolve_dashboard_config_candidate,
     dashboard_save_config_profile,
     sanitize_dashboard_message,
 )
-from halpha.dashboard.state import read_dashboard_selected_config_state, write_dashboard_selected_config_state
+from halpha.dashboard.state import read_dashboard_config_history, read_dashboard_selected_config_state, write_dashboard_selected_config_state
 from halpha.dashboard.strategy_actions import dashboard_strategy_action_job
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.ui import dashboard_index_html
@@ -155,14 +158,31 @@ def load_dashboard_startup_config(config_arg: str | None) -> DashboardStartupCon
 
 
 def _select_dashboard_config(context: DashboardConfigContext, *, request: dict[str, Any]) -> dict[str, Any]:
-    raw_path = request.get("config_path")
-    if not isinstance(raw_path, str) or not raw_path.strip():
-        return _unconfigured_payload(
-            "dashboard_config_selection",
-            status="failed",
-            errors=["config_path must be a non-empty string."],
+    candidate_id = request.get("candidate_id")
+    if isinstance(candidate_id, str) and candidate_id.strip():
+        active = context.active()
+        active_config_path = active[1] if active else None
+        resolved = resolve_dashboard_config_candidate(
+            candidate_id,
+            active_config_path=active_config_path,
+            config_history=read_dashboard_config_history(),
         )
-    config_path = Path(raw_path.strip())
+        if resolved is None:
+            return _unconfigured_payload(
+                "dashboard_config_selection",
+                status="failed",
+                errors=["selected config option is no longer available."],
+            )
+        config_path = resolved
+    else:
+        raw_path = request.get("config_path")
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            return _unconfigured_payload(
+                "dashboard_config_selection",
+                status="failed",
+                errors=["config_path or candidate_id must be provided."],
+            )
+        config_path = Path(raw_path.strip())
     try:
         config = load_config(config_path)
     except ConfigError as exc:
@@ -181,7 +201,7 @@ def _select_dashboard_config(context: DashboardConfigContext, *, request: dict[s
         "artifact_type": "dashboard_config_selection",
         "status": "succeeded",
         "config": _dashboard_config_status(config_path),
-        "profile": dashboard_config_profile(config, config_path=config_path),
+        "profile": _dashboard_config_profile(config, config_path=config_path),
         "warnings": [],
         "errors": [],
     }
@@ -190,6 +210,7 @@ def _select_dashboard_config(context: DashboardConfigContext, *, request: dict[s
 def _unconfigured_config_profile() -> dict[str, Any]:
     payload = _unconfigured_payload("dashboard_config_profile", fields=[], sections=[])
     payload["config"] = {"loaded": False, "ref": None, "editable": False, "requires_confirmation": False}
+    payload["config_selection"] = dashboard_config_selection(None, config_history=read_dashboard_config_history())
     payload["omitted"] = {
         "absolute_local_paths_embedded": False,
         "proxy_urls_embedded": False,
@@ -216,6 +237,10 @@ def _dashboard_config_status(config_path: Path | None) -> dict[str, Any]:
     if config_path is None:
         return {"loaded": False, "ref": None}
     return {"loaded": True, "ref": dashboard_config_ref(config_path)}
+
+
+def _dashboard_config_profile(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:
+    return dashboard_config_profile(config, config_path=config_path, config_history=read_dashboard_config_history())
 
 
 def create_dashboard_app(
@@ -307,11 +332,28 @@ def create_dashboard_app(
         if active is None:
             return _unconfigured_config_profile()
         active_config, active_config_path = active
-        return dashboard_config_profile(active_config, config_path=active_config_path)
+        return _dashboard_config_profile(active_config, config_path=active_config_path)
 
     @app.post("/api/config/select")
     def config_select_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
         return _select_dashboard_config(context, request=request)
+
+    @app.post("/api/config/import")
+    def config_import_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        imported = dashboard_import_config_file(request)
+        if imported.get("status") != "succeeded" or not imported.get("config_path"):
+            imported["profile"] = None
+            return imported
+        selected = _select_dashboard_config(context, request={"config_path": imported["config_path"]})
+        status = selected.get("status")
+        return {
+            **imported,
+            "status": status,
+            "selection": selected,
+            "profile": selected.get("profile"),
+            "warnings": [*(imported.get("warnings") or []), *(selected.get("warnings") or [])],
+            "errors": [*(imported.get("errors") or []), *(selected.get("errors") or [])],
+        }
 
     @app.post("/api/config/profile")
     def config_profile_save_endpoint(request: dict[str, Any] = Body(...)) -> dict[str, Any]:

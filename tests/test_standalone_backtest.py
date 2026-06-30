@@ -105,6 +105,62 @@ def test_cli_backtest_runs_one_strategy_from_local_ohlcv_history(
     assert history_record["visualization"]["chart_type"] == "candlestick_backtest"
 
 
+def test_cli_backtest_respects_explicit_time_window(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config_path = _write_config(tmp_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(open_time="2026-06-01T00:00:00Z", close=100),
+            _record(open_time="2026-06-02T00:00:00Z", close=101),
+            _record(open_time="2026-06-03T00:00:00Z", close=99),
+            _record(open_time="2026-06-04T00:00:00Z", close=102),
+            _record(open_time="2026-06-05T00:00:00Z", close=104),
+        ]
+    )
+    output_dir = tmp_path / "backtests"
+
+    exit_code = main(
+        [
+            "backtest",
+            "--config",
+            str(config_path),
+            "--strategy",
+            "tsmom_vol_scaled",
+            "--symbol",
+            "BTCUSDT",
+            "--timeframe",
+            "1d",
+            "--start",
+            "2026-06-02T00:00:00Z",
+            "--end",
+            "2026-06-05T00:00:00Z",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    capsys.readouterr()
+    run_dir = next(output_dir.iterdir())
+    backtest = json.loads((run_dir / "strategy_backtest.json").read_text(encoding="utf-8"))
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+
+    assert exit_code == 0
+    assert [bar["time"] for bar in backtest["visualization"]["bars"]] == [
+        "2026-06-02T00:00:00Z",
+        "2026-06-03T00:00:00Z",
+        "2026-06-04T00:00:00Z",
+        "2026-06-05T00:00:00Z",
+    ]
+    assert backtest["visualization"]["window_policy"] == "explicit_range"
+    assert backtest["visualization"]["requested_start"] == "2026-06-02T00:00:00Z"
+    assert backtest["visualization"]["requested_end"] == "2026-06-05T00:00:00Z"
+    assert manifest["inputs"]["start"] == "2026-06-02T00:00:00Z"
+    assert manifest["inputs"]["end"] == "2026-06-05T00:00:00Z"
+
+
 def test_cli_backtest_applies_targeted_strategy_params(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

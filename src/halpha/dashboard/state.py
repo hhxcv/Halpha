@@ -20,6 +20,7 @@ from halpha.runtime.state_store import (
 DASHBOARD_UI_PREFERENCES_MIGRATION_VERSION = 8
 DASHBOARD_UI_PREFERENCES_SCHEMA_VERSION = 1
 DASHBOARD_SELECTED_CONFIG_KEY = "selected_config"
+DASHBOARD_CONFIG_HISTORY_LIMIT = 12
 
 
 DASHBOARD_UI_PREFERENCE_MIGRATIONS = (
@@ -58,16 +59,26 @@ def write_dashboard_selected_config_state(
     now: datetime | str | None = None,
 ) -> dict[str, Any]:
     timestamp = _format_utc(now)
-    state = {
-        "schema_version": DASHBOARD_UI_PREFERENCES_SCHEMA_VERSION,
-        "artifact_type": "dashboard_selected_config_state",
-        "status": "selected",
-        "config_path": str(config_path),
-        "config": {"loaded": True, "ref": dashboard_config_ref(config_path)},
-        "updated_at": timestamp,
-    }
     with closing(open_runtime_state_connection(runtime_root=runtime_root, config_path=config_path)) as connection:
         apply_dashboard_ui_preference_migrations(connection, now=timestamp)
+        row = connection.execute(
+            """
+            SELECT value_json
+            FROM dashboard_ui_preferences
+            WHERE preference_key = ?
+            """,
+            (DASHBOARD_SELECTED_CONFIG_KEY,),
+        ).fetchone()
+        existing = _loads(row[0]) if row is not None else {}
+        state = {
+            "schema_version": DASHBOARD_UI_PREFERENCES_SCHEMA_VERSION,
+            "artifact_type": "dashboard_selected_config_state",
+            "status": "selected",
+            "config_path": str(config_path),
+            "config": {"loaded": True, "ref": dashboard_config_ref(config_path)},
+            "history": _updated_config_history(existing.get("history"), config_path),
+            "updated_at": timestamp,
+        }
         with runtime_state_transaction(connection):
             connection.execute(
                 """
@@ -102,6 +113,13 @@ def read_dashboard_selected_config_state(*, runtime_root: Path | None = None) ->
     return state, None
 
 
+def read_dashboard_config_history(*, runtime_root: Path | None = None) -> list[str]:
+    state, error = read_dashboard_selected_config_state(runtime_root=runtime_root)
+    if error:
+        return []
+    return _string_list(state.get("history"))
+
+
 def _format_utc(value: datetime | str | None) -> str:
     if value is None:
         timestamp = datetime.now(timezone.utc).replace(microsecond=0)
@@ -131,3 +149,20 @@ def _loads(value: Any) -> dict[str, Any]:
         if isinstance(loaded, dict):
             return loaded
     return {}
+
+
+def _updated_config_history(existing: Any, config_path: Path) -> list[str]:
+    selected = str(config_path)
+    history = [selected]
+    for item in _string_list(existing):
+        if item != selected:
+            history.append(item)
+        if len(history) >= DASHBOARD_CONFIG_HISTORY_LIMIT:
+            break
+    return history
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in (str(item).strip() for item in value) if item]

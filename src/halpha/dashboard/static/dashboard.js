@@ -27,6 +27,7 @@
       services: app.dataset.servicesEndpoint,
       settings: app.dataset.settingsEndpoint,
       configSelect: app.dataset.configSelectEndpoint,
+      configImport: app.dataset.configImportEndpoint,
       textIntel: app.dataset.textIntelligenceEndpoint,
     };
     const shared = window.HalphaDashboardShared;
@@ -80,6 +81,14 @@
       intelligence: "Intelligence",
       settings: "Settings",
     };
+    const INTELLIGENCE_DATA_TYPES = ["text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"];
+    const INTELLIGENCE_OVERVIEW_LIMITS = {
+      text_event: 12,
+      macro_calendar: 32,
+      onchain_flow: 160,
+      derivatives_market: 220,
+      market_anomaly: 120,
+    };
 
     const state = {
       view: "overview",
@@ -115,7 +124,7 @@
       strategyExperimentLogs: [],
       strategyOptimizeLogs: [],
       strategyCollectLogs: [],
-      strategyExportLogs: [],
+      strategyBacktestDialogOpen: false,
       monitor: null,
       monitorCycles: [],
       monitorAlerts: null,
@@ -128,13 +137,16 @@
       dataViewerStrategyPreview: null,
       dataViewerStrategyPlan: null,
       dataViewerStrategyJob: null,
-      dataViewerStrategyExport: null,
       dataViewerIntelTimeline: null,
       dataViewerIntelPreview: null,
       dataViewerIntelPlan: null,
       dataViewerIntelJob: null,
       dataViewerIntelExport: null,
       selectedIntelTab: "overview",
+      intelligenceOverviewPreviews: null,
+      intelligenceOverviewErrors: {},
+      intelligenceOverviewLoading: false,
+      intelligenceOverviewRequestId: 0,
       selectedIntelItem: null,
       selectedIntelPreviewIndex: 0,
       intelPreviewDisplayLimit: 30,
@@ -158,6 +170,9 @@
       settingsProfile: null,
       settingsSection: "Market data",
       settingsChanges: {},
+      settingsFieldErrors: {},
+      settingsConfigError: "",
+      settingsLoadingConfig: false,
       selectedRunArtifacts: [],
       selectedSharedStores: [],
       validationJob: null,
@@ -331,11 +346,161 @@
       return fetchJson(url, {method: "POST", body: JSON.stringify(body || {})});
     }
 
-    function showToast(message) {
+    function showToast(message, kind = "info") {
       const toast = document.querySelector("#toast");
+      const safeKind = ["info", "success", "warning", "error"].includes(kind) ? kind : "info";
       toast.textContent = message;
-      toast.classList.add("visible");
+      toast.className = `toast visible ${safeKind}`;
       window.setTimeout(() => toast.classList.remove("visible"), 3600);
+    }
+
+    const tooltipState = {
+      target: null,
+      observer: null,
+    };
+
+    function initializeTooltips() {
+      migrateNativeTooltips(document.body);
+      document.addEventListener("pointerover", handleTooltipEnter, true);
+      document.addEventListener("pointerout", handleTooltipLeave, true);
+      document.addEventListener("focusin", handleTooltipEnter, true);
+      document.addEventListener("focusout", handleTooltipLeave, true);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          hideTooltip();
+        }
+      });
+      window.addEventListener("resize", () => positionTooltip());
+      window.addEventListener("scroll", () => positionTooltip(), true);
+      tooltipState.observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === "attributes" && mutation.target instanceof Element) {
+            migrateNativeTooltips(mutation.target);
+          }
+          mutation.addedNodes.forEach((node) => migrateNativeTooltips(node));
+        });
+      });
+      tooltipState.observer.observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ["title"]});
+    }
+
+    function migrateNativeTooltips(root) {
+      if (!root) {
+        return;
+      }
+      const nodes = [];
+      if (root.nodeType === Node.ELEMENT_NODE && root instanceof Element) {
+        nodes.push(root);
+        root.querySelectorAll("[title]").forEach((node) => nodes.push(node));
+      } else if (root === document || root.nodeType === Node.DOCUMENT_NODE) {
+        document.querySelectorAll("[title]").forEach((node) => nodes.push(node));
+      }
+      nodes.forEach((node) => {
+        const title = node.getAttribute("title");
+        if (!title) {
+          return;
+        }
+        if (!node.dataset.tooltip) {
+          node.dataset.tooltip = title;
+        }
+        if (!node.getAttribute("aria-label") && node.tagName === "BUTTON") {
+          node.setAttribute("aria-label", title);
+        }
+        node.removeAttribute("title");
+      });
+    }
+
+    function tooltipTargetFromEvent(event) {
+      const target = event.target instanceof Element ? event.target.closest("[data-tooltip]") : null;
+      if (target) {
+        migrateNativeTooltips(target);
+      }
+      return target;
+    }
+
+    function handleTooltipEnter(event) {
+      const target = tooltipTargetFromEvent(event);
+      if (!target || !target.dataset.tooltip || target.dataset.tooltip.trim() === "") {
+        return;
+      }
+      if (tooltipState.target === target) {
+        return;
+      }
+      showTooltip(target);
+    }
+
+    function handleTooltipLeave(event) {
+      const target = tooltipTargetFromEvent(event);
+      if (!target || tooltipState.target !== target) {
+        return;
+      }
+      const related = event.relatedTarget;
+      if (related instanceof Node && target.contains(related)) {
+        return;
+      }
+      hideTooltip();
+    }
+
+    function tooltipNode() {
+      let node = document.querySelector("#app-tooltip");
+      if (!node) {
+        node = document.createElement("div");
+        node.id = "app-tooltip";
+        node.className = "app-tooltip";
+        node.setAttribute("role", "tooltip");
+        document.body.appendChild(node);
+      }
+      return node;
+    }
+
+    function showTooltip(target) {
+      const tooltip = tooltipNode();
+      tooltipState.target = target;
+      tooltip.textContent = target.dataset.tooltip || "";
+      tooltip.className = "app-tooltip visible";
+      target.setAttribute("aria-describedby", "app-tooltip");
+      positionTooltip();
+    }
+
+    function hideTooltip() {
+      if (tooltipState.target) {
+        tooltipState.target.removeAttribute("aria-describedby");
+      }
+      tooltipState.target = null;
+      const tooltip = document.querySelector("#app-tooltip");
+      if (tooltip) {
+        tooltip.className = "app-tooltip";
+        tooltip.removeAttribute("style");
+      }
+    }
+
+    function positionTooltip() {
+      const target = tooltipState.target;
+      const tooltip = document.querySelector("#app-tooltip");
+      if (!target || !tooltip || !tooltip.classList.contains("visible")) {
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      if (rect.width <= 0 && rect.height <= 0) {
+        hideTooltip();
+        return;
+      }
+      const spacing = 10;
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const width = tooltipRect.width || 260;
+      const height = tooltipRect.height || 40;
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const preferredTop = rect.top - height - spacing;
+      const placement = preferredTop >= 8 ? "top" : "bottom";
+      const top = placement === "top"
+        ? Math.max(8, preferredTop)
+        : Math.min(viewportHeight - height - 8, rect.bottom + spacing);
+      const left = Math.max(8, Math.min(viewportWidth - width - 8, rect.left + rect.width / 2 - width / 2));
+      const arrowLeft = Math.max(12, Math.min(width - 12, rect.left + rect.width / 2 - left));
+      tooltip.classList.toggle("placement-bottom", placement === "bottom");
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.style.setProperty("--tooltip-arrow-left", `${arrowLeft}px`);
     }
 
     function setHtml(selector, html) {
@@ -655,10 +820,14 @@
     }
 
     function renderIntelligenceLoading() {
-      setHtml("#intel-overview-kpis", skeletonCards(5, "summary-cell"));
+      renderIntelligenceOverviewLoading();
       setHtml("#intel-overview-content", `
-        <section class="panel panel-pad">${skeletonList(3)}</section>
-        <section class="panel panel-pad">${skeletonList(3)}</section>`);
+        <div class="intel-overview-dashboard">
+          <section class="panel panel-pad intel-overview-section wide">${skeletonList(4)}</section>
+          <section class="panel panel-pad intel-overview-section side">${skeletonList(4)}</section>
+          <section class="panel panel-pad intel-overview-section chart">${skeletonMessage(3)}</section>
+          <section class="panel panel-pad intel-overview-section chart">${skeletonMessage(3)}</section>
+        </div>`);
       setPill("#intel-data-status", "pending", "loading");
       setHtml("#intel-data-summary", skeletonCards(4, "summary-cell"));
       setHtml("#intel-data-coverage", `<div class="data-viewer-timeline loading-surface">${skeletonLine("100%")}${skeletonLine("96%")}</div>`);
@@ -668,8 +837,7 @@
     function renderSettingsLoading() {
       setHtml("#settings-nav", skeletonList(6));
       setHtml("#settings-form", skeletonRows(7));
-      setHtml("#change-summary", `<li>${skeletonLine("72%")}</li><li>${skeletonLine("58%")}</li>`);
-      setHtml("#validation-results", skeletonMessage(3));
+      setHtml("#settings-config-select", `<option>Loading configs...</option>`);
     }
 
     async function loadHealth(options = {}) {
@@ -1459,6 +1627,126 @@
       return [...backtests, ...pipeline].filter(Boolean);
     }
 
+    function strategyProfiles() {
+      const configured = state.strategies?.commands?.options?.strategy_profiles;
+      if (Array.isArray(configured) && configured.length) {
+        return configured.filter((profile) => profile && profile.strategy_name);
+      }
+      const symbols = state.strategies?.commands?.options?.symbols || [];
+      const timeframes = state.strategies?.commands?.options?.timeframes || [];
+      const source = defaultStrategySource();
+      const fallbackSymbol = symbols[0] || "";
+      const fallbackTimeframe = timeframes[0] || "";
+      return strategySpecs().flatMap((spec) => {
+        const targeted = Array.isArray(spec.targeted_params) ? spec.targeted_params : [];
+        const profiles = targeted.length ? targeted : [{source, symbol: fallbackSymbol, timeframe: fallbackTimeframe, params: spec.configured_params || spec.default_params || {}}];
+        return profiles.map((profile, index) => {
+          const profileSource = profile.source || source;
+          const symbol = profile.symbol || fallbackSymbol;
+          const timeframe = profile.timeframe || fallbackTimeframe;
+          return {
+            profile_id: `${spec.name}:${profileSource}:${symbol}:${timeframe}:${index}`,
+            display_name: `${symbol || "symbol"} ${timeframe || "timeframe"} - ${spec.name}`,
+            strategy_name: spec.name,
+            family: spec.family,
+            description: spec.description,
+            source: profileSource,
+            symbol,
+            timeframe,
+            params: {...(spec.configured_params || {}), ...(profile.params || {})},
+            tuned: targeted.length > 0,
+            supported_market_types: spec.supported_market_types || [],
+            minimum_rows_policy: spec.minimum_rows_policy || {},
+          };
+        });
+      });
+    }
+
+    function strategyProfileId(profile) {
+      return profile?.profile_id || [profile?.strategy_name, profile?.source, profile?.symbol, profile?.timeframe].filter(Boolean).join(":");
+    }
+
+    function strategyProfileLabels(profiles) {
+      return Object.fromEntries(profiles.map((profile) => [strategyProfileId(profile), profile.display_name || `${profile.symbol} ${profile.timeframe} - ${profile.strategy_name}`]));
+    }
+
+    function selectedStrategyProfile(selector = "#strategy-profile") {
+      const profiles = strategyProfiles();
+      const selectedId = document.querySelector(selector)?.value || "";
+      return profiles.find((profile) => strategyProfileId(profile) === selectedId) || profiles[0] || null;
+    }
+
+    function renderProfileSummary(selector, profile) {
+      const node = document.querySelector(selector);
+      if (!node) return;
+      if (!profile) {
+        node.innerHTML = `<div class="message">No configured strategy profile is available.</div>`;
+        return;
+      }
+      const policy = profile.minimum_rows_policy || {};
+      const params = Object.entries(profile.params || {}).slice(0, 4).map(([name, value]) => `${name}: ${value}`).join(" / ");
+      node.innerHTML = `
+        <div>
+          <strong>${escapeHtml(profile.display_name || profile.strategy_name || "Strategy profile")}</strong>
+          <p>${escapeHtml(profile.description || "Configured strategy profile ready for evaluation.")}</p>
+        </div>
+        <div class="strategy-profile-facts">
+          <span class="chip">${escapeHtml(profile.tuned ? "configured target" : "base profile")}</span>
+          <span class="chip">${escapeHtml(profile.source || "source n/a")}</span>
+          <span class="chip">${escapeHtml(profile.symbol || "symbol n/a")}</span>
+          <span class="chip">${escapeHtml(profile.timeframe || "timeframe n/a")}</span>
+          <span class="chip">${escapeHtml(`${policy.minimum_rows_with_default_params || "n/a"} rows`)}</span>
+        </div>
+        ${params ? `<p class="strategy-profile-params">${escapeHtml(params)}</p>` : ""}`;
+    }
+
+    function syncBacktestProfileControls(force = false) {
+      const profile = selectedStrategyProfile("#strategy-profile");
+      if (!profile) {
+        renderProfileSummary("#strategy-profile-summary", null);
+        return;
+      }
+      const profileId = strategyProfileId(profile);
+      setSelectIfPresent("#strategy-profile", profileId);
+      const spec = strategySpecByName(profile.strategy_name);
+      if (spec?.family) {
+        setSelectIfPresent("#strategy-family", spec.family);
+        fillSelect("#strategy-name", strategiesForFamily(spec.family).map((itemSpec) => itemSpec.name));
+      }
+      setSelectIfPresent("#strategy-name", profile.strategy_name);
+      setSelectIfPresent("#strategy-symbol", profile.symbol);
+      setSelectIfPresent("#strategy-timeframe", profile.timeframe);
+      setInputValue("#strategy-source", profile.source || defaultStrategySource(), true);
+      setInputValue("#strategy-evaluation-window", strategyActionScopeLabel("backtest"), true);
+      renderProfileSummary("#strategy-profile-summary", profile);
+      renderStrategySpecControls();
+      if (force) {
+        state.selectedStrategyOutput = null;
+        queueStrategyChartRefresh({clearBacktest: true});
+      }
+    }
+
+    function syncOptimizeProfileControls(force = false) {
+      const profile = selectedStrategyProfile("#strategy-optimize-profile");
+      if (!profile) {
+        renderProfileSummary("#strategy-optimize-profile-summary", null);
+        renderStrategyOptimizationSpace();
+        return;
+      }
+      const spec = strategySpecByName(profile.strategy_name);
+      if (spec?.family) {
+        setSelectIfPresent("#strategy-optimize-family", spec.family);
+        fillSelect("#strategy-optimize-name", strategiesForFamily(spec.family).map((itemSpec) => itemSpec.name));
+      }
+      setSelectIfPresent("#strategy-optimize-name", profile.strategy_name);
+      setSelectIfPresent("#strategy-optimize-symbol", profile.symbol);
+      setSelectIfPresent("#strategy-optimize-timeframe", profile.timeframe);
+      setInputValue("#strategy-optimize-source", profile.source || defaultStrategySource(), true);
+      renderProfileSummary("#strategy-optimize-profile-summary", profile);
+      renderStrategyOptimizationSpace();
+      if (force) renderStrategyOptimizeResults();
+    }
+
     function renderStrategyControls() {
       const options = state.strategies?.commands?.options || {};
       const sources = options.sources || ["binance"];
@@ -1467,11 +1755,16 @@
       const specs = strategySpecs();
       const families = strategyFamilies(specs);
       const marketTypes = options.market_types || [];
+      const profiles = strategyProfiles();
+      const profileIds = profiles.map(strategyProfileId);
+      const profileLabels = strategyProfileLabels(profiles);
       fillDatalist("#strategy-ohlcv-source-options", sources);
       setInputValue("#strategy-source", defaultStrategySource(), true);
       setInputValue("#strategy-evaluation-window", strategyActionScopeLabel("backtest"), true);
       setInputValue("#strategy-experiment-window", strategyActionScopeLabel("experiment"), true);
       setInputValue("#strategy-optimize-window", strategyActionScopeLabel("optimize"), true);
+      fillSelect("#strategy-profile", profileIds, profileLabels);
+      fillSelect("#strategy-optimize-profile", profileIds, profileLabels);
       fillSelect("#strategy-market-type", marketTypes);
       fillSelect("#strategy-symbol", symbols);
       fillSelect("#strategy-timeframe", timeframes);
@@ -1487,16 +1780,18 @@
       fillSelect("#strategy-chart-timeframe", timeframes);
       fillSelect("#strategy-collect-symbol", symbols);
       fillSelect("#strategy-collect-timeframe", timeframes);
-      fillSelect("#strategy-export-symbol", symbols);
-      fillSelect("#strategy-export-timeframe", timeframes);
       ensureStrategyCollectTargets(symbols, timeframes);
       renderStrategyCollectTargets();
+      syncBacktestProfileControls(false);
+      syncOptimizeProfileControls(false);
       renderStrategySpecControls();
       renderStrategyExperimentStrategies();
       renderStrategyOptimizationSpace();
       syncStrategyOperationTabs();
       syncStrategyDataInputs(false);
       syncStrategyRangePresets(false);
+      document.querySelector("#strategy-profile").onchange = () => syncBacktestProfileControls(true);
+      document.querySelector("#strategy-optimize-profile").onchange = () => syncOptimizeProfileControls(true);
       ["#strategy-symbol", "#strategy-timeframe", "#strategy-name", "#strategy-family", "#strategy-market-type"].forEach((selector) => {
         document.querySelector(selector).onchange = () => {
           state.selectedStrategyOutput = null;
@@ -1520,19 +1815,18 @@
     }
 
     function syncStrategyDataInputs(force = false) {
-      const symbol = document.querySelector("#strategy-symbol")?.value || "";
-      const timeframe = document.querySelector("#strategy-timeframe")?.value || "";
-      const source = defaultStrategySource();
+      const profile = selectedStrategyProfile("#strategy-profile");
+      const optimizeProfile = selectedStrategyProfile("#strategy-optimize-profile");
+      const symbol = document.querySelector("#strategy-symbol")?.value || profile?.symbol || "";
+      const timeframe = document.querySelector("#strategy-timeframe")?.value || profile?.timeframe || "";
+      const source = profile?.source || defaultStrategySource();
       setInputValue("#strategy-chart-source", source, false);
       setInputValue("#strategy-chart-symbol", symbol, force);
       setInputValue("#strategy-chart-timeframe", timeframe, force);
-      setInputValue("#strategy-export-symbol", symbol, force);
-      setInputValue("#strategy-export-timeframe", timeframe, force);
-      setInputValue("#strategy-optimize-source", source, false);
-      setInputValue("#strategy-optimize-symbol", symbol, force);
-      setInputValue("#strategy-optimize-timeframe", timeframe, force);
+      setInputValue("#strategy-optimize-source", optimizeProfile?.source || source, false);
+      setInputValue("#strategy-optimize-symbol", optimizeProfile?.symbol || symbol, force);
+      setInputValue("#strategy-optimize-timeframe", optimizeProfile?.timeframe || timeframe, force);
       setInputValue("#strategy-collect-source", source, false);
-      setInputValue("#strategy-export-source", source, false);
     }
 
     function setInputValue(selector, value, force) {
@@ -1742,8 +2036,8 @@
     }
 
     function syncStrategyRangePresets(force = false) {
+      applyRangePreset("#strategy-backtest-range", "#strategy-backtest-start", "#strategy-backtest-end", force);
       applyRangePreset("#strategy-collect-range", "#strategy-collect-start", "#strategy-collect-end", force);
-      applyRangePreset("#strategy-export-range", "#strategy-export-start", "#strategy-export-end", force);
     }
 
     function presetDateRange(value) {
@@ -1759,7 +2053,7 @@
           end: toIsoSecond(anchor),
         };
       }
-      const days = value === "1d" ? 1 : value === "7d" ? 7 : value === "30d" ? 30 : value === "180d" ? 180 : 7;
+      const days = value === "1d" ? 1 : value === "7d" ? 7 : value === "30d" ? 30 : value === "90d" ? 90 : value === "180d" ? 180 : 7;
       return {
         start: toIsoSecond(new Date(anchor.getTime() - days * 24 * 3600 * 1000)),
         end: toIsoSecond(anchor),
@@ -2142,17 +2436,15 @@
       if (state.strategyOperationTab === "backtest") {
         return "OHLCV-only chart. Select a backtest run to overlay operations.";
       }
-      return "OHLCV-only chart. Collection and export settings do not select a backtest.";
+      return "OHLCV-only chart. Collection settings do not select a backtest.";
     }
 
     function setStrategyOperationTab(tab) {
-      state.strategyOperationTab = ["backtest", "experiment", "optimize", "collect", "export"].includes(tab) ? tab : "backtest";
+      state.strategyOperationTab = ["backtest", "experiment", "optimize", "collect"].includes(tab) ? tab : "backtest";
       syncStrategyOperationTabs();
       if (state.strategyOperationTab === "collect") {
         syncStrategyRangePresets(false);
         queueStrategyCollectTimelineRefresh();
-      } else if (state.strategyOperationTab === "export") {
-        syncStrategyRangePresets(false);
       }
       renderStrategies();
     }
@@ -2174,9 +2466,9 @@
     }
 
     function selectedStrategyOutput(outputs) {
-      const selectedName = document.querySelector("#strategy-name").value;
-      const selectedSymbol = document.querySelector("#strategy-symbol").value;
-      const selectedTimeframe = document.querySelector("#strategy-timeframe").value;
+      const selectedName = document.querySelector("#strategy-name")?.value || "";
+      const selectedSymbol = document.querySelector("#strategy-symbol")?.value || "";
+      const selectedTimeframe = document.querySelector("#strategy-timeframe")?.value || "";
       if (!state.selectedStrategyOutput || !outputs.includes(state.selectedStrategyOutput)) {
         return null;
       }
@@ -2189,9 +2481,9 @@
     }
 
     function filteredStrategyOutputs(outputs) {
-      const selectedName = document.querySelector("#strategy-name").value;
-      const selectedSymbol = document.querySelector("#strategy-symbol").value;
-      const selectedTimeframe = document.querySelector("#strategy-timeframe").value;
+      const selectedName = document.querySelector("#strategy-name")?.value || "";
+      const selectedSymbol = document.querySelector("#strategy-symbol")?.value || "";
+      const selectedTimeframe = document.querySelector("#strategy-timeframe")?.value || "";
       return outputs.filter((item) => {
         const identity = strategyIdentity(item);
         return (!selectedName || identity.name === selectedName)
@@ -2464,38 +2756,99 @@
     }
 
     function renderBacktestRuns(outputs) {
-      const visibleRuns = outputs.slice(0, 8);
+      const indexedRuns = outputs.map((item, index) => ({item, index, identity: strategyIdentity(item)}));
+      const visibleRuns = indexedRuns.slice(0, 8);
       const clearButton = `<button class="report-row ${state.selectedStrategyOutput ? "" : "active"}" type="button" data-backtest-clear="true">
           <span class="report-row-title">OHLCV only</span>
           <span class="report-row-meta">No backtest overlay</span>
         </button>`;
-      document.querySelector("#backtest-runs").innerHTML = clearButton + (visibleRuns.map((item, index) => `
-        <button class="report-row ${item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${index}">
-          <span class="report-row-title">${escapeHtml(strategyName(item))}</span>
-          <span class="report-row-meta">${escapeHtml(backtestRunMeta(item))}</span>
+      const side = document.querySelector("#backtest-runs");
+      if (side) {
+        side.innerHTML = clearButton + (visibleRuns.map((run) => `
+        <button class="report-row ${run.item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${run.index}">
+          <span class="report-row-title">${escapeHtml(strategyName(run.item))}</span>
+          <span class="report-row-meta">${escapeHtml(backtestRunMeta(run.item))}</span>
         </button>`).join("") || `<div class="message">No backtest runs recorded.</div>`);
-      document.querySelector("[data-backtest-clear]")?.addEventListener("click", () => {
+      }
+      const board = document.querySelector("#strategy-backtest-board");
+      if (board) {
+        if (!indexedRuns.length) {
+          board.innerHTML = `
+            <div class="empty-state">
+              <strong>No backtest runs yet.</strong>
+              <span>Run a configured strategy profile to create an inspectable evaluation record.</span>
+            </div>`;
+        } else {
+          const groups = new Map();
+          indexedRuns.forEach((run) => {
+            const key = run.identity.symbol || "Unknown symbol";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(run);
+          });
+          board.innerHTML = Array.from(groups.entries()).map(([symbol, runs]) => `
+            <section class="strategy-run-group">
+              <div class="strategy-run-group-header">
+                <div>
+                  <h3>${escapeHtml(symbol)}</h3>
+                  <p>${escapeHtml(`${runs.length} recorded run${runs.length === 1 ? "" : "s"}`)}</p>
+                </div>
+                <span class="chip">${escapeHtml(unique(runs.map((run) => run.identity.timeframe).filter(Boolean)).join(", ") || "timeframe n/a")}</span>
+              </div>
+              <div class="strategy-run-grid">
+                ${runs.slice(0, 18).map((run) => renderBacktestRunCard(run)).join("")}
+              </div>
+            </section>`).join("");
+        }
+      }
+      document.querySelectorAll("[data-backtest-clear]").forEach((button) => button.addEventListener("click", () => {
         state.selectedStrategyOutput = null;
         setSelectIfPresent("#strategy-name", "");
         strategyChart.resetCandlestickView("#backtest-chart");
         queueStrategyChartRefresh({clearBacktest: true});
         renderStrategies();
-      });
+      }));
       document.querySelectorAll("[data-backtest-index]").forEach((button) => {
         button.addEventListener("click", () => {
-          state.selectedStrategyOutput = visibleRuns[Number(button.dataset.backtestIndex)];
-          const identity = strategyIdentity(state.selectedStrategyOutput);
-          setSelectIfPresent("#strategy-name", identity.name);
-          setSelectIfPresent("#strategy-symbol", identity.symbol);
-          setSelectIfPresent("#strategy-timeframe", identity.timeframe);
-          setSelectIfPresent("#strategy-chart-symbol", identity.symbol);
-          setSelectIfPresent("#strategy-chart-timeframe", identity.timeframe);
-          setInputValue("#strategy-chart-source", defaultStrategySource(), false);
-          strategyChart.resetCandlestickView("#backtest-chart");
-          queueStrategyChartRefresh({clearBacktest: false});
-          renderStrategies();
+          selectBacktestRun(outputs, Number(button.dataset.backtestIndex));
         });
       });
+    }
+
+    function renderBacktestRunCard(run) {
+      const metrics = strategyMetrics(run.item);
+      const identity = run.identity;
+      const status = run.item?.status || run.item?.fields?.status || "stored";
+      const created = run.item?.fields?.created_at || run.item?.created_at || "";
+      return `
+        <button class="strategy-run-card ${run.item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${run.index}">
+          <span class="strategy-run-card-top">
+            <strong>${escapeHtml(identity.name || "Strategy")}</strong>
+            <span class="status-pill ${escapeHtml(statusClass(status))}">${escapeHtml(label(status))}</span>
+          </span>
+          <span class="strategy-run-meta">${escapeHtml([identity.symbol, identity.timeframe, formatTimestamp(created)].filter(Boolean).join(" / "))}</span>
+          <span class="strategy-run-metrics">
+            <span><b>${escapeHtml(metrics.totalReturn)}</b><small>return</small></span>
+            <span><b>${escapeHtml(metrics.drawdown)}</b><small>drawdown</small></span>
+            <span><b>${escapeHtml(metrics.sharpe)}</b><small>sharpe</small></span>
+            <span><b>${escapeHtml(metrics.trades)}</b><small>trades</small></span>
+          </span>
+        </button>`;
+    }
+
+    function selectBacktestRun(outputs, index) {
+      const item = outputs[index];
+      if (!item) return;
+      state.selectedStrategyOutput = item;
+      const identity = strategyIdentity(item);
+      setSelectIfPresent("#strategy-name", identity.name);
+      setSelectIfPresent("#strategy-symbol", identity.symbol);
+      setSelectIfPresent("#strategy-timeframe", identity.timeframe);
+      setSelectIfPresent("#strategy-chart-symbol", identity.symbol);
+      setSelectIfPresent("#strategy-chart-timeframe", identity.timeframe);
+      setInputValue("#strategy-chart-source", defaultStrategySource(), false);
+      strategyChart.resetCandlestickView("#backtest-chart");
+      queueStrategyChartRefresh({clearBacktest: false});
+      renderStrategies();
     }
 
     function backtestRunMeta(item) {
@@ -2989,19 +3342,40 @@
       return `<polyline points="${points.join(" ")}" fill="none" stroke="#008575" stroke-width="3"></polyline>`;
     }
 
+    function openStrategyBacktestDialog() {
+      state.strategyBacktestDialogOpen = true;
+      syncBacktestProfileControls(false);
+      syncStrategyRangePresets(false);
+      document.querySelector("#strategy-backtest-dialog")?.classList.remove("hidden");
+      document.querySelector("#strategy-backtest-dialog-backdrop")?.classList.remove("hidden");
+      document.querySelector("#strategy-profile")?.focus();
+    }
+
+    function closeStrategyBacktestDialog() {
+      state.strategyBacktestDialogOpen = false;
+      document.querySelector("#strategy-backtest-dialog")?.classList.add("hidden");
+      document.querySelector("#strategy-backtest-dialog-backdrop")?.classList.add("hidden");
+    }
+
     async function startBacktest() {
       const params = {
         strategy_name: document.querySelector("#strategy-name")?.value,
+        source: document.querySelector("#strategy-source")?.value || defaultStrategySource(),
         symbol: document.querySelector("#strategy-symbol")?.value,
         timeframe: document.querySelector("#strategy-timeframe")?.value,
       };
+      const start = String(document.querySelector("#strategy-backtest-start")?.value || "").trim();
+      const end = String(document.querySelector("#strategy-backtest-end")?.value || "").trim();
+      if (start) params.start = start;
+      if (end) params.end = end;
       if (!params.strategy_name || !params.symbol || !params.timeframe) {
         showToast("Select a configured strategy, symbol, and timeframe first.");
         return;
       }
+      closeStrategyBacktestDialog();
       await runStrategyAction("backtest", params, {
         headline: `Backtest ${params.symbol} ${params.timeframe}`,
-        submitLog: `Submitting ${params.strategy_name} on ${params.symbol} ${params.timeframe}.`,
+        submitLog: `Submitting ${params.strategy_name} on ${params.symbol} ${params.timeframe}${start || end ? ` from ${start || "start"} to ${end || "end"}` : ""}.`,
       });
     }
 
@@ -3443,63 +3817,6 @@
       return latest;
     }
 
-    function strategyExportRequest() {
-      const source = String(document.querySelector("#strategy-export-source")?.value || "").trim();
-      const symbol = String(document.querySelector("#strategy-export-symbol")?.value || "").trim();
-      const timeframe = String(document.querySelector("#strategy-export-timeframe")?.value || "").trim();
-      const start = String(document.querySelector("#strategy-export-start")?.value || "").trim();
-      const end = String(document.querySelector("#strategy-export-end")?.value || "").trim();
-      const asOf = String(document.querySelector("#strategy-export-as-of")?.value || "").trim();
-      const format = String(document.querySelector("#strategy-export-format")?.value || "csv").trim();
-      if (!source || !symbol || !timeframe || !start || !end) {
-        showToast("Export requires source, symbol, timeframe, start, and end.");
-        return null;
-      }
-      return removeEmpty({
-        data_type: "ohlcv",
-        source,
-        symbol,
-        timeframe,
-        start,
-        end,
-        as_of: asOf,
-        format,
-      });
-    }
-
-    async function runStrategyExport() {
-      const request = strategyExportRequest();
-      if (!request) return;
-      state.strategyExportLogs = [];
-      appendOperationLog("export", `Exporting ${request.symbol} ${request.timeframe} as ${String(request.format).toUpperCase()}.`);
-      renderOperationProgress("export", {status: "running", percent: 18, headline: `Export ${request.symbol} ${request.timeframe}`, logs: state.strategyExportLogs});
-      const panel = document.querySelector("#strategy-data-job-panel");
-      panel.innerHTML = `<div class="message">Creating bounded export under data/exports.</div>`;
-      try {
-        const payload = await postJson(endpoints.dataViewerExport, request);
-        state.dataViewerStrategyExport = payload;
-        const result = payload.export || {};
-        appendOperationLog("export", `Export ${payload.status || result.status || "ok"}: ${result.output_path || "output path n/a"}.`);
-        panel.innerHTML = `
-          <div class="message">
-            <strong>Export ${escapeHtml(label(payload.status || result.status || "ok"))}</strong><br>
-            Output: ${escapeHtml(result.output_path || "n/a")}<br>
-            Records: ${escapeHtml(text(result.record_count, "0"))}${result.truncated ? " / truncated" : ""}
-          </div>
-          ${table(["Field", "Value"], [
-            ["Format", result.format || result.output_format || request.format || "n/a"],
-            ["Metadata", result.metadata_path || "embedded or n/a"],
-            ["As of", result.query_parameters?.as_of || "latest stored view"],
-            ["Coverage", result.coverage_diagnostics?.status || "n/a"],
-          ])}`;
-        renderOperationProgress("export", {status: payload.status || "succeeded", percent: 100, headline: "Export complete", logs: state.strategyExportLogs});
-      } catch (error) {
-        appendOperationLog("export", `Failed: ${error.message}`);
-        panel.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
-        renderOperationProgress("export", {status: "failed", percent: 100, headline: "Export failed", logs: state.strategyExportLogs});
-      }
-    }
-
     function appendOperationLog(kind, message) {
       const key = strategyOperationLogKey(kind);
       const timeText = new Date().toLocaleTimeString(undefined, {hour12: false});
@@ -3521,7 +3838,6 @@
       if (kind === "backtest") return "strategyBacktestLogs";
       if (kind === "experiment") return "strategyExperimentLogs";
       if (kind === "optimize") return "strategyOptimizeLogs";
-      if (kind === "export") return "strategyExportLogs";
       return "strategyCollectLogs";
     }
 
@@ -3564,36 +3880,6 @@
       return Math.round(jobStatusFraction(status) * 100);
     }
 
-    function downloadSelectedOhlcv() {
-      const selected = state.strategyOperationTab === "backtest" ? state.selectedStrategyOutput : null;
-      const vis = visibleStrategyVisualization(selected);
-      const bars = Array.isArray(vis.bars) ? vis.bars : [];
-      if (!bars.length) {
-        showToast("No OHLCV bars are available on the current chart.");
-        return;
-      }
-      const columns = ["time", "open", "high", "low", "close", "volume"];
-      const csv = [
-        columns.join(","),
-        ...bars.map((bar) => columns.map((column) => csvCell(bar[column])).join(",")),
-      ].join("\n");
-      const blob = new Blob([csv], {type: "text/csv"});
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${vis.symbol || "ohlcv"}-${vis.timeframe || "window"}-candles.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function csvCell(value) {
-      const textValue = String(value ?? "");
-      if (/[",\n\r]/.test(textValue)) {
-        return `"${textValue.replace(/"/g, '""')}"`;
-      }
-      return textValue;
-    }
-
     function removeEmpty(value) {
       return Object.fromEntries(Object.entries(value).filter((entry) => entry[1] !== null && entry[1] !== undefined && entry[1] !== ""));
     }
@@ -3606,8 +3892,12 @@
           dataViewerWorkflow.loadDataViewerSummary().catch(() => null),
         ]);
         state.intelligence = textIntel;
+        state.intelligenceOverviewPreviews = null;
+        state.intelligenceOverviewErrors = {};
       } catch (error) {
         state.intelligence = {status: "failed", warnings: [error.message], artifacts: []};
+        state.intelligenceOverviewPreviews = null;
+        state.intelligenceOverviewErrors = {};
         await dataViewerWorkflow.loadDataViewerSummary();
       }
       renderIntelligence();
@@ -3628,7 +3918,7 @@
     }
 
     function syncIntelTabs() {
-      const supportedTabs = ["overview", "text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"];
+      const supportedTabs = ["overview", ...INTELLIGENCE_DATA_TYPES];
       if (!supportedTabs.includes(state.selectedIntelTab)) {
         state.selectedIntelTab = "overview";
       }
@@ -3637,33 +3927,411 @@
       });
     }
 
+    function renderIntelligenceOverviewLoading() {
+      setHtml("#intel-overview-kpis", `
+        <div class="intel-overview-pulse">
+          ${Array.from({length: 4}, () => `<div class="intel-overview-pulse-card loading-surface">${skeletonLine("48%")}${skeletonLine("72%")}</div>`).join("")}
+        </div>`);
+    }
+
     function renderIntelligenceOverview() {
-      const items = intelligenceOverviewItems();
+      const hasPreviews = state.intelligenceOverviewPreviews && Object.keys(state.intelligenceOverviewPreviews).length;
+      if (!hasPreviews) {
+        renderIntelligenceOverviewLoading();
+        setHtml("#intel-overview-content", `
+          <div class="intel-overview-dashboard">
+            <section class="panel panel-pad intel-overview-section wide">${skeletonList(4)}</section>
+            <section class="panel panel-pad intel-overview-section side">${skeletonList(4)}</section>
+            <section class="panel panel-pad intel-overview-section chart">${skeletonMessage(3)}</section>
+            <section class="panel panel-pad intel-overview-section chart">${skeletonMessage(3)}</section>
+          </div>`);
+        loadIntelligenceOverviewPreviews();
+        return;
+      }
+      const model = buildIntelligenceOverviewModel();
+      document.querySelector("#intel-overview-kpis").innerHTML = renderIntelligenceOverviewPulse(model);
+      document.querySelector("#intel-overview-content").innerHTML = renderIntelligenceOverviewDashboard(model);
+      wireIntelligenceOverview();
+    }
+
+    async function loadIntelligenceOverviewPreviews() {
+      if (state.intelligenceOverviewLoading) return;
+      const requestId = state.intelligenceOverviewRequestId + 1;
+      state.intelligenceOverviewRequestId = requestId;
+      state.intelligenceOverviewLoading = true;
+      const results = {};
+      const errors = {};
+      await Promise.all(INTELLIGENCE_DATA_TYPES.map(async (dataType) => {
+        const request = intelligenceOverviewPreviewRequest(dataType);
+        if (!request || !endpoints.dataViewerPreview) {
+          results[dataType] = {data_type: dataType, status: "unavailable", records: [], query: {}, overview_request: request};
+          return;
+        }
+        try {
+          const payload = await postJson(endpoints.dataViewerPreview, request);
+          results[dataType] = {...payload, overview_request: request};
+        } catch (error) {
+          errors[dataType] = error.message || "Preview failed.";
+          results[dataType] = {data_type: dataType, status: "failed", records: [], errors: [errors[dataType]], query: {}, overview_request: request};
+        }
+      }));
+      if (state.intelligenceOverviewRequestId !== requestId) return;
+      state.intelligenceOverviewPreviews = results;
+      state.intelligenceOverviewErrors = errors;
+      state.intelligenceOverviewLoading = false;
+      if (state.selectedIntelTab === "overview") {
+        renderIntelligenceOverview();
+      }
+    }
+
+    function intelligenceOverviewPreviewRequest(dataType) {
+      const summary = intelligenceStoreSummary(dataType);
+      const coverage = summary?.coverage || {};
+      const coverageStart = parseDateSafe(coverage.range_start);
+      const coverageEnd = parseDateSafe(coverage.range_end);
+      const now = new Date();
+      let start;
+      let end;
+      if (coverageStart && coverageEnd) {
+        if (dataType === "macro_calendar") {
+          start = maxDate(coverageStart, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+          end = minDate(coverageEnd, new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000));
+          if (start.getTime() > end.getTime()) {
+            start = coverageStart;
+            end = coverageEnd;
+          }
+        } else {
+          end = coverageEnd;
+          start = maxDate(coverageStart, new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000));
+        }
+      } else {
+        end = dataType === "macro_calendar" ? new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000) : now;
+        start = dataType === "macro_calendar" ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+      if (!start || !end || start.getTime() > end.getTime()) return null;
+      return {
+        data_type: dataType,
+        start: toIsoSeconds(start),
+        end: toIsoSeconds(end),
+        limit: INTELLIGENCE_OVERVIEW_LIMITS[dataType] || 80,
+        sort_order: dataType === "macro_calendar" ? "asc" : "desc",
+      };
+    }
+
+    function buildIntelligenceOverviewModel() {
+      const previews = state.intelligenceOverviewPreviews || {};
       const stores = intelligenceStoreSummaries();
-      const healthyStores = stores.filter((store) => ["ok", "available"].includes(String(store.status || "").toLowerCase())).length;
-      const warningCount = stores.reduce((sum, store) => sum + (store.warnings || []).length + (store.errors || []).length, 0)
-        + items.filter((item) => item.severity === "Medium" || item.severity === "High").length;
-      document.querySelector("#intel-overview-kpis").innerHTML = [
-        metricCell("High-impact events", items.filter((item) => item.severity === "High").length, "from current intelligence artifacts"),
-        metricCell("Source coverage", unique([...items.flatMap((item) => item.sources || []), ...stores.flatMap((store) => store.source_artifacts || [])]).length, "source refs"),
-        metricCell("Warnings", warningCount, "warnings and errors"),
-        metricCell("New topics", unique(items.map((item) => item.category || item.title)).length, "artifact categories"),
-        metricCell("Data quality", `${healthyStores}/${stores.length || 0}`, "healthy shared stores"),
-      ].join("");
-      document.querySelector("#intel-overview-content").innerHTML = `
-        <section class="panel panel-pad">
-          <h2 class="panel-title">Shared store coverage</h2>
-          <div class="intel-store-card-grid">${stores.map(renderIntelStoreCard).join("") || `<div class="empty-state">No intelligence shared-store summaries are available.</div>`}</div>
-        </section>
-        <section class="panel panel-pad">
-          <h2 class="panel-title">Recent intelligence artifacts</h2>
-          <div class="intel-overview-list">${items.slice(0, 8).map(renderIntelOverviewItem).join("") || `<div class="empty-state">No intelligence artifact summaries are available.</div>`}</div>
+      const recordsByType = Object.fromEntries(INTELLIGENCE_DATA_TYPES.map((dataType) => [
+        dataType,
+        (Array.isArray(previews[dataType]?.records) ? previews[dataType].records : []).slice(),
+      ]));
+      const latestRecords = INTELLIGENCE_DATA_TYPES.flatMap((dataType) => recordsByType[dataType].map((record) => ({dataType, record})))
+        .sort((left, right) => timestampMs(intelligenceRecordTime(right.record, right.dataType)) - timestampMs(intelligenceRecordTime(left.record, left.dataType)));
+      const issueCount = stores.reduce((sum, store) => sum + (store.warnings || []).length + (store.errors || []).length, 0)
+        + Object.values(previews).reduce((sum, payload) => sum + (payload?.warnings || []).length + (payload?.errors || []).length, 0);
+      return {
+        previews,
+        stores,
+        recordsByType,
+        latestRecords,
+        issueCount,
+        textEvents: recordsByType.text_event || [],
+        macroEvents: intelligenceOverviewMacroEvents(recordsByType.macro_calendar || []),
+        anomalies: intelligenceOverviewAnomalies(recordsByType.market_anomaly || []),
+        onchainChart: intelligenceOverviewMetricModel("onchain_flow", recordsByType.onchain_flow || []),
+        derivativesChart: intelligenceOverviewMetricModel("derivatives_market", recordsByType.derivatives_market || []),
+      };
+    }
+
+    function renderIntelligenceOverviewPulse(model) {
+      const sourceCount = unique(model.latestRecords.map(({record}) => intelligenceRecordSource(record)).filter(Boolean)).length;
+      const newest = model.latestRecords[0];
+      const upcoming = model.macroEvents.filter((event) => timestampMs(intelligenceRecordTime(event, "macro_calendar")) >= Date.now()).length;
+      const highAnomalies = model.anomalies.filter((record) => ["critical", "high"].includes(String(record?.severity || "").toLowerCase())).length;
+      return `
+        <div class="intel-overview-pulse">
+          ${renderIntelOverviewPulseCard("Latest intelligence", model.latestRecords.length, newest ? `${intelligenceTypeLabel(newest.dataType)} / ${formatTimestamp(intelligenceRecordTime(newest.record, newest.dataType))}` : "No recent records")}
+          ${renderIntelOverviewPulseCard("Market anomalies", model.anomalies.length, `${formatNumber(highAnomalies)} high severity`)}
+          ${renderIntelOverviewPulseCard("Macro agenda", upcoming, "upcoming scheduled events")}
+          ${renderIntelOverviewPulseCard("Sources", sourceCount, model.issueCount ? `${formatNumber(model.issueCount)} warnings or errors` : "no overview issues")}
+        </div>`;
+    }
+
+    function renderIntelOverviewPulseCard(title, value, note) {
+      return `
+        <article class="intel-overview-pulse-card">
+          <span>${escapeHtml(title)}</span>
+          <strong>${escapeHtml(formatNumber(value))}</strong>
+          <small>${escapeHtml(note || "")}</small>
+        </article>`;
+    }
+
+    function renderIntelligenceOverviewDashboard(model) {
+      return `
+        <div class="intel-overview-dashboard">
+          ${renderIntelOverviewTextEvents(model.textEvents)}
+          ${renderIntelOverviewMacroAgenda(model.macroEvents)}
+          ${renderIntelOverviewAnomalyRadar(model.anomalies)}
+          ${renderIntelOverviewChartSection("On-chain flow", "onchain_flow", model.onchainChart)}
+          ${renderIntelOverviewChartSection("Derivatives market", "derivatives_market", model.derivativesChart)}
+          ${renderIntelOverviewHealth(model)}
+        </div>`;
+    }
+
+    function renderIntelOverviewTextEvents(records) {
+      const rows = records
+        .slice()
+        .sort((left, right) => timestampMs(intelligenceRecordTime(right, "text_event")) - timestampMs(intelligenceRecordTime(left, "text_event")))
+        .slice(0, 6);
+      return `
+        <section class="panel panel-pad intel-overview-section wide">
+          ${renderIntelOverviewSectionHead("Recent text intelligence", "Headlines, source refs, and warning text from text-event stores.", "text_event")}
+          <div class="intel-overview-headline-list">
+            ${rows.map((record) => renderIntelOverviewHeadlineRow(record, "text_event")).join("") || `<div class="empty-state">No recent text events are available for the overview window.</div>`}
+          </div>
         </section>`;
+    }
+
+    function renderIntelOverviewMacroAgenda(records) {
+      const rows = records.slice(0, 7);
+      return `
+        <section class="panel panel-pad intel-overview-section side">
+          ${renderIntelOverviewSectionHead("Macro agenda", "Upcoming and recent scheduled events.", "macro_calendar")}
+          <div class="intel-overview-agenda">
+            ${rows.map((record) => renderIntelOverviewAgendaRow(record)).join("") || `<div class="empty-state">No macro calendar events are available for the overview window.</div>`}
+          </div>
+        </section>`;
+    }
+
+    function renderIntelOverviewAnomalyRadar(records) {
+      const rows = records.slice(0, 6);
+      const severityCounts = countBySimple(records, (record) => String(record?.severity || "unknown").toLowerCase());
+      return `
+        <section class="panel panel-pad intel-overview-section side">
+          ${renderIntelOverviewSectionHead("Anomaly radar", "Deduped market anomalies ranked by severity and magnitude.", "market_anomaly")}
+          <div class="intel-overview-anomaly-strip">
+            ${["critical", "high", "medium", "low"].map((severity) => `
+              <span class="intel-overview-anomaly-count severity-${escapeHtml(severity)}"><strong>${escapeHtml(formatNumber(severityCounts.get(severity) || 0))}</strong>${escapeHtml(label(severity))}</span>
+            `).join("")}
+          </div>
+          <div class="intel-overview-mini-list">
+            ${rows.map((record) => renderIntelOverviewHeadlineRow(record, "market_anomaly")).join("") || `<div class="empty-state">No anomaly records are available for the overview window.</div>`}
+          </div>
+        </section>`;
+    }
+
+    function renderIntelOverviewChartSection(title, dataType, model) {
+      return `
+        <section class="panel panel-pad intel-overview-section chart">
+          ${renderIntelOverviewSectionHead(title, model ? `${model.label} / ${overviewMetricLabel(model.metricKey)}` : "No numeric series available.", dataType)}
+          ${model ? `
+            <div class="intel-overview-chart-summary">
+              <div>
+                <span>Latest</span>
+                <strong>${escapeHtml(formatOverviewMetricValue(model.latest?.value, model.metricKey, model.unit))}</strong>
+              </div>
+              <div>
+                <span>Range</span>
+                <strong>${escapeHtml(formatTimestamp(model.first?.time))} - ${escapeHtml(formatTimestamp(model.latest?.time))}</strong>
+              </div>
+            </div>
+            ${renderIntelOverviewSparkline(model)}
+          ` : `<div class="empty-state">No chartable ${escapeHtml(intelligenceTypeLabel(dataType))} observations are available for the overview window.</div>`}
+        </section>`;
+    }
+
+    function renderIntelOverviewHealth(model) {
+      return `
+        <section class="panel panel-pad intel-overview-section health">
+          <div class="intel-overview-section-head">
+            <div>
+              <h2 class="panel-title">Data health</h2>
+              <p>Compact status only; use each tab for full coverage timelines and properties.</p>
+            </div>
+            ${model.issueCount ? statusPill("warning", `${formatNumber(model.issueCount)} issues`) : statusPill("available", "No issues")}
+          </div>
+          <div class="intel-overview-health-list">
+            ${INTELLIGENCE_DATA_TYPES.map((dataType) => renderIntelOverviewHealthRow(dataType, model)).join("")}
+          </div>
+        </section>`;
+    }
+
+    function renderIntelOverviewSectionHead(title, note, dataType) {
+      return `
+        <div class="intel-overview-section-head">
+          <div>
+            <h2 class="panel-title">${escapeHtml(title)}</h2>
+            <p>${escapeHtml(note || "")}</p>
+          </div>
+          <button class="ghost-button compact-button" type="button" data-intel-overview-open="${escapeHtml(dataType)}">Open</button>
+        </div>`;
+    }
+
+    function renderIntelOverviewHeadlineRow(record, dataType) {
+      const time = intelligenceRecordTime(record, dataType);
+      const category = intelligenceRecordCategory(record, dataType);
+      const source = intelligenceRecordSource(record);
+      return `
+        <button class="intel-overview-record-row" type="button" data-intel-overview-open="${escapeHtml(dataType)}">
+          <span class="intel-overview-record-main">
+            <strong>${escapeHtml(intelligenceRecordTitle(record, dataType))}</strong>
+            <small>${escapeHtml(formatTimestamp(time))}${source ? ` / ${escapeHtml(source)}` : ""}</small>
+          </span>
+          <span class="tag-row">
+            ${record?.severity ? `<span class="status-pill ${escapeHtml(anomalyOverviewStatus(record.severity))}">${escapeHtml(label(record.severity))}</span>` : ""}
+            <span class="tag">${escapeHtml(category)}</span>
+          </span>
+        </button>`;
+    }
+
+    function renderIntelOverviewAgendaRow(record) {
+      const time = intelligenceRecordTime(record, "macro_calendar");
+      const future = timestampMs(time) >= Date.now();
+      const importance = record?.importance || record?.impact || "unknown";
+      const region = record?.region || record?.country || record?.currency || "global";
+      return `
+        <button class="intel-overview-agenda-row ${future ? "future" : "past"}" type="button" data-intel-overview-open="macro_calendar">
+          <span class="intel-overview-agenda-date">${escapeHtml(formatTimestamp(time))}</span>
+          <span class="intel-overview-record-main">
+            <strong>${escapeHtml(intelligenceRecordTitle(record, "macro_calendar"))}</strong>
+            <small>${escapeHtml(intelligenceRecordSummary(record, "macro_calendar"))}</small>
+          </span>
+          <span class="tag-row">
+            <span class="status-pill ${future ? "available" : "skipped"}">${future ? "Future" : "Past"}</span>
+            <span class="tag">${escapeHtml(label(importance))}</span>
+            <span class="tag">${escapeHtml(label(region))}</span>
+          </span>
+        </button>`;
+    }
+
+    function renderIntelOverviewHealthRow(dataType, model) {
+      const store = intelligenceStoreSummary(dataType);
+      const preview = model.previews[dataType] || {};
+      const coverage = store?.coverage || {};
+      const records = Array.isArray(preview.records) ? preview.records.length : 0;
+      const status = preview.status || store?.status || coverage.state_status || "unknown";
+      const range = coverage.range_start && coverage.range_end
+        ? `${formatTimestamp(coverage.range_start)} - ${formatTimestamp(coverage.range_end)}`
+        : "No coverage range";
+      return `
+        <button class="intel-overview-health-row" type="button" data-intel-overview-open="${escapeHtml(dataType)}">
+          <span>
+            <strong>${escapeHtml(intelligenceTypeLabel(dataType))}</strong>
+            <small>${escapeHtml(range)}</small>
+          </span>
+          <span>${escapeHtml(formatNumber(records))} loaded</span>
+          ${statusPill(status)}
+        </button>`;
+    }
+
+    function renderIntelOverviewSparkline(model) {
+      const series = model.series || [];
+      if (series.length < 2) {
+        return `<div class="empty-state">At least two numeric observations are needed for a trend chart.</div>`;
+      }
+      const values = series.map((point) => point.value);
+      let min = Math.min(...values);
+      let max = Math.max(...values);
+      if (min === max) {
+        const padding = Math.abs(max || 1) * 0.05;
+        min -= padding;
+        max += padding;
+      } else {
+        const padding = (max - min) * 0.08;
+        min -= padding;
+        max += padding;
+      }
+      const width = 620;
+      const height = 190;
+      const left = 58;
+      const right = 24;
+      const top = 18;
+      const bottom = 40;
+      const plotWidth = width - left - right;
+      const plotHeight = height - top - bottom;
+      const xFor = (index) => left + (index / Math.max(1, series.length - 1)) * plotWidth;
+      const yFor = (value) => top + ((max - value) / Math.max(1, max - min)) * plotHeight;
+      const path = series.map((point, index) => `${index === 0 ? "M" : "L"}${xFor(index).toFixed(2)},${yFor(point.value).toFixed(2)}`).join(" ");
+      const yTicks = [max, (max + min) / 2, min];
+      const visibleEvery = Math.max(1, Math.ceil(series.length / 48));
+      return `
+        <div class="intel-overview-sparkline" aria-label="${escapeHtml(model.label)} ${escapeHtml(overviewMetricLabel(model.metricKey))} trend">
+          <svg class="intel-overview-sparkline-svg" viewBox="0 0 ${width} ${height}" role="img">
+            <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+            ${yTicks.map((tick) => {
+              const y = yFor(tick);
+              return `<g class="intel-overview-spark-grid"><line x1="${left}" x2="${width - right}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line><text x="${left - 8}" y="${(y + 4).toFixed(2)}">${escapeHtml(formatOverviewMetricValue(tick, model.metricKey, model.unit))}</text></g>`;
+            }).join("")}
+            <path class="intel-overview-sparkline-path" d="${path}"></path>
+            ${series.map((point, index) => {
+              const x = xFor(index);
+              const y = yFor(point.value);
+              const valueLabel = formatOverviewMetricValue(point.value, model.metricKey, model.unit);
+              const lines = [
+                formatTimestamp(point.time),
+                `${overviewMetricLabel(model.metricKey)}: ${valueLabel}`,
+                intelligenceRecordTitle(point.record, model.dataType),
+              ];
+              return `
+                <g class="intel-overview-spark-point">
+                  ${(index % visibleEvery === 0 || index === series.length - 1) ? `<circle class="intel-overview-spark-dot" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${index === series.length - 1 ? 3.8 : 2.2}"></circle>` : ""}
+                  <circle class="intel-overview-spark-hit" tabindex="0" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="10"><title>${escapeHtml(lines.join(" / "))}</title></circle>
+                  ${renderIntelOverviewSparkHover(x, y, left, right, top, width, height, plotHeight, valueLabel, lines)}
+                </g>`;
+            }).join("")}
+          </svg>
+        </div>`;
+    }
+
+    function renderIntelOverviewSparkHover(x, y, left, right, top, width, height, plotHeight, valueLabel, lines) {
+      const tooltipWidth = 220;
+      const lineHeight = 15;
+      const tooltipHeight = 18 + lines.length * lineHeight;
+      const tooltipX = Math.max(left + 8, Math.min(width - right - tooltipWidth - 8, x < width - tooltipWidth - 28 ? x + 14 : x - tooltipWidth - 14));
+      const tooltipY = Math.max(top + 8, Math.min(height - tooltipHeight - 10, y - tooltipHeight - 12));
+      return `
+        <g class="intel-overview-spark-hover">
+          <line class="intel-overview-spark-cross vertical" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${top}" y2="${top + plotHeight}"></line>
+          <line class="intel-overview-spark-cross horizontal" x1="${left}" x2="${width - right}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line>
+          <rect class="intel-overview-spark-axis-pill" x="4" y="${(y - 11).toFixed(2)}" width="${Math.max(48, left - 12)}" height="22" rx="6"></rect>
+          <text class="intel-overview-spark-axis-label" x="${left - 12}" y="${(y + 4).toFixed(2)}">${escapeHtml(valueLabel)}</text>
+          <rect class="intel-overview-spark-tooltip-box" x="${tooltipX.toFixed(2)}" y="${tooltipY.toFixed(2)}" width="${tooltipWidth}" height="${tooltipHeight}" rx="8"></rect>
+          ${lines.map((line, index) => `<text class="intel-overview-spark-tooltip-text ${index === 0 ? "primary" : ""}" x="${(tooltipX + 10).toFixed(2)}" y="${(tooltipY + 18 + index * lineHeight).toFixed(2)}">${escapeHtml(line)}</text>`).join("")}
+        </g>`;
+    }
+
+    function wireIntelligenceOverview() {
+      document.querySelectorAll("[data-intel-overview-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.intelOverviewOpen;
+          if (!INTELLIGENCE_DATA_TYPES.includes(target)) return;
+          state.selectedIntelTab = target;
+          renderIntelligence();
+        });
+      });
+      wireIntelligenceOverviewSparklineHover();
+    }
+
+    function wireIntelligenceOverviewSparklineHover() {
+      document.querySelectorAll(".intel-overview-spark-hit").forEach((hit) => {
+        const point = hit.closest(".intel-overview-spark-point");
+        if (!point) return;
+        const show = () => point.classList.add("hovered");
+        const hide = () => point.classList.remove("hovered");
+        hit.addEventListener("mouseenter", show);
+        hit.addEventListener("focus", show);
+        hit.addEventListener("mouseleave", hide);
+        hit.addEventListener("blur", hide);
+      });
     }
 
     function intelligenceStoreSummaries() {
       const stores = Array.isArray(state.dataViewerSummary?.stores) ? state.dataViewerSummary.stores : [];
-      return stores.filter((store) => ["text_event", "macro_calendar", "onchain_flow", "derivatives_market", "market_anomaly"].includes(store.data_type));
+      return stores.filter((store) => INTELLIGENCE_DATA_TYPES.includes(store.data_type));
+    }
+
+    function intelligenceStoreSummary(dataType) {
+      return intelligenceStoreSummaries().find((store) => store.data_type === dataType) || null;
     }
 
     function renderIntelStoreCard(store) {
@@ -3720,6 +4388,228 @@
       }[dataType] || label(dataType);
     }
 
+    function intelligenceOverviewMacroEvents(records) {
+      return (Array.isArray(records) ? records : [])
+        .slice()
+        .sort((left, right) => {
+          const leftTime = timestampMs(intelligenceRecordTime(left, "macro_calendar"));
+          const rightTime = timestampMs(intelligenceRecordTime(right, "macro_calendar"));
+          const now = Date.now();
+          const leftFuture = leftTime >= now;
+          const rightFuture = rightTime >= now;
+          if (leftFuture !== rightFuture) return leftFuture ? -1 : 1;
+          return leftFuture ? leftTime - rightTime : rightTime - leftTime;
+        });
+    }
+
+    function intelligenceOverviewAnomalies(records) {
+      return (Array.isArray(records) ? records : [])
+        .slice()
+        .sort((left, right) => {
+          const severityDelta = overviewSeverityScore(right?.severity) - overviewSeverityScore(left?.severity);
+          if (severityDelta) return severityDelta;
+          const magnitudeDelta = overviewRecordMagnitude(right) - overviewRecordMagnitude(left);
+          if (magnitudeDelta) return magnitudeDelta;
+          return timestampMs(intelligenceRecordTime(right, "market_anomaly")) - timestampMs(intelligenceRecordTime(left, "market_anomaly"));
+        });
+    }
+
+    function intelligenceOverviewMetricModel(dataType, records) {
+      const groups = new Map();
+      (Array.isArray(records) ? records : []).forEach((record) => {
+        const category = intelligenceRecordCategory(record, dataType);
+        if (!groups.has(category)) groups.set(category, []);
+        groups.get(category).push(record);
+      });
+      const candidates = [];
+      groups.forEach((groupRecords, groupKey) => {
+        const keys = unique(groupRecords.flatMap((record) => overviewMetricEntries(record).map(([key]) => key)));
+        const metricKey = overviewPreferredMetric(dataType, keys);
+        if (!metricKey) return;
+        const series = groupRecords
+          .map((record) => {
+            const value = overviewMetricValue(record, metricKey);
+            const time = intelligenceRecordTime(record, dataType);
+            return {record, time, timestamp: timestampMs(time), value};
+          })
+          .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.value))
+          .sort((left, right) => left.timestamp - right.timestamp);
+        if (!series.length) return;
+        candidates.push({
+          dataType,
+          key: groupKey,
+          label: label(groupKey),
+          metricKey,
+          unit: series[series.length - 1]?.record?.units?.[metricKey] || "",
+          series,
+          first: series[0],
+          latest: series[series.length - 1],
+        });
+      });
+      return candidates.sort((left, right) => {
+        if (right.series.length !== left.series.length) return right.series.length - left.series.length;
+        return timestampMs(right.latest?.time) - timestampMs(left.latest?.time);
+      })[0] || null;
+    }
+
+    function intelligenceRecordTime(record, dataType) {
+      const fields = {
+        text_event: ["event_time", "published_at", "timestamp", "time", "first_seen_at", "collected_at"],
+        macro_calendar: ["event_time", "scheduled_at", "release_time", "timestamp", "date", "time"],
+        onchain_flow: ["observed_at", "timestamp", "as_of", "time", "collected_at"],
+        derivatives_market: ["observed_at", "timestamp", "as_of", "funding_time", "time", "collected_at"],
+        market_anomaly: ["event_time", "detected_at", "observed_at", "timestamp", "time", "collected_at"],
+      }[dataType] || ["timestamp", "time", "collected_at"];
+      const value = fields.map((field) => record?.[field]).find(Boolean);
+      return value || record?.as_of || record?.collected_at || "";
+    }
+
+    function intelligenceRecordTitle(record, dataType) {
+      if (!record) return "No record";
+      if (dataType === "macro_calendar") return text(record.title || record.event || record.name || record.event_name, "Macro calendar event");
+      if (dataType === "onchain_flow") return text(record.title, `${label(record.data_class || record.endpoint || "On-chain flow")} ${record.asset || record.chain || ""}`.trim());
+      if (dataType === "derivatives_market") return text(record.title, `${record.symbol || "Market"} ${label(record.data_class || record.endpoint || "derivatives")}`.trim());
+      if (dataType === "market_anomaly") return text(record.title, `${record.symbol || "Market"} ${label(record.data_class || record.anomaly_type || "anomaly")}`.trim());
+      return text(record.title || record.headline || record.name || record.url, "Text event");
+    }
+
+    function intelligenceRecordSummary(record, dataType) {
+      if (!record) return "";
+      if (record.summary || record.description) return String(record.summary || record.description);
+      if (dataType === "macro_calendar") {
+        const parts = [
+          record.region || record.country || record.currency,
+          record.importance || record.impact,
+          record.source,
+        ].filter(Boolean);
+        return parts.length ? parts.map(label).join(" / ") : "Scheduled macro event.";
+      }
+      const metrics = overviewMetricEntries(record).slice(0, 3);
+      if (metrics.length) {
+        return metrics.map(([key, value, unit]) => `${overviewMetricLabel(key)} ${formatOverviewMetricValue(value, key, unit)}`).join(" / ");
+      }
+      return text(record.content || record.body || record.url, "No summary recorded.");
+    }
+
+    function intelligenceRecordCategory(record, dataType) {
+      return String(record?.data_class || record?.category || record?.event_type || record?.source_type || record?.endpoint || dataType || "uncategorized");
+    }
+
+    function intelligenceRecordSource(record) {
+      return text(record?.source || record?.source_name || record?.provider || record?.source_type, "");
+    }
+
+    function overviewMetricEntries(record) {
+      const metrics = record?.metrics && typeof record.metrics === "object" ? record.metrics : {};
+      const units = record?.units && typeof record.units === "object" ? record.units : {};
+      const entries = Object.entries(metrics)
+        .map(([key, value]) => [key, Number(value), units[key] || ""])
+        .filter((entry) => Number.isFinite(entry[1]));
+      Object.entries(record || {}).forEach(([key, value]) => {
+        if (entries.some(([existing]) => existing === key)) return;
+        if (!overviewTopLevelMetricKey(key)) return;
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) entries.push([key, numeric, units[key] || ""]);
+      });
+      return entries;
+    }
+
+    function overviewTopLevelMetricKey(key) {
+      return !/(^id$|_id$|key$|time$|timestamp|date|source|symbol|asset|chain|title|summary|url|status|severity|direction|class|type|endpoint)/i.test(key);
+    }
+
+    function overviewMetricValue(record, metricKey) {
+      const raw = record?.metrics && Object.prototype.hasOwnProperty.call(record.metrics, metricKey) ? record.metrics[metricKey] : record?.[metricKey];
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : NaN;
+    }
+
+    function overviewPreferredMetric(dataType, keys) {
+      const preferred = {
+        onchain_flow: ["exchange_netflow", "netflow", "mempool_size_bytes", "mempool_transaction_count", "transaction_count", "active_addresses", "value"],
+        derivatives_market: ["funding_rate", "last_funding_rate", "open_interest_value", "open_interest_contracts", "basis_rate", "premium_rate", "depth_imbalance", "bid_depth_notional", "ask_depth_notional", "mark_price"],
+        market_anomaly: ["severity_score", "score", "z_score", "volume_spike_multiplier", "price_change_pct", "magnitude", "value"],
+      }[dataType] || [];
+      return preferred.find((key) => keys.includes(key)) || keys[0] || "";
+    }
+
+    function overviewMetricLabel(key) {
+      return {
+        exchange_netflow: "Exchange netflow",
+        mempool_size_bytes: "Mempool size",
+        mempool_transaction_count: "Mempool transactions",
+        active_addresses: "Active addresses",
+        transaction_count: "Transactions",
+        funding_rate: "Funding rate",
+        last_funding_rate: "Last funding rate",
+        open_interest_value: "Open interest value",
+        open_interest_contracts: "Open interest",
+        basis_rate: "Basis rate",
+        premium_rate: "Premium rate",
+        depth_imbalance: "Depth imbalance",
+        bid_depth_notional: "Bid depth",
+        ask_depth_notional: "Ask depth",
+        volume_spike_multiplier: "Volume spike",
+        price_change_pct: "Price change",
+      }[key] || label(key);
+    }
+
+    function formatOverviewMetricValue(value, key, unit = "") {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return text(value);
+      const normalizedUnit = String(unit || "").toLowerCase();
+      if (normalizedUnit === "ratio" || /rate|ratio|pct|percent/.test(String(key || "").toLowerCase())) {
+        const pctValue = Math.abs(number) <= 1 ? number * 100 : number;
+        return `${pctValue.toFixed(Math.abs(pctValue) >= 10 ? 1 : 2)}%`;
+      }
+      if (Math.abs(number) >= 1000000) return new Intl.NumberFormat("en-US", {notation: "compact", maximumFractionDigits: 2}).format(number);
+      if (Math.abs(number) >= 1000) return formatNumber(Math.round(number));
+      return Number.isInteger(number) ? formatNumber(number) : number.toFixed(Math.abs(number) >= 10 ? 2 : 4).replace(/0+$/, "").replace(/\.$/, "");
+    }
+
+    function overviewSeverityScore(severity) {
+      return {critical: 5, high: 4, medium: 3, warning: 2, low: 1}[String(severity || "").toLowerCase()] || 0;
+    }
+
+    function overviewRecordMagnitude(record) {
+      const entries = overviewMetricEntries(record);
+      return entries.reduce((max, [, value]) => Math.max(max, Math.abs(Number(value) || 0)), 0);
+    }
+
+    function anomalyOverviewStatus(severity) {
+      const normalized = String(severity || "").toLowerCase();
+      if (["critical", "high"].includes(normalized)) return "failed";
+      if (["medium", "warning"].includes(normalized)) return "warning";
+      if (normalized === "low") return "available";
+      return "unknown";
+    }
+
+    function countBySimple(items, getter) {
+      const counts = new Map();
+      (Array.isArray(items) ? items : []).forEach((item) => {
+        const key = getter(item);
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+      return counts;
+    }
+
+    function parseDateSafe(value) {
+      const date = value ? new Date(value) : null;
+      return date && Number.isFinite(date.getTime()) ? date : null;
+    }
+
+    function maxDate(left, right) {
+      return left.getTime() >= right.getTime() ? left : right;
+    }
+
+    function minDate(left, right) {
+      return left.getTime() <= right.getTime() ? left : right;
+    }
+
+    function toIsoSeconds(date) {
+      return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+    }
+
     function timestampMs(value) {
       const time = value ? new Date(value).getTime() : NaN;
       return Number.isFinite(time) ? time : 0;
@@ -3763,21 +4653,44 @@
         state.settingsSection = button.dataset.settingsSection;
         renderSettings();
       }));
-      const profileStatus = state.settingsProfile?.status || "loading";
-      setPill("#settings-valid-pill", profileStatus, profileStatus === "available" ? "Loaded" : profileStatus);
-      document.querySelector("#settings-last-validated").textContent = state.validationJob ? `Last validation job: ${state.validationJob.status || "created"}` : "Last validated: not run";
       const loaded = state.settingsProfile?.config?.loaded !== false && state.settingsProfile?.status !== "unconfigured";
-      document.querySelector("#config-profile").textContent = loaded ? (state.settingsProfile?.config?.ref || state.health?.config?.ref || "Current config") : "not configured";
+      renderSettingsConfigSelector();
       document.querySelector("#settings-section-title").textContent = state.settingsSection;
       document.querySelector("#settings-form").innerHTML = settingsForm(state.settingsSection);
       const backupButton = document.querySelector("#settings-backup");
       if (backupButton) backupButton.disabled = !loaded;
-      document.querySelectorAll("[data-job-intent='validate']").forEach((button) => { button.disabled = !loaded; });
       renderChangeSummary();
-      renderValidationResults();
       renderStorageMaintenance();
       wireSettingsControls();
       wireCleanupControls();
+    }
+
+    function renderSettingsConfigSelector() {
+      const select = document.querySelector("#settings-config-select");
+      if (!select) return;
+      const selection = state.settingsProfile?.config_selection || {};
+      const candidates = Array.isArray(selection.candidates) ? selection.candidates : [];
+      const activeId = selection.active_id || candidates.find((candidate) => candidate.active)?.id || "";
+      select.innerHTML = candidates.length
+        ? candidates.map((candidate) => `<option value="${escapeHtml(candidate.id)}" ${candidate.id === activeId ? "selected" : ""}>${escapeHtml(settingsConfigOptionLabel(candidate))}</option>`).join("")
+        : `<option value="">No config files found</option>`;
+      select.value = activeId || "";
+      select.disabled = state.settingsLoadingConfig || !candidates.length;
+      const errorNode = document.querySelector("#settings-config-error");
+      if (errorNode) {
+        errorNode.textContent = state.settingsConfigError || "";
+        errorNode.classList.toggle("hidden", !state.settingsConfigError);
+      }
+      const browseButton = document.querySelector("#settings-config-browse");
+      if (browseButton) {
+        browseButton.disabled = state.settingsLoadingConfig || !selection.import_supported || !endpoints.configImport;
+      }
+    }
+
+    function settingsConfigOptionLabel(candidate) {
+      const source = String(candidate?.source || "");
+      const suffix = source && source !== "current" ? ` / ${label(source)}` : "";
+      return `${candidate?.label || candidate?.ref || "Config"}${suffix}`;
     }
 
     function settingsForm(section) {
@@ -3871,13 +4784,17 @@
     }
 
     function settingRow(field) {
+      const error = state.settingsFieldErrors[field.path];
       return `
         <div class="form-row">
           <div>
             <strong>${escapeHtml(field.label)}</strong>
             ${field.description ? `<small class="muted">${escapeHtml(field.description)}</small>` : ""}
           </div>
-          ${settingControl(field)}
+          <div class="setting-control-stack">
+            ${settingControl(field)}
+            <small class="field-error ${error ? "" : "hidden"}" data-setting-error="${escapeHtml(field.path)}">${error ? escapeHtml(error) : ""}</small>
+          </div>
         </div>`;
     }
 
@@ -3952,6 +4869,14 @@
       if (!field) {
         return;
       }
+      if (Object.prototype.hasOwnProperty.call(state.settingsFieldErrors, path)) {
+        delete state.settingsFieldErrors[path];
+        const errorNode = document.querySelector(`[data-setting-error="${cssEscape(path)}"]`);
+        if (errorNode) {
+          errorNode.textContent = "";
+          errorNode.classList.add("hidden");
+        }
+      }
       if (valuesEqual(value, field.value)) {
         delete state.settingsChanges[path];
       } else {
@@ -3964,20 +4889,20 @@
       return JSON.stringify(left) === JSON.stringify(right);
     }
 
+    function cssEscape(value) {
+      if (window.CSS && typeof window.CSS.escape === "function") {
+        return window.CSS.escape(String(value));
+      }
+      return String(value).replace(/["\\]/g, "\\$&");
+    }
+
     function renderChangeSummary() {
       const paths = Object.keys(state.settingsChanges);
-      setPill("#change-count", paths.length ? "warning" : "available", `${paths.length} changes`);
       const saveButton = document.querySelector("#settings-save");
       if (saveButton) {
         saveButton.disabled = !paths.length || state.settingsProfile?.status === "unconfigured";
+        saveButton.textContent = paths.length ? `Save ${paths.length} change${paths.length === 1 ? "" : "s"}` : "Save changes";
       }
-      document.querySelector("#change-summary").innerHTML = paths.length
-        ? paths.map((path) => {
-          const field = settingField(path);
-          const labelText = field?.label || path;
-          return `<li class="compact-row"><strong>${escapeHtml(labelText)}</strong><span>${escapeHtml(path)}</span></li>`;
-        }).join("")
-        : `<li class="message">No pending changes.</li>`;
     }
 
     function renderValidationResults() {
@@ -3985,7 +4910,6 @@
         renderValidationJob(state.validationJob);
         return;
       }
-      document.querySelector("#validation-results").innerHTML = `<div class="message">Use Validate to run the local product validation command. Warnings are shown here without exposing private local values.</div>`;
     }
 
     function renderStorageMaintenance() {
@@ -4092,14 +5016,72 @@
         .filter(Boolean);
     }
 
+    function settingsResultMessage(result, fallback) {
+      const errors = Array.isArray(result?.errors) ? result.errors.filter(Boolean).map(String) : [];
+      const warnings = Array.isArray(result?.warnings) ? result.warnings.filter(Boolean).map(String) : [];
+      return errors.join("; ") || warnings.join("; ") || fallback;
+    }
+
+    function fieldErrorsFromMessages(errors) {
+      const fieldPaths = new Set(settingsFields().map((field) => field.path));
+      const fieldErrors = {};
+      const general = [];
+      (Array.isArray(errors) ? errors : []).forEach((raw) => {
+        const message = String(raw || "").trim();
+        const splitIndex = message.indexOf(":");
+        const path = splitIndex > 0 ? message.slice(0, splitIndex).trim() : "";
+        if (path && fieldPaths.has(path)) {
+          fieldErrors[path] = message.slice(splitIndex + 1).trim() || message;
+        } else if (message) {
+          general.push(message);
+        }
+      });
+      return {fieldErrors, general};
+    }
+
+    async function confirmDiscardSettingsChanges() {
+      const count = Object.keys(state.settingsChanges).length;
+      if (!count) {
+        return true;
+      }
+      const ok = await dialogs.confirmAction({
+        title: "Discard unsaved settings",
+        message: `Loading another config will discard ${count} unsaved setting change${count === 1 ? "" : "s"}.`,
+        confirmLabel: "Discard changes",
+      });
+      if (!ok) {
+        showToast("Config change cancelled.", "info");
+      }
+      return ok;
+    }
+
+    function setSettingsConfigError(message) {
+      state.settingsConfigError = message || "";
+      renderSettingsConfigSelector();
+      if (state.settingsConfigError) {
+        showToast(state.settingsConfigError, "error");
+      }
+    }
+
+    async function applyLoadedSettingsProfile(result, successMessage) {
+      state.settingsProfile = result.profile;
+      applyTimestampDisplayOptionsFromProfile(state.settingsProfile);
+      state.settingsChanges = {};
+      state.settingsFieldErrors = {};
+      state.settingsConfigError = "";
+      await loadHealth().catch(() => {});
+      renderSettings();
+      showToast(successMessage, "success");
+    }
+
     async function saveSettings() {
       if (state.settingsProfile?.status === "unconfigured") {
-        showToast("Load a config file first.");
+        showToast("Select a config file first.", "warning");
         return;
       }
       const paths = Object.keys(state.settingsChanges);
       if (!paths.length) {
-        showToast("No settings changes to save.");
+        showToast("No settings changes to save.", "info");
         return;
       }
       const ok = await dialogs.confirmAction({
@@ -4108,7 +5090,7 @@
         confirmLabel: "Save settings",
       });
       if (!ok) {
-        showToast("Settings save cancelled.");
+        showToast("Settings save cancelled.", "info");
         return;
       }
       try {
@@ -4117,53 +5099,97 @@
           state.settingsProfile = result.profile;
           applyTimestampDisplayOptionsFromProfile(state.settingsProfile);
           state.settingsChanges = {};
+          state.settingsFieldErrors = {};
           renderSettings();
+          showToast("Settings saved.", "success");
+          return;
         }
         const errors = Array.isArray(result.errors) ? result.errors : [];
-        document.querySelector("#validation-results").innerHTML = `<div class="message ${errors.length ? "error" : ""}"><strong>Config save ${escapeHtml(result.status)}</strong>${result.backup_ref ? `<br>Backup: ${escapeHtml(result.backup_ref)}` : ""}${errors.length ? `<br>${escapeHtml(errors.join("; "))}` : ""}</div>`;
-        showToast(`Settings save ${result.status}.`);
+        const parsed = fieldErrorsFromMessages(errors);
+        state.settingsFieldErrors = parsed.fieldErrors;
+        renderSettings();
+        showToast(parsed.general.join("; ") || errors.join("; ") || `Settings save ${result.status}.`, result.status === "skipped" ? "warning" : "error");
       } catch (error) {
-        document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+        showToast(`Settings save failed: ${error.message}`, "error");
       }
     }
 
     async function backupSettings() {
       if (state.settingsProfile?.status === "unconfigured") {
-        showToast("Load a config file first.");
+        showToast("Select a config file first.", "warning");
         return;
       }
       try {
         const result = await postJson(`${endpoints.settings}/backup`, {});
-        document.querySelector("#validation-results").innerHTML = `<div class="message ${result.status === "succeeded" ? "" : "error"}"><strong>Config backup ${escapeHtml(result.status)}</strong>${result.backup_ref ? `<br>${escapeHtml(result.backup_ref)}` : ""}${Array.isArray(result.errors) && result.errors.length ? `<br>${escapeHtml(result.errors.join("; "))}` : ""}</div>`;
-        showToast(`Config backup ${result.status}.`);
+        const kind = result.status === "succeeded" ? "success" : "error";
+        showToast(settingsResultMessage(result, `Config backup ${result.status}.`), kind);
       } catch (error) {
-        document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+        showToast(`Config backup failed: ${error.message}`, "error");
       }
     }
 
-    async function loadSelectedConfig() {
-      const input = document.querySelector("#config-path-input");
-      const configPath = input ? input.value.trim() : "";
-      if (!configPath) {
-        showToast("Enter a config file path.");
+    async function loadSelectedConfigCandidate(candidateId) {
+      if (!candidateId || state.settingsLoadingConfig) {
         return;
       }
+      const selection = state.settingsProfile?.config_selection || {};
+      if (candidateId === selection.active_id && !state.settingsConfigError) {
+        return;
+      }
+      if (!(await confirmDiscardSettingsChanges())) {
+        renderSettingsConfigSelector();
+        return;
+      }
+      state.settingsLoadingConfig = true;
+      state.settingsConfigError = "";
+      renderSettingsConfigSelector();
       try {
-        const result = await postJson(endpoints.configSelect, {config_path: configPath});
+        const result = await postJson(endpoints.configSelect, {candidate_id: candidateId});
         if (result.status === "succeeded") {
-          state.settingsProfile = result.profile;
-          applyTimestampDisplayOptionsFromProfile(state.settingsProfile);
-          state.settingsChanges = {};
-          await loadHealth();
-          document.querySelector("#validation-results").innerHTML = `<div class="message"><strong>Config loaded</strong><br>${escapeHtml(result.config?.ref || configPath)}</div>`;
-          renderSettings();
+          state.settingsLoadingConfig = false;
+          await applyLoadedSettingsProfile(result, `Config loaded: ${result.config?.ref || "selected config"}.`);
         } else {
-          const errors = Array.isArray(result.errors) ? result.errors : [];
-          document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(errors.join("; ") || "Config load failed.")}</div>`;
+          state.settingsLoadingConfig = false;
+          setSettingsConfigError(settingsResultMessage(result, "Config load failed."));
         }
-        showToast(`Config load ${result.status}.`);
       } catch (error) {
-        document.querySelector("#validation-results").innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+        state.settingsLoadingConfig = false;
+        setSettingsConfigError(`Config load failed: ${error.message}`);
+      }
+    }
+
+    async function importSelectedConfigFile(event) {
+      const input = event.currentTarget;
+      const file = input?.files?.[0];
+      if (input) {
+        input.value = "";
+      }
+      if (!file || state.settingsLoadingConfig) {
+        return;
+      }
+      if (!endpoints.configImport) {
+        showToast("Config import is unavailable.", "error");
+        return;
+      }
+      if (!(await confirmDiscardSettingsChanges())) {
+        return;
+      }
+      state.settingsLoadingConfig = true;
+      state.settingsConfigError = "";
+      renderSettingsConfigSelector();
+      try {
+        const content = await file.text();
+        const result = await postJson(endpoints.configImport, {name: file.name, content});
+        if (result.status === "succeeded") {
+          state.settingsLoadingConfig = false;
+          await applyLoadedSettingsProfile(result, `Config imported: ${result.config?.ref || file.name}.`);
+        } else {
+          state.settingsLoadingConfig = false;
+          setSettingsConfigError(settingsResultMessage(result, "Config import failed."));
+        }
+      } catch (error) {
+        state.settingsLoadingConfig = false;
+        setSettingsConfigError(`Config import failed: ${error.message}`);
       }
     }
 
@@ -4367,7 +5393,13 @@
       const jobId = job?.job_id || "pending";
       const errors = Array.isArray(job?.errors) ? job.errors : [];
       const warnings = Array.isArray(job?.warnings) ? job.warnings : [];
-      document.querySelector("#validation-results").innerHTML = `
+      const target = document.querySelector("#validation-results");
+      if (!target) {
+        const message = errors.join("; ") || warnings.join("; ") || `Validation job ${status}.`;
+        showToast(message, errors.length ? "error" : "info");
+        return;
+      }
+      target.innerHTML = `
         <div class="message">
           <strong>Validation job ${escapeHtml(status)}</strong><br>
           Job: ${escapeHtml(jobId)}
@@ -4478,6 +5510,7 @@
       initializeSidebarCollapse();
       wireTopbarTabDragging();
       wireDateRangePickers();
+      initializeTooltips();
       document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
         event.preventDefault();
         setHashView(node.dataset.viewTarget);
@@ -4495,17 +5528,19 @@
       document.querySelector("#report-details-button").addEventListener("click", openReportDetailsDrawer);
       document.querySelector("#report-details-drawer-close").addEventListener("click", () => closeReportDetailsDrawer());
       document.querySelector("#report-details-drawer-backdrop").addEventListener("click", () => closeReportDetailsDrawer());
-      document.querySelector("#run-backtest-button").addEventListener("click", startBacktest);
+      document.querySelector("#run-backtest-button").addEventListener("click", openStrategyBacktestDialog);
+      document.querySelector("#strategy-backtest-submit").addEventListener("click", startBacktest);
+      document.querySelector("#strategy-backtest-cancel").addEventListener("click", closeStrategyBacktestDialog);
+      document.querySelector("#strategy-backtest-dialog-close").addEventListener("click", closeStrategyBacktestDialog);
+      document.querySelector("#strategy-backtest-dialog-backdrop").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#run-experiment-button").addEventListener("click", startStrategyExperiment);
       document.querySelector("#run-optimize-button").addEventListener("click", startStrategyOptimize);
-      document.querySelector("#download-ohlcv-button").addEventListener("click", downloadSelectedOhlcv);
       document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
         button.addEventListener("click", () => setStrategyOperationTab(button.dataset.strategyOperationTab));
       });
       document.querySelector("#strategy-collect-add-target").addEventListener("click", addStrategyCollectTarget);
       document.querySelector("#strategy-collect-refresh-timeline").addEventListener("click", refreshStrategyCollectTimeline);
       document.querySelector("#strategy-collect-run").addEventListener("click", runStrategyCollectBatch);
-      document.querySelector("#strategy-export-run").addEventListener("click", runStrategyExport);
       document.querySelector("#strategy-chart-refresh").addEventListener("click", () => loadStrategyChartPreview({silent: false}));
       ["#strategy-chart-source", "#strategy-chart-symbol", "#strategy-chart-timeframe"].forEach((selector) => {
         document.querySelector(selector).addEventListener("change", () => {
@@ -4521,8 +5556,8 @@
         applyRangePreset("#strategy-collect-range", "#strategy-collect-start", "#strategy-collect-end", true);
         queueStrategyCollectTimelineRefresh();
       });
-      document.querySelector("#strategy-export-range").addEventListener("change", () => {
-        applyRangePreset("#strategy-export-range", "#strategy-export-start", "#strategy-export-end", true);
+      document.querySelector("#strategy-backtest-range").addEventListener("change", () => {
+        applyRangePreset("#strategy-backtest-range", "#strategy-backtest-start", "#strategy-backtest-end", true);
       });
       ["#strategy-collect-source", "#strategy-collect-start", "#strategy-collect-end"].forEach((selector) => {
         document.querySelector(selector).addEventListener("change", queueStrategyCollectTimelineRefresh);
@@ -4541,6 +5576,9 @@
       document.querySelectorAll("[data-report-job]").forEach((button) => button.addEventListener("click", startReportJob));
       document.querySelectorAll("[data-job-intent]").forEach((button) => button.addEventListener("click", () => postJob(button.dataset.jobIntent, {})));
       document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && state.strategyBacktestDialogOpen) {
+          closeStrategyBacktestDialog();
+        }
         if (event.key === "Escape" && state.reportDetailsDrawerOpen) {
           closeReportDetailsDrawer();
         }
@@ -4568,7 +5606,11 @@
       }));
       document.querySelector("#settings-save").addEventListener("click", saveSettings);
       document.querySelector("#settings-backup").addEventListener("click", backupSettings);
-      document.querySelector("#settings-load-config").addEventListener("click", loadSelectedConfig);
+      document.querySelector("#settings-config-select").addEventListener("change", (event) => loadSelectedConfigCandidate(event.currentTarget.value));
+      document.querySelector("#settings-config-browse").addEventListener("click", () => {
+        document.querySelector("#settings-config-file-input")?.click();
+      });
+      document.querySelector("#settings-config-file-input").addEventListener("change", importSelectedConfigFile);
       window.addEventListener("hashchange", () => setView(viewFromHash()));
       window.addEventListener("resize", refreshTopbarTabHints);
       wireShortcutButtons();

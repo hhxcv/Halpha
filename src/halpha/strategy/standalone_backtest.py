@@ -48,6 +48,8 @@ def run_standalone_strategy_backtest(
     symbol: str,
     timeframe: str,
     source: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
     output_dir: Path | None = None,
     now: datetime | None = None,
 ) -> StandaloneBacktestResult:
@@ -75,7 +77,16 @@ def run_standalone_strategy_backtest(
         )
 
     lookback = int(ohlcv["lookback"][timeframe])
-    window = rows[-lookback:]
+    requested_window = _requested_window_rows(rows, start=start, end=end)
+    if not requested_window:
+        raise StandaloneBacktestError(
+            (
+                f"no OHLCV history found for source={source}, symbol={symbol}, "
+                f"timeframe={timeframe}, start={start or 'latest'}, end={end or 'latest'}."
+            ),
+            exit_code=3,
+        )
+    window = requested_window if start or end else requested_window[-lookback:]
     view = _view_record(
         storage_dir=storage_dir,
         config_path=config_path,
@@ -83,6 +94,9 @@ def run_standalone_strategy_backtest(
         symbol=symbol,
         timeframe=timeframe,
         lookback=lookback,
+        requested_start=start,
+        requested_end=end,
+        window_policy="explicit_range" if start or end else "configured_latest_lookback",
         rows=window,
     )
     definition = get_strategy_definition(strategy_name)
@@ -115,6 +129,9 @@ def run_standalone_strategy_backtest(
             source=source,
             symbol=symbol,
             timeframe=timeframe,
+            requested_start=start,
+            requested_end=end,
+            window_policy="explicit_range" if start or end else "configured_latest_lookback",
         ),
     }
     target_dir = _unique_output_dir(
@@ -131,6 +148,8 @@ def run_standalone_strategy_backtest(
         source=source,
         symbol=symbol,
         timeframe=timeframe,
+        start=start,
+        end=end,
         storage_dir=storage_dir,
         view=view,
         evaluation=evaluation,
@@ -238,6 +257,48 @@ def _history_rows(
         raise StandaloneBacktestError(str(exc), exit_code=3) from exc
 
 
+def _requested_window_rows(
+    rows: list[dict[str, Any]],
+    *,
+    start: str | None,
+    end: str | None,
+) -> list[dict[str, Any]]:
+    if not start and not end:
+        return rows
+    start_time = _parse_optional_time(start, "start")
+    end_time = _parse_optional_time(end, "end")
+    if start_time and end_time and start_time > end_time:
+        raise StandaloneBacktestError("backtest start must be before or equal to end.", exit_code=2)
+    selected = []
+    for row in rows:
+        row_time = _parse_optional_time(row.get("open_time"), "open_time")
+        if row_time is None:
+            continue
+        if start_time and row_time < start_time:
+            continue
+        if end_time and row_time > end_time:
+            continue
+        selected.append(row)
+    return selected
+
+
+def _parse_optional_time(value: Any, label: str) -> datetime | None:
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        raise StandaloneBacktestError(f"{label} must be an ISO timestamp.", exit_code=2)
+    raw = value.strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise StandaloneBacktestError(f"{label} must be an ISO timestamp: {raw}", exit_code=2) from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _view_record(
     *,
     storage_dir: Path,
@@ -246,6 +307,9 @@ def _view_record(
     symbol: str,
     timeframe: str,
     lookback: int,
+    requested_start: str | None,
+    requested_end: str | None,
+    window_policy: str,
     rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
     row_count = len(rows)
@@ -255,7 +319,10 @@ def _view_record(
         "source": source,
         "symbol": symbol,
         "timeframe": timeframe,
+        "window_policy": window_policy,
         "requested_lookback": lookback,
+        "requested_start": requested_start,
+        "requested_end": requested_end,
         "input_window_start": rows[0]["open_time"] if rows else None,
         "input_window_end": latest,
         "latest_candle_time": latest,
@@ -293,6 +360,9 @@ def _visualization_record(
     source: str,
     symbol: str,
     timeframe: str,
+    requested_start: str | None = None,
+    requested_end: str | None = None,
+    window_policy: str = "configured_latest_lookback",
 ) -> dict[str, Any]:
     bars = [_visualization_bar(row) for row in rows]
     bars = [bar for bar in bars if bar is not None]
@@ -320,6 +390,9 @@ def _visualization_record(
         "source": source,
         "symbol": symbol,
         "timeframe": timeframe,
+        "window_policy": window_policy,
+        "requested_start": requested_start,
+        "requested_end": requested_end,
         "bars": visible_bars,
         "markers": visible_markers,
         "equity_curve": equity_curve,
@@ -479,6 +552,8 @@ def _manifest(
     source: str,
     symbol: str,
     timeframe: str,
+    start: str | None,
+    end: str | None,
     storage_dir: Path,
     view: dict[str, Any],
     evaluation: dict[str, Any],
@@ -497,6 +572,8 @@ def _manifest(
             "source": source,
             "symbol": symbol,
             "timeframe": timeframe,
+            "start": start,
+            "end": end,
             "params": strategy.get("params") if isinstance(strategy.get("params"), dict) else {},
             "parameter_profile": parameter_profile_record(strategy),
             "storage_dir": display_path(storage_dir, base=runtime_root(config_path)),

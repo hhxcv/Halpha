@@ -109,6 +109,7 @@ def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
             "sources": _configured_ohlcv_sources(config),
             "strategy_families": _configured_strategy_families(specs),
             "strategy_names": sorted(_configured_strategy_names(config)),
+            "strategy_profiles": _configured_strategy_profiles(config, specs),
             "strategy_specs": specs,
             "symbols": _configured_symbols(config),
             "timeframes": _configured_timeframes(config),
@@ -119,9 +120,9 @@ def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
 def _strategy_action_scopes() -> dict[str, dict[str, Any]]:
     return {
         "backtest": {
-            "window_policy": "configured_latest_lookback",
-            "range_supported": False,
-            "label": "Configured latest lookback",
+            "window_policy": "selected_profile_range",
+            "range_supported": True,
+            "label": "Selected profile range",
         },
         "experiment": {
             "window_policy": "configured_benchmark_suite",
@@ -159,6 +160,95 @@ def _configured_strategy_specs(config: dict[str, Any]) -> list[dict[str, Any]]:
             record["targeted_params"] = configured_targeted_parameter_profiles(strategy_config)
             records.append(record)
     return records
+
+
+def _configured_strategy_profiles(config: dict[str, Any], specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    source = _configured_ohlcv_sources(config)[0] if _configured_ohlcv_sources(config) else "binance"
+    symbols = _configured_symbols(config)
+    timeframes = _configured_timeframes(config)
+    fallback_symbol = symbols[0] if symbols else ""
+    fallback_timeframe = timeframes[0] if timeframes else ""
+    profiles: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for spec in specs:
+        name = str(spec.get("name") or "")
+        if not name:
+            continue
+        base_params = _dict(spec.get("configured_params"))
+        targeted = [profile for profile in _list(spec.get("targeted_params")) if isinstance(profile, dict)]
+        if targeted:
+            for index, profile in enumerate(targeted, start=1):
+                profile_source = str(profile.get("source") or source)
+                symbol = str(profile.get("symbol") or fallback_symbol)
+                timeframe = str(profile.get("timeframe") or fallback_timeframe)
+                if not symbol or not timeframe:
+                    continue
+                params = {**base_params, **_dict(profile.get("params"))}
+                profile_id = f"{name}:{profile_source}:{symbol}:{timeframe}"
+                if profile_id in seen:
+                    profile_id = f"{profile_id}:{index}"
+                seen.add(profile_id)
+                profiles.append(
+                    _strategy_profile_record(
+                        spec,
+                        profile_id=profile_id,
+                        source=profile_source,
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        params=params,
+                        profile_source="targeted_params",
+                        tuned=True,
+                    )
+                )
+            continue
+        if not fallback_symbol or not fallback_timeframe:
+            continue
+        profile_id = f"{name}:{source}:{fallback_symbol}:{fallback_timeframe}"
+        if profile_id in seen:
+            continue
+        seen.add(profile_id)
+        profiles.append(
+            _strategy_profile_record(
+                spec,
+                profile_id=profile_id,
+                source=source,
+                symbol=fallback_symbol,
+                timeframe=fallback_timeframe,
+                params=base_params,
+                profile_source="base_params",
+                tuned=False,
+            )
+        )
+    return profiles
+
+
+def _strategy_profile_record(
+    spec: dict[str, Any],
+    *,
+    profile_id: str,
+    source: str,
+    symbol: str,
+    timeframe: str,
+    params: dict[str, Any],
+    profile_source: str,
+    tuned: bool,
+) -> dict[str, Any]:
+    name = str(spec.get("name") or "")
+    return {
+        "profile_id": profile_id,
+        "display_name": f"{symbol} {timeframe} - {name}",
+        "strategy_name": name,
+        "family": spec.get("family"),
+        "description": spec.get("description"),
+        "source": source,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "params": _bounded_mapping(params),
+        "profile_source": profile_source,
+        "tuned": tuned,
+        "supported_market_types": _list(spec.get("supported_market_types")),
+        "minimum_rows_policy": _bounded_mapping(spec.get("minimum_rows_policy")),
+    }
 
 
 def _configured_strategy_map(config: dict[str, Any]) -> dict[str, dict[str, Any]]:

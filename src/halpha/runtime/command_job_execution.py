@@ -224,6 +224,8 @@ def _execute_backtest(config: dict[str, Any], *, config_path: Path, params: dict
         source=str(params.get("source") or "") or None,
         symbol=str(params.get("symbol") or ""),
         timeframe=str(params.get("timeframe") or ""),
+        start=str(params.get("start") or "") or None,
+        end=str(params.get("end") or "") or None,
         output_dir=_optional_path(params.get("output_dir")),
     )
     return CommandJobExecutionResult(exit_code=result.exit_code, stdout=result.stdout)
