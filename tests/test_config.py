@@ -57,7 +57,7 @@ def test_config_example_loads_successfully() -> None:
         "4h",
         "1d",
         "1w",
-        "1month",
+        "1M",
     ]
     assert config["market"]["ohlcv"]["lookback"] == {
         "1m": 1440,
@@ -67,7 +67,7 @@ def test_config_example_loads_successfully() -> None:
         "4h": 720,
         "1d": 500,
         "1w": 260,
-        "1month": 120,
+        "1M": 120,
     }
     assert config["market"]["derivatives"] == {
         "enabled": True,

@@ -63,6 +63,21 @@ def test_service_lifecycle_start_reports_existing_and_config_conflict(tmp_path: 
     assert conflict_ownership is None
 
 
+def test_service_lifecycle_start_mutex_blocks_duplicate_launchers(tmp_path: Path) -> None:
+    repository = ServiceLifecycleRepository(runtime_root=tmp_path)
+    first = repository.acquire_start_mutex("core")
+    assert first is not None
+    try:
+        second = repository.acquire_start_mutex("core")
+    finally:
+        first.release()
+    third = repository.acquire_start_mutex("core")
+    assert third is not None
+    third.release()
+
+    assert second is None
+
+
 def test_service_lifecycle_inspect_reports_owned_service_state(tmp_path: Path) -> None:
     repository = ServiceLifecycleRepository(runtime_root=tmp_path)
     result, ownership = repository.attempt_start_ownership(

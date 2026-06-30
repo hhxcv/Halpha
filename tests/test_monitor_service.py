@@ -73,6 +73,25 @@ def test_monitor_start_conflicting_config_does_not_launch_process(
         ownership.release()
 
 
+def test_monitor_start_mutex_blocks_duplicate_launcher_before_process_launch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    repository = ServiceLifecycleRepository(runtime_root=tmp_path)
+    start_mutex = repository.acquire_start_mutex("monitor")
+    assert start_mutex is not None
+    try:
+        monkeypatch.setattr("halpha.runtime.monitor_service.MONITOR_START_WAIT_SECONDS", 0.01)
+        monkeypatch.setattr("halpha.runtime.monitor_service.MONITOR_CONTROL_POLL_SECONDS", 0.001)
+        monkeypatch.setattr("halpha.runtime.monitor_service._launch_monitor_service_process", _fail_launch)
+
+        with pytest.raises(MonitorServiceError, match="monitor service start is already in progress"):
+            start_monitor_service(str(config_path))
+    finally:
+        start_mutex.release()
+
+
 def test_monitor_status_and_stop_do_not_require_loadable_config(tmp_path: Path) -> None:
     config_path = tmp_path / "broken.yaml"
     config_path.write_text("run: [", encoding="utf-8")

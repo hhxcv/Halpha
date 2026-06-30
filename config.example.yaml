@@ -39,7 +39,7 @@ market:
       - 4h
       - 1d
       - 1w
-      - 1month
+      - 1M
     lookback:
       1m: 1440
       5m: 2016
@@ -48,7 +48,7 @@ market:
       4h: 720
       1d: 500
       1w: 260
-      1month: 120
+      1M: 120
   derivatives:
     enabled: true
     source: binance_usdm

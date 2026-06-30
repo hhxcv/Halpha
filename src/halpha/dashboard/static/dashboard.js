@@ -60,9 +60,15 @@
     const reportHelpers = reportsWorkflow.createReportHelpers({joinPath, unique});
     const {isAvailableReport, reportPath, reportSourceRefs} = reportHelpers;
     const BACKTEST_CHART_MAX_CANDLES = 1000;
+    const VIEW_REFRESH_TTL_MS = 15000;
+    const HEALTH_REFRESH_TTL_MS = 15000;
 
     const state = {
       view: "overview",
+      viewLoadedAt: {},
+      viewRefreshPromises: {},
+      healthLoadedAt: 0,
+      healthRequest: null,
       overview: null,
       health: null,
       runs: [],
@@ -268,6 +274,59 @@
       window.setTimeout(() => toast.classList.remove("visible"), 3600);
     }
 
+    function setHtml(selector, html) {
+      const node = document.querySelector(selector);
+      if (node) {
+        node.innerHTML = html;
+      }
+    }
+
+    function skeletonLine(width = "100%", extraClass = "") {
+      return `<span class="skeleton skeleton-line ${extraClass}" style="width:${escapeHtml(width)}"></span>`;
+    }
+
+    function skeletonValue(width = "42%") {
+      return `<span class="skeleton skeleton-value" style="width:${escapeHtml(width)}"></span>`;
+    }
+
+    function skeletonRows(count = 4) {
+      return `<div class="skeleton-table loading-surface">${Array.from({length: count}, (_, index) => `
+        <div class="skeleton-row">
+          ${skeletonLine(index % 2 ? "46%" : "62%", "tight")}
+          ${skeletonLine(index % 3 ? "72%" : "54%", "tight")}
+        </div>`).join("")}</div>`;
+    }
+
+    function skeletonCards(count = 4, className = "skeleton-card") {
+      return Array.from({length: count}, (_, index) => `
+        <div class="${className} loading-surface">
+          ${skeletonLine(index % 2 ? "58%" : "72%", "tight")}
+          ${skeletonValue(index % 3 ? "34%" : "46%")}
+          ${skeletonLine(index % 2 ? "42%" : "56%", "tight")}
+        </div>`).join("");
+    }
+
+    function skeletonList(count = 3) {
+      return `<div class="skeleton-list loading-surface">${Array.from({length: count}, (_, index) => `
+        <div class="skeleton-card">
+          ${skeletonLine(index % 2 ? "52%" : "68%", "tight")}
+          ${skeletonLine("86%", "tight")}
+          ${skeletonLine(index % 2 ? "44%" : "58%", "tight")}
+        </div>`).join("")}</div>`;
+    }
+
+    function skeletonListItems(count = 3) {
+      return Array.from({length: count}, (_, index) => `
+        <li class="compact-row loading-surface">
+          ${skeletonLine(index % 2 ? "62%" : "78%", "tight")}
+          ${skeletonLine(index % 2 ? "48%" : "64%", "tight")}
+        </li>`).join("");
+    }
+
+    function skeletonMessage(lines = 3) {
+      return `<div class="empty-state loading-surface">${Array.from({length: lines}, (_, index) => skeletonLine(index === lines - 1 ? "46%" : "82%")).join("")}</div>`;
+    }
+
     function viewFromHash() {
       const raw = (window.location.hash || "#overview").slice(1) || "overview";
       return raw;
@@ -289,30 +348,217 @@
       refreshCurrentView();
     }
 
-    async function refreshCurrentView() {
-      if (state.view === "overview") return refreshOverview();
-      if (state.view === "reports") return refreshReports();
-      if (state.view === "strategies") return refreshStrategies();
-      if (state.view === "monitor") return monitorWorkflow.refreshMonitor();
-      if (state.view === "intelligence") return refreshIntelligence();
-      if (state.view === "settings") return refreshSettings();
+    async function refreshCurrentView(options = {}) {
+      return refreshView(state.view, options);
     }
 
-    async function loadHealth() {
-      try {
-        state.health = await fetchJson(endpoints.health);
-        const loaded = state.health?.config?.loaded !== false;
-        const ref = loaded ? (state.health?.config?.ref || "Current config") : "not configured";
-        document.querySelector("#config-ref").textContent = ref;
-        document.querySelector("#sidebar-health-text").textContent = loaded
-          ? (state.health?.status === "ok" ? "All local systems operational." : "Dashboard status needs attention.")
-          : "Open Settings and load a config file.";
-        if (!loaded && state.view !== "settings") {
-          setHashView("settings");
+    async function refreshView(view, options = {}) {
+      const force = Boolean(options.force);
+      const lastLoaded = state.viewLoadedAt[view] || 0;
+      const fresh = lastLoaded && Date.now() - lastLoaded < VIEW_REFRESH_TTL_MS;
+      if (!force && fresh) {
+        return null;
+      }
+      if (state.viewRefreshPromises[view]) {
+        return state.viewRefreshPromises[view];
+      }
+      showViewLoading(view);
+      const promise = (async () => {
+        try {
+          if (view === "overview") await refreshOverview();
+          if (view === "reports") await refreshReports();
+          if (view === "strategies") await refreshStrategies();
+          if (view === "monitor") await monitorWorkflow.refreshMonitor();
+          if (view === "intelligence") await refreshIntelligence();
+          if (view === "settings") await refreshSettings();
+          state.viewLoadedAt[view] = Date.now();
+        } finally {
+          clearViewLoading(view);
+          state.viewRefreshPromises[view] = null;
         }
+      })();
+      state.viewRefreshPromises[view] = promise;
+      return promise;
+    }
+
+    function showViewLoading(view) {
+      const viewNode = document.querySelector(`[data-view="${view}"]`);
+      viewNode?.setAttribute("aria-busy", "true");
+      if (view === "overview" && !state.overview && !state.runs.length && !state.stores.length) renderOverviewLoading();
+      if (view === "reports" && !state.runs.length) renderReportsLoading();
+      if (view === "strategies" && !state.strategies) renderStrategiesLoading();
+      if (view === "monitor" && !state.monitor) renderMonitorLoading();
+      if (view === "intelligence" && !state.intelligence && !state.dataViewerSummary) renderIntelligenceLoading();
+      if (view === "settings" && !state.settingsProfile) renderSettingsLoading();
+    }
+
+    function clearViewLoading(view) {
+      const viewNode = document.querySelector(`[data-view="${view}"]`);
+      viewNode?.removeAttribute("aria-busy");
+    }
+
+    function renderInitialLoadingPlaceholders() {
+      renderOverviewLoading();
+      renderReportsLoading();
+      renderStrategiesLoading();
+      renderMonitorLoading();
+      renderIntelligenceLoading();
+      renderSettingsLoading();
+    }
+
+    function renderOverviewLoading() {
+      setPill("#overview-report-status", "pending", "loading");
+      setHtml("#overview-report-metrics", skeletonCards(4, "report-metric"));
+      setHtml("#overview-latest-report", skeletonRows(6));
+      setHtml("#overview-runtime", skeletonRows(7));
+      setPill("#overview-monitor-pill", "pending", "loading");
+      setHtml("#overview-monitor", skeletonRows(7));
+      setPill("#overview-data-pill", "pending", "loading");
+      setHtml("#overview-data-cards", skeletonCards(6, "data-card"));
+      setHtml("#overview-quality", `<div class="summary-strip columns-3">${skeletonCards(3, "summary-cell")}</div>`);
+      setPill("#attention-count", "pending", "...");
+      setHtml("#attention-list", skeletonListItems(2));
+    }
+
+    function renderReportsLoading() {
+      setHtml("#report-library-groups", skeletonList(4));
+      setHtml("#report-reader", `<article class="markdown-reader loading-surface">${skeletonLine("68%")}${skeletonLine("96%")}${skeletonLine("92%")}${skeletonLine("88%")}${skeletonLine("52%")}</article>`);
+      setHtml("#report-outline", skeletonListItems(3));
+      setHtml("#report-details", skeletonRows(6));
+      setHtml("#report-sources", skeletonListItems(3));
+    }
+
+    function renderStrategiesLoading() {
+      setHtml("#strategy-spec-summary", `<div class="loading-surface">${skeletonLine("42%")}${skeletonLine("78%")}</div>`);
+      setHtml("#strategy-parameter-controls", skeletonCards(3, "strategy-param-card"));
+      setHtml("#strategy-metrics", skeletonCards(6, "summary-cell"));
+      setHtml("#strategy-params", `<tbody><tr><td colspan="2">${skeletonRows(5)}</td></tr></tbody>`);
+      setHtml("#recent-trades", skeletonList(2));
+      setHtml("#backtest-runs", skeletonList(3));
+      setHtml("#strategy-tab-content", skeletonMessage(4));
+      setHtml("#strategy-experiment-results", skeletonMessage(3));
+      setHtml("#strategy-optimize-results", skeletonMessage(3));
+      document.querySelector("#strategy-chart-meta").textContent = "Loading market data.";
+    }
+
+    function renderMonitorLoading() {
+      setHtml("#monitor-hero", skeletonCards(6, "summary-cell"));
+      setHtml("#monitor-timeline", `<li>${skeletonRows(5)}</li>`);
+      setHtml("#monitor-config", skeletonRows(8));
+      setHtml("#monitor-alert-table", skeletonMessage(3));
+      setHtml("#monitor-job-table", skeletonMessage(3));
+    }
+
+    function renderIntelligenceLoading() {
+      setHtml("#intel-overview-kpis", skeletonCards(5, "summary-cell"));
+      setHtml("#intel-overview-content", `
+        <section class="panel panel-pad">${skeletonList(3)}</section>
+        <section class="panel panel-pad">${skeletonList(3)}</section>`);
+      setPill("#intel-data-status", "pending", "loading");
+      setHtml("#intel-data-summary", skeletonCards(4, "summary-cell"));
+      setHtml("#intel-data-coverage", `<div class="data-viewer-timeline loading-surface">${skeletonLine("100%")}${skeletonLine("96%")}</div>`);
+      setHtml("#intel-data-preview-panel", skeletonMessage(4));
+    }
+
+    function renderSettingsLoading() {
+      setHtml("#settings-nav", skeletonList(6));
+      setHtml("#settings-form", skeletonRows(7));
+      setHtml("#change-summary", `<li>${skeletonLine("72%")}</li><li>${skeletonLine("58%")}</li>`);
+      setHtml("#validation-results", skeletonMessage(3));
+    }
+
+    async function loadHealth(options = {}) {
+      if (!options.force && state.health && Date.now() - state.healthLoadedAt < HEALTH_REFRESH_TTL_MS) {
+        renderHealth();
+        return state.health;
+      }
+      if (state.healthRequest) {
+        return state.healthRequest;
+      }
+      state.healthRequest = (async () => {
+        try {
+          state.health = await fetchJson(endpoints.health);
+          state.healthLoadedAt = Date.now();
+          renderHealth();
+          return state.health;
+        } catch (error) {
+          document.querySelector("#config-ref").textContent = "unavailable";
+          throw error;
+        } finally {
+          state.healthRequest = null;
+        }
+      })();
+      return state.healthRequest;
+    }
+
+    function renderHealth() {
+      const loaded = state.health?.config?.loaded !== false;
+      const ref = loaded ? (state.health?.config?.ref || "Current config") : "not configured";
+      document.querySelector("#config-ref").textContent = ref;
+      if (!loaded && state.view !== "settings") {
+        setHashView("settings");
+      }
+    }
+
+    function monitorSidebarState() {
+      const services = state.services?.services || {};
+      const service = services.monitor || {};
+      const healthService = state.monitor?.health?.fields?.service || {};
+      const status = String(
+        service.lifecycle_status
+          || service.status
+          || service.process_health
+          || healthService.status
+          || state.monitor?.status
+          || "unknown",
+      ).toLowerCase();
+      const lastError = service.last_error?.message ? ` Last error: ${service.last_error.message}` : "";
+      if (service.config_conflict) {
+        return {
+          tone: "warning",
+          title: "Monitor config conflict",
+          detail: service.actionable || "Monitor is running with a different active config.",
+        };
+      }
+      if (status === "running") {
+        return {tone: "running", title: "Monitor running", detail: "Monitoring is enabled and running."};
+      }
+      if (status === "starting") {
+        return {tone: "warning", title: "Monitor starting", detail: "Monitoring is starting."};
+      }
+      if (status === "stop_requested") {
+        return {tone: "warning", title: "Monitor stopping", detail: service.actionable || "Monitoring is stopping."};
+      }
+      if (["unresponsive", "stale"].includes(status)) {
+        return {tone: "warning", title: "Monitor stale", detail: service.actionable || "Monitor heartbeat is stale."};
+      }
+      if (["failed", "crashed", "error"].includes(status)) {
+        return {tone: "failed", title: "Monitor failed", detail: `Monitoring needs attention.${lastError}`};
+      }
+      if (["stopped", "not_found", "unconfigured", "unmanaged", "disabled"].includes(status)) {
+        return {tone: "stopped", title: "Monitor stopped", detail: "Monitoring is not running."};
+      }
+      return {tone: "unknown", title: "Monitor status", detail: "Monitor status is unavailable."};
+    }
+
+    function renderSidebarMonitorStatus() {
+      const dot = document.querySelector("#sidebar-monitor-dot");
+      const title = document.querySelector("#sidebar-monitor-title");
+      const detail = document.querySelector("#sidebar-monitor-text");
+      if (!dot || !title || !detail) {
+        return;
+      }
+      const monitorState = monitorSidebarState();
+      dot.className = `health-dot ${monitorState.tone}`;
+      title.textContent = monitorState.title;
+      detail.textContent = monitorState.detail;
+    }
+
+    async function refreshHealthForView() {
+      try {
+        await loadHealth();
       } catch (error) {
         document.querySelector("#config-ref").textContent = "unavailable";
-        document.querySelector("#sidebar-health-text").textContent = error.message;
       }
     }
 
@@ -364,6 +610,7 @@
       state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
       state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
       state.services = services.status === "fulfilled" ? services.value : null;
+      renderSidebarMonitorStatus();
     }
 
     function renderOverview() {
@@ -487,7 +734,7 @@
       const errors = stores.flatMap((store) => store.errors || []);
       setPill("#overview-data-pill", errors.length ? "failed" : warnings.length ? "warning" : "available", errors.length ? "Issues" : warnings.length ? "Warnings" : "Good");
       document.querySelector("#overview-quality").innerHTML = `
-        <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+        <div class="summary-strip columns-3">
           ${metricCell("Validation pass", Math.max(0, stores.length - warnings.length - errors.length), "stores")}
           ${metricCell("Warnings", warnings.length, "latest state")}
           ${metricCell("Errors", errors.length, "latest state")}
@@ -1942,7 +2189,7 @@
         omittedMarkers,
       });
       return `
-        <div class="summary-strip" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
+        <div class="summary-strip columns-6">
           ${metricCell("Full trades", metrics.trades, "full evaluation")}
           ${metricCell("Visible operations", markers.length, omittedMarkers ? `${formatNumber(omittedMarkers)} omitted` : "bounded chart")}
           ${metricCell("Completed", text(trade.completed_trade_count), "")}
@@ -1974,7 +2221,7 @@
         <div class="strategy-eval-chart">
           <svg viewBox="0 0 900 140" role="img" aria-label="Equity curve">${lineChartPath(values)}</svg>
         </div>
-        <div class="summary-strip" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+        <div class="summary-strip columns-4">
           ${metricCell("Start equity", formatNumber(values[0]), "")}
           ${metricCell("Latest equity", formatNumber(values[values.length - 1]), "")}
           ${metricCell("Points", values.length, "bounded")}
@@ -1993,7 +2240,7 @@
         <div class="strategy-eval-chart drawdown">
           <svg viewBox="0 0 900 140" role="img" aria-label="Drawdown curve">${lineChartPath(drawdowns)}</svg>
         </div>
-        <div class="summary-strip" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+        <div class="summary-strip columns-3">
           ${metricCell("Worst drawdown", metricPercent(worst), "derived from bounded equity")}
           ${metricCell("Points", drawdowns.length, "bounded")}
           ${metricCell("Status", vis.status || "n/a", "")}
@@ -3000,7 +3247,11 @@
       if (!sections.includes(state.settingsSection)) {
         state.settingsSection = sections[0] || "General";
       }
-      document.querySelector("#settings-nav").innerHTML = sections.map((section) => `<button type="button" class="${section === state.settingsSection ? "active" : ""}" data-settings-section="${escapeHtml(section)}">${escapeHtml(section)}<span>&gt;</span></button>`).join("");
+      document.querySelector("#settings-nav").innerHTML = sections.map((section) => `
+        <button type="button" class="${section === state.settingsSection ? "active" : ""}" data-settings-section="${escapeHtml(section)}">
+          <span>${escapeHtml(section)}</span>
+          <svg class="settings-nav-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4"></path></svg>
+        </button>`).join("");
       document.querySelectorAll("[data-settings-section]").forEach((button) => button.addEventListener("click", () => {
         state.settingsSection = button.dataset.settingsSection;
         renderSettings();
@@ -3142,7 +3393,7 @@
       if (field.control === "multi_select") {
         const values = Array.isArray(value) ? value.map(String) : [];
         const options = Array.isArray(field.options) ? field.options : values;
-        return `<div class="chip-row">${options.map((option) => `<label class="chip"><input type="checkbox" ${values.includes(String(option)) ? "checked" : ""} data-setting-path="${path}" data-setting-type="multi_select" data-setting-option="${escapeHtml(option)}"> ${escapeHtml(option)}</label>`).join("")}</div>`;
+        return `<div class="chip-row">${options.map((option) => `<label class="chip choice-chip"><input type="checkbox" ${values.includes(String(option)) ? "checked" : ""} data-setting-path="${path}" data-setting-type="multi_select" data-setting-option="${escapeHtml(option)}"><span class="choice-check" aria-hidden="true"></span><span>${escapeHtml(option)}</span></label>`).join("")}</div>`;
       }
       if (field.control === "tags") {
         const values = Array.isArray(value) ? value.join(", ") : String(value || "");
@@ -3273,6 +3524,7 @@
       list.innerHTML = items.slice(0, 80).map((item) => `
         <label class="cleanup-option">
           <input type="checkbox" data-run-cleanup="${escapeHtml(item.run_id)}" ${state.selectedRunArtifacts.includes(item.run_id) ? "checked" : ""} ${item.deletable ? "" : "disabled"}>
+          <span class="choice-check" aria-hidden="true"></span>
           <span>
             <strong>${escapeHtml(item.title || item.run_id)}</strong>
             <small>${escapeHtml(formatTimestamp(item.started_at))} / ${escapeHtml(item.run_dir || "")}${item.blocked_reason ? ` / ${escapeHtml(item.blocked_reason)}` : ""}</small>
@@ -3295,6 +3547,7 @@
         return `
           <label class="cleanup-option">
             <input type="checkbox" data-shared-cleanup="${escapeHtml(item.name)}" ${state.selectedSharedStores.includes(item.name) ? "checked" : ""} ${item.deletable ? "" : "disabled"}>
+            <span class="choice-check" aria-hidden="true"></span>
             <span>
               <strong>${escapeHtml(item.title || item.name)}</strong>
               <small>${escapeHtml(item.group || "shared")} / ${formatNumber(item.records || 0)} records / ${refs} refs${item.blocked_reason ? ` / ${escapeHtml(item.blocked_reason)}` : ""}</small>
@@ -3718,7 +3971,7 @@
         event.preventDefault();
         setHashView(node.dataset.viewTarget);
       }));
-      document.querySelector("#global-refresh").addEventListener("click", refreshCurrentView);
+      document.querySelector("#global-refresh").addEventListener("click", () => refreshCurrentView({force: true}));
       document.querySelector("#report-search").addEventListener("input", renderReportLibrary);
       document.querySelector("#report-reader-search").addEventListener("input", () => {
         state.reportSearchTerm = document.querySelector("#report-reader-search").value;
@@ -3793,6 +4046,8 @@
       wireShortcutButtons();
     }
 
+    renderInitialLoadingPlaceholders();
     wireGlobalEvents();
-    loadHealth();
+    refreshHealthForView();
+    loadMonitorPayload().catch(() => renderSidebarMonitorStatus());
     setView(viewFromHash());

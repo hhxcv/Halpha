@@ -47,7 +47,7 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "market.ohlcv.lookback.1d",
     "market.ohlcv.lookback.1h",
     "market.ohlcv.lookback.1m",
-    "market.ohlcv.lookback.1month",
+    "market.ohlcv.lookback.1M",
     "market.ohlcv.lookback.1w",
     "market.ohlcv.lookback.4h",
     "market.ohlcv.lookback.5m",
@@ -349,18 +349,18 @@ def test_dashboard_settings_ohlcv_timeframes_materialize_matching_lookback(tmp_p
         request={
             "confirm": True,
             "changes": {
-                "market.ohlcv.timeframes": ["1m", "4h", "1month"],
+                "market.ohlcv.timeframes": ["1m", "4h", "1M"],
             },
         },
     )
 
     assert result["status"] == "succeeded"
     saved = load_config(config_path)
-    assert saved["market"]["ohlcv"]["timeframes"] == ["1m", "4h", "1month"]
+    assert saved["market"]["ohlcv"]["timeframes"] == ["1m", "4h", "1M"]
     assert saved["market"]["ohlcv"]["lookback"] == {
         "1m": 1440,
         "4h": 720,
-        "1month": 120,
+        "1M": 120,
     }
     assert str(tmp_path) not in str(result)
 

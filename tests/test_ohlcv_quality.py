@@ -10,24 +10,24 @@ from halpha.market.ohlcv_quality import (
 
 def test_weekly_and_monthly_timeframes_use_calendar_boundaries() -> None:
     weekly_record = _record(timeframe="1w", open_time="2026-06-01T00:00:00Z")
-    monthly_record = _record(timeframe="1month", open_time="2026-06-01T00:00:00Z")
+    monthly_record = _record(timeframe="1M", open_time="2026-06-01T00:00:00Z")
 
     assert ohlcv_record_invariant_errors(weekly_record) == []
     assert ohlcv_record_invariant_errors(monthly_record) == []
     assert ohlcv_next_open_time(
         datetime(2026, 6, 1, tzinfo=timezone.utc),
-        "1month",
+        "1M",
     ) == datetime(2026, 7, 1, tzinfo=timezone.utc)
 
 
 def test_weekly_and_monthly_timeframes_reject_non_boundary_open_times() -> None:
     weekly_errors = ohlcv_record_invariant_errors(_record(timeframe="1w", open_time="2026-06-02T00:00:00Z"))
     monthly_errors = ohlcv_record_invariant_errors(
-        _record(timeframe="1month", open_time="2026-06-02T00:00:00Z")
+        _record(timeframe="1M", open_time="2026-06-02T00:00:00Z")
     )
 
     assert "open_time must align to the 1w UTC timeframe boundary" in weekly_errors[0]
-    assert "open_time must align to the 1month UTC timeframe boundary" in monthly_errors[0]
+    assert "open_time must align to the 1M UTC timeframe boundary" in monthly_errors[0]
 
 
 def _record(*, timeframe: str, open_time: str) -> dict[str, object]:

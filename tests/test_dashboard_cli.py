@@ -365,7 +365,7 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
         "4h",
         "1d",
         "1w",
-        "1month",
+        "1M",
     ]
     assert "binance_usdm" in fields["market.ohlcv.sources"]["options"]
     assert "monitor.enabled" not in fields
@@ -1902,7 +1902,7 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
         "4h",
         "1d",
         "1w",
-        "1month",
+        "1M",
     ]
 
 

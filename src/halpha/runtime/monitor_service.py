@@ -305,33 +305,45 @@ def start_monitor_service(
     startup = load_monitor_startup_config(config_arg)
     repository = _monitor_lifecycle_repository(startup.config_path)
     config_digest = _monitor_service_config_digest(startup.config, config_path=startup.config_path)
-    lifecycle = repository.inspect(MONITOR_SERVICE_ROLE)
-    blocking = _monitor_start_blocking_result(
-        lifecycle,
-        config_digest=config_digest,
-        restart_from_instance_id=restart_from_instance_id,
-    )
-    if blocking is not None:
-        if blocking["status"] == "existing":
-            return blocking
-        if blocking["status"] == "starting":
-            return _wait_for_existing_monitor_service(
-                repository,
-                config_digest=config_digest,
-                timeout_seconds=MONITOR_START_WAIT_SECONDS,
-            )
-        raise MonitorServiceError(str(blocking["reason"]))
+    start_mutex = repository.acquire_start_mutex(MONITOR_SERVICE_ROLE)
+    if start_mutex is None:
+        return _wait_for_duplicate_monitor_start(
+            repository,
+            config_digest=config_digest,
+            restart_from_instance_id=restart_from_instance_id,
+            timeout_seconds=MONITOR_START_WAIT_SECONDS,
+        )
 
-    process = _launch_monitor_service_process(
-        config_arg,
-        restart_from_instance_id=restart_from_instance_id,
-    )
-    return _wait_for_monitor_service_start(
-        process,
-        repository=repository,
-        config_digest=config_digest,
-        timeout_seconds=MONITOR_START_WAIT_SECONDS,
-    )
+    try:
+        lifecycle = repository.inspect(MONITOR_SERVICE_ROLE)
+        blocking = _monitor_start_blocking_result(
+            lifecycle,
+            config_digest=config_digest,
+            restart_from_instance_id=restart_from_instance_id,
+        )
+        if blocking is not None:
+            if blocking["status"] == "existing":
+                return blocking
+            if blocking["status"] == "starting":
+                return _wait_for_existing_monitor_service(
+                    repository,
+                    config_digest=config_digest,
+                    timeout_seconds=MONITOR_START_WAIT_SECONDS,
+                )
+            raise MonitorServiceError(str(blocking["reason"]))
+
+        process = _launch_monitor_service_process(
+            config_arg,
+            restart_from_instance_id=restart_from_instance_id,
+        )
+        return _wait_for_monitor_service_start(
+            process,
+            repository=repository,
+            config_digest=config_digest,
+            timeout_seconds=MONITOR_START_WAIT_SECONDS,
+        )
+    finally:
+        start_mutex.release()
 
 
 def monitor_service_status(config_arg: str) -> dict[str, Any]:
@@ -571,6 +583,32 @@ def _wait_for_monitor_service_start(
             raise MonitorServiceError("monitor service exited before it registered a running lifecycle state.")
         time.sleep(MONITOR_CONTROL_POLL_SECONDS)
     raise MonitorServiceError("monitor service did not become running before the startup timeout.")
+
+
+def _wait_for_duplicate_monitor_start(
+    repository: ServiceLifecycleRepository,
+    *,
+    config_digest: str,
+    restart_from_instance_id: str | None,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        lifecycle = repository.inspect(MONITOR_SERVICE_ROLE)
+        blocking = _monitor_start_blocking_result(
+            lifecycle,
+            config_digest=config_digest,
+            restart_from_instance_id=restart_from_instance_id,
+        )
+        if blocking is not None:
+            if blocking["status"] == "existing":
+                return blocking
+            if blocking["status"] == "starting":
+                time.sleep(MONITOR_CONTROL_POLL_SECONDS)
+                continue
+            raise MonitorServiceError(str(blocking["reason"]))
+        time.sleep(MONITOR_CONTROL_POLL_SECONDS)
+    raise MonitorServiceError("monitor service start is already in progress; retry after it finishes or run monitor status.")
 
 
 def _wait_for_existing_monitor_service(

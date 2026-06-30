@@ -649,56 +649,114 @@ def start_dashboard_service(
     validate_dashboard_port(port)
     repository = _dashboard_lifecycle_repository(startup.config_path)
     config_digest = _dashboard_service_config_digest(host=host, port=port)
-    endpoint_can_bind = _dashboard_endpoint_can_bind(host, port)
-    lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
-    terminal_restart_instance_id = restart_from_instance_id or _terminal_dashboard_instance_id(lifecycle)
-    blocking = _dashboard_start_blocking_result(
-        lifecycle,
-        host=host,
-        port=port,
-        config_digest=config_digest,
-        endpoint_can_bind=endpoint_can_bind,
-    )
-    if blocking is not None:
-        if blocking["status"] == "existing":
-            return blocking
-        if blocking["status"] == "starting":
-            return _wait_for_existing_dashboard_service(
-                repository,
-                host=host,
-                port=port,
-                timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
-            )
-        raise DashboardError(str(blocking["reason"]))
-
-    if not endpoint_can_bind:
-        health = _read_dashboard_endpoint_health(host, port)
-        if _is_halpha_core_health(health):
-            existing = _dashboard_existing_result_from_health(health, repository=repository, host=host, port=port)
-            if existing is not None:
-                return existing
-            raise DashboardError(
-                f"a Halpha dashboard already responds on {host}:{port}, but shared lifecycle state does not match; "
-                "use dashboard status or stop before starting another service."
-            )
-        raise DashboardError(
-            f"dashboard port {port} on {host} is already in use by a non-Halpha or unresponsive local service; "
-            "stop that service or choose a different --port."
+    start_mutex = repository.acquire_start_mutex(DASHBOARD_SERVICE_ROLE)
+    if start_mutex is None:
+        return _wait_for_duplicate_dashboard_start(
+            repository,
+            host=host,
+            port=port,
+            config_digest=config_digest,
+            timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
         )
 
-    process = _launch_dashboard_service_process(
-        config_arg,
-        host=host,
-        port=port,
-        restart_from_instance_id=terminal_restart_instance_id,
-    )
-    return _wait_for_dashboard_service_start(
-        process,
-        repository=repository,
-        host=host,
-        port=port,
-        timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
-    )
+    try:
+        endpoint_can_bind = _dashboard_endpoint_can_bind(host, port)
+        lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+        terminal_restart_instance_id = restart_from_instance_id or _terminal_dashboard_instance_id(lifecycle)
+        blocking = _dashboard_start_blocking_result(
+            lifecycle,
+            host=host,
+            port=port,
+            config_digest=config_digest,
+            endpoint_can_bind=endpoint_can_bind,
+        )
+        if blocking is not None:
+            if blocking["status"] == "existing":
+                return blocking
+            if blocking["status"] == "starting":
+                return _wait_for_existing_dashboard_service(
+                    repository,
+                    host=host,
+                    port=port,
+                    timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
+                )
+            raise DashboardError(str(blocking["reason"]))
+
+        if not endpoint_can_bind:
+            health = _read_dashboard_endpoint_health(host, port)
+            if _is_halpha_core_health(health):
+                existing = _dashboard_existing_result_from_health(health, repository=repository, host=host, port=port)
+                if existing is not None:
+                    return existing
+                raise DashboardError(
+                    f"a Halpha dashboard already responds on {host}:{port}, but shared lifecycle state does not match; "
+                    "use dashboard status or stop before starting another service."
+                )
+            raise DashboardError(
+                f"dashboard port {port} on {host} is already in use by a non-Halpha or unresponsive local service; "
+                "stop that service or choose a different --port."
+            )
+
+        process = _launch_dashboard_service_process(
+            config_arg,
+            host=host,
+            port=port,
+            restart_from_instance_id=terminal_restart_instance_id,
+        )
+        return _wait_for_dashboard_service_start(
+            process,
+            repository=repository,
+            host=host,
+            port=port,
+            timeout_seconds=DASHBOARD_START_WAIT_SECONDS,
+        )
+    finally:
+        start_mutex.release()
+
+
+def _wait_for_duplicate_dashboard_start(
+    repository: ServiceLifecycleRepository,
+    *,
+    host: str,
+    port: int,
+    config_digest: str,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
+        endpoint_can_bind = _dashboard_endpoint_can_bind(host, port)
+        blocking = _dashboard_start_blocking_result(
+            lifecycle,
+            host=host,
+            port=port,
+            config_digest=config_digest,
+            endpoint_can_bind=endpoint_can_bind,
+        )
+        if blocking is not None:
+            if blocking["status"] == "existing":
+                return blocking
+            if blocking["status"] == "starting":
+                health = _read_dashboard_endpoint_health(host, port)
+                if _is_halpha_core_health(health):
+                    return _dashboard_service_result("existing", lifecycle=lifecycle, host=host, port=port)
+                time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
+                continue
+            raise DashboardError(str(blocking["reason"]))
+
+        if not endpoint_can_bind:
+            health = _read_dashboard_endpoint_health(host, port)
+            if _is_halpha_core_health(health):
+                existing = _dashboard_existing_result_from_health(health, repository=repository, host=host, port=port)
+                if existing is not None:
+                    return existing
+            raise DashboardError(
+                f"dashboard port {port} on {host} is already in use while another core service start is in progress; "
+                "wait for it to finish, then run dashboard status."
+            )
+
+        time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
+    raise DashboardError("core service start is already in progress; retry after it finishes or run dashboard status.")
 
 
 def dashboard_service_status(

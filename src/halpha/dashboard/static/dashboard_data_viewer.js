@@ -52,6 +52,20 @@
         const INTEL_PREVIEW_FETCH_STEP = 100;
         const INTEL_PREVIEW_MAX_LIMIT = 500;
 
+        function loadingSkeleton(lines = 3) {
+          return `<div class="empty-state loading-surface">${Array.from({length: lines}, (_, index) => (
+            `<span class="skeleton skeleton-line" style="width:${index === lines - 1 ? "52%" : "86%"}"></span>`
+          )).join("")}</div>`;
+        }
+
+        function timelineSkeleton() {
+          return `<div class="loading-surface">
+            <span class="skeleton skeleton-line" style="width:48%"></span>
+            <span class="skeleton skeleton-line" style="width:100%; height:18px; border-radius:999px;"></span>
+            <span class="skeleton skeleton-line" style="width:74%"></span>
+          </div>`;
+        }
+
         async function loadDataViewerSummary() {
           if (!endpoints.dataViewerSummary) {
             state.dataViewerSummary = {
@@ -101,8 +115,8 @@
           }
           renderStoreSummary("intel", dataType);
           renderCapabilityState("intel", dataType);
-          setHtml("#intel-data-coverage", `<div class="message">Loading coverage timeline.</div>`);
-          setHtml("#intel-data-preview-panel", `<div class="message">Loading preview records.</div>`);
+          setHtml("#intel-data-coverage", timelineSkeleton());
+          setHtml("#intel-data-preview-panel", loadingSkeleton(4));
           queueIntelligenceDataLoad();
         }
 
@@ -255,7 +269,7 @@
         async function loadTimeline(scope) {
           const request = viewerRequest(scope);
           if (!request) return;
-          setHtml(panelSelector(scope, "coverage"), `<div class="message">Loading coverage timeline.</div>`);
+          setHtml(panelSelector(scope, "coverage"), timelineSkeleton());
           try {
             const payload = await postJson(endpoints.dataViewerTimeline, request);
             state[scopeStateKey(scope, "timeline")] = payload;
@@ -269,7 +283,7 @@
           const baseRequest = viewerRequest(scope);
           if (!baseRequest) return;
           const request = {...baseRequest, limit: scope === "strategy" ? 1000 : 25, sort_order: "asc"};
-          setHtml(panelSelector(scope, "preview"), `<div class="message">Loading bounded preview.</div>`);
+          setHtml(panelSelector(scope, "preview"), loadingSkeleton(scope === "strategy" ? 3 : 5));
           try {
             const payload = await postJson(endpoints.dataViewerPreview, request);
             state[scopeStateKey(scope, "preview")] = payload;
@@ -285,7 +299,7 @@
         async function loadCollectionPlan(scope) {
           const request = collectionRequest(scope);
           if (!request) return;
-          setHtml(panelSelector(scope, "plan"), `<div class="message">Planning efficient collection windows.</div>`);
+          setHtml(panelSelector(scope, "plan"), loadingSkeleton(3));
           try {
             const payload = await postJson(endpoints.dataViewerCollectPlan, request);
             state[scopeStateKey(scope, "plan")] = payload;
@@ -298,7 +312,7 @@
         async function submitCollectionJob(scope) {
           const request = collectionRequest(scope);
           if (!request) return;
-          setHtml(panelSelector(scope, "job"), `<div class="message">Submitting allowlisted collection job.</div>`);
+          setHtml(panelSelector(scope, "job"), loadingSkeleton(2));
           try {
             const payload = await postJson(endpoints.dataViewerCollectJobs, request);
             state[scopeStateKey(scope, "job")] = payload.job || payload;
@@ -316,7 +330,7 @@
           const request = viewerRequest(scope);
           if (!request) return;
           const format = scope === "strategy" ? node("#strategy-data-format")?.value : "json";
-          setHtml(panelSelector(scope, "job"), `<div class="message">Creating bounded export under data/exports.</div>`);
+          setHtml(panelSelector(scope, "job"), loadingSkeleton(2));
           try {
             const payload = await postJson(endpoints.dataViewerExport, {...request, format: format || "csv"});
             state[scopeStateKey(scope, "export")] = payload;
@@ -350,7 +364,7 @@
           if (state.selectedIntelTab === "overview") return;
           const request = collectionViewerRequest("intel");
           if (!request) return;
-          setHtml("#intel-data-coverage", `<div class="message">Loading coverage timeline.</div>`);
+          setHtml("#intel-data-coverage", timelineSkeleton());
           const timelineRequest = {...request, limit: 200};
           try {
             const payload = await postJson(endpoints.dataViewerTimeline, timelineRequest);
@@ -365,7 +379,7 @@
           if (state.selectedIntelTab === "overview") return;
           const request = viewerRequest("intel");
           if (!request) return;
-          setHtml("#intel-data-preview-panel", `<div class="message">Loading preview records.</div>`);
+          setHtml("#intel-data-preview-panel", loadingSkeleton(5));
           const previewLimit = Math.min(INTEL_PREVIEW_MAX_LIMIT, Math.max(INTEL_PREVIEW_PAGE_SIZE, Number(state.intelPreviewFetchLimit) || INTEL_PREVIEW_FETCH_STEP));
           const previewRequest = {...request, limit: previewLimit, sort_order: "desc"};
           try {
@@ -537,7 +551,7 @@
           if (scope === "strategy" && payload.data_type === "ohlcv") {
             setHtml(
               selector,
-              `${header}<div class="message">Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy Lab chart.</div>`,
+              `${header}<div class="message">Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy chart.</div>`,
             );
             return;
           }

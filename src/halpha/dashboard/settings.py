@@ -36,7 +36,7 @@ OHLCV_LOOKBACK_DEFAULTS = {
     "4h": 720,
     "1d": 500,
     "1w": 260,
-    "1month": 120,
+    "1M": 120,
 }
 DERIVATIVES_PERIOD_OPTIONS = tuple(
     period

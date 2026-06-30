@@ -127,6 +127,25 @@ def test_dashboard_pages_expose_primary_semantic_views(tmp_path: Path) -> None:
     assert "Artifacts" not in _nav_block(html)
 
 
+def test_dashboard_shell_uses_monitor_status_without_local_mode_badges(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert "System healthy" not in html
+    assert "Local mode" not in html
+    assert "No data leaves this device through the dashboard UI." not in html
+    assert 'id="sidebar-monitor-dot"' in html
+    assert 'id="sidebar-monitor-title">Monitor status</span>' in html
+    assert 'id="sidebar-monitor-text">Loading monitor status.</div>' in html
+    assert "monitorSidebarState" in script
+    assert "renderSidebarMonitorStatus" in script
+    assert "Monitoring is enabled and running." in script
+    assert "loadMonitorPayload().catch(() => renderSidebarMonitorStatus())" in script
+    assert ".health-dot.stopped" in css
+    assert ".health-dot.unknown" in css
+
+
 @pytest.mark.parametrize(
     "selector_id",
     [
@@ -311,7 +330,7 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "postJson(endpoints.dataViewerExport" in script
     assert "renderStrategyOhlcvPreview(payload, request)" in script
     assert 'scope === "strategy" && payload.data_type === "ohlcv"' in script
-    assert "Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy Lab chart." in script
+    assert "Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy chart." in script
     assert "runStrategyCollectBatch" in script
     assert "renderStrategyExperimentResults" in script
     assert "renderStrategyOptimizeResults" in script
@@ -378,6 +397,7 @@ def test_dashboard_monitor_service_controls_expose_dom_contracts(tmp_path: Path)
 
 def test_dashboard_storage_and_settings_controls_expose_dom_contracts(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
+    css = _style_block(html)
     script = _script_block(html)
     parser = DashboardShellParser()
     parser.feed(html)
@@ -387,6 +407,70 @@ def test_dashboard_storage_and_settings_controls_expose_dom_contracts(tmp_path: 
     assert "data-settings-endpoint" in parser.data_attrs
     assert "data-setting-path" in script
     assert 'min="0" max="1" step="0.01"' in script
+    assert "body[data-theme=\"solar\"] .settings-nav button.active" in css
+    assert "body[data-theme=\"solar\"] .settings-nav button.active .settings-nav-chevron" in css
+    assert "body[data-theme=\"solar\"] .choice-check::after" in css
+    assert "body[data-theme=\"solar\"] input:checked + .choice-check" in css
+    assert "body[data-theme=\"solar\"] .choice-chip:has(input:checked)" in css
+
+
+def test_dashboard_surface_text_has_global_overflow_guards(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+
+    assert ".attention-item" in css
+    assert ".compact-row" in css
+    assert ".strategy-eval-panel" in css
+    assert ".intel-store-card" in css
+    assert "overflow-wrap: anywhere;" in css
+    assert ".toolbar-actions > *" in css
+    assert ".control-grid > *" in css
+    assert ".control-grid .ghost-button" in css
+    assert ".toolbar-actions .primary-button" in css
+    assert "body[data-theme=\"solar\"] .control-grid .ghost-button" in css
+
+
+def test_dashboard_overview_report_metrics_use_spaced_cards(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+
+    assert 'id="overview-report-metrics" class="report-metrics"' in html
+    assert ".report-metrics" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));" in css
+    assert "gap: 10px;" in css
+    assert "padding: 8px;" in css
+    assert ".report-metric" in css
+    assert "padding: 14px;" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));" in css
+
+
+def test_dashboard_dynamic_views_have_skeleton_loading_contracts(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert ".skeleton" in css
+    assert "@keyframes skeleton-shimmer" in css
+    assert ".loading-surface" in css
+    assert "renderInitialLoadingPlaceholders()" in script
+    assert "renderOverviewLoading()" in script
+    assert "renderReportsLoading()" in script
+    assert "renderStrategiesLoading()" in script
+    assert "renderMonitorLoading()" in script
+    assert "renderIntelligenceLoading()" in script
+    assert "renderSettingsLoading()" in script
+    assert "VIEW_REFRESH_TTL_MS = 15000" in script
+    assert "state.viewRefreshPromises[view]" in script
+    assert 'refreshCurrentView({force: true})' in script
+
+
+def test_dashboard_layout_composition_containers_are_unframed(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+
+    assert "body[data-theme=\"solar\"] .strategy-operation-panel,\n    body[data-theme=\"solar\"] .intel-overview-panel" in css
+    assert "background: transparent;" in css
+    assert "box-shadow: none;" in css
 
 
 def test_dashboard_uses_in_app_confirmation_dialogs(tmp_path: Path) -> None:

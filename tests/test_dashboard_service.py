@@ -105,6 +105,25 @@ def test_dashboard_start_conflicting_endpoint_does_not_launch_process(
         ownership.release()
 
 
+def test_dashboard_start_mutex_blocks_duplicate_launcher_before_process_launch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = ServiceLifecycleRepository(runtime_root=tmp_path)
+    start_mutex = repository.acquire_start_mutex("core")
+    assert start_mutex is not None
+    try:
+        monkeypatch.setattr("halpha.dashboard.app.DASHBOARD_START_WAIT_SECONDS", 0.01)
+        monkeypatch.setattr("halpha.dashboard.app.DASHBOARD_RESTART_POLL_SECONDS", 0.001)
+        monkeypatch.setattr("halpha.dashboard.app._dashboard_endpoint_can_bind", lambda host, port: True)
+        monkeypatch.setattr("halpha.dashboard.app.subprocess.Popen", _fail_popen)
+
+        with pytest.raises(DashboardError, match="core service start is already in progress"):
+            start_dashboard_service(None, host="127.0.0.1", port=8765)
+    finally:
+        start_mutex.release()
+
+
 def test_dashboard_start_rejects_non_halpha_occupied_port(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("halpha.dashboard.app._dashboard_endpoint_can_bind", lambda host, port: False)
     monkeypatch.setattr(
