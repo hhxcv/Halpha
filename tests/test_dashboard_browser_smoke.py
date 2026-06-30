@@ -201,7 +201,7 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       ]) {
         await page.locator(`[data-setting-path="${path}"]`).first().waitFor({state: "visible", timeout: 5000});
       }
-      await expect(page.locator("#change-summary")).toContainText("macro_calendar.enabled");
+      await expect(page.locator("#settings-save")).toContainText(/Save [1-9][0-9]* changes?/);
       await page.click('[data-settings-section="Market data"]');
       await page.locator('[data-setting-path="market.enabled"]').first().waitFor({state: "visible", timeout: 5000});
       await expect(page.locator('[data-setting-path="market.source"]')).toHaveCount(0);
@@ -246,15 +246,23 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       }
       await page.click("#strategy-collect-refresh-timeline");
       await expect(page.locator("#strategy-collect-timeline")).toContainText(/target|timeline|coverage|range/i, {timeout: 10000});
-      await page.click('[data-strategy-operation-tab="export"]');
-      await page.locator("#strategy-export-as-of").waitFor({state: "visible", timeout: 5000});
-      await expect(page.locator("#strategy-export-format")).toBeVisible();
-      await chooseVisibleDateRange(page, "#strategy-export-date-range");
-      const exportHiddenStart = await page.locator("#strategy-export-start").evaluate((node) => node.value);
-      if (!exportHiddenStart.includes("T00:00:00Z")) throw new Error("strategy export picker did not sync hidden start timestamp");
+      await expect(page.locator('[data-strategy-operation-tab="export"]')).toHaveCount(0);
+      await page.click('[data-strategy-operation-tab="backtest"]');
+      await page.click("#run-backtest-button");
+      await page.locator("#strategy-backtest-dialog").waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator("#strategy-profile")).toBeVisible();
+      const backtestRange = await chooseVisibleDateRange(page, "#strategy-backtest-date-range");
+      await expect(page.locator("#strategy-backtest-date-range")).toContainText(backtestRange.firstDate);
+      const backtestHiddenStart = await page.locator("#strategy-backtest-start").evaluate((node) => node.value);
+      const backtestHiddenEnd = await page.locator("#strategy-backtest-end").evaluate((node) => node.value);
+      if (!backtestHiddenStart.endsWith("T00:00:00Z") || !backtestHiddenEnd.endsWith("T23:59:59Z")) {
+        throw new Error("strategy backtest picker did not sync hidden start/end timestamps");
+      }
+      await page.click("#strategy-backtest-cancel");
+      await expect(page.locator("#strategy-backtest-dialog")).toBeHidden();
       await page.click('[data-view-target="intelligence"]');
       await page.waitForSelector("#intel-overview-panel:not(.hidden)", {timeout: 5000});
-      await expect(page.locator("#intel-overview-kpis")).toContainText(/High-impact events|Data quality/i, {timeout: 5000});
+      await expect(page.locator("#intel-overview-kpis")).toContainText(/Latest intelligence|Macro agenda/i, {timeout: 5000});
       await expect(page.locator("#intel-data-timeline")).toHaveCount(0);
       await expect(page.locator("#intel-data-preview")).toHaveCount(0);
       await expect(page.locator("#intel-data-plan")).toHaveCount(0);

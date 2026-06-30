@@ -41,6 +41,8 @@ def run_strategy_backtest_action(
     symbol: str,
     timeframe: str,
     source: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
     output_dir: Path | None = None,
 ) -> StrategyWorkbenchActionResult:
     try:
@@ -51,6 +53,8 @@ def run_strategy_backtest_action(
             source=source,
             symbol=symbol,
             timeframe=timeframe,
+            start=start,
+            end=end,
             output_dir=output_dir,
         )
     except StandaloneBacktestError as exc:

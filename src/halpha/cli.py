@@ -140,6 +140,8 @@ def build_parser() -> argparse.ArgumentParser:
     backtest_parser.add_argument("--source", help="Configured OHLCV source to evaluate. Defaults to market.source.")
     backtest_parser.add_argument("--symbol", required=True, help="Configured market symbol to evaluate.")
     backtest_parser.add_argument("--timeframe", required=True, help="Configured OHLCV timeframe to evaluate.")
+    backtest_parser.add_argument("--start", help="Optional inclusive ISO timestamp for the backtest window.")
+    backtest_parser.add_argument("--end", help="Optional inclusive ISO timestamp for the backtest window.")
     backtest_parser.add_argument("--output-dir", help="Directory for standalone backtest output artifacts.")
 
     experiment_parser = subparsers.add_parser("experiment", help="Run standalone strategy experiments.")
@@ -500,6 +502,8 @@ def _dispatch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
             source=args.source,
             symbol=args.symbol,
             timeframe=args.timeframe,
+            start=args.start,
+            end=args.end,
             output_dir=args.output_dir,
         )
 
@@ -971,6 +975,8 @@ def _backtest(
     source: str | None,
     symbol: str,
     timeframe: str,
+    start: str | None,
+    end: str | None,
     output_dir: str | None,
 ) -> int:
     config_path = Path(config_arg)
@@ -981,6 +987,8 @@ def _backtest(
         source=source,
         symbol=symbol,
         timeframe=timeframe,
+        start=start,
+        end=end,
         output_dir_requested=output_dir is not None,
     )
 
@@ -1001,6 +1009,8 @@ def _backtest(
         source=source,
         symbol=symbol,
         timeframe=timeframe,
+        start=start,
+        end=end,
         output_dir=Path(output_dir) if output_dir else None,
     )
     print(result.stdout, end="")
@@ -1012,6 +1022,8 @@ def _backtest(
             source=source,
             symbol=symbol,
             timeframe=timeframe,
+            start=start,
+            end=end,
         )
         return 0
 
@@ -1024,6 +1036,8 @@ def _backtest(
         source=source,
         symbol=symbol,
         timeframe=timeframe,
+        start=start,
+        end=end,
         exit_code=result.exit_code,
     )
     return result.exit_code

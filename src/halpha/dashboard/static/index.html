@@ -32,6 +32,7 @@
     data-services-endpoint="/api/services"
     data-settings-endpoint="/api/config/profile"
     data-config-select-endpoint="/api/config/select"
+    data-config-import-endpoint="/api/config/import"
     data-text-intelligence-endpoint="/api/text-intelligence"
     data-display-timezone="__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__"
     data-timestamp-hour-cycle="__HALPHA_DASHBOARD_TIMESTAMP_HOUR_CYCLE__"
@@ -97,11 +98,10 @@
             <button class="tab-button" type="button" data-intel-tab="market_anomaly">Anomalies</button>
           </div>
           <div class="tabs strategy-operation-tabs topbar-secondary-tabs hidden" id="strategy-operation-tabs" aria-label="Strategy operations">
-            <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtest</button>
-            <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiment</button>
+            <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtests</button>
+            <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiments</button>
             <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
             <button class="tab-button" type="button" data-strategy-operation-tab="collect">Collect</button>
-            <button class="tab-button" type="button" data-strategy-operation-tab="export">Export</button>
           </div>
         </div>
         <div class="topbar-actions" id="global-page-actions">
@@ -207,48 +207,80 @@
         <div class="strategy-layout">
           <section class="panel strategy-workbench" id="strategy-workbench">
             <div class="strategy-operation-panel" data-strategy-operation-panel="backtest">
-              <div class="strategy-controls strategy-backtest-controls strategy-action-grid">
-                <div class="field"><label for="strategy-source">Source <button class="hint-icon" type="button" aria-label="Source help" title="Strategy actions use the configured market source. The chart viewer below can inspect any configured stored source independently.">?</button></label><input id="strategy-source" class="text-input" type="text" readonly></div>
-                <div class="field"><label for="strategy-market-type">Market type</label><select id="strategy-market-type" class="select-input"></select></div>
-                <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
-                <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
-                <div class="field"><label for="strategy-family">Family</label><select id="strategy-family" class="select-input"></select></div>
-                <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
-                <div class="field strategy-wide-field"><label for="strategy-evaluation-window">Evaluation window <button class="hint-icon" type="button" aria-label="Backtest window help" title="Standalone backtests use the configured latest-lookback window from local OHLCV history. Use the independent K-line controls below to inspect arbitrary stored ranges.">?</button></label><input id="strategy-evaluation-window" class="text-input" type="text" readonly></div>
+              <div class="strategy-panel-header">
+                <div>
+                  <h2 class="panel-title">Backtest review</h2>
+                  <p class="panel-copy">Select a stored run to inspect its market overlay, trades, equity, drawdown, gates, and warnings.</p>
+                </div>
                 <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
               </div>
-              <div id="strategy-spec-summary" class="strategy-spec-summary"></div>
-              <div id="strategy-parameter-controls" class="strategy-parameter-controls"></div>
               <div id="strategy-backtest-progress" class="operation-progress hidden"></div>
+              <div id="strategy-backtest-board" class="strategy-backtest-board"><div class="message">Loading backtest runs.</div></div>
               <div class="metric-strip" id="strategy-metrics"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="experiment">
-              <div class="strategy-experiment-grid strategy-action-grid">
-                <div class="field"><label for="strategy-experiment-family">Family</label><select id="strategy-experiment-family" class="select-input"></select></div>
-                <div class="field"><label for="strategy-experiment-mode">Evaluation mode <button class="hint-icon" type="button" aria-label="Experiment mode help" title="Experiment jobs evaluate selected configured strategies over the configured benchmark suite. Date windows come from quant.benchmark_suite.">?</button></label><select id="strategy-experiment-mode" class="select-input"><option value="benchmark_suite">Configured benchmark suite</option></select></div>
-                <div class="field"><label for="strategy-experiment-window">Evaluation window</label><input id="strategy-experiment-window" class="text-input" type="text" readonly></div>
+              <div class="strategy-panel-header">
+                <div>
+                  <h2 class="panel-title">Experiment review</h2>
+                  <p class="panel-copy">Use experiments to compare configured strategies against the benchmark suite and gate evidence.</p>
+                </div>
                 <button class="primary-button" type="button" id="run-experiment-button">Run experiment</button>
               </div>
-              <div id="strategy-experiment-strategies" class="strategy-strategy-list"></div>
+              <div class="strategy-experiment-workspace">
+                <section class="strategy-review-card">
+                  <div class="strategy-card-heading">
+                    <strong>Benchmark scope</strong>
+                    <span id="strategy-experiment-window">Configured benchmark suite</span>
+                  </div>
+                  <select id="strategy-experiment-mode" class="hidden" aria-hidden="true"><option value="benchmark_suite">Configured benchmark suite</option></select>
+                  <p>The dashboard launches the same deterministic experiment path as the CLI. Benchmark windows stay config-owned so results remain comparable.</p>
+                </section>
+                <section class="strategy-review-card">
+                  <div class="field"><label for="strategy-experiment-family">Strategy family</label><select id="strategy-experiment-family" class="select-input"></select></div>
+                  <div id="strategy-experiment-strategies" class="strategy-strategy-list"></div>
+                </section>
+              </div>
               <div id="strategy-experiment-progress" class="operation-progress hidden"></div>
               <div id="strategy-experiment-results" class="strategy-result-panel"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="optimize">
-              <div class="strategy-optimize-grid strategy-action-grid">
-                <div class="field"><label for="strategy-optimize-source">Source</label><input id="strategy-optimize-source" class="text-input" type="text" readonly></div>
-                <div class="field"><label for="strategy-optimize-symbol">Symbol</label><select id="strategy-optimize-symbol" class="select-input"></select></div>
-                <div class="field"><label for="strategy-optimize-timeframe">Timeframe</label><select id="strategy-optimize-timeframe" class="select-input"></select></div>
-                <div class="field"><label for="strategy-optimize-family">Family</label><select id="strategy-optimize-family" class="select-input"></select></div>
-                <div class="field"><label for="strategy-optimize-name">Strategy</label><select id="strategy-optimize-name" class="select-input"></select></div>
-                <div class="field"><label for="strategy-optimize-max-combinations">Max combinations</label><input id="strategy-optimize-max-combinations" class="text-input" type="number" min="1" step="1" value="80"></div>
-                <div class="field"><label for="strategy-optimize-train-rows">Train rows</label><input id="strategy-optimize-train-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
-                <div class="field"><label for="strategy-optimize-validation-rows">Validation rows</label><input id="strategy-optimize-validation-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
-                <div class="field"><label for="strategy-optimize-step-rows">Step rows</label><input id="strategy-optimize-step-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
-                <div class="field"><label for="strategy-optimize-window">Evaluation window</label><input id="strategy-optimize-window" class="text-input" type="text" readonly></div>
+              <div class="strategy-panel-header">
+                <div>
+                  <h2 class="panel-title">Optimization review</h2>
+                  <p class="panel-copy">Run bounded tuning against configured evidence, then inspect robustness. It never mutates active strategy configuration.</p>
+                </div>
                 <button class="primary-button" type="button" id="run-optimize-button">Run optimization</button>
               </div>
+              <div class="strategy-optimize-workspace">
+                <section class="strategy-review-card">
+                  <div class="field"><label for="strategy-optimize-profile">Strategy profile</label><select id="strategy-optimize-profile" class="select-input"></select></div>
+                  <div class="strategy-profile-summary" id="strategy-optimize-profile-summary"></div>
+                </section>
+                <section class="strategy-review-card">
+                  <div class="strategy-card-heading">
+                    <strong>Bounded search</strong>
+                    <span id="strategy-optimize-window">Configured benchmark suite</span>
+                  </div>
+                  <div class="strategy-optimize-compact-grid">
+                    <div class="field"><label for="strategy-optimize-max-combinations">Max combinations</label><input id="strategy-optimize-max-combinations" class="text-input" type="number" min="1" step="1" value="80"></div>
+                    <div class="field"><label for="strategy-optimize-train-rows">Train rows</label><input id="strategy-optimize-train-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
+                    <div class="field"><label for="strategy-optimize-validation-rows">Validation rows</label><input id="strategy-optimize-validation-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
+                    <div class="field"><label for="strategy-optimize-step-rows">Step rows</label><input id="strategy-optimize-step-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
+                  </div>
+                </section>
+              </div>
+              <details class="strategy-advanced">
+                <summary>Advanced target override</summary>
+                <div class="strategy-optimize-grid strategy-action-grid">
+                  <div class="field"><label for="strategy-optimize-source">Source</label><input id="strategy-optimize-source" class="text-input" type="text" readonly></div>
+                  <div class="field"><label for="strategy-optimize-symbol">Symbol</label><select id="strategy-optimize-symbol" class="select-input"></select></div>
+                  <div class="field"><label for="strategy-optimize-timeframe">Timeframe</label><select id="strategy-optimize-timeframe" class="select-input"></select></div>
+                  <div class="field"><label for="strategy-optimize-family">Family</label><select id="strategy-optimize-family" class="select-input"></select></div>
+                  <div class="field"><label for="strategy-optimize-name">Strategy</label><select id="strategy-optimize-name" class="select-input"></select></div>
+                </div>
+              </details>
               <div id="strategy-optimization-space" class="strategy-optimization-space"></div>
               <div id="strategy-optimize-progress" class="operation-progress hidden"></div>
               <div id="strategy-optimize-results" class="strategy-result-panel"></div>
@@ -284,28 +316,6 @@
                 <div id="strategy-collect-timeline" class="collect-timeline"><div class="message">Collection timeline follows the selected targets and range.</div></div>
               </section>
               <div id="strategy-collect-progress" class="operation-progress hidden"></div>
-            </div>
-
-            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="export">
-              <div class="strategy-export-grid">
-                <div class="field"><label for="strategy-export-source">Source</label><input id="strategy-export-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
-                <div class="field"><label for="strategy-export-symbol">Symbol</label><select id="strategy-export-symbol" class="select-input"></select></div>
-                <div class="field"><label for="strategy-export-timeframe">Timeframe</label><select id="strategy-export-timeframe" class="select-input"></select></div>
-                <div class="field"><label for="strategy-export-range">Range preset</label><select id="strategy-export-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
-                <div class="field date-range-field" data-date-range-picker data-start-input="strategy-export-start" data-end-input="strategy-export-end" data-preset-input="strategy-export-range">
-                  <label for="strategy-export-date-range">Time window</label>
-                  <button class="range-picker-trigger" type="button" id="strategy-export-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
-                  <input id="strategy-export-start" class="hidden" type="text" aria-hidden="true">
-                  <input id="strategy-export-end" class="hidden" type="text" aria-hidden="true">
-                  <div class="range-picker-popover hidden" role="dialog" aria-label="Export time window"></div>
-                </div>
-                <div class="field"><label for="strategy-export-as-of">As of <button class="hint-icon" type="button" aria-label="As of help" title="Optional ISO timestamp for no-lookahead reads. Use it to export only records known at that time, for example 2026-06-28T00:00:00Z. Leave empty for the latest stored view.">?</button></label><input id="strategy-export-as-of" class="text-input" type="text" placeholder="optional ISO timestamp"></div>
-                <div class="field"><label for="strategy-export-format">Format</label><select id="strategy-export-format" class="select-input"><option value="csv">CSV</option><option value="parquet">Parquet</option></select></div>
-                <button class="primary-button" type="button" id="strategy-export-run" data-data-viewer-action="strategy-export">Export</button>
-                <button class="ghost-button" type="button" id="download-ohlcv-button">Download visible chart</button>
-              </div>
-              <div id="strategy-export-progress" class="operation-progress hidden"></div>
-              <div id="strategy-data-job-panel" class="data-viewer-job"><div class="message">Exports will appear here.</div></div>
             </div>
           </section>
           <section class="panel kline-panel">
@@ -359,6 +369,52 @@
             <div id="strategy-tab-content" style="padding-top: 14px;"></div>
           </section>
         </div>
+        <div id="strategy-backtest-dialog-backdrop" class="drawer-backdrop hidden"></div>
+        <section id="strategy-backtest-dialog" class="strategy-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="strategy-backtest-dialog-title">
+          <div class="drawer-header">
+            <div>
+              <span class="drawer-kicker">Strategy run</span>
+              <h2 id="strategy-backtest-dialog-title">Run backtest</h2>
+            </div>
+            <button class="icon-button" type="button" id="strategy-backtest-dialog-close" aria-label="Close backtest dialog">
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="strategy-dialog-body">
+            <div class="field"><label for="strategy-profile">Strategy profile</label><select id="strategy-profile" class="select-input"></select></div>
+            <div id="strategy-profile-summary" class="strategy-profile-summary"></div>
+            <div class="strategy-dialog-grid">
+              <div class="field"><label for="strategy-backtest-range">Date range</label><select id="strategy-backtest-range" class="select-input"><option value="30d">Latest 30 days</option><option value="90d">Latest 90 days</option><option value="180d">Latest 180 days</option><option value="all">All stored coverage</option><option value="custom">Custom</option></select></div>
+              <div class="field date-range-field" data-date-range-picker data-start-input="strategy-backtest-start" data-end-input="strategy-backtest-end" data-preset-input="strategy-backtest-range">
+                <label for="strategy-backtest-date-range">Backtest window</label>
+                <button class="range-picker-trigger" type="button" id="strategy-backtest-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
+                <input id="strategy-backtest-start" class="hidden" type="text" aria-hidden="true">
+                <input id="strategy-backtest-end" class="hidden" type="text" aria-hidden="true">
+                <div class="range-picker-popover hidden" role="dialog" aria-label="Backtest time window"></div>
+              </div>
+            </div>
+            <details class="strategy-advanced">
+              <summary>Advanced override</summary>
+              <div class="strategy-backtest-advanced-grid">
+                <div class="field"><label for="strategy-source">Source</label><input id="strategy-source" class="text-input" type="text" readonly></div>
+                <div class="field"><label for="strategy-market-type">Market type</label><select id="strategy-market-type" class="select-input"></select></div>
+                <div class="field"><label for="strategy-symbol">Symbol</label><select id="strategy-symbol" class="select-input"></select></div>
+                <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
+                <div class="field"><label for="strategy-family">Family</label><select id="strategy-family" class="select-input"></select></div>
+                <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
+                <div class="field strategy-wide-field"><label for="strategy-evaluation-window">Evaluation policy</label><input id="strategy-evaluation-window" class="text-input" type="text" readonly></div>
+              </div>
+            </details>
+            <div id="strategy-spec-summary" class="strategy-spec-summary"></div>
+            <div id="strategy-parameter-controls" class="strategy-parameter-controls"></div>
+          </div>
+          <div class="drawer-footer">
+            <button class="ghost-button" type="button" id="strategy-backtest-cancel">Cancel</button>
+            <button class="primary-button" type="button" id="strategy-backtest-submit">Run backtest</button>
+          </div>
+        </section>
       </section>
 
       <section id="monitor-view" class="view hidden" data-view="monitor">
@@ -444,13 +500,16 @@
       <section id="settings-view" class="view hidden" data-view="settings">
         <div class="settings-layout">
           <section class="panel settings-top">
-            <div class="field"><label>Config file</label><div id="config-profile" class="readonly-value">Current config</div></div>
-            <div class="field"><label>Load config</label><input class="text-input" id="config-path-input" type="text" placeholder="config.local.yaml"></div>
-            <button class="ghost-button" type="button" id="settings-load-config">Load</button>
-            <span id="settings-valid-pill" class="status-pill pending">loading</span>
-            <span class="muted" id="settings-last-validated">Last validated: not run</span>
+            <div class="field settings-config-field">
+              <label for="settings-config-select">Config file</label>
+              <div class="settings-config-picker">
+                <select class="select-input" id="settings-config-select"></select>
+                <button class="ghost-button" type="button" id="settings-config-browse">Browse</button>
+                <input id="settings-config-file-input" class="hidden" type="file" accept=".yaml,.yml,text/yaml,application/x-yaml">
+              </div>
+              <small id="settings-config-error" class="field-error hidden"></small>
+            </div>
             <button class="primary-button" type="button" id="settings-save">Save changes</button>
-            <button class="ghost-button" type="button" data-job-intent="validate">Validate</button>
             <button class="ghost-button" type="button" id="settings-backup">Create backup</button>
           </section>
           <div class="settings-main">
@@ -459,16 +518,6 @@
               <h2 class="panel-title" id="settings-section-title">Market data</h2>
               <div id="settings-form" class="form-grid"></div>
             </section>
-            <aside class="detail-rail">
-              <section class="panel panel-pad">
-                <h2 class="panel-title">Change summary <span id="change-count" class="status-pill warning">0 changes</span></h2>
-                <ul id="change-summary" class="compact-list"></ul>
-              </section>
-              <section class="panel panel-pad">
-                <h2 class="panel-title">Validation results</h2>
-                <div id="validation-results"></div>
-              </section>
-            </aside>
           </div>
         </div>
       </section>

@@ -11,7 +11,7 @@ from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, dashboard_health
 from halpha.dashboard.app import write_dashboard_selected_config_state
 from halpha.dashboard.runs import dashboard_runs
-from halpha.dashboard.state import read_dashboard_selected_config_state
+from halpha.dashboard.state import read_dashboard_config_history, read_dashboard_selected_config_state
 from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
 from halpha.monitor.state_store import MonitorArchivePersistence, MonitorStateRepository
@@ -190,6 +190,45 @@ def test_dashboard_settings_can_select_active_config(tmp_path: Path) -> None:
     assert not (tmp_path / "runs" / "dashboard").exists()
 
 
+def test_dashboard_settings_can_select_config_candidate_by_safe_id(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    client = TestClient(create_dashboard_app())
+    first = client.post("/api/config/select", json={"config_path": str(config_path)}).json()
+    active_id = first["profile"]["config_selection"]["active_id"]
+
+    second = client.post("/api/config/select", json={"candidate_id": active_id}).json()
+
+    assert second["status"] == "succeeded"
+    assert second["profile"]["config_selection"]["active_id"] == active_id
+    assert str(tmp_path) not in str(second["profile"])
+
+
+def test_dashboard_settings_imports_config_file_without_exposing_raw_content(tmp_path: Path) -> None:
+    source_path = _write_config(tmp_path)
+    client = TestClient(create_dashboard_app())
+
+    response = client.post(
+        "/api/config/import",
+        json={"name": "imported local.yaml", "content": source_path.read_text(encoding="utf-8")},
+    )
+
+    payload = response.json()
+    persisted, error = read_dashboard_selected_config_state()
+    history = read_dashboard_config_history()
+    assert response.status_code == 200
+    assert payload["status"] == "succeeded"
+    assert payload["profile"]["status"] == "available"
+    assert payload["config_path"].startswith(".halpha/configs/")
+    assert payload["config_path"].endswith(".yaml")
+    assert payload["omitted"]["raw_config_text_embedded"] is True
+    assert payload["profile"]["config_selection"]["active_id"]
+    assert error is None
+    assert Path(persisted["config_path"]).as_posix() == payload["config_path"]
+    assert Path(history[0]).as_posix() == payload["config_path"]
+    assert str(tmp_path) not in str(payload)
+    assert source_path.read_text(encoding="utf-8") not in str(payload)
+
+
 def test_dashboard_health_omits_external_absolute_config_path(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -260,6 +299,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
     assert 'data-services-endpoint="/api/services"' in response.text
     assert 'data-settings-endpoint="/api/config/profile"' in response.text
+    assert 'data-config-select-endpoint="/api/config/select"' in response.text
+    assert 'data-config-import-endpoint="/api/config/import"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert 'data-display-timezone="Asia/Shanghai"' in response.text
     assert 'data-timestamp-hour-cycle="24h"' in response.text
@@ -284,6 +325,13 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Controls" in response.text
     assert "Intelligence" in response.text
     assert "Overview" in response.text
+    assert 'id="settings-config-select"' in response.text
+    assert 'id="settings-config-browse"' in response.text
+    assert 'id="settings-config-file-input"' in response.text
+    assert 'id="settings-load-config"' not in response.text
+    assert 'data-job-intent="validate"' not in response.text
+    assert "Last validated" not in response.text
+    assert "Validation results" not in response.text
     assert "Intelligence shared stores" in response.text
     assert "Coverage timeline" in response.text
     assert "Topic volume over time" not in response.text
@@ -1911,9 +1959,9 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
     ]
     assert payload["commands"]["options"]["evaluation_modes"] == ["backtest", "experiment", "optimize"]
     assert payload["commands"]["options"]["action_scopes"]["backtest"] == {
-        "window_policy": "configured_latest_lookback",
-        "range_supported": False,
-        "label": "Configured latest lookback",
+        "window_policy": "selected_profile_range",
+        "range_supported": True,
+        "label": "Selected profile range",
     }
     assert payload["commands"]["options"]["strategy_families"] == [
         "mean_reversion",
@@ -1928,6 +1976,11 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
     assert specs["tsmom_vol_scaled"]["parameter_schema"]["return_window"]["default"] == 20
     assert specs["tsmom_vol_scaled"]["optimization_space"]["return_window"]["values"] == [10, 20, 40]
     assert specs["bollinger_rsi_long_short"]["output_position_policy"] == "research_signed_target_exposure"
+    profiles = payload["commands"]["options"]["strategy_profiles"]
+    assert {profile["strategy_name"] for profile in profiles} == set(payload["commands"]["options"]["strategy_names"])
+    assert profiles[0]["source"] == "binance"
+    assert profiles[0]["symbol"] == "BTCUSDT"
+    assert profiles[0]["timeframe"] == "1m"
     assert payload["commands"]["options"]["sources"] == [
         "binance",
         "binance_spot",

@@ -178,7 +178,7 @@ def test_dashboard_exposes_primary_filter_controls(tmp_path: Path, selector_id: 
 def test_dashboard_exposes_tabs_and_detail_rails_for_primary_flows(tmp_path: Path, contract: str) -> None:
     html = _dashboard_html(tmp_path)
 
-    assert 'id="config-profile" class="readonly-value"' in html
+    assert 'id="settings-config-select"' in html
     assert contract in html
 
 
@@ -196,7 +196,6 @@ def test_dashboard_report_job_controls_expose_dom_contracts(tmp_path: Path) -> N
     parser = DashboardShellParser()
     parser.feed(html)
 
-    assert "data-job-intent" in parser.data_attrs
     assert "data-preview-endpoint" in parser.data_attrs
     assert 'data-report-job="generate"' in html
     assert 'id="topbar-report-generate"' in html
@@ -226,14 +225,26 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     for selector_id in (
         "strategy-workbench",
         "strategy-operation-tabs",
-            "strategy-symbol",
-            "strategy-timeframe",
-            "strategy-name",
-            "strategy-evaluation-window",
-            "strategy-ohlcv-source-options",
-            "strategy-backtest-progress",
-            "strategy-experiment-results",
-            "strategy-optimize-results",
+        "strategy-backtest-board",
+        "strategy-backtest-dialog-backdrop",
+        "strategy-backtest-dialog",
+        "strategy-profile",
+        "strategy-profile-summary",
+        "strategy-backtest-range",
+        "strategy-backtest-date-range",
+        "strategy-backtest-start",
+        "strategy-backtest-end",
+        "strategy-backtest-submit",
+        "strategy-symbol",
+        "strategy-timeframe",
+        "strategy-name",
+        "strategy-evaluation-window",
+        "strategy-ohlcv-source-options",
+        "strategy-backtest-progress",
+        "strategy-experiment-results",
+        "strategy-optimize-profile",
+        "strategy-optimize-profile-summary",
+        "strategy-optimize-results",
         "strategy-chart-source",
         "strategy-chart-symbol",
         "strategy-chart-timeframe",
@@ -249,17 +260,6 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
         "strategy-collect-end",
         "strategy-collect-timeline",
         "strategy-collect-progress",
-        "strategy-export-source",
-        "strategy-export-symbol",
-        "strategy-export-timeframe",
-        "strategy-export-range",
-        "strategy-export-date-range",
-        "strategy-export-start",
-        "strategy-export-end",
-        "strategy-export-as-of",
-        "strategy-export-format",
-        "strategy-export-progress",
-        "strategy-data-job-panel",
         "intel-overview-panel",
         "intel-overview-kpis",
         "intel-overview-content",
@@ -316,7 +316,6 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     for action in (
         "strategy-timeline",
         "strategy-collect",
-        "strategy-export",
         "intel-collect",
     ):
         assert f'data-data-viewer-action="{action}"' in html
@@ -362,9 +361,18 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "renderStrategyExperimentResults" in script
     assert "renderStrategyOptimizeResults" in script
     assert "renderCollectTimelineResults" in script
-    assert "runStrategyExport" in script
+    assert "openStrategyBacktestDialog" in script
+    assert "strategyProfiles" in script
     assert "renderOperationProgress" in script
     assert "renderIntelligenceOverview" in script
+    assert "loadIntelligenceOverviewPreviews" in script
+    assert "intelligenceOverviewPreviewRequest" in script
+    assert "renderIntelOverviewSparkline" in script
+    assert "wireIntelligenceOverviewSparklineHover" in script
+    assert 'class="intel-overview-spark-hit" tabindex="0"' in script
+    assert "Latest intelligence" in script
+    assert "Anomaly radar" in script
+    assert "High-impact events" not in script
     assert "loadIntelligenceDataPanels" in script
     assert "renderIntelligenceTimeline" in script
     assert "renderIntelligencePreview" in script
@@ -407,7 +415,6 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     ):
         assert f'"{status}"' in script
     assert "Check the timeline to distinguish no_data from not_collected, partial, failed, stale, or unknown coverage." in script
-    assert "Creating bounded export under data/exports." in script
 
 
 def test_dashboard_monitor_service_controls_expose_dom_contracts(tmp_path: Path) -> None:
@@ -435,10 +442,30 @@ def test_dashboard_storage_and_settings_controls_expose_dom_contracts(tmp_path: 
     assert "data-delete-endpoint" in parser.data_attrs
     assert "data-services-endpoint" in parser.data_attrs
     assert "data-settings-endpoint" in parser.data_attrs
+    assert "data-config-select-endpoint" in parser.data_attrs
+    assert "data-config-import-endpoint" in parser.data_attrs
+    assert 'id="settings-config-select"' in html
+    assert 'id="settings-config-browse"' in html
+    assert 'id="settings-config-file-input"' in html
+    assert 'id="settings-config-error"' in html
+    assert 'id="settings-load-config"' not in html
+    assert 'id="settings-valid-pill"' not in html
+    assert 'id="settings-last-validated"' not in html
+    assert 'data-job-intent="validate"' not in html
+    assert "Change summary" not in html
+    assert "Validation results" not in html
     assert "data-setting-path" in script
     assert "dashboard.timestamp_hour_cycle" in script
     assert "dashboard.timestamp_date_order" in script
     assert 'min="0" max="1" step="0.01"' in script
+    assert "renderSettingsConfigSelector" in script
+    assert "loadSelectedConfigCandidate" in script
+    assert "importSelectedConfigFile" in script
+    assert "fieldErrorsFromMessages" in script
+    assert "setting-control-stack" in script
+    assert ".toast.error" in css
+    assert ".settings-config-picker" in css
+    assert ".field-error" in css
     assert "body[data-theme=\"solar\"] .settings-nav button.active" in css
     assert "body[data-theme=\"solar\"] .settings-nav button.active .settings-nav-chevron" in css
     assert "body[data-theme=\"solar\"] .choice-check::after" in css
@@ -460,6 +487,26 @@ def test_dashboard_surface_text_has_global_overflow_guards(tmp_path: Path) -> No
     assert ".control-grid .ghost-button" in css
     assert ".toolbar-actions .primary-button" in css
     assert "body[data-theme=\"solar\"] .control-grid .ghost-button" in css
+
+
+def test_dashboard_intelligence_overview_is_reader_oriented(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert ".intel-overview-pulse" in css
+    assert ".intel-overview-dashboard" in css
+    assert ".intel-overview-record-row" in css
+    assert ".intel-overview-sparkline" in css
+    assert ".intel-overview-spark-point.hovered .intel-overview-spark-hover" in css
+    assert ".intel-overview-spark-cross.horizontal" in css
+    assert "renderIntelOverviewTextEvents" in script
+    assert "renderIntelOverviewMacroAgenda" in script
+    assert "renderIntelOverviewAnomalyRadar" in script
+    assert "renderIntelOverviewChartSection" in script
+    assert "data-intel-overview-open" in script
+    assert "Shared store coverage" not in script
+    assert "Recent intelligence artifacts" not in script
 
 
 def test_dashboard_overview_report_metrics_use_spaced_cards(tmp_path: Path) -> None:
@@ -677,9 +724,14 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "OHLCV only" in script
     assert 'data-strategy-operation-tab="backtest"' in html
     assert 'data-strategy-operation-tab="collect"' in html
-    assert 'data-strategy-operation-tab="export"' in html
-    assert "As of help" in html
-    assert "Optional ISO timestamp for no-lookahead reads" in html
+    assert 'data-strategy-operation-tab="export"' not in html
+    assert "As of help" not in html
+    assert "Optional ISO timestamp for no-lookahead reads" not in html
+    assert 'id="strategy-profile"' in html
+    assert 'id="strategy-backtest-dialog"' in html
+    assert ".strategy-backtest-board" in css
+    assert ".strategy-run-card" in css
+    assert ".strategy-profile-summary" in css
     assert ".operation-progress" in css
     assert ".collect-timeline-track" in css
     assert ".date-range-field" in css
@@ -720,6 +772,14 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "sampleVisualization" not in script
     assert "sampleIntelItems" not in script
     assert 'id="strategy-evaluation-window"' in html
+    assert 'aria-label="Backtest window help" data-tooltip=' not in html
+    assert 'aria-label="Backtest window help" title=' not in html
+    assert ".app-tooltip" in css
+    assert "body[data-theme=\"solar\"] .app-tooltip" in css
+    assert "initializeTooltips" in script
+    assert "migrateNativeTooltips" in script
+    assert "MutationObserver" in script
+    assert "removeAttribute(\"title\")" in script
     assert "chart-tools" in html
     assert "tool-dot" in html
     chart_controls = html[html.index('id="strategy-chart-range"') : html.index('id="backtest-chart"')]
@@ -763,6 +823,11 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert ".onchain-chart-card" in css
     assert ".onchain-chart-scroll" in css
     assert ".onchain-chart-svg" in css
+    assert ".onchain-chart-point:hover .onchain-chart-hover-layer" in css
+    assert ".onchain-chart-hover-line.horizontal" in css
+    assert ".onchain-chart-axis-label" in css
+    assert "pointer-events: all;" in css
+    assert "mask-image: linear-gradient(90deg" in css
     assert ".onchain-selected-card" in css
     assert ".derivatives-market-preview" in css
     assert ".derivatives-board-card" in css
@@ -829,6 +894,8 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "renderDerivativesMarketPreview" in script
     assert "renderMarketAnomalyPreview" in script
     assert "onchainMetricSeries" in script
+    assert "chartPointTooltipLines" in script
+    assert "renderChartPointHoverLayer" in script
     assert "data-onchain-class" in script
     assert "data-onchain-metric" in script
     assert "data-onchain-point-index" in script
@@ -838,6 +905,9 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "data-anomaly-severity" in script
     assert "data-anomaly-index" in script
     assert "wireOnchainChartDragScroll" in script
+    assert "wireOnchainScrollableTabs" in script
+    assert "wireHorizontalDragScroll" in script
+    assert "suppressClickAfterDrag" in script
     assert "data-macro-calendar-view" in script
     assert "data-macro-list-index" in script
     assert "data-macro-event-index" in script
