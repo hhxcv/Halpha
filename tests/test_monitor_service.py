@@ -144,7 +144,7 @@ def test_monitor_restart_launches_with_previous_terminal_instance_id(
     }
 
 
-def test_monitor_service_triggers_core_schedule_and_monitor_jobs(tmp_path: Path) -> None:
+def test_monitor_service_supervises_core_without_creating_jobs(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, no_codex=False, text_enabled=True)
     config = load_config(config_path)
     core_client = _FakeCoreClient()
@@ -161,11 +161,8 @@ def test_monitor_service_triggers_core_schedule_and_monitor_jobs(tmp_path: Path)
     health_state = _health_state(config_path)
 
     assert core_client.ensure_calls == 2
-    assert core_client.dispatch_calls == 2
-    assert core_client.monitor_job_calls == [
-        {"instance_id": health_state["service"]["service_instance_id"], "cycle_sequence": 1},
-        {"instance_id": health_state["service"]["service_instance_id"], "cycle_sequence": 2},
-    ]
+    assert not hasattr(core_client, "dispatch_due_daily_report")
+    assert not hasattr(core_client, "create_monitor_cycle_job")
     assert health_state["cycle_count"] == 0
     assert health_state["latest_cycle_status"] == "missing"
     assert health_state["service"]["status"] == "stopped"
@@ -197,16 +194,15 @@ def test_monitor_service_observes_graceful_stop_during_wait(tmp_path: Path) -> N
     health_state = _health_state(config_path)
 
     assert core_client.ensure_calls == 1
-    assert core_client.dispatch_calls == 1
     assert health_state["cycle_count"] == 0
     assert health_state["service"]["status"] == "stopped"
     assert sleep_calls == 1
 
 
-def test_monitor_service_records_core_dispatch_failure(tmp_path: Path) -> None:
+def test_monitor_service_records_core_health_failure(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, interval_seconds=1, text_enabled=True)
     config = load_config(config_path)
-    core_client = _FakeCoreClient(fail_dispatch=True)
+    core_client = _FakeCoreClient(fail_ensure=True)
     sleeps: list[float] = []
 
     run_monitor_service(
@@ -220,10 +216,8 @@ def test_monitor_service_records_core_dispatch_failure(tmp_path: Path) -> None:
     health_state = _health_state(config_path)
 
     assert core_client.ensure_calls == 1
-    assert core_client.dispatch_calls == 1
-    assert core_client.monitor_job_calls == []
     assert health_state["service"]["status"] == "stopped"
-    assert health_state["service"]["last_error"]["message"] == "core dispatch failed"
+    assert health_state["service"]["last_error"]["message"] == "core health failed"
 
 
 class _FakeProcess:
@@ -236,31 +230,15 @@ def _fail_launch(*args: Any, **kwargs: Any) -> Any:
 
 
 class _FakeCoreClient:
-    def __init__(self, *, fail_dispatch: bool = False) -> None:
-        self.fail_dispatch = fail_dispatch
+    def __init__(self, *, fail_ensure: bool = False) -> None:
+        self.fail_ensure = fail_ensure
         self.ensure_calls = 0
-        self.dispatch_calls = 0
-        self.monitor_job_calls: list[dict[str, Any]] = []
 
     def ensure_running(self) -> dict[str, Any]:
         self.ensure_calls += 1
+        if self.fail_ensure:
+            raise RuntimeError("core health failed")
         return {"status": "running", "instance_id": "core-1"}
-
-    def dispatch_due_daily_report(self) -> dict[str, Any]:
-        self.dispatch_calls += 1
-        if self.fail_dispatch:
-            raise RuntimeError("core dispatch failed")
-        return {
-            "status": "skipped",
-            "schedule": {"enabled": False, "next_run_at": None},
-            "job": None,
-            "warnings": ["daily report schedule is disabled."],
-            "errors": [],
-        }
-
-    def create_monitor_cycle_job(self, *, instance_id: str, cycle_sequence: int) -> dict[str, Any]:
-        self.monitor_job_calls.append({"instance_id": instance_id, "cycle_sequence": cycle_sequence})
-        return {"status": "queued", "job_id": f"job-{cycle_sequence}"}
 
 
 def _write_config(

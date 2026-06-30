@@ -5,8 +5,9 @@ implementation contract, not a milestone plan.
 
 ## Purpose
 
-The monitor path turns repeated manual research runs into explicit local cycles.
-It must remain observable, bounded, and local-first:
+The monitor path has two distinct surfaces: explicit monitor cycle commands for
+bounded reassessment, and a resident System Monitor service for Core liveness.
+Both must remain observable, bounded, and local-first:
 
 - no hidden or dashboard-owned background service;
 - no hosted scheduler or dashboard assumption;
@@ -19,7 +20,8 @@ local monitor cycle or finite diagnostic loop, starts one resident Monitor
 service, writes immutable cycle manifests for explicit or diagnostic cycles,
 persists alert archive, cooldown, cycle, service-health, and source-cadence
 state in `.halpha/state.sqlite`, and exposes read-only monitor health
-inspection.
+inspection. Automatic scheduling and command-job creation are Core
+responsibilities, not resident Monitor responsibilities.
 
 The resident Monitor service is one of exactly two supported resident Halpha
 process roles: `core` and `monitor`. It is explicit, unique within one runtime
@@ -28,18 +30,25 @@ root, and managed through the shared lifecycle contract in
 
 Target Monitor responsibility:
 
-- remain the single lightweight checker for one runtime root;
-- trigger Core-owned monitor jobs rather than execute product tasks directly;
-- own daily schedule due checks and call Core for due dispatch;
+- remain the single lightweight Core-health checker for one runtime root;
 - check Core health and attempt Core start after stale or terminal Core state;
-- keep running through ordinary source, network, and collection failures by
-  recording warnings or errors and retrying on the next cadence;
-- avoid Codex and report generation during resident cycles;
-- update source groups by configured cadence and publish changed source scope;
-- avoid full material, experiment, product-validation, report, and Codex paths
-  when source refresh has no changed evidence;
+- keep running through recoverable Core health/start failures by recording
+  bounded warnings or errors and retrying with backoff;
+- avoid Codex, report generation, data collection, schedule dispatch, command
+  job creation, and product pipeline work inside the resident Monitor process;
 - never trade, access accounts, access wallets, place orders, or compute
   position sizing.
+
+Target Core scheduler responsibility:
+
+- claim due daily report schedule occurrences from shared schedule state;
+- create visible command jobs for due daily report runs;
+- create automatic `monitor_once` command jobs when `monitor.enabled` is true;
+- honor `monitor.interval_seconds` before creating the next automatic
+  `monitor_once` job;
+- skip automatic `monitor_once` creation when another monitor-cycle job is
+  queued, running, or cancel-requested;
+- keep scheduler decisions visible through schedule and command-job state.
 
 The resident Monitor must not be owned by Dashboard UI, a schedule process, a
 hidden supervisor, a broker, a worker pool, or another resident Halpha process.
@@ -51,7 +60,7 @@ The optional `monitor` config section supports these fields:
 | Field | Default | Contract |
 | --- | --- | --- |
 | `enabled` | `false` | Local monitor feature gate. It does not start a hidden process by itself. |
-| `interval_seconds` | `300` | Positive integer interval between successful resident cycles and finite-loop diagnostic cycles. |
+| `interval_seconds` | `300` | Positive integer interval between successful resident Core-health checks, automatic Core-owned monitor-cycle job ticks, and finite-loop diagnostic cycles. |
 | `max_cycles` | `1` | Positive integer cycle limit for the diagnostic finite-loop command only. It is not a resident-service termination rule. |
 | `failure_backoff_max_seconds` | `3600` | Positive integer cap for resident Monitor retry backoff after recoverable cycle failures. |
 | `cooldown_seconds` | `3600` | Positive integer duplicate-alert cooldown window. |
@@ -86,11 +95,11 @@ When generated `analysis/alert_decisions.json` exists, the cycle commits alert
 archive records, suppression results, cooldown updates, and the monitor cycle
 index to `.halpha/state.sqlite`.
 
-Monitor cycle, finite-loop, and resident source-cadence paths acquire the
-runtime-root mutation lease before writing monitor cycle artifacts or starting
-product pipeline work. If another live mutating product workflow owns the
-lease, the monitor command fails with an explicit `runtime_mutation_lease`
-reason and does not create a partial cycle manifest.
+Monitor cycle, finite-loop, and explicit source-cadence reassessment paths
+acquire the runtime-root mutation lease before writing monitor cycle artifacts
+or starting product pipeline work. If another live mutating product workflow
+owns the lease, the monitor command fails with an explicit
+`runtime_mutation_lease` reason and does not create a partial cycle manifest.
 
 Current implemented resident-service commands:
 
@@ -102,12 +111,12 @@ python -m halpha monitor restart --config config.example.yaml
 ```
 
 The resident Monitor service is unique per runtime root through the shared
-service lifecycle controller. It runs no-Codex source-cadence refresh cycles
-continuously until explicit stop, records heartbeat and terminal lifecycle
-state, persists current service health in `.halpha/state.sqlite`, stores
-routine no-due and all-source no-change polling cycles in runtime state only,
-and isolates recoverable source failures with per-source bounded exponential
-backoff.
+service lifecycle controller. It checks Core liveness, starts or retries Core
+when lifecycle state requires it, records heartbeat and terminal lifecycle
+state, persists current service health in `.halpha/state.sqlite`, and isolates
+recoverable Core health/start failures with bounded exponential backoff. It does
+not dispatch schedules, create command jobs, execute source-cadence refreshes,
+or run product pipeline work.
 
 Current implemented diagnostic finite-loop command:
 
@@ -133,11 +142,11 @@ export raw alert records, deliver notifications, trade, or access accounts.
 ## Cycle Manifest
 
 Explicit one-cycle and finite-loop diagnostic monitor paths write manifests
-under the configured monitor output directory. Resident source-cadence cycles
-write file manifests only when source evidence changed or when bounded failure
-diagnostics are needed. Routine no-due and all-source no-change source-cadence
-cycles persist to `.halpha/state.sqlite` only; their cycle index uses
-`.halpha/state.sqlite` as the `cycle_manifest` ref.
+under the configured monitor output directory. Explicit source-cadence
+reassessment cycles write file manifests only when source evidence changed or
+when bounded failure diagnostics are needed. Routine no-due and all-source
+no-change source-cadence cycles persist to `.halpha/state.sqlite` only; their
+cycle index uses `.halpha/state.sqlite` as the `cycle_manifest` ref.
 
 The file-backed path shape is:
 
@@ -162,8 +171,8 @@ Required manifest fields:
 - `source_artifacts`: linked product-run artifact refs when available.
 - `warnings`, `errors`: bounded actionable strings.
 
-Resident source-cadence file manifests also include `source_cadence` with due
-sources, changed sources, failed sources, per-source results, and the broad
+Source-cadence diagnostic file manifests also include `source_cadence` with
+due sources, changed sources, failed sources, per-source results, and the broad
 material/report/Codex tasks excluded from the fast path.
 
 The cycle manifest stores references and counts. It must not embed full raw

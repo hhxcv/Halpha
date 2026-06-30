@@ -4,6 +4,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+import logging
 from pathlib import Path
 import socket
 import subprocess
@@ -37,6 +38,7 @@ from halpha.dashboard.constants import (
     DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
     DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE,
 )
+from halpha.dashboard.core_scheduler import DEFAULT_CORE_SCHEDULER_TICK_SECONDS, CoreScheduler
 from halpha.dashboard.intelligence import dashboard_text_intelligence
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
@@ -63,6 +65,7 @@ from halpha.storage import artifact_base
 from halpha.time_display import configured_display_timezone
 
 
+DASHBOARD_LOGGER = logging.getLogger(__name__)
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
 DEFAULT_DASHBOARD_PORT = 8765
 LOCAL_DASHBOARD_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -124,6 +127,53 @@ class DashboardConfigContext:
             if self.config is None or self.config_path is None:
                 return None
             return self.config, self.config_path
+
+    def active_runtime(self) -> tuple[dict[str, Any], Path, CommandJobManager, DashboardScheduleManager] | None:
+        with self._lock:
+            if (
+                self.config is None
+                or self.config_path is None
+                or self.job_manager is None
+                or self.schedule_manager is None
+            ):
+                return None
+            return self.config, self.config_path, self.job_manager, self.schedule_manager
+
+
+def _run_core_scheduler_loop(context: DashboardConfigContext, stop_event: Event) -> None:
+    while not stop_event.is_set():
+        wait_seconds = DEFAULT_CORE_SCHEDULER_TICK_SECONDS
+        runtime = context.active_runtime()
+        if runtime is not None:
+            config, config_path, job_manager, schedule_manager = runtime
+            try:
+                tick = CoreScheduler.from_core_managers(
+                    config,
+                    config_path=config_path,
+                    job_manager=job_manager,
+                    schedule_manager=schedule_manager,
+                ).run_once()
+                wait_seconds = _core_scheduler_wait_seconds(tick)
+            except Exception as exc:
+                DASHBOARD_LOGGER.warning(
+                    "core scheduler tick failed.",
+                    extra={
+                        "event": "core_scheduler.tick_failed",
+                        "error": sanitize_dashboard_message(str(exc) or "core scheduler tick failed.", config_path=config_path),
+                    },
+                )
+        if stop_event.wait(wait_seconds):
+            break
+
+
+def _core_scheduler_wait_seconds(payload: dict[str, Any]) -> float:
+    try:
+        parsed = float(payload.get("next_tick_seconds"))
+    except (TypeError, ValueError):
+        return DEFAULT_CORE_SCHEDULER_TICK_SECONDS
+    if parsed <= 0:
+        return DEFAULT_CORE_SCHEDULER_TICK_SECONDS
+    return max(1.0, min(DEFAULT_CORE_SCHEDULER_TICK_SECONDS, parsed))
 
 
 def load_dashboard_startup_config(config_arg: str | None) -> DashboardStartupConfig:
@@ -250,6 +300,7 @@ def create_dashboard_app(
     host: str = DEFAULT_DASHBOARD_HOST,
     port: int = DEFAULT_DASHBOARD_PORT,
     service_lifecycle: Callable[[], dict[str, Any]] | None = None,
+    start_core_scheduler: bool = False,
 ) -> Any:
     try:
         from fastapi import Body, FastAPI, Response
@@ -262,6 +313,27 @@ def create_dashboard_app(
     context = DashboardConfigContext(config, config_path=config_path)
 
     app = FastAPI(title="Halpha Dashboard", version="0.0.0")
+    scheduler_stop_event = Event()
+    scheduler_thread: Thread | None = None
+
+    @app.on_event("startup")
+    def start_core_scheduler_loop() -> None:
+        nonlocal scheduler_thread
+        if start_core_scheduler is not True:
+            return
+        scheduler_thread = Thread(
+            target=_run_core_scheduler_loop,
+            args=(context, scheduler_stop_event),
+            name="halpha-core-scheduler",
+            daemon=True,
+        )
+        scheduler_thread.start()
+
+    @app.on_event("shutdown")
+    def stop_core_scheduler_loop() -> None:
+        scheduler_stop_event.set()
+        if scheduler_thread is not None:
+            scheduler_thread.join(timeout=3)
 
     @app.middleware("http")
     async def no_store_dashboard_responses(_request: Any, call_next: Any) -> Any:
@@ -647,6 +719,7 @@ def run_dashboard_service(
         config_path=config_path,
         host=host,
         port=port,
+        start_core_scheduler=True,
         service_lifecycle=lambda: _dashboard_lifecycle_payload(
             repository.inspect(DASHBOARD_SERVICE_ROLE),
             expected_instance_id=result.instance_id,

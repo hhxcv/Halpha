@@ -31,7 +31,7 @@ MAX_RECORDED_MISSED_OCCURRENCES = 10
 SUPPORTED_DAILY_REPORT_JOB_INTENTS = {"run", "run_no_codex"}
 DEFAULT_DAILY_REPORT_JOB_INTENT = "run"
 DEFAULT_DASHBOARD_TIMEZONE = "Asia/Shanghai"
-SCHEDULE_SERVICE_AUTOMATIC_DISPATCH = "monitor_service"
+SCHEDULE_SERVICE_AUTOMATIC_DISPATCH = "core_scheduler"
 
 
 class DashboardScheduleManager:
@@ -284,7 +284,7 @@ class DashboardScheduleManager:
                     {
                         "intent": intent,
                         "params": params,
-                        "requested_by": "Monitor",
+                        "requested_by": "Core",
                         "requester": {
                             "source": "daily_report_schedule",
                             "dispatch_kind": "automatic",
