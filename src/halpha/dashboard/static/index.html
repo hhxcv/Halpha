@@ -101,7 +101,6 @@
             <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtests</button>
             <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiments</button>
             <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
-            <button class="tab-button" type="button" data-strategy-operation-tab="collect">Collect</button>
           </div>
         </div>
         <div class="topbar-actions" id="global-page-actions">
@@ -209,164 +208,150 @@
             <div class="strategy-operation-panel" data-strategy-operation-panel="backtest">
               <div class="strategy-panel-header">
                 <div>
-                  <h2 class="panel-title">Backtest review</h2>
-                  <p class="panel-copy">Select a stored run to inspect its market overlay, trades, equity, drawdown, gates, and warnings.</p>
+                  <h2 class="panel-title">Backtest workspace</h2>
+                  <p class="panel-copy">Run one configured strategy profile, then review stored evaluations grouped by instrument.</p>
                 </div>
                 <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
               </div>
               <div id="strategy-backtest-progress" class="operation-progress hidden"></div>
+              <div id="strategy-profile-overview" class="strategy-profile-overview"></div>
               <div id="strategy-backtest-board" class="strategy-backtest-board"><div class="message">Loading backtest runs.</div></div>
-              <div class="metric-strip" id="strategy-metrics"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="experiment">
               <div class="strategy-panel-header">
                 <div>
-                  <h2 class="panel-title">Experiment review</h2>
-                  <p class="panel-copy">Use experiments to compare configured strategies against the benchmark suite and gate evidence.</p>
+                  <h2 class="panel-title">Experiment board</h2>
+                  <p class="panel-copy">Compare configured candidates against the benchmark suite and gate evidence. Strategy construction stays in code.</p>
                 </div>
                 <button class="primary-button" type="button" id="run-experiment-button">Run experiment</button>
               </div>
+              <div id="strategy-experiment-progress" class="operation-progress hidden"></div>
               <div class="strategy-experiment-workspace">
                 <section class="strategy-review-card">
                   <div class="strategy-card-heading">
-                    <strong>Benchmark scope</strong>
+                    <strong>Candidate universe</strong>
                     <span id="strategy-experiment-window">Configured benchmark suite</span>
                   </div>
                   <select id="strategy-experiment-mode" class="hidden" aria-hidden="true"><option value="benchmark_suite">Configured benchmark suite</option></select>
-                  <p>The dashboard launches the same deterministic experiment path as the CLI. Benchmark windows stay config-owned so results remain comparable.</p>
-                </section>
-                <section class="strategy-review-card">
-                  <div class="field"><label for="strategy-experiment-family">Strategy family</label><select id="strategy-experiment-family" class="select-input"></select></div>
                   <div id="strategy-experiment-strategies" class="strategy-strategy-list"></div>
                 </section>
+                <section class="strategy-review-card">
+                  <div class="strategy-card-heading">
+                    <strong>Latest evidence</strong>
+                    <span>Benchmark, candidates, warnings</span>
+                  </div>
+                  <div id="strategy-experiment-results" class="strategy-result-panel"></div>
+                </section>
               </div>
-              <div id="strategy-experiment-progress" class="operation-progress hidden"></div>
-              <div id="strategy-experiment-results" class="strategy-result-panel"></div>
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="optimize">
               <div class="strategy-panel-header">
                 <div>
-                  <h2 class="panel-title">Optimization review</h2>
-                  <p class="panel-copy">Run bounded tuning against configured evidence, then inspect robustness. It never mutates active strategy configuration.</p>
+                  <h2 class="panel-title">Optimization evidence</h2>
+                  <p class="panel-copy">Review bounded parameter evidence for an existing strategy profile. Results are research evidence, not adopted configuration.</p>
                 </div>
                 <button class="primary-button" type="button" id="run-optimize-button">Run optimization</button>
               </div>
+              <div id="strategy-optimize-progress" class="operation-progress hidden"></div>
               <div class="strategy-optimize-workspace">
                 <section class="strategy-review-card">
                   <div class="field"><label for="strategy-optimize-profile">Strategy profile</label><select id="strategy-optimize-profile" class="select-input"></select></div>
                   <div class="strategy-profile-summary" id="strategy-optimize-profile-summary"></div>
                 </section>
-                <section class="strategy-review-card">
-                  <div class="strategy-card-heading">
-                    <strong>Bounded search</strong>
-                    <span id="strategy-optimize-window">Configured benchmark suite</span>
-                  </div>
+                <details class="strategy-advanced">
+                  <summary>Advanced run controls</summary>
                   <div class="strategy-optimize-compact-grid">
                     <div class="field"><label for="strategy-optimize-max-combinations">Max combinations</label><input id="strategy-optimize-max-combinations" class="text-input" type="number" min="1" step="1" value="80"></div>
                     <div class="field"><label for="strategy-optimize-train-rows">Train rows</label><input id="strategy-optimize-train-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
                     <div class="field"><label for="strategy-optimize-validation-rows">Validation rows</label><input id="strategy-optimize-validation-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
                     <div class="field"><label for="strategy-optimize-step-rows">Step rows</label><input id="strategy-optimize-step-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
                   </div>
+                  <div class="strategy-optimize-grid strategy-action-grid">
+                    <div class="field"><label for="strategy-optimize-source">Source</label><input id="strategy-optimize-source" class="text-input" type="text" readonly></div>
+                    <div class="field"><label for="strategy-optimize-symbol">Symbol</label><select id="strategy-optimize-symbol" class="select-input"></select></div>
+                    <div class="field"><label for="strategy-optimize-timeframe">Timeframe</label><select id="strategy-optimize-timeframe" class="select-input"></select></div>
+                    <div class="field"><label for="strategy-optimize-family">Family</label><select id="strategy-optimize-family" class="select-input"></select></div>
+                    <div class="field"><label for="strategy-optimize-name">Strategy</label><select id="strategy-optimize-name" class="select-input"></select></div>
+                  </div>
+                </details>
+                <section class="strategy-review-card">
+                  <div class="strategy-card-heading">
+                    <strong>Search space</strong>
+                    <span id="strategy-optimize-window">Configured benchmark suite</span>
+                  </div>
+                  <div id="strategy-optimization-space" class="strategy-optimization-space"></div>
+                </section>
+                <section class="strategy-review-card">
+                  <div class="strategy-card-heading">
+                    <strong>Latest optimization result</strong>
+                    <span>Selection, robustness, failed candidates</span>
+                  </div>
+                  <div id="strategy-optimize-results" class="strategy-result-panel"></div>
                 </section>
               </div>
-              <details class="strategy-advanced">
-                <summary>Advanced target override</summary>
-                <div class="strategy-optimize-grid strategy-action-grid">
-                  <div class="field"><label for="strategy-optimize-source">Source</label><input id="strategy-optimize-source" class="text-input" type="text" readonly></div>
-                  <div class="field"><label for="strategy-optimize-symbol">Symbol</label><select id="strategy-optimize-symbol" class="select-input"></select></div>
-                  <div class="field"><label for="strategy-optimize-timeframe">Timeframe</label><select id="strategy-optimize-timeframe" class="select-input"></select></div>
-                  <div class="field"><label for="strategy-optimize-family">Family</label><select id="strategy-optimize-family" class="select-input"></select></div>
-                  <div class="field"><label for="strategy-optimize-name">Strategy</label><select id="strategy-optimize-name" class="select-input"></select></div>
-                </div>
-              </details>
-              <div id="strategy-optimization-space" class="strategy-optimization-space"></div>
-              <div id="strategy-optimize-progress" class="operation-progress hidden"></div>
-              <div id="strategy-optimize-results" class="strategy-result-panel"></div>
             </div>
-
-            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="collect">
-              <div class="data-viewer-header">
-                <h2 class="panel-title">OHLCV shared store <span id="strategy-data-status" class="status-pill pending">loading</span></h2>
-                <div id="strategy-data-issues" class="data-viewer-issues"></div>
+          </section>
+          <section id="strategy-backtest-detail" class="strategy-detail-view hidden" data-backtest-detail>
+            <section class="panel strategy-detail-header">
+              <button class="ghost-button compact-button" type="button" id="strategy-backtest-back">Back to runs</button>
+              <div class="strategy-detail-heading">
+                <span id="strategy-detail-kicker" class="drawer-kicker">Backtest detail</span>
+                <h2 id="strategy-detail-title">Select a backtest run</h2>
               </div>
-              <div class="strategy-collect-grid">
-                <div class="field"><label for="strategy-collect-source">Source</label><input id="strategy-collect-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
-                <div class="field"><label for="strategy-collect-symbol">Symbol</label><select id="strategy-collect-symbol" class="select-input"></select></div>
-                <div class="field"><label for="strategy-collect-timeframe">Timeframe</label><select id="strategy-collect-timeframe" class="select-input"></select></div>
-                <button class="ghost-button" type="button" id="strategy-collect-add-target">Add pair</button>
-              </div>
-              <div id="strategy-collect-targets" class="collect-target-list" aria-label="Selected collection targets"></div>
-              <div class="strategy-range-grid">
-                <div class="field"><label for="strategy-collect-range">Range preset</label><select id="strategy-collect-range" class="select-input"><option value="all">All stored coverage</option><option value="1d">Latest 1 day</option><option value="7d">Latest 1 week</option><option value="30d">Latest 30 days</option><option value="180d">Latest 180 days</option><option value="custom">Custom</option></select></div>
-                <div class="field date-range-field" data-date-range-picker data-start-input="strategy-collect-start" data-end-input="strategy-collect-end" data-preset-input="strategy-collect-range">
-                  <label for="strategy-collect-date-range">Time window</label>
-                  <button class="range-picker-trigger" type="button" id="strategy-collect-date-range"><span data-range-picker-label>Choose range</span><span class="range-picker-badge">UTC</span></button>
-                  <input id="strategy-collect-start" class="hidden" type="text" aria-hidden="true">
-                  <input id="strategy-collect-end" class="hidden" type="text" aria-hidden="true">
-                  <div class="range-picker-popover hidden" role="dialog" aria-label="Collection time window"></div>
+              <div id="strategy-metrics" class="metric-strip"></div>
+            </section>
+            <section class="panel kline-panel">
+              <div class="chart-header">
+                <div>
+                  <div id="strategy-chart-title" class="chart-title">OHLCV candlestick chart</div>
+                  <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
                 </div>
-                <button class="ghost-button" type="button" id="strategy-collect-refresh-timeline" data-data-viewer-action="strategy-timeline">Refresh timeline</button>
-                <button class="primary-button" type="button" id="strategy-collect-run" data-data-viewer-action="strategy-collect">Collect</button>
+                <div class="chart-selector" aria-label="OHLCV chart controls">
+                  <div class="field"><label for="strategy-chart-source">Source</label><input id="strategy-chart-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
+                  <div class="field"><label for="strategy-chart-symbol">Symbol</label><select id="strategy-chart-symbol" class="select-input"></select></div>
+                  <div class="field"><label for="strategy-chart-timeframe">Timeframe</label><select id="strategy-chart-timeframe" class="select-input"></select></div>
+                  <div class="field"><label for="strategy-chart-range">Candles</label><select id="strategy-chart-range" class="select-input"><option value="30" selected>Latest 30 candles</option><option value="90">Latest 90 candles</option><option value="180">Latest 180 candles</option><option value="360">Latest 360 candles</option></select></div>
+                  <button class="ghost-button chart-refresh-button" type="button" id="strategy-chart-refresh">Refresh candles</button>
+                  <span id="strategy-quote-label" class="status-pill ok">n/a</span>
+                </div>
               </div>
-              <div id="strategy-data-summary" class="summary-strip data-viewer-summary"></div>
-              <section class="strategy-collect-timeline-section">
-                <h3 class="subsection-title">Coverage timeline</h3>
-                <div id="strategy-collect-timeline" class="collect-timeline"><div class="message">Collection timeline follows the selected targets and range.</div></div>
+              <div class="chart-wrap">
+                <div class="chart-tools" aria-label="Candlestick chart window">
+                  <button class="tool-dot active" type="button" data-strategy-window="30" title="Show latest 30 candles">30</button>
+                  <button class="tool-dot" type="button" data-strategy-window="90" title="Show latest 90 candles">90</button>
+                  <button class="tool-dot" type="button" data-strategy-window="180" title="Show latest 180 candles">180</button>
+                  <button class="tool-dot" type="button" data-strategy-window="360" title="Show latest 360 candles">360</button>
+                </div>
+                <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="OHLCV candlestick chart"></svg>
+              </div>
+              <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>
+            </section>
+            <aside class="strategy-side">
+              <section class="panel panel-pad" id="strategy-params-panel">
+                <h2 class="panel-title" id="strategy-params-title">Strategy parameters</h2>
+                <table id="strategy-params" class="kv-table"></table>
               </section>
-              <div id="strategy-collect-progress" class="operation-progress hidden"></div>
-            </div>
-          </section>
-          <section class="panel kline-panel">
-            <div class="chart-header">
-              <div>
-                <div id="strategy-chart-title" class="chart-title">OHLCV candlestick chart</div>
-                <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
+              <section class="panel panel-pad" data-backtest-only="true">
+                <h2 class="panel-title">Recent operations</h2>
+                <div id="recent-trades"></div>
+              </section>
+              <section class="panel panel-pad" data-backtest-only="true">
+                <h2 class="panel-title">Backtest runs</h2>
+                <div id="backtest-runs"></div>
+              </section>
+            </aside>
+            <section class="panel strategy-tabs" data-backtest-only="true">
+              <div class="tabs" id="strategy-tabs">
+                <button class="tab-button active" type="button" data-strategy-tab="trades">Trades</button>
+                <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
+                <button class="tab-button" type="button" data-strategy-tab="drawdown">Drawdown</button>
+                <button class="tab-button" type="button" data-strategy-tab="summary">Performance summary</button>
+                <button class="tab-button" type="button" data-strategy-tab="list">Operation markers</button>
               </div>
-              <div class="chart-selector" aria-label="OHLCV chart controls">
-                <div class="field"><label for="strategy-chart-source">Source</label><input id="strategy-chart-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
-                <div class="field"><label for="strategy-chart-symbol">Symbol</label><select id="strategy-chart-symbol" class="select-input"></select></div>
-                <div class="field"><label for="strategy-chart-timeframe">Timeframe</label><select id="strategy-chart-timeframe" class="select-input"></select></div>
-                <div class="field"><label for="strategy-chart-range">Candles</label><select id="strategy-chart-range" class="select-input"><option value="30" selected>Latest 30 candles</option><option value="90">Latest 90 candles</option><option value="180">Latest 180 candles</option><option value="360">Latest 360 candles</option></select></div>
-                <button class="ghost-button chart-refresh-button" type="button" id="strategy-chart-refresh">Refresh candles</button>
-                <span id="strategy-quote-label" class="status-pill ok">n/a</span>
-              </div>
-            </div>
-            <div class="chart-wrap">
-              <div class="chart-tools" aria-label="Candlestick chart window">
-                <button class="tool-dot active" type="button" data-strategy-window="30" title="Show latest 30 candles">30</button>
-                <button class="tool-dot" type="button" data-strategy-window="90" title="Show latest 90 candles">90</button>
-                <button class="tool-dot" type="button" data-strategy-window="180" title="Show latest 180 candles">180</button>
-                <button class="tool-dot" type="button" data-strategy-window="360" title="Show latest 360 candles">360</button>
-              </div>
-              <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="OHLCV candlestick chart"></svg>
-            </div>
-            <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>
-          </section>
-          <aside class="strategy-side">
-            <section class="panel panel-pad" id="strategy-params-panel">
-              <h2 class="panel-title" id="strategy-params-title">Strategy parameters</h2>
-              <table id="strategy-params" class="kv-table"></table>
+              <div id="strategy-tab-content" style="padding-top: 14px;"></div>
             </section>
-            <section class="panel panel-pad" data-backtest-only="true">
-              <h2 class="panel-title">Recent operations</h2>
-              <div id="recent-trades"></div>
-            </section>
-            <section class="panel panel-pad" data-backtest-only="true">
-              <h2 class="panel-title">Backtest runs</h2>
-              <div id="backtest-runs"></div>
-            </section>
-          </aside>
-          <section class="panel strategy-tabs" data-backtest-only="true">
-            <div class="tabs" id="strategy-tabs">
-              <button class="tab-button active" type="button" data-strategy-tab="trades">Trades</button>
-              <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
-              <button class="tab-button" type="button" data-strategy-tab="drawdown">Drawdown</button>
-              <button class="tab-button" type="button" data-strategy-tab="summary">Performance summary</button>
-              <button class="tab-button" type="button" data-strategy-tab="list">Operation markers</button>
-            </div>
-            <div id="strategy-tab-content" style="padding-top: 14px;"></div>
           </section>
         </div>
         <div id="strategy-backtest-dialog-backdrop" class="drawer-backdrop hidden"></div>
