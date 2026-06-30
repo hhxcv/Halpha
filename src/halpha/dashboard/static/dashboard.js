@@ -112,6 +112,7 @@
       deletionPlan: null,
       strategies: null,
       selectedStrategyOutput: null,
+      strategyBacktestDetailOpen: false,
       strategyDataVisualization: null,
       strategyOperationTab: "backtest",
       strategyWindow: "30",
@@ -507,6 +508,13 @@
       const node = document.querySelector(selector);
       if (node) {
         node.innerHTML = html;
+      }
+    }
+
+    function setText(selector, value) {
+      const node = document.querySelector(selector);
+      if (node) {
+        node.textContent = value;
       }
     }
 
@@ -1623,8 +1631,7 @@
         ...sharedBacktests,
         ...standaloneBacktests.filter((item) => !sharedBacktestRefs.has(item?.output_dir || "")),
       ];
-      const pipeline = state.strategies?.pipeline?.artifacts || [];
-      return [...backtests, ...pipeline].filter(Boolean);
+      return backtests.filter(Boolean);
     }
 
     function strategyProfiles() {
@@ -1700,6 +1707,64 @@
         ${params ? `<p class="strategy-profile-params">${escapeHtml(params)}</p>` : ""}`;
     }
 
+    function renderStrategyProfileOverview() {
+      const node = document.querySelector("#strategy-profile-overview");
+      if (!node) return;
+      const profiles = strategyProfiles();
+      const outputs = strategyOutputs();
+      if (!profiles.length) {
+        node.innerHTML = `<div class="empty-state">
+          <strong>No strategy profiles are configured.</strong>
+          <span>Dashboard backtests require a strategy profile created by the strategy configuration pipeline.</span>
+        </div>`;
+        return;
+      }
+      const symbols = unique(profiles.map((profile) => profile.symbol));
+      const families = unique(profiles.map((profile) => label(profile.family || "uncategorized")));
+      const tunedCount = profiles.filter((profile) => profile.tuned).length;
+      const runCount = outputs.length;
+      node.innerHTML = `
+        <section class="strategy-profile-hero">
+          ${metricCell("Profiles", profiles.length, `${tunedCount} tuned target${tunedCount === 1 ? "" : "s"}`)}
+          ${metricCell("Backtest records", runCount, "stored evaluations")}
+          ${metricCell("Symbols", symbols.length, symbols.slice(0, 3).join(", ") || "n/a")}
+          ${metricCell("Families", families.length, families.slice(0, 3).join(", ") || "n/a")}
+        </section>
+        <div class="strategy-profile-grid">
+          ${profiles.slice(0, 12).map((profile) => {
+        const matchingRuns = outputs.filter((item) => strategyProfileMatchesIdentity(profile, strategyIdentity(item)));
+        const latest = matchingRuns[0];
+        const metrics = strategyMetrics(latest);
+        return `<button class="strategy-profile-card" type="button" data-strategy-profile-run="${escapeHtml(strategyProfileId(profile))}">
+            <span class="strategy-profile-card-top">
+              <strong>${escapeHtml(profile.display_name || profile.strategy_name || "Strategy profile")}</strong>
+              <span class="status-pill ${escapeHtml(profile.tuned ? "ok" : "pending")}">${escapeHtml(profile.tuned ? "configured" : "base")}</span>
+            </span>
+            <span class="strategy-run-meta">${escapeHtml([label(profile.family || "family n/a"), profile.source || "source n/a"].join(" / "))}</span>
+            <span class="strategy-run-metrics">
+              <span><b>${escapeHtml(metrics.totalReturn)}</b><small>latest return</small></span>
+              <span><b>${escapeHtml(metrics.sharpe)}</b><small>sharpe</small></span>
+              <span><b>${escapeHtml(metrics.drawdown)}</b><small>drawdown</small></span>
+              <span><b>${escapeHtml(matchingRuns.length)}</b><small>runs</small></span>
+            </span>
+          </button>`;
+      }).join("")}
+        </div>`;
+      document.querySelectorAll("[data-strategy-profile-run]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setSelectIfPresent("#strategy-profile", button.dataset.strategyProfileRun || "");
+          syncBacktestProfileControls(true);
+          openStrategyBacktestDialog();
+        });
+      });
+    }
+
+    function strategyProfileMatchesIdentity(profile, identity) {
+      return (!profile.strategy_name || !identity.name || identity.name === profile.strategy_name)
+        && (!profile.symbol || !identity.symbol || identity.symbol === profile.symbol)
+        && (!profile.timeframe || !identity.timeframe || identity.timeframe === profile.timeframe);
+    }
+
     function syncBacktestProfileControls(force = false) {
       const profile = selectedStrategyProfile("#strategy-profile");
       if (!profile) {
@@ -1761,8 +1826,8 @@
       fillDatalist("#strategy-ohlcv-source-options", sources);
       setInputValue("#strategy-source", defaultStrategySource(), true);
       setInputValue("#strategy-evaluation-window", strategyActionScopeLabel("backtest"), true);
-      setInputValue("#strategy-experiment-window", strategyActionScopeLabel("experiment"), true);
-      setInputValue("#strategy-optimize-window", strategyActionScopeLabel("optimize"), true);
+      setText("#strategy-experiment-window", strategyActionScopeLabel("experiment"));
+      setText("#strategy-optimize-window", strategyActionScopeLabel("optimize"));
       fillSelect("#strategy-profile", profileIds, profileLabels);
       fillSelect("#strategy-optimize-profile", profileIds, profileLabels);
       fillSelect("#strategy-market-type", marketTypes);
@@ -1770,7 +1835,6 @@
       fillSelect("#strategy-timeframe", timeframes);
       fillSelect("#strategy-family", ["all", ...families], {"all": "All families"});
       fillSelect("#strategy-name", strategiesForFamily(document.querySelector("#strategy-family")?.value || "all").map((spec) => spec.name));
-      fillSelect("#strategy-experiment-family", ["all", ...families], {"all": "All families"});
       setInputValue("#strategy-optimize-source", defaultStrategySource(), true);
       fillSelect("#strategy-optimize-symbol", symbols);
       fillSelect("#strategy-optimize-timeframe", timeframes);
@@ -1778,10 +1842,6 @@
       fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
       fillSelect("#strategy-chart-symbol", symbols);
       fillSelect("#strategy-chart-timeframe", timeframes);
-      fillSelect("#strategy-collect-symbol", symbols);
-      fillSelect("#strategy-collect-timeframe", timeframes);
-      ensureStrategyCollectTargets(symbols, timeframes);
-      renderStrategyCollectTargets();
       syncBacktestProfileControls(false);
       syncOptimizeProfileControls(false);
       renderStrategySpecControls();
@@ -1795,6 +1855,7 @@
       ["#strategy-symbol", "#strategy-timeframe", "#strategy-name", "#strategy-family", "#strategy-market-type"].forEach((selector) => {
         document.querySelector(selector).onchange = () => {
           state.selectedStrategyOutput = null;
+          state.strategyBacktestDetailOpen = false;
           if (selector === "#strategy-family") {
             fillSelect("#strategy-name", strategiesForFamily(document.querySelector("#strategy-family")?.value || "all").map((spec) => spec.name));
           }
@@ -1802,7 +1863,6 @@
           renderStrategies();
         };
       });
-      document.querySelector("#strategy-experiment-family").onchange = renderStrategyExperimentStrategies;
       document.querySelector("#strategy-optimize-family").onchange = () => {
         fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
         renderStrategyOptimizationSpace();
@@ -1924,18 +1984,24 @@
     function renderStrategyExperimentStrategies() {
       const panel = document.querySelector("#strategy-experiment-strategies");
       if (!panel) return;
-      const specs = strategiesForFamily(document.querySelector("#strategy-experiment-family")?.value || "all");
-      if (!specs.length) {
-        panel.innerHTML = `<div class="message">No configured strategies match this family.</div>`;
+      const profiles = strategyProfiles();
+      if (!profiles.length) {
+        panel.innerHTML = `<div class="message">No configured strategy profiles are available for the benchmark suite.</div>`;
         return;
       }
       panel.innerHTML = `
-        <div class="strategy-choice-list">
-          ${specs.map((spec) => `
-            <label class="strategy-choice-card">
-              <input type="checkbox" data-strategy-experiment-name="${escapeHtml(spec.name)}" checked>
-              <span><strong>${escapeHtml(spec.name)}</strong><p>${escapeHtml(label(spec.family || "n/a"))} / ${escapeHtml(spec.output_position_policy || "position policy n/a")}</p></span>
-            </label>`).join("")}
+        <div class="strategy-candidate-grid">
+          ${profiles.slice(0, 16).map((profile) => {
+        const params = Object.entries(profile.params || {}).slice(0, 3).map(([name, value]) => `${name}: ${value}`).join(" / ");
+        return `<article class="strategy-candidate-card">
+            <div class="strategy-profile-card-top">
+              <strong>${escapeHtml(profile.display_name || profile.strategy_name || "Strategy")}</strong>
+              <span class="chip">${escapeHtml(label(profile.family || "family n/a"))}</span>
+            </div>
+            <p>${escapeHtml([profile.source || "source n/a", profile.symbol || "symbol n/a", profile.timeframe || "timeframe n/a"].join(" / "))}</p>
+            ${params ? `<p class="strategy-profile-params">${escapeHtml(params)}</p>` : ""}
+          </article>`;
+      }).join("")}
         </div>`;
     }
 
@@ -1944,7 +2010,7 @@
       if (!panel) return;
       const spec = selectedOptimizeSpec();
       if (!spec) {
-        panel.innerHTML = `<div class="message">Select a strategy to inspect and edit its optimization grid.</div>`;
+        panel.innerHTML = `<div class="message">Select a strategy profile to inspect its configured optimization grid.</div>`;
         return;
       }
       const space = spec.optimization_space || {};
@@ -1974,8 +2040,8 @@
         return `
           <div class="strategy-space-card">
             <label for="strategy-grid-${escapeHtml(name)}">${escapeHtml(name)}</label>
-            <input id="strategy-grid-${escapeHtml(name)}" class="text-input" type="text" value="${escapeHtml(values)}" data-strategy-grid-param="${escapeHtml(name)}">
-            <p>${escapeHtml(schema.description || "Comma-separated grid values.")}</p>
+            <input id="strategy-grid-${escapeHtml(name)}" class="text-input" type="text" value="${escapeHtml(values)}" data-strategy-grid-param="${escapeHtml(name)}" readonly>
+            <p>${escapeHtml(schema.description || "Configured grid values.")}</p>
           </div>`;
       }).join("")}`;
     }
@@ -2392,28 +2458,34 @@
       const selected = state.strategyOperationTab === "backtest" ? selectedStrategyOutput(outputs) : null;
       if (state.strategyOperationTab === "backtest") {
         state.selectedStrategyOutput = selected;
+        if (!selected) state.strategyBacktestDetailOpen = false;
+      } else {
+        state.strategyBacktestDetailOpen = false;
       }
+      renderStrategyProfileOverview();
       syncStrategyControls(selected);
       syncStrategyDataInputs(false);
+      syncStrategyOperationTabs();
       const metrics = strategyMetrics(selected);
-      document.querySelector("#strategy-metrics").innerHTML = [
+      setHtml("#strategy-metrics", [
         metricCell("Total return", metrics.totalReturn, "strategy"),
         metricCell("Max drawdown", metrics.drawdown, "risk"),
         metricCell("Sharpe", metrics.sharpe, "risk adjusted"),
         metricCell("Win rate", metrics.winRate, "trades"),
         metricCell("Profit factor", metrics.profitFactor, "gross"),
         metricCell("Trades", metrics.trades, "count"),
-      ].join("");
+      ].join(""));
+      renderStrategyDetailHeader(selected, metrics);
       const vis = visibleStrategyVisualization(selected);
       const identityLabel = [vis.symbol, vis.timeframe].filter(Boolean).join(" - ");
-      document.querySelector("#strategy-chart-title").textContent = identityLabel ? `${identityLabel} - Halpha` : "OHLCV data viewer";
-      document.querySelector("#strategy-chart-meta").textContent = strategyChartMeta(selected, vis);
-      document.querySelector("#strategy-quote-label").textContent = strategyChart.quoteAsset(vis.symbol);
-      document.querySelector("#strategy-window-label").textContent = strategyChart.strategyWindowLabel(
+      setText("#strategy-chart-title", identityLabel ? `${identityLabel} - Halpha` : "OHLCV data viewer");
+      setText("#strategy-chart-meta", strategyChartMeta(selected, vis));
+      setText("#strategy-quote-label", strategyChart.quoteAsset(vis.symbol));
+      setText("#strategy-window-label", strategyChart.strategyWindowLabel(
         vis,
         displayTimezone,
-      );
-      document.querySelector("#strategy-chart-clock").textContent = displayTimezone;
+      ));
+      setText("#strategy-chart-clock", displayTimezone);
       syncStrategyWindowControls();
       strategyChart.renderCandlestickSvg("#backtest-chart", vis, {displayTimezone});
       renderStrategyParams(selected, vis);
@@ -2422,6 +2494,21 @@
       renderStrategyExperimentResults();
       renderStrategyOptimizeResults();
       renderStrategyTab("trades");
+    }
+
+    function renderStrategyDetailHeader(selected) {
+      const title = document.querySelector("#strategy-detail-title");
+      const kicker = document.querySelector("#strategy-detail-kicker");
+      if (!title || !kicker) return;
+      if (!selected) {
+        kicker.textContent = "Backtest detail";
+        title.textContent = "Select a backtest run";
+        return;
+      }
+      const identity = strategyIdentity(selected);
+      const created = selected?.fields?.created_at || selected?.created_at || "";
+      kicker.textContent = [identity.symbol, identity.timeframe, formatTimestamp(created)].filter(Boolean).join(" / ") || "Backtest detail";
+      title.textContent = identity.name || "Strategy backtest";
     }
 
     function strategyChartMeta(selected, vis) {
@@ -2440,24 +2527,24 @@
     }
 
     function setStrategyOperationTab(tab) {
-      state.strategyOperationTab = ["backtest", "experiment", "optimize", "collect"].includes(tab) ? tab : "backtest";
+      state.strategyOperationTab = ["backtest", "experiment", "optimize"].includes(tab) ? tab : "backtest";
+      if (state.strategyOperationTab !== "backtest") state.strategyBacktestDetailOpen = false;
       syncStrategyOperationTabs();
-      if (state.strategyOperationTab === "collect") {
-        syncStrategyRangePresets(false);
-        queueStrategyCollectTimelineRefresh();
-      }
       renderStrategies();
     }
 
     function syncStrategyOperationTabs() {
+      const detailOpen = state.strategyOperationTab === "backtest" && state.strategyBacktestDetailOpen && Boolean(state.selectedStrategyOutput);
+      document.querySelector("#strategy-workbench")?.classList.toggle("hidden", detailOpen);
+      document.querySelector("#strategy-backtest-detail")?.classList.toggle("hidden", !detailOpen);
       document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
         button.classList.toggle("active", button.dataset.strategyOperationTab === state.strategyOperationTab);
       });
       document.querySelectorAll("[data-strategy-operation-panel]").forEach((panel) => {
-        panel.classList.toggle("hidden", panel.dataset.strategyOperationPanel !== state.strategyOperationTab);
+        panel.classList.toggle("hidden", detailOpen || panel.dataset.strategyOperationPanel !== state.strategyOperationTab);
       });
       document.querySelectorAll("[data-backtest-only]").forEach((panel) => {
-        panel.classList.toggle("hidden", state.strategyOperationTab !== "backtest");
+        panel.classList.toggle("hidden", !detailOpen);
       });
       const paramsTitle = document.querySelector("#strategy-params-title");
       if (paramsTitle) {
@@ -2647,6 +2734,7 @@
       state.strategyDataVisualization = ohlcvPreviewVisualization(payload, request);
       if (options.clearBacktest !== false) {
         state.selectedStrategyOutput = null;
+        state.strategyBacktestDetailOpen = false;
         setSelectIfPresent("#strategy-name", "");
       }
       strategyChart.resetCandlestickView("#backtest-chart");
@@ -2802,6 +2890,7 @@
       }
       document.querySelectorAll("[data-backtest-clear]").forEach((button) => button.addEventListener("click", () => {
         state.selectedStrategyOutput = null;
+        state.strategyBacktestDetailOpen = false;
         setSelectIfPresent("#strategy-name", "");
         strategyChart.resetCandlestickView("#backtest-chart");
         queueStrategyChartRefresh({clearBacktest: true});
@@ -2839,6 +2928,7 @@
       const item = outputs[index];
       if (!item) return;
       state.selectedStrategyOutput = item;
+      state.strategyBacktestDetailOpen = true;
       const identity = strategyIdentity(item);
       setSelectIfPresent("#strategy-name", identity.name);
       setSelectIfPresent("#strategy-symbol", identity.symbol);
@@ -2849,6 +2939,12 @@
       strategyChart.resetCandlestickView("#backtest-chart");
       queueStrategyChartRefresh({clearBacktest: false});
       renderStrategies();
+    }
+
+    function showStrategyBacktestList() {
+      state.strategyBacktestDetailOpen = false;
+      syncStrategyOperationTabs();
+      renderBacktestRuns(strategyOutputs());
     }
 
     function backtestRunMeta(item) {
@@ -3456,6 +3552,9 @@
           const completed = await pollStrategyActionJob(kind, job.job_id, copy.headline);
           if (terminalJobStatus(completed.status)) {
             await refreshStrategies();
+            if (kind === "backtest") {
+              openLatestBacktestForParams(params);
+            }
           }
         }
       } catch (error) {
@@ -3501,11 +3600,36 @@
       return latest;
     }
 
+    function openLatestBacktestForParams(params) {
+      const outputs = strategyOutputs();
+      const match = outputs.find((item) => {
+        const identity = strategyIdentity(item);
+        return (!params.strategy_name || identity.name === params.strategy_name)
+          && (!params.symbol || identity.symbol === params.symbol)
+          && (!params.timeframe || identity.timeframe === params.timeframe);
+      });
+      if (!match) return;
+      state.strategyOperationTab = "backtest";
+      state.selectedStrategyOutput = match;
+      state.strategyBacktestDetailOpen = true;
+      const identity = strategyIdentity(match);
+      setSelectIfPresent("#strategy-name", identity.name);
+      setSelectIfPresent("#strategy-symbol", identity.symbol);
+      setSelectIfPresent("#strategy-timeframe", identity.timeframe);
+      setSelectIfPresent("#strategy-chart-symbol", identity.symbol);
+      setSelectIfPresent("#strategy-chart-timeframe", identity.timeframe);
+      strategyChart.resetCandlestickView("#backtest-chart");
+      queueStrategyChartRefresh({clearBacktest: false});
+      renderStrategies();
+    }
+
     function selectedExperimentStrategyNames() {
-      return Array.from(document.querySelectorAll("[data-strategy-experiment-name]"))
+      const selected = Array.from(document.querySelectorAll("[data-strategy-experiment-name]"))
         .filter((node) => node.checked)
         .map((node) => node.dataset.strategyExperimentName)
         .filter(Boolean);
+      if (selected.length) return unique(selected);
+      return unique(strategyProfiles().map((profile) => profile.strategy_name).filter(Boolean));
     }
 
     function selectedOptimizationGrid() {
@@ -5533,14 +5657,15 @@
       document.querySelector("#strategy-backtest-cancel").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#strategy-backtest-dialog-close").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#strategy-backtest-dialog-backdrop").addEventListener("click", closeStrategyBacktestDialog);
+      document.querySelector("#strategy-backtest-back").addEventListener("click", showStrategyBacktestList);
       document.querySelector("#run-experiment-button").addEventListener("click", startStrategyExperiment);
       document.querySelector("#run-optimize-button").addEventListener("click", startStrategyOptimize);
       document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
         button.addEventListener("click", () => setStrategyOperationTab(button.dataset.strategyOperationTab));
       });
-      document.querySelector("#strategy-collect-add-target").addEventListener("click", addStrategyCollectTarget);
-      document.querySelector("#strategy-collect-refresh-timeline").addEventListener("click", refreshStrategyCollectTimeline);
-      document.querySelector("#strategy-collect-run").addEventListener("click", runStrategyCollectBatch);
+      document.querySelector("#strategy-collect-add-target")?.addEventListener("click", addStrategyCollectTarget);
+      document.querySelector("#strategy-collect-refresh-timeline")?.addEventListener("click", refreshStrategyCollectTimeline);
+      document.querySelector("#strategy-collect-run")?.addEventListener("click", runStrategyCollectBatch);
       document.querySelector("#strategy-chart-refresh").addEventListener("click", () => loadStrategyChartPreview({silent: false}));
       ["#strategy-chart-source", "#strategy-chart-symbol", "#strategy-chart-timeframe"].forEach((selector) => {
         document.querySelector(selector).addEventListener("change", () => {
@@ -5552,7 +5677,7 @@
       document.querySelector("#strategy-chart-range").addEventListener("change", () => {
         setStrategyWindow(document.querySelector("#strategy-chart-range")?.value, {reload: true});
       });
-      document.querySelector("#strategy-collect-range").addEventListener("change", () => {
+      document.querySelector("#strategy-collect-range")?.addEventListener("change", () => {
         applyRangePreset("#strategy-collect-range", "#strategy-collect-start", "#strategy-collect-end", true);
         queueStrategyCollectTimelineRefresh();
       });
@@ -5560,10 +5685,10 @@
         applyRangePreset("#strategy-backtest-range", "#strategy-backtest-start", "#strategy-backtest-end", true);
       });
       ["#strategy-collect-source", "#strategy-collect-start", "#strategy-collect-end"].forEach((selector) => {
-        document.querySelector(selector).addEventListener("change", queueStrategyCollectTimelineRefresh);
+        document.querySelector(selector)?.addEventListener("change", queueStrategyCollectTimelineRefresh);
       });
       ["#strategy-collect-symbol", "#strategy-collect-timeframe"].forEach((selector) => {
-        document.querySelector(selector).addEventListener("change", () => {
+        document.querySelector(selector)?.addEventListener("change", () => {
           if (!state.strategyCollectTargets.length) addStrategyCollectTarget();
         });
       });

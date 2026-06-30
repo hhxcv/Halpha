@@ -225,7 +225,12 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     for selector_id in (
         "strategy-workbench",
         "strategy-operation-tabs",
+        "strategy-profile-overview",
         "strategy-backtest-board",
+        "strategy-backtest-detail",
+        "strategy-backtest-back",
+        "strategy-detail-title",
+        "strategy-detail-kicker",
         "strategy-backtest-dialog-backdrop",
         "strategy-backtest-dialog",
         "strategy-profile",
@@ -250,16 +255,6 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
         "strategy-chart-timeframe",
         "strategy-chart-range",
         "strategy-chart-refresh",
-        "strategy-collect-source",
-        "strategy-collect-symbol",
-        "strategy-collect-timeframe",
-        "strategy-collect-targets",
-        "strategy-collect-range",
-        "strategy-collect-date-range",
-        "strategy-collect-start",
-        "strategy-collect-end",
-        "strategy-collect-timeline",
-        "strategy-collect-progress",
         "intel-overview-panel",
         "intel-overview-kpis",
         "intel-overview-content",
@@ -311,16 +306,15 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     assert "Reset preview" not in html
     assert '<h3 class="subsection-title">Preview</h3>' not in html
     assert 'id="intel-properties-button"' not in html
-    assert html.count("data-date-range-picker") == 4
-    assert html.count("data-range-picker-label") == 4
-    for action in (
-        "strategy-timeline",
-        "strategy-collect",
-        "intel-collect",
-    ):
-        assert f'data-data-viewer-action="{action}"' in html
+    assert html.count("data-date-range-picker") == 3
+    assert html.count("data-range-picker-label") == 3
+    assert 'data-data-viewer-action="intel-collect"' in html
+    assert 'data-data-viewer-action="strategy-collect"' not in html
+    assert 'data-data-viewer-action="strategy-timeline"' not in html
     assert 'id="strategy-collect-preview"' not in html
     assert 'id="strategy-collect-plan"' not in html
+    assert 'data-strategy-operation-tab="collect"' not in html
+    assert 'data-strategy-operation-tab="export"' not in html
     for removed_id in (
         "intel-asset",
         "intel-range",
@@ -723,13 +717,21 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "OHLCV candlestick chart" in html
     assert "OHLCV only" in script
     assert 'data-strategy-operation-tab="backtest"' in html
-    assert 'data-strategy-operation-tab="collect"' in html
+    assert 'data-strategy-operation-tab="experiment"' in html
+    assert 'data-strategy-operation-tab="optimize"' in html
+    assert 'data-strategy-operation-tab="collect"' not in html
     assert 'data-strategy-operation-tab="export"' not in html
     assert "As of help" not in html
     assert "Optional ISO timestamp for no-lookahead reads" not in html
     assert 'id="strategy-profile"' in html
+    assert 'id="strategy-profile-overview"' in html
     assert 'id="strategy-backtest-dialog"' in html
+    assert 'id="strategy-backtest-detail"' in html
+    assert 'id="strategy-backtest-back"' in html
     assert ".strategy-backtest-board" in css
+    assert ".strategy-detail-view" in css
+    assert ".strategy-profile-card" in css
+    assert ".strategy-candidate-card" in css
     assert ".strategy-run-card" in css
     assert ".strategy-profile-summary" in css
     assert ".operation-progress" in css

@@ -1708,6 +1708,44 @@
       min-width: 0;
     }
 
+    .strategy-detail-view {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      grid-template-rows: auto auto auto;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .strategy-detail-view.hidden {
+      display: none !important;
+    }
+
+    .strategy-detail-header {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) minmax(420px, 0.9fr);
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      min-width: 0;
+    }
+
+    .strategy-detail-heading {
+      min-width: 0;
+    }
+
+    .strategy-detail-heading h2 {
+      margin: 2px 0 0;
+      overflow-wrap: anywhere;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .strategy-detail-header .metric-strip {
+      min-width: 0;
+    }
+
     .strategy-controls {
       display: grid;
       grid-template-columns: 160px 140px 220px minmax(180px, 1fr) auto;
@@ -1872,6 +1910,29 @@
       min-width: 0;
     }
 
+    .strategy-profile-overview {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .strategy-profile-hero {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .strategy-profile-grid,
+    .strategy-candidate-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+      min-width: 0;
+    }
+
     .strategy-run-group {
       display: grid;
       gap: 10px;
@@ -1879,7 +1940,8 @@
     }
 
     .strategy-run-group-header,
-    .strategy-run-card-top {
+    .strategy-run-card-top,
+    .strategy-profile-card-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1909,7 +1971,9 @@
       min-width: 0;
     }
 
-    .strategy-run-card {
+    .strategy-run-card,
+    .strategy-profile-card,
+    .strategy-candidate-card {
       display: grid;
       gap: 10px;
       min-width: 0;
@@ -1923,7 +1987,13 @@
       cursor: pointer;
     }
 
-    .strategy-run-card.active {
+    .strategy-candidate-card {
+      min-height: 118px;
+      cursor: default;
+    }
+
+    .strategy-run-card.active,
+    .strategy-profile-card:hover {
       border-color: var(--primary);
       background: var(--primary-soft);
       box-shadow: inset 4px 0 0 var(--primary);
@@ -5707,6 +5777,7 @@
       .overview-layout,
       .reports-layout,
       .strategy-layout,
+      .strategy-detail-view,
       .monitor-layout,
       .intel-grid,
       .intel-overview-grid,
@@ -5741,6 +5812,8 @@
       .strategy-optimize-compact-grid,
       .strategy-result-grid,
       .strategy-run-grid,
+      .strategy-profile-grid,
+      .strategy-candidate-grid,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,
@@ -5751,6 +5824,14 @@
       .intel-fact-grid,
       .filter-grid,
       .settings-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .strategy-detail-header {
+        grid-template-columns: 1fr;
+      }
+
+      .strategy-profile-hero {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
@@ -6683,6 +6764,17 @@
       gap: 14px;
     }
 
+    body[data-theme="solar"] .strategy-detail-view {
+      gap: 14px;
+    }
+
+    body[data-theme="solar"] .strategy-detail-header,
+    body[data-theme="solar"] .strategy-profile-hero {
+      border-color: var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
     body[data-theme="solar"] .strategy-action-grid,
     body[data-theme="solar"] .strategy-collect-grid,
     body[data-theme="solar"] .strategy-range-grid {
@@ -6747,7 +6839,9 @@
 
     body[data-theme="solar"] .strategy-param-card,
     body[data-theme="solar"] .strategy-space-card,
-    body[data-theme="solar"] .strategy-choice-card {
+    body[data-theme="solar"] .strategy-choice-card,
+    body[data-theme="solar"] .strategy-profile-card,
+    body[data-theme="solar"] .strategy-candidate-card {
       padding: 14px;
       border-color: var(--border);
       border-radius: var(--radius);

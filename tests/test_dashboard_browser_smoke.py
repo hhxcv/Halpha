@@ -136,7 +136,7 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       if (shell.mainOverflowY !== "auto") throw new Error("main shell should own desktop vertical scrolling");
       if (Math.abs(shell.sidebarHeight - shell.viewportHeight) > 1) throw new Error("sidebar height should match the viewport");
       if (shell.sidebarBottom > shell.viewportHeight + 1) throw new Error("sidebar bottom content should stay in the viewport");
-      await page.click('[data-report-job="generate"]');
+      await page.locator('[data-report-job="generate"]:visible').first().click();
       await page.waitForSelector('#dashboard-dialog-backdrop:not(.hidden)', {timeout: 5000});
       const dialogTitle = await page.locator("#dashboard-dialog-title").innerText();
       if (!dialogTitle.includes("Generate report")) throw new Error("Generate report dialog did not open");
@@ -146,9 +146,18 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       for (const view of views) {
         await page.click(`[data-view-target="${view}"]`);
         await page.waitForSelector(`#${view}-view:not(.hidden)`, {timeout: 5000});
+        await page.waitForFunction((currentView) => {
+          const node = document.querySelector(`#${currentView}-view`);
+          if (!node) return false;
+          const box = node.getBoundingClientRect();
+          const viewText = (node.innerText || "").trim();
+          const titleText = (document.querySelector("#global-page-title")?.innerText || "").trim();
+          return box.width >= 200 && box.height >= 120 && Boolean(viewText || titleText);
+        }, view, {timeout: 5000});
         const state = await page.locator(`#${view}-view`).evaluate((node) => {
           const box = node.getBoundingClientRect();
-          return {text: node.innerText || "", width: box.width, height: box.height};
+          const titleText = document.querySelector("#global-page-title")?.innerText || "";
+          return {text: node.innerText || titleText, width: box.width, height: box.height};
         });
         if (!state.text.trim()) throw new Error(`${view} view is blank`);
         if (state.width < 200 || state.height < 120) throw new Error(`${view} view did not render usable dimensions`);
@@ -225,29 +234,17 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       await page.locator("#cleanup-shared-data").waitFor({state: "visible", timeout: 5000});
 
       await page.click('[data-view-target="strategies"]');
-      await page.click('[data-strategy-tab="equity"]');
-      await page.waitForSelector("#strategy-tab-content", {timeout: 5000});
       await page.locator("#strategy-workbench").waitFor({state: "visible", timeout: 5000});
-      await expect(page.locator("#strategy-chart-symbol")).toBeVisible();
-      await expect(page.locator("#strategy-chart-timeframe")).toBeVisible();
-      await expect(page.locator("#strategy-chart-refresh")).toBeVisible();
-      await page.click('[data-strategy-operation-tab="collect"]');
-      await page.locator("#strategy-collect-timeline").waitFor({state: "visible", timeout: 5000});
+      await expect(page.locator("#strategy-profile-overview")).toBeVisible();
+      await expect(page.locator("#strategy-backtest-detail")).toBeHidden();
+      await expect(page.locator("#strategy-chart-symbol")).toBeHidden();
+      await expect(page.locator("#strategy-chart-timeframe")).toBeHidden();
+      await expect(page.locator("#strategy-chart-refresh")).toBeHidden();
+      await expect(page.locator('[data-strategy-operation-tab="collect"]')).toHaveCount(0);
+      await expect(page.locator('[data-strategy-operation-tab="export"]')).toHaveCount(0);
       await expect(page.locator("#strategy-collect-preview")).toHaveCount(0);
       await expect(page.locator("#strategy-collect-plan")).toHaveCount(0);
       await expect(page.locator('[data-backtest-only="true"]').first()).toBeHidden();
-      await page.fill("#strategy-collect-source", "binance");
-      const collectRange = await chooseVisibleDateRange(page, "#strategy-collect-date-range");
-      await expect(page.locator("#strategy-collect-date-range")).toContainText(collectRange.firstDate);
-      const collectHiddenStart = await page.locator("#strategy-collect-start").evaluate((node) => node.value);
-      const collectHiddenEnd = await page.locator("#strategy-collect-end").evaluate((node) => node.value);
-      if (!collectHiddenStart.endsWith("T00:00:00Z") || !collectHiddenEnd.endsWith("T23:59:59Z")) {
-        throw new Error("strategy collect picker did not sync hidden start/end timestamps");
-      }
-      await page.click("#strategy-collect-refresh-timeline");
-      await expect(page.locator("#strategy-collect-timeline")).toContainText(/target|timeline|coverage|range/i, {timeout: 10000});
-      await expect(page.locator('[data-strategy-operation-tab="export"]')).toHaveCount(0);
-      await page.click('[data-strategy-operation-tab="backtest"]');
       await page.click("#run-backtest-button");
       await page.locator("#strategy-backtest-dialog").waitFor({state: "visible", timeout: 5000});
       await expect(page.locator("#strategy-profile")).toBeVisible();
@@ -271,10 +268,14 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       await expect(page.locator("#intel-data-plan-panel")).toHaveCount(0);
       await page.click('[data-intel-tab="text_event"]');
       await page.locator("#intel-data-viewer").waitFor({state: "visible", timeout: 5000});
+      await page.click("#intel-collect-open");
+      await page.locator("#intel-collect-dialog").waitFor({state: "visible", timeout: 5000});
       const intelCollectRange = await chooseVisibleDateRange(page, "#intel-collect-date-range");
       await expect(page.locator("#intel-collect-date-range")).toContainText(intelCollectRange.firstDate);
       const intelCollectHiddenEnd = await page.locator("#intel-collect-end").evaluate((node) => node.value);
       if (!intelCollectHiddenEnd.endsWith("T23:59:59Z")) throw new Error("intelligence collect picker did not sync hidden end timestamp");
+      await page.click("#intel-collect-dialog-cancel");
+      await expect(page.locator("#intel-collect-dialog")).toBeHidden();
       const intelPreviewRange = await chooseVisibleDateRange(page, "#intel-preview-date-range");
       await expect(page.locator("#intel-preview-date-range")).toContainText(intelPreviewRange.firstDate);
       const intelPreviewHiddenEnd = await page.locator("#intel-preview-end").evaluate((node) => node.value);
@@ -285,7 +286,7 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       await page.fill("#intel-preview-keyword", "bitcoin");
       await expect(page.locator("#intel-data-preview-panel")).toContainText(/No records|history|preview|failed|query/i, {timeout: 10000});
       await page.click('[data-intel-tab="macro_calendar"]');
-      await expect(page.locator("#intel-data-collect")).toBeEnabled();
+      await expect(page.locator("#intel-collect-open")).toBeEnabled();
       await expect(page.locator("#intel-data-coverage")).toContainText(/unknown|coverage|interval/i, {timeout: 10000});
       await page.setViewportSize({width: 390, height: 820});
       await page.click('[data-view-target="overview"]');
