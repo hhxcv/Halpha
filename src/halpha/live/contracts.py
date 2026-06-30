@@ -15,7 +15,31 @@ LIVE_CONFIG_FIELDS = {"enabled", "tick_seconds", "collections", "reports"}
 LIVE_COLLECTION_FIELDS = {"enabled", "cadence_seconds", "lookback_seconds", "lookahead_seconds"}
 LIVE_REPORTS_FIELDS = {"daily", "triggers"}
 LIVE_DAILY_REPORT_FIELDS = {"enabled"}
-LIVE_REPORT_TRIGGER_FIELDS = {"enabled", "cooldown_seconds"}
+LIVE_REPORT_TRIGGER_FIELDS = {
+    "enabled",
+    "cooldown_seconds",
+    "job_intent",
+    "min_priority",
+    "window_seconds",
+    "price_change_pct",
+    "volume_change_pct",
+    "lookahead_seconds",
+    "min_failed_targets",
+    "min_stale_targets",
+    "codex_authorization",
+}
+LIVE_REPORT_TRIGGER_JOB_INTENTS = ("run_no_codex", "run")
+LIVE_TRIGGER_PRIORITY_LEVELS = ("low", "medium", "high", "critical")
+LIVE_TRIGGER_DECISION_STATUSES = (
+    "triggered",
+    "suppressed_cooldown",
+    "skipped_disabled",
+    "skipped_no_match",
+    "skipped_insufficient_evidence",
+    "blocked_authorization",
+    "failed",
+)
+LIVE_TRIGGER_REVISION = 1
 
 LIVE_TRIGGER_IDS = (
     "market_breakout",
