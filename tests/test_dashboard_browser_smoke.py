@@ -84,7 +84,7 @@ def test_dashboard_primary_pages_browser_smoke(tmp_path: Path) -> None:
 _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
     r"""
     const { test, expect } = require("@playwright/test");
-    const views = ["overview", "reports", "strategies", "monitor", "intelligence", "settings"];
+    const views = ["overview", "reports", "strategies", "live", "intelligence", "settings"];
 
     test.use({viewport: {width: 1280, height: 900}});
 
@@ -163,6 +163,14 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
         if (state.width < 200 || state.height < 120) throw new Error(`${view} view did not render usable dimensions`);
         if (state.text.toLowerCase().includes("loading dashboard")) throw new Error(`${view} view is stuck loading`);
       }
+      await page.click('[data-view-target="live"]');
+      await page.waitForSelector("#live-view:not(.hidden)", {timeout: 5000});
+      await expect(page.locator("#live-summary")).toBeVisible();
+      await expect(page.locator("#live-source-matrix")).toBeVisible();
+      await expect(page.locator("#live-operations-timeline")).toBeVisible();
+      await expect(page.locator("#monitor-view")).toHaveCount(0);
+      await expect(page.locator("[data-monitor-job]")).toHaveCount(0);
+      await expect(page.locator('[data-service-role="monitor"]')).toHaveCount(0);
 
       await page.click('[data-view-target="settings"]');
       await page.click('[data-settings-section="Intelligence sources"]');

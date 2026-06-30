@@ -20,7 +20,7 @@ EXPECTED_DASHBOARD_VIEWS = {
     "overview",
     "reports",
     "strategies",
-    "monitor",
+    "live",
     "intelligence",
     "settings",
 }
@@ -31,7 +31,7 @@ REQUIRED_SCRIPT_ASSETS = (
     "/assets/dashboard_dialogs.js",
     "/assets/dashboard_reports.js",
     "/assets/dashboard_strategy_chart.js",
-    "/assets/dashboard_monitor.js",
+    "/assets/dashboard_live.js",
     "/assets/dashboard_data_viewer.js",
     "/assets/dashboard.js",
 )
@@ -106,7 +106,7 @@ def test_dashboard_css_contracts_cover_redesigned_desktop_and_small_viewports(tm
         ".main-shell",
         ".reports-layout",
         ".strategy-layout",
-        ".monitor-layout",
+        ".live-layout",
         ".intelligence-layout",
         ".settings-main",
         ".kline-panel",
@@ -128,7 +128,7 @@ def test_dashboard_pages_expose_primary_semantic_views(tmp_path: Path) -> None:
     assert "Artifacts" not in _nav_block(html)
 
 
-def test_dashboard_shell_uses_monitor_status_without_local_mode_badges(tmp_path: Path) -> None:
+def test_dashboard_shell_uses_system_monitor_status_without_local_mode_badges(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     css = _style_block(html)
     script = _script_block(html)
@@ -136,13 +136,13 @@ def test_dashboard_shell_uses_monitor_status_without_local_mode_badges(tmp_path:
     assert "System healthy" not in html
     assert "Local mode" not in html
     assert "No data leaves this device through the dashboard UI." not in html
-    assert 'id="sidebar-monitor-dot"' in html
-    assert 'id="sidebar-monitor-title">Monitor status</span>' in html
-    assert 'id="sidebar-monitor-text">Loading monitor status.</div>' in html
-    assert "monitorSidebarState" in script
-    assert "renderSidebarMonitorStatus" in script
-    assert "Monitoring is enabled and running." in script
-    assert "loadMonitorPayload().catch(() => renderSidebarMonitorStatus())" in script
+    assert 'id="sidebar-system-monitor-dot"' in html
+    assert 'id="sidebar-system-monitor-title">System Monitor</span>' in html
+    assert 'id="sidebar-system-monitor-text">Loading runtime status.</div>' in html
+    assert "systemMonitorSidebarState" in script
+    assert "renderSidebarSystemMonitorStatus" in script
+    assert "Runtime monitoring is enabled and running." in script
+    assert "loadLivePayload().catch(() => renderSidebarSystemMonitorStatus())" in script
     assert ".health-dot.stopped" in css
     assert ".health-dot.unknown" in css
 
@@ -411,17 +411,26 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "Check the timeline to distinguish no_data from not_collected, partial, failed, stale, or unknown coverage." in script
 
 
-def test_dashboard_monitor_service_controls_expose_dom_contracts(tmp_path: Path) -> None:
+def test_dashboard_live_view_removes_monitor_service_controls_from_user_workflow(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     parser = DashboardShellParser()
     parser.feed(html)
 
-    assert "data-monitor-job" in parser.data_attrs
-    assert "data-service-role" in parser.data_attrs
-    assert "data-service-action" in parser.data_attrs
-    assert 'data-service-role="monitor"' in html
+    assert "data-monitor-job" not in parser.data_attrs
+    assert "data-service-role" not in parser.data_attrs
+    assert "data-service-action" not in parser.data_attrs
+    assert 'data-service-role="monitor"' not in html
     assert 'data-service-role="schedule"' not in html
-    assert 'data-service-action="restart"' in html
+    assert 'data-service-action="restart"' not in html
+    assert 'href="#live" data-view-target="live"' in html
+    assert 'href="#monitor" data-view-target="monitor"' not in html
+    assert 'id="live-view"' in html
+    assert 'id="monitor-view"' not in html
+    assert "dashboard_monitor.js" not in html
+    assert "dashboard_live.js" in html
+    assert "Start Monitor" not in html
+    assert "Stop Monitor" not in html
+    assert "Restart Monitor" not in html
     assert "cancelRunningMonitorJobs" not in _script_block(html)
     assert "stop-monitor-button" not in html
 
@@ -533,7 +542,7 @@ def test_dashboard_dynamic_views_have_skeleton_loading_contracts(tmp_path: Path)
     assert "renderOverviewLoading()" in script
     assert "renderReportsLoading()" in script
     assert "renderStrategiesLoading()" in script
-    assert "renderMonitorLoading()" in script
+    assert "renderLiveLoading()" in script
     assert "renderIntelligenceLoading()" in script
     assert "renderSettingsLoading()" in script
     assert "VIEW_REFRESH_TTL_MS = 15000" in script
@@ -690,12 +699,21 @@ def test_dashboard_report_preview_and_job_contracts_are_present(tmp_path: Path) 
     assert "Report artifact recorded" not in script
 
 
-def test_dashboard_monitor_workflow_contracts_are_present(tmp_path: Path) -> None:
+def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
 
-    assert "data-monitor-job" in html
-    assert 'data-service-role="monitor"' in html
-    assert 'data-service-action="restart"' in html
+    assert 'data-live-endpoint="/api/live"' in html
+    assert 'data-live-cycles-endpoint="/api/live/cycles"' in html
+    assert 'data-live-alerts-endpoint="/api/live/alerts"' in html
+    assert 'id="live-summary"' in html
+    assert 'id="live-source-matrix"' in html
+    assert 'id="live-intelligence-stream"' in html
+    assert 'id="live-report-history"' in html
+    assert 'id="live-operations-timeline"' in html
+    assert "window.HalphaDashboardLive" in dashboard_script()
+    assert "data-monitor-job" not in html
+    assert 'data-service-role="monitor"' not in html
+    assert 'data-service-action="restart"' not in html
     assert "stop-monitor-button" not in html
 
 

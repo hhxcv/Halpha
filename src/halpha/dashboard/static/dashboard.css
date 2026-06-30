@@ -3146,20 +3146,156 @@
       font-weight: 760;
     }
 
-    .monitor-layout {
+    .live-layout {
       display: grid;
       grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
       gap: 14px;
+      align-items: start;
     }
 
-    .monitor-hero {
+    .live-summary,
+    .live-source-board,
+    .live-operations-panel {
       grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
-      overflow: hidden;
     }
 
-    .monitor-timeline {
+    .live-section-head,
+    .live-source-card-head,
+    .live-stream-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .live-section-head {
+      margin-bottom: 12px;
+    }
+
+    .live-source-matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .live-source-card {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .live-source-card h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .live-source-card p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .live-source-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .live-fact {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--panel-muted);
+    }
+
+    .live-fact span,
+    .live-stream-time {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .live-fact strong {
+      display: block;
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+    }
+
+    .live-target-list,
+    .live-ref-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .live-target-chip,
+    .live-ref-list span {
+      max-width: 100%;
+      padding: 4px 8px;
+      overflow-wrap: anywhere;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      background: var(--panel-muted);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .live-stream,
+    .live-report-history,
+    .live-timeline {
+      display: grid;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .live-stream-row {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .live-stream-row:last-child {
+      border-bottom: 0;
+    }
+
+    .live-stream-body {
+      min-width: 0;
+    }
+
+    .live-stream-title {
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .live-stream-title strong,
+    .live-stream-body p {
+      overflow-wrap: anywhere;
+    }
+
+    .live-stream-body p {
+      margin: 6px 0;
+      color: var(--muted);
+    }
+
+    .live-side {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .live-timeline {
       display: grid;
       gap: 0;
       margin: 0;
@@ -5778,7 +5914,7 @@
       .reports-layout,
       .strategy-layout,
       .strategy-detail-view,
-      .monitor-layout,
+      .live-layout,
       .intel-grid,
       .intel-overview-grid,
       .intelligence-preview-layout,
@@ -5931,7 +6067,8 @@
       .metric-strip,
       .data-cards,
       .overview-grid-2,
-      .monitor-hero,
+      .live-summary,
+      .live-source-stats,
       .storage-maintenance {
         grid-template-columns: 1fr;
       }
@@ -6299,7 +6436,7 @@
     body[data-theme="solar"] .summary-cell,
     body[data-theme="solar"] .report-metric,
     body[data-theme="solar"] .metric-strip > div,
-    body[data-theme="solar"] .monitor-hero > div {
+    body[data-theme="solar"] .live-summary > div {
       border-color: var(--border);
     }
 

@@ -116,7 +116,7 @@ actionable error and must not kill the unrelated process.
 The dashboard root serves the application shell and loads packaged static
 frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
 `/assets/dashboard_dialogs.js`, `/assets/dashboard_reports.js`,
-`/assets/dashboard_strategy_chart.js`, `/assets/dashboard_monitor.js`, and
+`/assets/dashboard_strategy_chart.js`, `/assets/dashboard_live.js`, and
 `/assets/dashboard.js`.
 
 User-visible timestamp display uses `dashboard.display_timezone` when
@@ -130,8 +130,8 @@ timestamps.
 
 Implemented dashboard views expose:
 
-- overview state from latest run, product validation, data quality, monitor,
-  and workbench summaries;
+- overview state from latest run, product validation, data quality, System
+  Monitor, and workbench summaries;
 - run history, report previews, stage timelines, report source file refs, and
   artifact refs;
 - bounded artifact previews for supported local text-like artifacts;
@@ -140,8 +140,8 @@ Implemented dashboard views expose:
   gates, and
   lifecycle state, including bounded K-line backtest visualizations when the
   standalone backtest artifact records visualization data;
-- monitor health, recent cycles, alert counts, cooldown state, alert samples,
-  and monitor job history from the shared runtime state store.
+- Live source-refresh state, recent cycles, alert counts, cooldown state, alert
+  samples, and recent job history from the shared runtime state store.
 
 Implemented dashboard command controls submit to the shared allowlisted
 command-job runner.

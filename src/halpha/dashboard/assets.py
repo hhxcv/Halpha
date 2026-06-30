@@ -11,7 +11,7 @@ DASHBOARD_ASSET_MEDIA_TYPES = {
     "dashboard_dialogs.js": "application/javascript; charset=utf-8",
     "dashboard_reports.js": "application/javascript; charset=utf-8",
     "dashboard_strategy_chart.js": "application/javascript; charset=utf-8",
-    "dashboard_monitor.js": "application/javascript; charset=utf-8",
+    "dashboard_live.js": "application/javascript; charset=utf-8",
     "dashboard_data_viewer.js": "application/javascript; charset=utf-8",
     "dashboard.js": "application/javascript; charset=utf-8",
 }

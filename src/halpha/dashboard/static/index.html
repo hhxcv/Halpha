@@ -24,9 +24,9 @@
     data-data-viewer-collect-jobs-endpoint="/api/data/viewer/collect/jobs"
     data-strategies-endpoint="/api/strategies"
     data-strategy-actions-endpoint="/api/strategies/actions"
-    data-monitor-endpoint="/api/monitor"
-    data-monitor-cycles-endpoint="/api/monitor/cycles"
-    data-monitor-alerts-endpoint="/api/monitor/alerts"
+    data-live-endpoint="/api/live"
+    data-live-cycles-endpoint="/api/live/cycles"
+    data-live-alerts-endpoint="/api/live/alerts"
     data-jobs-endpoint="/api/jobs"
     data-schedule-endpoint="/api/schedule/daily-report"
     data-services-endpoint="/api/services"
@@ -67,8 +67,8 @@
         <a class="nav-item" href="#reports" data-view-target="reports">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM14 3v4h4M9 11h6M9 15h6"></path></svg><span class="nav-label">Reports</span>
         </a>
-        <a class="nav-item" href="#monitor" data-view-target="monitor">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"></path></svg><span class="nav-label">Monitor</span>
+        <a class="nav-item" href="#live" data-view-target="live">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"></path></svg><span class="nav-label">Live</span>
         </a>
         <a class="nav-item" href="#settings" data-view-target="settings">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4"></path></svg><span class="nav-label">Settings</span>
@@ -76,8 +76,8 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="sidebar-card">
-          <div class="sidebar-card-title"><span class="health-dot unknown" id="sidebar-monitor-dot"></span><span id="sidebar-monitor-title">Monitor status</span></div>
-          <div class="sidebar-card-detail" id="sidebar-monitor-text">Loading monitor status.</div>
+          <div class="sidebar-card-title"><span class="health-dot unknown" id="sidebar-system-monitor-dot"></span><span id="sidebar-system-monitor-title">System Monitor</span></div>
+          <div class="sidebar-card-detail" id="sidebar-system-monitor-text">Loading runtime status.</div>
         </div>
         <div class="sidebar-disclaimer">Market output is research material, not financial advice.</div>
       </div>
@@ -135,8 +135,8 @@
                 <div id="overview-runtime"></div>
               </section>
               <section class="panel panel-pad">
-                <h2 class="panel-title">Monitor status <span id="overview-monitor-pill" class="status-pill pending">loading</span></h2>
-                <div id="overview-monitor"></div>
+                <h2 class="panel-title">System Monitor <span id="overview-system-monitor-pill" class="status-pill pending">loading</span></h2>
+                <div id="overview-system-monitor"></div>
               </section>
             </div>
 
@@ -158,7 +158,7 @@
                 <button class="ghost-button" type="button" data-report-job="generate">Generate report</button>
                 <button class="ghost-button" type="button" data-view-shortcut="strategies">Run strategy backtest</button>
                 <button class="ghost-button" type="button" data-view-shortcut="intelligence">Review intelligence</button>
-                <button class="ghost-button" type="button" data-view-shortcut="monitor">Monitor control</button>
+                <button class="ghost-button" type="button" data-view-shortcut="live">Live overview</button>
                 <button class="ghost-button" type="button" data-view-shortcut="settings">System settings</button>
               </div>
             </section>
@@ -402,39 +402,39 @@
         </section>
       </section>
 
-      <section id="monitor-view" class="view hidden" data-view="monitor">
-        <div class="monitor-layout">
-          <section class="panel monitor-hero" id="monitor-hero"></section>
-          <section class="panel panel-pad">
-            <h2 class="panel-title">Monitor timeline</h2>
-            <ul id="monitor-timeline" class="monitor-timeline"></ul>
+      <section id="live-view" class="view hidden" data-view="live">
+        <div class="live-layout">
+          <section class="summary-strip columns-6 live-summary" id="live-summary"></section>
+          <section class="panel panel-pad live-source-board">
+            <div class="live-section-head">
+              <h2 class="panel-title">Source refresh</h2>
+              <span class="muted">Core-owned collection state across configured shared stores.</span>
+            </div>
+            <div id="live-source-matrix" class="live-source-matrix"></div>
           </section>
-          <aside class="detail-rail">
+          <section class="panel panel-pad live-stream-panel">
+            <div class="live-section-head">
+              <h2 class="panel-title">Intelligence stream</h2>
+              <span class="muted">Latest bounded alerts and source-state warnings.</span>
+            </div>
+            <div id="live-intelligence-stream" class="live-stream"></div>
+          </section>
+          <aside class="live-side">
             <section class="panel panel-pad">
-              <h2 class="panel-title">Controls</h2>
-              <div class="control-grid">
-                <button class="primary-button" type="button" data-service-role="monitor" data-service-action="start">Start Monitor</button>
-                <button class="ghost-button" type="button" data-service-role="monitor" data-service-action="stop">Stop Monitor</button>
-                <button class="ghost-button" type="button" data-service-role="monitor" data-service-action="restart">Restart Monitor</button>
-                <button class="primary-button" type="button" data-monitor-job="monitor_once">Run one cycle</button>
-                <button class="ghost-button" type="button" data-monitor-job="monitor_dry_run">Dry run</button>
-                <button class="ghost-button" type="button" id="enable-daily-report">Enable no-Codex daily run</button>
-                <button class="ghost-button" type="button" id="schedule-monitor-button">Schedule</button>
-              </div>
-              <div id="monitor-control-result" style="margin-top: 12px;"></div>
+              <h2 class="panel-title">Report schedule</h2>
+              <div id="live-report-history" class="live-report-history"></div>
             </section>
             <section class="panel panel-pad">
-              <h2 class="panel-title">Configuration</h2>
-              <div id="monitor-config"></div>
+              <h2 class="panel-title">System runtime</h2>
+              <div id="live-system-runtime"></div>
             </section>
           </aside>
-          <section class="panel panel-pad">
-            <h2 class="panel-title">Recent alerts</h2>
-            <div id="monitor-alert-table"></div>
-          </section>
-          <section class="panel panel-pad">
-            <h2 class="panel-title">Recent jobs</h2>
-            <div id="monitor-job-table"></div>
+          <section class="panel panel-pad live-operations-panel">
+            <div class="live-section-head">
+              <h2 class="panel-title">Operations timeline</h2>
+              <span class="muted">Recent Live refresh jobs and historical monitor-cycle evidence.</span>
+            </div>
+            <ul id="live-operations-timeline" class="live-timeline"></ul>
           </section>
         </div>
       </section>
@@ -615,7 +615,7 @@
   <script src="/assets/dashboard_dialogs.js" defer></script>
   <script src="/assets/dashboard_reports.js" defer></script>
   <script src="/assets/dashboard_strategy_chart.js" defer></script>
-  <script src="/assets/dashboard_monitor.js" defer></script>
+  <script src="/assets/dashboard_live.js" defer></script>
   <script src="/assets/dashboard_data_viewer.js" defer></script>
   <script src="/assets/dashboard.js" defer></script>
 </body>

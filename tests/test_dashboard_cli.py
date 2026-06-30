@@ -247,7 +247,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     response = client.get("/")
     shared_script = client.get("/assets/dashboard_shared.js")
     strategy_chart_script = client.get("/assets/dashboard_strategy_chart.js")
-    monitor_script = client.get("/assets/dashboard_monitor.js")
+    live_script = client.get("/assets/dashboard_live.js")
     script = client.get("/assets/dashboard.js")
 
     assert response.status_code == 200
@@ -258,8 +258,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert shared_script.headers["cache-control"] == "no-store, max-age=0"
     assert strategy_chart_script.status_code == 200
     assert strategy_chart_script.headers["cache-control"] == "no-store, max-age=0"
-    assert monitor_script.status_code == 200
-    assert monitor_script.headers["cache-control"] == "no-store, max-age=0"
+    assert live_script.status_code == 200
+    assert live_script.headers["cache-control"] == "no-store, max-age=0"
     assert script.status_code == 200
     assert script.headers["cache-control"] == "no-store, max-age=0"
     assert "halpha-dashboard-app" in response.text
@@ -267,14 +267,14 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'id="global-page-subtitle"' not in response.text
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in response.text
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in response.text
-    assert '<script src="/assets/dashboard_monitor.js" defer></script>' in response.text
+    assert '<script src="/assets/dashboard_live.js" defer></script>' in response.text
     assert '<script src="/assets/dashboard.js" defer></script>' in response.text
     assert response.text.index("/assets/dashboard_shared.js") < response.text.index("/assets/dashboard_strategy_chart.js")
-    assert response.text.index("/assets/dashboard_strategy_chart.js") < response.text.index("/assets/dashboard_monitor.js")
-    assert response.text.index("/assets/dashboard_monitor.js") < response.text.index("/assets/dashboard.js")
+    assert response.text.index("/assets/dashboard_strategy_chart.js") < response.text.index("/assets/dashboard_live.js")
+    assert response.text.index("/assets/dashboard_live.js") < response.text.index("/assets/dashboard.js")
     assert "window.HalphaDashboardShared" in shared_script.text
     assert "window.HalphaDashboardStrategyChart" in strategy_chart_script.text
-    assert "window.HalphaDashboardMonitor" in monitor_script.text
+    assert "window.HalphaDashboardLive" in live_script.text
     assert "refreshCurrentView" in script.text
     assert 'runStrategyAction("backtest"' in script.text
     assert 'runStrategyAction("experiment"' in script.text
@@ -294,7 +294,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-delete-endpoint="/api/data/deletion"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
     assert 'data-strategy-actions-endpoint="/api/strategies/actions"' in response.text
-    assert 'data-monitor-endpoint="/api/monitor"' in response.text
+    assert 'data-live-endpoint="/api/live"' in response.text
+    assert 'data-live-cycles-endpoint="/api/live/cycles"' in response.text
+    assert 'data-live-alerts-endpoint="/api/live/alerts"' in response.text
+    assert 'data-monitor-endpoint="/api/monitor"' not in response.text
     assert 'data-jobs-endpoint="/api/jobs"' in response.text
     assert 'data-schedule-endpoint="/api/schedule/daily-report"' in response.text
     assert 'data-services-endpoint="/api/services"' in response.text
@@ -310,7 +313,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'href="#overview" data-view-target="overview"' in response.text
     assert 'href="#reports" data-view-target="reports"' in response.text
     assert 'href="#strategies" data-view-target="strategies"' in response.text
-    assert 'href="#monitor" data-view-target="monitor"' in response.text
+    assert 'href="#live" data-view-target="live"' in response.text
+    assert 'href="#monitor" data-view-target="monitor"' not in response.text
     assert 'href="#intelligence" data-view-target="intelligence"' in response.text
     assert 'href="#settings" data-view-target="settings"' in response.text
     assert 'href="#artifacts"' not in response.text
@@ -321,8 +325,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Markdown" not in response.text
     assert "OHLCV candlestick chart" in response.text
     assert "Strategy parameters" in response.text
-    assert "Monitor timeline" in response.text
-    assert "Controls" in response.text
+    assert "Operations timeline" in response.text
+    assert "Source refresh" in response.text
     assert "Intelligence" in response.text
     assert "Overview" in response.text
     assert 'id="settings-config-select"' in response.text
@@ -340,9 +344,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "Storage maintenance" in script.text
     assert "DELETE RUN DATA" in script.text
     assert "empty-state" in response.text
-    assert "No monitor cycles yet" in monitor_script.text
-    assert "Dry run" in response.text
-    assert "Run one cycle" in response.text
+    assert "No Live refresh jobs or historical cycles are available yet." in live_script.text
+    assert "Dry run" not in response.text
+    assert "Run one cycle" not in response.text
     assert "Run backtest" in response.text
     assert "Generate report" in response.text
     assert "Save changes" in response.text
