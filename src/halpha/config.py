@@ -19,6 +19,15 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
+from halpha.live.contracts import (
+    LIVE_COLLECTION_FIELDS,
+    LIVE_CONFIG_FIELDS,
+    LIVE_DAILY_REPORT_FIELDS,
+    LIVE_DATA_TYPES,
+    LIVE_REPORT_TRIGGER_FIELDS,
+    LIVE_REPORTS_FIELDS,
+    LIVE_TRIGGER_IDS,
+)
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS
 from halpha.market.ohlcv_source import SUPPORTED_OHLCV_SOURCES
 from halpha.monitor.monitoring import MONITOR_SOURCE_KEYS, SUPPORTED_MONITOR_FIELDS
@@ -30,6 +39,7 @@ CONFIG_SECTIONS = {
     "codex",
     "dashboard",
     "logging",
+    "live",
     "macro_calendar",
     "market",
     "monitor",
@@ -246,6 +256,8 @@ def validate_config(config: dict[str, Any], *, config_path: Path | str | None = 
         _validate_monitor_config(config["monitor"])
     if "dashboard" in config:
         _validate_dashboard_config(config["dashboard"])
+    if "live" in config:
+        _validate_live_config(config["live"])
     if "logging" in config:
         _validate_logging_config(config["logging"])
 
@@ -438,6 +450,81 @@ def _validate_logging_config(logging_config: Any) -> None:
     )
     if "output_dir" in logging_config:
         _require_non_empty_string(logging_config, "output_dir", "logging.output_dir")
+
+
+def _validate_live_config(live: Any) -> None:
+    if not isinstance(live, dict):
+        raise ConfigError("live must be a mapping.")
+    _reject_unsupported_fields(live, path="live", supported_fields=LIVE_CONFIG_FIELDS)
+    if "enabled" in live:
+        _require_bool(live, "enabled", "live.enabled")
+    if "tick_seconds" in live:
+        _require_positive_int(live, "tick_seconds", "live.tick_seconds")
+    if "collections" in live:
+        _validate_live_collections_config(live["collections"])
+    if "reports" in live:
+        _validate_live_reports_config(live["reports"])
+
+
+def _validate_live_collections_config(collections: Any) -> None:
+    if not isinstance(collections, dict):
+        raise ConfigError("live.collections must be a mapping.")
+    unsupported = sorted(set(collections) - set(LIVE_DATA_TYPES))
+    if unsupported:
+        supported = ", ".join(LIVE_DATA_TYPES)
+        names = ", ".join(str(item) for item in unsupported)
+        raise ConfigError(f"unsupported live.collections data type(s): {names}. Supported data types: {supported}.")
+    for data_type in sorted(collections):
+        path = f"live.collections.{data_type}"
+        collection = collections[data_type]
+        if not isinstance(collection, dict):
+            raise ConfigError(f"{path} must be a mapping.")
+        _reject_unsupported_fields(collection, path=path, supported_fields=LIVE_COLLECTION_FIELDS)
+        enabled = collection.get("enabled") is True
+        if "enabled" in collection:
+            _require_bool(collection, "enabled", f"{path}.enabled")
+        if enabled or "cadence_seconds" in collection:
+            _require_positive_int(collection, "cadence_seconds", f"{path}.cadence_seconds")
+        if enabled or "lookback_seconds" in collection:
+            _require_positive_int(collection, "lookback_seconds", f"{path}.lookback_seconds")
+        if data_type == "macro_calendar":
+            if enabled or "lookahead_seconds" in collection:
+                _require_positive_int(collection, "lookahead_seconds", f"{path}.lookahead_seconds")
+        elif "lookahead_seconds" in collection:
+            raise ConfigError(f"{path}.lookahead_seconds is only supported for macro_calendar.")
+
+
+def _validate_live_reports_config(reports: Any) -> None:
+    if not isinstance(reports, dict):
+        raise ConfigError("live.reports must be a mapping.")
+    _reject_unsupported_fields(reports, path="live.reports", supported_fields=LIVE_REPORTS_FIELDS)
+    if "daily" in reports:
+        daily = reports["daily"]
+        if not isinstance(daily, dict):
+            raise ConfigError("live.reports.daily must be a mapping.")
+        _reject_unsupported_fields(daily, path="live.reports.daily", supported_fields=LIVE_DAILY_REPORT_FIELDS)
+        if "enabled" in daily:
+            _require_bool(daily, "enabled", "live.reports.daily.enabled")
+    if "triggers" in reports:
+        triggers = reports["triggers"]
+        if not isinstance(triggers, dict):
+            raise ConfigError("live.reports.triggers must be a mapping.")
+        unsupported = sorted(set(triggers) - set(LIVE_TRIGGER_IDS))
+        if unsupported:
+            supported = ", ".join(LIVE_TRIGGER_IDS)
+            names = ", ".join(str(item) for item in unsupported)
+            raise ConfigError(f"unsupported live.reports.triggers id(s): {names}. Supported trigger ids: {supported}.")
+        for trigger_id in sorted(triggers):
+            path = f"live.reports.triggers.{trigger_id}"
+            trigger = triggers[trigger_id]
+            if not isinstance(trigger, dict):
+                raise ConfigError(f"{path} must be a mapping.")
+            _reject_unsupported_fields(trigger, path=path, supported_fields=LIVE_REPORT_TRIGGER_FIELDS)
+            enabled = trigger.get("enabled") is True
+            if "enabled" in trigger:
+                _require_bool(trigger, "enabled", f"{path}.enabled")
+            if enabled or "cooldown_seconds" in trigger:
+                _require_positive_int(trigger, "cooldown_seconds", f"{path}.cooldown_seconds")
 
 
 def _validate_text_intelligence_models(intelligence: dict[str, Any], *, required: bool) -> None:

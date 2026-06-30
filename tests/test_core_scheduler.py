@@ -109,6 +109,45 @@ def test_core_scheduler_skips_duplicate_transient_monitor_cycle(tmp_path: Path) 
     assert jobs.created_requests == []
 
 
+def test_core_scheduler_creates_due_live_collection_job(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = _write_config(
+        tmp_path,
+        monitor_enabled=False,
+        live_block="""
+live:
+  enabled: true
+  tick_seconds: 15
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    jobs = _RecordingJobManager()
+    scheduler = CoreScheduler(config, config_path=config_path, job_manager=jobs, schedule_manager=_SkippingScheduleManager())
+
+    tick = scheduler.run_once()
+
+    assert tick["live_refresh"]["status"] == "available"
+    assert len(jobs.created_requests) == 1
+    request = jobs.created_requests[0]
+    assert request["intent"] == "data_collect"
+    assert request["requested_by"] == "Core"
+    assert request["requester"] == {
+        "source": "live_scheduler",
+        "tick_id": tick["tick_id"],
+        "data_type": "text_event",
+        "target_key": "text_event:all",
+    }
+    assert request["params"]["data_type"] == "text_event"
+    assert request["params"]["source"] == "all"
+    assert request["params"]["start"]
+    assert request["params"]["end"]
+
+
 def test_core_scheduler_skips_recent_terminal_monitor_cycle(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, monitor_enabled=True)
     config = load_config(config_path)
@@ -178,7 +217,11 @@ class _RecordingJobManager:
         return job
 
 
-def _write_config(tmp_path: Path, *, monitor_enabled: bool) -> Path:
+def _write_config(tmp_path: Path, *, monitor_enabled: bool, live_block: str = "") -> Path:
+    return _write_config_with_live(tmp_path, monitor_enabled=monitor_enabled, live_block=live_block)
+
+
+def _write_config_with_live(tmp_path: Path, *, monitor_enabled: bool, live_block: str) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         f"""
@@ -203,6 +246,7 @@ monitor:
   output_dir: runs/monitor
   target_stage: build_materials
   no_codex: true
+{live_block}
 """.strip(),
         encoding="utf-8",
     )

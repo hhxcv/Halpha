@@ -387,6 +387,103 @@ profiles:
         load_config(config_path)
 
 
+def test_load_config_accepts_live_collection_config(tmp_path: Path) -> None:
+    config_path = _write_config_text(
+        tmp_path,
+        """
+run:
+  output_dir: runs
+market:
+  enabled: false
+text:
+  enabled: false
+report:
+  language: zh-CN
+codex:
+  enabled: false
+live:
+  enabled: true
+  tick_seconds: 15
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+    macro_calendar:
+      enabled: true
+      cadence_seconds: 3600
+      lookback_seconds: 86400
+      lookahead_seconds: 604800
+  reports:
+    daily:
+      enabled: false
+    triggers:
+      data_quality_degraded:
+        enabled: true
+        cooldown_seconds: 3600
+""",
+    )
+
+    config = load_config(config_path)
+
+    assert config["live"]["enabled"] is True
+
+
+def test_load_config_rejects_unknown_live_collection_type(tmp_path: Path) -> None:
+    config_path = _write_config_text(
+        tmp_path,
+        """
+run:
+  output_dir: runs
+market:
+  enabled: false
+text:
+  enabled: false
+report:
+  language: zh-CN
+codex:
+  enabled: false
+live:
+  enabled: true
+  collections:
+    unsupported:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+
+    with pytest.raises(ConfigError, match="unsupported live.collections data type"):
+        load_config(config_path)
+
+
+def test_load_config_rejects_enabled_live_collection_without_lookback(tmp_path: Path) -> None:
+    config_path = _write_config_text(
+        tmp_path,
+        """
+run:
+  output_dir: runs
+market:
+  enabled: false
+text:
+  enabled: false
+report:
+  language: zh-CN
+codex:
+  enabled: false
+live:
+  enabled: true
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+""",
+    )
+
+    with pytest.raises(ConfigError, match=r"live\.collections\.text_event\.lookback_seconds must be a positive integer"):
+        load_config(config_path)
+
+
 def test_load_config_accepts_enabled_user_state_config(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     _add_user_state_config(config_path)
@@ -1905,6 +2002,12 @@ def _add_user_state_config(config_path: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _write_config_text(tmp_path: Path, text: str) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(text.strip(), encoding="utf-8")
+    return config_path
 
 
 def _add_text_intelligence_config(config_path: Path) -> None:

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
+from halpha.live.config import load_live_settings
+from halpha.live.scheduler import LiveScheduler
 from halpha.dashboard.schedule import DashboardScheduleManager
 from halpha.monitor.monitoring import load_monitor_config
 from halpha.runtime.command_job_store import JOB_TRANSIENT_STATUSES
@@ -40,6 +42,7 @@ class CoreSchedulerTick:
     tick_id: str
     schedule_dispatch: dict[str, Any]
     monitor_cycle_job: dict[str, Any] | None
+    live_refresh: dict[str, Any]
     warnings: list[str]
     errors: list[str]
     next_tick_seconds: float
@@ -52,6 +55,7 @@ class CoreSchedulerTick:
             "tick_id": self.tick_id,
             "schedule_dispatch": self.schedule_dispatch,
             "monitor_cycle_job": self.monitor_cycle_job,
+            "live_refresh": self.live_refresh,
             "warnings": self.warnings,
             "errors": self.errors,
             "next_tick_seconds": self.next_tick_seconds,
@@ -93,12 +97,16 @@ class CoreScheduler:
         monitor_cycle_job = self._create_monitor_cycle_job_if_due(tick_id=tick_id)
         warnings.extend(_strings(monitor_cycle_job.get("warnings")) if monitor_cycle_job else [])
         errors.extend(_strings(monitor_cycle_job.get("errors")) if monitor_cycle_job else [])
+        live_refresh = self._run_live_refresh(tick_id=tick_id)
+        warnings.extend(_strings(live_refresh.get("warnings")))
+        errors.extend(_strings(live_refresh.get("errors")))
         status = "available" if not errors else "degraded"
         return CoreSchedulerTick(
             status=status,
             tick_id=tick_id,
             schedule_dispatch=schedule_dispatch,
             monitor_cycle_job=monitor_cycle_job,
+            live_refresh=live_refresh,
             warnings=warnings[:10],
             errors=errors[:10],
             next_tick_seconds=self.next_tick_seconds(),
@@ -118,7 +126,14 @@ class CoreScheduler:
             schedule_seconds = _positive_float(self.schedule_manager.next_due_seconds(), default=DEFAULT_CORE_SCHEDULER_TICK_SECONDS)
         except Exception:
             schedule_seconds = DEFAULT_CORE_SCHEDULER_TICK_SECONDS
-        return max(1.0, min(DEFAULT_CORE_SCHEDULER_TICK_SECONDS, monitor_seconds, schedule_seconds))
+        live_seconds = DEFAULT_CORE_SCHEDULER_TICK_SECONDS
+        try:
+            live_settings = load_live_settings(self.config)
+            if live_settings.enabled:
+                live_seconds = float(live_settings.tick_seconds)
+        except Exception:
+            live_seconds = DEFAULT_CORE_SCHEDULER_TICK_SECONDS
+        return max(1.0, min(DEFAULT_CORE_SCHEDULER_TICK_SECONDS, monitor_seconds, schedule_seconds, live_seconds))
 
     def _dispatch_daily_schedule(self) -> dict[str, Any]:
         try:
@@ -132,6 +147,27 @@ class CoreScheduler:
                 "job": None,
                 "warnings": [],
                 "errors": [str(exc) or "daily report schedule dispatch failed."],
+            }
+
+    def _run_live_refresh(self, *, tick_id: str) -> dict[str, Any]:
+        try:
+            return LiveScheduler(
+                self.config,
+                config_path=self.config_path,
+                job_manager=self.job_manager,
+            ).tick(tick_id=tick_id)
+        except Exception as exc:
+            return {
+                "schema_version": 1,
+                "artifact_type": "live_scheduler_tick",
+                "status": "failed",
+                "tick_id": tick_id,
+                "enabled": False,
+                "reason": "Live scheduler tick failed.",
+                "created_jobs": [],
+                "collections": [],
+                "warnings": [],
+                "errors": [str(exc) or "Live scheduler tick failed."],
             }
 
     def _create_monitor_cycle_job_if_due(self, *, tick_id: str) -> dict[str, Any] | None:
