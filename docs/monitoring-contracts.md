@@ -22,6 +22,8 @@ persists alert archive, cooldown, cycle, service-health, and source-cadence
 state in `.halpha/state.sqlite`, and exposes read-only monitor health
 inspection. Automatic scheduling and command-job creation are Core
 responsibilities, not resident Monitor responsibilities.
+User-facing continuous market intelligence belongs to the planned Live workflow
+defined in `docs/live-contracts.md`, not to the resident Monitor process.
 
 The resident Monitor service is one of exactly two supported resident Halpha
 process roles: `core` and `monitor`. It is explicit, unique within one runtime

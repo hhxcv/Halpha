@@ -640,7 +640,7 @@ The left rail contains:
 
 * formal Halpha logo lockup;
 * primary navigation;
-* compact monitor or pipeline state when useful;
+* compact System Monitor or pipeline state when useful;
 * latest run freshness when useful;
 * a collapse control for dense review work.
 
@@ -651,7 +651,7 @@ Overview
 Intelligence
 Strategy
 Reports
-Monitor
+Live
 Settings
 ```
 
@@ -660,9 +660,12 @@ Rules:
 * The rail is stable and quiet. Do not make it a marketing sidebar.
 * Use icon plus text navigation.
 * Active navigation uses `primary`.
+* Use `Live` for the user-facing continuous market intelligence workflow.
+* Do not use `Monitor` as a primary navigation label for market intelligence.
+  Monitor is reserved for System Monitor/runtime health language.
 * Keep rail cards compact. They should not compete with main content.
 * The rail must support a collapsed icon-only state on desktop and tablet.
-* The collapsed state uses the same active navigation style, hides labels and rail copy, and preserves the monitor status dot.
+* The collapsed state uses the same active navigation style, hides labels and rail copy, and preserves the System Monitor status dot.
 * The collapse state may persist locally in browser storage. It is display state, not product data or runtime authority.
 * The collapse toggle lives in the rail header, uses a current-color chevron, and must not look like a primary action.
 * In collapsed or responsive compact rail state, do not show a separate expand chevron button. The Halpha logo mark becomes the rail header control.
@@ -1472,9 +1475,9 @@ Rules:
 * Long source refs, URLs, JSON keys, and paths wrap inside the reader without
   overlapping buttons, badges, or adjacent columns.
 
-### Monitor cards
+### System Monitor Cards
 
-Monitor states:
+System Monitor states:
 
 ```text
 running
@@ -1490,14 +1493,16 @@ If stopped intentionally, do not style it as failure.
 Required fields:
 
 ```text
-Service state
-Last heartbeat
-Latest cycle
-Latest alert
-Suppressed duplicates
-Next scheduled run
+Core service state
+Monitor service state
+Last Core heartbeat
+Last Monitor heartbeat
+Latest explicit monitor cycle
 Failure summary
 ```
+
+Live freshness, source refresh, alert history, and report trigger decisions
+belong on the Live workflow surface, not on System Monitor cards.
 
 ### Artifact links
 

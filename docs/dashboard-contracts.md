@@ -155,8 +155,9 @@ The current job runner supports:
   `text_models_prepare`, and `text_intel`;
 - monitor jobs: `monitor_dry_run`, `monitor_once`, and `monitor_inspect`.
 
-The dashboard UI may expose short monitor validation jobs directly in the
-Monitor view. It must not create a resident Monitor loop as a command job.
+The dashboard UI may expose short monitor validation jobs directly in System
+Monitor or runtime control surfaces. It must not create a resident Monitor loop
+as a command job.
 Strategy actions are also available through
 `POST /api/strategies/actions/{backtest|experiment|optimize}`. The strategy
 action API creates the same internal allowlisted command jobs as the generic
@@ -248,18 +249,20 @@ Start, stop, force-stop, and restart semantics:
 - restart is explicit stop plus start, not implicit replacement during ordinary
   `start`.
 
-Core serves UI/API, reads product state, submits and executes bounded jobs, and
-sends lifecycle requests. Monitor is the lightweight resident checker for
-schedule due checks, Core health, Core restart after stale or terminal state,
-and Core job triggers. Halpha must not add a hidden supervisor, broker, worker
-pool, or additional resident process role.
+Core serves UI/API, reads product state, submits and executes bounded jobs,
+owns automatic schedule and job decisions, and sends lifecycle requests.
+Monitor is the lightweight resident checker for Core health and Core restart
+after stale or terminal Core state. Planned user-facing continuous market
+intelligence belongs to Live, defined in `docs/live-contracts.md`, and must run
+through Core-owned scheduling and visible command jobs. Halpha must not add a
+hidden supervisor, broker, worker pool, or additional resident process role.
 
 ## View Contract
 
 Dashboard pages should expose the current product shape through bounded views:
 
-- Overview: latest report state, system runtime, monitor status, data health,
-  warning and error counts, and recent attention items.
+- Overview: latest report state, system runtime, System Monitor status, data
+  health, warning and error counts, and recent attention items.
 - Reports: all generated reports, report metadata, real source refs, rendered
   Markdown previews, report outline navigation, report-directory source file
   browsing, report generation, and single-run report deletion.
@@ -279,9 +282,14 @@ Dashboard pages should expose the current product shape through bounded views:
   strategy controls expose configured strategy specs plus any exact
   source/symbol/timeframe `targeted_params` profiles. The dashboard must not
   reconstruct charts by dumping full reusable OHLCV history by default.
-- Monitor: monitor control, configured loop parameters, state-store cycle
-  history, linked runs, alert archive aggregates, cooldown state, warnings,
-  errors, and explicit daily-report schedule state.
+- Live: planned user-facing continuous market intelligence workflow for source
+  refresh state, recent intelligence, deterministic trigger decisions, alert or
+  attention history, daily schedule state, report dispatches, warnings, errors,
+  and drill-down links to jobs, records, runs, reports, and artifacts. Live is
+  not implemented by this contract text alone; see `docs/live-contracts.md`.
+- System Monitor: runtime health and service-control surfaces for the resident
+  Monitor role, Core liveness, bounded service health, and explicit recovery
+  commands. System Monitor is not a user-facing market intelligence workflow.
 - Intelligence: config-source non-OHLCV intelligence review. The Overview tab
   owns overall statistics such as high-impact events, source coverage, warnings,
   new topics, and data quality. Category tabs map to implemented backend shared
