@@ -121,15 +121,19 @@ frontend assets from `/assets/dashboard.css`, `/assets/dashboard_shared.js`,
 
 User-visible timestamp display uses `dashboard.display_timezone` when
 configured, falls back to `run.timezone`, and defaults to `Asia/Shanghai`.
-This display setting changes local UI rendering, report prompt timestamps, and
-other human-facing labels; it must not rewrite source artifacts or stored UTC
+Dashboard timestamp rendering also uses `dashboard.timestamp_hour_cycle`
+(`24h` by default, or `12h`) and `dashboard.timestamp_date_order`
+(`year_first` by default, or `year_last`) as the frontend global default. These
+display settings change local UI rendering, report prompt timestamps, and other
+human-facing labels; they must not rewrite source artifacts or stored UTC
 timestamps.
 
 Implemented dashboard views expose:
 
 - overview state from latest run, product validation, data quality, monitor,
   and workbench summaries;
-- run history, report previews, stage timelines, and artifact refs;
+- run history, report previews, stage timelines, report source file refs, and
+  artifact refs;
 - bounded artifact previews for supported local text-like artifacts;
 - local data store metadata and source refs;
 - strategy research outputs, standalone backtests, experiments, optimizations,
@@ -256,8 +260,8 @@ Dashboard pages should expose the current product shape through bounded views:
 - Overview: latest report state, system runtime, monitor status, data health,
   warning and error counts, and recent attention items.
 - Reports: all generated reports, report metadata, real source refs, rendered
-  Markdown previews, report generation, report download, and single-run report
-  deletion.
+  Markdown previews, report outline navigation, report-directory source file
+  browsing, report generation, and single-run report deletion.
 - Strategy lab: OHLCV shared-store review through the reusable candlestick
   chart, pipeline strategy artifacts, standalone backtests, standalone
   experiments, standalone optimizations, shared strategy evaluation history,

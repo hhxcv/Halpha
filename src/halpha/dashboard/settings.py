@@ -10,6 +10,12 @@ from typing import Any
 from uuid import uuid4
 
 from halpha.config import ConfigError, load_config
+from halpha.dashboard.constants import (
+    DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS,
+    DASHBOARD_TIMESTAMP_HOUR_CYCLE_OPTIONS,
+    DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
+    DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE,
+)
 from halpha.data.public_capabilities import (
     SUPPORTED_DERIVATIVES_DATA_CLASSES,
     SUPPORTED_DERIVATIVES_MARKET_SOURCES,
@@ -126,6 +132,26 @@ CONFIG_PROFILE_FIELDS = (
         "value_type": "string",
         "options": ("Asia/Shanghai", "UTC"),
         "description": "Timezone used for timestamps displayed in dashboard pages.",
+    },
+    {
+        "section": "Dashboard",
+        "label": "Time clock",
+        "path": "dashboard.timestamp_hour_cycle",
+        "control": "select",
+        "value_type": "string",
+        "options": DASHBOARD_TIMESTAMP_HOUR_CYCLE_OPTIONS,
+        "default": DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE,
+        "description": "Default clock style used by dashboard timestamps.",
+    },
+    {
+        "section": "Dashboard",
+        "label": "Date order",
+        "path": "dashboard.timestamp_date_order",
+        "control": "select",
+        "value_type": "string",
+        "options": DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS,
+        "default": DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
+        "description": "Default date order used by dashboard timestamps.",
     },
     {
         "section": "Market data",

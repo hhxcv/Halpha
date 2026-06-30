@@ -11,6 +11,7 @@ from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from dashboard_asset_helpers import (
     dashboard_css,
+    dashboard_reports_script,
     dashboard_script,
 )
 
@@ -154,8 +155,6 @@ def test_dashboard_shell_uses_monitor_status_without_local_mode_badges(tmp_path:
         "strategy-name",
         "intel-collect-range",
         "intel-preview-range",
-        "intel-preview-as-of-mode",
-        "intel-preview-as-of",
     ],
 )
 def test_dashboard_exposes_primary_filter_controls(tmp_path: Path, selector_id: str) -> None:
@@ -200,8 +199,14 @@ def test_dashboard_report_job_controls_expose_dom_contracts(tmp_path: Path) -> N
     assert "data-job-intent" in parser.data_attrs
     assert "data-preview-endpoint" in parser.data_attrs
     assert 'data-report-job="generate"' in html
+    assert 'id="topbar-report-generate"' in html
+    assert 'id="download-report-button"' not in html
+    assert 'id="report-details-button"' in html
+    assert 'id="report-details-drawer"' in html
+    assert 'id="report-details-drawer-body"' in html
     assert 'id="overview-report-job-status"' in html
     assert 'id="reports-report-job-status"' in html
+    assert "Daily Market Brief ${run.run_id}" not in dashboard_reports_script()
 
 
 def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> None:
@@ -260,6 +265,12 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
         "intel-overview-content",
         "intel-data-viewer",
         "intel-data-type",
+        "intel-collect-open",
+        "intel-collect-dialog-backdrop",
+        "intel-collect-dialog",
+        "intel-collect-dialog-title",
+        "intel-collect-dialog-close",
+        "intel-collect-dialog-cancel",
         "intel-collect-range",
         "intel-collect-date-range",
         "intel-collect-start",
@@ -267,12 +278,17 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
         "intel-collect-reset",
         "intel-preview-range",
         "intel-preview-date-range",
-        "intel-preview-as-of-mode",
-        "intel-preview-as-of-custom-field",
         "intel-preview-start",
         "intel-preview-end",
-        "intel-preview-as-of",
-        "intel-preview-reset",
+        "intel-preview-category-filter",
+        "intel-preview-keyword",
+        "intel-preview-clear-filters",
+        "intel-preview-apply-filters",
+        "intel-properties-drawer-backdrop",
+        "intel-properties-drawer",
+        "intel-properties-drawer-title",
+        "intel-properties-drawer-close",
+        "intel-properties-drawer-body",
         "intel-data-coverage",
         "intel-data-preview-panel",
         "intel-data-job-panel",
@@ -281,9 +297,20 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
     assert "Identity filter key" not in html
     assert "Identity filter value" not in html
     assert "Source scope" not in html
-    assert "Point-in-time view" in html
-    assert "Point-in-time help" in html
-    assert "Optional no-lookahead cutoff" in html
+    assert "Point-in-time view" not in html
+    assert "Point-in-time help" not in html
+    assert "Optional no-lookahead cutoff" not in html
+    assert "Filter" in html
+    assert "Date range" in html
+    assert "Preview time window" not in html
+    assert "Apply filters" not in html
+    assert "Clear filters" not in html
+    assert 'id="intel-preview-filter-count"' not in html
+    assert ">Apply</button>" in html
+    assert ">Clear</button>" in html
+    assert "Reset preview" not in html
+    assert '<h3 class="subsection-title">Preview</h3>' not in html
+    assert 'id="intel-properties-button"' not in html
     assert html.count("data-date-range-picker") == 4
     assert html.count("data-range-picker-label") == 4
     for action in (
@@ -347,7 +374,10 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "intelPreviewDisplayLimit" in script
     assert "intel-preview-keyword" in script
     assert "intel-preview-category-filter" in script
-    assert "Search loaded records" in script
+    assert "syncIntelligencePreviewFilterControls" in script
+    assert "refreshIntelligencePreviewFromState" in script
+    assert "openIntelligenceCollectDialog" in script
+    assert "closeIntelligenceCollectDialog" in script
     assert "recordCategory" in script
     assert "Unclassified" in script
     assert "wireDateRangePickers" in script
@@ -357,7 +387,7 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "in-range" in script
     assert "data-range-quick" in script
     assert "syncDateRangePicker" in script
-    assert "Click two dates to set one UTC range." in script
+    assert "Click two dates to set one UTC range." not in script
     assert "ensureStrategyDefaultRange" in script
     assert "coverage.range_start" in script
     assert 'ensureDefaultRange("strategy-data")' in script
@@ -406,6 +436,8 @@ def test_dashboard_storage_and_settings_controls_expose_dom_contracts(tmp_path: 
     assert "data-services-endpoint" in parser.data_attrs
     assert "data-settings-endpoint" in parser.data_attrs
     assert "data-setting-path" in script
+    assert "dashboard.timestamp_hour_cycle" in script
+    assert "dashboard.timestamp_date_order" in script
     assert 'min="0" max="1" step="0.01"' in script
     assert "body[data-theme=\"solar\"] .settings-nav button.active" in css
     assert "body[data-theme=\"solar\"] .settings-nav button.active .settings-nav-chevron" in css
@@ -451,6 +483,10 @@ def test_dashboard_dynamic_views_have_skeleton_loading_contracts(tmp_path: Path)
 
     assert ".skeleton" in css
     assert "@keyframes skeleton-shimmer" in css
+    assert "--skeleton-shimmer-duration: 2.4s;" in css
+    assert "animation: skeleton-shimmer var(--skeleton-shimmer-duration) var(--ease-standard) infinite;" in css
+    assert "body[data-theme=\"solar\"] .skeleton" in css
+    assert "animation: none !important;" in css
     assert ".loading-surface" in css
     assert "renderInitialLoadingPlaceholders()" in script
     assert "renderOverviewLoading()" in script
@@ -461,7 +497,6 @@ def test_dashboard_dynamic_views_have_skeleton_loading_contracts(tmp_path: Path)
     assert "renderSettingsLoading()" in script
     assert "VIEW_REFRESH_TTL_MS = 15000" in script
     assert "state.viewRefreshPromises[view]" in script
-    assert 'refreshCurrentView({force: true})' in script
 
 
 def test_dashboard_layout_composition_containers_are_unframed(tmp_path: Path) -> None:
@@ -494,11 +529,65 @@ def test_dashboard_shell_exposes_configured_display_timezone(tmp_path: Path) -> 
     script = _script_block(html)
 
     assert 'data-display-timezone="Asia/Shanghai"' in html
-    assert '<strong id="display-timezone">Asia/Shanghai</strong>' in html
-    assert 'const displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";' in script
+    assert 'data-timestamp-hour-cycle="24h"' in html
+    assert 'data-timestamp-date-order="year_first"' in html
+    assert 'id="display-timezone"' not in html
+    assert 'id="config-ref"' not in html
+    assert "Timezone:" not in html
+    assert "Config:" not in html
+    assert 'id="global-page-title">Overview</h1>' in html
+    assert 'id="global-page-subtitle"' not in html
+    assert 'class="topbar-secondary"' in html
+    assert 'class="topbar-actions"' in html
+    assert 'id="global-refresh"' not in html
+    assert "VIEW_TITLES" in script
+    assert "renderGlobalTopbar" in script
+    assert 'let displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";' in script
+    assert "app.dataset.timestampHourCycle" in script
+    assert "app.dataset.timestampDateOrder" in script
+    assert "applyTimestampDisplayOptionsFromProfile" in script
     assert "new Intl.DateTimeFormat" in script
     assert "formatTimestamp(value)" in script
     assert "looksLikeIsoTimestamp(value)" in script
+
+
+def test_dashboard_topbar_tabs_and_sidebar_are_interactive_shell_controls(tmp_path: Path) -> None:
+    html = _dashboard_html(tmp_path)
+    css = _style_block(html)
+    script = _script_block(html)
+
+    assert 'id="brand-logo-toggle"' in html
+    assert 'id="sidebar-collapse-toggle"' in html
+    assert 'aria-label="Collapse navigation"' in html
+    assert "--global-header-height: 64px;" in css
+    assert "min-height: var(--global-header-height);" in css
+    assert "height: var(--global-header-height);" in css
+    assert "padding: 0 14px 22px;" in css
+    assert "flex: 0 0 auto;" in css
+    assert ".brand-copy" in css
+    assert "gap: 5px;" in css
+    assert ".app-shell.sidebar-collapsed" in css
+    assert ".app-shell.sidebar-collapsed .sidebar-toggle" in css
+    assert "display: none;" in css
+    assert "halpha.dashboard.sidebarCollapsed" in script
+    assert "initializeSidebarCollapse()" in script
+    assert 'document.querySelector("#brand-logo-toggle")?.addEventListener("click"' in script
+    assert "wireTopbarTabDragging()" in script
+    assert 'class="tabs topbar-secondary-tabs hidden" id="intel-tabs"' in html
+    assert 'class="tabs strategy-operation-tabs topbar-secondary-tabs hidden" id="strategy-operation-tabs"' in html
+    assert ".topbar-secondary" in css
+    assert ".topbar-secondary-tabs" in css
+    assert ".topbar-secondary-tabs .tab-button" in css
+    assert "justify-content: flex-start;" in css
+    assert "align-items: center;" in css
+    assert "scrollbar-width: none;" in css
+    assert ".topbar-secondary::-webkit-scrollbar" in css
+    assert "can-scroll-right" in css
+    assert "mask-image" in css
+    assert (
+        css.index('body[data-theme="solar"] .strategy-operation-tabs.topbar-secondary-tabs')
+        > css.index('body[data-theme="solar"] .strategy-operation-tabs {')
+    )
 
 
 def test_dashboard_startup_event_selectors_exist_in_shell(tmp_path: Path) -> None:
@@ -526,9 +615,35 @@ def test_dashboard_report_preview_and_job_contracts_are_present(tmp_path: Path) 
     script = _script_block(html)
 
     assert 'data-report-job="generate"' in html
+    assert 'id="topbar-report-generate"' in html
+    assert 'id="download-report-button"' not in html
+    assert 'id="report-details-drawer-backdrop"' in html
+    assert 'id="report-details-drawer-close"' in html
+    assert 'id="report-source-files"' in html
     assert 'data-job-intent="run_no_codex"' not in html
     assert 'id="overview-report-job-status"' in html
     assert 'id="reports-report-job-status"' in html
+    assert ".report-source-chip" in css
+    assert ".report-source-files" in css
+    assert ".report-source-row.active" in css
+    assert ".artifact-document" in css
+    assert ".artifact-field-grid" in css
+    assert ".report-library-list" in css
+    assert ".group-title" not in css
+    assert "reportArtifactFiles" in dashboard_reports_script()
+    assert "reportArtifactGroups" in dashboard_reports_script()
+    assert "renderReportSourceFiles" in script
+    assert "selectReportArtifact" in script
+    assert "renderReportArtifactPreview" in script
+    assert "renderJsonArtifact" in script
+    assert "renderCsvArtifact" in script
+    assert "renderTextArtifact" in script
+    assert "larger than the bounded preview" in script
+    assert "data-report-artifact-ref" in script
+    assert "wireReportOutline" in script
+    assert "annotateReportHeadings" in script
+    assert "openReportDetailsDrawer" in script
+    assert "closeReportDetailsDrawer" in script
     assert ".hidden" in css
     assert "display: none !important;" in css
     assert "Report artifact recorded" not in script
@@ -570,6 +685,9 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert ".date-range-field" in css
     assert ".range-picker-trigger" in css
     assert ".range-picker-popover" in css
+    assert ".range-picker-hint" not in css
+    assert "body[data-theme=\"solar\"] .range-picker-presets," not in css
+    assert "body[data-theme=\"solar\"] .range-picker-actions," not in css
     assert ".range-picker-day.range-start" in css
     assert ".range-picker-day.in-range" in css
     assert "renderStrategyOhlcvPreview" in script
@@ -632,8 +750,39 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert ".intelligence-preview" in css
     assert "overflow: visible;" in css
     assert ".intel-preview-sidebar" in css
-    assert ".intel-list-filterbar" in css
-    assert ".intel-filter-actions" in css
+    assert ".intel-view-filter-controls" in css
+    assert ".filter-panel-title" in css
+    assert ".intel-filter-search-field" in css
+    assert ".filter-actions" in css
+    assert ".macro-calendar-mode .intel-view-filter-controls" in css
+    assert ".onchain-flow-mode .intel-view-filter-controls" in css
+    assert ".derivatives-market-mode .intel-view-filter-controls" in css
+    assert ".market-anomaly-mode .intel-view-filter-controls" in css
+    assert ".onchain-flow-preview" in css
+    assert ".onchain-subtabs" in css
+    assert ".onchain-chart-card" in css
+    assert ".onchain-chart-scroll" in css
+    assert ".onchain-chart-svg" in css
+    assert ".onchain-selected-card" in css
+    assert ".derivatives-market-preview" in css
+    assert ".derivatives-board-card" in css
+    assert ".derivatives-context-strip" in css
+    assert ".derivatives-pressure-panel" in css
+    assert ".market-anomaly-preview" in css
+    assert ".anomaly-radar-header" in css
+    assert ".anomaly-heatmap" in css
+    assert ".anomaly-leaderboard" in css
+    assert ".anomaly-detail-card" in css
+    assert ".macro-calendar-preview" in css
+    assert ".macro-calendar-main" in css
+    assert ".macro-month-grid" in css
+    assert "height: clamp(680px, calc(100vh - 180px), 980px);" in css
+    assert "grid-auto-rows: minmax(112px, 1fr);" in css
+    assert ".macro-year-grid" in css
+    assert ".macro-event-dialog" in css
+    assert ".intel-collect-dialog-controls" in css
+    assert ".intelligence-collect-dialog" in css
+    assert ".dialog-title-row" in css
     assert ".intel-date-picker" in css
     assert ".intel-calendar-day.has-data" in css
     assert ".intel-date-heading" in css
@@ -642,12 +791,27 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert ".macro-event-banner.past" in css
     assert ".intel-preview-row.macro-event-future" in css
     assert ".intel-preview-row.macro-event-past" in css
+    assert ".intel-preview-main-head" in css
+    assert "border-left: 4px solid var(--primary);" in css
+    assert "background: #fff4c2;" in css
+    assert ".data-viewer-header-actions" in css
+    assert ".intel-properties-trigger" in css
+    assert ".drawer-backdrop" in css
+    assert ".artifact-drawer" in css
+    assert "border-radius: 18px 0 0 18px;" not in css
+    assert "border-radius: 0;" in css
+    assert ".drawer-header" in css
+    assert ".drawer-body" in css
+    assert "@keyframes drawer-in" in css
+    assert "@keyframes overlay-in" in css
     assert ".intel-timeline-segment.unknown" in css
     assert ".timeline-legend-dot.unknown" in css
     assert ".collect-timeline-segment.unknown" in css
     assert ".data-viewer-issues" in css
     assert ".data-viewer-issue-popover" in css
     assert ".data-viewer-issue-list" in css
+    assert "min-width: 118px;" not in css
+    assert "compact-button data-viewer-issue-button" in script
     assert "background: #94a3b8;" in css
     assert "Jump date" in script
     assert "Scroll for more records" in script
@@ -657,6 +821,33 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "macroCalendarTemporalState" in script
     assert "Future event" in script
     assert "Past event" in script
+    assert "macroEventTooltip" in script
+    assert 'title="${escapeHtml(tooltip)}"' in script
+    assert 'aria-label="${escapeHtml(tooltip)}"' in script
+    assert "renderMacroCalendarPreview" in script
+    assert "renderOnchainFlowPreview" in script
+    assert "renderDerivativesMarketPreview" in script
+    assert "renderMarketAnomalyPreview" in script
+    assert "onchainMetricSeries" in script
+    assert "data-onchain-class" in script
+    assert "data-onchain-metric" in script
+    assert "data-onchain-point-index" in script
+    assert "data-onchain-jump" in script
+    assert "data-derivatives-class" in script
+    assert "data-derivatives-metric" in script
+    assert "data-anomaly-severity" in script
+    assert "data-anomaly-index" in script
+    assert "wireOnchainChartDragScroll" in script
+    assert "data-macro-calendar-view" in script
+    assert "data-macro-list-index" in script
+    assert "data-macro-event-index" in script
+    assert "data-macro-year-date" in script
+    assert "macroCalendarView" in script
+    assert "updateIntelligencePropertiesSelection" in script
+    assert "openIntelligencePropertiesDrawer" in script
+    assert "closeIntelligencePropertiesDrawer" in script
+    assert "renderIntelligencePropertiesDrawer" in script
+    assert 'id="intel-properties-button"' in script
     assert "data-data-viewer-job-log-toggle" in script
     assert "storeFields.records ?? storeFields.record_count ?? coverage.record_count" not in script
     assert "data-data-viewer-issues" in script
@@ -676,8 +867,11 @@ def test_dashboard_shell_has_no_unwired_dashboard_controls_or_fabricated_sources
     script = _script_block(html)
 
     assert 'id="report-reader-search"' in html
+    assert 'id="report-details"' not in html
+    assert 'id="report-sources"' not in html
+    assert "downloadSelectedReport" not in script
     assert "Report content is not available yet" not in script
-    assert '"Run manifest"' not in script
+    assert 'category === "run_metadata") return "Run manifest";' in script
     assert '"Report artifact"' not in script
     assert '["BTC", "ETH", "USDT", "SOL", "XRP", "ADA"]' not in script
     assert "{max_cycles: 72, interval_seconds: 360}" not in script

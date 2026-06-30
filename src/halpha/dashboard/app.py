@@ -31,6 +31,12 @@ from halpha.dashboard.data_viewer import (
     dashboard_data_viewer_summary,
     dashboard_data_viewer_timeline,
 )
+from halpha.dashboard.constants import (
+    DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS,
+    DASHBOARD_TIMESTAMP_HOUR_CYCLE_OPTIONS,
+    DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
+    DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE,
+)
 from halpha.dashboard.intelligence import dashboard_text_intelligence
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
@@ -244,7 +250,11 @@ def create_dashboard_app(
         active = context.active()
         active_config = active[0] if active else {}
         return HTMLResponse(
-            dashboard_index_html(display_timezone=dashboard_display_timezone(active_config)),
+            dashboard_index_html(
+                display_timezone=dashboard_display_timezone(active_config),
+                timestamp_hour_cycle=dashboard_timestamp_hour_cycle(active_config),
+                timestamp_date_order=dashboard_timestamp_date_order(active_config),
+            ),
             headers=NO_STORE_HEADERS,
         )
 
@@ -1167,6 +1177,22 @@ def _dashboard_lifecycle_payload(result: ServiceLifecycleResult, *, expected_ins
 
 def dashboard_display_timezone(config: dict[str, Any]) -> str:
     return configured_display_timezone(config)
+
+
+def dashboard_timestamp_hour_cycle(config: dict[str, Any]) -> str:
+    dashboard = config.get("dashboard") if isinstance(config, dict) else None
+    value = dashboard.get("timestamp_hour_cycle") if isinstance(dashboard, dict) else None
+    if value in DASHBOARD_TIMESTAMP_HOUR_CYCLE_OPTIONS:
+        return str(value)
+    return DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE
+
+
+def dashboard_timestamp_date_order(config: dict[str, Any]) -> str:
+    dashboard = config.get("dashboard") if isinstance(config, dict) else None
+    value = dashboard.get("timestamp_date_order") if isinstance(dashboard, dict) else None
+    if value in DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS:
+        return str(value)
+    return DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER
 
 
 def dashboard_data_deletion_plan(config: dict[str, Any], *, config_path: Path) -> dict[str, Any]:

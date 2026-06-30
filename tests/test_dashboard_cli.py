@@ -224,7 +224,8 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert script.status_code == 200
     assert script.headers["cache-control"] == "no-store, max-age=0"
     assert "halpha-dashboard-app" in response.text
-    assert "System status, reports, monitor, and data health" in response.text
+    assert 'id="global-page-title">Overview</h1>' in response.text
+    assert 'id="global-page-subtitle"' not in response.text
     assert '<script src="/assets/dashboard_shared.js" defer></script>' in response.text
     assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in response.text
     assert '<script src="/assets/dashboard_monitor.js" defer></script>' in response.text
@@ -261,7 +262,9 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-settings-endpoint="/api/config/profile"' in response.text
     assert 'data-preview-endpoint="/api/artifacts/preview"' in response.text
     assert 'data-display-timezone="Asia/Shanghai"' in response.text
-    assert '<strong id="display-timezone">Asia/Shanghai</strong>' in response.text
+    assert 'data-timestamp-hour-cycle="24h"' in response.text
+    assert 'data-timestamp-date-order="year_first"' in response.text
+    assert '<strong id="display-timezone">' not in response.text
     assert "formatTimestamp(value)" in script.text
     assert 'href="#overview" data-view-target="overview"' in response.text
     assert 'href="#reports" data-view-target="reports"' in response.text
@@ -301,12 +304,12 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert str(tmp_path) not in script.text
 
 
-def test_dashboard_root_uses_configured_display_timezone(tmp_path: Path) -> None:
+def test_dashboard_root_uses_configured_timestamp_display(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace(
             "market:\n",
-            "dashboard:\n  display_timezone: UTC\n\nmarket:\n",
+            "dashboard:\n  display_timezone: UTC\n  timestamp_hour_cycle: 12h\n  timestamp_date_order: year_last\n\nmarket:\n",
         ),
         encoding="utf-8",
     )
@@ -317,7 +320,9 @@ def test_dashboard_root_uses_configured_display_timezone(tmp_path: Path) -> None
 
     assert response.status_code == 200
     assert 'data-display-timezone="UTC"' in response.text
-    assert '<strong id="display-timezone">UTC</strong>' in response.text
+    assert 'data-timestamp-hour-cycle="12h"' in response.text
+    assert 'data-timestamp-date-order="year_last"' in response.text
+    assert '<strong id="display-timezone">' not in response.text
 
 
 def test_dashboard_display_timezone_falls_back_to_run_timezone() -> None:
@@ -355,6 +360,10 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
     ]
     fields = {field["path"]: field for field in payload["fields"]}
     assert fields["dashboard.display_timezone"]["value"] == "Asia/Shanghai"
+    assert fields["dashboard.timestamp_hour_cycle"]["value"] == "24h"
+    assert fields["dashboard.timestamp_hour_cycle"]["options"] == ["24h", "12h"]
+    assert fields["dashboard.timestamp_date_order"]["value"] == "year_first"
+    assert fields["dashboard.timestamp_date_order"]["options"] == ["year_first", "year_last"]
     assert fields["market.enabled"]["control"] == "toggle"
     assert fields["market.symbols"]["control"] == "tags"
     assert fields["market.ohlcv.timeframes"]["options"] == [
@@ -401,6 +410,8 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
             "confirm": True,
             "changes": {
                 "dashboard.display_timezone": "UTC",
+                "dashboard.timestamp_hour_cycle": "12h",
+                "dashboard.timestamp_date_order": "year_last",
                 "monitor.interval_seconds": 600,
                 "text.max_items": 12,
             },
@@ -412,12 +423,16 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
     assert payload["status"] == "succeeded"
     assert payload["changed_paths"] == [
         "dashboard.display_timezone",
+        "dashboard.timestamp_date_order",
+        "dashboard.timestamp_hour_cycle",
         "monitor.interval_seconds",
         "text.max_items",
     ]
     assert payload["backup_ref"].startswith(".halpha/dashboard/config_backups/config-")
     saved = load_config(config_path)
     assert saved["dashboard"]["display_timezone"] == "UTC"
+    assert saved["dashboard"]["timestamp_hour_cycle"] == "12h"
+    assert saved["dashboard"]["timestamp_date_order"] == "year_last"
     assert saved["monitor"]["interval_seconds"] == 600
     assert saved["text"]["max_items"] == 12
     assert dashboard_display_timezone(config) == "UTC"
@@ -1028,6 +1043,41 @@ def test_dashboard_run_detail_reports_empty_report_dir_as_not_generated(tmp_path
     assert detail["fields"]["report"] is None
     assert detail["fields"]["report_state"] == {"status": "skipped", "artifact": None}
     assert str(tmp_path) not in detail_response.text
+
+
+def test_dashboard_run_detail_lists_report_reference_files(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    run = _write_run(tmp_path, config_path)
+    _write_dashboard_source_artifacts(tmp_path, run)
+    write_json(run.raw_dir / "market.json", {"records": [{"symbol": "BTCUSDT"}]})
+    (run.codex_context_dir / "context.md").write_text("# Context\n", encoding="utf-8")
+    write_run_index(run, now="2026-06-20T00:05:00Z")
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/runs/run-1")
+
+    assert response.status_code == 200
+    payload = response.json()
+    files = payload["report_files"]
+    assert files[0] == {
+        "ref": "runs/run-1/report/report.md",
+        "path": "report/report.md",
+        "name": "report.md",
+        "title": "Report",
+        "category": "report",
+        "category_label": "Report",
+        "preview_kind": "markdown",
+        "size_bytes": (run.report_dir / "report.md").stat().st_size,
+        "pinned": True,
+    }
+    by_path = {file["path"]: file for file in files}
+    assert by_path["analysis/data_quality_summary.json"]["category"] == "analysis"
+    assert by_path["analysis/data_quality_summary.json"]["preview_kind"] == "json"
+    assert by_path["codex_context/context.md"]["category"] == "codex_context"
+    assert by_path["raw/market.json"]["category"] == "raw_input"
+    assert by_path["run_manifest.json"]["category"] == "run_metadata"
+    assert str(tmp_path) not in response.text
 
 
 def test_dashboard_rejects_run_index_refs_outside_project_root(tmp_path: Path) -> None:

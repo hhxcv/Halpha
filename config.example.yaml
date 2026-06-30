@@ -7,6 +7,8 @@ logging:
 
 dashboard:
   display_timezone: Asia/Shanghai
+  timestamp_hour_cycle: 24h
+  timestamp_date_order: year_first
 
 market:
   enabled: true
