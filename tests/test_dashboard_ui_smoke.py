@@ -707,10 +707,33 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert 'data-live-alerts-endpoint="/api/live/alerts"' in html
     assert 'id="live-summary"' in html
     assert 'id="live-source-matrix"' in html
+    assert 'id="live-filter-data-type"' in html
+    assert 'id="live-filter-status"' in html
+    assert 'id="live-filter-active"' in html
+    assert 'id="live-filter-attention"' in html
+    assert 'id="live-intelligence-strip"' in html
     assert 'id="live-intelligence-stream"' in html
     assert 'id="live-report-history"' in html
+    assert 'id="live-target-detail"' in html
+    assert 'id="live-job-lane"' in html
     assert 'id="live-operations-timeline"' in html
     assert "window.HalphaDashboardLive" in dashboard_script()
+    css = _style_block(html)
+    assert ".live-filter-bar" in css
+    assert ".live-intelligence-strip" in css
+    assert ".live-target-table" in css
+    assert ".live-target-row.active" in css
+    assert ".live-job-lane" in css
+    assert ".live-job-row" in css
+    assert ".live-target-detail" in css
+    assert "overflow-wrap: anywhere;" in css
+    assert ".live-job-head" in css
+    assert "DATA_TYPE_ORDER = [\"ohlcv\", \"text_event\", \"macro_calendar\", \"onchain_flow\", \"derivatives_market\", \"market_anomaly\"]" in dashboard_script()
+    assert "renderLiveIntelligenceStrip" in dashboard_script()
+    assert "renderLiveJobLane" in dashboard_script()
+    assert "data-live-target-key" in dashboard_script()
+    assert "matchesLiveFilters" in dashboard_script()
+    assert "collectionStatus" in dashboard_script()
     assert "data-monitor-job" not in html
     assert 'data-service-role="monitor"' not in html
     assert 'data-service-action="restart"' not in html

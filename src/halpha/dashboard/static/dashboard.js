@@ -129,6 +129,8 @@
       live: null,
       liveCycles: [],
       liveAlerts: null,
+      liveFilters: {dataType: "all", status: "all", activeOnly: false, attentionOnly: false},
+      selectedLiveTargetKey: "",
       schedule: null,
       services: null,
       jobs: [],
