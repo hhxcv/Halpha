@@ -38,7 +38,7 @@
         const view = chartView(selector, dataKey, sourceBars.length);
         const bars = sourceBars.slice(view.start, view.end + 1);
         if (!sourceBars.length) {
-          svg.innerHTML = `<text x="490" y="235" fill="#9fb2c7" text-anchor="middle">No backtest visualization available</text>`;
+          svg.innerHTML = `<text x="490" y="235" fill="#6F7682" text-anchor="middle">No backtest visualization available</text>`;
           hideTooltip(svg);
           return;
         }
@@ -59,7 +59,7 @@
           const high = Number(bar.high);
           const low = Number(bar.low);
           const up = close >= open;
-          const color = up ? "#00a88f" : "#f04438";
+          const color = up ? "#0ECB81" : "#F6465D";
           const cx = x(index);
           const yOpen = priceY(open);
           const yClose = priceY(close);
@@ -89,7 +89,7 @@
         const grid = Array.from({length: 6}, (_, index) => {
           const y = pad.top + index * ((height - pad.top - pad.bottom) / 5);
           const price = max - index * ((max - min) / 5);
-          return `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,0.07)"></line><text x="${width - pad.right + 12}" y="${y + 4}" fill="#9fb2c7" font-size="12">${formatNumber(Math.round(price))}</text>`;
+          return `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y}" y2="${y}" stroke="#E1E5EC"></line><text x="${width - pad.right + 12}" y="${y + 4}" fill="#6F7682" font-size="12">${formatNumber(Math.round(price))}</text>`;
         }).join("");
         const ma50 = renderAverageLine(bars, x, priceY, 12, "#4f8cff");
         const ma200 = renderAverageLine(bars, x, priceY, 34, "#f59e0b");
@@ -97,7 +97,7 @@
           ? `${view.start + 1}-${view.end + 1} / ${sourceBars.length} candles`
           : `${sourceBars.length} candles`;
         const crosshair = `<line class="candle-crosshair" x1="0" x2="0" y1="${pad.top}" y2="${height - 22}" visibility="hidden"></line>`;
-        svg.innerHTML = `${grid}${ma50}${ma200}${candleSvg}${crosshair}<text x="54" y="24" fill="#dbe7f3" font-size="13">${escapeHtml([vis.symbol, vis.timeframe].filter(Boolean).join(" - ") || "OHLCV")}</text><text x="54" y="44" fill="#9fb2c7" font-size="12">MA 12 close  MA 34 close</text><text x="54" y="64" fill="#9fb2c7" font-size="12">${escapeHtml(viewportLabel)}</text>`;
+        svg.innerHTML = `${grid}${ma50}${ma200}${candleSvg}${crosshair}<text x="54" y="24" fill="#111827" font-size="13">${escapeHtml([vis.symbol, vis.timeframe].filter(Boolean).join(" - ") || "OHLCV")}</text><text x="54" y="44" fill="#6F7682" font-size="12">MA 12 close  MA 34 close</text><text x="54" y="64" fill="#6F7682" font-size="12">${escapeHtml(viewportLabel)}</text>`;
         wireCandleTooltip(svg, bars, markerByTime, options.displayTimezone);
         wireChartNavigation(svg, selector, vis, options, {
           plotLeft: pad.left,
@@ -260,12 +260,12 @@
       }
 
       function markerColor(tone) {
-        if (tone === "exit") return "#f04438";
+        if (tone === "exit") return "#F6465D";
         if (tone === "short") return "#f97316";
         if (tone === "event") return "#8b5cf6";
         if (tone === "funding") return "#0ea5e9";
         if (tone === "multi-leg") return "#64748b";
-        return "#00a88f";
+        return "#0ECB81";
       }
 
       function markerDetailRows(marker) {

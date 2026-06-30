@@ -13,9 +13,9 @@ OHLCV_TIMEFRAME_DURATIONS = {
     "4h": timedelta(hours=4),
     "1d": timedelta(days=1),
     "1w": timedelta(weeks=1),
-    "1month": timedelta(days=31),
+    "1M": timedelta(days=31),
 }
-OHLCV_TIMEFRAME_ORDER = ("1m", "5m", "15m", "1h", "4h", "1d", "1w", "1month")
+OHLCV_TIMEFRAME_ORDER = ("1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M")
 STALE_CANDLE_TOLERANCE_MULTIPLIER = 2
 QUALITY_SAMPLE_LIMIT = 3
 
@@ -198,7 +198,7 @@ def _record_identity(record: dict[str, Any]) -> str:
 
 def ohlcv_timeframe_is_aligned(value: datetime, timeframe: str) -> bool:
     value = value.astimezone(timezone.utc).replace(microsecond=0)
-    if timeframe == "1month":
+    if timeframe == "1M":
         return (
             value.day == 1
             and value.hour == 0
@@ -221,7 +221,7 @@ def ohlcv_timeframe_is_aligned(value: datetime, timeframe: str) -> bool:
 
 def ohlcv_next_open_time(value: datetime, timeframe: str) -> datetime:
     value = value.astimezone(timezone.utc).replace(microsecond=0)
-    if timeframe == "1month":
+    if timeframe == "1M":
         year = value.year + (1 if value.month == 12 else 0)
         month = 1 if value.month == 12 else value.month + 1
         return value.replace(year=year, month=month, day=1, hour=0, minute=0, second=0)

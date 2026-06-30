@@ -78,9 +78,6 @@ OHLCV_SOURCE_SPECS = {
     "kraken_spot": OHLCVSourceSpec(exchange_id="kraken", market_type="spot", default_type="spot"),
     "coinbase_spot": OHLCVSourceSpec(exchange_id="coinbase", market_type="spot", default_type="spot"),
 }
-CCXT_TIMEFRAME_BY_TIMEFRAME = {"1month": "1M"}
-
-
 class OHLCVSourceError(Exception):
     """Raised when public OHLCV collection cannot produce valid finalized candles."""
 
@@ -234,7 +231,7 @@ def _exchange_options(source: str, *, proxy_url: str | None) -> dict[str, Any]:
 
 
 def _exchange_timeframe(timeframe: str) -> str:
-    return CCXT_TIMEFRAME_BY_TIMEFRAME.get(timeframe, timeframe)
+    return timeframe
 
 
 def ohlcv_exchange_symbol(source: str, symbol: str) -> str:

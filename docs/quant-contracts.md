@@ -838,7 +838,7 @@ market:
       - 4h
       - 1d
       - 1w
-      - 1month
+      - 1M
     lookback:
       1m: 1440
       5m: 2016
@@ -847,7 +847,7 @@ market:
       4h: 720
       1d: 500
       1w: 260
-      1month: 120
+      1M: 120
 
 quant:
   enabled: true
@@ -1054,7 +1054,7 @@ Validation contract:
   the runtime root. Absolute paths remain explicit local overrides.
 - `market.ohlcv.timeframes` must be a non-empty list when `market.ohlcv` exists or `quant.enabled` is true.
 - Supported OHLCV timeframes are `1m`, `5m`, `15m`, `1h`, `4h`, `1d`,
-  `1w`, and `1month`.
+  `1w`, and `1M`.
 - `market.ohlcv.sources` may list explicit public OHLCV collection sources for
   CLI and Dashboard collection. If omitted, explicit collection may use the
   built-in supported OHLCV sources. Product OHLCV sync still uses

@@ -1,27 +1,48 @@
     :root {
       color-scheme: light;
-      --bg: #f7f8fa;
+      --primary: #ffd43b;
+      --secondary: #6f7682;
+      --tertiary: #c2410c;
+      --on-accent: #111827;
+      --bg: #f7f8fb;
       --panel: #ffffff;
-      --panel-soft: #fbfcfd;
-      --sidebar: #0d1b2a;
-      --sidebar-2: #10263b;
-      --border: #dce2ea;
-      --border-strong: #bdc8d6;
+      --panel-soft: #f2f4f7;
+      --surface-inverse: #eef1f5;
+      --sidebar: #eef1f5;
+      --sidebar-2: #f7f8fb;
+      --border: #dbe1ea;
+      --border-strong: #b9c3d0;
       --text: #111827;
-      --muted: #5d6675;
-      --muted-2: #8a94a5;
-      --teal: #008575;
-      --teal-dark: #006f62;
-      --teal-soft: #e5f7f4;
-      --amber: #c46a00;
-      --amber-soft: #fff4dc;
-      --red: #dc2626;
-      --red-soft: #fdecec;
-      --blue: #2563eb;
-      --blue-soft: #eef4ff;
-      --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
-      --radius: 8px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --muted: #4b5563;
+      --muted-2: #8892a1;
+      --teal: #2f856d;
+      --teal-dark: #236553;
+      --teal-soft: #eef7f3;
+      --amber: #f59e0b;
+      --amber-soft: #fff7dd;
+      --red: #bd5b55;
+      --red-soft: #fff1ef;
+      --blue: #526aa8;
+      --blue-soft: #f0f4ff;
+      --chart-grid: #e1e5ec;
+      --chart-muted: #a8b0bc;
+      --focus-shadow: rgba(255, 212, 59, 0.34);
+      --overlay: rgba(23, 32, 51, 0.34);
+      --shadow: none;
+      --shadow-overlay: 0 18px 48px rgba(42, 60, 95, 0.16);
+      --radius: 14px;
+      --radius-control: 10px;
+      --radius-small: 6px;
+      --motion-instant: 90ms;
+      --motion-fast: 150ms;
+      --motion-standard: 220ms;
+      --motion-slow: 420ms;
+      --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+      --press-scale: 0.985;
+      --font-ui: Inter, Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: var(--font-ui);
     }
 
     * {
@@ -162,6 +183,19 @@
       border-radius: 999px;
       background: var(--teal);
       margin-right: 7px;
+    }
+
+    .health-dot.warning {
+      background: var(--amber);
+    }
+
+    .health-dot.failed {
+      background: var(--red);
+    }
+
+    .health-dot.stopped,
+    .health-dot.unknown {
+      background: var(--muted-2);
     }
 
     .sidebar-card-title {
@@ -324,6 +358,145 @@
       font-weight: 780;
     }
 
+    .loading-surface {
+      pointer-events: none;
+    }
+
+    .skeleton {
+      position: relative;
+      display: block;
+      overflow: hidden;
+      border-radius: var(--radius-small);
+      background: linear-gradient(90deg, #e5e9f0 0%, #f3f5f8 42%, #e5e9f0 82%);
+      background-size: 240% 100%;
+      animation: skeleton-shimmer 1.35s var(--ease-standard) infinite;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      margin: 7px 0;
+    }
+
+    .skeleton-line.tight {
+      margin: 4px 0;
+    }
+
+    .skeleton-value {
+      width: 42%;
+      height: 24px;
+      margin: 12px 0 10px;
+    }
+
+    .skeleton-block {
+      min-height: 86px;
+      border-radius: var(--radius);
+    }
+
+    .skeleton-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .skeleton-card {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .skeleton-table {
+      display: grid;
+      gap: 8px;
+    }
+
+    .skeleton-row {
+      display: grid;
+      grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+      min-height: 38px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .skeleton-row:last-child {
+      border-bottom: 0;
+    }
+
+    @keyframes skeleton-shimmer {
+      0% {
+        background-position: 120% 0;
+      }
+      100% {
+        background-position: -120% 0;
+      }
+    }
+
+    :where(
+      .panel,
+      .sidebar-card,
+      .message,
+      .empty-state,
+      .attention-item,
+      .compact-row,
+      .data-card,
+      .report-metric,
+      .strategy-param-card,
+      .strategy-space-card,
+      .strategy-choice-card,
+      .strategy-eval-panel,
+      .strategy-walkforward-card,
+      .intel-store-card,
+      .cleanup-option,
+      .skeleton-card
+    ) {
+      min-width: 0;
+    }
+
+    :where(
+      .panel,
+      .sidebar-card,
+      .message,
+      .empty-state,
+      .attention-item,
+      .compact-row,
+      .data-card,
+      .report-metric,
+      .strategy-param-card,
+      .strategy-space-card,
+      .strategy-choice-card,
+      .strategy-eval-panel,
+      .strategy-walkforward-card,
+      .intel-store-card,
+      .cleanup-option,
+      .skeleton-card
+    ) > * {
+      min-width: 0;
+    }
+
+    :where(
+      .panel,
+      .sidebar-card,
+      .message,
+      .empty-state,
+      .attention-item,
+      .compact-row,
+      .data-card,
+      .report-metric,
+      .strategy-param-card,
+      .strategy-space-card,
+      .strategy-choice-card,
+      .strategy-eval-panel,
+      .strategy-walkforward-card,
+      .intel-store-card,
+      .cleanup-option,
+      .skeleton-card
+    ) :where(p, div, span, small, strong, td, th, code, a) {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+
     .status-pill {
       display: inline-flex;
       align-items: center;
@@ -404,6 +577,18 @@
       overflow: hidden;
     }
 
+    .summary-strip.columns-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .summary-strip.columns-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .summary-strip.columns-6 {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
     .summary-cell {
       min-width: 0;
       padding: 16px 18px;
@@ -465,24 +650,34 @@
       align-items: stretch;
     }
 
+    .report-ops-grid > *,
+    .overview-layout > *,
+    .detail-rail > * {
+      min-width: 0;
+    }
+
     .report-metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0;
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      gap: 10px;
+      padding: 8px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      overflow: hidden;
+      background: var(--panel-soft);
       margin-bottom: 16px;
+      overflow: visible;
     }
 
     .report-metric {
-      padding: 13px;
-      border-right: 1px solid var(--border);
-      background: var(--panel-soft);
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
     }
 
     .report-metric:last-child {
-      border-right: 0;
+      border-right: 1px solid var(--border);
     }
 
     .metric-big {
@@ -518,8 +713,8 @@
 
     #overview-latest-report {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0 18px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 4px 16px;
     }
 
     #overview-latest-report .detail-row {
@@ -921,6 +1116,11 @@
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .toolbar-actions > * {
       min-width: 0;
     }
 
@@ -2191,6 +2391,18 @@
       gap: 10px;
     }
 
+    .control-grid > * {
+      min-width: 0;
+    }
+
+    .control-grid .ghost-button,
+    .toolbar-actions .ghost-button,
+    .toolbar-actions .primary-button,
+    .toolbar-actions .danger-button {
+      white-space: normal;
+      line-height: 1.2;
+    }
+
     .intelligence-layout {
       display: grid;
       gap: 14px;
@@ -2805,9 +3017,9 @@
     }
 
     .settings-nav button.active {
-      border-left-color: var(--teal);
-      background: #effaf8;
-      color: var(--teal-dark);
+      border-left-color: var(--primary);
+      background: var(--primary);
+      color: var(--on-accent);
     }
 
     .form-grid {
@@ -3184,6 +3396,9 @@
       }
 
       .summary-strip,
+      .summary-strip.columns-3,
+      .summary-strip.columns-4,
+      .summary-strip.columns-6,
       .report-metrics,
       .metric-strip,
       .data-cards,
@@ -3236,5 +3451,1281 @@
 
       .settings-top .field {
         flex-basis: 100%;
+      }
+    }
+
+    /* M24 solar surface refresh. Keep existing dashboard behavior, replace the visual system. */
+    body[data-theme="solar"] {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      line-height: 1.5;
+      letter-spacing: 0;
+      font-feature-settings: "tnum" 1;
+      transition:
+        background-color var(--motion-slow) var(--ease-standard),
+        color var(--motion-standard) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] button,
+    body[data-theme="solar"] input,
+    body[data-theme="solar"] select,
+    body[data-theme="solar"] textarea {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    body[data-theme="solar"] button {
+      transition:
+        background-color var(--motion-fast) var(--ease-standard),
+        border-color var(--motion-fast) var(--ease-standard),
+        color var(--motion-fast) var(--ease-standard),
+        box-shadow var(--motion-fast) var(--ease-standard),
+        transform var(--motion-instant) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] button:active:not(:disabled) {
+      transform: scale(var(--press-scale));
+    }
+
+    body[data-theme="solar"] :focus-visible {
+      outline: 0;
+      box-shadow: 0 0 0 3px var(--focus-shadow);
+    }
+
+    body[data-theme="solar"] .app-shell {
+      grid-template-columns: 236px minmax(0, 1fr);
+      background: var(--bg);
+    }
+
+    body[data-theme="solar"] .sidebar {
+      gap: 22px;
+      padding: 22px 14px;
+      border-right: 1px solid var(--border);
+      background: var(--surface-inverse);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .brand {
+      gap: 12px;
+      padding: 0 8px 16px;
+      border-bottom: 1px solid rgba(16, 24, 32, 0.09);
+    }
+
+    body[data-theme="solar"] .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text);
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    body[data-theme="solar"] .brand-name {
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 760;
+    }
+
+    body[data-theme="solar"] .brand-subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    body[data-theme="solar"] .nav {
+      gap: 6px;
+    }
+
+    body[data-theme="solar"] .nav-item {
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-control);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .nav-item:hover {
+      border-color: rgba(16, 24, 32, 0.08);
+      background: #e2e6ee;
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .nav-item.active {
+      border-color: #e0b800;
+      background: var(--primary);
+      color: var(--on-accent);
+      box-shadow: none;
+    }
+
+    body[data-theme="solar"] .nav-icon,
+    body[data-theme="solar"] .nav-item svg {
+      width: 18px;
+      height: 18px;
+      color: currentColor;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    body[data-theme="solar"] .nav-item:first-child .nav-icon {
+      fill: currentColor;
+      stroke: none;
+    }
+
+    body[data-theme="solar"] .sidebar-card {
+      padding: 14px;
+      border: 1px solid rgba(16, 24, 32, 0.11);
+      border-radius: var(--radius-control);
+      background: rgba(255, 255, 255, 0.68);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .sidebar-card-detail,
+    body[data-theme="solar"] .sidebar-disclaimer {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .sidebar-disclaimer {
+      border-top-color: rgba(16, 24, 32, 0.11);
+    }
+
+    body[data-theme="solar"] .main-shell {
+      background: var(--bg);
+    }
+
+    body[data-theme="solar"] .global-topbar {
+      height: 58px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(253, 253, 254, 0.96);
+      backdrop-filter: blur(8px);
+    }
+
+    body[data-theme="solar"] .top-status-item {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    body[data-theme="solar"] .top-status-item strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .view {
+      padding: 24px;
+    }
+
+    body[data-theme="solar"] .page-title-row {
+      margin-bottom: 16px;
+    }
+
+    body[data-theme="solar"] .page-title h1 {
+      font-size: 32px;
+      font-weight: 650;
+      line-height: 1.12;
+    }
+
+    body[data-theme="solar"] .page-title p {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .panel,
+    body[data-theme="solar"] .summary-strip,
+    body[data-theme="solar"] .report-metric,
+    body[data-theme="solar"] .strategy-eval-panel,
+    body[data-theme="solar"] .intel-preview-sidebar,
+    body[data-theme="solar"] .intel-preview-main,
+    body[data-theme="solar"] .intel-preview-detail,
+    body[data-theme="solar"] .data-viewer-timeline,
+    body[data-theme="solar"] .data-viewer-preview .table-wrap,
+    body[data-theme="solar"] .data-viewer-plan .table-wrap,
+    body[data-theme="solar"] .data-viewer-job .table-wrap,
+    body[data-theme="solar"] .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: none;
+    }
+
+    body[data-theme="solar"] .panel-pad {
+      padding: 20px;
+    }
+
+    body[data-theme="solar"] .panel-title {
+      margin-bottom: 14px;
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 650;
+    }
+
+    body[data-theme="solar"] .summary-cell,
+    body[data-theme="solar"] .report-metric,
+    body[data-theme="solar"] .metric-strip > div,
+    body[data-theme="solar"] .monitor-hero > div {
+      border-color: var(--border);
+    }
+
+    body[data-theme="solar"] .summary-label,
+    body[data-theme="solar"] .summary-note,
+    body[data-theme="solar"] .muted,
+    body[data-theme="solar"] .chart-meta,
+    body[data-theme="solar"] .timeline-time {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .summary-value,
+    body[data-theme="solar"] .metric-big,
+    body[data-theme="solar"] .intel-store-card-metric,
+    body[data-theme="solar"] .intel-metric-grid strong {
+      color: var(--text);
+      font-feature-settings: "tnum" 1;
+      font-weight: 650;
+    }
+
+    body[data-theme="solar"] .ghost-button,
+    body[data-theme="solar"] .primary-button,
+    body[data-theme="solar"] .danger-button,
+    body[data-theme="solar"] .icon-button,
+    body[data-theme="solar"] .chart-refresh-button,
+    body[data-theme="solar"] .compact-button,
+    body[data-theme="solar"] .data-viewer-issue-button,
+    body[data-theme="solar"] .hint-icon,
+    body[data-theme="solar"] .range-picker-trigger {
+      min-height: 40px;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: none;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    body[data-theme="solar"] .toolbar-actions > *,
+    body[data-theme="solar"] .control-grid > * {
+      min-width: 0;
+    }
+
+    body[data-theme="solar"] .toolbar-actions .ghost-button,
+    body[data-theme="solar"] .toolbar-actions .primary-button,
+    body[data-theme="solar"] .toolbar-actions .danger-button,
+    body[data-theme="solar"] .control-grid .ghost-button,
+    body[data-theme="solar"] .control-grid .primary-button,
+    body[data-theme="solar"] .control-grid .danger-button {
+      white-space: normal;
+      line-height: 1.2;
+    }
+
+    body[data-theme="solar"] .icon-button,
+    body[data-theme="solar"] .hint-icon {
+      width: 40px;
+      min-width: 40px;
+      padding: 0;
+    }
+
+    body[data-theme="solar"] .hint-icon {
+      width: 22px;
+      min-width: 22px;
+      min-height: 22px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    body[data-theme="solar"] .primary-button {
+      border-color: #e0b800;
+      background: var(--primary);
+      color: var(--on-accent);
+    }
+
+    body[data-theme="solar"] .primary-button:hover:not(:disabled) {
+      border-color: #caa300;
+      background: #ffdf5a;
+    }
+
+    body[data-theme="solar"] .primary-button:disabled {
+      border-color: var(--border);
+      background: var(--panel-soft);
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .ghost-button:hover:not(:disabled),
+    body[data-theme="solar"] .icon-button:hover:not(:disabled),
+    body[data-theme="solar"] .chart-refresh-button:hover:not(:disabled),
+    body[data-theme="solar"] .compact-button:hover:not(:disabled),
+    body[data-theme="solar"] .range-picker-trigger:hover {
+      border-color: var(--border-strong);
+      background: var(--panel-soft);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .danger-button {
+      border-color: #f0c1bd;
+      background: var(--red-soft);
+      color: #873631;
+    }
+
+    body[data-theme="solar"] .danger-button:hover:not(:disabled) {
+      border-color: var(--red);
+      background: #ffe6e2;
+    }
+
+    body[data-theme="solar"] .primary-button:disabled,
+    body[data-theme="solar"] .ghost-button:disabled,
+    body[data-theme="solar"] .danger-button:disabled,
+    body[data-theme="solar"] .icon-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    body[data-theme="solar"] .search-input,
+    body[data-theme="solar"] .select-input,
+    body[data-theme="solar"] .text-input,
+    body[data-theme="solar"] .readonly-value,
+    body[data-theme="solar"] textarea {
+      min-height: 40px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: none;
+      outline: 0;
+      transition:
+        border-color var(--motion-fast) var(--ease-standard),
+        background-color var(--motion-fast) var(--ease-standard),
+        box-shadow var(--motion-fast) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] .readonly-value {
+      background: var(--panel-soft);
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .search-input::placeholder,
+    body[data-theme="solar"] .text-input::placeholder,
+    body[data-theme="solar"] textarea::placeholder {
+      color: var(--muted-2);
+    }
+
+    body[data-theme="solar"] .search-input:focus,
+    body[data-theme="solar"] .select-input:focus,
+    body[data-theme="solar"] .text-input:focus,
+    body[data-theme="solar"] textarea:focus,
+    body[data-theme="solar"] .range-picker-trigger:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--focus-shadow);
+    }
+
+    body[data-theme="solar"] .status-pill,
+    body[data-theme="solar"] .range-picker-badge,
+    body[data-theme="solar"] .data-viewer-issue-count {
+      min-height: 24px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border-color: var(--border);
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .status-pill.ok,
+    body[data-theme="solar"] .status-pill.available,
+    body[data-theme="solar"] .status-pill.collected,
+    body[data-theme="solar"] .status-pill.no_data,
+    body[data-theme="solar"] .status-pill.succeeded,
+    body[data-theme="solar"] .status-pill.success,
+    body[data-theme="solar"] .status-pill.completed,
+    body[data-theme="solar"] .status-pill.running,
+    body[data-theme="solar"] .data-viewer-issue-button.ok {
+      border-color: #c6e6dc;
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+    }
+
+    body[data-theme="solar"] .status-pill.warning,
+    body[data-theme="solar"] .status-pill.partial,
+    body[data-theme="solar"] .status-pill.missing,
+    body[data-theme="solar"] .status-pill.not_collected,
+    body[data-theme="solar"] .status-pill.stale,
+    body[data-theme="solar"] .status-pill.skipped,
+    body[data-theme="solar"] .status-pill.pending,
+    body[data-theme="solar"] .data-viewer-issue-button.warning {
+      border-color: #f8d888;
+      background: var(--amber-soft);
+      color: #7a4100;
+    }
+
+    body[data-theme="solar"] .status-pill.unknown,
+    body[data-theme="solar"] .intel-timeline-segment.unknown,
+    body[data-theme="solar"] .collect-timeline-segment.unknown,
+    body[data-theme="solar"] .timeline-legend-dot.unknown {
+      border-color: #c8d1dc;
+      background: #e5e7eb;
+      color: #596273;
+    }
+
+    body[data-theme="solar"] .status-pill.failed,
+    body[data-theme="solar"] .status-pill.error,
+    body[data-theme="solar"] .status-pill.degraded,
+    body[data-theme="solar"] .status-pill.blocked,
+    body[data-theme="solar"] .data-viewer-issue-button.error,
+    body[data-theme="solar"] .data-viewer-issue-button.failed {
+      border-color: #f0c1bd;
+      background: var(--red-soft);
+      color: #873631;
+    }
+
+    body[data-theme="solar"] .status-pill.future {
+      border-color: #d5ddfa;
+      background: var(--blue-soft);
+      color: #3a4f82;
+    }
+
+    body[data-theme="solar"] .tabs {
+      display: inline-flex;
+      gap: 4px;
+      max-width: 100%;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel-soft);
+      overflow-x: auto;
+    }
+
+    body[data-theme="solar"] .tab-button {
+      min-height: 34px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-small);
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .tab-button:hover {
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .tab-button.active {
+      border-color: #e0b800;
+      background: var(--primary);
+      color: var(--on-accent);
+    }
+
+    body[data-theme="solar"] .metric-strip,
+    body[data-theme="solar"] .intel-date-picker,
+    body[data-theme="solar"] .chart-card,
+    body[data-theme="solar"] .operation-progress,
+    body[data-theme="solar"] .message {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .strategy-operation-panel,
+    body[data-theme="solar"] .intel-overview-panel {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    body[data-theme="solar"] .message {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .message.warning {
+      border-color: #f8d888;
+      background: var(--amber-soft);
+      color: #7a4100;
+    }
+
+    body[data-theme="solar"] .message.error {
+      border-color: #f0c1bd;
+      background: var(--red-soft);
+      color: #873631;
+    }
+
+    body[data-theme="solar"] .operation-progress-track {
+      height: 7px;
+      border-radius: 999px;
+      background: #e4e8ef;
+      overflow: hidden;
+    }
+
+    body[data-theme="solar"] .operation-progress-track span {
+      border-radius: inherit;
+      background: var(--primary);
+      transition: width var(--motion-standard) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] .operation-progress-track span.warning,
+    body[data-theme="solar"] .operation-progress-track span.partial,
+    body[data-theme="solar"] .operation-progress-track span.pending {
+      background: var(--amber);
+    }
+
+    body[data-theme="solar"] .operation-progress-track span.failed,
+    body[data-theme="solar"] .operation-progress-track span.error {
+      background: var(--red);
+    }
+
+    body[data-theme="solar"] .range-picker-popover,
+    body[data-theme="solar"] .data-viewer-issue-popover,
+    body[data-theme="solar"] .dialog {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow-overlay);
+    }
+
+    body[data-theme="solar"] .range-picker-presets,
+    body[data-theme="solar"] .range-picker-actions,
+    body[data-theme="solar"] .dialog-actions {
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .range-picker-day {
+      border-radius: var(--radius-small);
+    }
+
+    body[data-theme="solar"] .range-picker-day:not(.empty):hover {
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .range-picker-day.in-range {
+      background: var(--blue-soft);
+      color: #3a4f82;
+    }
+
+    body[data-theme="solar"] .range-picker-day.selected,
+    body[data-theme="solar"] .range-picker-day.range-start,
+    body[data-theme="solar"] .range-picker-day.range-end {
+      background: var(--primary);
+      color: var(--on-accent);
+    }
+
+    body[data-theme="solar"] .collect-timeline-track,
+    body[data-theme="solar"] .intel-timeline-track {
+      min-height: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel-soft);
+      overflow: hidden;
+    }
+
+    body[data-theme="solar"] .collect-timeline-segment.collected,
+    body[data-theme="solar"] .collect-timeline-segment.succeeded,
+    body[data-theme="solar"] .collect-timeline-segment.no_data,
+    body[data-theme="solar"] .collect-timeline-segment.ok,
+    body[data-theme="solar"] .intel-timeline-segment.collected,
+    body[data-theme="solar"] .intel-timeline-segment.succeeded,
+    body[data-theme="solar"] .intel-timeline-segment.no_data,
+    body[data-theme="solar"] .intel-timeline-segment.ok,
+    body[data-theme="solar"] .timeline-legend-dot.collected,
+    body[data-theme="solar"] .timeline-legend-dot.no_data {
+      background: var(--teal);
+    }
+
+    body[data-theme="solar"] .collect-timeline-segment.partial,
+    body[data-theme="solar"] .collect-timeline-segment.not_collected,
+    body[data-theme="solar"] .collect-timeline-segment.stale,
+    body[data-theme="solar"] .collect-timeline-segment.warning,
+    body[data-theme="solar"] .intel-timeline-segment.partial,
+    body[data-theme="solar"] .intel-timeline-segment.not_collected,
+    body[data-theme="solar"] .intel-timeline-segment.stale,
+    body[data-theme="solar"] .intel-timeline-segment.warning,
+    body[data-theme="solar"] .timeline-legend-dot.partial {
+      background: var(--amber);
+    }
+
+    body[data-theme="solar"] .collect-timeline-segment.failed,
+    body[data-theme="solar"] .collect-timeline-segment.error,
+    body[data-theme="solar"] .intel-timeline-segment.failed,
+    body[data-theme="solar"] .intel-timeline-segment.error,
+    body[data-theme="solar"] .timeline-legend-dot.failed {
+      background: var(--red);
+    }
+
+    body[data-theme="solar"] .strategy-layout {
+      gap: 14px;
+      min-height: calc(100vh - 112px);
+    }
+
+    body[data-theme="solar"] .strategy-workbench {
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    body[data-theme="solar"] .strategy-operation-tabs {
+      width: max-content;
+      max-width: 100%;
+      margin: 0 0 14px;
+      padding: 4px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .strategy-operation-panel {
+      gap: 14px;
+    }
+
+    body[data-theme="solar"] .strategy-action-grid,
+    body[data-theme="solar"] .strategy-collect-grid,
+    body[data-theme="solar"] .strategy-range-grid,
+    body[data-theme="solar"] .strategy-export-grid {
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .strategy-backtest-controls,
+    body[data-theme="solar"] .strategy-experiment-grid,
+    body[data-theme="solar"] .strategy-optimize-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    body[data-theme="solar"] .strategy-collect-grid,
+    body[data-theme="solar"] .strategy-range-grid,
+    body[data-theme="solar"] .strategy-export-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    body[data-theme="solar"] .strategy-action-grid .field,
+    body[data-theme="solar"] .strategy-collect-grid .field,
+    body[data-theme="solar"] .strategy-range-grid .field,
+    body[data-theme="solar"] .strategy-export-grid .field {
+      min-width: 0;
+    }
+
+    body[data-theme="solar"] .strategy-action-grid .strategy-wide-field {
+      grid-column: span 2;
+    }
+
+    @media (max-width: 760px) {
+      body[data-theme="solar"] .strategy-action-grid .strategy-wide-field {
+        grid-column: auto;
+      }
+    }
+
+    body[data-theme="solar"] .strategy-action-grid .primary-button,
+    body[data-theme="solar"] .strategy-action-grid .ghost-button,
+    body[data-theme="solar"] .strategy-collect-grid .primary-button,
+    body[data-theme="solar"] .strategy-collect-grid .ghost-button,
+    body[data-theme="solar"] .strategy-range-grid .primary-button,
+    body[data-theme="solar"] .strategy-range-grid .ghost-button,
+    body[data-theme="solar"] .strategy-export-grid .primary-button,
+    body[data-theme="solar"] .strategy-export-grid .ghost-button {
+      justify-self: start;
+    }
+
+    body[data-theme="solar"] .strategy-spec-summary {
+      gap: 12px;
+      padding: 14px;
+      border-color: var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .strategy-parameter-controls,
+    body[data-theme="solar"] .strategy-optimization-space,
+    body[data-theme="solar"] .strategy-strategy-list,
+    body[data-theme="solar"] .strategy-choice-list,
+    body[data-theme="solar"] .strategy-result-panel {
+      gap: 12px;
+    }
+
+    body[data-theme="solar"] .strategy-param-card,
+    body[data-theme="solar"] .strategy-space-card,
+    body[data-theme="solar"] .strategy-choice-card {
+      padding: 14px;
+      border-color: var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    body[data-theme="solar"] .strategy-choice-card input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
+
+    body[data-theme="solar"] .metric-strip {
+      border-color: var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    body[data-theme="solar"] .strategy-tabs {
+      padding: 14px;
+    }
+
+    body[data-theme="solar"] .kline-panel {
+      border: 1px solid var(--border);
+      background: var(--panel-soft);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .chart-header {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px 16px;
+      border-color: var(--border);
+      background: var(--panel);
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .chart-footer {
+      border-color: var(--border);
+      background: var(--panel);
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .chart-selector {
+      width: 100%;
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 10px;
+    }
+
+    body[data-theme="solar"] .chart-refresh-button,
+    body[data-theme="solar"] #strategy-quote-label {
+      justify-self: start;
+      align-self: end;
+    }
+
+    body[data-theme="solar"] .chart-title {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .chart-selector .field label {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .chart-selector .select-input,
+    body[data-theme="solar"] .chart-selector .text-input {
+      border-color: var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .text-input[readonly] {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    body[data-theme="solar"] .chart-wrap {
+      background:
+        linear-gradient(var(--chart-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px),
+        var(--panel-soft);
+      background-size: 60px 48px;
+    }
+
+    body[data-theme="solar"] .chart-wrap .candle-crosshair {
+      stroke: rgba(17, 24, 39, 0.52);
+    }
+
+    body[data-theme="solar"] .chart-tooltip {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: rgba(255, 255, 255, 0.98);
+      color: var(--text);
+      box-shadow: var(--shadow-overlay);
+    }
+
+    body[data-theme="solar"] .chart-tooltip-title,
+    body[data-theme="solar"] .chart-tooltip-grid strong {
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .chart-tooltip-grid span,
+    body[data-theme="solar"] .chart-tooltip-section strong,
+    body[data-theme="solar"] .chart-tooltip-op-detail span {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .chart-tooltip-section {
+      border-top-color: var(--border);
+    }
+
+    body[data-theme="solar"] .table-wrap {
+      overflow: auto;
+    }
+
+    body[data-theme="solar"] table.data-table,
+    body[data-theme="solar"] .kv-table,
+    body[data-theme="solar"] .markdown-reader table {
+      font-feature-settings: "tnum" 1;
+    }
+
+    body[data-theme="solar"] table.data-table th,
+    body[data-theme="solar"] table.data-table td,
+    body[data-theme="solar"] .kv-table td {
+      border-color: var(--border);
+    }
+
+    body[data-theme="solar"] table.data-table th {
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .timeline-node {
+      background: var(--teal);
+      color: #ffffff;
+    }
+
+    body[data-theme="solar"] .timeline-node.warning {
+      background: var(--amber);
+      color: #111827;
+    }
+
+    body[data-theme="solar"] .timeline-node.failed {
+      background: var(--red);
+      color: #ffffff;
+    }
+
+    body[data-theme="solar"] .toggle {
+      border: 1px solid var(--border-strong);
+      background: #dfe4ec;
+    }
+
+    body[data-theme="solar"] .toggle.on {
+      border-color: #e0b800;
+      background: var(--primary);
+    }
+
+    body[data-theme="solar"] .toggle::after {
+      box-shadow: 0 2px 6px rgba(17, 24, 39, 0.18);
+      transition: transform var(--motion-fast) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] .settings-layout {
+      gap: 14px;
+    }
+
+    body[data-theme="solar"] .settings-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    body[data-theme="solar"] .settings-top .field {
+      flex: 1 1 240px;
+      min-width: 200px;
+    }
+
+    body[data-theme="solar"] .settings-top .muted {
+      flex: 1 1 170px;
+      min-width: 150px;
+      padding: 0 4px 9px;
+      font-size: 13px;
+    }
+
+    body[data-theme="solar"] .settings-main {
+      grid-template-columns: minmax(190px, 230px) minmax(0, 1fr) minmax(260px, 320px);
+    }
+
+    body[data-theme="solar"] .settings-nav {
+      display: grid;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .settings-nav button {
+      align-items: center;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .settings-nav button span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    body[data-theme="solar"] .settings-nav button:hover {
+      border-color: var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .settings-nav button.active {
+      border-color: #e0b800;
+      background: var(--primary);
+      color: var(--on-accent);
+    }
+
+    body[data-theme="solar"] .settings-nav-chevron {
+      width: 16px;
+      height: 16px;
+      color: currentColor;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.76;
+      flex: 0 0 auto;
+    }
+
+    body[data-theme="solar"] .settings-nav button.active .settings-nav-chevron {
+      opacity: 1;
+    }
+
+    body[data-theme="solar"] .form-grid {
+      gap: 0;
+    }
+
+    body[data-theme="solar"] .form-row {
+      grid-template-columns: minmax(150px, 176px) minmax(0, 1fr);
+      gap: 18px;
+      min-height: 78px;
+      padding: 16px 0;
+      border-bottom-color: var(--border);
+    }
+
+    body[data-theme="solar"] .form-row:first-child {
+      padding-top: 0;
+    }
+
+    body[data-theme="solar"] .form-row strong {
+      font-weight: 700;
+    }
+
+    body[data-theme="solar"] .form-row small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    body[data-theme="solar"] .select-input {
+      appearance: none;
+      padding-right: 36px;
+      background-color: var(--panel);
+      background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%23526070' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    body[data-theme="solar"] .chip-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      min-width: 0;
+    }
+
+    body[data-theme="solar"] .form-row:has(.chip-row) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    body[data-theme="solar"] .chip.choice-chip {
+      position: relative;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      width: 100%;
+      min-height: 38px;
+      padding: 9px 11px;
+      border-color: var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: none;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    body[data-theme="solar"] .chip.choice-chip span:last-child {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      line-height: 1.25;
+    }
+
+    body[data-theme="solar"] .chip.choice-chip:hover {
+      border-color: var(--border-strong);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .choice-chip:has(input:checked) {
+      border-color: var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    body[data-theme="solar"] .choice-chip:has(input:focus-visible),
+    body[data-theme="solar"] .cleanup-option:has(input:focus-visible) {
+      outline: 0;
+      box-shadow: 0 0 0 3px var(--focus-shadow);
+    }
+
+    body[data-theme="solar"] .choice-chip input,
+    body[data-theme="solar"] .cleanup-option input[type="checkbox"] {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body[data-theme="solar"] .choice-check {
+      position: relative;
+      display: block;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--border-strong);
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--on-accent);
+      flex: 0 0 auto;
+      transition:
+        background-color var(--motion-standard) var(--ease-standard),
+        border-color var(--motion-standard) var(--ease-standard),
+        box-shadow var(--motion-standard) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] .choice-check::after {
+      position: absolute;
+      top: 3px;
+      left: 6px;
+      width: 4px;
+      height: 8px;
+      border: solid var(--on-accent);
+      border-width: 0 2px 2px 0;
+      opacity: 0;
+      transform: rotate(45deg) scale(0.8);
+      transition:
+        opacity var(--motion-fast) var(--ease-standard),
+        transform var(--motion-fast) var(--ease-emphasized);
+      content: "";
+    }
+
+    body[data-theme="solar"] input:checked + .choice-check {
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+
+    body[data-theme="solar"] input:checked + .choice-check::after {
+      opacity: 1;
+      transform: rotate(45deg) scale(1);
+    }
+
+    body[data-theme="solar"] .cleanup-panel {
+      border-color: var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    body[data-theme="solar"] .settings-storage-page {
+      gap: 14px;
+    }
+
+    body[data-theme="solar"] .settings-storage-page .storage-maintenance-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      align-items: start;
+    }
+
+    body[data-theme="solar"] .settings-storage-page .cleanup-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-theme="solar"] .settings-storage-page .cleanup-panel {
+      gap: 12px;
+      padding: 12px;
+    }
+
+    body[data-theme="solar"] .settings-storage-page .cleanup-panel-head {
+      align-items: center;
+    }
+
+    body[data-theme="solar"] .cleanup-option {
+      position: relative;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: start;
+      border-color: var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel);
+      cursor: pointer;
+    }
+
+    body[data-theme="solar"] .cleanup-option:hover {
+      border-color: var(--border-strong);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .cleanup-option:has(input:checked) {
+      border-color: var(--border);
+      background: var(--panel);
+    }
+
+    body[data-theme="solar"] .cleanup-option:has(input:disabled) {
+      cursor: not-allowed;
+      opacity: 0.66;
+    }
+
+    body[data-theme="solar"] .cleanup-option strong,
+    body[data-theme="solar"] .cleanup-option small {
+      overflow-wrap: anywhere;
+    }
+
+    body[data-theme="solar"] .positive {
+      color: var(--teal-dark);
+    }
+
+    body[data-theme="solar"] .negative {
+      color: var(--red);
+    }
+
+    body[data-theme="solar"] .toast {
+      top: 76px;
+      right: auto;
+      bottom: auto;
+      left: 50%;
+      display: block;
+      width: min(420px, calc(100vw - 48px));
+      max-width: min(420px, calc(100vw - 48px));
+      padding: 14px 18px 14px 20px;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--blue);
+      border-radius: var(--radius-control);
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow-overlay);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -10px);
+      transition:
+        opacity var(--motion-fast) var(--ease-standard),
+        transform var(--motion-fast) var(--ease-standard);
+    }
+
+    body[data-theme="solar"] .toast.visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    body[data-theme="solar"] .dialog-backdrop {
+      background: var(--overlay);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body[data-theme="solar"] *,
+      body[data-theme="solar"] *::before,
+      body[data-theme="solar"] *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 1180px) {
+      body[data-theme="solar"] .app-shell {
+        grid-template-columns: 84px minmax(0, 1fr);
+      }
+
+      body[data-theme="solar"] .brand {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body[data-theme="solar"] .app-shell {
+        display: block;
+      }
+
+      body[data-theme="solar"] .sidebar {
+        padding: 16px;
+      }
+
+      body[data-theme="solar"] .brand-copy,
+      body[data-theme="solar"] .nav-label,
+      body[data-theme="solar"] .sidebar-card,
+      body[data-theme="solar"] .sidebar-disclaimer {
+        display: block;
+      }
+
+      body[data-theme="solar"] .brand {
+        justify-content: flex-start;
+      }
+
+      body[data-theme="solar"] .nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      body[data-theme="solar"] .nav-item {
+        justify-content: flex-start;
+      }
+
+      body[data-theme="solar"] .view {
+        padding: 16px;
+      }
+
+      body[data-theme="solar"] .global-topbar {
+        height: auto;
+        min-height: 58px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        overflow-x: visible;
+        padding: 10px 16px;
+      }
+
+      body[data-theme="solar"] .top-status-item {
+        white-space: normal;
+      }
+
+      body[data-theme="solar"] .report-ops-grid,
+      body[data-theme="solar"] #overview-latest-report,
+      body[data-theme="solar"] .settings-main,
+      body[data-theme="solar"] .settings-storage-page .cleanup-grid {
+        grid-template-columns: 1fr;
+      }
+
+      body[data-theme="solar"] .form-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      body[data-theme="solar"] .report-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      body[data-theme="solar"] .chart-mini {
+        width: 100%;
       }
     }

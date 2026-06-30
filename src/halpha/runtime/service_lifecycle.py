@@ -76,6 +76,22 @@ class ServiceOwnership:
         return False
 
 
+class ServiceStartMutex:
+    def __init__(self, *, role: ServiceRole, lock: "_RoleLock") -> None:
+        self.role = role
+        self._lock = lock
+
+    def release(self) -> None:
+        self._lock.release()
+
+    def __enter__(self) -> "ServiceStartMutex":
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> bool:
+        self.release()
+        return False
+
+
 SERVICE_LIFECYCLE_MIGRATIONS = (
     StateStoreMigration(
         version=SERVICE_LIFECYCLE_MIGRATION_VERSION,
@@ -150,6 +166,13 @@ class ServiceLifecycleRepository:
         lock_free = lock_probe.acquire()
         lock_probe.release()
         return _inspection_result(role_id, state=state, lock_free=lock_free, now=now)
+
+    def acquire_start_mutex(self, role: str) -> ServiceStartMutex | None:
+        role_id = _role(role)
+        lock = _RoleLock(self._start_lock_path(role_id))
+        if not lock.acquire():
+            return None
+        return ServiceStartMutex(role=role_id, lock=lock)
 
     def attempt_start_ownership(
         self,
@@ -452,6 +475,10 @@ class ServiceLifecycleRepository:
     def _lock_path(self, role: ServiceRole) -> Path:
         root = self.database_path.parent
         return root / "service_locks" / f"{role}.lock"
+
+    def _start_lock_path(self, role: ServiceRole) -> Path:
+        root = self.database_path.parent
+        return root / "service_locks" / f"{role}.start.lock"
 
 
 class _RoleLock:

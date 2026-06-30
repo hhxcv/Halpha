@@ -606,7 +606,7 @@ def _expected_open_count(start: str, end: str, timeframe: str) -> int:
     end_dt = _parse_utc(end)
     if end_dt <= start_dt:
         return 0
-    if timeframe != "1month":
+    if timeframe != "1M":
         duration = TIMEFRAME_DURATIONS[timeframe]
         return int((end_dt - start_dt).total_seconds() // duration.total_seconds())
     count = 0

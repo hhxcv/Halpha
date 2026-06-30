@@ -6,7 +6,7 @@
   <title>Halpha Dashboard</title>
   <link rel="stylesheet" href="/assets/dashboard.css">
 </head>
-<body>
+<body data-theme="solar">
   <div
     id="halpha-dashboard-app"
     class="app-shell"
@@ -37,40 +37,39 @@
   >
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand">
-        <div class="brand-mark">H</div>
+        <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 5v38M5 24h38M11 11l26 26M37 11 11 37"></path>
+          <circle cx="24" cy="24" r="12"></circle>
+        </svg>
         <div class="brand-copy">
           <div class="brand-name">Halpha</div>
-          <div class="brand-subtitle">Local Research</div>
+          <div class="brand-subtitle">Market Intelligence</div>
         </div>
       </div>
       <nav class="nav">
         <a class="nav-item active" href="#overview" data-view-target="overview" aria-current="page">
-          <span class="nav-icon">OV</span><span class="nav-label">Overview</span>
-        </a>
-        <a class="nav-item" href="#reports" data-view-target="reports">
-          <span class="nav-icon">RP</span><span class="nav-label">Reports</span>
-        </a>
-        <a class="nav-item" href="#strategies" data-view-target="strategies">
-          <span class="nav-icon">ST</span><span class="nav-label">Strategy Lab</span>
-        </a>
-        <a class="nav-item" href="#monitor" data-view-target="monitor">
-          <span class="nav-icon">MO</span><span class="nav-label">Monitor</span>
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg><span class="nav-label">Overview</span>
         </a>
         <a class="nav-item" href="#intelligence" data-view-target="intelligence">
-          <span class="nav-icon">IN</span><span class="nav-label">Intelligence</span>
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"></path></svg><span class="nav-label">Intelligence</span>
+        </a>
+        <a class="nav-item" href="#strategies" data-view-target="strategies">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M7 15V7M12 15V4M17 15v-5"></path></svg><span class="nav-label">Strategy</span>
+        </a>
+        <a class="nav-item" href="#reports" data-view-target="reports">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM14 3v4h4M9 11h6M9 15h6"></path></svg><span class="nav-label">Reports</span>
+        </a>
+        <a class="nav-item" href="#monitor" data-view-target="monitor">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"></path></svg><span class="nav-label">Monitor</span>
         </a>
         <a class="nav-item" href="#settings" data-view-target="settings">
-          <span class="nav-icon">SE</span><span class="nav-label">Settings</span>
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4"></path></svg><span class="nav-label">Settings</span>
         </a>
       </nav>
       <div class="sidebar-bottom">
         <div class="sidebar-card">
-          <div class="sidebar-card-title"><span class="health-dot"></span>System healthy</div>
-          <div class="sidebar-card-detail" id="sidebar-health-text">Loading local status.</div>
-        </div>
-        <div class="sidebar-card">
-          <div class="sidebar-card-title">Local mode</div>
-          <div class="sidebar-card-detail">No data leaves this device through the dashboard UI.</div>
+          <div class="sidebar-card-title"><span class="health-dot unknown" id="sidebar-monitor-dot"></span><span id="sidebar-monitor-title">Monitor status</span></div>
+          <div class="sidebar-card-detail" id="sidebar-monitor-text">Loading monitor status.</div>
         </div>
         <div class="sidebar-disclaimer">Market output is research material, not financial advice.</div>
       </div>
@@ -78,7 +77,6 @@
 
     <main class="main-shell">
       <header class="global-topbar" aria-label="Global dashboard status">
-        <span class="top-status-item"><span class="health-dot"></span>Local mode</span>
         <span class="top-status-item">Timezone: <strong id="display-timezone">__HALPHA_DASHBOARD_DISPLAY_TIMEZONE__</strong></span>
         <span class="top-status-item">Config: <strong id="config-ref">Loading</strong></span>
         <button class="icon-button" type="button" id="global-refresh" title="Refresh current page">R</button>
@@ -191,11 +189,11 @@
 
       <section id="strategies-view" class="view hidden" data-view="strategies">
         <div class="page-title-row">
-          <div class="page-title"><h1>Strategy Lab</h1></div>
+          <div class="page-title"><h1>Strategy</h1></div>
         </div>
         <div class="strategy-layout">
           <section class="panel strategy-workbench" id="strategy-workbench">
-            <div class="tabs strategy-operation-tabs" id="strategy-operation-tabs" aria-label="Strategy Lab operations">
+            <div class="tabs strategy-operation-tabs" id="strategy-operation-tabs" aria-label="Strategy operations">
               <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtest</button>
               <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiment</button>
               <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
@@ -211,7 +209,7 @@
                 <div class="field"><label for="strategy-timeframe">Timeframe</label><select id="strategy-timeframe" class="select-input"></select></div>
                 <div class="field"><label for="strategy-family">Family</label><select id="strategy-family" class="select-input"></select></div>
                 <div class="field"><label for="strategy-name">Strategy</label><select id="strategy-name" class="select-input"></select></div>
-                <div class="field"><label for="strategy-evaluation-window">Evaluation window <button class="hint-icon" type="button" aria-label="Backtest window help" title="Standalone backtests use the configured latest-lookback window from local OHLCV history. Use the independent K-line controls below to inspect arbitrary stored ranges.">?</button></label><input id="strategy-evaluation-window" class="text-input" type="text" readonly></div>
+                <div class="field strategy-wide-field"><label for="strategy-evaluation-window">Evaluation window <button class="hint-icon" type="button" aria-label="Backtest window help" title="Standalone backtests use the configured latest-lookback window from local OHLCV history. Use the independent K-line controls below to inspect arbitrary stored ranges.">?</button></label><input id="strategy-evaluation-window" class="text-input" type="text" readonly></div>
                 <button class="primary-button" type="button" id="run-backtest-button">Run backtest</button>
               </div>
               <div id="strategy-spec-summary" class="strategy-spec-summary"></div>
