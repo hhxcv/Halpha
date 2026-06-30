@@ -23,8 +23,9 @@ collection coverage, and cleanup decisions to be explicit. The goal is simple:
   run-index projection, catalog fields, and data-quality contracts.
 - `docs/monitoring-contracts.md`: Monitor service, cycle, source-cadence,
   alert archive, and health contracts.
-- `docs/live-contracts.md`: planned Live workflow vocabulary, config fields,
-  Core-owned scheduling boundary, and bounded read-model contract.
+- `docs/live-contracts.md`: Live workflow vocabulary, config fields,
+  Core-owned source-refresh scheduling boundary, and bounded read-model
+  contract.
 - `docs/dashboard-contracts.md`: Dashboard command jobs, service lifecycle,
   artifact preview, and local API contracts.
 - `docs/product-stability-contracts.md`: product validation, workflow

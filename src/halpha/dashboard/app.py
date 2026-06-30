@@ -59,6 +59,7 @@ from halpha.dashboard.state import read_dashboard_config_history, read_dashboard
 from halpha.dashboard.strategy_actions import dashboard_strategy_action_job
 from halpha.dashboard.strategy import dashboard_strategy_research
 from halpha.dashboard.ui import dashboard_index_html
+from halpha.live.scheduler import LiveScheduler
 from halpha.runtime.command_jobs import CommandJobManager
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
 from halpha.storage import artifact_base
@@ -598,6 +599,20 @@ def create_dashboard_app(
             return _unconfigured_payload("dashboard_monitor_alerts", alerts=[])
         active_config, active_config_path = active
         return dashboard_monitor_alerts(active_config, config_path=active_config_path)
+
+    @app.get("/api/live")
+    def live_endpoint() -> dict[str, Any]:
+        if context.job_manager is None:
+            return _unconfigured_payload("dashboard_live", collections=[], active_jobs=[], recent_jobs=[])
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_live", collections=[], active_jobs=[], recent_jobs=[])
+        active_config, active_config_path = active
+        return LiveScheduler(
+            active_config,
+            config_path=active_config_path,
+            job_manager=context.job_manager,
+        ).read_model()
 
     @app.get("/api/jobs")
     def jobs_endpoint() -> dict[str, Any]:

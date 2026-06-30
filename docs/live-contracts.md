@@ -1,8 +1,10 @@
 # Live Contracts
 
-This document defines the planned M24 Live product contract. It is a durable
-target contract for follow-up implementation work, not a claim that Live UI,
-Live config parsing, or a Live scheduler already exists.
+This document defines the M24 Live product contract. The current implemented
+slice covers Live config parsing, Core-owned source-refresh scheduler ticks,
+visible data-collection command jobs, persisted source-refresh state, and the
+bounded `/api/live` read model. Trigger decisions and the full Live Dashboard UI
+remain planned follow-up work unless explicitly marked current below.
 
 ## Purpose
 
@@ -33,7 +35,7 @@ Live must remain:
 | `core` | The resident backend role that owns Dashboard APIs, allowlisted command-job execution, automatic schedules, Live scheduler ticks, and command-job creation. |
 | `monitor` | The resident System Monitor/runtime supervisor that checks Core liveness, starts or retries Core when appropriate, and records bounded service health. It is not a market intelligence product workflow. |
 | `live` | The user-facing continuous market intelligence workflow that summarizes source refresh, recent intelligence, deterministic trigger decisions, daily schedule state, report dispatches, warnings, and linked evidence. |
-| `live scheduler tick` | A planned Core-owned scheduling decision that may create visible command jobs. It is not a resident process role. |
+| `live scheduler tick` | A Core-owned scheduling decision that may create visible command jobs. It is not a resident process role. |
 | `Live trigger` | A deterministic Halpha decision that may explain why a report or attention item should be created. AI/Codex must not decide the trigger fact, severity, cooldown, or source truth. |
 
 ## Runtime Boundary
@@ -44,7 +46,7 @@ roles remain:
 - `core`
 - `monitor`
 
-Planned Live execution runs inside Core-owned scheduling and command-job
+Live source-refresh execution runs inside Core-owned scheduling and command-job
 infrastructure:
 
 - Core evaluates Live scheduler ticks.
@@ -59,19 +61,19 @@ infrastructure:
   resident process.
 
 Explicit existing Monitor CLI recovery commands and monitor cycle artifacts may
-remain under the Monitor contract. They are not the planned Live Dashboard
-workflow.
+remain under the Monitor contract. They are not the Live Dashboard workflow.
 
-## Planned Configuration Contract
+## Configuration Contract
 
-The `live` config section is planned and not implemented yet. Follow-up work
-that implements parsing must validate it deterministically and reject unknown
-Live fields with actionable errors.
+The `live` config section is implemented for source-refresh scheduling and
+validated deterministically during config load. Unknown Live fields, unknown
+data types, unknown trigger ids, and invalid positive-integer windows are
+rejected with actionable errors.
 
 | Field | Default or required behavior | Validation expectation |
 | --- | --- | --- |
 | `live.enabled` | Defaults to `false`. | Boolean only. `false` prevents automatic Live scheduler ticks from creating jobs. |
-| `live.tick_seconds` | Defaults to `30` when Live is implemented. | Positive integer. Controls how often Core evaluates Live scheduler ticks. |
+| `live.tick_seconds` | Defaults to `30`. | Positive integer. Controls how often Core evaluates Live scheduler ticks. |
 | `live.collections.<data_type>.enabled` | Defaults to `false` for every supported data type. | Boolean only. Unknown `data_type` keys are unsupported. |
 | `live.collections.<data_type>.cadence_seconds` | Required when that collection is enabled unless a future source-specific default is explicitly documented. | Positive integer. Core must not refresh a data type before the cadence has elapsed unless an explicit user action requests it. |
 | `live.collections.<data_type>.lookback_seconds` | Required when that collection is enabled unless a future source-specific default is explicitly documented. | Positive integer. Defines the incremental collection window and must not be interpreted as full-history backfill. |
@@ -80,13 +82,12 @@ Live fields with actionable errors.
 | `live.reports.triggers.<trigger_id>.enabled` | Defaults to `false` for every supported trigger. | Boolean only. Unknown `trigger_id` keys are unsupported. |
 | `live.reports.triggers.<trigger_id>.cooldown_seconds` | Required when that trigger is enabled. | Positive integer. Prevents duplicate report dispatch for equivalent trigger decisions within the cooldown window. |
 
-Unsupported Live config fields must not be silently ignored after Live parsing
-is implemented. Until implementation lands, shipped example configs should not
-include `live` fields as current behavior.
+Unsupported Live config fields must not be silently ignored.
 
 ## Supported Live Data Types
 
-The planned M24 Live workflow may refresh these implemented shared-data types:
+The current Live source-refresh scheduler can refresh these implemented
+shared-data types through visible `data_collect` command jobs:
 
 - `ohlcv`
 - `text_event`
@@ -100,7 +101,9 @@ read model are explicitly implemented.
 
 ## Initial Trigger IDs
 
-Planned deterministic Live trigger ids:
+The config parser currently validates these deterministic trigger ids so future
+trigger settings cannot drift. Trigger decision generation and report dispatch
+from these triggers remain planned follow-up work.
 
 - `market_breakout`
 - `major_market_move`
@@ -113,10 +116,10 @@ Each trigger decision must preserve source refs, data quality state, cooldown
 state, and no-action reasons. Trigger decisions must not be generated or
 revised by AI/Codex.
 
-## Planned Read Model
+## Current Source-Refresh Read Model
 
-Live Dashboard APIs must expose bounded read models, not raw streams or full
-shared stores. The minimum read model fields are:
+`GET /api/live` exposes a bounded read model for the implemented source-refresh
+slice. It does not embed raw streams or full shared stores. Current fields are:
 
 - Live enabled state and scheduler status.
 - Source refresh state by data type.
@@ -124,11 +127,12 @@ shared stores. The minimum read model fields are:
   failures, and latest job id for each data type.
 - Recent collection jobs with bounded terminal status, duration, warning count,
   error count, and linked artifact refs.
-- Latest intelligence items or bounded record refs by data type.
-- Trigger decisions with status, reason, source refs, cooldown, linked job id,
-  linked run id, and linked report ref.
-- Daily report schedule state and dispatch history.
+- Active Live collection jobs.
 - Warnings and errors.
+
+Planned Live read-model expansion may add latest intelligence items, trigger
+decisions, daily report schedule state, report dispatch history, and drill-down
+links once their deterministic producers exist.
 
 Live read models must not embed:
 

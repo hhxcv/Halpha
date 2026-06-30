@@ -175,6 +175,20 @@ def test_dashboard_rejects_core_role_action_without_lifecycle_side_effect(tmp_pa
     assert payload["service"] is None
 
 
+def test_dashboard_live_endpoint_returns_disabled_read_model(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    payload = client.get("/api/live").json()
+
+    assert payload["artifact_type"] == "dashboard_live"
+    assert payload["status"] == "disabled"
+    assert payload["scheduler"] == {"enabled": False, "tick_seconds": 30, "source": "core"}
+    assert payload["active_jobs"] == []
+    assert payload["recent_jobs"] == []
+
+
 def _service_result(role: str, service: str, *, status: str, instance_id: str) -> dict[str, Any]:
     return {
         "status": status,

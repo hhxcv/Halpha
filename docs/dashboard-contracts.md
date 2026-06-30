@@ -250,12 +250,13 @@ Start, stop, force-stop, and restart semantics:
   `start`.
 
 Core serves UI/API, reads product state, submits and executes bounded jobs,
-owns automatic schedule and job decisions, and sends lifecycle requests.
-Monitor is the lightweight resident checker for Core health and Core restart
-after stale or terminal Core state. Planned user-facing continuous market
-intelligence belongs to Live, defined in `docs/live-contracts.md`, and must run
-through Core-owned scheduling and visible command jobs. Halpha must not add a
-hidden supervisor, broker, worker pool, or additional resident process role.
+owns automatic schedule, Live source-refresh scheduling, and job decisions, and
+sends lifecycle requests. Monitor is the lightweight resident checker for Core
+health and Core restart after stale or terminal Core state. User-facing
+continuous market intelligence belongs to Live, defined in
+`docs/live-contracts.md`, and must run through Core-owned scheduling and visible
+command jobs. Halpha must not add a hidden supervisor, broker, worker pool, or
+additional resident process role.
 
 ## View Contract
 
@@ -282,11 +283,12 @@ Dashboard pages should expose the current product shape through bounded views:
   strategy controls expose configured strategy specs plus any exact
   source/symbol/timeframe `targeted_params` profiles. The dashboard must not
   reconstruct charts by dumping full reusable OHLCV history by default.
-- Live: planned user-facing continuous market intelligence workflow for source
-  refresh state, recent intelligence, deterministic trigger decisions, alert or
-  attention history, daily schedule state, report dispatches, warnings, errors,
-  and drill-down links to jobs, records, runs, reports, and artifacts. Live is
-  not implemented by this contract text alone; see `docs/live-contracts.md`.
+- Live: user-facing continuous market intelligence workflow. The implemented
+  slice exposes source-refresh state, active/recent Live collection jobs,
+  warnings, and errors through `/api/live`. Recent intelligence, deterministic
+  trigger decisions, alert or attention history, daily schedule state, report
+  dispatches, and richer drill-down links remain planned follow-up work unless
+  implemented by their own issues.
 - System Monitor: runtime health and service-control surfaces for the resident
   Monitor role, Core liveness, bounded service health, and explicit recovery
   commands. System Monitor is not a user-facing market intelligence workflow.
