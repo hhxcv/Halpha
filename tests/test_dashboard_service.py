@@ -171,6 +171,71 @@ def test_dashboard_restart_stops_then_starts_with_previous_instance_id(
     assert calls == [("stop", None), ("start", result.instance_id)]
 
 
+def test_dashboard_restart_waits_for_stop_requested_lifecycle_before_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = ServiceLifecycleRepository(runtime_root=tmp_path)
+    result, ownership = repository.attempt_start_ownership(
+        "core",
+        config_ref="dashboard-service-unconfigured",
+        config_digest=_dashboard_digest("127.0.0.1", 8765),
+        endpoint={"host": "127.0.0.1", "port": 8765, "health_url": "http://127.0.0.1:8765/api/health"},
+    )
+    assert ownership is not None
+    repository.register_started("core", instance_id=result.instance_id or "")
+    launched: list[str | None] = []
+    replacement_ownerships = []
+    terminal_recorded = False
+
+    class FakeProcess:
+        def poll(self) -> None:
+            return None
+
+    def fake_sleep(seconds: float) -> None:
+        nonlocal terminal_recorded
+        if not terminal_recorded:
+            terminal_recorded = True
+            repository.record_terminal_exit("core", instance_id=result.instance_id or "", status="stopped", exit_code=0)
+            ownership.release()
+
+    def fake_launch(config_arg, *, host, port, restart_from_instance_id=None):  # noqa: ANN001
+        launched.append(restart_from_instance_id)
+        next_result, next_ownership = repository.attempt_restart_ownership(
+            "core",
+            previous_instance_id=restart_from_instance_id or "",
+            config_ref="dashboard-service-unconfigured",
+            config_digest=_dashboard_digest(host, port),
+            endpoint={"host": host, "port": port, "health_url": f"http://{host}:{port}/api/health"},
+        )
+        assert next_ownership is not None
+        replacement_ownerships.append(next_ownership)
+        repository.register_started("core", instance_id=next_result.instance_id or "")
+        return FakeProcess()
+
+    try:
+        monkeypatch.setattr("halpha.dashboard.app.DASHBOARD_RESTART_WAIT_SECONDS", 1)
+        monkeypatch.setattr("halpha.dashboard.app.DASHBOARD_RESTART_POLL_SECONDS", 0.001)
+        monkeypatch.setattr("halpha.dashboard.app._dashboard_endpoint_can_bind", lambda host, port: True)
+        monkeypatch.setattr(
+            "halpha.dashboard.app._read_dashboard_endpoint_health",
+            lambda host, port: {"service": "halpha_core"},
+        )
+        monkeypatch.setattr("halpha.dashboard.app.time.sleep", fake_sleep)
+        monkeypatch.setattr("halpha.dashboard.app._launch_dashboard_service_process", fake_launch)
+
+        restarted = restart_dashboard_service(None, host="127.0.0.1", port=8765)
+    finally:
+        ownership.release()
+        for replacement in replacement_ownerships:
+            replacement.release()
+
+    assert terminal_recorded is True
+    assert restarted["status"] == "started"
+    assert launched == [result.instance_id]
+    assert restarted["instance_id"] != result.instance_id
+
+
 def test_dashboard_selected_config_uses_runtime_state_store(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yaml"
     config_path.write_text("run:\n  output_dir: runs\n", encoding="utf-8")

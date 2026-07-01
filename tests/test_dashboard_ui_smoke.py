@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
 import re
+import shutil
+import subprocess
+import textwrap
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -13,6 +17,7 @@ from dashboard_asset_helpers import (
     dashboard_css,
     dashboard_reports_script,
     dashboard_script,
+    dashboard_strategy_chart_script,
 )
 
 
@@ -166,7 +171,7 @@ def test_dashboard_exposes_primary_filter_controls(tmp_path: Path, selector_id: 
 @pytest.mark.parametrize(
     "contract",
     [
-        'data-strategy-tab="trades"',
+        'data-strategy-tab="equity"',
         'data-intel-tab="overview"',
         'data-intel-tab="text_event"',
         'data-intel-tab="macro_calendar"',
@@ -256,7 +261,6 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
         "strategy-chart-symbol",
         "strategy-chart-timeframe",
         "strategy-chart-range",
-        "strategy-chart-refresh",
         "intel-overview-panel",
         "intel-overview-kpis",
         "intel-overview-content",
@@ -805,6 +809,16 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert ".candle-crosshair" in css
     assert ".strategy-eval-grid" in css
     assert ".strategy-eval-panel" in css
+    assert ".strategy-equity-chart" in css
+    assert ".strategy-drawdown-chart" in css
+    assert ".equity-chart-hit" in css
+    assert ".equity-chart-crosshair" in css
+    assert ".equity-axis-label" in css
+    assert ".drawdown-chart-hit" in css
+    assert ".drawdown-chart-crosshair" in css
+    assert ".drawdown-axis-label" in css
+    assert ".drawdown-boundary-label" in css
+    assert ".drawdown-worst-marker" in css
     assert ".strategy-walkforward-card" in css
     assert 'id="backtest-chart"' in html
     assert "OHLCV candlestick chart" in html
@@ -868,15 +882,36 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "#0ECB81" not in script
     assert "#F6465D" not in script
     assert "Operations" in script
-    assert "Stored operations" in script
-    assert "This table lists stored operation markers for the full evaluation." in script
-    assert "Operation markers" in html
-    assert "Recent operations" in html
+    assert "Stored operations" not in script
+    assert "This table lists stored operation markers for the full evaluation." not in script
+    assert "Operation markers" not in html
+    assert 'data-strategy-tab="list"' not in html
+    assert "renderStrategyTradesPanel" not in script
+    assert "strategyMarkerTable" not in script
+    assert "strategyOperationScopeNotice" not in script
+    assert ".strategy-marker-table" not in css
+    assert "Trade operations" in html
+    assert "Recent operations" not in html
     assert "backtestRunMeta" in script
     assert "No backtest runs recorded." in script
     assert "Cost and Funding" in script
     assert "Walk-forward" in script
     assert "renderStrategyEvaluationPanels" in script
+    assert "renderEquityCurveSvg" in script
+    assert "resetEquityCurveView" in script
+    assert "renderDrawdownCurveSvg" in script
+    assert "resetDrawdownCurveView" in script
+    assert "EQUITY_CHART_MAX_POINTS" in script
+    assert "aggregateEquityPoints" in script
+    assert "aggregateDrawdownPoints" in script
+    assert "drawdownPointsFromEquityCurve" in script
+    assert "lastDeltaPoints" in script
+    assert 'id="strategy-equity-chart"' in script
+    assert 'id="strategy-drawdown-chart"' in script
+    assert 'metricCell("Start equity"' not in script
+    assert 'metricCell("Latest equity"' not in script
+    assert 'metricCell("Worst drawdown"' not in script
+    assert "derived from bounded equity" not in script
     assert "renderStrategyDrawdownPanel" in script
     assert "onwheel" in script
     assert "onpointerdown" in script
@@ -914,12 +949,80 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "limit: request.limit || request.lookback" in script
     assert "height: 52vh" not in css
     assert "align-self: start;" in css
-    assert "max-height: calc(clamp(360px, calc(100vh - 330px), 470px) + 122px);" in css
+    assert ".strategy-operation-tree-panel" in css
+    assert "height: calc(clamp(360px, calc(100vh - 330px), 470px) + 111px);" in css
     assert "function visibleBacktestVisualization(item)" in script
     assert "function fullBacktestVisualization(item)" in script
     assert "return applyStrategyWindow(strategyVisualization(item), state.strategyWindow, state.strategyFocusedMarkerTime);" in script
     assert "focusStrategyMarker" in script
-    assert "strategy-marker-jump" in script
+    assert "data-strategy-marker-time" in script
+    assert "strategy-marker-jump" not in script
+
+
+def test_strategy_chart_moving_average_uses_full_series_when_panning(tmp_path: Path) -> None:
+    node = shutil.which("node") or shutil.which("node.exe")
+    if node is None:
+        pytest.skip("node is required for the strategy chart moving-average regression test.")
+    chart_path = tmp_path / "dashboard_strategy_chart.js"
+    chart_path.write_text(dashboard_strategy_chart_script(), encoding="utf-8")
+    spec_path = tmp_path / "strategy_chart_ma_regression.js"
+    spec_path.write_text(_STRATEGY_CHART_MA_REGRESSION, encoding="utf-8")
+
+    result = subprocess.run(
+        [node, str(spec_path)],
+        text=True,
+        capture_output=True,
+        timeout=20,
+        check=False,
+        env={**os.environ, "HALPHA_CHART_SCRIPT": str(chart_path)},
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_strategy_equity_chart_has_axes_hover_and_bounded_sampling(tmp_path: Path) -> None:
+    node = shutil.which("node") or shutil.which("node.exe")
+    if node is None:
+        pytest.skip("node is required for the strategy equity chart regression test.")
+    chart_path = tmp_path / "dashboard_strategy_chart.js"
+    chart_path.write_text(dashboard_strategy_chart_script(), encoding="utf-8")
+    spec_path = tmp_path / "strategy_equity_chart_regression.js"
+    spec_path.write_text(_STRATEGY_EQUITY_CHART_REGRESSION, encoding="utf-8")
+
+    result = subprocess.run(
+        [node, str(spec_path)],
+        text=True,
+        capture_output=True,
+        timeout=20,
+        check=False,
+        env={**os.environ, "HALPHA_CHART_SCRIPT": str(chart_path)},
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_strategy_drawdown_chart_has_axes_worst_marker_and_navigation(tmp_path: Path) -> None:
+    node = shutil.which("node") or shutil.which("node.exe")
+    if node is None:
+        pytest.skip("node is required for the strategy drawdown chart regression test.")
+    chart_path = tmp_path / "dashboard_strategy_chart.js"
+    chart_path.write_text(dashboard_strategy_chart_script(), encoding="utf-8")
+    spec_path = tmp_path / "strategy_drawdown_chart_regression.js"
+    spec_path.write_text(_STRATEGY_DRAWDOWN_CHART_REGRESSION, encoding="utf-8")
+
+    result = subprocess.run(
+        [node, str(spec_path)],
+        text=True,
+        capture_output=True,
+        timeout=20,
+        check=False,
+        env={**os.environ, "HALPHA_CHART_SCRIPT": str(chart_path)},
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Path) -> None:
@@ -1067,6 +1170,447 @@ def test_dashboard_shell_has_no_unwired_dashboard_controls_or_fabricated_sources
     assert "{max_cycles: 72, interval_seconds: 360}" not in script
     assert "monitor_loop" not in html
     assert "monitor_loop" not in script
+
+
+_STRATEGY_CHART_MA_REGRESSION = textwrap.dedent(
+    r"""
+    const fs = require("fs");
+    const vm = require("vm");
+
+    const chartScriptPath = process.env.HALPHA_CHART_SCRIPT;
+    if (!chartScriptPath) throw new Error("HALPHA_CHART_SCRIPT is required");
+    const chartScript = fs.readFileSync(chartScriptPath, "utf8");
+
+    const classList = () => ({
+      add() {},
+      remove() {},
+      toggle() {},
+    });
+    const parent = {
+      querySelector() { return null; },
+      appendChild() {},
+      getBoundingClientRect() { return {left: 0, top: 0, width: 980, height: 470}; },
+    };
+    const svg = {
+      innerHTML: "",
+      parentElement: parent,
+      classList: classList(),
+      getBoundingClientRect() { return {left: 0, top: 0, width: 980, height: 470}; },
+      querySelector() { return {setAttribute() {}}; },
+      querySelectorAll(selector) {
+        if (selector !== ".candle-hit") return [];
+        return [...this.innerHTML.matchAll(/<rect class="candle-hit"[^>]*>/g)].map((match) => {
+          const dataset = {};
+          for (const [, key, value] of match[0].matchAll(/data-([a-z-]+)="([^"]*)"/g)) {
+            dataset[key.replace(/-([a-z])/g, (_, char) => char.toUpperCase())] = value;
+          }
+          return {dataset, addEventListener() {}};
+        });
+      },
+      addEventListener() {},
+      setPointerCapture() {},
+    };
+    const context = {
+      window: {
+        HalphaDashboardShared: {
+          escapeHtml(value) {
+            return String(value ?? "")
+              .replaceAll("&", "&amp;")
+              .replaceAll('"', "&quot;")
+              .replaceAll("<", "&lt;")
+              .replaceAll(">", "&gt;");
+          },
+          formatNumber(value) { return String(value); },
+          pnlColors() { return {up: "#0a8", down: "#d33", neutral: "#777"}; },
+          formatTimestamp(value) { return String(value || ""); },
+        },
+      },
+      document: {
+        querySelector(selector) { return selector === "#chart" ? svg : null; },
+        createElement() {
+          return {
+            className: "",
+            classList: classList(),
+            style: {},
+            innerHTML: "",
+            offsetWidth: 230,
+            offsetHeight: 160,
+          };
+        },
+      },
+      requestAnimationFrame(callback) {
+        callback();
+        return 1;
+      },
+      cancelAnimationFrame() {},
+      console,
+    };
+    context.globalThis = context;
+    vm.createContext(context);
+    vm.runInContext(chartScript, context, {filename: "dashboard_strategy_chart.js"});
+
+    const bars = Array.from({length: 50}, (_, index) => ({
+      time: `t${index}`,
+      open: index,
+      high: 100,
+      low: 0,
+      close: index,
+      volume: 1,
+    }));
+    const chart = context.window.HalphaDashboardStrategyChart;
+
+    function movingAverageY(time, color) {
+      const html = svg.innerHTML;
+      const times = [...html.matchAll(/data-candle-time="([^"]+)"/g)].map((match) => match[1]);
+      const line = [...html.matchAll(/<polyline points="([^"]+)"[^>]*stroke="([^"]+)"/g)]
+        .find((match) => match[2] === color);
+      if (!line) throw new Error(`moving-average line ${color} was not rendered`);
+      const index = times.indexOf(time);
+      if (index < 0) throw new Error(`${time} is not visible in ${times.join(",")}`);
+      const point = line[1].trim().split(/\s+/)[index];
+      return Number(point.split(",")[1]);
+    }
+
+    chart.renderCandlestickSvg("#chart", {symbol: "BTCUSDT", timeframe: "4h", bars}, {});
+    svg.onwheel({preventDefault() {}, clientX: 490, deltaY: -1});
+    const ma12Before = movingAverageY("t10", "#4f8cff");
+    const ma34Before = movingAverageY("t10", "#f59e0b");
+    svg.onpointerdown({button: 0, clientX: 500, pointerId: 1});
+    svg.onpointerup({clientX: 420, pointerId: 1});
+    const ma12After = movingAverageY("t10", "#4f8cff");
+    const ma34After = movingAverageY("t10", "#f59e0b");
+
+    const ma12Delta = Math.abs(ma12Before - ma12After);
+    const ma34Delta = Math.abs(ma34Before - ma34After);
+    console.log(JSON.stringify({ma12Before, ma12After, ma12Delta, ma34Before, ma34After, ma34Delta}));
+    if (ma12Delta > 1e-9 || ma34Delta > 1e-9) {
+      throw new Error(`moving averages changed after pan: MA12 delta=${ma12Delta}, MA34 delta=${ma34Delta}`);
+    }
+    """
+)
+
+
+_STRATEGY_EQUITY_CHART_REGRESSION = textwrap.dedent(
+    r"""
+    const fs = require("fs");
+    const vm = require("vm");
+
+    const chartScriptPath = process.env.HALPHA_CHART_SCRIPT;
+    if (!chartScriptPath) throw new Error("HALPHA_CHART_SCRIPT is required");
+    const chartScript = fs.readFileSync(chartScriptPath, "utf8");
+
+    const classList = () => ({
+      add() {},
+      remove() {},
+      toggle() {},
+    });
+    const parent = {
+      tooltip: null,
+      querySelector(selector) {
+        return selector === ".chart-tooltip" ? this.tooltip : null;
+      },
+      appendChild(node) {
+        this.tooltip = node;
+      },
+      getBoundingClientRect() { return {left: 0, top: 0, width: 900, height: 260}; },
+    };
+    const svg = {
+      innerHTML: "",
+      parentElement: parent,
+      classList: classList(),
+      lastHits: [],
+      crosshairAttrs: {},
+      getBoundingClientRect() { return {left: 0, top: 0, width: 900, height: 260}; },
+      querySelector(selector) {
+        if (selector === ".equity-chart-crosshair") {
+          return {
+            setAttribute: (name, value) => {
+              this.crosshairAttrs[name] = value;
+            },
+          };
+        }
+        return {setAttribute() {}};
+      },
+      querySelectorAll(selector) {
+        if (selector !== ".equity-chart-hit") return [];
+        this.lastHits = [...this.innerHTML.matchAll(/<circle class="equity-chart-hit"[^>]*>/g)].map((match) => {
+          const dataset = {};
+          const listeners = {};
+          for (const [, key, value] of match[0].matchAll(/data-([a-z-]+)="([^"]*)"/g)) {
+            dataset[key.replace(/-([a-z])/g, (_, char) => char.toUpperCase())] = value;
+          }
+          return {
+            dataset,
+            listeners,
+            addEventListener(name, callback) { listeners[name] = callback; },
+          };
+        });
+        return this.lastHits;
+      },
+      addEventListener() {},
+      setPointerCapture() {},
+    };
+    const context = {
+      window: {
+        HalphaDashboardShared: {
+          escapeHtml(value) {
+            return String(value ?? "")
+              .replaceAll("&", "&amp;")
+              .replaceAll('"', "&quot;")
+              .replaceAll("<", "&lt;")
+              .replaceAll(">", "&gt;");
+          },
+          formatNumber(value) { return String(value); },
+          pnlColors() { return {profit: "#087f5b", loss: "#c92a2a", up: "#087f5b", down: "#c92a2a"}; },
+          formatTimestamp(value) { return String(value || ""); },
+        },
+      },
+      document: {
+        querySelector(selector) { return selector === "#equity" ? svg : null; },
+        createElement() {
+          return {
+            className: "",
+            classList: classList(),
+            style: {},
+            innerHTML: "",
+            offsetWidth: 230,
+            offsetHeight: 160,
+          };
+        },
+      },
+      requestAnimationFrame(callback) {
+        callback();
+        return 1;
+      },
+      cancelAnimationFrame() {},
+      console,
+    };
+    context.globalThis = context;
+    vm.createContext(context);
+    vm.runInContext(chartScript, context, {filename: "dashboard_strategy_chart.js"});
+
+    const chart = context.window.HalphaDashboardStrategyChart;
+    const curve = Array.from({length: 400}, (_, index) => ({
+      time: `2026-01-${String((index % 28) + 1).padStart(2, "0")}T00:00:00Z`,
+      equity: 1 + Math.sin(index / 11) * 0.04 + (index - 200) / 10000,
+    }));
+    chart.renderEquityCurveSvg("#equity", curve, {displayTimezone: "UTC"});
+    const hitCount = (svg.innerHTML.match(/class="equity-chart-hit"/g) || []).length;
+    if (hitCount > chart.EQUITY_CHART_MAX_POINTS) {
+      throw new Error(`expected bounded hit nodes, got ${hitCount}`);
+    }
+    for (const required of [
+      "equity-axis-label y",
+      "equity-axis-label x",
+      "equity-baseline",
+      "equity-chart-crosshair",
+      "equity-chart-segment profit",
+      "equity-chart-segment loss",
+    ]) {
+      if (!svg.innerHTML.includes(required)) {
+        throw new Error(`missing ${required}`);
+      }
+    }
+    if (!svg.lastHits.length || !svg.lastHits[0].listeners.mousemove) {
+      throw new Error("equity hover hit listeners were not wired");
+    }
+    svg.lastHits[0].listeners.mousemove({clientX: 120, clientY: 80});
+    if (!parent.tooltip?.innerHTML.includes("Equity") || !parent.tooltip?.innerHTML.includes("Change")) {
+      throw new Error("equity tooltip did not render point details");
+    }
+    if (svg.crosshairAttrs.visibility !== "visible") {
+      throw new Error("equity crosshair did not become visible on hover");
+    }
+    svg.onwheel({preventDefault() {}, clientX: 450, deltaY: -1});
+    if (!svg.innerHTML.includes("/ 400 points")) {
+      throw new Error("equity wheel zoom did not create a bounded viewport label");
+    }
+    const zoomedHitCount = (svg.innerHTML.match(/class="equity-chart-hit"/g) || []).length;
+    if (zoomedHitCount > chart.EQUITY_CHART_MAX_POINTS) {
+      throw new Error(`expected bounded zoomed hit nodes, got ${zoomedHitCount}`);
+    }
+    const sampled = chart.aggregateEquityPoints([
+      {index: 0, value: 1},
+      {index: 1, value: 1.08},
+      {index: 2, value: 0.75},
+      {index: 3, value: 1.03},
+      {index: 4, value: 1.45},
+    ], 2);
+    if (sampled.length !== 2 || sampled[0].index !== 1 || sampled[1].index !== 4) {
+      throw new Error(`unexpected absolute-extreme sampling: ${JSON.stringify(sampled)}`);
+    }
+    console.log(JSON.stringify({hitCount, zoomedHitCount}));
+    """
+)
+
+
+_STRATEGY_DRAWDOWN_CHART_REGRESSION = textwrap.dedent(
+    r"""
+    const fs = require("fs");
+    const vm = require("vm");
+
+    const chartScriptPath = process.env.HALPHA_CHART_SCRIPT;
+    if (!chartScriptPath) throw new Error("HALPHA_CHART_SCRIPT is required");
+    const chartScript = fs.readFileSync(chartScriptPath, "utf8");
+
+    const classList = () => ({
+      add() {},
+      remove() {},
+      toggle() {},
+    });
+    const parent = {
+      tooltip: null,
+      querySelector(selector) {
+        return selector === ".chart-tooltip" ? this.tooltip : null;
+      },
+      appendChild(node) {
+        this.tooltip = node;
+      },
+      getBoundingClientRect() { return {left: 0, top: 0, width: 900, height: 260}; },
+    };
+    const svg = {
+      innerHTML: "",
+      parentElement: parent,
+      classList: classList(),
+      lastHits: [],
+      crosshairAttrs: {},
+      getBoundingClientRect() { return {left: 0, top: 0, width: 900, height: 260}; },
+      querySelector(selector) {
+        if (selector === ".drawdown-chart-crosshair") {
+          return {
+            setAttribute: (name, value) => {
+              this.crosshairAttrs[name] = value;
+            },
+          };
+        }
+        return {setAttribute() {}};
+      },
+      querySelectorAll(selector) {
+        if (selector !== ".drawdown-chart-hit, .drawdown-worst-hit" && selector !== ".drawdown-chart-hit") return [];
+        const pattern = selector === ".drawdown-chart-hit"
+          ? /<circle class="drawdown-chart-hit"[^>]*>/g
+          : /<circle class="(?:drawdown-chart-hit|drawdown-worst-hit)"[^>]*>/g;
+        this.lastHits = [...this.innerHTML.matchAll(pattern)].map((match) => {
+          const dataset = {};
+          const listeners = {};
+          const className = (match[0].match(/class="([^"]+)"/) || [])[1] || "";
+          for (const [, key, value] of match[0].matchAll(/data-([a-z-]+)="([^"]*)"/g)) {
+            dataset[key.replace(/-([a-z])/g, (_, char) => char.toUpperCase())] = value;
+          }
+          return {
+            className,
+            dataset,
+            listeners,
+            addEventListener(name, callback) { listeners[name] = callback; },
+          };
+        });
+        return this.lastHits;
+      },
+      addEventListener() {},
+      setPointerCapture() {},
+    };
+    const context = {
+      window: {
+        HalphaDashboardShared: {
+          escapeHtml(value) {
+            return String(value ?? "")
+              .replaceAll("&", "&amp;")
+              .replaceAll('"', "&quot;")
+              .replaceAll("<", "&lt;")
+              .replaceAll(">", "&gt;");
+          },
+          formatNumber(value) { return String(value); },
+          pnlColors() { return {profit: "#087f5b", loss: "#c92a2a", up: "#087f5b", down: "#c92a2a"}; },
+          formatTimestamp(value) { return String(value || ""); },
+        },
+      },
+      document: {
+        querySelector(selector) { return selector === "#drawdown" ? svg : null; },
+        createElement() {
+          return {
+            className: "",
+            classList: classList(),
+            style: {},
+            innerHTML: "",
+            offsetWidth: 230,
+            offsetHeight: 160,
+          };
+        },
+      },
+      requestAnimationFrame(callback) {
+        callback();
+        return 1;
+      },
+      cancelAnimationFrame() {},
+      console,
+    };
+    context.globalThis = context;
+    vm.createContext(context);
+    vm.runInContext(chartScript, context, {filename: "dashboard_strategy_chart.js"});
+
+    const chart = context.window.HalphaDashboardStrategyChart;
+    const curve = Array.from({length: 400}, (_, index) => {
+      const recovery = index > 240 ? (index - 240) / 260 : 0;
+      const shock = index > 120 && index < 240 ? (index - 120) / 35 : 0;
+      const equity = 1.2 + index / 2000 - Math.min(0.32, shock * 0.05) + recovery * 0.15;
+      return {
+        time: `2026-02-${String((index % 28) + 1).padStart(2, "0")}T00:00:00Z`,
+        equity,
+      };
+    });
+    chart.renderDrawdownCurveSvg("#drawdown", curve, {displayTimezone: "UTC"});
+    const hitCount = (svg.innerHTML.match(/class="drawdown-chart-hit"/g) || []).length;
+    if (hitCount > chart.EQUITY_CHART_MAX_POINTS) {
+      throw new Error(`expected bounded hit nodes, got ${hitCount}`);
+    }
+    for (const required of [
+      "drawdown-axis-label y",
+      "drawdown-axis-label x",
+      "drawdown-boundary-label start",
+      "drawdown-boundary-label end",
+      "drawdown-zero-line",
+      "drawdown-chart-line",
+      "drawdown-worst-marker",
+      "drawdown-worst-hit",
+    ]) {
+      if (!svg.innerHTML.includes(required)) {
+        throw new Error(`missing ${required}`);
+      }
+    }
+    const worstHit = svg.lastHits.find((hit) => hit.className.includes("drawdown-worst-hit"));
+    if (!worstHit || !worstHit.listeners.mousemove) {
+      throw new Error("drawdown worst marker hover was not wired");
+    }
+    worstHit.listeners.mousemove({clientX: 420, clientY: 120});
+    if (!parent.tooltip?.innerHTML.includes("Max drawdown") || !parent.tooltip?.innerHTML.includes("Drawdown")) {
+      throw new Error("drawdown worst tooltip did not render details");
+    }
+    if (svg.crosshairAttrs.visibility !== "visible") {
+      throw new Error("drawdown crosshair did not become visible on hover");
+    }
+    const before = (svg.innerHTML.match(/<text class="drawdown-chart-status"[^>]*>([^<]+)<\/text>/) || [])[1];
+    svg.onwheel({preventDefault() {}, clientX: 450, deltaY: -1});
+    const after = (svg.innerHTML.match(/<text class="drawdown-chart-status"[^>]*>([^<]+)<\/text>/) || [])[1];
+    if (!after || !after.includes("/ 400 points") || before === after) {
+      throw new Error(`drawdown wheel zoom did not update viewport label: ${before} -> ${after}`);
+    }
+    const zoomedHitCount = (svg.innerHTML.match(/class="drawdown-chart-hit"/g) || []).length;
+    if (zoomedHitCount > chart.EQUITY_CHART_MAX_POINTS) {
+      throw new Error(`expected bounded zoomed hit nodes, got ${zoomedHitCount}`);
+    }
+    const sampled = chart.aggregateDrawdownPoints([
+      {index: 0, value: 0},
+      {index: 1, value: -4},
+      {index: 2, value: -1},
+      {index: 3, value: -8},
+      {index: 4, value: -2},
+    ], 2);
+    if (sampled.length !== 2 || sampled[0].index !== 1 || sampled[1].index !== 3) {
+      throw new Error(`unexpected drawdown sampling: ${JSON.stringify(sampled)}`);
+    }
+    console.log(JSON.stringify({hitCount, zoomedHitCount, before, after}));
+    """
+)
 
 
 def _dashboard_html(tmp_path: Path) -> str:

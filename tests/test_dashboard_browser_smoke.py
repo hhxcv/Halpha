@@ -267,7 +267,7 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
       await expect(page.locator("#strategy-backtest-detail")).toBeHidden();
       await expect(page.locator("#strategy-chart-symbol")).toBeHidden();
       await expect(page.locator("#strategy-chart-timeframe")).toBeHidden();
-      await expect(page.locator("#strategy-chart-refresh")).toBeHidden();
+      await expect(page.locator("#strategy-chart-refresh")).toHaveCount(0);
       await expect(page.locator('[data-strategy-operation-tab="collect"]')).toHaveCount(0);
       await expect(page.locator('[data-strategy-operation-tab="export"]')).toHaveCount(0);
       await expect(page.locator("#strategy-collect-preview")).toHaveCount(0);

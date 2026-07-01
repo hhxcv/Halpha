@@ -1894,7 +1894,7 @@
     .strategy-detail-header {
       grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 14px;
       align-items: center;
       padding: 14px 16px;
@@ -1910,6 +1910,27 @@
       overflow-wrap: anywhere;
       font-size: 18px;
       line-height: 1.25;
+    }
+
+    .strategy-detail-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .strategy-back-button {
+      width: 42px;
+      min-width: 42px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+    }
+
+    .strategy-detail-actions .compact-button {
+      min-height: 40px;
+      white-space: nowrap;
     }
 
     .strategy-controls {
@@ -2720,9 +2741,9 @@
 
     .chart-header {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) minmax(0, auto);
+      grid-template-columns: 1fr;
       gap: 12px;
-      align-items: end;
+      align-items: center;
       padding: 12px 14px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       background: #0b1726;
@@ -2738,14 +2759,17 @@
     }
 
     .chart-selector {
-      display: grid;
-      grid-template-columns: 110px 130px 96px minmax(196px, auto) auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 8px;
-      align-items: end;
+      align-items: center;
+      justify-content: space-between;
       min-width: 0;
+      width: 100%;
     }
 
     .chart-selector .field {
+      flex: 1 1 124px;
       min-width: 0;
     }
 
@@ -2769,7 +2793,8 @@
     }
 
     .chart-window-field {
-      min-width: 196px;
+      flex: 0 0 auto;
+      min-width: min(196px, 100%);
     }
 
     .segmented-control {
@@ -2812,8 +2837,8 @@
       box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
     }
 
-    .chart-refresh-button {
-      white-space: nowrap;
+    #strategy-quote-label {
+      flex: 0 0 auto;
     }
 
     .chart-wrap {
@@ -2971,9 +2996,27 @@
       align-self: start;
       align-content: start;
       min-width: 0;
-      max-height: calc(clamp(360px, calc(100vh - 330px), 470px) + 122px);
-      overflow-y: auto;
-      padding-right: 2px;
+      max-height: none;
+      overflow-y: visible;
+    }
+
+    .strategy-operation-tree-panel {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: calc(clamp(360px, calc(100vh - 330px), 470px) + 111px);
+      overflow: hidden;
+    }
+
+    .strategy-params-drawer {
+      width: min(500px, 100vw);
+    }
+
+    .strategy-params-drawer .drawer-section {
+      margin-bottom: 18px;
+    }
+
+    .strategy-params-drawer .drawer-section:last-child {
+      margin-bottom: 0;
     }
 
     .kv-table {
@@ -3001,33 +3044,104 @@
       word-break: normal;
     }
 
-    .trade-list {
+    #strategy-operation-tree {
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .strategy-operation-tree {
       display: grid;
-      gap: 8px;
+      gap: 12px;
     }
 
-    .trade-row {
+    .strategy-operation-day {
       display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 4px 8px;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid #edf1f5;
+      gap: 7px;
     }
 
-    .trade-row:last-child {
-      border-bottom: 0;
-    }
-
-    .trade-row strong {
-      text-align: right;
-      font-size: 12px;
-      overflow-wrap: break-word;
-    }
-
-    .trade-row small {
-      grid-column: 1 / -1;
+    .strategy-operation-day h3 {
+      margin: 0;
       color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .strategy-operation-nodes {
+      display: grid;
+      gap: 6px;
+    }
+
+    .strategy-operation-node {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 12px auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      padding: 9px 0;
+      border: 0;
+      border-bottom: 1px solid #edf1f5;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .strategy-operation-node:hover,
+    .strategy-operation-node:focus-visible,
+    .strategy-operation-node.active {
+      color: var(--text);
+    }
+
+    .strategy-operation-node:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-control);
+    }
+
+    .strategy-operation-node.active {
+      border-bottom-color: rgba(214, 179, 0, 0.42);
+      background: rgba(255, 210, 38, 0.12);
+    }
+
+    .strategy-operation-rail {
+      width: 8px;
+      height: 8px;
+      border: 2px solid var(--border-strong);
+      border-radius: 50%;
+      background: var(--panel);
+    }
+
+    .strategy-operation-node.active .strategy-operation-rail {
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+
+    .strategy-operation-node-main {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .strategy-operation-node-main strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .strategy-operation-node-main small {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .compact-message {
+      margin-bottom: 10px;
+      padding: 8px 10px;
       font-size: 11px;
     }
 
@@ -3087,6 +3201,7 @@
     }
 
     .strategy-eval-chart {
+      position: relative;
       min-height: 150px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -3098,6 +3213,124 @@
       display: block;
       width: 100%;
       height: 150px;
+    }
+
+    .strategy-eval-chart.strategy-equity-chart,
+    .strategy-eval-chart.strategy-drawdown-chart {
+      min-height: 260px;
+      height: clamp(240px, 32vh, 320px);
+      background:
+        linear-gradient(var(--chart-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px),
+        var(--panel-soft);
+      background-size: 60px 48px;
+    }
+
+    .strategy-eval-chart.strategy-equity-chart svg,
+    .strategy-eval-chart.strategy-drawdown-chart svg {
+      height: 100%;
+    }
+
+    .strategy-eval-chart svg.is-draggable {
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .strategy-eval-chart svg.dragging {
+      cursor: grabbing;
+    }
+
+    .strategy-eval-chart .equity-chart-plot,
+    .strategy-eval-chart .drawdown-chart-plot {
+      fill: rgba(255, 255, 255, 0.35);
+      stroke: var(--border);
+    }
+
+    .strategy-eval-chart .equity-grid-line,
+    .strategy-eval-chart .drawdown-grid-line {
+      stroke: var(--chart-grid);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .strategy-eval-chart .equity-grid-line.vertical,
+    .strategy-eval-chart .drawdown-grid-line.vertical {
+      opacity: 0.72;
+    }
+
+    .strategy-eval-chart .equity-baseline,
+    .strategy-eval-chart .drawdown-zero-line {
+      stroke: rgba(111, 118, 130, 0.48);
+      stroke-width: 1;
+      stroke-dasharray: 5 5;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .strategy-eval-chart .equity-axis-label,
+    .strategy-eval-chart .equity-chart-status,
+    .strategy-eval-chart .drawdown-axis-label,
+    .strategy-eval-chart .drawdown-boundary-label,
+    .strategy-eval-chart .drawdown-chart-status {
+      fill: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .strategy-eval-chart .equity-chart-segment,
+    .strategy-eval-chart .drawdown-chart-line {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .strategy-eval-chart .drawdown-chart-line {
+      stroke: var(--red);
+    }
+
+    .strategy-eval-chart .equity-chart-hit,
+    .strategy-eval-chart .drawdown-chart-hit,
+    .strategy-eval-chart .drawdown-worst-hit {
+      cursor: crosshair;
+    }
+
+    .strategy-eval-chart .equity-chart-crosshair,
+    .strategy-eval-chart .drawdown-chart-crosshair {
+      stroke: rgba(17, 24, 39, 0.52);
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+      vector-effect: non-scaling-stroke;
+      pointer-events: none;
+    }
+
+    .strategy-eval-chart .drawdown-worst-marker {
+      pointer-events: none;
+    }
+
+    .strategy-eval-chart .drawdown-worst-marker line {
+      stroke: var(--red);
+      stroke-width: 1.4;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .strategy-eval-chart .drawdown-worst-marker circle {
+      fill: var(--red);
+      stroke: #fff;
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .strategy-eval-chart .drawdown-worst-marker rect {
+      fill: var(--red);
+      stroke: rgba(255, 255, 255, 0.68);
+      stroke-width: 1;
+    }
+
+    .strategy-eval-chart .drawdown-worst-marker text {
+      fill: #fff;
+      font-size: 11px;
+      font-weight: 850;
     }
 
     .strategy-eval-chart.drawdown polyline {
@@ -3453,31 +3686,6 @@
       font-weight: 760;
     }
 
-    .strategy-marker-table tr.active {
-      background: var(--primary-soft);
-      box-shadow: inset 3px 0 0 var(--primary);
-    }
-
-    .strategy-marker-jump {
-      min-width: 0;
-      padding: 0;
-      border: 0;
-      background: transparent;
-      color: var(--info-text);
-      font: inherit;
-      font-weight: 760;
-      text-align: left;
-      white-space: nowrap;
-      cursor: pointer;
-    }
-
-    .strategy-marker-jump:hover,
-    .strategy-marker-jump:focus-visible {
-      color: var(--text);
-      text-decoration: underline;
-      outline: none;
-    }
-
     .live-layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(320px, 0.42fr);
@@ -3490,6 +3698,10 @@
     .live-review-panel,
     .live-operations-panel {
       grid-column: 1 / -1;
+    }
+
+    [data-live-panel][hidden] {
+      display: none !important;
     }
 
     .live-now-grid {
@@ -3554,8 +3766,8 @@
     }
 
     .live-filter-bar {
-      display: grid;
-      grid-template-columns: minmax(180px, 0.9fr) minmax(160px, 0.75fr) auto auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       align-items: end;
       min-width: 0;
@@ -3567,8 +3779,8 @@
     }
 
     .live-history-filter-bar {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(130px, 1fr)) auto auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       align-items: end;
       min-width: 0;
@@ -3579,10 +3791,53 @@
       background: var(--panel-muted);
     }
 
+    .live-filter-bar .field,
+    .live-history-filter-bar .field {
+      flex: 1 1 150px;
+      min-width: 140px;
+    }
+
+    .live-filter-bar .field {
+      flex-basis: 170px;
+    }
+
+    .live-history-filter-bar .field {
+      flex-basis: 135px;
+    }
+
+    .live-filter-bar .compact-button,
+    .live-history-filter-bar .compact-button {
+      flex: 0 0 auto;
+      min-height: 42px;
+      white-space: nowrap;
+    }
+
     .live-filter-chip {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: max-content;
       min-height: 42px;
       align-self: end;
       justify-content: flex-start;
+      white-space: nowrap;
+      overflow-wrap: normal;
+      word-break: keep-all;
+    }
+
+    .live-filter-chip span:last-child {
+      white-space: nowrap;
+    }
+
+    body[data-theme="solar"] .live-filter-chip.chip.choice-chip {
+      display: inline-flex;
+      width: auto;
+      min-width: max-content;
+      border-radius: var(--radius);
+    }
+
+    body[data-theme="solar"] .live-filter-chip.chip.choice-chip span:last-child {
+      overflow-wrap: normal;
+      white-space: nowrap;
     }
 
     .live-source-matrix {
@@ -3698,7 +3953,8 @@
     }
 
     .live-target-row {
-      grid-template-columns: minmax(120px, 1.3fr) minmax(88px, 0.65fr) minmax(112px, 0.85fr) minmax(112px, 0.85fr);
+      grid-template-columns: minmax(92px, 1.3fr) minmax(78px, 0.75fr) minmax(90px, 0.95fr) minmax(72px, 0.7fr);
+      gap: 8px;
       cursor: pointer;
     }
 
@@ -3764,7 +4020,7 @@
 
     .live-review-row {
       display: grid;
-      grid-template-columns: minmax(150px, 0.85fr) minmax(104px, 0.52fr) minmax(220px, 1.2fr) minmax(128px, 0.75fr) minmax(180px, 1fr) minmax(150px, 0.8fr);
+      grid-template-columns: minmax(150px, 0.85fr) minmax(150px, 0.7fr) minmax(220px, 1.25fr) minmax(110px, 0.62fr) minmax(170px, 0.95fr) minmax(130px, 0.72fr);
       gap: 10px;
       align-items: center;
       min-width: 0;
@@ -3956,6 +4212,11 @@
       display: grid;
       gap: 10px;
       min-width: 0;
+    }
+
+    .live-target-detail .detail-value,
+    .live-detail-block .detail-value {
+      overflow-wrap: anywhere;
     }
 
     .live-history-row {
@@ -6703,6 +6964,11 @@
         padding-right: 0;
       }
 
+      .strategy-operation-tree-panel {
+        height: auto;
+        max-height: none;
+      }
+
       .live-source-board,
       .live-side,
       .live-runtime-panel,
@@ -6735,6 +7001,10 @@
 
       .strategy-detail-header {
         grid-template-columns: 1fr;
+      }
+
+      .strategy-detail-actions {
+        justify-content: flex-start;
       }
 
       .strategy-profile-hero {
@@ -6893,6 +7163,11 @@
         grid-template-columns: 1fr;
       }
 
+      .chart-selector .field,
+      .chart-selector #strategy-quote-label {
+        flex: 1 1 100%;
+      }
+
       .live-filter-bar,
       .live-history-filter-bar,
       .live-source-matrix,
@@ -6903,8 +7178,18 @@
         grid-template-columns: 1fr;
       }
 
-      .live-filter-chip {
+      .live-filter-bar .field,
+      .live-history-filter-bar .field,
+      .live-filter-bar .compact-button,
+      .live-history-filter-bar .compact-button {
+        flex: 1 1 100%;
         width: 100%;
+      }
+
+      .live-filter-chip {
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
       }
 
       .live-stream-row,
@@ -7276,7 +7561,6 @@
     body[data-theme="solar"] .primary-button,
     body[data-theme="solar"] .danger-button,
     body[data-theme="solar"] .icon-button,
-    body[data-theme="solar"] .chart-refresh-button,
     body[data-theme="solar"] .compact-button,
     body[data-theme="solar"] .data-viewer-issue-button,
     body[data-theme="solar"] .range-picker-trigger {
@@ -7363,7 +7647,6 @@
 
     body[data-theme="solar"] .ghost-button:hover:not(:disabled),
     body[data-theme="solar"] .icon-button:hover:not(:disabled),
-    body[data-theme="solar"] .chart-refresh-button:hover:not(:disabled),
     body[data-theme="solar"] .compact-button:hover:not(:disabled),
     body[data-theme="solar"] .range-picker-trigger:hover {
       border-color: var(--border-strong);
@@ -7839,12 +8122,23 @@
 
     body[data-theme="solar"] .chart-selector {
       width: 100%;
-      grid-template-columns: 140px 140px 140px minmax(196px, auto) auto auto;
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
     }
 
-    body[data-theme="solar"] .chart-refresh-button,
+    body[data-theme="solar"] .chart-selector .field {
+      flex: 1 1 140px;
+      min-width: 0;
+    }
+
+    body[data-theme="solar"] .chart-selector .chart-window-field {
+      flex: 0 0 auto;
+      min-width: min(196px, 100%);
+    }
+
     body[data-theme="solar"] #strategy-quote-label {
+      flex: 0 0 auto;
       justify-self: start;
       align-self: end;
     }

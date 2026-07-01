@@ -20,6 +20,7 @@
       dataViewerCollectJobs: app.dataset.dataViewerCollectJobsEndpoint,
       strategies: app.dataset.strategiesEndpoint,
       strategyActions: app.dataset.strategyActionsEndpoint,
+      strategyBacktests: app.dataset.strategyBacktestsEndpoint,
       live: app.dataset.liveEndpoint,
       liveCycles: app.dataset.liveCyclesEndpoint,
       liveAlerts: app.dataset.liveAlertsEndpoint,
@@ -133,6 +134,7 @@
       strategyOptimizeLogs: [],
       strategyCollectLogs: [],
       strategyBacktestDialogOpen: false,
+      strategyParamsDrawerOpen: false,
       live: null,
       liveCycles: [],
       liveAlerts: null,
@@ -871,13 +873,12 @@
     function renderStrategiesLoading() {
       setHtml("#strategy-spec-summary", `<div class="loading-surface">${skeletonLine("42%")}${skeletonLine("78%")}</div>`);
       setHtml("#strategy-parameter-controls", skeletonCards(3, "strategy-param-card"));
-      setHtml("#strategy-params", `<tbody><tr><td colspan="2">${skeletonRows(5)}</td></tr></tbody>`);
-      setHtml("#recent-trades", skeletonList(2));
+      setHtml("#strategy-params-drawer-body", skeletonRows(5));
+      setHtml("#strategy-operation-tree", skeletonList(3));
       setHtml("#backtest-runs", skeletonList(3));
       setHtml("#strategy-tab-content", skeletonMessage(4));
       setHtml("#strategy-experiment-results", skeletonMessage(3));
       setHtml("#strategy-optimize-results", skeletonMessage(3));
-      document.querySelector("#strategy-chart-meta").textContent = "Loading market data.";
     }
 
     function renderLiveLoading() {
@@ -2728,9 +2729,6 @@
     function renderBacktestDetail(selected) {
       renderStrategyDetailHeader(selected);
       const vis = visibleStrategyVisualization(selected);
-      const identityLabel = [vis.symbol, vis.timeframe].filter(Boolean).join(" - ");
-      setText("#strategy-chart-title", identityLabel ? `${identityLabel} - Halpha` : "OHLCV data viewer");
-      setText("#strategy-chart-meta", strategyChartMeta(selected, vis));
       setText("#strategy-quote-label", strategyChart.quoteAsset(vis.symbol));
       setText("#strategy-window-label", strategyChart.strategyWindowLabel(
         vis,
@@ -2739,9 +2737,9 @@
       setText("#strategy-chart-clock", displayTimezone);
       syncStrategyWindowControls();
       strategyChart.renderCandlestickSvg("#backtest-chart", vis, {displayTimezone, pnlColorScheme});
-      renderStrategyParams(selected, vis);
-      renderRecentTrades(vis);
-      renderStrategyTab("trades");
+      if (state.strategyParamsDrawerOpen) renderStrategyParamsDrawer(selected, vis);
+      renderStrategyOperationTree(fullBacktestVisualization(selected));
+      renderStrategyTab(currentStrategyTab());
     }
 
     function renderStrategyDetailHeader(selected) {
@@ -2754,24 +2752,18 @@
         return;
       }
       const identity = strategyIdentity(selected);
+      const vis = backtestVisualization(selected);
       const created = selected?.fields?.created_at || selected?.created_at || "";
-      kicker.textContent = [identity.symbol, identity.timeframe, formatTimestamp(created)].filter(Boolean).join(" / ") || "Backtest detail";
+      const source = selected?.fields?.source || selected?.source || vis.source || document.querySelector("#strategy-chart-source")?.value || "";
+      const status = vis.status || selected?.status || "";
+      kicker.textContent = [
+        source,
+        identity.symbol,
+        identity.timeframe,
+        formatTimestamp(created),
+        status ? label(status) : "",
+      ].filter(Boolean).join(" / ") || "Backtest detail";
       title.textContent = identity.name || "Strategy backtest";
-    }
-
-    function strategyChartMeta(selected, vis) {
-      if (state.strategyOperationTab === "backtest" && selected && vis.strategy_name) {
-        return `${vis.strategy_name} - ${vis.status || selected?.status || "partial"}`;
-      }
-      const bars = Array.isArray(vis.bars) ? vis.bars.length : 0;
-      if (bars) {
-        const source = vis.source || document.querySelector("#strategy-chart-source")?.value || "shared store";
-        return `OHLCV only - ${formatNumber(bars)} candles from ${source}.`;
-      }
-      if (state.strategyOperationTab === "backtest") {
-        return "OHLCV-only chart. Select a backtest run to overlay operations.";
-      }
-      return "OHLCV-only chart. Collection settings do not select a backtest.";
     }
 
     function setStrategyOperationTab(tab) {
@@ -2794,10 +2786,6 @@
       document.querySelectorAll("[data-backtest-only]").forEach((panel) => {
         panel.classList.toggle("hidden", !detailOpen);
       });
-      const paramsTitle = document.querySelector("#strategy-params-title");
-      if (paramsTitle) {
-        paramsTitle.textContent = state.strategyOperationTab === "backtest" ? "Strategy parameters" : "Chart parameters";
-      }
     }
 
     function selectedStrategyOutput(outputs) {
@@ -3094,33 +3082,171 @@
       return strategyIdentity(item).name || "No strategy selected";
     }
 
-    function renderStrategyParams(item, vis) {
-      const inputs = item?.fields?.inputs || {};
-      const rows = item ? {
-        "Momentum window": inputs.momentum_window,
-        "Volume window": inputs.volume_window,
-        "Symbol": vis.symbol || inputs.symbol,
-        "Timeframe": vis.timeframe || inputs.timeframe,
-        "Stoploss": inputs.stoploss,
-        "Take profit": inputs.take_profit,
-        "Stake per trade": inputs.stake_per_trade,
-        "Time in force": inputs.time_in_force,
-      } : {
-        "Source": vis.source,
-        "Symbol": vis.symbol,
-        "Timeframe": vis.timeframe,
-        "Candles": Array.isArray(vis.bars) ? vis.bars.length : 0,
-        "First candle": vis.bars?.[0]?.time,
-        "Latest candle": vis.bars?.[vis.bars.length - 1]?.time,
-        "Backtest overlay": "none",
-        "Status": vis.status,
-      };
-      document.querySelector("#strategy-params").innerHTML = Object.entries(rows).map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(text(value))}</td></tr>`).join("");
+    function renderStrategyParamsDrawer(item, vis = null) {
+      const body = document.querySelector("#strategy-params-drawer-body");
+      const title = document.querySelector("#strategy-params-drawer-title");
+      if (!body) return;
+      if (!item) {
+        if (title) title.textContent = "Strategy parameters";
+        body.innerHTML = `<div class="empty-state">Select a backtest run to inspect parameters.</div>`;
+        return;
+      }
+      const visual = vis || visibleStrategyVisualization(item);
+      const identity = strategyIdentity(item);
+      if (title) title.textContent = identity.name || "Strategy parameters";
+      const sections = strategyParameterSections(item, visual);
+      body.innerHTML = `
+        <div class="artifact-summary">
+          ${statusPill(item.status || item.fields?.status || visual.status || "unknown")}
+          <span class="tag">${escapeHtml(identity.symbol || "symbol n/a")}</span>
+          <span class="tag">${escapeHtml(identity.timeframe || "timeframe n/a")}</span>
+          <span class="tag">${escapeHtml(visual.source || item.fields?.source || "source n/a")}</span>
+        </div>
+        ${sections.map((section) => `
+          <section class="drawer-section">
+            <h3>${escapeHtml(section.title)}</h3>
+            ${section.rows.length ? kvRows(section.rows) : `<div class="message">${escapeHtml(section.empty || "No values recorded.")}</div>`}
+          </section>`).join("")}`;
     }
 
-    function renderRecentTrades(vis) {
-      const markers = (vis.markers || []).slice(-5).reverse();
-      document.querySelector("#recent-trades").innerHTML = markers.length ? `<div class="trade-list">${markers.map((marker) => `<div class="trade-row"><span class="status-pill ${String(marker.kind || "").toLowerCase().includes("exit") ? "failed" : "available"}">${escapeHtml(marker.label || marker.kind)}</span><strong>${escapeHtml(formatNumber(marker.price || ""))}</strong><small>${escapeHtml(formatTimestamp(marker.time))}</small></div>`).join("")}</div>` : `<div class="message">No operations on the current chart.</div>`;
+    function strategyParameterSections(item, vis) {
+      const fields = item?.fields || {};
+      const inputs = objectValue(fields.inputs);
+      const metrics = objectValue(fields.metrics);
+      const identity = strategyIdentity(item);
+      const window = backtestRunWindow(item);
+      const runParams = {...objectValue(inputs.params), ...objectValue(fields.params)};
+      const spec = strategySpecByName(identity.name);
+      const configuredParams = objectValue(spec?.configured_params && Object.keys(spec.configured_params).length ? spec.configured_params : spec?.default_params);
+      const strategyParams = {...configuredParams, ...runParams};
+      const inputRows = objectRows(inputs, new Set(["params"]));
+      const executionRows = [
+        ...objectRows(metrics.execution_model),
+        ...objectRows(metrics.cost_assumptions),
+      ];
+      return [
+        {
+          title: "Run",
+          rows: [
+            ["Strategy", identity.name],
+            ["Created", formatTimestamp(fields.created_at || item?.created_at)],
+            ["Status", item.status || fields.status || vis.status],
+            ["Source", fields.source || inputs.source || vis.source],
+            ["Symbol", identity.symbol || vis.symbol],
+            ["Timeframe", identity.timeframe || vis.timeframe],
+            ["Window start", window.start],
+            ["Window end", window.end],
+            ["Evaluation id", fields.evaluation_id],
+            ["Output", item.output_dir],
+          ].filter((row) => row[1] !== undefined && row[1] !== null && row[1] !== ""),
+        },
+        {
+          title: "Strategy parameters",
+          rows: objectRows(strategyParams),
+          empty: "No strategy-specific parameters are recorded for this run.",
+        },
+        {
+          title: "Backtest inputs",
+          rows: inputRows,
+          empty: "No additional backtest inputs are recorded.",
+        },
+        {
+          title: "Execution and cost",
+          rows: executionRows,
+          empty: "No execution model or cost assumptions are recorded.",
+        },
+        {
+          title: "Sample",
+          rows: objectRows(metrics.sample),
+          empty: "No sample window metrics are recorded.",
+        },
+      ];
+    }
+
+    function objectValue(value) {
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    }
+
+    function objectRows(value, excluded = new Set()) {
+      return Object.entries(objectValue(value))
+        .filter(([key, item]) => !excluded.has(key) && item !== undefined && item !== null && item !== "")
+        .map(([key, item]) => [label(key), parameterValueText(item)]);
+    }
+
+    function parameterValueText(value) {
+      if (value && typeof value === "object") {
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return text(value);
+        }
+      }
+      return text(value);
+    }
+
+    function kvRows(rows) {
+      return `<table class="kv-table"><tbody>${rows.map(([key, value]) => `
+        <tr><td>${escapeHtml(key)}</td><td>${escapeHtml(parameterValueText(value))}</td></tr>`).join("")}</tbody></table>`;
+    }
+
+    function renderStrategyOperationTree(vis) {
+      const node = document.querySelector("#strategy-operation-tree");
+      if (!node) return;
+      const markers = strategyOperationMarkers(vis);
+      const omittedMarkers = omittedVisualizationMarkers(vis);
+      if (!markers.length) {
+        node.innerHTML = `<div class="message">No operation markers are stored for this backtest.</div>`;
+        return;
+      }
+      const groups = new Map();
+      markers.forEach((marker) => {
+        const day = formatTimestamp(marker.time).split(" ")[0] || "Unknown";
+        if (!groups.has(day)) groups.set(day, []);
+        groups.get(day).push(marker);
+      });
+      const omittedNotice = omittedMarkers > 0
+        ? `<div class="message compact-message">${escapeHtml(formatNumber(omittedMarkers))} older operation marker${omittedMarkers === 1 ? "" : "s"} are omitted by the bounded artifact.</div>`
+        : "";
+      node.innerHTML = `${omittedNotice}<div class="strategy-operation-tree">
+        ${Array.from(groups.entries()).map(([day, dayMarkers]) => `
+          <section class="strategy-operation-day">
+            <h3>${escapeHtml(day)}</h3>
+            <div class="strategy-operation-nodes">
+              ${dayMarkers.map((marker) => strategyOperationNode(marker)).join("")}
+            </div>
+          </section>`).join("")}
+        </div>`;
+      wireStrategyMarkerJumps();
+    }
+
+    function strategyOperationMarkers(vis) {
+      return (Array.isArray(vis?.markers) ? vis.markers : [])
+        .filter((marker) => marker && marker.time)
+        .slice()
+        .sort((left, right) => timestampMs(right.time) - timestampMs(left.time));
+    }
+
+    function strategyOperationNode(marker) {
+      const price = marker.price === undefined || marker.price === null || marker.price === "" ? "n/a" : formatNumber(marker.price);
+      const exposure = marker.position ?? marker.exposure ?? "";
+      const labelText = marker.label || marker.kind || marker.side || "operation";
+      const isActive = String(marker.time || "") === String(state.strategyFocusedMarkerTime || "");
+      return `
+        <button class="strategy-operation-node ${isActive ? "active" : ""}" type="button" data-strategy-marker-time="${escapeHtml(marker.time || "")}">
+          <span class="strategy-operation-rail" aria-hidden="true"></span>
+          <span class="status-pill ${escapeHtml(strategyOperationStatusClass(marker))}">${escapeHtml(labelText)}</span>
+          <span class="strategy-operation-node-main">
+            <strong>${escapeHtml(formatTimestamp(marker.time))}</strong>
+            <small>${escapeHtml([marker.side, price, exposure !== "" ? `exposure ${parameterValueText(exposure)}` : ""].filter(Boolean).join(" / "))}</small>
+          </span>
+        </button>`;
+    }
+
+    function strategyOperationStatusClass(marker) {
+      const textValue = String(marker?.kind || marker?.label || "").toLowerCase();
+      if (textValue.includes("exit") || textValue.includes("close")) return "failed";
+      if (textValue.includes("short")) return "warning";
+      return "available";
     }
 
     function renderBacktestRuns(outputs) {
@@ -3183,6 +3309,8 @@
         state.strategyBacktestDetailOpen = false;
         setSelectIfPresent("#strategy-name", "");
         strategyChart.resetCandlestickView("#backtest-chart");
+        strategyChart.resetEquityCurveView("#strategy-equity-chart");
+        strategyChart.resetDrawdownCurveView("#strategy-drawdown-chart");
         queueStrategyChartRefresh({clearBacktest: true});
         renderStrategies();
       }));
@@ -3380,14 +3508,17 @@
       setSelectIfPresent("#strategy-timeframe", identity.timeframe);
       setSelectIfPresent("#strategy-chart-symbol", identity.symbol);
       setSelectIfPresent("#strategy-chart-timeframe", identity.timeframe);
-      setInputValue("#strategy-chart-source", defaultStrategySource(), false);
+      setInputValue("#strategy-chart-source", backtestVisualization(item).source || item?.fields?.source || defaultStrategySource(), true);
       strategyChart.resetCandlestickView("#backtest-chart");
+      strategyChart.resetEquityCurveView("#strategy-equity-chart");
+      strategyChart.resetDrawdownCurveView("#strategy-drawdown-chart");
       queueStrategyChartRefresh({clearBacktest: false});
       renderStrategies();
     }
 
     function showStrategyBacktestList() {
       state.strategyBacktestDetailOpen = false;
+      closeStrategyParamsDrawer();
       syncStrategyOperationTabs();
       renderBacktestRuns(strategyOutputs());
     }
@@ -3553,74 +3684,39 @@
       </section>`;
     }
 
+    function currentStrategyTab() {
+      const active = document.querySelector("[data-strategy-tab].active")?.dataset.strategyTab || "equity";
+      return ["equity", "drawdown", "summary"].includes(active) ? active : "equity";
+    }
+
     function renderStrategyTab(tab) {
-      document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.classList.toggle("active", button.dataset.strategyTab === tab));
+      const selectedTab = ["equity", "drawdown", "summary"].includes(tab) ? tab : "equity";
+      document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.classList.toggle("active", button.dataset.strategyTab === selectedTab));
       const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
       const fullVis = fullBacktestVisualization(state.selectedStrategyOutput);
-      const metrics = strategyMetrics(state.selectedStrategyOutput);
       let content = "";
-      if (tab === "trades" || tab === "list") {
-        content = renderStrategyTradesPanel(state.selectedStrategyOutput, fullVis, metrics);
-      } else if (tab === "equity") {
+      if (selectedTab === "equity") {
         content = renderStrategyEquityPanel(vis);
-      } else if (tab === "drawdown") {
-        content = renderStrategyDrawdownPanel(vis);
-      } else if (tab === "summary") {
+      } else if (selectedTab === "drawdown") {
+        content = renderStrategyDrawdownPanel(fullVis);
+      } else if (selectedTab === "summary") {
         content = renderStrategyEvaluationPanels(state.selectedStrategyOutput, vis);
       } else {
         content = renderStrategyDiagnostics();
       }
       document.querySelector("#strategy-tab-content").innerHTML = content;
-      wireStrategyMarkerJumps();
-    }
-
-    function renderStrategyTradesPanel(item, vis, metrics) {
-      const trade = strategyTradeSummary(item);
-      const markers = Array.isArray(vis.markers) ? vis.markers : [];
-      const omittedMarkers = omittedVisualizationMarkers(vis);
-      const fullTradeCount = numericOrNull(trade.trade_count);
-      const scopeNotice = strategyOperationScopeNotice({
-        fullTradeCount,
-        visibleMarkerCount: markers.length,
-        omittedMarkers,
-      });
-      return `
-        <div class="summary-strip columns-6">
-          ${metricCell("Full trades", metrics.trades, "full evaluation")}
-          ${metricCell("Stored operations", markers.length, omittedMarkers ? `${formatNumber(omittedMarkers)} omitted` : "full evaluation")}
-          ${metricCell("Completed", text(trade.completed_trade_count), "")}
-          ${metricCell("Open", text(trade.open_trade_count), "")}
-          ${metricCell("Hit rate", metrics.winRate, "")}
-          ${metricCell("Turnover", text(trade.turnover), "")}
-        </div>
-        ${scopeNotice}
-        ${markers.length ? strategyMarkerTable(markers) : `<div class="message">No operation markers are stored for this backtest.</div>`}`;
-    }
-
-    function strategyOperationScopeNotice({fullTradeCount, visibleMarkerCount, omittedMarkers}) {
-      if (omittedMarkers > 0) {
-        return `<div class="message">This table lists stored operation markers for the full evaluation. ${escapeHtml(formatNumber(omittedMarkers))} older operation marker${omittedMarkers === 1 ? "" : "s"} are omitted by the bounded artifact.</div>`;
+      if (selectedTab === "equity") {
+        strategyChart.renderEquityCurveSvg("#strategy-equity-chart", Array.isArray(vis.equity_curve) ? vis.equity_curve : [], {
+          displayTimezone,
+          pnlColorScheme,
+        });
       }
-      if (fullTradeCount !== null && visibleMarkerCount > 0 && visibleMarkerCount < fullTradeCount) {
-        return `<div class="message">The full evaluation reports ${escapeHtml(formatNumber(fullTradeCount))} trade${fullTradeCount === 1 ? "" : "s"}, while this artifact stores ${escapeHtml(formatNumber(visibleMarkerCount))} operation marker${visibleMarkerCount === 1 ? "" : "s"}.</div>`;
+      if (selectedTab === "drawdown") {
+        strategyChart.renderDrawdownCurveSvg("#strategy-drawdown-chart", Array.isArray(fullVis.equity_curve) ? fullVis.equity_curve : [], {
+          displayTimezone,
+          pnlColorScheme,
+        });
       }
-      return "";
-    }
-
-    function strategyMarkerTable(markers) {
-      const rows = markers.map((marker, index) => {
-        const price = marker.price === undefined || marker.price === null || marker.price === "" ? "n/a" : formatNumber(marker.price);
-        return `
-        <tr class="${marker.time === state.strategyFocusedMarkerTime ? "active" : ""}">
-          <td><button class="link-button strategy-marker-jump" type="button" data-strategy-marker-time="${escapeHtml(marker.time || "")}" data-strategy-marker-index="${index}">${escapeHtml(formatTimestamp(marker.time))}</button></td>
-          <td>${escapeHtml(marker.label || marker.kind || "operation")}</td>
-          <td>${escapeHtml(marker.side || marker.kind || "n/a")}</td>
-          <td>${escapeHtml(price)}</td>
-          <td>${escapeHtml(text(marker.position ?? marker.exposure ?? "n/a"))}</td>
-          <td>${escapeHtml(marker.execution_timing || "n/a")}</td>
-        </tr>`;
-      }).join("");
-      return `<div class="table-wrap"><table class="data-table strategy-marker-table"><thead><tr><th>Time</th><th>Marker</th><th>Side</th><th>Price</th><th>Exposure</th><th>Execution</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
 
     function wireStrategyMarkerJumps() {
@@ -3644,14 +3740,8 @@
         return `<div class="message">No equity curve is available for the selected backtest.</div>`;
       }
       return `
-        <div class="strategy-eval-chart">
-          <svg viewBox="0 0 900 140" role="img" aria-label="Equity curve">${lineChartPath(values)}</svg>
-        </div>
-        <div class="summary-strip columns-4">
-          ${metricCell("Start equity", formatNumber(values[0]), "")}
-          ${metricCell("Latest equity", formatNumber(values[values.length - 1]), "")}
-          ${metricCell("Points", values.length, "bounded")}
-          ${metricCell("Window", strategyChart.strategyWindowLabel(vis, displayTimezone), "")}
+        <div class="strategy-eval-chart strategy-equity-chart">
+          <svg id="strategy-equity-chart" viewBox="0 0 900 240" role="img" aria-label="Equity curve"></svg>
         </div>`;
     }
 
@@ -3661,15 +3751,9 @@
       if (!drawdowns.length) {
         return `<div class="message">No drawdown data can be derived for the selected backtest.</div>`;
       }
-      const worst = Math.min(...drawdowns);
       return `
-        <div class="strategy-eval-chart drawdown">
-          <svg viewBox="0 0 900 140" role="img" aria-label="Drawdown curve">${lineChartPath(drawdowns)}</svg>
-        </div>
-        <div class="summary-strip columns-3">
-          ${metricCell("Worst drawdown", metricPercent(worst), "derived from bounded equity")}
-          ${metricCell("Points", drawdowns.length, "bounded")}
-          ${metricCell("Status", vis.status || "n/a", "")}
+        <div class="strategy-eval-chart strategy-drawdown-chart">
+          <svg id="strategy-drawdown-chart" viewBox="0 0 900 240" role="img" aria-label="Drawdown curve"></svg>
         </div>`;
     }
 
@@ -3909,10 +3993,13 @@
       return `<polyline points="${points.join(" ")}" fill="none" stroke="#008575" stroke-width="3"></polyline>`;
     }
 
-    function openStrategyBacktestDialog() {
+    function openStrategyBacktestDialog(options = {}) {
       state.strategyBacktestDialogOpen = true;
       syncBacktestProfileControls(false);
       syncStrategyRangePresets(false);
+      if (options.prefillBacktest) {
+        prefillBacktestDialogFromRun(options.prefillBacktest);
+      }
       document.querySelector("#strategy-backtest-dialog")?.classList.remove("hidden");
       document.querySelector("#strategy-backtest-dialog-backdrop")?.classList.remove("hidden");
       document.querySelector("#strategy-profile")?.focus();
@@ -3922,6 +4009,108 @@
       state.strategyBacktestDialogOpen = false;
       document.querySelector("#strategy-backtest-dialog")?.classList.add("hidden");
       document.querySelector("#strategy-backtest-dialog-backdrop")?.classList.add("hidden");
+    }
+
+    function openStrategyParamsDrawer() {
+      const selected = state.selectedStrategyOutput;
+      if (!selected) {
+        showToast("Select a backtest run first.");
+        return;
+      }
+      state.strategyParamsDrawerOpen = true;
+      renderStrategyParamsDrawer(selected, visibleStrategyVisualization(selected));
+      document.querySelector("#strategy-params-drawer")?.classList.remove("hidden");
+      const backdrop = document.querySelector("#strategy-params-drawer-backdrop");
+      backdrop?.classList.remove("hidden");
+      backdrop?.setAttribute("aria-hidden", "false");
+      document.querySelector("#strategy-params-drawer-close")?.focus({preventScroll: true});
+    }
+
+    function closeStrategyParamsDrawer() {
+      state.strategyParamsDrawerOpen = false;
+      document.querySelector("#strategy-params-drawer")?.classList.add("hidden");
+      const backdrop = document.querySelector("#strategy-params-drawer-backdrop");
+      backdrop?.classList.add("hidden");
+      backdrop?.setAttribute("aria-hidden", "true");
+    }
+
+    function rerunSelectedBacktest() {
+      const selected = state.selectedStrategyOutput;
+      if (!selected) {
+        showToast("Select a backtest run first.");
+        return;
+      }
+      openStrategyBacktestDialog({prefillBacktest: selected});
+    }
+
+    function prefillBacktestDialogFromRun(item) {
+      const params = strategyBacktestActionParams(item);
+      const profile = strategyProfiles().find((candidate) => (
+        (!params.strategy_name || candidate.strategy_name === params.strategy_name)
+        && (!params.source || candidate.source === params.source)
+        && (!params.symbol || candidate.symbol === params.symbol)
+        && (!params.timeframe || candidate.timeframe === params.timeframe)
+      ));
+      if (profile) {
+        setSelectIfPresent("#strategy-profile", strategyProfileId(profile));
+        syncBacktestProfileControls(false);
+      }
+      const spec = strategySpecByName(params.strategy_name);
+      if (spec?.family) {
+        setSelectIfPresent("#strategy-family", spec.family);
+        fillSelect("#strategy-name", strategiesForFamily(spec.family).map((itemSpec) => itemSpec.name));
+      }
+      setSelectIfPresent("#strategy-name", params.strategy_name);
+      setSelectIfPresent("#strategy-symbol", params.symbol);
+      setSelectIfPresent("#strategy-timeframe", params.timeframe);
+      setInputValue("#strategy-source", params.source || defaultStrategySource(), true);
+      document.querySelector("#strategy-backtest-range").value = "custom";
+      document.querySelector("#strategy-backtest-start").value = params.start || "";
+      document.querySelector("#strategy-backtest-end").value = params.end || "";
+      syncDateRangePickerByInputs("#strategy-backtest-start", "#strategy-backtest-end");
+      renderStrategySpecControls();
+    }
+
+    function strategyBacktestActionParams(item) {
+      const fields = item?.fields || {};
+      const inputs = objectValue(fields.inputs);
+      const identity = strategyIdentity(item);
+      const window = backtestRunWindow(item);
+      return {
+        strategy_name: identity.name || inputs.strategy_name || fields.strategy_name || "",
+        source: inputs.source || fields.source || item?.visualization?.source || defaultStrategySource(),
+        symbol: identity.symbol || inputs.symbol || fields.symbol || "",
+        timeframe: identity.timeframe || inputs.timeframe || fields.timeframe || "",
+        start: fields.input_window_start || inputs.start || window.start || "",
+        end: fields.input_window_end || inputs.end || window.end || "",
+      };
+    }
+
+    async function deleteSelectedBacktest() {
+      const selected = state.selectedStrategyOutput;
+      if (!selected) {
+        showToast("Select a backtest run first.");
+        return;
+      }
+      const identity = strategyIdentity(selected);
+      const ok = await dialogs.confirmAction({
+        title: "Delete backtest run",
+        message: `Delete ${identity.name || "this strategy"} ${identity.symbol || ""} ${identity.timeframe || ""}? Standalone backtest artifacts are removed when this run owns them; report artifacts are preserved.`,
+        confirmLabel: "Delete backtest",
+        danger: true,
+      });
+      if (!ok) return;
+      try {
+        const result = await postStrategyBacktestDelete(selected);
+        state.selectedStrategyOutput = null;
+        state.strategyBacktestDetailOpen = false;
+        closeStrategyParamsDrawer();
+        strategyChart.resetCandlestickView("#backtest-chart");
+        await refreshStrategies();
+        showToast(`Backtest delete ${result.status || "completed"}.`);
+      } catch (error) {
+        showToast(`Delete failed: ${error.message}`, "error");
+      }
     }
 
     async function startBacktest() {
@@ -4210,10 +4399,6 @@
       if (!request) return;
       const requestId = state.strategyChartPreviewRequest + 1;
       state.strategyChartPreviewRequest = requestId;
-      const meta = document.querySelector("#strategy-chart-meta");
-      if (meta && !options.silent) {
-        meta.textContent = `Loading ${request.symbol} ${request.timeframe} candles.`;
-      }
       try {
         const payload = await postJson(endpoints.dataViewerPreview, {
           ...request,
@@ -4226,9 +4411,6 @@
         renderStrategyOhlcvPreview(payload, request, {clearBacktest});
       } catch (error) {
         if (requestId !== state.strategyChartPreviewRequest) return;
-        if (meta) {
-          meta.textContent = `Chart load failed: ${error.message}`;
-        }
         if (!options.silent) showToast(`Chart load failed: ${error.message}`);
       }
     }
@@ -5868,6 +6050,26 @@
       return job;
     }
 
+    async function postStrategyBacktestDelete(item) {
+      if (!endpoints.strategyBacktests) {
+        throw new Error("Strategy backtest deletion is not configured.");
+      }
+      return postJson(`${endpoints.strategyBacktests}/delete`, {backtest: strategyBacktestDeleteRef(item)});
+    }
+
+    function strategyBacktestDeleteRef(item) {
+      const fields = item?.fields || {};
+      const execution = objectValue(fields.execution_source);
+      return {
+        history_id: fields.history_id || item?.history_id || "",
+        evaluation_id: fields.evaluation_id || item?.evaluation_id || "",
+        output_dir: item?.output_dir || execution.output_dir || execution.run_dir || "",
+        strategy_name: fields.strategy_name || strategyIdentity(item).name || "",
+        symbol: fields.symbol || strategyIdentity(item).symbol || "",
+        timeframe: fields.timeframe || strategyIdentity(item).timeframe || "",
+      };
+    }
+
     async function fetchJob(jobId) {
       return fetchJson(`${endpoints.jobs}/${encodeURIComponent(jobId)}`);
     }
@@ -6220,6 +6422,11 @@
       document.querySelector("#strategy-backtest-dialog-close").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#strategy-backtest-dialog-backdrop").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#strategy-backtest-back").addEventListener("click", showStrategyBacktestList);
+      document.querySelector("#strategy-detail-params").addEventListener("click", openStrategyParamsDrawer);
+      document.querySelector("#strategy-detail-rerun").addEventListener("click", rerunSelectedBacktest);
+      document.querySelector("#strategy-detail-delete").addEventListener("click", deleteSelectedBacktest);
+      document.querySelector("#strategy-params-drawer-close").addEventListener("click", closeStrategyParamsDrawer);
+      document.querySelector("#strategy-params-drawer-backdrop").addEventListener("click", closeStrategyParamsDrawer);
       document.querySelector("#run-experiment-button").addEventListener("click", startStrategyExperiment);
       document.querySelector("#run-optimize-button").addEventListener("click", startStrategyOptimize);
       document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
@@ -6228,9 +6435,8 @@
       document.querySelector("#strategy-collect-add-target")?.addEventListener("click", addStrategyCollectTarget);
       document.querySelector("#strategy-collect-refresh-timeline")?.addEventListener("click", refreshStrategyCollectTimeline);
       document.querySelector("#strategy-collect-run")?.addEventListener("click", runStrategyCollectBatch);
-      document.querySelector("#strategy-chart-refresh").addEventListener("click", () => loadStrategyChartPreview({silent: false}));
       ["#strategy-chart-source", "#strategy-chart-symbol", "#strategy-chart-timeframe"].forEach((selector) => {
-        document.querySelector(selector).addEventListener("change", () => {
+        document.querySelector(selector)?.addEventListener("change", () => {
           state.selectedStrategyOutput = null;
           state.strategyFocusedMarkerTime = "";
           setSelectIfPresent("#strategy-name", "");
@@ -6269,6 +6475,9 @@
         }
         if (event.key === "Escape" && state.reportDetailsDrawerOpen) {
           closeReportDetailsDrawer();
+        }
+        if (event.key === "Escape" && state.strategyParamsDrawerOpen) {
+          closeStrategyParamsDrawer();
         }
       });
       document.querySelectorAll("[data-intel-tab]").forEach((button) => button.addEventListener("click", () => {

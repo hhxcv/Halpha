@@ -10,6 +10,7 @@ from halpha.live.contracts import LIVE_DATA_TYPES
 from halpha.live.state_store import LiveCollectionStateRepository
 from halpha.live.triggers import LiveTriggerEvaluator
 from halpha.runtime.command_job_store import JOB_TERMINAL_STATUSES, JOB_TRANSIENT_STATUSES
+from halpha.runtime.mutation_lease import LEASE_BLOCKED_MESSAGE, MUTATION_LEASE_STAGE, is_mutating_workflow_kind
 
 
 LIVE_SCHEDULER_ARTIFACT = "live_scheduler_tick"
@@ -80,7 +81,9 @@ class LiveScheduler:
         warnings: list[str] = []
         errors: list[str] = []
         targets = build_live_collection_targets(self.config, settings)
-        jobs = self._live_jobs(limit=200)
+        all_jobs = self._jobs(limit=200)
+        jobs = [job for job in all_jobs if _is_live_collection_job(job)]
+        active_mutation_job = _transient_mutating_job(all_jobs)
         existing_states = {
             str(state.get("target_key")): state
             for state in self.state_repository.list_states()
@@ -114,6 +117,10 @@ class LiveScheduler:
             if not _state_due(state, now=self.now):
                 updated_states.append(self.state_repository.upsert_state(state))
                 continue
+            if active_mutation_job is not None:
+                state["next_attempt_at"] = _format_utc(self.now + timedelta(seconds=max(1, settings.tick_seconds)))
+                updated_states.append(self.state_repository.upsert_state(state))
+                continue
             job = self._create_collection_job(target, tick_id=tick_id)
             created_jobs.append(job)
             state.update(
@@ -128,6 +135,8 @@ class LiveScheduler:
             )
             if isinstance(job.get("job_id"), str) and job.get("job_id"):
                 state = self._reconcile_state(state, jobs=[job, *jobs], now_text=now_text)
+                if _transient_mutating_job([job]) is not None:
+                    active_mutation_job = job
             elif str(job.get("status") or "") in JOB_TERMINAL_STATUSES:
                 state["latest_terminal_status"] = str(job.get("status") or "")
                 state["consecutive_failures"] = int(state.get("consecutive_failures") or 0) + 1
@@ -302,10 +311,14 @@ class LiveScheduler:
         if status not in JOB_TERMINAL_STATUSES:
             return state
         if state.get("latest_terminal_job_id") == job_id:
+            if _is_mutation_lease_blocked_job(job):
+                state = _deferred_mutation_state(state, job)
             return state
         state["latest_terminal_job_id"] = job_id
         state["latest_terminal_status"] = status
         state["source_refs"] = _source_refs(job)
+        if _is_mutation_lease_blocked_job(job):
+            return _deferred_mutation_state(state, job)
         state["warnings"] = sorted(set([*_strings(state.get("warnings")), *_strings(job.get("warnings"))]))
         state["errors"] = sorted(set([*_strings(state.get("errors")), *_strings(job.get("errors"))]))
         if status == "succeeded":
@@ -359,12 +372,15 @@ class LiveScheduler:
         return params
 
     def _live_jobs(self, *, limit: int) -> list[dict[str, Any]]:
+        return [job for job in self._jobs(limit=limit) if _is_live_collection_job(job)]
+
+    def _jobs(self, *, limit: int) -> list[dict[str, Any]]:
         try:
             payload = self.job_manager.list_jobs(limit=limit)
         except Exception:
             return []
         jobs = payload.get("jobs") if isinstance(payload, dict) else []
-        return [job for job in jobs if _is_live_collection_job(job)]
+        return [job for job in jobs if isinstance(job, dict)]
 
     def _get_job(self, job_id: str) -> dict[str, Any] | None:
         get_job = getattr(self.job_manager, "get_job", None)
@@ -486,6 +502,15 @@ def _transient_live_job(jobs: list[dict[str, Any]], *, target_key: str) -> dict[
     return None
 
 
+def _transient_mutating_job(jobs: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for job in jobs:
+        if str(job.get("status") or "") not in JOB_TRANSIENT_STATUSES:
+            continue
+        if is_mutating_workflow_kind(str(job.get("kind") or "")):
+            return job
+    return None
+
+
 def _state_due(state: dict[str, Any], *, now: datetime) -> bool:
     next_attempt = _parse_utc(state.get("next_attempt_at"))
     if next_attempt is None:
@@ -534,6 +559,24 @@ def _job_time(job: dict[str, Any]) -> str | None:
         if isinstance(value, str) and value:
             return value
     return None
+
+
+def _is_mutation_lease_blocked_job(job: dict[str, Any]) -> bool:
+    if str(job.get("status") or "") != "blocked":
+        return False
+    diagnostic = job.get("diagnostic") if isinstance(job.get("diagnostic"), dict) else {}
+    if diagnostic.get("stage") == MUTATION_LEASE_STAGE:
+        return True
+    return LEASE_BLOCKED_MESSAGE in _strings(job.get("errors"))
+
+
+def _deferred_mutation_state(state: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
+    state["latest_terminal_status"] = "deferred"
+    state["warnings"] = sorted(set([*_strings(state.get("warnings")), *_strings(job.get("warnings"))]))
+    state["errors"] = [error for error in _strings(state.get("errors")) if error != LEASE_BLOCKED_MESSAGE]
+    if not state["errors"]:
+        state["consecutive_failures"] = 0
+    return state
 
 
 def _collection_errors(collections: list[dict[str, Any]]) -> list[str]:
