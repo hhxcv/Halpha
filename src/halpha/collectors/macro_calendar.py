@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from html import unescape
 from html.parser import HTMLParser
+from json import JSONDecodeError
 import re
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -19,13 +21,22 @@ STAGE_NAME = "collect_macro_calendar_data"
 MACRO_CALENDAR_ARTIFACT = "raw/macro_calendar.json"
 FEDERAL_RESERVE_FOMC_SOURCE = "federal_reserve_fomc"
 FEDERAL_RESERVE_FOMC_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+BEA_RELEASE_CALENDAR_SOURCE = "bea_release_calendar"
+BEA_RELEASE_DATES_URL = "https://apps.bea.gov/API/signup/release_dates.json"
 REQUEST_TIMEOUT_SECONDS = 20
 SOURCE_TIMEZONE = "America/New_York"
 FOMC_ENDPOINT = "fomc_calendars"
+BEA_ENDPOINT = "bea_release_dates_json"
 DATE_PRECISION_WARNING = (
     "source provides FOMC meeting dates without exact intraday time; "
     "scheduled_at is normalized to the meeting end date at 00:00:00Z."
 )
+BEA_HIGH_IMPORTANCE_RELEASES = {
+    "Corporate Profits",
+    "Gross Domestic Product",
+    "Personal Income and Outlays",
+    "U.S. International Trade in Goods and Services",
+}
 
 MONTHS = {
     "January": 1,
@@ -91,35 +102,125 @@ def collect_macro_calendar_raw(
 ) -> dict[str, Any]:
     now_value = _utc_now() if now is None else now.astimezone(timezone.utc)
     collected_at = _utc_timestamp(now_value)
-    source = str(macro_calendar.get("source") or "")
-    source_url = str(macro_calendar.get("source_url") or FEDERAL_RESERVE_FOMC_URL)
+    sources = _macro_calendar_sources(macro_calendar)
+    source_urls = _macro_calendar_source_urls(macro_calendar, sources)
     lookback_days = _positive_int(macro_calendar.get("lookback_days"), default=7)
     lookahead_days = _positive_int(macro_calendar.get("lookahead_days"), default=45)
     window_start = now_value - timedelta(days=lookback_days)
     window_end = now_value + timedelta(days=lookahead_days)
     data_classes = _string_list(macro_calendar.get("data_classes"))
     raw = _raw_artifact(
-        source,
-        source_url,
+        sources[0] if len(sources) == 1 else "multiple",
+        source_urls.get(sources[0], "") if len(sources) == 1 else "",
         collected_at,
         window_start=_utc_timestamp(window_start),
         window_end=_utc_timestamp(window_end),
+        sources=[{"name": source, "url": source_urls.get(source, "")} for source in sources],
     )
 
-    if source != FEDERAL_RESERVE_FOMC_SOURCE:
-        raw["availability"].append(
-            _availability_record(
-                source=source,
-                data_class="central_bank_event",
-                status="unavailable",
-                reason=unsupported_macro_calendar_raw_collection_reason("central_bank_event", source),
-            )
+    multi_source = len(sources) > 1
+    for source in sources:
+        source_data_classes = _requested_data_classes_for_source(
+            source,
+            data_classes=data_classes,
+            multi_source=multi_source,
         )
+        if not source_data_classes:
+            continue
+        result = _collect_macro_calendar_source(
+            source,
+            source_url=source_urls.get(source, ""),
+            data_classes=source_data_classes,
+            collected_at=collected_at,
+            window_start=window_start,
+            window_end=window_end,
+            affected_assets=affected_assets or [],
+            proxy_url=proxy_url,
+        )
+        raw["items"].extend(result["items"])
+        raw["availability"].extend(result["availability"])
+        raw["errors"].extend(result["errors"])
+
+    try:
         validate_macro_calendar_raw_artifact(raw, MACRO_CALENDAR_ARTIFACT)
-        return raw
+    except RawArtifactError as exc:
+        raw["errors"].append(_collector_error(source="macro_calendar", message=str(exc), source_url=""))
+    return raw
+
+
+def _collect_macro_calendar_source(
+    source: str,
+    *,
+    source_url: str,
+    data_classes: list[str],
+    collected_at: str,
+    window_start: datetime,
+    window_end: datetime,
+    affected_assets: list[str],
+    proxy_url: str | None,
+) -> dict[str, list[dict[str, Any]]]:
+    if source == FEDERAL_RESERVE_FOMC_SOURCE:
+        return _collect_fomc_source(
+            source=source,
+            source_url=source_url,
+            data_classes=data_classes,
+            collected_at=collected_at,
+            window_start=window_start,
+            window_end=window_end,
+            affected_assets=affected_assets,
+            proxy_url=proxy_url,
+        )
+    if source == BEA_RELEASE_CALENDAR_SOURCE:
+        return _collect_bea_release_calendar_source(
+            source=source,
+            source_url=source_url,
+            data_classes=data_classes,
+            collected_at=collected_at,
+            window_start=window_start,
+            window_end=window_end,
+            affected_assets=affected_assets,
+            proxy_url=proxy_url,
+        )
+    availability = [
+        _availability_record(
+            source=source,
+            data_class=data_class,
+            status="unavailable",
+            reason=unsupported_macro_calendar_raw_collection_reason(data_class, source),
+        )
+        for data_class in (data_classes or ["central_bank_event"])
+    ]
+    return {"items": [], "availability": availability, "errors": []}
+
+
+def _collect_fomc_source(
+    *,
+    source: str,
+    source_url: str,
+    data_classes: list[str],
+    collected_at: str,
+    window_start: datetime,
+    window_end: datetime,
+    affected_assets: list[str],
+    proxy_url: str | None,
+) -> dict[str, list[dict[str, Any]]]:
+    items: list[dict[str, Any]] = []
+    availability: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+
+    for data_class in data_classes:
+        if data_class != "central_bank_event":
+            availability.append(
+                _availability_record(
+                    source=source,
+                    data_class=data_class,
+                    status="unavailable",
+                    reason=unsupported_macro_calendar_raw_collection_reason(data_class, source),
+                )
+            )
 
     if "central_bank_event" not in data_classes:
-        raw["availability"].append(
+        availability.append(
             _availability_record(
                 source=source,
                 data_class="central_bank_event",
@@ -127,15 +228,14 @@ def collect_macro_calendar_raw(
                 reason="central_bank_event is not configured.",
             )
         )
-        validate_macro_calendar_raw_artifact(raw, MACRO_CALENDAR_ARTIFACT)
-        return raw
+        return {"items": items, "availability": availability, "errors": errors}
 
     try:
         body = _request_source(source_url, proxy_url=proxy_url)
     except MacroCalendarCollectionError as exc:
         error = _collector_error(source=source, message=str(exc), source_url=source_url)
-        raw["errors"].append(error)
-        raw["availability"].append(
+        errors.append(error)
+        availability.append(
             _availability_record(
                 source=source,
                 data_class="central_bank_event",
@@ -145,41 +245,118 @@ def collect_macro_calendar_raw(
                 reason=str(exc),
             )
         )
-    else:
-        records, errors = _parse_federal_reserve_fomc(
-            body,
+        return {"items": items, "availability": availability, "errors": errors}
+
+    records, parse_errors = _parse_federal_reserve_fomc(
+        body,
+        source=source,
+        source_url=source_url,
+        collected_at=collected_at,
+        affected_assets=affected_assets,
+    )
+    windowed_records = [record for record in records if _inside_window(record["scheduled_at"], window_start, window_end)]
+    items.extend(windowed_records)
+    errors.extend(parse_errors)
+    availability.append(
+        _availability_record(
             source=source,
-            source_url=source_url,
-            collected_at=collected_at,
-            affected_assets=affected_assets or [],
+            data_class="central_bank_event",
+            status=_availability_status(
+                records=records,
+                windowed_records=windowed_records,
+                errors=parse_errors,
+                window_start=window_start,
+            ),
+            endpoint=FOMC_ENDPOINT,
+            record_count=len(windowed_records),
+            parsed_record_count=len(records),
+            error_count=len(parse_errors),
         )
-        windowed_records = [
-            record for record in records if _inside_window(record["scheduled_at"], window_start, window_end)
-        ]
-        raw["items"].extend(windowed_records)
-        raw["errors"].extend(errors)
-        raw["availability"].append(
+    )
+    return {"items": items, "availability": availability, "errors": errors}
+
+
+def _collect_bea_release_calendar_source(
+    *,
+    source: str,
+    source_url: str,
+    data_classes: list[str],
+    collected_at: str,
+    window_start: datetime,
+    window_end: datetime,
+    affected_assets: list[str],
+    proxy_url: str | None,
+) -> dict[str, list[dict[str, Any]]]:
+    items: list[dict[str, Any]] = []
+    availability: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+
+    for data_class in data_classes:
+        if data_class != "economic_release":
+            availability.append(
+                _availability_record(
+                    source=source,
+                    data_class=data_class,
+                    status="unavailable",
+                    reason=unsupported_macro_calendar_raw_collection_reason(data_class, source),
+                )
+            )
+
+    if "economic_release" not in data_classes:
+        availability.append(
             _availability_record(
                 source=source,
-                data_class="central_bank_event",
-                status=_availability_status(
-                    records=records,
-                    windowed_records=windowed_records,
-                    errors=errors,
-                    window_start=window_start,
-                ),
-                endpoint=FOMC_ENDPOINT,
-                record_count=len(windowed_records),
-                parsed_record_count=len(records),
-                error_count=len(errors),
+                data_class="economic_release",
+                status="skipped",
+                reason="economic_release is not configured.",
             )
         )
+        return {"items": items, "availability": availability, "errors": errors}
 
     try:
-        validate_macro_calendar_raw_artifact(raw, MACRO_CALENDAR_ARTIFACT)
-    except RawArtifactError as exc:
-        raw["errors"].append(_collector_error(source=source, message=str(exc), source_url=source_url))
-    return raw
+        body = _request_source(source_url, proxy_url=proxy_url)
+    except MacroCalendarCollectionError as exc:
+        error = _collector_error(source=source, message=str(exc), source_url=source_url)
+        errors.append(error)
+        availability.append(
+            _availability_record(
+                source=source,
+                data_class="economic_release",
+                status="failed",
+                endpoint=BEA_ENDPOINT,
+                error_count=1,
+                reason=str(exc),
+            )
+        )
+        return {"items": items, "availability": availability, "errors": errors}
+
+    records, parse_errors = _parse_bea_release_dates(
+        body,
+        source=source,
+        source_url=source_url,
+        collected_at=collected_at,
+        affected_assets=affected_assets,
+    )
+    windowed_records = [record for record in records if _inside_window(record["scheduled_at"], window_start, window_end)]
+    items.extend(windowed_records)
+    errors.extend(parse_errors)
+    availability.append(
+        _availability_record(
+            source=source,
+            data_class="economic_release",
+            status=_availability_status(
+                records=records,
+                windowed_records=windowed_records,
+                errors=parse_errors,
+                window_start=window_start,
+            ),
+            endpoint=BEA_ENDPOINT,
+            record_count=len(windowed_records),
+            parsed_record_count=len(records),
+            error_count=len(parse_errors),
+        )
+    )
+    return {"items": items, "availability": availability, "errors": errors}
 
 
 def _request_source(source_url: str, *, proxy_url: str | None) -> str:
@@ -282,6 +459,134 @@ def _parse_federal_reserve_fomc(
             }
         )
     return records, errors
+
+
+def _parse_bea_release_dates(
+    body: str,
+    *,
+    source: str,
+    source_url: str,
+    collected_at: str,
+    affected_assets: list[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    try:
+        payload = json.loads(body)
+    except JSONDecodeError as exc:
+        return [], [
+            {
+                "source": source,
+                "endpoint": BEA_ENDPOINT,
+                "data_class": "economic_release",
+                "error_type": "parse_error",
+                "message": f"BEA release calendar JSON could not be parsed: {exc.msg}",
+            }
+        ]
+    if not isinstance(payload, dict):
+        return [], [
+            {
+                "source": source,
+                "endpoint": BEA_ENDPOINT,
+                "data_class": "economic_release",
+                "error_type": "parse_error",
+                "message": "BEA release calendar payload must be a JSON object.",
+            }
+        ]
+
+    records: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    file_last_updated = _optional_utc_timestamp(payload.get("file_last_updated"))
+    for release_name, release_payload in sorted(payload.items()):
+        if release_name == "file_last_updated":
+            continue
+        if not isinstance(release_payload, dict):
+            errors.append(_bea_parse_error(source, release_name, "release payload is not a JSON object."))
+            continue
+        release_dates = release_payload.get("release_dates")
+        if not isinstance(release_dates, list):
+            errors.append(_bea_parse_error(source, release_name, "release_dates is not a list."))
+            continue
+        for value in release_dates:
+            scheduled_at = _optional_utc_timestamp(value)
+            if scheduled_at is None:
+                errors.append(_bea_parse_error(source, release_name, f"invalid release date: {value!r}"))
+                continue
+            key = (release_name, scheduled_at)
+            if key in seen:
+                continue
+            seen.add(key)
+            records.append(
+                _bea_record(
+                    source=source,
+                    source_url=source_url,
+                    release_name=release_name,
+                    scheduled_at=scheduled_at,
+                    file_last_updated=file_last_updated,
+                    collected_at=collected_at,
+                    affected_assets=affected_assets,
+                )
+            )
+
+    if not records and not errors:
+        errors.append(
+            {
+                "source": source,
+                "endpoint": BEA_ENDPOINT,
+                "data_class": "economic_release",
+                "error_type": "parse_error",
+                "message": "no BEA release dates were found in source payload",
+            }
+        )
+    return sorted(records, key=lambda record: (record["scheduled_at"], record["event_name"])), errors
+
+
+def _bea_record(
+    *,
+    source: str,
+    source_url: str,
+    release_name: str,
+    scheduled_at: str,
+    file_last_updated: str | None,
+    collected_at: str,
+    affected_assets: list[str],
+) -> dict[str, Any]:
+    slug = _slug(release_name)
+    item_id = f"macro_calendar:economic_release:{source}:US:{slug}:{scheduled_at}"
+    return {
+        "item_id": item_id,
+        "data_class": "economic_release",
+        "source": source,
+        "event_name": release_name,
+        "event_type": "bea_release",
+        "region": "US",
+        "affected_assets": sorted(set(affected_assets)),
+        "scheduled_at": scheduled_at,
+        "source_timezone": "UTC",
+        "importance": "high" if release_name in BEA_HIGH_IMPORTANCE_RELEASES else "medium",
+        "source_published_at": file_last_updated,
+        "endpoint": BEA_ENDPOINT,
+        "metrics": {},
+        "units": {},
+        "raw_fields": {
+            "source_url": source_url,
+            "release_name": release_name,
+            "time_precision": "datetime",
+        },
+        "warnings": [],
+        "errors": [],
+        "collected_at": collected_at,
+    }
+
+
+def _bea_parse_error(source: str, release_name: str, message: str) -> dict[str, Any]:
+    return {
+        "source": source,
+        "endpoint": BEA_ENDPOINT,
+        "data_class": "economic_release",
+        "error_type": "parse_error",
+        "message": message,
+        "raw_fields": {"release_name": release_name},
+    }
 
 
 def _fomc_record(
@@ -404,8 +709,9 @@ def _raw_artifact(
     *,
     window_start: str,
     window_end: str,
+    sources: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    return {
+    artifact = {
         "schema_version": 1,
         "artifact_type": "macro_calendar_raw",
         "collector": "macro_calendar",
@@ -424,6 +730,9 @@ def _raw_artifact(
         "warnings": [],
         "errors": [],
     }
+    if sources is not None:
+        artifact["sources"] = sources
+    return artifact
 
 
 def _availability_record(
@@ -510,9 +819,9 @@ def _record_manifest_counts(
 def _collector_error(*, source: str, message: str, source_url: str) -> dict[str, Any]:
     return {
         "source": source,
-        "endpoint": FOMC_ENDPOINT,
+        "endpoint": _source_endpoint(source),
         "source_url": source_url,
-        "data_class": "central_bank_event",
+        "data_class": _source_data_class(source),
         "error_type": "collector_error",
         "message": message,
     }
@@ -521,6 +830,64 @@ def _collector_error(*, source: str, message: str, source_url: str) -> dict[str,
 def _macro_calendar_config(config: dict[str, Any]) -> dict[str, Any]:
     macro_calendar = config.get("macro_calendar")
     return macro_calendar if isinstance(macro_calendar, dict) else {}
+
+
+def _macro_calendar_sources(macro_calendar: dict[str, Any]) -> list[str]:
+    sources = _string_list(macro_calendar.get("sources"))
+    if not sources:
+        source = str(macro_calendar.get("source") or "").strip()
+        sources = [source] if source else [FEDERAL_RESERVE_FOMC_SOURCE]
+    return list(dict.fromkeys(sources))
+
+
+def _macro_calendar_source_urls(macro_calendar: dict[str, Any], sources: list[str]) -> dict[str, str]:
+    configured = str(macro_calendar.get("source_url") or "").strip()
+    return {
+        source: configured if configured and len(sources) == 1 else _default_source_url(source)
+        for source in sources
+    }
+
+
+def _default_source_url(source: str) -> str:
+    if source == BEA_RELEASE_CALENDAR_SOURCE:
+        return BEA_RELEASE_DATES_URL
+    return FEDERAL_RESERVE_FOMC_URL
+
+
+def _source_endpoint(source: str) -> str:
+    if source == BEA_RELEASE_CALENDAR_SOURCE:
+        return BEA_ENDPOINT
+    return FOMC_ENDPOINT
+
+
+def _source_data_class(source: str) -> str:
+    if source == BEA_RELEASE_CALENDAR_SOURCE:
+        return "economic_release"
+    return "central_bank_event"
+
+
+def _requested_data_classes_for_source(
+    source: str,
+    *,
+    data_classes: list[str],
+    multi_source: bool,
+) -> list[str]:
+    supported = _source_supported_data_classes(source)
+    if not supported:
+        return data_classes or ["central_bank_event"]
+    requested = data_classes or list(supported)
+    selected = [data_class for data_class in requested if data_class in supported]
+    if selected or multi_source:
+        return selected
+    return requested
+
+
+def _source_supported_data_classes(source: str) -> set[str]:
+    if source == FEDERAL_RESERVE_FOMC_SOURCE:
+        return {"central_bank_event"}
+    if source == BEA_RELEASE_CALENDAR_SOURCE:
+        return {"economic_release"}
+    return set()
 
 
 def _market_symbols(config: dict[str, Any]) -> list[str]:
@@ -540,6 +907,23 @@ def _positive_int(value: Any, *, default: int) -> int:
     if isinstance(value, int) and not isinstance(value, bool) and value > 0:
         return value
     return default
+
+
+def _optional_utc_timestamp(value: Any) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return _utc_timestamp(parsed)
+
+
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+    return slug or "release"
 
 
 def _read_error_detail(error: HTTPError) -> str:

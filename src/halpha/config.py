@@ -81,6 +81,7 @@ SUPPORTED_MACRO_CALENDAR_FIELDS = {
     "regions",
     "source",
     "source_url",
+    "sources",
 }
 SUPPORTED_ONCHAIN_FLOW_FIELDS = {
     "assets",
@@ -920,8 +921,15 @@ def _validate_macro_calendar_config(macro_calendar: Any) -> None:
     if not enabled:
         return
 
-    source = _require_non_empty_string(macro_calendar, "source", "macro_calendar.source")
-    _require_supported_value(source, "macro_calendar.source", SUPPORTED_MACRO_CALENDAR_SOURCES)
+    if "source" not in macro_calendar and "sources" not in macro_calendar:
+        raise ConfigError("macro_calendar.source or macro_calendar.sources is required when macro_calendar is enabled.")
+    if "source" in macro_calendar:
+        source = _require_non_empty_string(macro_calendar, "source", "macro_calendar.source")
+        _require_supported_value(source, "macro_calendar.source", SUPPORTED_MACRO_CALENDAR_SOURCES)
+    if "sources" in macro_calendar:
+        sources = _require_non_empty_string_list(macro_calendar, "sources", "macro_calendar.sources")
+        for index, source in enumerate(sources):
+            _require_supported_value(source, f"macro_calendar.sources[{index}]", SUPPORTED_MACRO_CALENDAR_SOURCES)
 
     data_classes = _require_non_empty_string_list(
         macro_calendar,

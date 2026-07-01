@@ -628,7 +628,6 @@
       .data-card,
       .report-metric,
       .strategy-param-card,
-      .strategy-space-card,
       .strategy-choice-card,
       .strategy-eval-panel,
       .strategy-walkforward-card,
@@ -649,7 +648,6 @@
       .data-card,
       .report-metric,
       .strategy-param-card,
-      .strategy-space-card,
       .strategy-choice-card,
       .strategy-eval-panel,
       .strategy-walkforward-card,
@@ -670,7 +668,6 @@
       .data-card,
       .report-metric,
       .strategy-param-card,
-      .strategy-space-card,
       .strategy-choice-card,
       .strategy-eval-panel,
       .strategy-walkforward-card,
@@ -1028,9 +1025,11 @@
 
     .reports-layout {
       display: grid;
-      grid-template-columns: 260px minmax(0, 1fr) 250px;
+      grid-template-columns: minmax(0, 1fr) 300px;
       gap: 14px;
-      min-height: calc(100vh - 96px);
+      height: calc(100vh - var(--global-header-height) - 44px);
+      min-height: 520px;
+      overflow: hidden;
     }
 
     .report-library {
@@ -1304,9 +1303,10 @@
 
     .report-workspace {
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto auto minmax(0, 1fr);
       min-width: 0;
       min-height: 0;
+      height: 100%;
       overflow: hidden;
     }
 
@@ -1367,6 +1367,67 @@
       overflow-x: hidden;
       padding: 28px 34px;
       background: #fff;
+    }
+
+    .report-inspector {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .report-inspector-tabs {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      min-width: 0;
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-soft);
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .report-inspector-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .report-inspector-tabs .tab-button {
+      flex: 1 0 auto;
+      min-width: 0;
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .report-inspector-panel {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .report-inspector-panel[hidden] {
+      display: none;
+    }
+
+    .report-inspector-section-header {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .report-inspector-panel .outline-list,
+    .report-inspector-panel .report-source-files {
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px;
     }
 
     .markdown-reader {
@@ -1903,13 +1964,51 @@
 
     .strategy-detail-heading {
       min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      -webkit-overflow-scrolling: touch;
+      cursor: grab;
+    }
+
+    .strategy-detail-heading::-webkit-scrollbar {
+      display: none;
+    }
+
+    .strategy-detail-heading.is-dragging {
+      cursor: grabbing;
+      user-select: none;
+    }
+
+    .strategy-detail-heading .drawer-kicker,
+    .strategy-detail-heading h2 {
+      display: block;
+      width: max-content;
+      white-space: nowrap;
     }
 
     .strategy-detail-heading h2 {
       margin: 2px 0 0;
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
       font-size: 18px;
       line-height: 1.25;
+    }
+
+    .strategy-detail-action-shell {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+
+    .strategy-detail-action-menu {
+      display: none;
+      width: 42px;
+      min-width: 42px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
     }
 
     .strategy-detail-actions {
@@ -1955,13 +2054,6 @@
       align-items: end;
     }
 
-    .strategy-optimize-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 10px;
-      align-items: end;
-    }
-
     .strategy-spec-summary {
       display: grid;
       grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(140px, 0.4fr));
@@ -1983,20 +2075,17 @@
     }
 
     .strategy-parameter-controls,
-    .strategy-optimization-space,
     .strategy-strategy-list {
       display: grid;
       gap: 10px;
       min-width: 0;
     }
 
-    .strategy-parameter-controls,
-    .strategy-optimization-space {
+    .strategy-parameter-controls {
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
     .strategy-param-card,
-    .strategy-space-card,
     .strategy-choice-card {
       display: grid;
       gap: 7px;
@@ -2008,7 +2097,6 @@
     }
 
     .strategy-param-card label,
-    .strategy-space-card label,
     .strategy-choice-card label {
       margin: 0;
       color: var(--text);
@@ -2017,7 +2105,6 @@
     }
 
     .strategy-param-card p,
-    .strategy-space-card p,
     .strategy-choice-card p {
       margin: 0;
       color: var(--muted);
@@ -2038,6 +2125,133 @@
 
     .strategy-choice-card input {
       margin-top: 3px;
+    }
+
+    .strategy-lab-brief {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .strategy-lab-step {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 4px 10px;
+      align-items: start;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .strategy-lab-step span {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--amber-soft);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .strategy-lab-step strong,
+    .strategy-lab-step small {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .strategy-lab-step small {
+      grid-column: 2;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .strategy-lab-filter-grid {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .strategy-candidate-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: end;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+
+    .strategy-lab-selection-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .strategy-lab-choice-list {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .strategy-lab-choice {
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .strategy-lab-choice:hover,
+    .strategy-lab-choice.selected {
+      border-color: var(--primary);
+      background: var(--amber-soft);
+      box-shadow: inset 4px 0 0 var(--primary);
+    }
+
+    .strategy-lab-choice small {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .strategy-lab-verdict {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .strategy-lab-verdict.ok {
+      border-color: rgba(0, 125, 95, 0.3);
+      background: rgba(0, 125, 95, 0.08);
+    }
+
+    .strategy-lab-verdict.warning {
+      border-color: rgba(185, 104, 0, 0.34);
+      background: rgba(255, 211, 64, 0.14);
+    }
+
+    .strategy-lab-verdict strong {
+      display: block;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 14px;
+    }
+
+    .strategy-lab-verdict p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     .strategy-result-panel {
@@ -2162,6 +2376,48 @@
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 10px;
       min-width: 0;
+    }
+
+    .strategy-run-toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(140px, 0.9fr)) repeat(2, minmax(140px, 0.8fr)) minmax(180px, 1fr) minmax(92px, 0.55fr) auto;
+      gap: 10px;
+      align-items: end;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .strategy-run-toolbar .field {
+      min-width: 0;
+    }
+
+    .strategy-run-search-field {
+      min-width: 220px;
+    }
+
+    .strategy-run-toolbar-summary {
+      align-self: center;
+      justify-self: end;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.3;
+      text-align: right;
+    }
+
+    .strategy-run-load-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .strategy-run-group {
@@ -2384,8 +2640,7 @@
     }
 
     .strategy-dialog-grid,
-    .strategy-backtest-advanced-grid,
-    .strategy-optimize-compact-grid {
+    .strategy-backtest-advanced-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
@@ -2415,8 +2670,7 @@
       padding: 14px;
     }
 
-    .strategy-experiment-workspace,
-    .strategy-optimize-workspace {
+    .strategy-experiment-workspace {
       display: grid;
       gap: 14px;
       min-width: 0;
@@ -2577,11 +2831,11 @@
 
     .operation-progress {
       display: grid;
-      gap: 8px;
-      padding: 10px 12px;
+      gap: 10px;
+      padding: 12px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: var(--panel-soft);
+      background: var(--panel);
     }
 
     .operation-progress-top,
@@ -2608,10 +2862,30 @@
       white-space: nowrap;
     }
 
+    .operation-progress-top strong {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
     .operation-progress-top span {
       color: var(--muted);
       font-size: 12px;
       font-weight: 760;
+    }
+
+    .operation-log-header {
+      min-height: 34px;
+      padding: 7px 8px 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel-soft);
+    }
+
+    .operation-log-latest {
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.45;
     }
 
     .operation-progress-track {
@@ -2641,21 +2915,23 @@
     }
 
     .operation-log {
-      max-height: 22px;
+      max-height: calc((12px * 1.55 * 2) + 18px);
       margin: 0;
-      padding: 8px;
+      padding: 9px 10px;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: #fff;
-      color: #2b3445;
-      overflow: hidden;
+      border-radius: var(--radius-control);
+      background: #fbfcfe;
+      color: var(--text);
+      overflow-x: auto;
+      overflow-y: hidden;
+      font-family: var(--font-mono);
       font-size: 12px;
-      line-height: 1.45;
-      white-space: pre-wrap;
+      line-height: 1.55;
+      white-space: pre;
     }
 
     .operation-log.expanded {
-      max-height: 14.5em;
+      max-height: min(240px, 28vh);
       overflow: auto;
     }
 
@@ -2792,55 +3068,6 @@
       border-color: rgba(219, 231, 243, 0.22);
     }
 
-    .chart-window-field {
-      flex: 0 0 auto;
-      min-width: min(196px, 100%);
-    }
-
-    .segmented-control {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      width: max-content;
-      min-width: 0;
-      padding: 3px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--panel-soft);
-    }
-
-    .segmented-button {
-      min-width: 36px;
-      min-height: 30px;
-      padding: 6px 10px;
-      border: 0;
-      border-radius: 6px;
-      background: transparent;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 760;
-      line-height: 1;
-      text-align: center;
-      white-space: nowrap;
-      cursor: pointer;
-    }
-
-    .segmented-button:hover {
-      background: var(--rail-hover);
-      color: var(--text);
-    }
-
-    .segmented-button.active,
-    .segmented-button[aria-pressed="true"] {
-      background: var(--primary);
-      color: var(--on-accent);
-      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
-    }
-
-    #strategy-quote-label {
-      flex: 0 0 auto;
-    }
-
     .chart-wrap {
       position: relative;
       min-height: 360px;
@@ -2866,6 +3093,10 @@
 
     .chart-wrap svg.dragging {
       cursor: grabbing;
+    }
+
+    .chart-wrap svg.pinching {
+      cursor: zoom-in;
     }
 
     .chart-wrap .candle-hit {
@@ -3264,6 +3495,14 @@
       stroke-width: 1;
       stroke-dasharray: 5 5;
       vector-effect: non-scaling-stroke;
+    }
+
+    .strategy-eval-chart .drawdown-worst-range {
+      stroke: rgba(207, 52, 52, 0.28);
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+      vector-effect: non-scaling-stroke;
+      pointer-events: none;
     }
 
     .strategy-eval-chart .equity-axis-label,
@@ -6949,6 +7188,22 @@
         grid-template-columns: 1fr;
       }
 
+      .reports-layout {
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+      }
+
+      .report-workspace {
+        height: calc(100vh - var(--global-header-height) - 44px);
+        min-height: 500px;
+      }
+
+      .report-inspector {
+        height: min(520px, calc(100vh - var(--global-header-height) - 44px));
+        min-height: 360px;
+      }
+
       .macro-year-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -6978,17 +7233,18 @@
 
       .strategy-controls,
       .strategy-experiment-grid,
-      .strategy-optimize-grid,
       .strategy-spec-summary,
       .strategy-dialog-grid,
       .strategy-backtest-advanced-grid,
-      .strategy-optimize-compact-grid,
       .strategy-result-grid,
+      .strategy-lab-brief,
+      .strategy-lab-selection-summary,
       .strategy-profile-grid,
       .strategy-candidate-grid,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,
+      .strategy-run-toolbar,
       .data-viewer-controls,
       .intel-data-controls,
       .data-viewer-grid,
@@ -7000,11 +7256,11 @@
       }
 
       .strategy-detail-header {
-        grid-template-columns: 1fr;
+        grid-template-columns: auto minmax(0, 1fr) auto;
       }
 
       .strategy-detail-actions {
-        justify-content: flex-start;
+        justify-content: flex-end;
       }
 
       .strategy-profile-hero {
@@ -7013,6 +7269,12 @@
 
       .strategy-panel-header {
         display: grid;
+      }
+
+      .strategy-run-toolbar-summary {
+        grid-column: 1 / -1;
+        justify-self: start;
+        text-align: left;
       }
 
       .intel-view-filter-controls .intel-filter-search-field,
@@ -7137,15 +7399,16 @@
 
       .strategy-controls,
       .strategy-experiment-grid,
-      .strategy-optimize-grid,
       .strategy-spec-summary,
       .strategy-dialog-grid,
       .strategy-backtest-advanced-grid,
-      .strategy-optimize-compact-grid,
       .strategy-result-grid,
+      .strategy-lab-brief,
+      .strategy-lab-selection-summary,
       .chart-selector,
       .strategy-collect-grid,
       .strategy-range-grid,
+      .strategy-run-toolbar,
       .collect-timeline-row,
       .data-viewer-controls,
       .intel-data-controls,
@@ -7163,9 +7426,40 @@
         grid-template-columns: 1fr;
       }
 
-      .chart-selector .field,
-      .chart-selector #strategy-quote-label {
+      .chart-selector .field {
         flex: 1 1 100%;
+      }
+
+      .strategy-run-toolbar-summary {
+        justify-self: start;
+        text-align: left;
+      }
+
+      .strategy-detail-action-menu {
+        display: grid;
+      }
+
+      .strategy-detail-actions {
+        display: none;
+      }
+
+      .strategy-detail-action-shell.open .strategy-detail-actions {
+        position: absolute;
+        z-index: 8;
+        top: calc(100% + 8px);
+        right: 0;
+        display: grid;
+        min-width: 156px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .strategy-detail-action-shell.open .strategy-detail-actions .compact-button {
+        justify-content: flex-start;
+        width: 100%;
       }
 
       .live-filter-bar,
@@ -8022,8 +8316,7 @@
     }
 
     body[data-theme="solar"] .strategy-backtest-controls,
-    body[data-theme="solar"] .strategy-experiment-grid,
-    body[data-theme="solar"] .strategy-optimize-grid {
+    body[data-theme="solar"] .strategy-experiment-grid {
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 
@@ -8066,7 +8359,6 @@
     }
 
     body[data-theme="solar"] .strategy-parameter-controls,
-    body[data-theme="solar"] .strategy-optimization-space,
     body[data-theme="solar"] .strategy-strategy-list,
     body[data-theme="solar"] .strategy-choice-list,
     body[data-theme="solar"] .strategy-result-panel {
@@ -8074,7 +8366,6 @@
     }
 
     body[data-theme="solar"] .strategy-param-card,
-    body[data-theme="solar"] .strategy-space-card,
     body[data-theme="solar"] .strategy-choice-card,
     body[data-theme="solar"] .strategy-profile-card,
     body[data-theme="solar"] .strategy-candidate-card {
@@ -8130,17 +8421,6 @@
     body[data-theme="solar"] .chart-selector .field {
       flex: 1 1 140px;
       min-width: 0;
-    }
-
-    body[data-theme="solar"] .chart-selector .chart-window-field {
-      flex: 0 0 auto;
-      min-width: min(196px, 100%);
-    }
-
-    body[data-theme="solar"] #strategy-quote-label {
-      flex: 0 0 auto;
-      justify-self: start;
-      align-self: end;
     }
 
     body[data-theme="solar"] .chart-title {

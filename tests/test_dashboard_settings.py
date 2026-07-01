@@ -350,8 +350,8 @@ def test_dashboard_settings_enabling_capabilities_materializes_editable_defaults
     }
     assert saved["macro_calendar"] == {
         "enabled": True,
-        "source": "federal_reserve_fomc",
-        "data_classes": ["central_bank_event"],
+        "source": "bea_release_calendar",
+        "data_classes": ["central_bank_event", "economic_release"],
         "regions": ["US"],
         "lookback_days": 7,
         "lookahead_days": 45,

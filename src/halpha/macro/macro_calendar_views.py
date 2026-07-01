@@ -46,7 +46,7 @@ def build_macro_calendar_views(
         _record_zero_counts(run)
         return []
 
-    source = str(macro_calendar.get("source") or "unknown_source")
+    sources = _macro_calendar_sources(macro_calendar)
     data_classes = _string_list(macro_calendar.get("data_classes"))
     regions = _string_list(macro_calendar.get("regions"))
     lookback_days = _positive_int(macro_calendar.get("lookback_days"), default=7)
@@ -57,33 +57,36 @@ def build_macro_calendar_views(
     history_records = read_macro_calendar_history_records(run.config_path)
 
     views = []
-    for data_class in data_classes:
-        if data_class not in SUPPORTED_VIEW_DATA_CLASSES:
-            for region in regions or [None]:
+    for source in sources:
+        for data_class in data_classes:
+            if data_class not in SUPPORTED_VIEW_DATA_CLASSES:
+                for region in regions or [None]:
+                    views.append(
+                        _skipped_view(
+                            source=source,
+                            data_class=data_class,
+                            region=region,
+                            reason=unsupported_macro_calendar_view_reason(data_class),
+                        )
+                    )
+                continue
+            if not _source_supports_data_class(source, data_class):
+                continue
+            for region in regions:
                 views.append(
-                    _skipped_view(
+                    _view_record(
+                        records=history_records,
                         source=source,
                         data_class=data_class,
                         region=region,
-                        reason=unsupported_macro_calendar_view_reason(data_class),
+                        lookback_days=lookback_days,
+                        lookahead_days=lookahead_days,
+                        window_start=window_start,
+                        window_end=window_end,
+                        availability_status=availability.get((source, data_class)),
+                        config_base=runtime_root(run.config_path),
                     )
                 )
-            continue
-        for region in regions:
-            views.append(
-                _view_record(
-                    records=history_records,
-                    source=source,
-                    data_class=data_class,
-                    region=region,
-                    lookback_days=lookback_days,
-                    lookahead_days=lookahead_days,
-                    window_start=window_start,
-                    window_end=window_end,
-                    availability_status=availability.get((source, data_class)),
-                    config_base=runtime_root(run.config_path),
-                )
-            )
 
     artifact = {
         "schema_version": VIEW_SCHEMA_VERSION,
@@ -386,6 +389,22 @@ def _state_artifact_from_base(config_base: Any) -> str:
 def _macro_calendar_config(config: dict[str, Any]) -> dict[str, Any]:
     macro_calendar = config.get("macro_calendar")
     return macro_calendar if isinstance(macro_calendar, dict) else {}
+
+
+def _macro_calendar_sources(macro_calendar: dict[str, Any]) -> list[str]:
+    sources = _string_list(macro_calendar.get("sources"))
+    if not sources:
+        source = str(macro_calendar.get("source") or "").strip()
+        sources = [source] if source else ["unknown_source"]
+    return list(dict.fromkeys(sources))
+
+
+def _source_supports_data_class(source: str, data_class: str) -> bool:
+    if source == "federal_reserve_fomc":
+        return data_class == "central_bank_event"
+    if source == "bea_release_calendar":
+        return data_class == "economic_release"
+    return True
 
 
 def _positive_int(value: Any, *, default: int) -> int:

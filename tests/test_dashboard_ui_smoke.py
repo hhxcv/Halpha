@@ -117,6 +117,7 @@ def test_dashboard_css_contracts_cover_redesigned_desktop_and_small_viewports(tm
         ".kline-panel",
         ".markdown-reader",
         ".detail-rail",
+        ".report-inspector",
     ):
         assert selector in css
     assert "@media (max-width: 1180px)" in css
@@ -253,10 +254,12 @@ def test_dashboard_data_viewer_controls_expose_dom_contracts(tmp_path: Path) -> 
         "strategy-evaluation-window",
         "strategy-ohlcv-source-options",
         "strategy-backtest-progress",
+        "strategy-experiment-family",
+        "strategy-experiment-symbol",
+        "strategy-experiment-timeframe",
+        "strategy-experiment-select-all",
+        "strategy-experiment-clear",
         "strategy-experiment-results",
-        "strategy-optimize-profile",
-        "strategy-optimize-profile-summary",
-        "strategy-optimize-results",
         "strategy-chart-source",
         "strategy-chart-symbol",
         "strategy-chart-timeframe",
@@ -359,7 +362,7 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
     assert "Loaded ${escapeHtml(formatNumber(records.length))} bounded candles into the Strategy chart." in script
     assert "runStrategyCollectBatch" in script
     assert "renderStrategyExperimentResults" in script
-    assert "renderStrategyOptimizeResults" in script
+    assert "renderStrategyOptimizeResults" not in script
     assert "renderCollectTimelineResults" in script
     assert "openStrategyBacktestDialog" in script
     assert "strategyProfiles" in script
@@ -685,9 +688,21 @@ def test_dashboard_report_preview_and_job_contracts_are_present(tmp_path: Path) 
     assert 'id="report-details-drawer-backdrop"' in html
     assert 'id="report-details-drawer-close"' in html
     assert 'id="report-source-files"' in html
+    assert 'class="panel report-library"' not in html
+    assert 'class="panel report-inspector"' in html
+    assert 'data-report-inspector-tab="reports"' in html
+    assert 'data-report-inspector-tab="outline"' in html
+    assert 'data-report-inspector-tab="sources"' in html
+    assert 'data-report-inspector-panel="reports"' in html
+    assert 'data-report-inspector-panel="outline"' in html
+    assert 'data-report-inspector-panel="sources"' in html
     assert 'data-job-intent="run_no_codex"' not in html
     assert 'id="overview-report-job-status"' in html
     assert 'id="reports-report-job-status"' in html
+    assert "grid-template-columns: minmax(0, 1fr) 300px" in css
+    assert "height: calc(100vh - var(--global-header-height) - 44px)" in css
+    assert ".report-inspector-panel .outline-list" in css
+    assert ".report-inspector-panel .report-source-files" in css
     assert ".report-source-chip" in css
     assert ".report-source-files" in css
     assert ".report-source-row.active" in css
@@ -702,6 +717,8 @@ def test_dashboard_report_preview_and_job_contracts_are_present(tmp_path: Path) 
     assert "reportArtifactGroups" in dashboard_reports_script()
     assert "renderReportSourceFiles" in script
     assert "renderReportProgress" in script
+    assert "reportInspectorTab" in script
+    assert "selectReportInspectorTab" in script
     assert "reportMilestones" in script
     assert "reportJobRecord" in script
     assert "Generating Report" in script
@@ -818,14 +835,17 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert ".drawdown-chart-crosshair" in css
     assert ".drawdown-axis-label" in css
     assert ".drawdown-boundary-label" in css
+    assert ".drawdown-worst-range" in css
     assert ".drawdown-worst-marker" in css
     assert ".strategy-walkforward-card" in css
     assert 'id="backtest-chart"' in html
     assert "OHLCV candlestick chart" in html
-    assert "OHLCV only" in script
+    assert "OHLCV only" not in script
     assert 'data-strategy-operation-tab="backtest"' in html
     assert 'data-strategy-operation-tab="experiment"' in html
-    assert 'data-strategy-operation-tab="optimize"' in html
+    assert 'data-strategy-operation-tab="optimize"' not in html
+    assert "Strategy Lab validation" in html
+    assert "Run validation" in html
     assert 'data-strategy-operation-tab="collect"' not in html
     assert 'data-strategy-operation-tab="export"' not in html
     assert "As of help" not in html
@@ -843,7 +863,22 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert ".strategy-candidate-card" in css
     assert ".strategy-run-list" in css
     assert ".strategy-run-row" in css
+    assert ".strategy-run-toolbar" in css
+    assert ".strategy-run-load-row" in css
     assert ".strategy-run-sparkline" in css
+    assert "strategyRunFilters" in script
+    assert "strategyRunSort" in script
+    assert "strategyRunPageSize" in script
+    assert "strategy-run-search" in script
+    assert "strategy-run-strategy-filter" in script
+    assert "strategy-run-timeframe-filter" in script
+    assert "strategy-run-date-from" in script
+    assert "strategy-run-date-to" in script
+    assert "strategy-run-sort" in script
+    assert "strategy-run-load-more" in script
+    assert "filteredBacktestRuns" in script
+    assert "sortedBacktestRuns" in script
+    assert "strategyRunSortOptions" in script
     assert "renderBacktestRunRow" in script
     assert "backtestRunDuration" in script
     assert "renderBacktestSparkline" in script
@@ -853,6 +888,10 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "strategyBacktestFocusCells" in script
     assert ".strategy-profile-summary" in css
     assert ".operation-progress" in css
+    assert ".operation-log-latest" in css
+    assert "font-family: var(--font-mono)" in css
+    assert "max-height: 22px" not in css
+    assert 'aria-expanded="${expanded ? "true" : "false"}"' in script
     assert ".collect-timeline-track" in css
     assert ".date-range-field" in css
     assert ".range-picker-trigger" in css
@@ -893,7 +932,7 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "Trade operations" in html
     assert "Recent operations" not in html
     assert "backtestRunMeta" in script
-    assert "No backtest runs recorded." in script
+    assert "No backtest runs yet." in script
     assert "Cost and Funding" in script
     assert "Walk-forward" in script
     assert "renderStrategyEvaluationPanels" in script
@@ -916,6 +955,8 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "onwheel" in script
     assert "onpointerdown" in script
     assert "onpointermove" in script
+    assert "activePointers" in script
+    assert "pinchDistance" in script
     assert "drag.lastDeltaBars" in script
     assert "requestAnimationFrame" in script
     assert "downloadSelectedOhlcv" not in html
@@ -932,16 +973,16 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "removeAttribute(\"title\")" in script
     assert "chart-tools" not in html
     assert "tool-dot" not in html
-    assert "chart-window-control" in html
-    assert "segmented-button" in html
+    assert "chart-window-control" not in html
     chart_controls = html[html.index('id="strategy-chart-range"') : html.index('id="backtest-chart"')]
+    assert 'id="strategy-chart-range" type="hidden" value="90"' in chart_controls
     assert 'value="all"' not in chart_controls
     assert 'data-strategy-window="all"' not in chart_controls
-    assert "Show latest 30 candles" in chart_controls
-    assert "Show latest 360 candles" in chart_controls
-    assert 'data-strategy-window="30"' in chart_controls
-    assert 'data-strategy-window="360"' in chart_controls
-    assert 'strategyWindow: "30"' in script
+    assert "Show latest 30 candles" not in chart_controls
+    assert "Show latest 360 candles" not in chart_controls
+    assert 'data-strategy-window="30"' not in chart_controls
+    assert 'data-strategy-window="360"' not in chart_controls
+    assert 'strategyWindow: "90"' in script
     assert '["30", "90", "180", "360"]' in script
     assert "lookback: Number(windowValue)" in script
     assert "BACKTEST_CHART_MAX_CANDLES" in script
@@ -951,6 +992,10 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "align-self: start;" in css
     assert ".strategy-operation-tree-panel" in css
     assert "height: calc(clamp(360px, calc(100vh - 330px), 470px) + 111px);" in css
+    assert '<h2 class="panel-title">Backtest runs</h2>' not in html
+    assert 'id="strategy-detail-action-menu"' in html
+    assert ".strategy-detail-action-shell.open .strategy-detail-actions" in css
+    assert "wireStrategyDetailHeaderDrag" in script
     assert "function visibleBacktestVisualization(item)" in script
     assert "function fullBacktestVisualization(item)" in script
     assert "return applyStrategyWindow(strategyVisualization(item), state.strategyWindow, state.strategyFocusedMarkerTime);" in script
@@ -1150,7 +1195,7 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert 'metricCell("Issues"' not in script
     assert "execution: internal core service" in script
     assert "data-intel-jump-date" in script
-    assert "data-strategy-window" in html
+    assert "data-strategy-window" not in html
     assert ">USDT</span>" not in html
     assert "Latest available window" not in html
 
@@ -1570,12 +1615,24 @@ _STRATEGY_DRAWDOWN_CHART_REGRESSION = textwrap.dedent(
       "drawdown-boundary-label end",
       "drawdown-zero-line",
       "drawdown-chart-line",
+      "drawdown-worst-range",
+      "drawdown-worst-gradient",
       "drawdown-worst-marker",
       "drawdown-worst-hit",
     ]) {
       if (!svg.innerHTML.includes(required)) {
         throw new Error(`missing ${required}`);
       }
+    }
+    const rangeMatch = svg.innerHTML.match(/<rect class="drawdown-worst-range" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"[^>]*data-peak-index="([^"]+)"[^>]*data-trough-index="([^"]+)"/);
+    if (!rangeMatch) {
+      throw new Error("drawdown max range was not rendered with peak and trough metadata");
+    }
+    const rangeWidth = Number(rangeMatch[3]);
+    const peakIndex = Number(rangeMatch[5]);
+    const troughIndex = Number(rangeMatch[6]);
+    if (!(rangeWidth > 0) || !(peakIndex < troughIndex)) {
+      throw new Error(`invalid drawdown range metadata: ${rangeMatch.slice(1).join(",")}`);
     }
     const worstHit = svg.lastHits.find((hit) => hit.className.includes("drawdown-worst-hit"));
     if (!worstHit || !worstHit.listeners.mousemove) {

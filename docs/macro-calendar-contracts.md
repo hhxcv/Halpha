@@ -112,6 +112,19 @@ Initial adoption should prefer a small number of stable public calendar sources
 over broad but fragile coverage. A configured source may be disabled or
 unavailable, but that state must be explicit in artifacts.
 
+Implemented public sources:
+
+| Source | Data class | Endpoint | Notes |
+| --- | --- | --- | --- |
+| `federal_reserve_fomc` | `central_bank_event` | `fomc_calendars` | Federal Reserve FOMC meeting calendar. Meeting dates are normalized to UTC and warn when the public source lacks exact intraday time. |
+| `bea_release_calendar` | `economic_release` | `bea_release_dates_json` | BEA machine-readable release schedule from `https://apps.bea.gov/API/signup/release_dates.json`. Duplicate release times for the same release are deduplicated. |
+
+`macro_calendar.source` configures one source. `macro_calendar.sources`
+configures multiple sources. In a multi-source configuration, each implemented
+source collects only the configured data classes it supports, so a source is not
+marked unavailable merely because another configured source owns a different
+data class.
+
 ## Pipeline Position
 
 Intended product flow:
@@ -175,12 +188,12 @@ Rules:
 
 ## Data Class Contract
 
-Planned data classes:
+Data classes:
 
 | Data class | Purpose | Required source state |
 | --- | --- | --- |
-| `economic_release` | Identify scheduled macro releases that may create catalyst risk. | Implement when a stable public calendar source exposes event time, name, country or region, and source timestamp. |
-| `central_bank_event` | Identify scheduled policy meetings, statements, speeches, or minutes. | Implement when a stable public source exposes event time, institution, event type, and source timestamp. |
+| `economic_release` | Identify scheduled macro releases that may create catalyst risk. | Implemented for `bea_release_calendar` when the source exposes event time, release name, and source timestamp. |
+| `central_bank_event` | Identify scheduled policy meetings, statements, speeches, or minutes. | Implemented for `federal_reserve_fomc`; exact intraday timing may be unavailable and must be warned. |
 | `market_holiday` | Identify closure or reduced-liquidity windows that may affect interpretation. | Implement when a stable public source covers configured markets. |
 | `macro_proxy_observation` | Preserve bounded broad risk proxy observations such as dollar, rates, or volatility when configured. | Implement only when a stable public source provides timestamped observations and units. |
 

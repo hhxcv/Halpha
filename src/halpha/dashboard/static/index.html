@@ -102,8 +102,7 @@
           </div>
           <div class="tabs strategy-operation-tabs topbar-secondary-tabs hidden" id="strategy-operation-tabs" aria-label="Strategy operations">
             <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtests</button>
-            <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiments</button>
-            <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
+            <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Strategy Lab</button>
           </div>
           <div class="tabs live-mode-tabs topbar-secondary-tabs hidden" id="live-mode-tabs" aria-label="Live review sections">
             <button class="tab-button active" type="button" data-live-mode="now">Now</button>
@@ -177,13 +176,6 @@
 
       <section id="reports-view" class="view hidden" data-view="reports">
         <div class="reports-layout">
-          <aside class="panel report-library">
-            <div class="library-header">
-              <h2 class="panel-title">All reports</h2>
-              <input id="report-search" class="search-input" type="search" placeholder="Search reports...">
-            </div>
-            <div id="report-library-groups" class="library-groups"></div>
-          </aside>
           <section class="panel report-workspace">
             <div class="report-toolbar">
               <div id="selected-report-kicker" class="muted">Select a report</div>
@@ -198,13 +190,29 @@
               <div class="empty-state">Loading report library.</div>
             </div>
           </section>
-          <aside class="detail-rail">
-            <section class="panel panel-pad">
-              <h2 class="panel-title">Report outline</h2>
+          <aside class="panel report-inspector">
+            <div class="report-inspector-tabs" role="tablist" aria-label="Report side panels">
+              <button class="tab-button active" type="button" role="tab" aria-selected="true" data-report-inspector-tab="reports">Reports</button>
+              <button class="tab-button" type="button" role="tab" aria-selected="false" data-report-inspector-tab="outline">Outline</button>
+              <button class="tab-button" type="button" role="tab" aria-selected="false" data-report-inspector-tab="sources">Sources</button>
+            </div>
+            <section class="report-inspector-panel active" data-report-inspector-panel="reports">
+              <div class="library-header">
+                <h2 class="panel-title">All reports</h2>
+                <input id="report-search" class="search-input" type="search" placeholder="Search reports...">
+              </div>
+              <div id="report-library-groups" class="library-groups"></div>
+            </section>
+            <section class="report-inspector-panel" data-report-inspector-panel="outline" hidden>
+              <div class="report-inspector-section-header">
+                <h2 class="panel-title">Report outline</h2>
+              </div>
               <ul id="report-outline" class="outline-list"></ul>
             </section>
-            <section class="panel panel-pad report-source-panel">
-              <h2 class="panel-title">Report sources</h2>
+            <section class="report-inspector-panel" data-report-inspector-panel="sources" hidden>
+              <div class="report-inspector-section-header">
+                <h2 class="panel-title">Report sources</h2>
+              </div>
               <div id="report-source-files" class="report-source-files"></div>
             </section>
           </aside>
@@ -228,76 +236,56 @@
             </div>
 
             <div class="strategy-operation-panel hidden" data-strategy-operation-panel="experiment">
-              <div class="strategy-panel-header">
+              <div class="strategy-panel-header strategy-lab-header">
                 <div>
-                  <h2 class="panel-title">Experiment board</h2>
-                  <p class="panel-copy">Compare configured candidates against the benchmark suite and gate evidence. Strategy construction stays in code.</p>
+                  <h2 class="panel-title">Strategy Lab validation</h2>
+                  <p class="panel-copy">Validate configured strategy profiles against benchmark coverage, effectiveness gates, and warnings. Parameter search stays in development workflows; this page is for deciding whether configured strategies have reviewable evidence.</p>
                 </div>
-                <button class="primary-button" type="button" id="run-experiment-button">Run experiment</button>
+                <button class="primary-button" type="button" id="run-experiment-button">Run validation</button>
               </div>
               <div id="strategy-experiment-progress" class="operation-progress hidden"></div>
-              <div class="strategy-experiment-workspace">
-                <section class="strategy-review-card">
+              <div class="strategy-experiment-workspace strategy-lab-workspace">
+                <section class="strategy-lab-brief" aria-label="Strategy validation workflow">
+                  <div class="strategy-lab-step">
+                    <span>1</span>
+                    <strong>Select candidates</strong>
+                    <small>Use configured profiles, not ad hoc parameters.</small>
+                  </div>
+                  <div class="strategy-lab-step">
+                    <span>2</span>
+                    <strong>Run benchmark suite</strong>
+                    <small>Reuse deterministic backtest and gate contracts.</small>
+                  </div>
+                  <div class="strategy-lab-step">
+                    <span>3</span>
+                    <strong>Review evidence</strong>
+                    <small>Check coverage, failures, gates, and warnings.</small>
+                  </div>
+                </section>
+
+                <section class="strategy-review-card strategy-lab-candidates">
                   <div class="strategy-card-heading">
-                    <strong>Candidate universe</strong>
+                    <strong>Candidate set</strong>
                     <span id="strategy-experiment-window">Configured benchmark suite</span>
                   </div>
-                  <select id="strategy-experiment-mode" class="hidden" aria-hidden="true"><option value="benchmark_suite">Configured benchmark suite</option></select>
+                  <div class="strategy-experiment-grid strategy-lab-filter-grid">
+                    <div class="field"><label for="strategy-experiment-family">Family</label><select id="strategy-experiment-family" class="select-input"></select></div>
+                    <div class="field"><label for="strategy-experiment-symbol">Symbol</label><select id="strategy-experiment-symbol" class="select-input"></select></div>
+                    <div class="field"><label for="strategy-experiment-timeframe">Timeframe</label><select id="strategy-experiment-timeframe" class="select-input"></select></div>
+                    <div class="strategy-candidate-actions">
+                      <button class="ghost-button compact-button" type="button" id="strategy-experiment-select-all">Select visible</button>
+                      <button class="ghost-button compact-button" type="button" id="strategy-experiment-clear">Clear</button>
+                    </div>
+                  </div>
                   <div id="strategy-experiment-strategies" class="strategy-strategy-list"></div>
                 </section>
-                <section class="strategy-review-card">
+
+                <section class="strategy-review-card strategy-lab-results">
                   <div class="strategy-card-heading">
-                    <strong>Latest evidence</strong>
-                    <span>Benchmark, candidates, warnings</span>
+                    <strong>Latest validation evidence</strong>
+                    <span>Benchmarks, gates, warnings, next step</span>
                   </div>
                   <div id="strategy-experiment-results" class="strategy-result-panel"></div>
-                </section>
-              </div>
-            </div>
-
-            <div class="strategy-operation-panel hidden" data-strategy-operation-panel="optimize">
-              <div class="strategy-panel-header">
-                <div>
-                  <h2 class="panel-title">Optimization evidence</h2>
-                  <p class="panel-copy">Review bounded parameter evidence for an existing strategy profile. Results are research evidence, not adopted configuration.</p>
-                </div>
-                <button class="primary-button" type="button" id="run-optimize-button">Run optimization</button>
-              </div>
-              <div id="strategy-optimize-progress" class="operation-progress hidden"></div>
-              <div class="strategy-optimize-workspace">
-                <section class="strategy-review-card">
-                  <div class="field"><label for="strategy-optimize-profile">Strategy profile</label><select id="strategy-optimize-profile" class="select-input"></select></div>
-                  <div class="strategy-profile-summary" id="strategy-optimize-profile-summary"></div>
-                </section>
-                <details class="strategy-advanced">
-                  <summary>Advanced run controls</summary>
-                  <div class="strategy-optimize-compact-grid">
-                    <div class="field"><label for="strategy-optimize-max-combinations">Max combinations</label><input id="strategy-optimize-max-combinations" class="text-input" type="number" min="1" step="1" value="80"></div>
-                    <div class="field"><label for="strategy-optimize-train-rows">Train rows</label><input id="strategy-optimize-train-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
-                    <div class="field"><label for="strategy-optimize-validation-rows">Validation rows</label><input id="strategy-optimize-validation-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
-                    <div class="field"><label for="strategy-optimize-step-rows">Step rows</label><input id="strategy-optimize-step-rows" class="text-input" type="number" min="1" step="1" placeholder="optional"></div>
-                  </div>
-                  <div class="strategy-optimize-grid strategy-action-grid">
-                    <div class="field"><label for="strategy-optimize-source">Source</label><input id="strategy-optimize-source" class="text-input" type="text" readonly></div>
-                    <div class="field"><label for="strategy-optimize-symbol">Symbol</label><select id="strategy-optimize-symbol" class="select-input"></select></div>
-                    <div class="field"><label for="strategy-optimize-timeframe">Timeframe</label><select id="strategy-optimize-timeframe" class="select-input"></select></div>
-                    <div class="field"><label for="strategy-optimize-family">Family</label><select id="strategy-optimize-family" class="select-input"></select></div>
-                    <div class="field"><label for="strategy-optimize-name">Strategy</label><select id="strategy-optimize-name" class="select-input"></select></div>
-                  </div>
-                </details>
-                <section class="strategy-review-card">
-                  <div class="strategy-card-heading">
-                    <strong>Search space</strong>
-                    <span id="strategy-optimize-window">Configured benchmark suite</span>
-                  </div>
-                  <div id="strategy-optimization-space" class="strategy-optimization-space"></div>
-                </section>
-                <section class="strategy-review-card">
-                  <div class="strategy-card-heading">
-                    <strong>Latest optimization result</strong>
-                    <span>Selection, robustness, failed candidates</span>
-                  </div>
-                  <div id="strategy-optimize-results" class="strategy-result-panel"></div>
                 </section>
               </div>
             </div>
@@ -313,31 +301,24 @@
                 <span id="strategy-detail-kicker" class="drawer-kicker">Backtest detail</span>
                 <h2 id="strategy-detail-title">Select a backtest run</h2>
               </div>
-              <div class="strategy-detail-actions" aria-label="Backtest actions">
-                <button class="ghost-button compact-button" type="button" id="strategy-detail-params">Parameters</button>
-                <button class="ghost-button compact-button" type="button" id="strategy-detail-rerun">Rerun</button>
-                <button class="danger-button compact-button" type="button" id="strategy-detail-delete">Delete</button>
+              <div class="strategy-detail-action-shell">
+                <button class="icon-button strategy-detail-action-menu" type="button" id="strategy-detail-action-menu" aria-label="Backtest actions" aria-expanded="false" title="Backtest actions">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 8h.01M12 12h.01M12 16h.01"></path>
+                  </svg>
+                </button>
+                <div class="strategy-detail-actions" aria-label="Backtest actions">
+                  <button class="ghost-button compact-button" type="button" id="strategy-detail-params">Parameters</button>
+                  <button class="ghost-button compact-button" type="button" id="strategy-detail-rerun">Rerun</button>
+                  <button class="danger-button compact-button" type="button" id="strategy-detail-delete">Delete</button>
+                </div>
               </div>
             </section>
             <section class="panel kline-panel">
-              <div class="chart-header">
-                <div class="chart-selector" aria-label="OHLCV chart controls">
-                  <input id="strategy-chart-source" class="hidden" type="text" list="strategy-ohlcv-source-options" aria-hidden="true" tabindex="-1">
-                  <select id="strategy-chart-symbol" class="hidden" aria-hidden="true" tabindex="-1"></select>
-                  <select id="strategy-chart-timeframe" class="hidden" aria-hidden="true" tabindex="-1"></select>
-                  <div class="field chart-window-field">
-                    <span class="field-label">Candles</span>
-                    <input id="strategy-chart-range" type="hidden" value="30">
-                    <div class="segmented-control chart-window-control" aria-label="Candlestick chart window">
-                      <button class="segmented-button active" type="button" data-strategy-window="30" aria-pressed="true" aria-label="Show latest 30 candles">30</button>
-                      <button class="segmented-button" type="button" data-strategy-window="90" aria-pressed="false" aria-label="Show latest 90 candles">90</button>
-                      <button class="segmented-button" type="button" data-strategy-window="180" aria-pressed="false" aria-label="Show latest 180 candles">180</button>
-                      <button class="segmented-button" type="button" data-strategy-window="360" aria-pressed="false" aria-label="Show latest 360 candles">360</button>
-                    </div>
-                  </div>
-                  <span id="strategy-quote-label" class="status-pill ok">n/a</span>
-                </div>
-              </div>
+              <input id="strategy-chart-source" class="hidden" type="text" list="strategy-ohlcv-source-options" aria-hidden="true" tabindex="-1">
+              <select id="strategy-chart-symbol" class="hidden" aria-hidden="true" tabindex="-1"></select>
+              <select id="strategy-chart-timeframe" class="hidden" aria-hidden="true" tabindex="-1"></select>
+              <input id="strategy-chart-range" type="hidden" value="90">
               <div class="chart-wrap">
                 <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="OHLCV candlestick chart"></svg>
               </div>
@@ -347,10 +328,6 @@
               <section class="panel panel-pad strategy-operation-tree-panel" data-backtest-only="true">
                 <h2 class="panel-title">Trade operations</h2>
                 <div id="strategy-operation-tree"></div>
-              </section>
-              <section class="panel panel-pad" data-backtest-only="true">
-                <h2 class="panel-title">Backtest runs</h2>
-                <div id="backtest-runs"></div>
               </section>
             </aside>
             <section class="panel strategy-tabs" data-backtest-only="true">
