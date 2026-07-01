@@ -10,11 +10,41 @@ from halpha.config import ConfigError, load_config
 from halpha.dashboard.settings import (
     CONFIG_PROFILE_FIELDS,
     CONFIG_PROFILE_SECTIONS,
+    LIVE_TRIGGER_THRESHOLD_FIELDS,
     _dashboard_config_temp_path,
     dashboard_config_ref,
     dashboard_config_profile,
     dashboard_save_config_profile,
 )
+from halpha.live.contracts import (
+    LIVE_DATA_TYPES,
+    LIVE_REPORT_TRIGGER_JOB_INTENTS,
+    LIVE_TRIGGER_IDS,
+)
+from halpha.live.triggers import LiveTriggerEvaluator
+
+
+LIVE_EDITABLE_CONFIG_PATHS = {
+    "live.enabled",
+    "live.tick_seconds",
+    "live.reports.daily.enabled",
+    *(
+        f"live.collections.{data_type}.{suffix}"
+        for data_type in LIVE_DATA_TYPES
+        for suffix in ("enabled", "cadence_seconds", "lookback_seconds")
+    ),
+    "live.collections.macro_calendar.lookahead_seconds",
+    *(
+        f"live.reports.triggers.{trigger_id}.{suffix}"
+        for trigger_id in LIVE_TRIGGER_IDS
+        for suffix in ("enabled", "cooldown_seconds", "job_intent", "confirm_codex")
+    ),
+    *(
+        f"live.reports.triggers.{trigger_id}.{field_name}"
+        for trigger_id, field_specs in LIVE_TRIGGER_THRESHOLD_FIELDS.items()
+        for field_name, _label, _value_type, _description in field_specs
+    ),
+}
 
 
 EXPECTED_EDITABLE_CONFIG_PATHS = {
@@ -22,6 +52,7 @@ EXPECTED_EDITABLE_CONFIG_PATHS = {
     "dashboard.display_timezone",
     "dashboard.timestamp_date_order",
     "dashboard.timestamp_hour_cycle",
+    *LIVE_EDITABLE_CONFIG_PATHS,
     "macro_calendar.data_classes",
     "macro_calendar.enabled",
     "macro_calendar.lookahead_days",
@@ -146,7 +177,14 @@ def test_dashboard_settings_field_contract_is_explicit() -> None:
     for field in CONFIG_PROFILE_FIELDS:
         assert field["section"] in CONFIG_PROFILE_SECTIONS
         assert field["control"] in {"multi_select", "number", "select", "tags", "text", "toggle"}
-        assert field["value_type"] in {"bool", "positive_int", "string", "string_list", "unit_interval_number"}
+        assert field["value_type"] in {
+            "bool",
+            "positive_int",
+            "positive_number",
+            "string",
+            "string_list",
+            "unit_interval_number",
+        }
         if field["control"] in {"multi_select", "select"}:
             assert field.get("options")
         assert str(field["description"]).strip()
@@ -175,6 +213,7 @@ def test_dashboard_settings_profile_does_not_expose_local_private_config_values(
         "onchain_flow.chain_activity_source_url",
         "onchain_flow.network_congestion_source_url",
         "onchain_flow.stablecoin_source_url",
+        "live.reports.triggers.market_breakout.codex_authorization",
         "text.sources[].url",
         "user_state.path",
     ]:
@@ -183,6 +222,7 @@ def test_dashboard_settings_profile_does_not_expose_local_private_config_values(
     assert "https://cointelegraph.com/rss" not in profile_text
     assert "https://www.coindesk.com/arc/outboundfeeds/rss/" not in profile_text
     assert "user_state.local.yaml" not in profile_text
+    assert "config_digest" not in profile_text
 
 
 def test_dashboard_config_ref_rejects_traversal_like_relative_path() -> None:
@@ -456,6 +496,220 @@ def test_dashboard_settings_accepts_text_intelligence_threshold_changes(tmp_path
     saved = load_config(config_path)
     assert saved["text"]["intelligence"]["thresholds"]["duplicate_similarity"] == 0.9
     assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_live_section_exposes_safe_controls(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    profile = dashboard_config_profile(config, config_path=config_path)
+    fields = {field["path"]: field for field in profile["fields"]}
+
+    assert "Live" in profile["sections"]
+    assert fields["live.enabled"]["value"] is False
+    assert fields["live.tick_seconds"]["value"] == 30
+    assert fields["live.collections.ohlcv.enabled"]["value"] is False
+    assert fields["live.collections.macro_calendar.lookahead_seconds"]["value"] == 3888000
+    assert fields["live.reports.triggers.market_breakout.job_intent"]["options"] == list(
+        LIVE_REPORT_TRIGGER_JOB_INTENTS
+    )
+    assert fields["live.reports.triggers.market_breakout.confirm_codex"]["virtual"] is True
+    assert fields["live.reports.triggers.market_breakout.confirm_codex"]["value"] is False
+    assert "live.reports.triggers.market_breakout.codex_authorization" not in fields
+
+
+def test_dashboard_settings_save_live_collection_and_trigger_round_trip(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "live.enabled": True,
+                "live.tick_seconds": 15,
+                "live.reports.daily.enabled": True,
+                "live.collections.text_event.enabled": True,
+                "live.collections.text_event.cadence_seconds": 600,
+                "live.collections.text_event.lookback_seconds": 7200,
+                "live.collections.macro_calendar.enabled": True,
+                "live.reports.triggers.data_quality_degraded.enabled": True,
+                "live.reports.triggers.data_quality_degraded.cooldown_seconds": 900,
+                "live.reports.triggers.data_quality_degraded.job_intent": "run_no_codex",
+                "live.reports.triggers.data_quality_degraded.min_failed_targets": 2,
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    saved = load_config(config_path)
+    assert saved["live"]["enabled"] is True
+    assert saved["live"]["tick_seconds"] == 15
+    assert saved["live"]["reports"]["daily"]["enabled"] is True
+    assert saved["live"]["collections"]["text_event"] == {
+        "enabled": True,
+        "cadence_seconds": 600,
+        "lookback_seconds": 7200,
+    }
+    assert saved["live"]["collections"]["macro_calendar"] == {
+        "enabled": True,
+        "cadence_seconds": 3600,
+        "lookback_seconds": 604800,
+        "lookahead_seconds": 3888000,
+    }
+    assert saved["live"]["reports"]["triggers"]["data_quality_degraded"] == {
+        "enabled": True,
+        "cooldown_seconds": 900,
+        "job_intent": "run_no_codex",
+        "min_failed_targets": 2,
+        "min_stale_targets": 1,
+    }
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_rejects_invalid_live_values(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "live.tick_seconds": 0,
+                "live.collections.unsupported.enabled": True,
+            },
+        },
+    )
+
+    assert result["status"] == "failed"
+    assert "live.tick_seconds: value must be a positive integer." in result["errors"]
+    assert "live.collections.unsupported.enabled is not editable from the dashboard settings UI." in result["errors"]
+    assert "live" not in load_config(config_path)
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_live_run_trigger_requires_codex_confirmation(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "live.enabled": True,
+                "live.reports.triggers.market_breakout.enabled": True,
+                "live.reports.triggers.market_breakout.cooldown_seconds": 600,
+                "live.reports.triggers.market_breakout.job_intent": "run",
+                "live.reports.triggers.market_breakout.window_seconds": 3600,
+            },
+        },
+    )
+
+    assert result["status"] == "failed"
+    assert result["errors"] == [
+        "live.reports.triggers.market_breakout.confirm_codex: "
+        "confirm this trigger before saving unattended Codex-capable Live `run` behavior."
+    ]
+    assert "live" not in load_config(config_path)
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_live_run_trigger_confirmation_persists_valid_authorization(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "live.enabled": True,
+                "live.reports.triggers.market_breakout.enabled": True,
+                "live.reports.triggers.market_breakout.cooldown_seconds": 600,
+                "live.reports.triggers.market_breakout.job_intent": "run",
+                "live.reports.triggers.market_breakout.window_seconds": 3600,
+                "live.reports.triggers.market_breakout.confirm_codex": True,
+            },
+        },
+    )
+
+    assert result["status"] == "succeeded"
+    saved = load_config(config_path)
+    authorization = saved["live"]["reports"]["triggers"]["market_breakout"]["codex_authorization"]
+    assert authorization["authorized"] is True
+    assert authorization["trigger_id"] == "market_breakout"
+    assert authorization["job_intent"] == "run"
+    assert authorization["authorization_scope"] == "unattended_live_trigger"
+    assert "config_digest" in authorization
+
+    trigger_model = LiveTriggerEvaluator(
+        saved,
+        config_path=config_path,
+        job_manager=_NoopJobManager(),
+    ).read_model()
+    trigger_summary = {
+        item["trigger_id"]: item
+        for item in trigger_model["config"]["triggers"]
+    }["market_breakout"]
+    assert trigger_summary["codex_authorization"]["authorized"] is True
+    assert trigger_summary["codex_authorization"]["valid"] is True
+    assert str(tmp_path) not in str(result)
+
+
+def test_dashboard_settings_live_run_trigger_authorization_invalidates_on_config_change(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    first = dashboard_save_config_profile(
+        config,
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "live.enabled": True,
+                "live.reports.triggers.market_breakout.enabled": True,
+                "live.reports.triggers.market_breakout.cooldown_seconds": 600,
+                "live.reports.triggers.market_breakout.job_intent": "run",
+                "live.reports.triggers.market_breakout.window_seconds": 3600,
+                "live.reports.triggers.market_breakout.confirm_codex": True,
+            },
+        },
+    )
+    assert first["status"] == "succeeded"
+    original_text = config_path.read_text(encoding="utf-8")
+
+    result = dashboard_save_config_profile(
+        load_config(config_path),
+        config_path=config_path,
+        request={
+            "confirm": True,
+            "changes": {
+                "live.reports.triggers.market_breakout.cooldown_seconds": 1200,
+            },
+        },
+    )
+
+    assert result["status"] == "failed"
+    assert result["errors"] == [
+        "live.reports.triggers.market_breakout.confirm_codex: "
+        "confirm this trigger before saving unattended Codex-capable Live `run` behavior."
+    ]
+    assert config_path.read_text(encoding="utf-8") == original_text
+    assert str(tmp_path) not in str(result)
+
+
+class _NoopJobManager:
+    def list_jobs(self, *, limit: int = 100) -> dict[str, Any]:
+        return {"jobs": []}
+
+    def create_job(self, request: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError("settings authorization tests must not create jobs")
 
 
 def _write_config(tmp_path: Path) -> Path:

@@ -4882,6 +4882,36 @@
       if (path === "market.enabled" || path === "text.enabled" || path === "macro_calendar.enabled" || path === "onchain_flow.enabled") {
         return true;
       }
+      if (path === "live.enabled") {
+        return true;
+      }
+      if (path === "live.tick_seconds" || path === "live.reports.daily.enabled") {
+        return settingPathEnabled("live.enabled");
+      }
+      if (path.startsWith("live.collections.")) {
+        const parts = path.split(".");
+        const dataType = parts[2];
+        const suffix = parts.slice(3).join(".");
+        if (suffix === "enabled") {
+          return settingPathEnabled("live.enabled");
+        }
+        return settingPathEnabled("live.enabled") && settingPathEnabled(`live.collections.${dataType}.enabled`);
+      }
+      if (path.startsWith("live.reports.triggers.")) {
+        const parts = path.split(".");
+        const triggerId = parts[3];
+        const suffix = parts.slice(4).join(".");
+        if (suffix === "enabled") {
+          return settingPathEnabled("live.enabled");
+        }
+        if (!settingPathEnabled("live.enabled") || !settingPathEnabled(`live.reports.triggers.${triggerId}.enabled`)) {
+          return false;
+        }
+        if (suffix === "confirm_codex") {
+          return settingPathValue(`live.reports.triggers.${triggerId}.job_intent`) === "run";
+        }
+        return true;
+      }
       if (path.startsWith("market.derivatives.")) {
         return settingPathEnabled("market.enabled") && (path === "market.derivatives.enabled" || settingPathEnabled("market.derivatives.enabled"));
       }
@@ -4907,6 +4937,12 @@
     }
 
     function settingVisibilityChanges(path) {
+      if (String(path || "").startsWith("live.collections.") && String(path || "").endsWith(".enabled")) {
+        return true;
+      }
+      if (String(path || "").startsWith("live.reports.triggers.")) {
+        return String(path || "").endsWith(".enabled") || String(path || "").endsWith(".job_intent");
+      }
       return [
         "market.enabled",
         "market.derivatives.enabled",
@@ -4914,6 +4950,7 @@
         "text.intelligence.enabled",
         "macro_calendar.enabled",
         "onchain_flow.enabled",
+        "live.enabled",
       ].includes(path);
     }
 
@@ -4953,8 +4990,16 @@
         return `<select class="select-input" data-setting-path="${path}" data-setting-type="string">${options.map((option) => `<option value="${escapeHtml(option)}" ${String(option) === String(value) ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
       }
       if (field.control === "number") {
-        const numberType = field.value_type === "unit_interval_number" ? "unit_interval_number" : "positive_int";
-        const attrs = numberType === "unit_interval_number" ? 'min="0" max="1" step="0.01"' : 'min="1" step="1"';
+        const numberType = field.value_type === "unit_interval_number"
+          ? "unit_interval_number"
+          : field.value_type === "positive_number"
+            ? "positive_number"
+            : "positive_int";
+        const attrs = numberType === "unit_interval_number"
+          ? 'min="0" max="1" step="0.01"'
+          : numberType === "positive_number"
+            ? 'min="0" step="0.01"'
+            : 'min="1" step="1"';
         return `<input class="text-input" type="number" ${attrs} value="${escapeHtml(value)}" data-setting-path="${path}" data-setting-type="${numberType}">`;
       }
       if (field.control === "multi_select") {
@@ -4990,6 +5035,8 @@
             recordSettingChange(path, multiSelectValues(path));
           } else if (node.dataset.settingType === "positive_int") {
             recordSettingChange(path, Number(node.value));
+          } else if (node.dataset.settingType === "positive_number") {
+            recordSettingChange(path, Number(node.value));
           } else if (node.dataset.settingType === "unit_interval_number") {
             recordSettingChange(path, Number(node.value));
           } else if (node.dataset.settingType === "string_list") {
@@ -5019,6 +5066,11 @@
           errorNode.textContent = "";
           errorNode.classList.add("hidden");
         }
+      }
+      if (field.virtual && String(path).endsWith(".confirm_codex") && value === true) {
+        state.settingsChanges[path] = true;
+        renderChangeSummary();
+        return;
       }
       if (valuesEqual(value, field.value)) {
         delete state.settingsChanges[path];

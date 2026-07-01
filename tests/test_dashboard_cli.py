@@ -407,6 +407,7 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
         "Strategy",
         "Reports",
         "Monitor",
+        "Live",
         "Intelligence sources",
         "Storage",
         "Dashboard",
@@ -430,6 +431,10 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
         "1M",
     ]
     assert "binance_usdm" in fields["market.ohlcv.sources"]["options"]
+    assert fields["live.enabled"]["control"] == "toggle"
+    assert fields["live.tick_seconds"]["value"] == 30
+    assert fields["live.reports.triggers.market_breakout.job_intent"]["options"] == ["run_no_codex", "run"]
+    assert fields["live.reports.triggers.market_breakout.confirm_codex"]["virtual"] is True
     assert "monitor.enabled" not in fields
     assert payload["omitted"]["raw_config_text_embedded"] is False
     assert str(tmp_path) not in response.text

@@ -2,9 +2,9 @@
 
 This document defines the M24 Live product contract. The current implemented
 slice covers Live config parsing, Core-owned source-refresh scheduler ticks,
-visible data-collection command jobs, persisted source-refresh state, and the
-bounded `/api/live` read model. Trigger decisions and the full Live Dashboard UI
-remain planned follow-up work unless explicitly marked current below.
+visible data-collection command jobs, persisted source-refresh state,
+deterministic trigger decisions, Dashboard Settings controls for safe Live
+configuration, and the bounded `/api/live` read model.
 
 ## Purpose
 
@@ -92,6 +92,25 @@ rejected with actionable errors.
 | `live.reports.triggers.<trigger_id>.codex_authorization` | Optional persisted authorization metadata for unattended `run` trigger jobs. | Mapping only. It must match trigger id, trigger revision, config ref, config digest, job intent, and authorization scope before automatic Codex-capable report dispatch is allowed. |
 
 Unsupported Live config fields must not be silently ignored.
+
+Dashboard Settings exposes the common safe Live fields listed above:
+
+- `live.enabled`, `live.tick_seconds`, and `live.reports.daily.enabled`;
+- per-data-type collection enabled, cadence, and lookback windows;
+- `live.collections.macro_calendar.lookahead_seconds`;
+- per-trigger enabled state, cooldown, job intent, and implemented threshold
+  parameters.
+
+Dashboard Settings must not expose raw `codex_authorization` mappings, config
+digests, local private paths, or credential-like values. It exposes a virtual
+`confirm_codex` action for each trigger instead. When a trigger is enabled with
+`job_intent: run`, the backend writes authorization metadata only after explicit
+confirmation and only for the current trigger id, trigger revision, config ref,
+and config digest. Any later trigger config change invalidates that
+authorization until the user confirms again.
+
+Live settings are configuration only. They must not start, stop, or mutate the
+resident System Monitor process lifecycle.
 
 ## Supported Live Data Types
 
