@@ -90,6 +90,7 @@ def test_config_example_loads_successfully() -> None:
     assert config["user_state"] == {"enabled": False, "path": "user_state.local.yaml"}
     assert config["dashboard"] == {
         "display_timezone": "Asia/Shanghai",
+        "pnl_color_scheme": "green_profit_red_loss",
         "timestamp_hour_cycle": "24h",
         "timestamp_date_order": "year_first",
     }
@@ -493,19 +494,27 @@ def test_load_config_accepts_enabled_user_state_config(tmp_path: Path) -> None:
     assert config["user_state"] == {"enabled": True, "path": "user_state.local.yaml"}
 
 
-def test_load_config_accepts_dashboard_display_timezone(tmp_path: Path) -> None:
+def test_load_config_accepts_dashboard_display_preferences(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace(
             "quant:\n",
-            "dashboard:\n  display_timezone: UTC\n\nquant:\n",
+            (
+                "dashboard:\n"
+                "  display_timezone: UTC\n"
+                "  pnl_color_scheme: red_profit_green_loss\n\n"
+                "quant:\n"
+            ),
         ),
         encoding="utf-8",
     )
 
     config = load_config(config_path)
 
-    assert config["dashboard"] == {"display_timezone": "UTC"}
+    assert config["dashboard"] == {
+        "display_timezone": "UTC",
+        "pnl_color_scheme": "red_profit_green_loss",
+    }
 
 
 def test_load_config_rejects_invalid_run_timezone(tmp_path: Path) -> None:
@@ -538,6 +547,10 @@ def test_load_config_accepts_logging_output_dir(tmp_path: Path) -> None:
         (
             "dashboard:\n  display_timezone: Invalid/Zone",
             "dashboard.display_timezone is not an available IANA timezone",
+        ),
+        (
+            "dashboard:\n  pnl_color_scheme: purple_profit_orange_loss",
+            "dashboard.pnl_color_scheme must be one of",
         ),
         ("dashboard:\n  unsupported: true", "unsupported dashboard field"),
     ],

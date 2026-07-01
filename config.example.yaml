@@ -7,6 +7,7 @@ logging:
 
 dashboard:
   display_timezone: Asia/Shanghai
+  pnl_color_scheme: green_profit_red_loss
   timestamp_hour_cycle: 24h
   timestamp_date_order: year_first
 

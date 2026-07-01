@@ -3,7 +3,7 @@
       if (!shared) {
         throw new Error("Halpha dashboard shared helpers did not load.");
       }
-      const {escapeHtml, formatNumber} = shared;
+      const {escapeHtml, formatNumber, pnlColors} = shared;
       const chartViews = new Map();
 
       function quoteAsset(symbol) {
@@ -45,6 +45,7 @@
         const width = 980;
         const height = 470;
         const pad = {left: 44, right: 70, top: 28, bottom: 86};
+        const colors = pnlColors(options.pnlColorScheme);
         const max = Math.max(...bars.map((bar) => Number(bar.high) || 0));
         const min = Math.min(...bars.map((bar) => Number(bar.low) || 0));
         const priceY = (value) => pad.top + (max - value) / Math.max(1, max - min) * (height - pad.top - pad.bottom);
@@ -59,7 +60,7 @@
           const high = Number(bar.high);
           const low = Number(bar.low);
           const up = close >= open;
-          const color = up ? "#0ECB81" : "#F6465D";
+          const color = up ? colors.up : colors.down;
           const cx = x(index);
           const yOpen = priceY(open);
           const yClose = priceY(close);
@@ -75,6 +76,7 @@
             priceY(Number(marker.price) || close),
             marker,
             markerIndex,
+            colors,
           )).join("");
           const hitWidth = Math.max(1.5, Math.min(candleWidth + 8, barStep * 0.92));
           return `
@@ -116,10 +118,10 @@
         return `<polyline points="${points.join(" ")}" fill="none" stroke="${color}" stroke-width="2" opacity="0.95"></polyline>`;
       }
 
-      function renderTradeMarker(x, y, marker, markerIndex = 0) {
+      function renderTradeMarker(x, y, marker, markerIndex = 0, colors = pnlColors()) {
         const tone = markerTone(marker);
         const exit = tone === "exit" || tone === "short";
-        const color = markerColor(tone);
+        const color = markerColor(tone, colors);
         const labelText = marker.label || marker.side || marker.kind || (exit ? "Exit" : "Long");
         const offset = markerIndex * 25;
         const labelY = exit ? y - 24 - offset : y + 28 + offset;
@@ -259,13 +261,13 @@
         return "entry";
       }
 
-      function markerColor(tone) {
-        if (tone === "exit") return "#F6465D";
-        if (tone === "short") return "#f97316";
+      function markerColor(tone, colors = pnlColors()) {
+        if (tone === "exit") return colors.down;
+        if (tone === "short") return colors.down;
         if (tone === "event") return "#8b5cf6";
         if (tone === "funding") return "#0ea5e9";
         if (tone === "multi-leg") return "#64748b";
-        return "#0ECB81";
+        return colors.up;
       }
 
       function markerDetailRows(marker) {

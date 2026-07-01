@@ -511,7 +511,12 @@ def _standalone_strategy_section(
 def _shared_strategy_history_section(config_path: Path, *, base: Path) -> dict[str, Any]:
     history = read_strategy_evaluation_history(config_path)
     records = _list(history.get("records"))
-    backtests = [_shared_history_backtest(record, base=base) for record in records[:MAX_STANDALONE_RUNS]]
+    backtest_records = [
+        record
+        for record in records
+        if _is_strategy_backtest_history_record(_dict(record))
+    ]
+    backtests = [_shared_history_backtest(record, base=base) for record in backtest_records[:MAX_STANDALONE_RUNS]]
     status = _normalize_status(str(history.get("status") or "missing"))
     if records and status == "missing":
         status = "available"
@@ -522,6 +527,7 @@ def _shared_strategy_history_section(config_path: Path, *, base: Path) -> dict[s
             "history": STRATEGY_EVALUATION_HISTORY_ARTIFACT,
             "record_count": len(records),
             "backtest_count": len(backtests),
+            "ignored_non_backtest_records": max(0, len(records) - len(backtest_records)),
             "max_items": MAX_STANDALONE_RUNS,
         },
         source_artifacts=[STRATEGY_EVALUATION_HISTORY_ARTIFACT],
@@ -529,6 +535,10 @@ def _shared_strategy_history_section(config_path: Path, *, base: Path) -> dict[s
         errors=_messages(history.get("errors")),
         extra={"backtests": backtests},
     )
+
+
+def _is_strategy_backtest_history_record(record: dict[str, Any]) -> bool:
+    return bool(record.get("strategy_name") and record.get("symbol") and record.get("timeframe"))
 
 
 def _shared_history_backtest(record: Any, *, base: Path) -> dict[str, Any]:

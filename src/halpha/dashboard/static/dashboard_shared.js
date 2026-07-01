@@ -43,6 +43,66 @@
         return new Intl.NumberFormat("en-US").format(number);
       }
 
+      const pnlColorSchemeDefaults = {
+        scheme: "green_profit_red_loss",
+      };
+
+      function normalizePnlColorScheme(value) {
+        return value === "red_profit_green_loss" ? "red_profit_green_loss" : "green_profit_red_loss";
+      }
+
+      function configurePnlColorScheme(value) {
+        pnlColorSchemeDefaults.scheme = normalizePnlColorScheme(value);
+      }
+
+      function pnlColors(value = pnlColorSchemeDefaults.scheme) {
+        const scheme = normalizePnlColorScheme(value);
+        if (scheme === "red_profit_green_loss") {
+          return {
+            scheme,
+            profit: "#c92a2a",
+            loss: "#087f5b",
+            profitSoft: "#fff1ef",
+            lossSoft: "#eef7f3",
+            up: "#c92a2a",
+            down: "#087f5b",
+          };
+        }
+        return {
+          scheme,
+          profit: "#087f5b",
+          loss: "#c92a2a",
+          profitSoft: "#eef7f3",
+          lossSoft: "#fff1ef",
+          up: "#087f5b",
+          down: "#c92a2a",
+        };
+      }
+
+      function pnlNumber(value) {
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? value : null;
+        }
+        const textValue = String(value ?? "").trim();
+        if (!textValue || textValue.toLowerCase() === "n/a") {
+          return null;
+        }
+        const match = textValue.replace(/,/g, "").match(/[-+]?\d*\.?\d+/);
+        if (!match) {
+          return null;
+        }
+        const number = Number(match[0]);
+        return Number.isFinite(number) ? number : null;
+      }
+
+      function pnlClass(value) {
+        const number = pnlNumber(value);
+        if (number === null || number === 0) {
+          return "pnl-neutral";
+        }
+        return number > 0 ? "pnl-positive" : "pnl-negative";
+      }
+
       const timestampFormatDefaults = {
         timeZone: "Asia/Shanghai",
         hourCycle: "24h",
@@ -182,11 +242,16 @@
 
       window.HalphaDashboardShared = {
         configureTimestampFormat,
+        configurePnlColorScheme,
         escapeHtml,
         text,
         statusClass,
         formatNumber,
         formatTimestamp,
+        normalizePnlColorScheme,
+        pnlClass,
+        pnlColors,
+        pnlNumber,
         joinPath,
         markdownToHtml,
         renderInline,
