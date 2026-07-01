@@ -97,7 +97,7 @@ DERIVATIVES_VIEW_DATA_CLASSES: Final[set[str]] = {
 }
 DERIVATIVES_CONTEXT_DATA_CLASSES: Final[set[str]] = set(DERIVATIVES_VIEW_DATA_CLASSES)
 
-SUPPORTED_MACRO_CALENDAR_SOURCES: Final[set[str]] = {"federal_reserve_fomc"}
+SUPPORTED_MACRO_CALENDAR_SOURCES: Final[set[str]] = {"bea_release_calendar", "federal_reserve_fomc"}
 SUPPORTED_MACRO_CALENDAR_REGIONS: Final[set[str]] = {"US"}
 MACRO_CALENDAR_DATA_CLASS_CAPABILITIES: Final[dict[str, PublicDataClassCapability]] = {
     "central_bank_event": PublicDataClassCapability(
@@ -105,6 +105,12 @@ MACRO_CALENDAR_DATA_CLASS_CAPABILITIES: Final[dict[str, PublicDataClassCapabilit
         collection_status="implemented",
         view_status="implemented",
         request_classes=("fomc_calendars",),
+    ),
+    "economic_release": PublicDataClassCapability(
+        data_class="economic_release",
+        collection_status="implemented",
+        view_status="implemented",
+        request_classes=("bea_release_dates_json",),
     ),
 }
 SUPPORTED_MACRO_CALENDAR_DATA_CLASSES: Final[set[str]] = set(MACRO_CALENDAR_DATA_CLASS_CAPABILITIES)

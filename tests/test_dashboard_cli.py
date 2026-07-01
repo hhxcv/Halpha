@@ -279,13 +279,15 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "refreshCurrentView" in script.text
     assert 'runStrategyAction("backtest"' in script.text
     assert 'runStrategyAction("experiment"' in script.text
-    assert 'runStrategyAction("optimize"' in script.text
+    assert 'runStrategyAction("optimize"' not in script.text
     assert "postStrategyAction(kind, params)" in script.text
     assert 'postJob("backtest"' not in script.text
     assert 'id="run-experiment-button"' in response.text
-    assert 'id="run-optimize-button"' in response.text
+    assert 'id="run-optimize-button"' not in response.text
+    assert "Strategy Lab validation" in response.text
+    assert "Run validation" in response.text
     assert 'id="strategy-parameter-controls"' in response.text
-    assert 'id="strategy-optimization-space"' in response.text
+    assert 'id="strategy-optimization-space"' not in response.text
     assert 'id="strategy-evaluation-window"' in response.text
     assert 'id="strategy-detail-params"' in response.text
     assert 'id="strategy-detail-rerun"' in response.text

@@ -56,11 +56,15 @@ def test_derivatives_liquidation_capability_records_public_limitation() -> None:
 
 def test_macro_calendar_capability_drives_raw_view_and_context_support() -> None:
     capability = macro_calendar_data_class_capability("central_bank_event")
+    economic_release = macro_calendar_data_class_capability("economic_release")
 
     assert capability is not None
     assert capability.collection_status == "implemented"
     assert capability.view_status == "implemented"
-    assert MACRO_CALENDAR_RAW_DATA_CLASSES == {"central_bank_event"}
+    assert economic_release is not None
+    assert economic_release.collection_status == "implemented"
+    assert economic_release.view_status == "implemented"
+    assert MACRO_CALENDAR_RAW_DATA_CLASSES == {"central_bank_event", "economic_release"}
     assert MACRO_CALENDAR_VIEW_DATA_CLASSES == MACRO_CALENDAR_VIEW_SUPPORTED
     assert MACRO_CALENDAR_CONTEXT_DATA_CLASSES == MACRO_CALENDAR_CONTEXT_SUPPORTED
     assert unsupported_macro_calendar_raw_collection_reason(

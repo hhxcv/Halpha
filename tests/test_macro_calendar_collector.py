@@ -281,6 +281,89 @@ def test_macro_calendar_uses_configured_public_proxy(monkeypatch) -> None:
     assert proxy_handlers == [{"http": "http://proxy.example:8080", "https": "http://proxy.example:8080"}]
 
 
+def test_macro_calendar_collects_bea_economic_release_dates(monkeypatch) -> None:
+    requested_urls: list[str] = []
+
+    def fake_urlopen(request, timeout):
+        requested_urls.append(request.full_url)
+        return _FakeResponse(_bea_release_dates_json())
+
+    monkeypatch.setattr("halpha.collectors.macro_calendar.urlopen", fake_urlopen)
+
+    raw = collect_macro_calendar_raw(
+        {
+            "sources": ["bea_release_calendar"],
+            "data_classes": ["economic_release"],
+            "regions": ["US"],
+            "lookback_days": 3,
+            "lookahead_days": 45,
+        },
+        affected_assets=["BTCUSDT"],
+        now=datetime(2026, 7, 1, tzinfo=timezone.utc),
+    )
+
+    assert requested_urls == ["https://apps.bea.gov/API/signup/release_dates.json"]
+    assert raw["source"]["name"] == "bea_release_calendar"
+    assert raw["errors"] == []
+    assert raw["availability"] == [
+        {
+            "source": "bea_release_calendar",
+            "data_class": "economic_release",
+            "status": "succeeded",
+            "record_count": 2,
+            "parsed_record_count": 3,
+            "error_count": 0,
+            "endpoint": "bea_release_dates_json",
+        }
+    ]
+    assert [(item["event_name"], item["scheduled_at"]) for item in raw["items"]] == [
+        ("Gross Domestic Product", "2026-07-30T12:30:00Z"),
+        ("Personal Income and Outlays", "2026-07-30T12:30:00Z"),
+    ]
+    assert {item["data_class"] for item in raw["items"]} == {"economic_release"}
+    assert {item["event_type"] for item in raw["items"]} == {"bea_release"}
+    assert {item["source"] for item in raw["items"]} == {"bea_release_calendar"}
+    assert {item["importance"] for item in raw["items"]} == {"high"}
+    assert {tuple(item["affected_assets"]) for item in raw["items"]} == {("BTCUSDT",)}
+    assert all(item["source_published_at"] == "2026-05-12T14:42:41Z" for item in raw["items"])
+
+
+def test_macro_calendar_collects_only_supported_data_classes_per_source(monkeypatch) -> None:
+    requested_urls: list[str] = []
+
+    def fake_urlopen(request, timeout):
+        requested_urls.append(request.full_url)
+        if "apps.bea.gov" in request.full_url:
+            return _FakeResponse(_bea_release_dates_json())
+        return _FakeResponse(_fomc_html())
+
+    monkeypatch.setattr("halpha.collectors.macro_calendar.urlopen", fake_urlopen)
+
+    raw = collect_macro_calendar_raw(
+        {
+            "sources": ["federal_reserve_fomc", "bea_release_calendar"],
+            "data_classes": ["central_bank_event", "economic_release"],
+            "regions": ["US"],
+            "lookback_days": 3,
+            "lookahead_days": 45,
+        },
+        now=datetime(2026, 7, 1, tzinfo=timezone.utc),
+    )
+
+    assert requested_urls == [
+        "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        "https://apps.bea.gov/API/signup/release_dates.json",
+    ]
+    assert raw["source"]["name"] == "multiple"
+    assert [(item["source"], item["data_class"]) for item in raw["availability"]] == [
+        ("federal_reserve_fomc", "central_bank_event"),
+        ("bea_release_calendar", "economic_release"),
+    ]
+    assert {item["status"] for item in raw["availability"]} == {"succeeded"}
+    assert {item["source"] for item in raw["items"]} == {"federal_reserve_fomc", "bea_release_calendar"}
+    assert {item["data_class"] for item in raw["items"]} == {"central_bank_event", "economic_release"}
+
+
 def test_macro_calendar_records_proxy_credentials_error_without_echoing_secret() -> None:
     raw = collect_macro_calendar_raw(
         {
@@ -355,6 +438,26 @@ def _fomc_html() -> bytes:
   <p>June</p><p>16-17*</p>
   <p>July</p><p>28-29</p>
 </body></html>
+"""
+
+
+def _bea_release_dates_json() -> bytes:
+    return b"""
+{
+  "file_last_updated": "2026-05-12T14:42:41.381600",
+  "Gross Domestic Product": {
+    "release_dates": [
+      "2026-06-25T12:30:00+00:00",
+      "2026-07-30T12:30:00+00:00",
+      "2026-07-30T12:30:00+00:00"
+    ]
+  },
+  "Personal Income and Outlays": {
+    "release_dates": [
+      "2026-07-30T12:30:00+00:00"
+    ]
+  }
+}
 """
 
 

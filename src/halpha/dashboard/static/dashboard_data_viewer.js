@@ -2629,6 +2629,7 @@
           const percent = jobProgressPercent(status);
           const logLines = dataViewerJobLogLines(job, refRows, logRows);
           const visibleLogLines = logLines.slice().reverse();
+          const latestLogLine = visibleLogLines[0] || "No log lines yet.";
           setHtml(selector, `
             <div class="operation-progress" data-expanded="${expanded ? "true" : "false"}">
               <div class="operation-progress-top">
@@ -2640,7 +2641,7 @@
               </div>
               <div class="operation-progress-track"><span class="${escapeHtml(statusClass(status))}" style="width:${percent}%;"></span></div>
               <div class="operation-log-header">
-                <span>${escapeHtml(visibleLogLines[0] || "No log lines yet.")}</span>
+                <span class="operation-log-latest" title="${escapeHtml(latestLogLine)}">${escapeHtml(latestLogLine)}</span>
                 <button class="ghost-button compact-button" type="button" data-data-viewer-job-log-toggle>${expanded ? "Collapse" : "Expand logs"}</button>
               </div>
               <pre class="operation-log ${expanded ? "expanded" : ""}">${escapeHtml(visibleLogLines.join("\n") || "No log lines yet.")}</pre>

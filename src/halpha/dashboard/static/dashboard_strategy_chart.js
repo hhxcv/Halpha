@@ -8,17 +8,6 @@
       const EQUITY_CHART_MAX_POINTS = 140;
       const EQUITY_CHART_MIN_VISIBLE_POINTS = 12;
 
-      function quoteAsset(symbol) {
-        const value = String(symbol || "").trim();
-        if (!value) return "n/a";
-        for (const suffix of ["USDT", "USDC", "USD", "BTC", "ETH"]) {
-          if (value.endsWith(suffix) && value.length > suffix.length) {
-            return suffix;
-          }
-        }
-        return value;
-      }
-
       function strategyWindowLabel(vis, displayTimezone = "Asia/Shanghai") {
         const bars = Array.isArray(vis.bars) ? vis.bars : [];
         const timeframe = vis.timeframe || "timeframe n/a";
@@ -228,6 +217,7 @@
           x: Number(pointX(worstPoint).toFixed(2)),
           y: Number(pointY(worstPoint.value).toFixed(2)),
         } : null;
+        const worstRange = drawdownWorstRange(worstPoint, view, sourcePoints, pointX, pad, plotHeight);
         const grid = renderDrawdownGrid({
           width,
           height,
@@ -244,13 +234,22 @@
           const hitWidth = Math.max(7, Math.min(22, plotWidth / Math.max(1, plotted.length)));
           return `<circle class="drawdown-chart-hit" cx="${point.x}" cy="${point.y}" r="${hitWidth / 2}" fill="transparent" data-drawdown-index="${point.index}" data-drawdown-x="${point.x}" data-drawdown-y="${point.y}"></circle>`;
         }).join("");
+        const rangeBand = renderDrawdownWorstRange(worstRange);
         const worstMarker = visibleWorst ? renderDrawdownWorstMarker(visibleWorst) : "";
         const visibleLabel = view.start > 0 || view.end < sourcePoints.length - 1
           ? `${view.start + 1}-${view.end + 1} / ${sourcePoints.length} points`
           : `${sourcePoints.length} points`;
         const crosshair = `<line class="drawdown-chart-crosshair" x1="0" x2="0" y1="${pad.top}" y2="${height - pad.bottom}" visibility="hidden"></line>`;
         svg.innerHTML = `
+          <defs>
+            <linearGradient id="drawdown-worst-gradient" class="drawdown-worst-gradient" x1="0%" x2="100%" y1="0%" y2="0%">
+              <stop offset="0%" stop-color="#ef4444" stop-opacity="0.04"></stop>
+              <stop offset="50%" stop-color="#ef4444" stop-opacity="0.18"></stop>
+              <stop offset="100%" stop-color="#ef4444" stop-opacity="0.04"></stop>
+            </linearGradient>
+          </defs>
           ${grid}
+          ${rangeBand}
           ${line}
           ${hitNodes}
           ${worstMarker}
@@ -258,6 +257,40 @@
           <text class="drawdown-chart-status" x="${pad.left}" y="${height - 10}" fill="#6F7682" font-size="12">${escapeHtml(visibleLabel)}</text>`;
         wireDrawdownTooltip(svg, sourcePoints, worstPoint, options.displayTimezone);
         wireDrawdownChartNavigation(svg, selector, curve, options, sourcePoints.length);
+      }
+
+      function drawdownWorstRange(worstPoint, view, sourcePoints, pointX, pad, plotHeight) {
+        if (!worstPoint || !Number.isFinite(worstPoint.peakIndex) || worstPoint.peakIndex >= worstPoint.index) {
+          return null;
+        }
+        if (worstPoint.index < view.start || worstPoint.peakIndex > view.end) {
+          return null;
+        }
+        const peakPoint = sourcePoints[worstPoint.peakIndex];
+        if (!peakPoint) return null;
+        const visibleStartIndex = Math.max(view.start, peakPoint.index);
+        const visibleEndIndex = Math.min(view.end, worstPoint.index);
+        if (visibleStartIndex >= visibleEndIndex) return null;
+        const startPoint = sourcePoints[visibleStartIndex];
+        const endPoint = sourcePoints[visibleEndIndex];
+        const x1 = Number(pointX(startPoint).toFixed(2));
+        const x2 = Number(pointX(endPoint).toFixed(2));
+        return {
+          x: Math.min(x1, x2),
+          y: pad.top,
+          width: Math.max(1, Math.abs(x2 - x1)),
+          height: plotHeight,
+          peakIndex: peakPoint.index,
+          troughIndex: worstPoint.index,
+          peakTime: peakPoint.time,
+          troughTime: worstPoint.time,
+        };
+      }
+
+      function renderDrawdownWorstRange(range) {
+        if (!range) return "";
+        return `
+          <rect class="drawdown-worst-range" x="${range.x}" y="${range.y}" width="${range.width}" height="${range.height}" rx="6" fill="url(#drawdown-worst-gradient)" data-peak-index="${range.peakIndex}" data-trough-index="${range.troughIndex}" data-peak-time="${escapeHtml(range.peakTime)}" data-trough-time="${escapeHtml(range.troughTime)}"></rect>`;
       }
 
       function resetEquityCurveView(selector) {
@@ -938,6 +971,57 @@
         const totalBars = geometry.sourceBars.length;
         svg.classList.toggle("is-draggable", totalBars > 1);
         if (totalBars <= 1) return;
+        const viewState = chartViews.get(selector);
+        const activePointers = viewState.activePointers || new Map();
+        viewState.activePointers = activePointers;
+        const zoomViewport = (nextVisible, ratio) => {
+          const view = chartViews.get(selector);
+          if (!view) return false;
+          const visible = view.end - view.start + 1;
+          const boundedVisible = Math.max(8, Math.min(totalBars, Math.round(nextVisible)));
+          if (boundedVisible === visible) return false;
+          const boundedRatio = Math.min(1, Math.max(0, ratio));
+          const center = view.start + Math.round((visible - 1) * boundedRatio);
+          const start = Math.round(center - (boundedVisible - 1) * boundedRatio);
+          setViewport(selector, start, start + boundedVisible - 1, totalBars);
+          return true;
+        };
+        const schedulePinchRender = () => {
+          const view = chartViews.get(selector);
+          if (!view?.pinch || view.pinch.renderFrame) return;
+          view.pinch.renderFrame = requestAnimationFrame(() => {
+            if (view.pinch) view.pinch.renderFrame = 0;
+            renderCandlestickSvg(selector, vis, options);
+          });
+        };
+        const activePointerList = () => Array.from(activePointers.values());
+        const pinchDistance = () => {
+          const points = activePointerList();
+          if (points.length < 2) return 0;
+          return Math.hypot(points[0].clientX - points[1].clientX, points[0].clientY - points[1].clientY);
+        };
+        const pinchRatio = () => {
+          const points = activePointerList();
+          if (points.length < 2) return 0.5;
+          const rect = svg.getBoundingClientRect();
+          const centerX = (points[0].clientX + points[1].clientX) / 2;
+          return (centerX - rect.left) / Math.max(1, rect.width);
+        };
+        const startPinch = () => {
+          const view = chartViews.get(selector);
+          if (!view) return;
+          if (view.drag?.renderFrame) {
+            cancelAnimationFrame(view.drag.renderFrame);
+          }
+          view.drag = null;
+          view.pinch = {
+            distance: Math.max(1, pinchDistance()),
+            visible: view.end - view.start + 1,
+            renderFrame: 0,
+          };
+          svg.classList.remove("dragging");
+          svg.classList.add("pinching");
+        };
         svg.onwheel = (event) => {
           event.preventDefault();
           const view = chartViews.get(selector);
@@ -948,17 +1032,19 @@
           const nextVisible = event.deltaY < 0
             ? Math.max(8, Math.round(visible * 0.74))
             : Math.min(totalBars, Math.round(visible * 1.36));
-          if (nextVisible === visible) return;
-          const center = view.start + Math.round((visible - 1) * ratio);
-          const start = Math.round(center - (nextVisible - 1) * ratio);
-          setViewport(selector, start, start + nextVisible - 1, totalBars);
-          renderCandlestickSvg(selector, vis, options);
+          if (zoomViewport(nextVisible, ratio)) renderCandlestickSvg(selector, vis, options);
         };
         svg.ondblclick = () => {
           resetCandlestickView(selector);
           renderCandlestickSvg(selector, vis, options);
         };
         svg.onpointerdown = (event) => {
+          activePointers.set(event.pointerId, {clientX: event.clientX, clientY: event.clientY});
+          svg.setPointerCapture?.(event.pointerId);
+          if (activePointers.size >= 2) {
+            startPinch();
+            return;
+          }
           if (event.button !== 0) return;
           const view = chartViews.get(selector);
           if (!view) return;
@@ -970,9 +1056,22 @@
             renderFrame: 0,
           };
           svg.classList.add("dragging");
-          svg.setPointerCapture?.(event.pointerId);
         };
         svg.onpointermove = (event) => {
+          if (activePointers.has(event.pointerId)) {
+            activePointers.set(event.pointerId, {clientX: event.clientX, clientY: event.clientY});
+          }
+          const currentView = chartViews.get(selector);
+          if (activePointers.size >= 2 && currentView?.pinch) {
+            event.preventDefault();
+            const distance = Math.max(1, pinchDistance());
+            const scale = distance / Math.max(1, currentView.pinch.distance);
+            const nextVisible = currentView.pinch.visible / Math.max(0.1, scale);
+            if (zoomViewport(nextVisible, pinchRatio())) {
+              schedulePinchRender();
+            }
+            return;
+          }
           const view = chartViews.get(selector);
           const drag = view?.drag;
           if (!drag) return;
@@ -991,6 +1090,17 @@
           }
         };
         svg.onpointerup = (event) => {
+          activePointers.delete(event.pointerId);
+          const currentView = chartViews.get(selector);
+          if (currentView?.pinch && activePointers.size < 2) {
+            if (currentView.pinch.renderFrame) {
+              cancelAnimationFrame(currentView.pinch.renderFrame);
+            }
+            currentView.pinch = null;
+            svg.classList.remove("pinching");
+            renderCandlestickSvg(selector, vis, options);
+            return;
+          }
           const view = chartViews.get(selector);
           const drag = view?.drag;
           if (!drag) return;
@@ -1006,13 +1116,19 @@
           svg.classList.remove("dragging");
           renderCandlestickSvg(selector, vis, options);
         };
-        svg.onpointercancel = () => {
+        svg.onpointercancel = (event) => {
+          activePointers.delete(event.pointerId);
           const view = chartViews.get(selector);
+          if (view?.pinch?.renderFrame) {
+            cancelAnimationFrame(view.pinch.renderFrame);
+          }
+          if (view) view.pinch = null;
           if (view?.drag?.renderFrame) {
             cancelAnimationFrame(view.drag.renderFrame);
           }
           if (view) view.drag = null;
           svg.classList.remove("dragging");
+          svg.classList.remove("pinching");
         };
       }
 
@@ -1060,7 +1176,6 @@
         EQUITY_CHART_MAX_POINTS,
         aggregateEquityPoints,
         aggregateDrawdownPoints,
-        quoteAsset,
         renderDrawdownCurveSvg,
         renderEquityCurveSvg,
         resetCandlestickView,

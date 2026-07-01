@@ -114,6 +114,7 @@
       reportDetailsDrawerOpen: false,
       reportJob: null,
       generatedReportRunId: null,
+      reportInspectorTab: "reports",
       reportSearchTerm: "",
       stores: [],
       deletionPlan: null,
@@ -122,7 +123,7 @@
       strategyBacktestDetailOpen: false,
       strategyDataVisualization: null,
       strategyOperationTab: "backtest",
-      strategyWindow: "30",
+      strategyWindow: "90",
       strategyFocusedMarkerTime: "",
       strategyChartPreviewTimer: null,
       strategyChartPreviewRequest: 0,
@@ -131,8 +132,14 @@
       strategyCollectTimelineRequest: 0,
       strategyBacktestLogs: [],
       strategyExperimentLogs: [],
-      strategyOptimizeLogs: [],
       strategyCollectLogs: [],
+      strategyExperimentFilters: {family: "all", symbol: "all", timeframe: "all"},
+      strategyExperimentSelection: [],
+      strategyExperimentSelectionInitialized: false,
+      strategyRunFilters: {query: "", strategy: "all", timeframe: "all", start: "", end: ""},
+      strategyRunSort: "time_desc",
+      strategyRunPageSize: 25,
+      strategyRunVisibleCount: 25,
       strategyBacktestDialogOpen: false,
       strategyParamsDrawerOpen: false,
       live: null,
@@ -791,6 +798,52 @@
       });
     }
 
+    function wireStrategyDetailHeaderDrag() {
+      const scroller = document.querySelector(".strategy-detail-heading");
+      if (!scroller) return;
+      let isDragging = false;
+      let didDrag = false;
+      let startX = 0;
+      let startScrollLeft = 0;
+      scroller.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 || scroller.scrollWidth <= scroller.clientWidth + 2) {
+          return;
+        }
+        isDragging = true;
+        didDrag = false;
+        startX = event.clientX;
+        startScrollLeft = scroller.scrollLeft;
+      });
+      scroller.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const delta = event.clientX - startX;
+        if (!didDrag && Math.abs(delta) > 3) {
+          didDrag = true;
+          scroller.classList.add("is-dragging");
+          scroller.setPointerCapture?.(event.pointerId);
+        }
+        if (!didDrag) return;
+        event.preventDefault();
+        scroller.scrollLeft = startScrollLeft - delta;
+      });
+      const endDrag = (event) => {
+        if (!isDragging) return;
+        isDragging = false;
+        scroller.classList.remove("is-dragging");
+        if (didDrag) {
+          scroller.releasePointerCapture?.(event.pointerId);
+        }
+      };
+      scroller.addEventListener("pointerup", endDrag);
+      scroller.addEventListener("pointercancel", endDrag);
+      scroller.addEventListener("click", (event) => {
+        if (!didDrag) return;
+        didDrag = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+    }
+
     async function refreshCurrentView(options = {}) {
       return refreshView(state.view, options);
     }
@@ -875,10 +928,8 @@
       setHtml("#strategy-parameter-controls", skeletonCards(3, "strategy-param-card"));
       setHtml("#strategy-params-drawer-body", skeletonRows(5));
       setHtml("#strategy-operation-tree", skeletonList(3));
-      setHtml("#backtest-runs", skeletonList(3));
       setHtml("#strategy-tab-content", skeletonMessage(4));
       setHtml("#strategy-experiment-results", skeletonMessage(3));
-      setHtml("#strategy-optimize-results", skeletonMessage(3));
     }
 
     function renderLiveLoading() {
@@ -1239,6 +1290,21 @@
         }).join("")}</div>`
         : `<div class="message">No reports matched the current search.</div>`;
       document.querySelectorAll("[data-report-run-id]").forEach((button) => button.addEventListener("click", () => selectReport(button.dataset.reportRunId)));
+    }
+
+    function selectReportInspectorTab(tab) {
+      const nextTab = ["reports", "outline", "sources"].includes(tab) ? tab : "reports";
+      state.reportInspectorTab = nextTab;
+      document.querySelectorAll("[data-report-inspector-tab]").forEach((button) => {
+        const active = button.dataset.reportInspectorTab === nextTab;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      document.querySelectorAll("[data-report-inspector-panel]").forEach((panel) => {
+        const active = panel.dataset.reportInspectorPanel === nextTab;
+        panel.classList.toggle("active", active);
+        panel.hidden = !active;
+      });
     }
 
     async function selectReport(runId) {
@@ -2043,27 +2109,6 @@
       }
     }
 
-    function syncOptimizeProfileControls(force = false) {
-      const profile = selectedStrategyProfile("#strategy-optimize-profile");
-      if (!profile) {
-        renderProfileSummary("#strategy-optimize-profile-summary", null);
-        renderStrategyOptimizationSpace();
-        return;
-      }
-      const spec = strategySpecByName(profile.strategy_name);
-      if (spec?.family) {
-        setSelectIfPresent("#strategy-optimize-family", spec.family);
-        fillSelect("#strategy-optimize-name", strategiesForFamily(spec.family).map((itemSpec) => itemSpec.name));
-      }
-      setSelectIfPresent("#strategy-optimize-name", profile.strategy_name);
-      setSelectIfPresent("#strategy-optimize-symbol", profile.symbol);
-      setSelectIfPresent("#strategy-optimize-timeframe", profile.timeframe);
-      setInputValue("#strategy-optimize-source", profile.source || defaultStrategySource(), true);
-      renderProfileSummary("#strategy-optimize-profile-summary", profile);
-      renderStrategyOptimizationSpace();
-      if (force) renderStrategyOptimizeResults();
-    }
-
     function renderStrategyControls() {
       const options = state.strategies?.commands?.options || {};
       const sources = options.sources || ["binance"];
@@ -2079,31 +2124,27 @@
       setInputValue("#strategy-source", defaultStrategySource(), true);
       setInputValue("#strategy-evaluation-window", strategyActionScopeLabel("backtest"), true);
       setText("#strategy-experiment-window", strategyActionScopeLabel("experiment"));
-      setText("#strategy-optimize-window", strategyActionScopeLabel("optimize"));
       fillSelect("#strategy-profile", profileIds, profileLabels);
-      fillSelect("#strategy-optimize-profile", profileIds, profileLabels);
       fillSelect("#strategy-market-type", marketTypes);
       fillSelect("#strategy-symbol", symbols);
       fillSelect("#strategy-timeframe", timeframes);
       fillSelect("#strategy-family", ["all", ...families], {"all": "All families"});
       fillSelect("#strategy-name", strategiesForFamily(document.querySelector("#strategy-family")?.value || "all").map((spec) => spec.name));
-      setInputValue("#strategy-optimize-source", defaultStrategySource(), true);
-      fillSelect("#strategy-optimize-symbol", symbols);
-      fillSelect("#strategy-optimize-timeframe", timeframes);
-      fillSelect("#strategy-optimize-family", ["all", ...families], {"all": "All families"});
-      fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
+      fillSelect("#strategy-experiment-family", ["all", ...families], {"all": "All families"});
+      fillSelect("#strategy-experiment-symbol", ["all", ...symbols], {"all": "All symbols"});
+      fillSelect("#strategy-experiment-timeframe", ["all", ...timeframes], {"all": "All timeframes"});
+      setSelectIfPresent("#strategy-experiment-family", state.strategyExperimentFilters.family || "all");
+      setSelectIfPresent("#strategy-experiment-symbol", state.strategyExperimentFilters.symbol || "all");
+      setSelectIfPresent("#strategy-experiment-timeframe", state.strategyExperimentFilters.timeframe || "all");
       fillSelect("#strategy-chart-symbol", symbols);
       fillSelect("#strategy-chart-timeframe", timeframes);
       syncBacktestProfileControls(false);
-      syncOptimizeProfileControls(false);
       renderStrategySpecControls();
       renderStrategyExperimentStrategies();
-      renderStrategyOptimizationSpace();
       syncStrategyOperationTabs();
       syncStrategyDataInputs(false);
       syncStrategyRangePresets(false);
       document.querySelector("#strategy-profile").onchange = () => syncBacktestProfileControls(true);
-      document.querySelector("#strategy-optimize-profile").onchange = () => syncOptimizeProfileControls(true);
       ["#strategy-symbol", "#strategy-timeframe", "#strategy-name", "#strategy-family", "#strategy-market-type"].forEach((selector) => {
         document.querySelector(selector).onchange = () => {
           state.selectedStrategyOutput = null;
@@ -2115,29 +2156,39 @@
           renderStrategies();
         };
       });
-      document.querySelector("#strategy-optimize-family").onchange = () => {
-        fillSelect("#strategy-optimize-name", strategiesForFamily(document.querySelector("#strategy-optimize-family")?.value || "all").map((spec) => spec.name));
-        renderStrategyOptimizationSpace();
-      };
-      document.querySelector("#strategy-optimize-name").onchange = renderStrategyOptimizationSpace;
-      ["#strategy-optimize-symbol", "#strategy-optimize-timeframe"].forEach((selector) => {
-        document.querySelector(selector).onchange = renderStrategyOptimizationSpace;
+      ["#strategy-experiment-family", "#strategy-experiment-symbol", "#strategy-experiment-timeframe"].forEach((selector) => {
+        document.querySelector(selector).onchange = () => {
+          state.strategyExperimentFilters = {
+            family: document.querySelector("#strategy-experiment-family")?.value || "all",
+            symbol: document.querySelector("#strategy-experiment-symbol")?.value || "all",
+            timeframe: document.querySelector("#strategy-experiment-timeframe")?.value || "all",
+          };
+          renderStrategyExperimentStrategies();
+        };
       });
+      document.querySelector("#strategy-experiment-select-all").onclick = () => {
+        const names = filteredExperimentChoices(experimentChoices()).map((choice) => choice.name);
+        state.strategyExperimentSelection = unique([...state.strategyExperimentSelection, ...names]);
+        state.strategyExperimentSelectionInitialized = true;
+        renderStrategyExperimentStrategies();
+      };
+      document.querySelector("#strategy-experiment-clear").onclick = () => {
+        const visible = new Set(filteredExperimentChoices(experimentChoices()).map((choice) => choice.name));
+        state.strategyExperimentSelection = state.strategyExperimentSelection.filter((name) => !visible.has(name));
+        state.strategyExperimentSelectionInitialized = true;
+        renderStrategyExperimentStrategies();
+      };
       queueStrategyChartRefresh();
     }
 
     function syncStrategyDataInputs(force = false) {
       const profile = selectedStrategyProfile("#strategy-profile");
-      const optimizeProfile = selectedStrategyProfile("#strategy-optimize-profile");
       const symbol = document.querySelector("#strategy-symbol")?.value || profile?.symbol || "";
       const timeframe = document.querySelector("#strategy-timeframe")?.value || profile?.timeframe || "";
       const source = profile?.source || defaultStrategySource();
       setInputValue("#strategy-chart-source", source, false);
       setInputValue("#strategy-chart-symbol", symbol, force);
       setInputValue("#strategy-chart-timeframe", timeframe, force);
-      setInputValue("#strategy-optimize-source", optimizeProfile?.source || source, false);
-      setInputValue("#strategy-optimize-symbol", optimizeProfile?.symbol || symbol, force);
-      setInputValue("#strategy-optimize-timeframe", optimizeProfile?.timeframe || timeframe, force);
       setInputValue("#strategy-collect-source", source, false);
     }
 
@@ -2194,10 +2245,6 @@
       return strategySpecByName(document.querySelector("#strategy-name")?.value || "");
     }
 
-    function selectedOptimizeSpec() {
-      return strategySpecByName(document.querySelector("#strategy-optimize-name")?.value || "");
-    }
-
     function renderStrategySpecControls() {
       const spec = selectedStrategySpec();
       const summary = document.querySelector("#strategy-spec-summary");
@@ -2236,66 +2283,125 @@
     function renderStrategyExperimentStrategies() {
       const panel = document.querySelector("#strategy-experiment-strategies");
       if (!panel) return;
-      const profiles = strategyProfiles();
-      if (!profiles.length) {
+      const choices = experimentChoices();
+      ensureExperimentSelection(choices);
+      const visibleChoices = filteredExperimentChoices(choices);
+      const selectedSet = new Set(state.strategyExperimentSelection);
+      if (!choices.length) {
         panel.innerHTML = `<div class="message">No configured strategy profiles are available for the benchmark suite.</div>`;
         return;
       }
+      if (!visibleChoices.length) {
+        panel.innerHTML = `
+          <div class="strategy-lab-selection-summary">
+            ${metricCell("Configured", choices.length, "strategies")}
+            ${metricCell("Selected", state.strategyExperimentSelection.length, "for next validation")}
+            ${metricCell("Visible", 0, "after filters")}
+          </div>
+          <div class="message">No strategy candidates match the current filters.</div>`;
+        return;
+      }
       panel.innerHTML = `
-        <div class="strategy-candidate-grid">
-          ${profiles.slice(0, 16).map((profile) => {
-        const params = Object.entries(profile.params || {}).slice(0, 3).map(([name, value]) => `${name}: ${value}`).join(" / ");
-        return `<article class="strategy-candidate-card">
-            <div class="strategy-profile-card-top">
-              <strong>${escapeHtml(profile.display_name || profile.strategy_name || "Strategy")}</strong>
-              <span class="chip">${escapeHtml(label(profile.family || "family n/a"))}</span>
-            </div>
-            <p>${escapeHtml([profile.source || "source n/a", profile.symbol || "symbol n/a", profile.timeframe || "timeframe n/a"].join(" / "))}</p>
-            ${params ? `<p class="strategy-profile-params">${escapeHtml(params)}</p>` : ""}
-          </article>`;
+        <div class="strategy-lab-selection-summary">
+          ${metricCell("Configured", choices.length, "strategies")}
+          ${metricCell("Selected", state.strategyExperimentSelection.length, "for next validation")}
+          ${metricCell("Visible", visibleChoices.length, "after filters")}
+        </div>
+        <div class="strategy-choice-list strategy-lab-choice-list">
+          ${visibleChoices.map((choice) => {
+        const checked = selectedSet.has(choice.name);
+        return `
+          <label class="strategy-choice-card strategy-lab-choice ${checked ? "selected" : ""}">
+            <input type="checkbox" data-strategy-experiment-name="${escapeHtml(choice.name)}" ${checked ? "checked" : ""}>
+            <span>
+              <span class="strategy-profile-card-top">
+                <strong>${escapeHtml(choice.displayName || choice.name)}</strong>
+                <span class="chip">${escapeHtml(label(choice.family || "family n/a"))}</span>
+              </span>
+              <p>${escapeHtml(experimentTargetSummary(choice))}</p>
+              ${choice.paramsSummary ? `<p class="strategy-profile-params">${escapeHtml(choice.paramsSummary)}</p>` : ""}
+              <small>${escapeHtml(`${choice.targets.length} configured target${choice.targets.length === 1 ? "" : "s"}`)}</small>
+            </span>
+          </label>`;
       }).join("")}
         </div>`;
+      panel.querySelectorAll("[data-strategy-experiment-name]").forEach((input) => {
+        input.onchange = () => {
+          const name = input.dataset.strategyExperimentName;
+          state.strategyExperimentSelectionInitialized = true;
+          if (input.checked && name && !state.strategyExperimentSelection.includes(name)) {
+            state.strategyExperimentSelection = unique([...state.strategyExperimentSelection, name]);
+          }
+          if (!input.checked) {
+            state.strategyExperimentSelection = state.strategyExperimentSelection.filter((item) => item !== name);
+          }
+          renderStrategyExperimentStrategies();
+        };
+      });
     }
 
-    function renderStrategyOptimizationSpace() {
-      const panel = document.querySelector("#strategy-optimization-space");
-      if (!panel) return;
-      const spec = selectedOptimizeSpec();
-      if (!spec) {
-        panel.innerHTML = `<div class="message">Select a strategy profile to inspect its configured optimization grid.</div>`;
+    function experimentChoices() {
+      const byName = new Map();
+      strategyProfiles().forEach((profile) => {
+        const name = profile.strategy_name || profile.display_name || "";
+        if (!name) return;
+        const spec = strategySpecByName(name);
+        const current = byName.get(name) || {
+          name,
+          displayName: profile.display_name || name,
+          family: profile.family || spec?.family || "",
+          targets: [],
+          paramsSummary: "",
+        };
+        current.targets.push(profile);
+        current.family = current.family || profile.family || spec?.family || "";
+        if (!current.paramsSummary) {
+          current.paramsSummary = experimentParamSummary(profile.params || spec?.configured_params || spec?.default_params || {});
+        }
+        byName.set(name, current);
+      });
+      return Array.from(byName.values()).sort((left, right) => left.name.localeCompare(right.name));
+    }
+
+    function filteredExperimentChoices(choices) {
+      const filters = state.strategyExperimentFilters || {};
+      return choices.filter((choice) => {
+        const targets = choice.targets || [];
+        const family = filters.family || "all";
+        const symbol = filters.symbol || "all";
+        const timeframe = filters.timeframe || "all";
+        return (family === "all" || choice.family === family)
+          && (symbol === "all" || targets.some((profile) => profile.symbol === symbol))
+          && (timeframe === "all" || targets.some((profile) => profile.timeframe === timeframe));
+      });
+    }
+
+    function ensureExperimentSelection(choices) {
+      const names = choices.map((choice) => choice.name);
+      if (!state.strategyExperimentSelectionInitialized) {
+        state.strategyExperimentSelection = names;
+        state.strategyExperimentSelectionInitialized = true;
         return;
       }
-      const space = spec.optimization_space || {};
-      if (!Object.keys(space).length) {
-        panel.innerHTML = `<div class="message">This strategy does not expose an optimization grid.</div>`;
-        return;
-      }
-      const target = {
-        source: document.querySelector("#strategy-optimize-source")?.value || "",
-        symbol: document.querySelector("#strategy-optimize-symbol")?.value || "",
-        timeframe: document.querySelector("#strategy-optimize-timeframe")?.value || "",
-      };
-      const targetedProfiles = Array.isArray(spec.targeted_params) ? spec.targeted_params : [];
-      const matchedProfile = targetedProfiles.find((profile) => String(profile.source || "") === target.source
-        && String(profile.symbol || "") === target.symbol
-        && String(profile.timeframe || "") === target.timeframe);
-      const profileRows = Object.entries(matchedProfile?.params || {}).map(([name, value]) => [name, value]);
-      panel.innerHTML = `
-        <div class="strategy-space-card">
-          <label>Target parameter profile</label>
-          <p>${escapeHtml(target.source || "source")} ${escapeHtml(target.symbol || "symbol")} ${escapeHtml(target.timeframe || "timeframe")}</p>
-          ${profileRows.length ? table(["Parameter", "Current target value"], profileRows) : `<p>No targeted params configured for this exact target; optimization starts from base params.</p>`}
-        </div>
-        ${Object.entries(space).map(([name, config]) => {
-        const values = Array.isArray(config.values) ? config.values.join(", ") : "";
-        const schema = spec.parameter_schema?.[name] || {};
-        return `
-          <div class="strategy-space-card">
-            <label for="strategy-grid-${escapeHtml(name)}">${escapeHtml(name)}</label>
-            <input id="strategy-grid-${escapeHtml(name)}" class="text-input" type="text" value="${escapeHtml(values)}" data-strategy-grid-param="${escapeHtml(name)}" readonly>
-            <p>${escapeHtml(schema.description || "Configured grid values.")}</p>
-          </div>`;
-      }).join("")}`;
+      state.strategyExperimentSelection = state.strategyExperimentSelection.filter((name) => names.includes(name));
+    }
+
+    function experimentTargetSummary(choice) {
+      const targets = unique((choice.targets || []).map((profile) => [
+        profile.source || "source n/a",
+        profile.symbol || "symbol n/a",
+        profile.timeframe || "timeframe n/a",
+      ].join(" / ")));
+      if (!targets.length) return "No configured targets recorded.";
+      if (targets.length <= 3) return targets.join(" | ");
+      return `${targets.slice(0, 3).join(" | ")} | +${targets.length - 3} more`;
+    }
+
+    function experimentParamSummary(params) {
+      return Object.entries(params || {})
+        .slice(0, 4)
+        .map(([name, value]) => `${name}: ${value}`)
+        .join(" / ");
     }
 
     function ensureStrategyCollectTargets(symbols, timeframes) {
@@ -2723,13 +2829,11 @@
         renderBacktestDetail(selected);
       }
       renderStrategyExperimentResults();
-      renderStrategyOptimizeResults();
     }
 
     function renderBacktestDetail(selected) {
       renderStrategyDetailHeader(selected);
       const vis = visibleStrategyVisualization(selected);
-      setText("#strategy-quote-label", strategyChart.quoteAsset(vis.symbol));
       setText("#strategy-window-label", strategyChart.strategyWindowLabel(
         vis,
         displayTimezone,
@@ -2766,8 +2870,22 @@
       title.textContent = identity.name || "Strategy backtest";
     }
 
+    function closeStrategyDetailActionMenu() {
+      document.querySelector(".strategy-detail-action-shell")?.classList.remove("open");
+      document.querySelector("#strategy-detail-action-menu")?.setAttribute("aria-expanded", "false");
+    }
+
+    function toggleStrategyDetailActionMenu() {
+      const shell = document.querySelector(".strategy-detail-action-shell");
+      const button = document.querySelector("#strategy-detail-action-menu");
+      if (!shell || !button) return;
+      const isOpen = !shell.classList.contains("open");
+      shell.classList.toggle("open", isOpen);
+      button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
     function setStrategyOperationTab(tab) {
-      state.strategyOperationTab = ["backtest", "experiment", "optimize"].includes(tab) ? tab : "backtest";
+      state.strategyOperationTab = ["backtest", "experiment"].includes(tab) ? tab : "backtest";
       if (state.strategyOperationTab !== "backtest") state.strategyBacktestDetailOpen = false;
       syncStrategyOperationTabs();
       renderStrategies();
@@ -3072,10 +3190,8 @@
     }
 
     function syncStrategyWindowControls() {
-      document.querySelectorAll("[data-strategy-window]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.strategyWindow === state.strategyWindow);
-        button.setAttribute("aria-pressed", button.dataset.strategyWindow === state.strategyWindow ? "true" : "false");
-      });
+      const range = document.querySelector("#strategy-chart-range");
+      if (range) range.value = state.strategyWindow;
     }
 
     function strategyName(item) {
@@ -3251,19 +3367,6 @@
 
     function renderBacktestRuns(outputs) {
       const indexedRuns = outputs.map((item, index) => ({item, index, identity: strategyIdentity(item)}));
-      const visibleRuns = indexedRuns.slice(0, 8);
-      const clearButton = `<button class="report-row ${state.selectedStrategyOutput ? "" : "active"}" type="button" data-backtest-clear="true">
-          <span class="report-row-title">OHLCV only</span>
-          <span class="report-row-meta">No backtest overlay</span>
-        </button>`;
-      const side = document.querySelector("#backtest-runs");
-      if (side) {
-        side.innerHTML = clearButton + (visibleRuns.map((run) => `
-        <button class="report-row ${run.item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${run.index}">
-          <span class="report-row-title">${escapeHtml(strategyName(run.item))}</span>
-          <span class="report-row-meta">${escapeHtml(backtestRunMeta(run.item))}</span>
-        </button>`).join("") || `<div class="message">No backtest runs recorded.</div>`);
-      }
       const board = document.querySelector("#strategy-backtest-board");
       if (board) {
         if (!indexedRuns.length) {
@@ -3273,14 +3376,18 @@
               <span>Run a configured strategy profile to create an inspectable evaluation record with a strategy, symbol, and timeframe.</span>
             </div>`;
         } else {
+          const filteredRuns = sortedBacktestRuns(filteredBacktestRuns(indexedRuns));
+          const pageSize = strategyRunPageSize();
+          state.strategyRunVisibleCount = Math.max(pageSize, Number(state.strategyRunVisibleCount) || pageSize);
+          const visibleRuns = filteredRuns.slice(0, state.strategyRunVisibleCount);
           const groups = new Map();
-          indexedRuns.forEach((run) => {
+          visibleRuns.forEach((run) => {
             const key = run.identity.symbol;
             if (!key) return;
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(run);
           });
-          board.innerHTML = Array.from(groups.entries()).map(([symbol, runs]) => `
+          const groupMarkup = Array.from(groups.entries()).map(([symbol, runs]) => `
             <section class="strategy-run-group">
               <div class="strategy-run-group-header">
                 <div>
@@ -3301,19 +3408,15 @@
                 </div>
                 ${runs.map((run) => renderBacktestRunRow(run)).join("")}
               </div>
-            </section>`).join("");
+          </section>`).join("");
+          const remaining = Math.max(0, filteredRuns.length - visibleRuns.length);
+          board.innerHTML = `
+            ${renderBacktestRunControls(indexedRuns, filteredRuns.length, visibleRuns.length)}
+            ${groupMarkup || `<div class="empty-state"><strong>No matching backtest runs.</strong><span>Adjust filters or date range to review stored evaluations.</span></div>`}
+            ${remaining ? `<div class="strategy-run-load-row"><button class="secondary-button" type="button" id="strategy-run-load-more">Load ${escapeHtml(Math.min(pageSize, remaining))} more</button><span>${escapeHtml(`${remaining} remaining`)}</span></div>` : ""}`;
         }
       }
-      document.querySelectorAll("[data-backtest-clear]").forEach((button) => button.addEventListener("click", () => {
-        state.selectedStrategyOutput = null;
-        state.strategyBacktestDetailOpen = false;
-        setSelectIfPresent("#strategy-name", "");
-        strategyChart.resetCandlestickView("#backtest-chart");
-        strategyChart.resetEquityCurveView("#strategy-equity-chart");
-        strategyChart.resetDrawdownCurveView("#strategy-drawdown-chart");
-        queueStrategyChartRefresh({clearBacktest: true});
-        renderStrategies();
-      }));
+      wireBacktestRunControls(outputs);
       document.querySelectorAll("[data-backtest-index]").forEach((button) => {
         button.addEventListener("click", () => {
           selectBacktestRun(outputs, Number(button.dataset.backtestIndex));
@@ -3321,10 +3424,223 @@
       });
     }
 
+    function renderBacktestRunControls(runs, filteredCount, visibleCount) {
+      const filters = strategyRunFilters();
+      const strategies = uniqueSorted(runs.map((run) => run.identity.name).filter(Boolean));
+      const timeframes = uniqueSorted(runs.map((run) => run.identity.timeframe).filter(Boolean));
+      const summary = `${visibleCount} shown / ${filteredCount} matching / ${runs.length} total`;
+      return `
+        <section class="strategy-run-toolbar" aria-label="Backtest run filters">
+          <div class="field strategy-run-search-field">
+            <label for="strategy-run-search">Search</label>
+            <input id="strategy-run-search" class="text-input" type="search" value="${escapeHtml(filters.query)}" placeholder="Strategy, symbol, timeframe">
+          </div>
+          <div class="field">
+            <label for="strategy-run-strategy-filter">Strategy</label>
+            <select id="strategy-run-strategy-filter" data-strategy-run-filter="strategy">
+              <option value="all">All strategies</option>
+              ${strategies.map((name) => `<option value="${escapeHtml(name)}" ${filters.strategy === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label for="strategy-run-timeframe-filter">Timeframe</label>
+            <select id="strategy-run-timeframe-filter" data-strategy-run-filter="timeframe">
+              <option value="all">All timeframes</option>
+              ${timeframes.map((timeframe) => `<option value="${escapeHtml(timeframe)}" ${filters.timeframe === timeframe ? "selected" : ""}>${escapeHtml(timeframe)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label for="strategy-run-date-from">From</label>
+            <input id="strategy-run-date-from" class="text-input" type="date" value="${escapeHtml(filters.start)}" data-strategy-run-filter="start">
+          </div>
+          <div class="field">
+            <label for="strategy-run-date-to">To</label>
+            <input id="strategy-run-date-to" class="text-input" type="date" value="${escapeHtml(filters.end)}" data-strategy-run-filter="end">
+          </div>
+          <div class="field">
+            <label for="strategy-run-sort">Sort</label>
+            <select id="strategy-run-sort">
+              ${strategyRunSortOptions().map((option) => `<option value="${escapeHtml(option.value)}" ${state.strategyRunSort === option.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="field">
+            <label for="strategy-run-page-size">Rows</label>
+            <select id="strategy-run-page-size">
+              ${[10, 25, 50, 100].map((size) => `<option value="${size}" ${strategyRunPageSize() === size ? "selected" : ""}>${size}</option>`).join("")}
+            </select>
+          </div>
+          <button class="secondary-button" type="button" id="strategy-run-clear-filters">Clear</button>
+          <span class="strategy-run-toolbar-summary">${escapeHtml(summary)}</span>
+        </section>`;
+    }
+
+    function wireBacktestRunControls(outputs) {
+      const search = document.querySelector("#strategy-run-search");
+      if (search) {
+        search.addEventListener("input", () => {
+          const selectionStart = search.selectionStart;
+          state.strategyRunFilters = {...strategyRunFilters(), query: search.value};
+          state.strategyRunVisibleCount = strategyRunPageSize();
+          renderBacktestRuns(outputs);
+          const replacement = document.querySelector("#strategy-run-search");
+          if (replacement) {
+            replacement.focus({preventScroll: true});
+            const caret = Math.min(selectionStart ?? replacement.value.length, replacement.value.length);
+            replacement.setSelectionRange(caret, caret);
+          }
+        });
+      }
+      document.querySelectorAll("[data-strategy-run-filter]").forEach((control) => {
+        control.addEventListener("change", () => {
+          const key = control.dataset.strategyRunFilter;
+          state.strategyRunFilters = {...strategyRunFilters(), [key]: control.value};
+          state.strategyRunVisibleCount = strategyRunPageSize();
+          renderBacktestRuns(outputs);
+        });
+      });
+      document.querySelector("#strategy-run-sort")?.addEventListener("change", (event) => {
+        state.strategyRunSort = event.target.value || "time_desc";
+        state.strategyRunVisibleCount = strategyRunPageSize();
+        renderBacktestRuns(outputs);
+      });
+      document.querySelector("#strategy-run-page-size")?.addEventListener("change", (event) => {
+        state.strategyRunPageSize = Number(event.target.value) || 25;
+        state.strategyRunVisibleCount = strategyRunPageSize();
+        renderBacktestRuns(outputs);
+      });
+      document.querySelector("#strategy-run-clear-filters")?.addEventListener("click", () => {
+        state.strategyRunFilters = {query: "", strategy: "all", timeframe: "all", start: "", end: ""};
+        state.strategyRunVisibleCount = strategyRunPageSize();
+        renderBacktestRuns(outputs);
+      });
+      document.querySelector("#strategy-run-load-more")?.addEventListener("click", () => {
+        state.strategyRunVisibleCount += strategyRunPageSize();
+        renderBacktestRuns(outputs);
+      });
+    }
+
+    function filteredBacktestRuns(runs) {
+      const filters = strategyRunFilters();
+      const query = String(filters.query || "").trim().toLowerCase();
+      return runs.filter((run) => {
+        const dateKey = backtestRunCreatedDateKey(run.item);
+        if (filters.strategy !== "all" && run.identity.name !== filters.strategy) return false;
+        if (filters.timeframe !== "all" && run.identity.timeframe !== filters.timeframe) return false;
+        if (filters.start && (!dateKey || dateKey < filters.start)) return false;
+        if (filters.end && (!dateKey || dateKey > filters.end)) return false;
+        if (!query) return true;
+        const metrics = strategyMetrics(run.item);
+        return [
+          run.identity.name,
+          run.identity.symbol,
+          run.identity.timeframe,
+          backtestRunCreatedAt(run.item),
+          backtestRunDuration(run.item),
+          metrics.totalReturn,
+          metrics.drawdown,
+          metrics.sharpe,
+          metrics.trades,
+        ].join(" ").toLowerCase().includes(query);
+      });
+    }
+
+    function sortedBacktestRuns(runs) {
+      const sort = state.strategyRunSort || "time_desc";
+      return [...runs].sort((a, b) => {
+        const metricA = strategyMetricNumbers(a.item);
+        const metricB = strategyMetricNumbers(b.item);
+        let result = 0;
+        if (sort === "time_asc") result = compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), "asc");
+        else if (sort === "return_desc") result = compareNullableNumbers(metricA.totalReturn, metricB.totalReturn, "desc");
+        else if (sort === "return_asc") result = compareNullableNumbers(metricA.totalReturn, metricB.totalReturn, "asc");
+        else if (sort === "drawdown_best") result = compareNullableNumbers(metricA.drawdown, metricB.drawdown, "desc");
+        else if (sort === "drawdown_worst") result = compareNullableNumbers(metricA.drawdown, metricB.drawdown, "asc");
+        else if (sort === "sharpe_desc") result = compareNullableNumbers(metricA.sharpe, metricB.sharpe, "desc");
+        else if (sort === "sharpe_asc") result = compareNullableNumbers(metricA.sharpe, metricB.sharpe, "asc");
+        else if (sort === "trades_desc") result = compareNullableNumbers(metricA.trades, metricB.trades, "desc");
+        else if (sort === "trades_asc") result = compareNullableNumbers(metricA.trades, metricB.trades, "asc");
+        else if (sort === "name_asc") result = compareText(a.identity.name, b.identity.name, "asc");
+        else if (sort === "name_desc") result = compareText(a.identity.name, b.identity.name, "desc");
+        else if (sort === "timeframe_asc") result = compareText(a.identity.timeframe, b.identity.timeframe, "asc");
+        else result = compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), "desc");
+        return result || compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), "desc") || compareText(a.identity.name, b.identity.name, "asc") || (a.index - b.index);
+      });
+    }
+
+    function strategyRunFilters() {
+      return {
+        query: "",
+        strategy: "all",
+        timeframe: "all",
+        start: "",
+        end: "",
+        ...(state.strategyRunFilters || {}),
+      };
+    }
+
+    function strategyRunSortOptions() {
+      return [
+        {value: "time_desc", label: "Newest first"},
+        {value: "time_asc", label: "Oldest first"},
+        {value: "return_desc", label: "Return high to low"},
+        {value: "return_asc", label: "Return low to high"},
+        {value: "drawdown_best", label: "Drawdown best first"},
+        {value: "drawdown_worst", label: "Drawdown worst first"},
+        {value: "sharpe_desc", label: "Sharpe high to low"},
+        {value: "sharpe_asc", label: "Sharpe low to high"},
+        {value: "trades_desc", label: "Trades high to low"},
+        {value: "trades_asc", label: "Trades low to high"},
+        {value: "name_asc", label: "Name A to Z"},
+        {value: "name_desc", label: "Name Z to A"},
+        {value: "timeframe_asc", label: "Timeframe A to Z"},
+      ];
+    }
+
+    function strategyRunPageSize() {
+      const value = Number(state.strategyRunPageSize);
+      return [10, 25, 50, 100].includes(value) ? value : 25;
+    }
+
+    function uniqueSorted(values) {
+      return Array.from(new Set(values)).sort((a, b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+    }
+
+    function compareNullableNumbers(a, b, direction) {
+      const aOk = Number.isFinite(a);
+      const bOk = Number.isFinite(b);
+      if (!aOk && !bOk) return 0;
+      if (!aOk) return 1;
+      if (!bOk) return -1;
+      return direction === "asc" ? a - b : b - a;
+    }
+
+    function compareText(a, b, direction) {
+      const result = String(a || "").localeCompare(String(b || ""), undefined, {numeric: true});
+      return direction === "desc" ? -result : result;
+    }
+
+    function backtestRunCreatedAt(item) {
+      const fields = item?.fields || {};
+      return fields.created_at || item?.created_at || fields.run_started_at || fields.generated_at || backtestRunWindow(item).end || "";
+    }
+
+    function backtestRunCreatedTime(item) {
+      const parsed = Date.parse(backtestRunCreatedAt(item));
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function backtestRunCreatedDateKey(item) {
+      const created = backtestRunCreatedAt(item);
+      const parsed = Date.parse(created);
+      if (Number.isFinite(parsed)) return new Date(parsed).toISOString().slice(0, 10);
+      const match = String(created || "").match(/\d{4}-\d{2}-\d{2}/);
+      return match ? match[0] : "";
+    }
+
     function renderBacktestRunRow(run) {
       const metrics = strategyMetrics(run.item);
       const identity = run.identity;
-      const created = run.item?.fields?.created_at || run.item?.created_at || "";
+      const created = backtestRunCreatedAt(run.item);
       const statusChip = backtestRunStatusChip(run.item);
       return `
         <button class="strategy-run-row ${run.item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${run.index}" role="listitem">
@@ -3545,6 +3861,7 @@
       const candidates = latest.records?.candidates || [];
       const gates = latest.records?.gates || [];
       const benchmarks = latest.records?.benchmarks || [];
+      const verdict = strategyExperimentVerdict(latest, fields, coverage, counts);
       const candidateRows = candidates.map((candidate) => {
         const gate = gates.find((item) => !candidate.strategy_name || item.strategy_name === candidate.strategy_name) || {};
         return [
@@ -3564,13 +3881,20 @@
       ]);
       node.innerHTML = `
         <div class="strategy-result-header">
-          <div><strong>Latest experiment</strong><span>${escapeHtml(fields.created_at || latest.output_dir || "latest stored result")}</span></div>
+          <div><strong>Latest validation</strong><span>${escapeHtml(fields.created_at || latest.output_dir || "latest stored result")}</span></div>
           <span class="status-pill ${escapeHtml(statusClass(latest.status))}">${escapeHtml(label(latest.status || "unknown"))}</span>
         </div>
-        <div class="summary-strip">
+        <div class="strategy-lab-verdict ${escapeHtml(verdict.className)}">
+          <span class="status-pill ${escapeHtml(verdict.pillClass)}">${escapeHtml(verdict.pill)}</span>
+          <div>
+            <strong>${escapeHtml(verdict.title)}</strong>
+            <p>${escapeHtml(verdict.body)}</p>
+          </div>
+        </div>
+        <div class="summary-strip columns-4">
           ${metricCell("Candidates", coverage.strategy_candidates ?? counts.strategy_candidates, "strategies")}
           ${metricCell("Evaluations", coverage.evaluations ?? counts.evaluations, "benchmark runs")}
-          ${metricCell("Succeeded", coverage.evaluations_succeeded ?? coverage.succeeded, "evaluations")}
+          ${metricCell("Succeeded", coverage.evaluations_succeeded ?? coverage.succeeded, "completed")}
           ${metricCell("Effective", fields.gate_coverage?.effective ?? counts.strategy_gate_effective, "gates")}
         </div>
         <div class="strategy-result-grid">
@@ -3586,80 +3910,55 @@
         ${strategyResultMessages(latest)}`;
     }
 
-    function renderStrategyOptimizeResults() {
-      const node = document.querySelector("#strategy-optimize-results");
-      if (!node) return;
-      const optimizations = standaloneOptimizations();
-      if (!optimizations.length) {
-        node.innerHTML = `<div class="message">No standalone optimization results yet.</div>`;
-        return;
+    function strategyExperimentVerdict(latest, fields, coverage, counts) {
+      const status = latest.status || fields.status || "unknown";
+      const effective = Number(fields.gate_coverage?.effective ?? counts.strategy_gate_effective ?? 0) || 0;
+      const candidateCount = Number(coverage.strategy_candidates ?? counts.strategy_candidates ?? 0) || 0;
+      const succeeded = Number(coverage.evaluations_succeeded ?? coverage.succeeded ?? 0) || 0;
+      const failed = Number(coverage.evaluations_failed ?? coverage.failed ?? 0) || 0;
+      const warningCount = [
+        ...(Array.isArray(latest.warnings) ? latest.warnings : []),
+        ...(Array.isArray(latest.errors) ? latest.errors : []),
+      ].length;
+      if (status === "failed" || failed > 0) {
+        return {
+          className: "warning",
+          pillClass: "warning",
+          pill: "Needs review",
+          title: "Validation completed with failed evidence paths.",
+          body: `${failed} benchmark evaluation${failed === 1 ? "" : "s"} failed. Inspect warnings before treating any gate result as usable.`,
+        };
       }
-      const selectedName = document.querySelector("#strategy-optimize-name")?.value || "";
-      const latest = optimizations.find((item) => !selectedName || item.fields?.strategy_name === selectedName) || optimizations[0];
-      const fields = latest.fields || {};
-      const search = fields.search_space || {};
-      const coverage = fields.coverage || {};
-      const selected = fields.selected_candidate || {};
-      const robustness = fields.robustness || {};
-      const walkForward = fields.walk_forward || {};
-      const target = fields.target || {};
-      const recommended = fields.recommended_targeted_params || {};
-      const paramRows = Object.entries(selected.params || {}).map(([name, value]) => [name, value]);
-      const recommendedRows = Object.entries(recommended.params || {}).map(([name, value]) => [name, value]);
-      const failedRows = (latest.records?.failed_candidates || []).slice(0, 6).map((candidate) => [
-        candidate.candidate_id || "n/a",
-        candidate.error_type || "n/a",
-        candidate.message || "n/a",
-      ]);
-      node.innerHTML = `
-        <div class="strategy-result-header">
-          <div><strong>Latest optimization</strong><span>${escapeHtml(fields.created_at || latest.output_dir || "latest stored result")}</span></div>
-          <span class="status-pill ${escapeHtml(statusClass(latest.status))}">${escapeHtml(label(latest.status || "unknown"))}</span>
-        </div>
-        <div class="summary-strip">
-          ${metricCell("Strategy", fields.strategy_name || "n/a", "target")}
-          ${metricCell("Target", [target.symbol, target.timeframe].filter(Boolean).join(" ") || "n/a", target.source || "source")}
-          ${metricCell("Combinations", search.combination_count ?? coverage.candidate_count, "grid")}
-          ${metricCell("Succeeded", coverage.succeeded, "candidates")}
-          ${metricCell("Robustness", robustness.status || "n/a", "walk-forward")}
-        </div>
-        <div class="strategy-result-grid">
-          <section>
-            <h3 class="subsection-title">Selected candidate</h3>
-            <div class="strategy-eval-kv">
-              ${detailRow("Candidate", selected.candidate_id)}
-              ${detailRow("Status", selected.status)}
-              ${detailRow("Automatic config mutation", selected.automatic_config_mutation)}
-              ${detailRow("Walk-forward", walkForward.status)}
-            </div>
-            ${paramRows.length ? table(["Parameter", "Value"], paramRows) : `<div class="message">No selected candidate parameters are recorded.</div>`}
-          </section>
-          <section>
-            <h3 class="subsection-title">Recommended targeted config</h3>
-            <div class="strategy-eval-kv">
-              ${detailRow("Source", recommended.source)}
-              ${detailRow("Symbol", recommended.symbol)}
-              ${detailRow("Timeframe", recommended.timeframe)}
-              ${detailRow("Mutation", recommended.automatic_config_mutation)}
-            </div>
-            ${recommendedRows.length ? table(["Parameter", "Value"], recommendedRows) : `<div class="message">No targeted recommendation is available for this optimization.</div>`}
-          </section>
-          <section>
-            <h3 class="subsection-title">Failed candidates</h3>
-            ${failedRows.length ? table(["Candidate", "Error type", "Message"], failedRows) : `<div class="message">No failed candidates are recorded.</div>`}
-          </section>
-        </div>
-        ${strategyResultMessages(latest)}`;
+      if (effective > 0) {
+        return {
+          className: "ok",
+          pillClass: "ok",
+          pill: "Actionable",
+          title: `${effective} configured strateg${effective === 1 ? "y has" : "ies have"} effective gate evidence.`,
+          body: `${succeeded} benchmark evaluation${succeeded === 1 ? "" : "s"} succeeded across ${candidateCount || "configured"} candidate${candidateCount === 1 ? "" : "s"}. Review candidate rows before promoting conclusions.`,
+        };
+      }
+      if (warningCount > 0) {
+        return {
+          className: "warning",
+          pillClass: "warning",
+          pill: "Insufficient",
+          title: "No strategy has effective gate evidence yet.",
+          body: `${warningCount} warning/error note${warningCount === 1 ? "" : "s"} were recorded. Treat this as an evidence gap, not a negative strategy conclusion.`,
+        };
+      }
+      return {
+        className: "pending",
+        pillClass: "pending",
+        pill: "Review",
+        title: "Validation evidence is recorded but not yet effective.",
+        body: "The benchmark suite ran without an effective gate result. Check coverage, sample size, and gate reasons before changing strategy configuration.",
+      };
     }
 
     function standaloneExperiments() {
       const experiments = state.strategies?.standalone?.experiments;
       return Array.isArray(experiments) ? experiments : [];
-    }
-
-    function standaloneOptimizations() {
-      const optimizations = state.strategies?.standalone?.optimizations;
-      return Array.isArray(optimizations) ? optimizations : [];
     }
 
     function statusCountsText(counts) {
@@ -3760,7 +4059,7 @@
     function renderStrategyEvaluationPanels(item, vis) {
       const context = strategyEvaluationContext(item, vis);
       if (!item && !context.hasEvidence) {
-        return `<div class="message">Select a backtest or run an experiment/optimization to inspect strategy evaluation evidence.</div>`;
+        return `<div class="message">Select a backtest or run Strategy Lab validation to inspect strategy evaluation evidence.</div>`;
       }
       return `
         <div class="strategy-eval-grid">
@@ -3768,7 +4067,7 @@
           ${strategyEvalPanel("Cost and Funding", renderCostFundingEvidence(item, vis))}
           ${strategyEvalPanel("Gates", renderGateEvidence(context.gate))}
           ${strategyEvalPanel("Lifecycle", renderLifecycleEvidence(context.lifecycle))}
-          ${strategyEvalPanel("Optimization", renderOptimizationEvidence(context.optimization))}
+          ${strategyEvalPanel("Robustness evidence", renderOptimizationEvidence(context.optimization))}
           ${strategyEvalPanel("Walk-forward", renderWalkForwardEvidence(context))}
           ${strategyEvalPanel("Warnings", renderWarningEvidence(item, context))}
           ${strategyEvalPanel("Source refs", renderSourceEvidence(item, context))}
@@ -3837,7 +4136,7 @@
     }
 
     function renderOptimizationEvidence(optimization) {
-      if (!optimization) return `<div class="message">No optimization artifact is available for the selected strategy context.</div>`;
+      if (!optimization) return `<div class="message">No development-time robustness artifact is available for the selected strategy context.</div>`;
       const fields = optimization.fields || {};
       const candidate = fields.selected_candidate || {};
       const params = candidate.params || {};
@@ -4147,49 +4446,6 @@
       });
     }
 
-    async function startStrategyOptimize() {
-      const strategyName = document.querySelector("#strategy-optimize-name")?.value || "";
-      if (!strategyName) {
-        showToast("Select a configured strategy to optimize.");
-        return;
-      }
-      const numericValidation = validateOptimizeNumericInputs();
-      if (numericValidation) {
-        state.strategyOptimizeLogs = [];
-        appendOperationLog("optimize", numericValidation);
-        renderOperationProgress("optimize", {
-          status: "failed",
-          percent: 100,
-          headline: "Optimization parameters invalid",
-          logs: state.strategyOptimizeLogs,
-        });
-        return;
-      }
-      const params = {
-        strategy_name: strategyName,
-        source: document.querySelector("#strategy-optimize-source")?.value || "",
-        symbol: document.querySelector("#strategy-optimize-symbol")?.value || "",
-        timeframe: document.querySelector("#strategy-optimize-timeframe")?.value || "",
-        grid: selectedOptimizationGrid(),
-      };
-      if (!params.symbol || !params.timeframe) {
-        showToast("Select a symbol and timeframe to optimize.");
-        return;
-      }
-      const maxCombinations = positiveIntegerInput("#strategy-optimize-max-combinations");
-      if (maxCombinations) params.max_combinations = maxCombinations;
-      const trainRows = positiveIntegerInput("#strategy-optimize-train-rows");
-      const validationRows = positiveIntegerInput("#strategy-optimize-validation-rows");
-      const stepRows = positiveIntegerInput("#strategy-optimize-step-rows");
-      if (trainRows) params.walk_forward_train_rows = trainRows;
-      if (validationRows) params.walk_forward_validation_rows = validationRows;
-      if (stepRows) params.walk_forward_step_rows = stepRows;
-      await runStrategyAction("optimize", params, {
-        headline: `Optimize ${params.symbol} ${params.timeframe}`,
-        submitLog: `Submitting optimization for ${strategyName} on ${params.symbol} ${params.timeframe}.`,
-      });
-    }
-
     async function runStrategyAction(kind, params, copy) {
       state[strategyOperationLogKey(kind)] = [];
       appendOperationLog(kind, copy.submitLog);
@@ -4284,56 +4540,10 @@
     }
 
     function selectedExperimentStrategyNames() {
-      const selected = Array.from(document.querySelectorAll("[data-strategy-experiment-name]"))
-        .filter((node) => node.checked)
-        .map((node) => node.dataset.strategyExperimentName)
-        .filter(Boolean);
-      if (selected.length) return unique(selected);
-      return unique(strategyProfiles().map((profile) => profile.strategy_name).filter(Boolean));
-    }
-
-    function selectedOptimizationGrid() {
-      const grid = {};
-      document.querySelectorAll("[data-strategy-grid-param]").forEach((node) => {
-        const name = node.dataset.strategyGridParam;
-        const values = String(node.value || "")
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-          .map((value) => {
-            const number = Number(value);
-            return Number.isFinite(number) ? number : value;
-          });
-        if (name && values.length) {
-          grid[name] = values;
-        }
-      });
-      return grid;
-    }
-
-    function positiveIntegerInput(selector) {
-      const raw = String(document.querySelector(selector)?.value || "").trim();
-      if (!raw) return null;
-      const value = Number(raw);
-      return Number.isInteger(value) && value > 0 ? value : null;
-    }
-
-    function validateOptimizeNumericInputs() {
-      const labels = {
-        "#strategy-optimize-max-combinations": "Max combinations",
-        "#strategy-optimize-train-rows": "Train rows",
-        "#strategy-optimize-validation-rows": "Validation rows",
-        "#strategy-optimize-step-rows": "Step rows",
-      };
-      for (const [selector, labelText] of Object.entries(labels)) {
-        const raw = String(document.querySelector(selector)?.value || "").trim();
-        if (!raw) continue;
-        const value = Number(raw);
-        if (!Number.isInteger(value) || value <= 0) {
-          return `${labelText} must be a positive integer.`;
-        }
-      }
-      return "";
+      const choices = experimentChoices();
+      ensureExperimentSelection(choices);
+      const validNames = new Set(choices.map((choice) => choice.name));
+      return unique(state.strategyExperimentSelection.filter((name) => validNames.has(name)));
     }
 
     function queueStrategyChartRefresh(options = {}) {
@@ -4614,7 +4824,6 @@
     function strategyOperationLogKey(kind) {
       if (kind === "backtest") return "strategyBacktestLogs";
       if (kind === "experiment") return "strategyExperimentLogs";
-      if (kind === "optimize") return "strategyOptimizeLogs";
       return "strategyCollectLogs";
     }
 
@@ -4626,6 +4835,7 @@
       const logs = Array.isArray(payload.logs) ? payload.logs : [];
       const expanded = node.dataset.expanded === "true";
       const visibleLogs = logs.slice().reverse();
+      const latestLog = visibleLogs[0] || "No log lines yet.";
       node.className = `operation-progress ${expanded ? "expanded" : ""}`.trim();
       node.innerHTML = `
         <div class="operation-progress-top">
@@ -4634,8 +4844,8 @@
         </div>
         <div class="operation-progress-track"><span class="${escapeHtml(statusClass(status))}" style="width:${percent}%;"></span></div>
         <div class="operation-log-header">
-          <span>${escapeHtml(visibleLogs[0] || "No log lines yet.")}</span>
-          <button class="ghost-button" type="button" data-operation-log-toggle="${escapeHtml(kind)}">${expanded ? "Collapse" : "Expand logs"}</button>
+          <span class="operation-log-latest" title="${escapeHtml(latestLog)}">${escapeHtml(latestLog)}</span>
+          <button class="ghost-button compact-button" type="button" data-operation-log-toggle="${escapeHtml(kind)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Collapse" : "Expand logs"}</button>
         </div>
         <pre class="operation-log ${expanded ? "expanded" : ""}">${escapeHtml(visibleLogs.join("\n") || "No log lines yet.")}</pre>`;
       node.querySelector("[data-operation-log-toggle]")?.addEventListener("click", () => {
@@ -6397,12 +6607,17 @@
       dialogs.wire();
       initializeSidebarCollapse();
       wireTopbarTabDragging();
+      wireStrategyDetailHeaderDrag();
       wireDateRangePickers();
       initializeTooltips();
       document.querySelectorAll("[data-view-target]").forEach((node) => node.addEventListener("click", (event) => {
         event.preventDefault();
         setHashView(node.dataset.viewTarget);
       }));
+      document.querySelectorAll("[data-report-inspector-tab]").forEach((button) => {
+        button.addEventListener("click", () => selectReportInspectorTab(button.dataset.reportInspectorTab));
+      });
+      selectReportInspectorTab(state.reportInspectorTab);
       document.querySelector("#report-search").addEventListener("input", renderReportLibrary);
       document.querySelector("#report-reader-search").addEventListener("input", () => {
         state.reportSearchTerm = document.querySelector("#report-reader-search").value;
@@ -6422,13 +6637,33 @@
       document.querySelector("#strategy-backtest-dialog-close").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#strategy-backtest-dialog-backdrop").addEventListener("click", closeStrategyBacktestDialog);
       document.querySelector("#strategy-backtest-back").addEventListener("click", showStrategyBacktestList);
-      document.querySelector("#strategy-detail-params").addEventListener("click", openStrategyParamsDrawer);
-      document.querySelector("#strategy-detail-rerun").addEventListener("click", rerunSelectedBacktest);
-      document.querySelector("#strategy-detail-delete").addEventListener("click", deleteSelectedBacktest);
+      document.querySelector("#strategy-detail-action-menu").addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleStrategyDetailActionMenu();
+      });
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest(".strategy-detail-action-shell")) {
+          closeStrategyDetailActionMenu();
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeStrategyDetailActionMenu();
+      });
+      document.querySelector("#strategy-detail-params").addEventListener("click", () => {
+        closeStrategyDetailActionMenu();
+        openStrategyParamsDrawer();
+      });
+      document.querySelector("#strategy-detail-rerun").addEventListener("click", () => {
+        closeStrategyDetailActionMenu();
+        rerunSelectedBacktest();
+      });
+      document.querySelector("#strategy-detail-delete").addEventListener("click", () => {
+        closeStrategyDetailActionMenu();
+        deleteSelectedBacktest();
+      });
       document.querySelector("#strategy-params-drawer-close").addEventListener("click", closeStrategyParamsDrawer);
       document.querySelector("#strategy-params-drawer-backdrop").addEventListener("click", closeStrategyParamsDrawer);
       document.querySelector("#run-experiment-button").addEventListener("click", startStrategyExperiment);
-      document.querySelector("#run-optimize-button").addEventListener("click", startStrategyOptimize);
       document.querySelectorAll("[data-strategy-operation-tab]").forEach((button) => {
         button.addEventListener("click", () => setStrategyOperationTab(button.dataset.strategyOperationTab));
       });
@@ -6460,9 +6695,6 @@
         document.querySelector(selector)?.addEventListener("change", () => {
           if (!state.strategyCollectTargets.length) addStrategyCollectTarget();
         });
-      });
-      document.querySelectorAll("[data-strategy-window]").forEach((button) => {
-        button.addEventListener("click", () => setStrategyWindow(button.dataset.strategyWindow, {reload: true}));
       });
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.addEventListener("click", () => renderStrategyTab(button.dataset.strategyTab)));
       liveWorkflow.wire();
