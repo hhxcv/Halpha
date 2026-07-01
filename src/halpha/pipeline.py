@@ -1296,6 +1296,9 @@ def _record_report_failure_artifacts(
 def _should_enforce_report_core_requirements(config: dict[str, Any], run: RunContext) -> bool:
     if not _is_report_archive_run(run):
         return False
+    codex = config.get("codex")
+    if not isinstance(codex, dict) or codex.get("enabled") is not True:
+        return False
     quant = config.get("quant")
     market = config.get("market")
     return (
@@ -1337,7 +1340,21 @@ def _succeeded_market_data_views(run: RunContext) -> int:
     views = data.get("views") if isinstance(data, dict) else None
     if not isinstance(views, list):
         return 0
-    return sum(1 for view in views if isinstance(view, dict) and view.get("status") == "succeeded")
+    return sum(1 for view in views if isinstance(view, dict) and _market_data_view_succeeded(view))
+
+
+def _market_data_view_succeeded(view: dict[str, Any]) -> bool:
+    status = view.get("status")
+    if isinstance(status, str) and status:
+        return status == "succeeded"
+    if view.get("insufficient_data") is not False:
+        return False
+    row_count = view.get("row_count")
+    if isinstance(row_count, int):
+        return row_count > 0
+    if isinstance(row_count, str) and row_count.isdigit():
+        return int(row_count) > 0
+    return False
 
 
 def _succeeded_quant_strategy_runs(run: RunContext) -> int:

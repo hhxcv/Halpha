@@ -168,7 +168,10 @@ def test_market_collection_failure_writes_error_artifact_without_fake_records(
     assert manifest["stages"][0]["error"] == manifest["errors"][0]
     assert "network unreachable" in manifest["errors"][0]["message"]
     assert not (result.run.analysis_dir / "market_material.md").exists()
-    assert not (result.run.report_dir / "report.md").exists()
+    assert (result.run.report_dir / "report.md").exists()
+    assert (result.run.report_dir / "report_failure.json").exists()
+    assert manifest["artifacts"]["report"] == "report/report.md"
+    assert manifest["artifacts"]["report_failure"] == "report/report_failure.json"
 
 
 def test_market_collection_uses_configured_proxy(tmp_path: Path, monkeypatch) -> None:
