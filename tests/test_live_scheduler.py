@@ -10,6 +10,7 @@ from halpha.config import load_config
 from halpha.live.contracts import LIVE_DATA_TYPES
 from halpha.live.scheduler import LiveScheduler
 from halpha.live.state_store import LiveCollectionStateRepository
+from halpha.runtime.mutation_lease import LEASE_BLOCKED_MESSAGE
 
 
 @pytest.fixture(autouse=True)
@@ -106,6 +107,75 @@ live:
     assert state["target_key"] == "text_event:all"
     assert state["latest_job_id"] == "job-running"
     assert state["latest_job_status"] == "running"
+
+
+def test_live_scheduler_defers_collection_while_mutating_job_is_running(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  tick_seconds: 15
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    jobs = _RecordingLiveJobManager(
+        jobs=[
+            _command_job(
+                "monitor-running",
+                intent="monitor_once",
+                kind="monitor_cycle",
+                status="running",
+                created_at="2026-06-30T11:59:50Z",
+            )
+        ]
+    )
+
+    tick = LiveScheduler(config, config_path=config_path, job_manager=jobs, now=now).tick(tick_id="tick-1")
+
+    assert tick["status"] == "available"
+    assert tick["errors"] == []
+    assert jobs.created_requests == []
+    state = _collection_state(tick, "text_event:all")
+    assert state["latest_job_id"] is None
+    assert state["latest_job_status"] is None
+    assert state["next_attempt_at"] == "2026-06-30T12:00:15Z"
+    assert state["consecutive_failures"] == 0
+
+
+def test_live_scheduler_treats_mutation_lease_blocked_collection_as_deferred(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    jobs = _RecordingLiveJobManager(create_status="blocked", create_errors=[LEASE_BLOCKED_MESSAGE])
+
+    tick = LiveScheduler(config, config_path=config_path, job_manager=jobs, now=now).tick(tick_id="tick-1")
+
+    assert tick["status"] == "available"
+    assert tick["errors"] == []
+    assert len(jobs.created_requests) == 1
+    state = _collection_state(tick, "text_event:all")
+    assert state["latest_job_status"] == "blocked"
+    assert state["latest_terminal_status"] == "deferred"
+    assert state["consecutive_failures"] == 0
+    assert state["errors"] == []
 
 
 def test_live_scheduler_uses_macro_calendar_lookahead_window(tmp_path: Path) -> None:
@@ -357,11 +427,88 @@ live:
     assert second_state["consecutive_failures"] == 1
 
 
+def test_live_read_model_relabels_persisted_mutation_lease_block_as_deferred(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    repository = LiveCollectionStateRepository(config_path)
+    repository.upsert_state(
+        {
+            "target_key": "text_event:all",
+            "data_type": "text_event",
+            "target": {"data_type": "text_event"},
+            "enabled": True,
+            "cadence_seconds": 300,
+            "lookback_seconds": 3600,
+            "lookahead_seconds": None,
+            "last_attempt_at": "2026-06-30T11:59:00Z",
+            "last_success_at": "2026-06-30T11:55:00Z",
+            "next_attempt_at": "2026-06-30T12:04:00Z",
+            "latest_job_id": "collect-3",
+            "latest_job_status": "blocked",
+            "latest_terminal_job_id": "collect-3",
+            "latest_terminal_status": "blocked",
+            "consecutive_failures": 1,
+            "source_refs": [],
+            "warnings": [],
+            "errors": [LEASE_BLOCKED_MESSAGE],
+            "updated_at": "2026-06-30T11:59:00Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager(
+        jobs=[
+            _live_job(
+                "collect-3",
+                status="blocked",
+                target_key="text_event:all",
+                data_type="text_event",
+                created_at="2026-06-30T12:00:00Z",
+                errors=[LEASE_BLOCKED_MESSAGE],
+            )
+        ]
+    )
+
+    payload = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        state_repository=repository,
+        now=now,
+    ).read_model()
+    state = _collection_state(payload, "text_event:all")
+    persisted = _collection_state({"collections": repository.list_states()}, "text_event:all")
+
+    assert payload["status"] == "available"
+    assert payload["errors"] == []
+    assert state["latest_terminal_status"] == "deferred"
+    assert state["consecutive_failures"] == 0
+    assert state["errors"] == []
+    assert persisted["latest_terminal_status"] == "deferred"
+
+
 class _RecordingLiveJobManager:
-    def __init__(self, *, jobs: list[dict[str, Any]] | None = None, create_status: str = "queued") -> None:
+    def __init__(
+        self,
+        *,
+        jobs: list[dict[str, Any]] | None = None,
+        create_status: str = "queued",
+        create_errors: list[str] | None = None,
+    ) -> None:
         self.jobs = list(jobs or [])
         self.created_requests: list[dict[str, Any]] = []
         self.create_status = create_status
+        self.create_errors = list(create_errors or [])
 
     def list_jobs(self, *, limit: int = 100) -> dict[str, Any]:
         return {"jobs": self.jobs[:limit]}
@@ -383,10 +530,39 @@ class _RecordingLiveJobManager:
             data_type=str(requester["data_type"]),
             created_at=created_at,
             params=request["params"],
-            errors=["collection failed"] if self.create_status == "failed" else [],
+            errors=self.create_errors or (["collection failed"] if self.create_status == "failed" else []),
         )
         self.jobs.insert(0, job)
         return job
+
+
+def _command_job(
+    job_id: str,
+    *,
+    intent: str,
+    kind: str,
+    status: str,
+    created_at: str,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "artifact_type": "command_job",
+        "job_id": job_id,
+        "kind": kind,
+        "intent": intent,
+        "requested_by": "Core",
+        "requester": {"source": "core_scheduler"},
+        "params": {},
+        "status": status,
+        "created_at": created_at,
+        "updated_at": created_at,
+        "finished_at": created_at if status in {"succeeded", "failed", "cancelled", "unsupported", "blocked"} else None,
+        "result_refs": {},
+        "source_artifacts": [],
+        "warnings": [],
+        "errors": list(errors or []),
+    }
 
 
 def _live_job(

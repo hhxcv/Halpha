@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sqlite3
 
@@ -286,7 +287,21 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'id="strategy-parameter-controls"' in response.text
     assert 'id="strategy-optimization-space"' in response.text
     assert 'id="strategy-evaluation-window"' in response.text
+    assert 'id="strategy-detail-params"' in response.text
+    assert 'id="strategy-detail-rerun"' in response.text
+    assert 'id="strategy-detail-delete"' in response.text
+    assert 'id="strategy-params-drawer"' in response.text
+    assert 'id="strategy-operation-tree"' in response.text
+    assert 'id="strategy-backtest-back" aria-label="Back to runs"' in response.text
+    assert 'id="strategy-chart-refresh"' not in response.text
+    assert 'id="strategy-chart-title"' not in response.text
+    assert 'id="strategy-chart-meta"' not in response.text
+    assert 'id="recent-trades"' not in response.text
+    assert 'id="strategy-params"' not in response.text
     assert 'id="strategy-range"' not in response.text
+    assert 'data-strategy-tab="trades"' not in response.text
+    assert "renderStrategyOperationTree" in script.text
+    assert "strategy-chart-refresh" not in script.text
     assert 'data-overview-endpoint="/api/overview"' in response.text
     assert 'data-text-intelligence-endpoint="/api/text-intelligence"' in response.text
     assert 'data-runs-endpoint="/api/runs"' in response.text
@@ -294,6 +309,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'data-delete-endpoint="/api/data/deletion"' in response.text
     assert 'data-strategies-endpoint="/api/strategies"' in response.text
     assert 'data-strategy-actions-endpoint="/api/strategies/actions"' in response.text
+    assert 'data-strategy-backtests-endpoint="/api/strategies/backtests"' in response.text
     assert 'data-live-endpoint="/api/live"' in response.text
     assert 'data-live-cycles-endpoint="/api/live/cycles"' in response.text
     assert 'data-live-alerts-endpoint="/api/live/alerts"' in response.text
@@ -1815,6 +1831,121 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert optimization["fields"]["strategy_name"] == "tsmom_vol_scaled"
     assert optimization["fields"]["selected_candidate"]["candidate_id"] == "candidate:0001"
     assert optimization["fields"]["robustness"]["status"] == "robust"
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_strategy_backtest_delete_removes_standalone_artifacts_and_history(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    backtest_dir = tmp_path / "runs" / "strategy_backtests" / "20260620T000000Z_tsmom_binance_BTCUSDT_1d"
+    write_json(backtest_dir / "manifest.json", {"artifact_type": "standalone_strategy_backtest_manifest"})
+    write_json(backtest_dir / "strategy_backtest.json", {"artifact_type": "strategy_backtest"})
+    history_path = tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json"
+    write_json(
+        history_path,
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_history",
+            "status": "ok",
+            "record_count": 1,
+            "records": [
+                {
+                    "history_id": "strategy_evaluation_history:standalone_backtest:runs/strategy_backtests/20260620T000000Z_tsmom_binance_BTCUSDT_1d",
+                    "record_type": "strategy_evaluation_history_record",
+                    "created_at": "2026-06-20T00:00:00Z",
+                    "execution_source": {
+                        "type": "standalone_backtest",
+                        "output_dir": "runs/strategy_backtests/20260620T000000Z_tsmom_binance_BTCUSDT_1d",
+                    },
+                    "evaluation_id": "standalone_backtest:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-20T00:00:00Z",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "metrics": {},
+                    "visualization": {},
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post(
+        "/api/strategies/backtests/delete",
+        json={
+            "backtest": {
+                "evaluation_id": "standalone_backtest:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-20T00:00:00Z",
+                "output_dir": "runs/strategy_backtests/20260620T000000Z_tsmom_binance_BTCUSDT_1d",
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["artifact_type"] == "dashboard_strategy_backtest_delete"
+    assert payload["status"] == "succeeded"
+    assert not backtest_dir.exists()
+    history = json.loads(history_path.read_text(encoding="utf-8"))
+    assert history["records"] == []
+    assert history["record_count"] == 0
+    assert "runs/strategy_backtests/20260620T000000Z_tsmom_binance_BTCUSDT_1d" in response.text
+    assert str(tmp_path) not in response.text
+
+
+def test_dashboard_strategy_backtest_delete_preserves_report_run_artifacts(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    report_artifact = tmp_path / "runs" / "run-1" / "analysis" / "strategy_evaluation_summary.json"
+    write_json(report_artifact, {"artifact_type": "strategy_evaluation_summary"})
+    history_path = tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json"
+    write_json(
+        history_path,
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_history",
+            "status": "ok",
+            "record_count": 1,
+            "records": [
+                {
+                    "history_id": "strategy_evaluation_history:report_run:run-1:evaluation:tsmom_vol_scaled:BTCUSDT:1d",
+                    "record_type": "strategy_evaluation_history_record",
+                    "created_at": "2026-06-20T00:04:00Z",
+                    "execution_source": {
+                        "type": "report_run",
+                        "run_id": "run-1",
+                        "run_dir": "runs/run-1",
+                    },
+                    "evaluation_id": "evaluation:tsmom_vol_scaled:BTCUSDT:1d",
+                    "status": "succeeded",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "metrics": {},
+                    "visualization": {},
+                    "source_artifacts": ["runs/run-1/analysis/strategy_evaluation_summary.json"],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.post(
+        "/api/strategies/backtests/delete",
+        json={"backtest": {"evaluation_id": "evaluation:tsmom_vol_scaled:BTCUSDT:1d", "output_dir": "runs/run-1"}},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert report_artifact.exists()
+    history = json.loads(history_path.read_text(encoding="utf-8"))
+    assert history["records"] == []
+    assert payload["skipped"][0]["reason"] == "report-run artifacts are preserved; only the shared history record was removed."
     assert str(tmp_path) not in response.text
 
 

@@ -24,6 +24,7 @@
     data-data-viewer-collect-jobs-endpoint="/api/data/viewer/collect/jobs"
     data-strategies-endpoint="/api/strategies"
     data-strategy-actions-endpoint="/api/strategies/actions"
+    data-strategy-backtests-endpoint="/api/strategies/backtests"
     data-live-endpoint="/api/live"
     data-live-cycles-endpoint="/api/live/cycles"
     data-live-alerts-endpoint="/api/live/alerts"
@@ -303,22 +304,27 @@
           </section>
           <section id="strategy-backtest-detail" class="strategy-detail-view hidden" data-backtest-detail>
             <section class="panel strategy-detail-header">
-              <button class="ghost-button compact-button" type="button" id="strategy-backtest-back">Back to runs</button>
+              <button class="icon-button strategy-back-button" type="button" id="strategy-backtest-back" aria-label="Back to runs" title="Back to runs">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 12H5M12 19l-7-7 7-7"></path>
+                </svg>
+              </button>
               <div class="strategy-detail-heading">
                 <span id="strategy-detail-kicker" class="drawer-kicker">Backtest detail</span>
                 <h2 id="strategy-detail-title">Select a backtest run</h2>
               </div>
+              <div class="strategy-detail-actions" aria-label="Backtest actions">
+                <button class="ghost-button compact-button" type="button" id="strategy-detail-params">Parameters</button>
+                <button class="ghost-button compact-button" type="button" id="strategy-detail-rerun">Rerun</button>
+                <button class="danger-button compact-button" type="button" id="strategy-detail-delete">Delete</button>
+              </div>
             </section>
             <section class="panel kline-panel">
               <div class="chart-header">
-                <div>
-                  <div id="strategy-chart-title" class="chart-title">OHLCV candlestick chart</div>
-                  <div id="strategy-chart-meta" class="chart-meta">Loading strategy output.</div>
-                </div>
                 <div class="chart-selector" aria-label="OHLCV chart controls">
-                  <div class="field"><label for="strategy-chart-source">Source</label><input id="strategy-chart-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
-                  <div class="field"><label for="strategy-chart-symbol">Symbol</label><select id="strategy-chart-symbol" class="select-input"></select></div>
-                  <div class="field"><label for="strategy-chart-timeframe">Timeframe</label><select id="strategy-chart-timeframe" class="select-input"></select></div>
+                  <input id="strategy-chart-source" class="hidden" type="text" list="strategy-ohlcv-source-options" aria-hidden="true" tabindex="-1">
+                  <select id="strategy-chart-symbol" class="hidden" aria-hidden="true" tabindex="-1"></select>
+                  <select id="strategy-chart-timeframe" class="hidden" aria-hidden="true" tabindex="-1"></select>
                   <div class="field chart-window-field">
                     <span class="field-label">Candles</span>
                     <input id="strategy-chart-range" type="hidden" value="30">
@@ -329,7 +335,6 @@
                       <button class="segmented-button" type="button" data-strategy-window="360" aria-pressed="false" aria-label="Show latest 360 candles">360</button>
                     </div>
                   </div>
-                  <button class="ghost-button chart-refresh-button" type="button" id="strategy-chart-refresh">Refresh candles</button>
                   <span id="strategy-quote-label" class="status-pill ok">n/a</span>
                 </div>
               </div>
@@ -339,13 +344,9 @@
               <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>
             </section>
             <aside class="strategy-side">
-              <section class="panel panel-pad" id="strategy-params-panel">
-                <h2 class="panel-title" id="strategy-params-title">Strategy parameters</h2>
-                <table id="strategy-params" class="kv-table"></table>
-              </section>
-              <section class="panel panel-pad" data-backtest-only="true">
-                <h2 class="panel-title">Recent operations</h2>
-                <div id="recent-trades"></div>
+              <section class="panel panel-pad strategy-operation-tree-panel" data-backtest-only="true">
+                <h2 class="panel-title">Trade operations</h2>
+                <div id="strategy-operation-tree"></div>
               </section>
               <section class="panel panel-pad" data-backtest-only="true">
                 <h2 class="panel-title">Backtest runs</h2>
@@ -354,11 +355,9 @@
             </aside>
             <section class="panel strategy-tabs" data-backtest-only="true">
               <div class="tabs" id="strategy-tabs">
-                <button class="tab-button active" type="button" data-strategy-tab="trades">Trades</button>
-                <button class="tab-button" type="button" data-strategy-tab="equity">Equity curve</button>
+                <button class="tab-button active" type="button" data-strategy-tab="equity">Equity curve</button>
                 <button class="tab-button" type="button" data-strategy-tab="drawdown">Drawdown</button>
                 <button class="tab-button" type="button" data-strategy-tab="summary">Performance summary</button>
-                <button class="tab-button" type="button" data-strategy-tab="list">Operation markers</button>
               </div>
               <div id="strategy-tab-content" style="padding-top: 14px;"></div>
             </section>
@@ -701,6 +700,23 @@
       </div>
       <div id="report-details-drawer-body" class="drawer-body">
         <div class="empty-state">Select a report to inspect its details.</div>
+      </div>
+    </aside>
+    <div id="strategy-params-drawer-backdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+    <aside id="strategy-params-drawer" class="artifact-drawer strategy-params-drawer hidden" aria-label="Strategy backtest parameters">
+      <div class="drawer-header">
+        <div>
+          <p class="drawer-kicker">Backtest parameters</p>
+          <h2 id="strategy-params-drawer-title">Strategy parameters</h2>
+        </div>
+        <button class="icon-button" type="button" id="strategy-params-drawer-close" aria-label="Close strategy parameters">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="strategy-params-drawer-body" class="drawer-body">
+        <div class="empty-state">Select a backtest run to inspect parameters.</div>
       </div>
     </aside>
     <div id="live-event-drawer-backdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>

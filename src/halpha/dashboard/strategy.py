@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
+import shutil
 import sqlite3
 from typing import Any
 
@@ -18,12 +20,14 @@ from halpha.strategy.strategy_config import configured_targeted_parameter_profil
 from halpha.strategy.strategy_evaluation_history import (
     STRATEGY_EVALUATION_HISTORY_ARTIFACT,
     read_strategy_evaluation_history,
+    strategy_evaluation_history_path,
 )
 from halpha.storage import (
     artifact_base as _artifact_base,
     read_json_object,
     resolve_local_ref,
     safe_local_ref,
+    write_json,
 )
 from halpha.utils.value_helpers import (
     as_dict as _dict,
@@ -95,6 +99,206 @@ def dashboard_strategy_research(
             "trading_instructions_embedded": False,
         },
     }
+
+
+def dashboard_delete_strategy_backtest(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    base = _artifact_base(config_path)
+    criteria = _dict(request.get("backtest")) or _dict(request)
+    history = read_strategy_evaluation_history(config_path)
+    records = [record for record in _list(history.get("records")) if isinstance(record, dict)]
+    matched_indexes = {
+        index for index, record in enumerate(records) if _matches_backtest_delete_criteria(record, criteria)
+    }
+    matched_records = [record for index, record in enumerate(records) if index in matched_indexes]
+    remaining = [record for index, record in enumerate(records) if index not in matched_indexes]
+    deleted: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    errors: list[str] = []
+    if matched_records:
+        _write_strategy_history_records(history, remaining, config_path=config_path)
+        deleted.append(
+            {
+                "kind": "strategy_evaluation_history_records",
+                "count": len(matched_records),
+                "ref": STRATEGY_EVALUATION_HISTORY_ARTIFACT,
+            }
+        )
+    for record in matched_records:
+        _delete_standalone_backtest_dir(
+            config,
+            config_path=config_path,
+            base=base,
+            record=record,
+            deleted=deleted,
+            skipped=skipped,
+            errors=errors,
+        )
+    if not matched_records:
+        _delete_requested_standalone_backtest_dir(
+            config,
+            config_path=config_path,
+            base=base,
+            criteria=criteria,
+            deleted=deleted,
+            skipped=skipped,
+            errors=errors,
+        )
+    if not matched_records and not deleted and not skipped and not errors:
+        skipped.append({"kind": "strategy_backtest", "reason": "no matching backtest record was found."})
+    status = "failed" if errors else "succeeded" if deleted else "missing"
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_strategy_backtest_delete",
+        "status": status,
+        "deleted": deleted,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
+def _matches_backtest_delete_criteria(record: dict[str, Any], criteria: dict[str, Any]) -> bool:
+    history_id = str(criteria.get("history_id") or "")
+    evaluation_id = str(criteria.get("evaluation_id") or "")
+    output_dir = str(criteria.get("output_dir") or "")
+    if history_id:
+        return str(record.get("history_id") or "") == history_id
+    if evaluation_id:
+        return str(record.get("evaluation_id") or "") == evaluation_id
+    if output_dir:
+        source = _dict(record.get("execution_source"))
+        return output_dir in {
+            str(source.get("output_dir") or ""),
+            str(source.get("run_dir") or ""),
+            str(record.get("history_id") or ""),
+        }
+    return False
+
+
+def _write_strategy_history_records(
+    history: dict[str, Any],
+    records: list[dict[str, Any]],
+    *,
+    config_path: Path,
+) -> None:
+    artifact = dict(history)
+    artifact["schema_version"] = artifact.get("schema_version") or 1
+    artifact["artifact_type"] = "strategy_evaluation_history"
+    artifact["status"] = "ok"
+    artifact["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    artifact["record_count"] = len(records)
+    artifact["records"] = records
+    artifact["warnings"] = _messages(artifact.get("warnings"))
+    artifact["errors"] = _messages(artifact.get("errors"))
+    write_json(strategy_evaluation_history_path(config_path), artifact)
+
+
+def _delete_standalone_backtest_dir(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    base: Path,
+    record: dict[str, Any],
+    deleted: list[dict[str, Any]],
+    skipped: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    source = _dict(record.get("execution_source"))
+    if source.get("type") != "standalone_backtest":
+        skipped.append(
+            {
+                "kind": "strategy_backtest_artifacts",
+                "ref": _safe_ref(_resolve_ref(str(source.get("run_dir") or source.get("output_dir") or ""), base=base), base=base)
+                if (source.get("run_dir") or source.get("output_dir"))
+                else "",
+                "reason": "report-run artifacts are preserved; only the shared history record was removed.",
+            }
+        )
+        return
+    _delete_standalone_dir_ref(
+        config,
+        config_path=config_path,
+        base=base,
+        output_ref=str(source.get("output_dir") or ""),
+        deleted=deleted,
+        skipped=skipped,
+        errors=errors,
+    )
+
+
+def _delete_requested_standalone_backtest_dir(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    base: Path,
+    criteria: dict[str, Any],
+    deleted: list[dict[str, Any]],
+    skipped: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    output_ref = str(criteria.get("output_dir") or "")
+    if not output_ref:
+        return
+    _delete_standalone_dir_ref(
+        config,
+        config_path=config_path,
+        base=base,
+        output_ref=output_ref,
+        deleted=deleted,
+        skipped=skipped,
+        errors=errors,
+    )
+
+
+def _delete_standalone_dir_ref(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    base: Path,
+    output_ref: str,
+    deleted: list[dict[str, Any]],
+    skipped: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    if not output_ref:
+        skipped.append({"kind": "strategy_backtest_artifacts", "reason": "standalone output directory was not recorded."})
+        return
+    target = _resolve_ref(output_ref, base=base)
+    root = _run_output_root(config, config_path=config_path) / "strategy_backtests"
+    ref = _safe_ref(target, base=base)
+    if not _is_path_inside(target, root):
+        skipped.append(
+            {
+                "kind": "strategy_backtest_artifacts",
+                "ref": ref,
+                "reason": "output directory is outside the standalone strategy backtest root.",
+            }
+        )
+        return
+    if not target.exists():
+        skipped.append({"kind": "strategy_backtest_artifacts", "ref": ref, "reason": "output directory was already missing."})
+        return
+    if not target.is_dir():
+        skipped.append({"kind": "strategy_backtest_artifacts", "ref": ref, "reason": "output path is not a directory."})
+        return
+    try:
+        shutil.rmtree(target)
+    except OSError as exc:
+        errors.append(f"{ref} could not be deleted: {exc}.")
+        return
+    deleted.append({"kind": "strategy_backtest_artifacts", "ref": ref})
+
+
+def _is_path_inside(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except (OSError, ValueError):
+        return False
+    return True
 
 
 def _strategy_command_options(config: dict[str, Any]) -> dict[str, Any]:
@@ -552,6 +756,7 @@ def _shared_history_backtest(record: Any, *, base: Path) -> dict[str, Any]:
         "status": _normalize_status(str(item.get("status") or "unknown")),
         "output_dir": _shared_output_ref(item),
         "fields": {
+            "history_id": item.get("history_id"),
             "created_at": item.get("created_at"),
             "execution_source": _bounded_mapping(item.get("execution_source")),
             "evaluation_id": item.get("evaluation_id"),

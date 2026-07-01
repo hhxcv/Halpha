@@ -78,14 +78,18 @@
 
         function renderLiveModeTabs() {
           document.querySelectorAll("[data-live-mode]").forEach((button) => {
-            button.classList.toggle("active", button.dataset.liveMode === state.liveMode);
+            const active = button.dataset.liveMode === state.liveMode;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-selected", active ? "true" : "false");
           });
         }
 
         function applyLiveModeVisibility() {
           const mode = state.liveMode || "now";
           document.querySelectorAll("[data-live-panel]").forEach((panel) => {
-            panel.hidden = panel.dataset.livePanel !== mode;
+            const active = panel.dataset.livePanel === mode;
+            panel.hidden = !active;
+            panel.setAttribute("aria-hidden", active ? "false" : "true");
           });
         }
 
@@ -237,6 +241,7 @@
           const refs = Array.isArray(item.source_refs) ? item.source_refs : [];
           const warnings = Array.isArray(item.warnings) ? item.warnings : [];
           const errors = Array.isArray(item.errors) ? item.errors : [];
+          const targetDetails = Object.entries(target).filter(([key]) => key !== "data_type");
           setHtml("#live-target-detail", `
             <div class="live-target-detail-head">
               ${statusPill(status.status, status.label)}
@@ -245,7 +250,7 @@
             <div class="compact-list">
               ${detailRow("Data type", DATA_TYPE_LABELS[item.data_type] || label(item.data_type))}
               ${detailRow("Target key", item.target_key || "n/a")}
-              ${Object.entries(target).map(([key, value]) => detailRow(label(key), text(value))).join("")}
+              ${targetDetails.map(([key, value]) => detailRow(label(key), text(value))).join("")}
               ${detailRow("Enabled", item.enabled === true ? "yes" : "no")}
               ${detailRow("Cadence", durationSeconds(item.cadence_seconds))}
               ${detailRow("Lookback", durationSeconds(item.lookback_seconds))}

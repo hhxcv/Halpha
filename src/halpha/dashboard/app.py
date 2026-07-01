@@ -60,7 +60,7 @@ from halpha.dashboard.settings import (
 )
 from halpha.dashboard.state import read_dashboard_config_history, read_dashboard_selected_config_state, write_dashboard_selected_config_state
 from halpha.dashboard.strategy_actions import dashboard_strategy_action_job
-from halpha.dashboard.strategy import dashboard_strategy_research
+from halpha.dashboard.strategy import dashboard_delete_strategy_backtest, dashboard_strategy_research
 from halpha.dashboard.ui import dashboard_index_html
 from halpha.live.scheduler import LiveScheduler
 from halpha.runtime.command_jobs import CommandJobManager
@@ -579,6 +579,14 @@ def create_dashboard_app(
         if active is None:
             return _unconfigured_payload("dashboard_strategy_action_job", action=action, job=None)
         return dashboard_strategy_action_job(job_manager=context.job_manager, action=action, request=request or {})
+
+    @app.post("/api/strategies/backtests/delete")
+    def strategy_backtest_delete_endpoint(request: dict[str, Any] | None = Body(default=None)) -> dict[str, Any]:
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload("dashboard_strategy_backtest_delete", deleted=[], skipped=[])
+        active_config, active_config_path = active
+        return dashboard_delete_strategy_backtest(active_config, config_path=active_config_path, request=request or {})
 
     @app.get("/api/monitor")
     def monitor_endpoint() -> dict[str, Any]:
@@ -1233,7 +1241,9 @@ def _wait_for_dashboard_service_stop(
         lifecycle = repository.inspect(DASHBOARD_SERVICE_ROLE)
         if lifecycle.instance_id == previous_instance_id and lifecycle.status in {"stopped", "failed", "crashed", "stale"}:
             return _dashboard_service_result(lifecycle.status, lifecycle=lifecycle, host=host, port=port)
-        if lifecycle.status == "stale" or _dashboard_endpoint_can_bind(host, port):
+        if lifecycle.status == "stale" or (
+            lifecycle.instance_id != previous_instance_id and _dashboard_endpoint_can_bind(host, port)
+        ):
             return _dashboard_service_result("stale", lifecycle=lifecycle, host=host, port=port)
         time.sleep(DASHBOARD_RESTART_POLL_SECONDS)
     return None
