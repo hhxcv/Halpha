@@ -26,61 +26,28 @@ BROWSER_SMOKE_ENABLED = os.environ.get("HALPHA_BROWSER_SMOKE") == "1"
     reason="set HALPHA_BROWSER_SMOKE=1 to run local Playwright dashboard smoke checks",
 )
 def test_dashboard_primary_pages_browser_smoke(tmp_path: Path, test_output_dir: Path) -> None:
-    npx = shutil.which("npx") or shutil.which("npx.cmd")
-    if npx is None:
-        pytest.skip("npx is required for the Playwright browser smoke check.")
-    node_modules = _playwright_node_modules(npx)
-    if node_modules is None:
-        pytest.skip("npx could not expose the @playwright/test package path.")
-    config_path = _write_config(tmp_path)
-    config = load_config(config_path)
-    port = _free_port()
-    app = create_dashboard_app(config, config_path=config_path, host="127.0.0.1", port=port)
-    server = uvicorn.Server(
-        uvicorn.Config(
-            app,
-            host="127.0.0.1",
-            port=port,
-            log_level="warning",
-            access_log=False,
-        )
+    _run_browser_smoke_spec(
+        tmp_path,
+        test_output_dir,
+        _PLAYWRIGHT_SMOKE_SPEC,
+        spec_name="dashboard_browser_smoke.spec.js",
+        output_name="playwright",
     )
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    url = f"http://127.0.0.1:{port}/"
-    try:
-        _wait_for_dashboard(url)
-        spec_path = tmp_path / "dashboard_browser_smoke.spec.js"
-        spec_path.write_text(_PLAYWRIGHT_SMOKE_SPEC, encoding="utf-8")
-        env = {**os.environ, "HALPHA_DASHBOARD_URL": url}
-        existing_node_path = env.get("NODE_PATH")
-        env["NODE_PATH"] = str(node_modules) if not existing_node_path else f"{node_modules}{os.pathsep}{existing_node_path}"
-        result = subprocess.run(
-            [
-                npx,
-                "--yes",
-                "--package",
-                "@playwright/test",
-                "playwright",
-                "test",
-                spec_path.name,
-                "--browser=chromium",
-                "--output",
-                str(test_output_dir / "playwright"),
-                "--reporter=line",
-                "--workers=1",
-            ],
-            text=True,
-            capture_output=True,
-            timeout=90,
-            check=False,
-            env=env,
-            cwd=tmp_path,
-        )
-        assert result.returncode == 0, result.stdout + result.stderr
-    finally:
-        server.should_exit = True
-        thread.join(timeout=10)
+
+
+@pytest.mark.browser_smoke
+@pytest.mark.skipif(
+    not BROWSER_SMOKE_ENABLED,
+    reason="set HALPHA_BROWSER_SMOKE=1 to run local Playwright dashboard smoke checks",
+)
+def test_dashboard_settings_groups_browser_smoke(tmp_path: Path, test_output_dir: Path) -> None:
+    _run_browser_smoke_spec(
+        tmp_path,
+        test_output_dir,
+        _SETTINGS_GROUPS_SMOKE_SPEC,
+        spec_name="dashboard_settings_groups.spec.js",
+        output_name="playwright-settings",
+    )
 
 
 _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
@@ -324,6 +291,131 @@ _PLAYWRIGHT_SMOKE_SPEC = textwrap.dedent(
     });
     """
 ).strip()
+
+
+_SETTINGS_GROUPS_SMOKE_SPEC = textwrap.dedent(
+    r"""
+    const { test, expect } = require("@playwright/test");
+
+    test.use({viewport: {width: 1280, height: 900}});
+
+    test("settings sections group dependent controls", async ({ page }) => {
+      const url = process.env.HALPHA_DASHBOARD_URL;
+      if (!url) throw new Error("HALPHA_DASHBOARD_URL is required");
+      const errors = [];
+      page.on("console", (message) => {
+        if (message.type() === "error") errors.push(`console: ${message.text()}`);
+      });
+      page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+      await page.goto(`${url}#settings`, {waitUntil: "domcontentloaded"});
+      await page.waitForSelector("#settings-view:not(.hidden)", {timeout: 10000});
+
+      await page.click('[data-settings-section="Intelligence sources"]');
+      await expect(page.locator('[data-settings-group="intel-text-collection"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="intel-macro-calendar"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="intel-onchain-flow"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="intel-text-engine"]')).toHaveCount(0);
+      await page.click('[data-setting-path="text.enabled"]');
+      await expect(page.locator('[data-settings-group="intel-text-engine"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="intel-text-models"]')).toHaveCount(0);
+      await page.click('[data-setting-path="text.intelligence.enabled"]');
+      await expect(page.locator('[data-settings-group="intel-text-models"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="intel-text-thresholds"]')).toBeVisible();
+
+      await page.click('[data-settings-section="Market data"]');
+      await expect(page.locator('[data-settings-group="market-source"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="market-ohlcv"]')).toHaveCount(0);
+      await expect(page.locator('[data-settings-group="market-derivatives"]')).toHaveCount(0);
+      await page.click('[data-setting-path="market.enabled"]');
+      await expect(page.locator('[data-settings-group="market-ohlcv"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="market-derivatives"]')).toBeVisible();
+      await expect(page.locator('[data-setting-path="market.derivatives.source"]')).toHaveCount(0);
+      await page.click('[data-setting-path="market.derivatives.enabled"]');
+      await expect(page.locator('[data-setting-path="market.derivatives.source"]')).toBeVisible();
+
+      await page.click('[data-settings-section="Live"]');
+      await expect(page.locator('[data-settings-group="live-scheduler"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="live-collection-ohlcv"]')).toHaveCount(0);
+      await expect(page.locator('[data-settings-group="live-trigger-market_breakout"]')).toHaveCount(0);
+      await page.click('[data-setting-path="live.enabled"]');
+      await expect(page.locator('[data-settings-group="live-collection-ohlcv"]')).toBeVisible();
+      await expect(page.locator('[data-settings-group="live-trigger-market_breakout"]')).toBeVisible();
+      await expect(page.locator('[data-setting-path="live.collections.ohlcv.cadence_seconds"]')).toHaveCount(0);
+      await page.click('[data-setting-path="live.collections.ohlcv.enabled"]');
+      await expect(page.locator('[data-setting-path="live.collections.ohlcv.cadence_seconds"]')).toBeVisible();
+
+      await page.setViewportSize({width: 390, height: 820});
+      await expect(page.locator('[data-settings-group="live-collection-ohlcv"]')).toBeVisible();
+
+      expect(errors).toEqual([]);
+    });
+    """
+).strip()
+
+
+def _run_browser_smoke_spec(
+    tmp_path: Path,
+    test_output_dir: Path,
+    spec: str,
+    *,
+    spec_name: str,
+    output_name: str,
+) -> None:
+    npx = shutil.which("npx") or shutil.which("npx.cmd")
+    if npx is None:
+        pytest.skip("npx is required for the Playwright browser smoke check.")
+    node_modules = _playwright_node_modules(npx)
+    if node_modules is None:
+        pytest.skip("npx could not expose the @playwright/test package path.")
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    port = _free_port()
+    app = create_dashboard_app(config, config_path=config_path, host="127.0.0.1", port=port)
+    server = uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=port,
+            log_level="warning",
+            access_log=False,
+        )
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{port}/"
+    try:
+        _wait_for_dashboard(url)
+        spec_path = tmp_path / spec_name
+        spec_path.write_text(spec, encoding="utf-8")
+        env = {**os.environ, "HALPHA_DASHBOARD_URL": url}
+        existing_node_path = env.get("NODE_PATH")
+        env["NODE_PATH"] = str(node_modules) if not existing_node_path else f"{node_modules}{os.pathsep}{existing_node_path}"
+        result = subprocess.run(
+            [
+                npx,
+                "--yes",
+                "--package",
+                "@playwright/test",
+                "playwright",
+                "test",
+                spec_path.name,
+                "--browser=chromium",
+                "--output",
+                str(test_output_dir / output_name),
+                "--reporter=line",
+                "--workers=1",
+            ],
+            text=True,
+            capture_output=True,
+            timeout=90,
+            check=False,
+            env=env,
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
 
 
 def _free_port() -> int:

@@ -5695,7 +5695,8 @@
       if (!fields.length) {
         return `<div class="message">No editable controls are available for this section yet.</div>`;
       }
-      return fields.map(settingRow).join("");
+      const groups = settingsGroups(section, fields);
+      return `<div class="settings-group-list">${groups.map(settingGroupMarkup).join("")}</div>`;
     }
 
     function settingsFields() {
@@ -5723,6 +5724,204 @@
 
     function settingPathEnabled(path) {
       return settingPathValue(path) === true;
+    }
+
+    function settingsGroups(section, fields) {
+      const groups = [];
+      const byId = new Map();
+      fields.forEach((field) => {
+        const meta = settingGroupForField(section, field);
+        if (!byId.has(meta.id)) {
+          byId.set(meta.id, {...meta, fields: []});
+          groups.push(byId.get(meta.id));
+        }
+        byId.get(meta.id).fields.push(field);
+      });
+      return groups;
+    }
+
+    function settingGroupMarkup(group) {
+      const status = settingGroupStatus(group);
+      return `
+        <section class="settings-group" data-settings-group="${escapeHtml(group.id)}">
+          <div class="settings-group-head">
+            <div class="settings-group-title">
+              <h3>${escapeHtml(group.title)}</h3>
+              ${group.description ? `<p>${escapeHtml(group.description)}</p>` : ""}
+            </div>
+            ${status}
+          </div>
+          <div class="settings-group-body">
+            ${group.fields.map(settingRow).join("")}
+          </div>
+        </section>`;
+    }
+
+    function settingGroupStatus(group) {
+      if (!group.enabledPath) {
+        return "";
+      }
+      const enabled = settingPathEnabled(group.enabledPath);
+      return statusPill(enabled ? "available" : "skipped", enabled ? "Enabled" : "Disabled");
+    }
+
+    function settingGroupForField(section, field) {
+      const path = String(field?.path || "");
+      if (section === "Live") {
+        return liveSettingGroup(path);
+      }
+      if (section === "Market data") {
+        return marketSettingGroup(path);
+      }
+      if (section === "Intelligence sources") {
+        return intelligenceSettingGroup(path);
+      }
+      if (path.startsWith("codex.")) {
+        return {id: "report-codex", title: "Codex report writer", description: "Local report-generation integration.", enabledPath: "codex.enabled"};
+      }
+      if (path.startsWith("report.")) {
+        return {id: "report-output", title: "Report output", description: "Report language and title defaults."};
+      }
+      if (path.startsWith("dashboard.")) {
+        return {id: "dashboard-display", title: "Dashboard display", description: "Dashboard timestamp and market color preferences."};
+      }
+      if (path.startsWith("monitor.")) {
+        return {id: "monitor-health", title: "Monitor health checks", description: "Resident Monitor cadence and retry behavior."};
+      }
+      if (path.startsWith("quant.")) {
+        return {id: "strategy-research", title: "Strategy research", description: "Deterministic strategy evaluation switches.", enabledPath: "quant.enabled"};
+      }
+      return {id: `settings-${section.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, title: settingsSectionLabel(section)};
+    }
+
+    function liveSettingGroup(path) {
+      const collectionMatch = path.match(/^live\.collections\.([^.]+)\./);
+      if (collectionMatch) {
+        const dataType = collectionMatch[1];
+        return {
+          id: `live-collection-${dataType}`,
+          title: `${label(dataType)} collection`,
+          description: "Cadence and collection window for this data type.",
+          enabledPath: `live.collections.${dataType}.enabled`,
+        };
+      }
+      const triggerMatch = path.match(/^live\.reports\.triggers\.([^.]+)\./);
+      if (triggerMatch) {
+        const triggerId = triggerMatch[1];
+        return {
+          id: `live-trigger-${triggerId}`,
+          title: `${label(triggerId)} trigger`,
+          description: "Thresholds and job intent for this report trigger.",
+          enabledPath: `live.reports.triggers.${triggerId}.enabled`,
+        };
+      }
+      if (path.startsWith("live.reports.daily.")) {
+        return {
+          id: "live-daily-report",
+          title: "Daily report",
+          description: "Daily report availability in Live.",
+          enabledPath: "live.reports.daily.enabled",
+        };
+      }
+      return {
+        id: "live-scheduler",
+        title: "Live scheduler",
+        description: "Master switch and Core scheduler cadence.",
+        enabledPath: "live.enabled",
+      };
+    }
+
+    function marketSettingGroup(path) {
+      if (path.startsWith("market.derivatives.")) {
+        return {
+          id: "market-derivatives",
+          title: "Derivatives market",
+          description: "Derivatives source, instruments, classes, periods, and history depth.",
+          enabledPath: "market.derivatives.enabled",
+        };
+      }
+      if (path.startsWith("market.ohlcv.")) {
+        return {
+          id: "market-ohlcv",
+          title: "OHLCV history",
+          description: "Reusable candle sources, timeframes, and lookback depth.",
+          enabledPath: "market.enabled",
+        };
+      }
+      if (path.startsWith("market.proxy.")) {
+        return {
+          id: "market-network",
+          title: "Network access",
+          description: "Proxy switch without exposing local proxy values.",
+          enabledPath: "market.enabled",
+        };
+      }
+      if (path.startsWith("market.anomalies.")) {
+        return {
+          id: "market-anomalies",
+          title: "Market anomalies",
+          description: "External or Halpha rule-detected market anomaly records.",
+          enabledPath: "market.anomalies.enabled",
+        };
+      }
+      return {
+        id: "market-source",
+        title: "Market source",
+        description: "Primary public market source and instruments.",
+        enabledPath: "market.enabled",
+      };
+    }
+
+    function intelligenceSettingGroup(path) {
+      if (path.startsWith("text.intelligence.models.")) {
+        return {
+          id: "intel-text-models",
+          title: "Text intelligence models",
+          description: "Local model providers, names, revisions, and cache location.",
+          enabledPath: "text.intelligence.enabled",
+        };
+      }
+      if (path.startsWith("text.intelligence.thresholds.")) {
+        return {
+          id: "intel-text-thresholds",
+          title: "Text intelligence thresholds",
+          description: "Deterministic duplicate, topic, classifier, and entity cutoffs.",
+          enabledPath: "text.intelligence.enabled",
+        };
+      }
+      if (path.startsWith("text.intelligence.")) {
+        return {
+          id: "intel-text-engine",
+          title: "Text intelligence",
+          description: "Local text-intelligence evidence generation.",
+          enabledPath: "text.intelligence.enabled",
+        };
+      }
+      if (path.startsWith("text.")) {
+        return {
+          id: "intel-text-collection",
+          title: "Text collection",
+          description: "Configured public text source collection.",
+          enabledPath: "text.enabled",
+        };
+      }
+      if (path.startsWith("macro_calendar.")) {
+        return {
+          id: "intel-macro-calendar",
+          title: "Macro calendar",
+          description: "Scheduled-event sources, regions, classes, and windows.",
+          enabledPath: "macro_calendar.enabled",
+        };
+      }
+      if (path.startsWith("onchain_flow.")) {
+        return {
+          id: "intel-onchain-flow",
+          title: "On-chain flow",
+          description: "Aggregate on-chain and exchange-flow source coverage.",
+          enabledPath: "onchain_flow.enabled",
+        };
+      }
+      return {id: "intel-sources", title: "Intelligence sources"};
     }
 
     function settingFieldIsVisible(field) {
