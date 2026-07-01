@@ -6726,6 +6726,65 @@
       gap: 16px;
     }
 
+    .settings-group-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .settings-group {
+      display: grid;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+
+    .settings-group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      min-width: 0;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-soft);
+    }
+
+    .settings-group-title {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .settings-group-title h3 {
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .settings-group-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .settings-group-body {
+      display: grid;
+      min-width: 0;
+      padding: 0 14px;
+    }
+
+    .settings-group-body .form-row {
+      padding: 14px 0;
+    }
+
+    .settings-group-body .form-row:last-child {
+      border-bottom: 0;
+    }
+
     .form-row {
       display: grid;
       grid-template-columns: 160px minmax(0, 1fr);
@@ -7424,6 +7483,14 @@
       .settings-top,
       .form-row {
         grid-template-columns: 1fr;
+      }
+
+      .settings-group-head {
+        display: grid;
+      }
+
+      .settings-group-body {
+        padding: 0 12px;
       }
 
       .chart-selector .field {
@@ -8623,6 +8690,36 @@
       gap: 0;
     }
 
+    body[data-theme="solar"] .settings-group-list {
+      gap: 12px;
+    }
+
+    body[data-theme="solar"] .settings-group {
+      border-color: var(--border);
+      border-radius: var(--radius-control);
+      background: var(--panel);
+    }
+
+    body[data-theme="solar"] .settings-group-head {
+      padding: 12px 14px;
+      border-bottom-color: var(--border);
+      background: var(--panel-soft);
+    }
+
+    body[data-theme="solar"] .settings-group-title h3 {
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    body[data-theme="solar"] .settings-group-title p {
+      color: var(--muted);
+    }
+
+    body[data-theme="solar"] .settings-group-body {
+      padding: 0 14px;
+    }
+
     body[data-theme="solar"] .form-row {
       grid-template-columns: minmax(150px, 176px) minmax(0, 1fr);
       gap: 18px;
@@ -8959,6 +9056,11 @@
       body[data-theme="solar"] #overview-latest-report,
       body[data-theme="solar"] .settings-main,
       body[data-theme="solar"] .settings-storage-page .cleanup-grid {
+        grid-template-columns: 1fr;
+      }
+
+      body[data-theme="solar"] .settings-group-head,
+      body[data-theme="solar"] .form-row {
         grid-template-columns: 1fr;
       }
 
