@@ -362,7 +362,14 @@ def test_dashboard_root_uses_configured_timestamp_display(tmp_path: Path) -> Non
     config_path.write_text(
         config_path.read_text(encoding="utf-8").replace(
             "market:\n",
-            "dashboard:\n  display_timezone: UTC\n  timestamp_hour_cycle: 12h\n  timestamp_date_order: year_last\n\nmarket:\n",
+            (
+                "dashboard:\n"
+                "  display_timezone: UTC\n"
+                "  pnl_color_scheme: red_profit_green_loss\n"
+                "  timestamp_hour_cycle: 12h\n"
+                "  timestamp_date_order: year_last\n\n"
+                "market:\n"
+            ),
         ),
         encoding="utf-8",
     )
@@ -373,6 +380,7 @@ def test_dashboard_root_uses_configured_timestamp_display(tmp_path: Path) -> Non
 
     assert response.status_code == 200
     assert 'data-display-timezone="UTC"' in response.text
+    assert 'data-pnl-color-scheme="red_profit_green_loss"' in response.text
     assert 'data-timestamp-hour-cycle="12h"' in response.text
     assert 'data-timestamp-date-order="year_last"' in response.text
     assert '<strong id="display-timezone">' not in response.text
@@ -414,6 +422,11 @@ def test_dashboard_config_profile_exposes_safe_editable_fields(tmp_path: Path) -
     ]
     fields = {field["path"]: field for field in payload["fields"]}
     assert fields["dashboard.display_timezone"]["value"] == "Asia/Shanghai"
+    assert fields["dashboard.pnl_color_scheme"]["value"] == "green_profit_red_loss"
+    assert fields["dashboard.pnl_color_scheme"]["options"] == [
+        "green_profit_red_loss",
+        "red_profit_green_loss",
+    ]
     assert fields["dashboard.timestamp_hour_cycle"]["value"] == "24h"
     assert fields["dashboard.timestamp_hour_cycle"]["options"] == ["24h", "12h"]
     assert fields["dashboard.timestamp_date_order"]["value"] == "year_first"
@@ -468,6 +481,7 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
             "confirm": True,
             "changes": {
                 "dashboard.display_timezone": "UTC",
+                "dashboard.pnl_color_scheme": "red_profit_green_loss",
                 "dashboard.timestamp_hour_cycle": "12h",
                 "dashboard.timestamp_date_order": "year_last",
                 "monitor.interval_seconds": 600,
@@ -481,6 +495,7 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
     assert payload["status"] == "succeeded"
     assert payload["changed_paths"] == [
         "dashboard.display_timezone",
+        "dashboard.pnl_color_scheme",
         "dashboard.timestamp_date_order",
         "dashboard.timestamp_hour_cycle",
         "monitor.interval_seconds",
@@ -489,6 +504,7 @@ def test_dashboard_config_save_validates_and_updates_current_config(tmp_path: Pa
     assert payload["backup_ref"].startswith(".halpha/dashboard/config_backups/config-")
     saved = load_config(config_path)
     assert saved["dashboard"]["display_timezone"] == "UTC"
+    assert saved["dashboard"]["pnl_color_scheme"] == "red_profit_green_loss"
     assert saved["dashboard"]["timestamp_hour_cycle"] == "12h"
     assert saved["dashboard"]["timestamp_date_order"] == "year_last"
     assert saved["monitor"]["interval_seconds"] == 600
@@ -1783,6 +1799,61 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert optimization["fields"]["selected_candidate"]["candidate_id"] == "candidate:0001"
     assert optimization["fields"]["robustness"]["status"] == "robust"
     assert str(tmp_path) not in response.text
+
+
+def test_dashboard_strategies_endpoint_skips_history_records_without_strategy_identity(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    write_json(
+        tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_history",
+            "status": "ok",
+            "record_count": 2,
+            "records": [
+                {
+                    "history_id": "strategy_evaluation_history:artifact:strategy_benchmark_suite",
+                    "record_type": "strategy_evaluation_history_record",
+                    "created_at": "2026-06-20T00:03:00Z",
+                    "status": "warning",
+                    "strategy_name": "strategy_benchmark_suite",
+                    "metrics": {},
+                },
+                {
+                    "history_id": "strategy_evaluation_history:report_run:run-1:evaluation:tsmom_vol_scaled:BTCUSDT:1d",
+                    "record_type": "strategy_evaluation_history_record",
+                    "created_at": "2026-06-20T00:04:00Z",
+                    "status": "succeeded",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "source": "binance",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "metrics": {"strategy_metrics": {"net_return_pct": 4.2}},
+                    "visualization": {
+                        "chart_type": "candlestick_backtest",
+                        "status": "available",
+                        "strategy_name": "tsmom_vol_scaled",
+                        "source": "binance",
+                        "symbol": "BTCUSDT",
+                        "timeframe": "1d",
+                    },
+                },
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    payload = client.get("/api/strategies").json()
+
+    assert payload["shared_history"]["fields"]["record_count"] == 2
+    assert payload["shared_history"]["fields"]["backtest_count"] == 1
+    assert payload["shared_history"]["fields"]["ignored_non_backtest_records"] == 1
+    backtests = payload["shared_history"]["backtests"]
+    assert [item["fields"]["strategy_name"] for item in backtests] == ["tsmom_vol_scaled"]
+    assert [item["fields"]["symbol"] for item in backtests] == ["BTCUSDT"]
 
 
 def test_dashboard_strategies_endpoint_rebuilds_full_backtest_markers_from_equity_curve(tmp_path: Path) -> None:

@@ -33,8 +33,10 @@ from halpha.dashboard.data_viewer import (
     dashboard_data_viewer_timeline,
 )
 from halpha.dashboard.constants import (
+    DASHBOARD_PNL_COLOR_SCHEME_OPTIONS,
     DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS,
     DASHBOARD_TIMESTAMP_HOUR_CYCLE_OPTIONS,
+    DEFAULT_DASHBOARD_PNL_COLOR_SCHEME,
     DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
     DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE,
 )
@@ -351,6 +353,7 @@ def create_dashboard_app(
         return HTMLResponse(
             dashboard_index_html(
                 display_timezone=dashboard_display_timezone(active_config),
+                pnl_color_scheme=dashboard_pnl_color_scheme(active_config),
                 timestamp_hour_cycle=dashboard_timestamp_hour_cycle(active_config),
                 timestamp_date_order=dashboard_timestamp_date_order(active_config),
             ),
@@ -1371,6 +1374,14 @@ def _dashboard_lifecycle_payload(result: ServiceLifecycleResult, *, expected_ins
 
 def dashboard_display_timezone(config: dict[str, Any]) -> str:
     return configured_display_timezone(config)
+
+
+def dashboard_pnl_color_scheme(config: dict[str, Any]) -> str:
+    dashboard = config.get("dashboard") if isinstance(config, dict) else None
+    value = dashboard.get("pnl_color_scheme") if isinstance(dashboard, dict) else None
+    if value in DASHBOARD_PNL_COLOR_SCHEME_OPTIONS:
+        return str(value)
+    return DEFAULT_DASHBOARD_PNL_COLOR_SCHEME
 
 
 def dashboard_timestamp_hour_cycle(config: dict[str, Any]) -> str:

@@ -13,8 +13,10 @@ from uuid import uuid4
 
 from halpha.config import ConfigError, load_config
 from halpha.dashboard.constants import (
+    DASHBOARD_PNL_COLOR_SCHEME_OPTIONS,
     DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS,
     DASHBOARD_TIMESTAMP_HOUR_CYCLE_OPTIONS,
+    DEFAULT_DASHBOARD_PNL_COLOR_SCHEME,
     DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
     DEFAULT_DASHBOARD_TIMESTAMP_HOUR_CYCLE,
 )
@@ -239,6 +241,16 @@ CONFIG_PROFILE_FIELDS = (
         "options": DASHBOARD_TIMESTAMP_DATE_ORDER_OPTIONS,
         "default": DEFAULT_DASHBOARD_TIMESTAMP_DATE_ORDER,
         "description": "Default date order used by dashboard timestamps.",
+    },
+    {
+        "section": "Dashboard",
+        "label": "PnL colors",
+        "path": "dashboard.pnl_color_scheme",
+        "control": "select",
+        "value_type": "string",
+        "options": DASHBOARD_PNL_COLOR_SCHEME_OPTIONS,
+        "default": DEFAULT_DASHBOARD_PNL_COLOR_SCHEME,
+        "description": "Color convention for profit/loss values and candle up/down moves.",
     },
     {
         "section": "Market data",

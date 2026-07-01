@@ -1,5 +1,6 @@
     const app = document.querySelector("#halpha-dashboard-app");
     let displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";
+    let pnlColorScheme = app.dataset.pnlColorScheme || "green_profit_red_loss";
     const timestampDisplay = {
       hourCycle: normalizeTimestampHourCycle(app.dataset.timestampHourCycle),
       dateOrder: normalizeTimestampDateOrder(app.dataset.timestampDateOrder),
@@ -62,6 +63,9 @@
       formatNumber,
       joinPath,
       markdownToHtml,
+      normalizePnlColorScheme,
+      pnlClass,
+      pnlColors,
     } = shared;
     const reportHelpers = reportsWorkflow.createReportHelpers({joinPath, unique});
     const {isAvailableReport, reportArtifactFiles, reportArtifactGroups, reportPath, reportSourceRefs} = reportHelpers;
@@ -70,6 +74,7 @@
       hourCycle: timestampDisplay.hourCycle,
       dateOrder: timestampDisplay.dateOrder,
     });
+    applyPnlColorScheme(pnlColorScheme);
     const BACKTEST_CHART_MAX_CANDLES = 1000;
     const VIEW_REFRESH_TTL_MS = 15000;
     const HEALTH_REFRESH_TTL_MS = 15000;
@@ -260,6 +265,21 @@
         hourCycle: valueForPath("dashboard.timestamp_hour_cycle"),
         dateOrder: valueForPath("dashboard.timestamp_date_order"),
       });
+      applyPnlColorScheme(valueForPath("dashboard.pnl_color_scheme"));
+    }
+
+    function applyPnlColorScheme(value) {
+      pnlColorScheme = normalizePnlColorScheme(value || pnlColorScheme);
+      shared.configurePnlColorScheme(pnlColorScheme);
+      const colors = pnlColors(pnlColorScheme);
+      document.documentElement.dataset.pnlColorScheme = pnlColorScheme;
+      document.body.dataset.pnlColorScheme = pnlColorScheme;
+      document.documentElement.style.setProperty("--pnl-profit", colors.profit);
+      document.documentElement.style.setProperty("--pnl-loss", colors.loss);
+      document.documentElement.style.setProperty("--pnl-profit-soft", colors.profitSoft);
+      document.documentElement.style.setProperty("--pnl-loss-soft", colors.lossSoft);
+      document.documentElement.style.setProperty("--pnl-up", colors.up);
+      document.documentElement.style.setProperty("--pnl-down", colors.down);
     }
 
     function label(value) {
@@ -280,11 +300,33 @@
     }
 
     function metricCell(labelText, value, note = "") {
-      return `<div class="summary-cell"><div class="summary-label">${escapeHtml(labelText)}</div><div class="summary-value">${escapeHtml(value)}</div>${note ? `<div class="summary-note">${escapeHtml(note)}</div>` : ""}</div>`;
+      const valueHtml = pnlMetricLabel(labelText) ? pnlValueHtml(value) : escapeHtml(value);
+      return `<div class="summary-cell"><div class="summary-label">${escapeHtml(labelText)}</div><div class="summary-value">${valueHtml}</div>${note ? `<div class="summary-note">${escapeHtml(note)}</div>` : ""}</div>`;
     }
 
     function detailRow(key, value) {
-      return `<div class="detail-row"><div class="detail-key">${escapeHtml(key)}</div><div class="detail-value">${escapeHtml(text(value))}</div></div>`;
+      const valueText = text(value);
+      const valueHtml = pnlMetricLabel(key) ? pnlValueHtml(valueText) : escapeHtml(valueText);
+      return `<div class="detail-row"><div class="detail-key">${escapeHtml(key)}</div><div class="detail-value">${valueHtml}</div></div>`;
+    }
+
+    function pnlMetricLabel(labelText) {
+      const normalized = String(labelText || "").toLowerCase();
+      return [
+        "return",
+        "drawdown",
+        "profit",
+        "loss",
+        "pnl",
+        "excess",
+        "best trade",
+        "worst trade",
+        "buy and hold",
+      ].some((needle) => normalized.includes(needle));
+    }
+
+    function pnlValueHtml(value) {
+      return `<span class="${pnlClass(value)}">${escapeHtml(text(value))}</span>`;
     }
 
     function pct(value) {
@@ -825,7 +867,6 @@
     function renderStrategiesLoading() {
       setHtml("#strategy-spec-summary", `<div class="loading-surface">${skeletonLine("42%")}${skeletonLine("78%")}</div>`);
       setHtml("#strategy-parameter-controls", skeletonCards(3, "strategy-param-card"));
-      setHtml("#strategy-metrics", skeletonCards(6, "summary-cell"));
       setHtml("#strategy-params", `<tbody><tr><td colspan="2">${skeletonRows(5)}</td></tr></tbody>`);
       setHtml("#recent-trades", skeletonList(2));
       setHtml("#backtest-runs", skeletonList(3));
@@ -1646,7 +1687,13 @@
         ...sharedBacktests,
         ...standaloneBacktests.filter((item) => !sharedBacktestRefs.has(item?.output_dir || "")),
       ];
-      return backtests.filter(Boolean);
+      return backtests.filter(isDisplayableBacktestOutput);
+    }
+
+    function isDisplayableBacktestOutput(item) {
+      if (!item || item.type !== "strategy_backtest") return false;
+      const identity = strategyIdentity(item);
+      return Boolean(identity.name && identity.symbol && identity.timeframe);
     }
 
     function strategyProfiles() {
@@ -1744,40 +1791,7 @@
           ${metricCell("Backtest records", runCount, "stored evaluations")}
           ${metricCell("Symbols", symbols.length, symbols.slice(0, 3).join(", ") || "n/a")}
           ${metricCell("Families", families.length, families.slice(0, 3).join(", ") || "n/a")}
-        </section>
-        <div class="strategy-profile-grid">
-          ${profiles.slice(0, 12).map((profile) => {
-        const matchingRuns = outputs.filter((item) => strategyProfileMatchesIdentity(profile, strategyIdentity(item)));
-        const latest = matchingRuns[0];
-        const metrics = strategyMetrics(latest);
-        return `<button class="strategy-profile-card" type="button" data-strategy-profile-run="${escapeHtml(strategyProfileId(profile))}">
-            <span class="strategy-profile-card-top">
-              <strong>${escapeHtml(profile.display_name || profile.strategy_name || "Strategy profile")}</strong>
-              <span class="status-pill ${escapeHtml(profile.tuned ? "ok" : "pending")}">${escapeHtml(profile.tuned ? "configured" : "base")}</span>
-            </span>
-            <span class="strategy-run-meta">${escapeHtml([label(profile.family || "family n/a"), profile.source || "source n/a"].join(" / "))}</span>
-            <span class="strategy-run-metrics">
-              <span><b>${escapeHtml(metrics.totalReturn)}</b><small>latest return</small></span>
-              <span><b>${escapeHtml(metrics.sharpe)}</b><small>sharpe</small></span>
-              <span><b>${escapeHtml(metrics.drawdown)}</b><small>drawdown</small></span>
-              <span><b>${escapeHtml(matchingRuns.length)}</b><small>runs</small></span>
-            </span>
-          </button>`;
-      }).join("")}
-        </div>`;
-      document.querySelectorAll("[data-strategy-profile-run]").forEach((button) => {
-        button.addEventListener("click", () => {
-          setSelectIfPresent("#strategy-profile", button.dataset.strategyProfileRun || "");
-          syncBacktestProfileControls(true);
-          openStrategyBacktestDialog();
-        });
-      });
-    }
-
-    function strategyProfileMatchesIdentity(profile, identity) {
-      return (!profile.strategy_name || !identity.name || identity.name === profile.strategy_name)
-        && (!profile.symbol || !identity.symbol || identity.symbol === profile.symbol)
-        && (!profile.timeframe || !identity.timeframe || identity.timeframe === profile.timeframe);
+        </section>`;
     }
 
     function syncBacktestProfileControls(force = false) {
@@ -2481,16 +2495,16 @@
       syncStrategyControls(selected);
       syncStrategyDataInputs(false);
       syncStrategyOperationTabs();
-      const metrics = strategyMetrics(selected);
-      setHtml("#strategy-metrics", [
-        metricCell("Total return", metrics.totalReturn, "strategy"),
-        metricCell("Max drawdown", metrics.drawdown, "risk"),
-        metricCell("Sharpe", metrics.sharpe, "risk adjusted"),
-        metricCell("Win rate", metrics.winRate, "trades"),
-        metricCell("Profit factor", metrics.profitFactor, "gross"),
-        metricCell("Trades", metrics.trades, "count"),
-      ].join(""));
-      renderStrategyDetailHeader(selected, metrics);
+      renderBacktestRuns(outputs);
+      if (state.strategyOperationTab === "backtest" && state.strategyBacktestDetailOpen && selected) {
+        renderBacktestDetail(selected);
+      }
+      renderStrategyExperimentResults();
+      renderStrategyOptimizeResults();
+    }
+
+    function renderBacktestDetail(selected) {
+      renderStrategyDetailHeader(selected);
       const vis = visibleStrategyVisualization(selected);
       const identityLabel = [vis.symbol, vis.timeframe].filter(Boolean).join(" - ");
       setText("#strategy-chart-title", identityLabel ? `${identityLabel} - Halpha` : "OHLCV data viewer");
@@ -2502,12 +2516,9 @@
       ));
       setText("#strategy-chart-clock", displayTimezone);
       syncStrategyWindowControls();
-      strategyChart.renderCandlestickSvg("#backtest-chart", vis, {displayTimezone});
+      strategyChart.renderCandlestickSvg("#backtest-chart", vis, {displayTimezone, pnlColorScheme});
       renderStrategyParams(selected, vis);
       renderRecentTrades(vis);
-      renderBacktestRuns(outputs);
-      renderStrategyExperimentResults();
-      renderStrategyOptimizeResults();
       renderStrategyTab("trades");
     }
 
@@ -2879,12 +2890,13 @@
           board.innerHTML = `
             <div class="empty-state">
               <strong>No backtest runs yet.</strong>
-              <span>Run a configured strategy profile to create an inspectable evaluation record.</span>
+              <span>Run a configured strategy profile to create an inspectable evaluation record with a strategy, symbol, and timeframe.</span>
             </div>`;
         } else {
           const groups = new Map();
           indexedRuns.forEach((run) => {
-            const key = run.identity.symbol || "Unknown symbol";
+            const key = run.identity.symbol;
+            if (!key) return;
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(run);
           });
@@ -2897,8 +2909,18 @@
                 </div>
                 <span class="chip">${escapeHtml(unique(runs.map((run) => run.identity.timeframe).filter(Boolean)).join(", ") || "timeframe n/a")}</span>
               </div>
-              <div class="strategy-run-grid">
-                ${runs.slice(0, 18).map((run) => renderBacktestRunCard(run)).join("")}
+              <div class="strategy-run-list" role="list">
+                <div class="strategy-run-list-head" aria-hidden="true">
+                  <span>Strategy</span>
+                  <span>Timeframe</span>
+                  <span>Window</span>
+                  <span>Return</span>
+                  <span>Drawdown</span>
+                  <span>Sharpe</span>
+                  <span>Trades</span>
+                  <span>Equity</span>
+                </div>
+                ${runs.map((run) => renderBacktestRunRow(run)).join("")}
               </div>
             </section>`).join("");
         }
@@ -2918,25 +2940,119 @@
       });
     }
 
-    function renderBacktestRunCard(run) {
+    function renderBacktestRunRow(run) {
       const metrics = strategyMetrics(run.item);
       const identity = run.identity;
-      const status = run.item?.status || run.item?.fields?.status || "stored";
       const created = run.item?.fields?.created_at || run.item?.created_at || "";
+      const statusChip = backtestRunStatusChip(run.item);
       return `
-        <button class="strategy-run-card ${run.item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${run.index}">
-          <span class="strategy-run-card-top">
+        <button class="strategy-run-row ${run.item === state.selectedStrategyOutput ? "active" : ""}" type="button" data-backtest-index="${run.index}" role="listitem">
+          <span class="strategy-run-cell strategy-run-main">
             <strong>${escapeHtml(identity.name || "Strategy")}</strong>
-            <span class="status-pill ${escapeHtml(statusClass(status))}">${escapeHtml(label(status))}</span>
+            <small>${escapeHtml(formatTimestamp(created))}</small>
+            ${statusChip}
           </span>
-          <span class="strategy-run-meta">${escapeHtml([identity.symbol, identity.timeframe, formatTimestamp(created)].filter(Boolean).join(" / "))}</span>
-          <span class="strategy-run-metrics">
-            <span><b>${escapeHtml(metrics.totalReturn)}</b><small>return</small></span>
-            <span><b>${escapeHtml(metrics.drawdown)}</b><small>drawdown</small></span>
-            <span><b>${escapeHtml(metrics.sharpe)}</b><small>sharpe</small></span>
-            <span><b>${escapeHtml(metrics.trades)}</b><small>trades</small></span>
+          <span class="strategy-run-cell"><b>${escapeHtml(identity.timeframe || "n/a")}</b></span>
+          <span class="strategy-run-cell"><b>${escapeHtml(backtestRunDuration(run.item))}</b></span>
+          <span class="strategy-run-cell"><b class="${pnlClass(metrics.totalReturn)}">${escapeHtml(metrics.totalReturn)}</b></span>
+          <span class="strategy-run-cell"><b class="${pnlClass(metrics.drawdown)}">${escapeHtml(metrics.drawdown)}</b></span>
+          <span class="strategy-run-cell"><b class="${pnlClass(metrics.sharpe)}">${escapeHtml(metrics.sharpe)}</b></span>
+          <span class="strategy-run-cell"><b>${escapeHtml(metrics.trades)}</b></span>
+          <span class="strategy-run-cell strategy-run-sparkline-cell">
+            ${renderBacktestSparkline(run.item)}
           </span>
         </button>`;
+    }
+
+    function backtestRunStatusChip(item) {
+      const status = String(item?.status || item?.fields?.status || "stored").toLowerCase();
+      if (["available", "ok", "stored", "succeeded", "success"].includes(status)) {
+        return "";
+      }
+      return `<span class="status-pill ${escapeHtml(statusClass(status))}">${escapeHtml(label(status))}</span>`;
+    }
+
+    function backtestRunWindow(item) {
+      const fields = item?.fields || {};
+      const sample = fields.metrics?.sample || fields.sample || {};
+      const vis = backtestVisualization(item);
+      return {
+        start: fields.input_window_start || sample.start || firstTime(vis?.equity_curve) || firstTime(vis?.bars),
+        end: fields.input_window_end || sample.end || lastTime(vis?.equity_curve) || lastTime(vis?.bars),
+      };
+    }
+
+    function firstTime(items) {
+      return Array.isArray(items) && items.length ? items[0]?.time || items[0]?.open_time || "" : "";
+    }
+
+    function lastTime(items) {
+      return Array.isArray(items) && items.length ? items[items.length - 1]?.time || items[items.length - 1]?.open_time || "" : "";
+    }
+
+    function backtestRunDuration(item) {
+      const window = backtestRunWindow(item);
+      return compactDurationBetween(window.start, window.end);
+    }
+
+    function compactDurationBetween(start, end) {
+      const startMs = start ? new Date(start).getTime() : NaN;
+      const endMs = end ? new Date(end).getTime() : NaN;
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+        return "n/a";
+      }
+      return compactDurationMs(endMs - startMs);
+    }
+
+    function compactDurationMs(ms) {
+      const totalMinutes = Math.max(0, Math.round(ms / 60000));
+      const minutesPerHour = 60;
+      const minutesPerDay = 24 * minutesPerHour;
+      const minutesPerMonth = 30 * minutesPerDay;
+      if (totalMinutes >= minutesPerMonth) {
+        const months = Math.floor(totalMinutes / minutesPerMonth);
+        const days = Math.floor((totalMinutes % minutesPerMonth) / minutesPerDay);
+        return `${months}M${days ? `${days}d` : ""}`;
+      }
+      if (totalMinutes >= minutesPerDay) {
+        const days = Math.floor(totalMinutes / minutesPerDay);
+        const hours = Math.floor((totalMinutes % minutesPerDay) / minutesPerHour);
+        return `${days}d${hours ? `${hours}h` : ""}`;
+      }
+      if (totalMinutes >= minutesPerHour) {
+        const hours = Math.floor(totalMinutes / minutesPerHour);
+        const minutes = totalMinutes % minutesPerHour;
+        return `${hours}h${minutes ? `${minutes}m` : ""}`;
+      }
+      return `${totalMinutes}m`;
+    }
+
+    function renderBacktestSparkline(item) {
+      const values = equityCurveValues(backtestVisualization(item).equity_curve || []);
+      if (values.length < 2) {
+        return `<span class="strategy-run-sparkline-empty">n/a</span>`;
+      }
+      const width = 168;
+      const height = 44;
+      const padding = 4;
+      const baseline = height / 2;
+      const start = values[0];
+      const deltas = values.map((value) => value - start);
+      const maxAbs = Math.max(...deltas.map((value) => Math.abs(value)), 0.000001);
+      const points = values.map((value, index) => {
+        const x = padding + (index / (values.length - 1)) * (width - padding * 2);
+        const y = baseline - ((value - start) / maxAbs) * (baseline - padding);
+        return {x: Number(x.toFixed(2)), y: Number(y.toFixed(2)), value};
+      });
+      const segments = points.slice(1).map((point, index) => {
+        const previous = points[index];
+        const segmentClass = point.value >= start ? "profit" : "loss";
+        return `<path class="strategy-run-sparkline-segment ${segmentClass}" d="M ${previous.x} ${previous.y} L ${point.x} ${point.y}" />`;
+      }).join("");
+      return `<svg class="strategy-run-sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="Backtest equity curve">
+          <line class="strategy-run-sparkline-baseline" x1="${padding}" x2="${width - padding}" y1="${baseline}" y2="${baseline}" />
+          ${segments}
+        </svg>`;
     }
 
     function selectBacktestRun(outputs, index) {

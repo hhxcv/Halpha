@@ -19,6 +19,7 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_DATA_CLASSES,
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
+from halpha.dashboard.constants import DASHBOARD_PNL_COLOR_SCHEME_OPTIONS
 from halpha.live.contracts import (
     LIVE_COLLECTION_FIELDS,
     LIVE_CONFIG_FIELDS,
@@ -118,7 +119,12 @@ SUPPORTED_TEXT_INTELLIGENCE_THRESHOLD_FIELDS = {
     "max_topic_window_hours",
     "same_topic_similarity",
 }
-SUPPORTED_DASHBOARD_FIELDS = {"display_timezone", "timestamp_date_order", "timestamp_hour_cycle"}
+SUPPORTED_DASHBOARD_FIELDS = {
+    "display_timezone",
+    "pnl_color_scheme",
+    "timestamp_date_order",
+    "timestamp_hour_cycle",
+}
 SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "elevated_overfitting_blocks_effective",
     "max_abs_drawdown_pct",
@@ -440,6 +446,15 @@ def _validate_dashboard_config(dashboard: Any) -> None:
         )
         if value not in {"year_first", "year_last"}:
             raise ConfigError("dashboard.timestamp_date_order must be one of: year_first, year_last.")
+    if "pnl_color_scheme" in dashboard:
+        value = _require_non_empty_string(
+            dashboard,
+            "pnl_color_scheme",
+            "dashboard.pnl_color_scheme",
+        )
+        if value not in DASHBOARD_PNL_COLOR_SCHEME_OPTIONS:
+            options = ", ".join(DASHBOARD_PNL_COLOR_SCHEME_OPTIONS)
+            raise ConfigError(f"dashboard.pnl_color_scheme must be one of: {options}.")
 
 
 def _validate_logging_config(logging_config: Any) -> None:

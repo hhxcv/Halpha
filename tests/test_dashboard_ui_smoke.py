@@ -458,6 +458,7 @@ def test_dashboard_storage_and_settings_controls_expose_dom_contracts(tmp_path: 
     assert "Change summary" not in html
     assert "Validation results" not in html
     assert "data-setting-path" in script
+    assert "dashboard.pnl_color_scheme" in script
     assert "dashboard.timestamp_hour_cycle" in script
     assert "dashboard.timestamp_date_order" in script
     assert 'min="0" max="1" step="0.01"' in script
@@ -579,6 +580,7 @@ def test_dashboard_shell_exposes_configured_display_timezone(tmp_path: Path) -> 
     script = _script_block(html)
 
     assert 'data-display-timezone="Asia/Shanghai"' in html
+    assert 'data-pnl-color-scheme="green_profit_red_loss"' in html
     assert 'data-timestamp-hour-cycle="24h"' in html
     assert 'data-timestamp-date-order="year_first"' in html
     assert 'id="display-timezone"' not in html
@@ -593,9 +595,11 @@ def test_dashboard_shell_exposes_configured_display_timezone(tmp_path: Path) -> 
     assert "VIEW_TITLES" in script
     assert "renderGlobalTopbar" in script
     assert 'let displayTimezone = app.dataset.displayTimezone || "Asia/Shanghai";' in script
+    assert 'let pnlColorScheme = app.dataset.pnlColorScheme || "green_profit_red_loss";' in script
     assert "app.dataset.timestampHourCycle" in script
     assert "app.dataset.timestampDateOrder" in script
     assert "applyTimestampDisplayOptionsFromProfile" in script
+    assert "applyPnlColorScheme" in script
     assert "new Intl.DateTimeFormat" in script
     assert "formatTimestamp(value)" in script
     assert "looksLikeIsoTimestamp(value)" in script
@@ -777,6 +781,8 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert ".chart-wrap" in css
     assert ".chart-tooltip" in css
     assert ".chart-tooltip-op-detail" in css
+    assert ".pnl-positive" in css
+    assert ".pnl-negative" in css
     assert ".candle-hit" in css
     assert ".candle-crosshair" in css
     assert ".strategy-eval-grid" in css
@@ -797,11 +803,17 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert 'id="strategy-backtest-dialog"' in html
     assert 'id="strategy-backtest-detail"' in html
     assert 'id="strategy-backtest-back"' in html
+    assert 'id="strategy-metrics"' not in html
     assert ".strategy-backtest-board" in css
     assert ".strategy-detail-view" in css
     assert ".strategy-profile-card" in css
     assert ".strategy-candidate-card" in css
-    assert ".strategy-run-card" in css
+    assert ".strategy-run-list" in css
+    assert ".strategy-run-row" in css
+    assert ".strategy-run-sparkline" in css
+    assert "renderBacktestRunRow" in script
+    assert "backtestRunDuration" in script
+    assert "renderBacktestSparkline" in script
     assert ".strategy-profile-summary" in css
     assert ".operation-progress" in css
     assert ".collect-timeline-track" in css
@@ -823,6 +835,15 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "chart-tooltip" in script
     assert "markerDetailRows" in script
     assert "markerTone" in script
+    assert "markerColor" in script
+    assert "pnlColors" in script
+    assert "pnlValueHtml" in script
+    assert "isDisplayableBacktestOutput" in script
+    assert "renderBacktestDetail" in script
+    assert "Unknown symbol" not in script
+    assert "#strategy-metrics" not in script
+    assert "#0ECB81" not in script
+    assert "#F6465D" not in script
     assert "Operations" in script
     assert "Visible operations" in script
     assert "Full per-trade rows are not stored in this artifact." in script
