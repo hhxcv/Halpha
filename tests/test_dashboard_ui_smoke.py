@@ -705,6 +705,11 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert 'data-live-endpoint="/api/live"' in html
     assert 'data-live-cycles-endpoint="/api/live/cycles"' in html
     assert 'data-live-alerts-endpoint="/api/live/alerts"' in html
+    assert 'data-live-history-endpoint="/api/live/history"' in html
+    assert 'id="live-mode-tabs"' in html
+    assert 'data-live-mode="now"' in html
+    assert 'data-live-mode="reports"' in html
+    assert 'data-live-mode="history"' in html
     assert 'id="live-summary"' in html
     assert 'id="live-source-matrix"' in html
     assert 'id="live-filter-data-type"' in html
@@ -717,9 +722,25 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert 'id="live-target-detail"' in html
     assert 'id="live-job-lane"' in html
     assert 'id="live-operations-timeline"' in html
+    assert 'id="live-triggered-reports"' in html
+    assert 'id="live-alert-archive"' in html
+    assert 'id="live-history-filter-start"' in html
+    assert 'id="live-history-filter-end"' in html
+    assert 'id="live-history-filter-data-type"' in html
+    assert 'id="live-history-filter-trigger"' in html
+    assert 'id="live-history-filter-kind"' in html
+    assert 'id="live-history-filter-status"' in html
+    assert 'id="live-history-filter-report-linked"' in html
+    assert 'id="live-history-filter-attention"' in html
+    assert 'id="live-event-drawer"' in html
     assert "window.HalphaDashboardLive" in dashboard_script()
     css = _style_block(html)
     assert ".live-filter-bar" in css
+    assert ".live-history-filter-bar" in css
+    assert ".live-mode-tabs" in css
+    assert ".live-review-row" in css
+    assert ".live-alert-row" in css
+    assert ".live-history-event-button" in css
     assert ".live-intelligence-strip" in css
     assert ".live-target-table" in css
     assert ".live-target-row.active" in css
@@ -731,7 +752,14 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert "DATA_TYPE_ORDER = [\"ohlcv\", \"text_event\", \"macro_calendar\", \"onchain_flow\", \"derivatives_market\", \"market_anomaly\"]" in dashboard_script()
     assert "renderLiveIntelligenceStrip" in dashboard_script()
     assert "renderLiveJobLane" in dashboard_script()
+    assert "renderLiveTriggeredReports" in dashboard_script()
+    assert "renderLiveAlertArchive" in dashboard_script()
+    assert "renderLiveHistoryFilters" in dashboard_script()
+    assert "openLiveEventDrawer" in dashboard_script()
+    assert "closeLiveEventDrawer" in dashboard_script()
+    assert "filteredLiveHistoryEvents" in dashboard_script()
     assert "data-live-target-key" in dashboard_script()
+    assert "data-live-event-id" in dashboard_script()
     assert "matchesLiveFilters" in dashboard_script()
     assert "collectionStatus" in dashboard_script()
     assert "data-monitor-job" not in html

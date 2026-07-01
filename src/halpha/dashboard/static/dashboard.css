@@ -3155,8 +3155,14 @@
 
     .live-summary,
     .live-source-board,
+    .live-mode-tabs,
+    .live-review-panel,
     .live-operations-panel {
       grid-column: 1 / -1;
+    }
+
+    .live-mode-tabs {
+      justify-self: start;
     }
 
     .live-section-head,
@@ -3176,6 +3182,19 @@
     .live-filter-bar {
       display: grid;
       grid-template-columns: minmax(180px, 0.9fr) minmax(160px, 0.75fr) auto auto auto;
+      gap: 10px;
+      align-items: end;
+      min-width: 0;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-muted);
+    }
+
+    .live-history-filter-bar {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(130px, 1fr)) auto auto auto;
       gap: 10px;
       align-items: end;
       min-width: 0;
@@ -3349,6 +3368,106 @@
       min-width: 0;
     }
 
+    .live-triggered-reports,
+    .live-alert-archive {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .live-alert-archive {
+      margin-top: 14px;
+    }
+
+    .live-review-table {
+      display: grid;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .live-review-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.85fr) minmax(104px, 0.52fr) minmax(220px, 1.2fr) minmax(128px, 0.75fr) minmax(180px, 1fr) minmax(150px, 0.8fr);
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+      width: 100%;
+      padding: 11px 12px;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .live-review-row:last-child {
+      border-bottom: 0;
+    }
+
+    .live-review-head {
+      cursor: default;
+      background: var(--panel-muted);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .live-review-row span,
+    .live-review-row small,
+    .live-alert-row span,
+    .live-alert-row p,
+    .live-alert-row strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .live-review-row small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .live-ref-missing {
+      color: var(--warning-text);
+      font-weight: 740;
+    }
+
+    .live-alert-list {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .live-alert-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.8fr) minmax(132px, 0.7fr) minmax(160px, 0.9fr) minmax(180px, 1fr);
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-muted);
+    }
+
+    .live-alert-row div {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .live-alert-row p {
+      margin: 0;
+      color: var(--muted);
+    }
+
     .live-stream-row {
       display: grid;
       grid-template-columns: 130px minmax(0, 1fr);
@@ -3427,6 +3546,45 @@
       display: grid;
       gap: 10px;
       min-width: 0;
+    }
+
+    .live-history-row {
+      grid-template-columns: minmax(112px, 0.62fr) 42px minmax(0, 1fr) minmax(94px, auto);
+    }
+
+    .live-history-event-button {
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .live-history-event-button small {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 680;
+      overflow-wrap: anywhere;
+    }
+
+    .drawer-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+      margin-bottom: 10px;
+    }
+
+    .drawer-summary {
+      margin: 0 0 12px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
     }
 
     .live-target-detail-head {
@@ -6192,6 +6350,8 @@
       }
 
       .live-filter-bar,
+      .live-history-filter-bar,
+      .live-review-row,
       .live-job-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -6309,8 +6469,11 @@
       }
 
       .live-filter-bar,
+      .live-history-filter-bar,
       .live-source-matrix,
       .live-intelligence-strip,
+      .live-review-row,
+      .live-alert-row,
       .live-job-row {
         grid-template-columns: 1fr;
       }

@@ -22,6 +22,7 @@
       live: app.dataset.liveEndpoint,
       liveCycles: app.dataset.liveCyclesEndpoint,
       liveAlerts: app.dataset.liveAlertsEndpoint,
+      liveHistory: app.dataset.liveHistoryEndpoint,
       jobs: app.dataset.jobsEndpoint,
       schedule: app.dataset.scheduleEndpoint,
       services: app.dataset.servicesEndpoint,
@@ -129,7 +130,21 @@
       live: null,
       liveCycles: [],
       liveAlerts: null,
+      liveHistory: null,
       liveFilters: {dataType: "all", status: "all", activeOnly: false, attentionOnly: false},
+      liveMode: "now",
+      liveHistoryFilters: {
+        start: "",
+        end: "",
+        dataType: "all",
+        triggerId: "all",
+        eventKind: "all",
+        status: "all",
+        reportLinkedOnly: false,
+        attentionOnly: false,
+      },
+      selectedLiveEventId: "",
+      liveEventDrawerOpen: false,
       selectedLiveTargetKey: "",
       schedule: null,
       services: null,
@@ -972,10 +987,11 @@
     }
 
     async function loadLivePayload() {
-      const [live, cycles, alerts, jobs, schedule, services] = await Promise.allSettled([
+      const [live, cycles, alerts, history, jobs, schedule, services] = await Promise.allSettled([
         fetchJson(endpoints.live),
         fetchJson(endpoints.liveCycles),
         fetchJson(endpoints.liveAlerts),
+        fetchJson(endpoints.liveHistory),
         loadJobs(),
         fetchJson(endpoints.schedule),
         fetchJson(endpoints.services),
@@ -983,6 +999,7 @@
       state.live = live.status === "fulfilled" ? live.value : null;
       state.liveCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
       state.liveAlerts = alerts.status === "fulfilled" ? alerts.value : null;
+      state.liveHistory = history.status === "fulfilled" ? history.value : null;
       state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
       state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
       state.services = services.status === "fulfilled" ? services.value : null;

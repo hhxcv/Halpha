@@ -40,6 +40,7 @@ from halpha.dashboard.constants import (
 )
 from halpha.dashboard.core_scheduler import DEFAULT_CORE_SCHEDULER_TICK_SECONDS, CoreScheduler
 from halpha.dashboard.intelligence import dashboard_text_intelligence
+from halpha.dashboard.live_history import dashboard_live_history
 from halpha.dashboard.monitor import dashboard_monitor_alerts, dashboard_monitor_cycles, dashboard_monitor_summary
 from halpha.dashboard.overview import dashboard_overview
 from halpha.dashboard.runs import dashboard_run_detail, dashboard_runs
@@ -639,6 +640,43 @@ def create_dashboard_app(
             "artifact_type": "dashboard_live_alerts",
             "source_artifact_type": payload.get("artifact_type"),
         }
+
+    @app.get("/api/live/history")
+    def live_history_endpoint() -> dict[str, Any]:
+        if context.job_manager is None:
+            return _unconfigured_payload(
+                "dashboard_live_history",
+                timeline=[],
+                triggered_reports=[],
+                alert_archive={"counts": {}, "records": []},
+            )
+        active = context.active()
+        if active is None:
+            return _unconfigured_payload(
+                "dashboard_live_history",
+                timeline=[],
+                triggered_reports=[],
+                alert_archive={"counts": {}, "records": []},
+            )
+        active_config, active_config_path = active
+        live_payload = LiveScheduler(
+            active_config,
+            config_path=active_config_path,
+            job_manager=context.job_manager,
+        ).read_model()
+        cycles_payload = dashboard_monitor_cycles(active_config, config_path=active_config_path)
+        alerts_payload = dashboard_monitor_alerts(active_config, config_path=active_config_path)
+        schedule_payload = (
+            context.schedule_manager.read_daily_report_schedule() if context.schedule_manager is not None else {}
+        )
+        jobs_payload = context.job_manager.list_jobs(limit=250)
+        return dashboard_live_history(
+            live_payload=live_payload,
+            jobs_payload=jobs_payload,
+            schedule_payload=schedule_payload,
+            cycles_payload=cycles_payload,
+            alerts_payload=alerts_payload,
+        )
 
     @app.get("/api/jobs")
     def jobs_endpoint() -> dict[str, Any]:
