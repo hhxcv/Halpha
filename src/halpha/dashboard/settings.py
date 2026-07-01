@@ -4,6 +4,7 @@ from contextlib import suppress
 from copy import deepcopy
 from datetime import datetime, timezone
 from hashlib import sha256
+import json
 import os
 from pathlib import Path
 import shutil
@@ -30,6 +31,14 @@ from halpha.data.public_capabilities import (
     SUPPORTED_ONCHAIN_FLOW_SOURCES,
 )
 from halpha.dashboard.paths import dashboard_control_path
+from halpha.live.contracts import (
+    DEFAULT_LIVE_TICK_SECONDS,
+    LIVE_DATA_TYPES,
+    LIVE_REPORT_TRIGGER_JOB_INTENTS,
+    LIVE_TRIGGER_IDS,
+    LIVE_TRIGGER_PRIORITY_LEVELS,
+    LIVE_TRIGGER_REVISION,
+)
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
 from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
 from halpha.storage import config_base, display_path, safe_local_ref
@@ -107,12 +116,87 @@ TEXT_INTELLIGENCE_THRESHOLD_DEFAULTS = {
 }
 DEFAULT_CONFIG_STORAGE_DIR = Path(".halpha") / "configs"
 CONFIG_IMPORT_MAX_BYTES = 512 * 1024
+LIVE_COLLECTION_DEFAULTS = {
+    "ohlcv": {"cadence_seconds": 300, "lookback_seconds": 24 * 3600},
+    "text_event": {"cadence_seconds": 300, "lookback_seconds": 6 * 3600},
+    "macro_calendar": {
+        "cadence_seconds": 3600,
+        "lookback_seconds": 7 * 24 * 3600,
+        "lookahead_seconds": 45 * 24 * 3600,
+    },
+    "onchain_flow": {"cadence_seconds": 3600, "lookback_seconds": 24 * 3600},
+    "derivatives_market": {"cadence_seconds": 300, "lookback_seconds": 6 * 3600},
+    "market_anomaly": {"cadence_seconds": 300, "lookback_seconds": 6 * 3600},
+}
+LIVE_TRIGGER_DEFAULTS = {
+    "market_breakout": {
+        "cooldown_seconds": 1800,
+        "job_intent": "run_no_codex",
+        "window_seconds": 3600,
+    },
+    "major_market_move": {
+        "cooldown_seconds": 1800,
+        "job_intent": "run_no_codex",
+        "window_seconds": 3600,
+        "price_change_pct": 3.0,
+        "volume_change_pct": 2.0,
+    },
+    "critical_news": {
+        "cooldown_seconds": 3600,
+        "job_intent": "run_no_codex",
+        "min_priority": "high",
+        "window_seconds": 3600,
+    },
+    "scheduled_catalyst": {
+        "cooldown_seconds": 3600,
+        "job_intent": "run_no_codex",
+        "min_priority": "high",
+        "lookahead_seconds": 24 * 3600,
+    },
+    "derivatives_stress": {
+        "cooldown_seconds": 1800,
+        "job_intent": "run_no_codex",
+        "window_seconds": 3600,
+    },
+    "data_quality_degraded": {
+        "cooldown_seconds": 3600,
+        "job_intent": "run_no_codex",
+        "min_failed_targets": 1,
+        "min_stale_targets": 1,
+    },
+}
+LIVE_TRIGGER_THRESHOLD_FIELDS = {
+    "market_breakout": (
+        ("window_seconds", "Evidence window seconds", "positive_int", "Recent anomaly evidence window."),
+    ),
+    "major_market_move": (
+        ("window_seconds", "Evidence window seconds", "positive_int", "Recent OHLCV evidence window."),
+        ("price_change_pct", "Price change pct", "positive_number", "Minimum absolute price move percentage."),
+        ("volume_change_pct", "Volume change multiplier", "positive_number", "Minimum volume change multiplier."),
+    ),
+    "critical_news": (
+        ("min_priority", "Minimum priority", "select", "Minimum text-event priority accepted as trigger evidence."),
+        ("window_seconds", "Evidence window seconds", "positive_int", "Recent text-event evidence window."),
+    ),
+    "scheduled_catalyst": (
+        ("min_priority", "Minimum priority", "select", "Minimum macro event priority accepted as trigger evidence."),
+        ("lookahead_seconds", "Lookahead seconds", "positive_int", "Future scheduled-event evidence window."),
+    ),
+    "derivatives_stress": (
+        ("window_seconds", "Evidence window seconds", "positive_int", "Recent derivatives stress evidence window."),
+    ),
+    "data_quality_degraded": (
+        ("min_failed_targets", "Failed targets threshold", "positive_int", "Minimum failed Live collection targets."),
+        ("min_stale_targets", "Stale targets threshold", "positive_int", "Minimum stale Live collection targets."),
+    ),
+}
 CONFIG_PROFILE_SECTIONS = (
     "General",
     "Market data",
     "Strategy",
     "Reports",
     "Monitor",
+    "Live",
     "Intelligence sources",
     "Storage",
     "Dashboard",
@@ -360,6 +444,137 @@ CONFIG_PROFILE_FIELDS = (
         "description": "Keep monitor cycles deterministic unless explicit report generation is requested.",
     },
     {
+        "section": "Live",
+        "label": "Enable Live",
+        "path": "live.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Enable Core-owned Live scheduling for continuous market intelligence.",
+    },
+    {
+        "section": "Live",
+        "label": "Scheduler tick seconds",
+        "path": "live.tick_seconds",
+        "control": "number",
+        "value_type": "positive_int",
+        "default": DEFAULT_LIVE_TICK_SECONDS,
+        "description": "How often Core evaluates Live collection and trigger work.",
+    },
+    {
+        "section": "Live",
+        "label": "Daily report in Live",
+        "path": "live.reports.daily.enabled",
+        "control": "toggle",
+        "value_type": "bool",
+        "description": "Show the existing daily report schedule in Live without creating a second scheduler authority.",
+    },
+    *(
+        {
+            "section": "Live",
+            "label": f"Collect {data_type}",
+            "path": f"live.collections.{data_type}.enabled",
+            "control": "toggle",
+            "value_type": "bool",
+            "description": f"Allow Live to create visible collection jobs for {data_type}.",
+        }
+        for data_type in LIVE_DATA_TYPES
+    ),
+    *(
+        {
+            "section": "Live",
+            "label": f"{data_type} cadence seconds",
+            "path": f"live.collections.{data_type}.cadence_seconds",
+            "control": "number",
+            "value_type": "positive_int",
+            "default": LIVE_COLLECTION_DEFAULTS[data_type]["cadence_seconds"],
+            "description": f"Minimum seconds between Live {data_type} collection attempts.",
+        }
+        for data_type in LIVE_DATA_TYPES
+    ),
+    *(
+        {
+            "section": "Live",
+            "label": f"{data_type} lookback seconds",
+            "path": f"live.collections.{data_type}.lookback_seconds",
+            "control": "number",
+            "value_type": "positive_int",
+            "default": LIVE_COLLECTION_DEFAULTS[data_type]["lookback_seconds"],
+            "description": f"Backward collection window for Live {data_type} jobs.",
+        }
+        for data_type in LIVE_DATA_TYPES
+    ),
+    {
+        "section": "Live",
+        "label": "Macro calendar lookahead seconds",
+        "path": "live.collections.macro_calendar.lookahead_seconds",
+        "control": "number",
+        "value_type": "positive_int",
+        "default": LIVE_COLLECTION_DEFAULTS["macro_calendar"]["lookahead_seconds"],
+        "description": "Forward collection window for scheduled macro events.",
+    },
+    *(
+        {
+            "section": "Live",
+            "label": f"{trigger_id} trigger",
+            "path": f"live.reports.triggers.{trigger_id}.enabled",
+            "control": "toggle",
+            "value_type": "bool",
+            "description": f"Enable deterministic Live trigger evaluation for {trigger_id}.",
+        }
+        for trigger_id in LIVE_TRIGGER_IDS
+    ),
+    *(
+        {
+            "section": "Live",
+            "label": f"{trigger_id} cooldown seconds",
+            "path": f"live.reports.triggers.{trigger_id}.cooldown_seconds",
+            "control": "number",
+            "value_type": "positive_int",
+            "default": LIVE_TRIGGER_DEFAULTS[trigger_id]["cooldown_seconds"],
+            "description": f"Minimum seconds before {trigger_id} can create another equivalent report job.",
+        }
+        for trigger_id in LIVE_TRIGGER_IDS
+    ),
+    *(
+        {
+            "section": "Live",
+            "label": f"{trigger_id} job intent",
+            "path": f"live.reports.triggers.{trigger_id}.job_intent",
+            "control": "select",
+            "value_type": "string",
+            "options": LIVE_REPORT_TRIGGER_JOB_INTENTS,
+            "default": LIVE_TRIGGER_DEFAULTS[trigger_id]["job_intent"],
+            "description": "`run_no_codex` creates deterministic jobs. `run` requires explicit unattended Codex authorization.",
+        }
+        for trigger_id in LIVE_TRIGGER_IDS
+    ),
+    *(
+        {
+            "section": "Live",
+            "label": f"{trigger_id} {label}",
+            "path": f"live.reports.triggers.{trigger_id}.{field_name}",
+            "control": "select" if value_type == "select" else "number",
+            "value_type": "string" if value_type == "select" else value_type,
+            "options": LIVE_TRIGGER_PRIORITY_LEVELS if value_type == "select" else None,
+            "default": LIVE_TRIGGER_DEFAULTS[trigger_id][field_name],
+            "description": description,
+        }
+        for trigger_id, field_specs in LIVE_TRIGGER_THRESHOLD_FIELDS.items()
+        for field_name, label, value_type, description in field_specs
+    ),
+    *(
+        {
+            "section": "Live",
+            "label": f"Authorize {trigger_id} Codex run",
+            "path": f"live.reports.triggers.{trigger_id}.confirm_codex",
+            "control": "toggle",
+            "value_type": "bool",
+            "virtual": True,
+            "description": "Explicitly authorize this enabled trigger to create unattended Codex-capable `run` jobs for the current config digest.",
+        }
+        for trigger_id in LIVE_TRIGGER_IDS
+    ),
+    {
         "section": "Intelligence sources",
         "label": "Enable text collection",
         "path": "text.enabled",
@@ -606,7 +821,7 @@ def dashboard_config_profile(
     config_path: Path,
     config_history: list[str] | None = None,
 ) -> dict[str, Any]:
-    fields = [_config_profile_field(config, field) for field in CONFIG_PROFILE_FIELDS]
+    fields = [_config_profile_field(config, field, config_path=config_path) for field in CONFIG_PROFILE_FIELDS]
     return {
         "schema_version": 1,
         "artifact_type": "dashboard_config_profile",
@@ -750,6 +965,7 @@ def dashboard_save_config_profile(
 
     next_config = deepcopy(config)
     changed_paths: list[str] = []
+    virtual_changes: dict[str, Any] = {}
     errors: list[str] = []
     for path, raw_value in sorted(changes.items()):
         if not isinstance(path, str):
@@ -763,11 +979,21 @@ def dashboard_save_config_profile(
         if error:
             errors.append(f"{path}: {error}")
             continue
-        _set_config_value(next_config, path, value)
+        if field.get("virtual") is True:
+            virtual_changes[path] = value
+        else:
+            _set_config_value(next_config, path, value)
         changed_paths.append(path)
     if errors:
         return _config_save_result(config, config_path=config_path, status="failed", errors=errors)
     _materialize_enabled_capability_defaults(next_config)
+    authorization_errors = _materialize_live_trigger_authorizations(
+        next_config,
+        config_path=config_path,
+        virtual_changes=virtual_changes,
+    )
+    if authorization_errors:
+        return _config_save_result(config, config_path=config_path, status="failed", errors=authorization_errors)
 
     serialized, error = _serialize_config_yaml(next_config)
     if error:
@@ -849,11 +1075,11 @@ def sanitize_dashboard_message(message: str, *, config_path: Path) -> str:
     return sanitized
 
 
-def _config_profile_field(config: dict[str, Any], field: dict[str, Any]) -> dict[str, Any]:
+def _config_profile_field(config: dict[str, Any], field: dict[str, Any], *, config_path: Path | None = None) -> dict[str, Any]:
     path = str(field["path"])
     value = _get_config_value(config, path)
     if value is None:
-        value = _config_profile_default(config, field)
+        value = _config_profile_default(config, field, config_path=config_path)
     result = {
         "section": field["section"],
         "label": field["label"],
@@ -866,6 +1092,8 @@ def _config_profile_field(config: dict[str, Any], field: dict[str, Any]) -> dict
     options = field.get("options")
     if isinstance(options, tuple):
         result["options"] = list(options)
+    if field.get("virtual") is True:
+        result["virtual"] = True
     return result
 
 
@@ -876,7 +1104,11 @@ def _config_profile_field_definition(path: str) -> dict[str, Any] | None:
     return None
 
 
-def _config_profile_default(config: dict[str, Any], field: dict[str, Any]) -> Any:
+def _config_profile_default(config: dict[str, Any], field: dict[str, Any], *, config_path: Path | None = None) -> Any:
+    path = str(field.get("path") or "")
+    trigger_id = _live_confirm_trigger_id(path)
+    if trigger_id and config_path is not None:
+        return _live_trigger_codex_authorization_valid(config, config_path=config_path, trigger_id=trigger_id)
     default_from = field.get("default_from")
     if isinstance(default_from, str):
         value = _get_config_value(config, default_from)
@@ -892,6 +1124,8 @@ def _config_profile_default(config: dict[str, Any], field: dict[str, Any]) -> An
         return False
     if value_type == "positive_int":
         return 1
+    if value_type == "positive_number":
+        return 1.0
     if value_type == "string_list":
         options = field.get("options")
         return [options[0]] if isinstance(options, tuple) and options else []
@@ -911,8 +1145,133 @@ def _materialize_enabled_capability_defaults(config: dict[str, Any]) -> None:
                 continue
             if _get_config_value(config, path) is None:
                 _set_config_value(config, path, _config_profile_default(config, field))
+    _materialize_live_defaults(config)
     _normalize_ohlcv_lookback(config)
     _normalize_derivatives_lookback(config)
+
+
+def _materialize_live_defaults(config: dict[str, Any]) -> None:
+    if _get_config_value(config, "live.enabled") is not True:
+        return
+    if _get_config_value(config, "live.tick_seconds") is None:
+        _set_config_value(config, "live.tick_seconds", DEFAULT_LIVE_TICK_SECONDS)
+    for data_type in LIVE_DATA_TYPES:
+        prefix = f"live.collections.{data_type}"
+        if _get_config_value(config, f"{prefix}.enabled") is not True:
+            continue
+        defaults = LIVE_COLLECTION_DEFAULTS[data_type]
+        for key, value in defaults.items():
+            path = f"{prefix}.{key}"
+            if _get_config_value(config, path) is None:
+                _set_config_value(config, path, value)
+    for trigger_id in LIVE_TRIGGER_IDS:
+        prefix = f"live.reports.triggers.{trigger_id}"
+        if _get_config_value(config, f"{prefix}.enabled") is not True:
+            continue
+        defaults = LIVE_TRIGGER_DEFAULTS[trigger_id]
+        for key, value in defaults.items():
+            path = f"{prefix}.{key}"
+            if _get_config_value(config, path) is None:
+                _set_config_value(config, path, value)
+
+
+def _materialize_live_trigger_authorizations(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    virtual_changes: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    if _get_config_value(config, "live.enabled") is not True:
+        return errors
+    for trigger_id in LIVE_TRIGGER_IDS:
+        prefix = f"live.reports.triggers.{trigger_id}"
+        if _get_config_value(config, f"{prefix}.enabled") is not True:
+            continue
+        if _get_config_value(config, f"{prefix}.job_intent") != "run":
+            continue
+        if _live_trigger_codex_authorization_valid(config, config_path=config_path, trigger_id=trigger_id):
+            continue
+        confirm_path = f"{prefix}.confirm_codex"
+        if virtual_changes.get(confirm_path) is True:
+            _set_config_value(
+                config,
+                f"{prefix}.codex_authorization",
+                _live_trigger_codex_authorization(config, config_path=config_path, trigger_id=trigger_id),
+            )
+            continue
+        errors.append(
+            f"{confirm_path}: confirm this trigger before saving unattended Codex-capable Live `run` behavior."
+        )
+    return errors
+
+
+def _live_confirm_trigger_id(path: str) -> str | None:
+    parts = path.split(".")
+    if len(parts) != 5:
+        return None
+    if parts[:3] != ["live", "reports", "triggers"] or parts[4] != "confirm_codex":
+        return None
+    trigger_id = parts[3]
+    return trigger_id if trigger_id in LIVE_TRIGGER_IDS else None
+
+
+def _live_trigger_codex_authorization(config: dict[str, Any], *, config_path: Path, trigger_id: str) -> dict[str, Any]:
+    return {
+        "authorized": True,
+        "valid": True,
+        "authorized_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "trigger_id": trigger_id,
+        "trigger_revision": LIVE_TRIGGER_REVISION,
+        "config_ref": _live_config_ref(config_path),
+        "config_digest": _live_trigger_config_digest(config, config_path=config_path, trigger_id=trigger_id),
+        "job_intent": "run",
+        "authorization_scope": "unattended_live_trigger",
+    }
+
+
+def _live_trigger_codex_authorization_valid(config: dict[str, Any], *, config_path: Path, trigger_id: str) -> bool:
+    data = _get_config_value(config, f"live.reports.triggers.{trigger_id}.codex_authorization")
+    if not isinstance(data, dict):
+        return False
+    return (
+        data.get("authorized") is True
+        and data.get("job_intent") == "run"
+        and data.get("authorization_scope") == "unattended_live_trigger"
+        and data.get("trigger_id") == trigger_id
+        and data.get("trigger_revision") == LIVE_TRIGGER_REVISION
+        and data.get("config_digest") == _live_trigger_config_digest(config, config_path=config_path, trigger_id=trigger_id)
+        and data.get("config_ref") == _live_config_ref(config_path)
+    )
+
+
+def _live_trigger_config_digest(config: dict[str, Any], *, config_path: Path, trigger_id: str) -> str:
+    live = _as_mapping(config.get("live"))
+    reports = _as_mapping(live.get("reports"))
+    triggers = _as_mapping(reports.get("triggers"))
+    trigger_config = _as_mapping(triggers.get(trigger_id))
+    material = {
+        "config_ref": _live_config_ref(config_path),
+        "trigger_id": trigger_id,
+        "trigger_revision": LIVE_TRIGGER_REVISION,
+        "trigger_config": {
+            key: value
+            for key, value in trigger_config.items()
+            if key != "codex_authorization"
+        },
+        "contract": "live_trigger_v1",
+    }
+    payload = json.dumps(material, sort_keys=True, separators=(",", ":"), default=str)
+    return sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _live_config_ref(config_path: Path) -> str:
+    path = Path(config_path)
+    return display_path(path, external_ref="<external-config>") if not path.is_absolute() else "<external-config>"
+
+
+def _as_mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 def _normalize_ohlcv_lookback(config: dict[str, Any]) -> None:
@@ -987,6 +1346,16 @@ def _coerce_config_profile_value(raw_value: Any, field: dict[str, Any]) -> tuple
             return None, "value must be a positive integer."
         if value <= 0:
             return None, "value must be a positive integer."
+        return value, None
+    if value_type == "positive_number":
+        if isinstance(raw_value, bool):
+            return None, "value must be a positive number."
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            return None, "value must be a positive number."
+        if value <= 0:
+            return None, "value must be a positive number."
         return value, None
     if value_type == "unit_interval_number":
         if isinstance(raw_value, bool):
