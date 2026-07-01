@@ -3236,21 +3236,45 @@
 
     .live-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.42fr);
       gap: 14px;
       align-items: start;
     }
 
     .live-summary,
-    .live-source-board,
-    .live-mode-tabs,
+    .live-now-grid,
     .live-review-panel,
     .live-operations-panel {
       grid-column: 1 / -1;
     }
 
-    .live-mode-tabs {
-      justify-self: start;
+    .live-now-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.52fr);
+      gap: 14px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .live-now-grid > .live-intelligence-strip-panel {
+      grid-column: 1 / -1;
+    }
+
+    .live-runtime-panel {
+      grid-column: 1;
+    }
+
+    .live-now-grid > .live-stream-panel {
+      grid-column: 2;
+    }
+
+    .live-source-board {
+      grid-column: 1;
+    }
+
+    .live-mode-tabs.topbar-secondary-tabs {
+      margin: 0;
+      padding: 0;
     }
 
     .live-section-head,
@@ -3534,9 +3558,9 @@
 
     .live-alert-row {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.8fr) minmax(132px, 0.7fr) minmax(160px, 0.9fr) minmax(180px, 1fr);
-      gap: 10px;
-      align-items: center;
+      grid-template-columns: minmax(220px, 1.4fr) minmax(140px, 0.78fr) minmax(132px, 0.68fr) minmax(160px, 0.86fr) minmax(180px, 0.95fr);
+      gap: 12px;
+      align-items: start;
       min-width: 0;
       padding: 11px 12px;
       border: 1px solid var(--border);
@@ -3544,10 +3568,18 @@
       background: var(--panel-muted);
     }
 
-    .live-alert-row div {
-      display: flex;
+    .live-alert-row > * {
+      min-width: 0;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .live-alert-key-cell {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       gap: 8px;
-      align-items: center;
+      align-items: start;
       min-width: 0;
     }
 
@@ -3573,6 +3605,9 @@
     }
 
     .live-stream-title {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
       justify-content: flex-start;
       gap: 8px;
     }
@@ -3580,6 +3615,11 @@
     .live-stream-title strong,
     .live-stream-body p {
       overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .live-stream-title .status-pill {
+      flex: 0 0 auto;
     }
 
     .live-stream-body p {
@@ -3625,7 +3665,21 @@
     .live-side {
       display: grid;
       gap: 14px;
+      grid-column: 2;
       min-width: 0;
+    }
+
+    .live-review-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .live-report-schedule {
+      display: grid;
+      gap: 0;
+      min-width: 0;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
     }
 
     .live-target-detail,
@@ -3823,6 +3877,10 @@
       min-width: 0;
     }
 
+    .intel-overview-kpis {
+      min-width: 0;
+    }
+
     .intel-overview-pulse,
     .intel-overview-dashboard {
       min-width: 0;
@@ -3850,7 +3908,7 @@
       color: var(--muted);
       font-size: 12px;
       font-weight: 700;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .intel-overview-pulse-card strong {
@@ -3986,7 +4044,7 @@
     }
 
     .intel-overview-record-main strong {
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .intel-overview-record-main small,
@@ -3995,16 +4053,21 @@
       color: var(--muted);
       font-size: 12px;
       line-height: 1.35;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
 
     .intel-overview-agenda-row {
       display: grid;
-      grid-template-columns: 130px minmax(0, 1fr) auto;
+      grid-template-columns: minmax(118px, max-content) minmax(0, 1fr);
       align-items: start;
       gap: 12px;
       padding: 12px;
       border-left: 4px solid var(--primary);
+    }
+
+    .intel-overview-agenda-row > .tag-row {
+      grid-column: 2;
+      margin-top: 0;
     }
 
     .intel-overview-agenda-row.past {
@@ -6347,6 +6410,7 @@
       .strategy-layout,
       .strategy-detail-view,
       .live-layout,
+      .live-now-grid,
       .intel-grid,
       .intel-overview-grid,
       .intelligence-preview-layout,
@@ -6369,6 +6433,13 @@
         max-height: none;
         overflow-y: visible;
         padding-right: 0;
+      }
+
+      .live-source-board,
+      .live-side,
+      .live-runtime-panel,
+      .live-now-grid > .live-stream-panel {
+        grid-column: 1 / -1;
       }
 
       .strategy-controls,

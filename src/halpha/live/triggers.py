@@ -395,70 +395,120 @@ class LiveTriggerEvaluator:
     def _major_market_move_evidence(self, trigger: LiveTriggerConfig) -> _EvidenceResult:
         market = _dict(self.config.get("market"))
         ohlcv = _dict(market.get("ohlcv"))
-        source = _first_text(ohlcv.get("sources")) or _optional_text(market.get("source"))
-        symbol = _first_text(market.get("symbols"))
-        timeframe = _first_text(ohlcv.get("timeframes"))
-        if not source or not symbol or not timeframe:
+        targets = _ohlcv_trigger_targets(market, ohlcv)
+        if not targets:
             return _insufficient(["ohlcv_scope_not_configured"], source_data_types=["ohlcv"])
         storage_dir = resolve_runtime_path(str(ohlcv.get("storage_dir") or "data/market/ohlcv"), config_path=self.config_path)
-        try:
-            result = query_latest_ohlcv_records(
-                storage_dir,
-                source=source,
-                symbol=symbol,
-                timeframe=timeframe,
-                lookback=2,
-                as_of=self.now,
-                config_path=self.config_path,
-                limit=2,
-            )
-        except OHLCVQueryError as exc:
-            return _insufficient(["ohlcv_query_failed"], source_data_types=["ohlcv"], errors=[str(exc)])
-        records = _records(result)
-        if len(records) < 2:
-            return _insufficient(["ohlcv_requires_two_closed_candles"], source_data_types=["ohlcv"], source_refs=_strings(result.get("source_artifacts")))
-        previous, latest = records[-2], records[-1]
-        previous_close = _number(previous.get("close"))
-        latest_close = _number(latest.get("close"))
-        previous_volume = _number(previous.get("volume"))
-        latest_volume = _number(latest.get("volume"))
-        if previous_close is None or latest_close is None or previous_close == 0:
-            return _insufficient(["ohlcv_close_fields_missing"], source_data_types=["ohlcv"])
-        price_change_pct = ((latest_close - previous_close) / previous_close) * 100.0
-        volume_change_pct = None
-        if previous_volume is not None and latest_volume is not None and previous_volume > 0:
-            volume_change_pct = ((latest_volume - previous_volume) / previous_volume) * 100.0
         price_threshold = trigger.price_change_pct or 5.0
         volume_threshold = trigger.volume_change_pct
-        price_matched = abs(price_change_pct) >= price_threshold
-        volume_matched = volume_threshold is not None and volume_change_pct is not None and abs(volume_change_pct) >= volume_threshold
-        evidence = {
-            "symbol": symbol,
-            "timeframe": timeframe,
-            "source": source,
-            "latest_open_time": latest.get("open_time"),
-            "previous_close": previous_close,
-            "latest_close": latest_close,
-            "price_change_pct": round(price_change_pct, 6),
-            "volume_change_pct": round(volume_change_pct, 6) if volume_change_pct is not None else None,
-        }
-        if price_matched or volume_matched:
-            reasons = ["major_market_move_price_change"] if price_matched else []
-            if volume_matched:
-                reasons.append("major_market_move_volume_change")
+        matches: list[dict[str, Any]] = []
+        observed: list[dict[str, Any]] = []
+        source_refs: list[str] = []
+        warnings: list[str] = []
+        errors: list[str] = []
+        reason_codes: list[str] = []
+        evaluated_count = 0
+        for source, symbol, timeframe in targets:
+            target_label = f"{source}:{symbol}:{timeframe}"
+            try:
+                result = query_latest_ohlcv_records(
+                    storage_dir,
+                    source=source,
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    lookback=2,
+                    as_of=self.now,
+                    config_path=self.config_path,
+                    limit=2,
+                )
+            except OHLCVQueryError as exc:
+                reason_codes.append("ohlcv_query_failed")
+                errors.append(f"{target_label}: {exc}")
+                continue
+            source_refs.extend(_strings(result.get("source_artifacts")))
+            warnings.extend(_strings(result.get("warnings")))
+            records = _records(result)
+            if len(records) < 2:
+                reason_codes.append("ohlcv_requires_two_closed_candles")
+                continue
+            previous, latest = records[-2], records[-1]
+            previous_close = _number(previous.get("close"))
+            latest_close = _number(latest.get("close"))
+            previous_volume = _number(previous.get("volume"))
+            latest_volume = _number(latest.get("volume"))
+            if previous_close is None or latest_close is None or previous_close == 0:
+                reason_codes.append("ohlcv_close_fields_missing")
+                continue
+            evaluated_count += 1
+            price_change_pct = ((latest_close - previous_close) / previous_close) * 100.0
+            volume_change_pct = None
+            if previous_volume is not None and latest_volume is not None and previous_volume > 0:
+                volume_change_pct = ((latest_volume - previous_volume) / previous_volume) * 100.0
+            price_matched = abs(price_change_pct) >= price_threshold
+            volume_matched = volume_threshold is not None and volume_change_pct is not None and abs(volume_change_pct) >= volume_threshold
+            evidence = {
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "source": source,
+                "latest_open_time": latest.get("open_time"),
+                "previous_close": previous_close,
+                "latest_close": latest_close,
+                "price_change_pct": round(price_change_pct, 6),
+                "volume_change_pct": round(volume_change_pct, 6) if volume_change_pct is not None else None,
+            }
+            observed.append(evidence)
+            if price_matched or volume_matched:
+                evidence["reason_codes"] = ["major_market_move_price_change"] if price_matched else []
+                if volume_matched:
+                    evidence["reason_codes"].append("major_market_move_volume_change")
+                matches.append(evidence)
+        if matches:
+            first = matches[0]
+            reasons = []
+            for match in matches:
+                reasons.extend(_strings(match.get("reason_codes")))
+            evidence = {
+                "matched_count": len(matches),
+                "evaluated_target_count": evaluated_count,
+                "matches": matches[:LIVE_TRIGGER_QUERY_LIMIT],
+                "symbol": first.get("symbol"),
+                "timeframe": first.get("timeframe"),
+                "source": first.get("source"),
+                "latest_open_time": first.get("latest_open_time"),
+                "previous_close": first.get("previous_close"),
+                "latest_close": first.get("latest_close"),
+                "price_change_pct": first.get("price_change_pct"),
+                "volume_change_pct": first.get("volume_change_pct"),
+            }
+            if errors:
+                warnings.extend(errors)
             return _matched(
                 source_data_types=["ohlcv"],
-                source_refs=_strings(result.get("source_artifacts")),
+                source_refs=source_refs,
                 reason_codes=reasons,
                 matched_evidence=evidence,
-                warnings=_strings(result.get("warnings")),
+                warnings=warnings,
             )
+        if evaluated_count <= 0:
+            return _insufficient(
+                reason_codes or ["ohlcv_requires_two_closed_candles"],
+                source_data_types=["ohlcv"],
+                source_refs=source_refs,
+                warnings=warnings,
+                errors=errors,
+            )
+        evidence = {
+            "evaluated_target_count": evaluated_count,
+            "targets": observed[:LIVE_TRIGGER_QUERY_LIMIT],
+            **(observed[0] if observed else {}),
+        }
         return _no_match(
-            ["major_market_move_below_threshold"],
+            ["major_market_move_below_threshold", *reason_codes],
             source_data_types=["ohlcv"],
-            source_refs=_strings(result.get("source_artifacts")),
+            source_refs=source_refs,
             matched_evidence=evidence,
-            warnings=_strings(result.get("warnings")),
+            warnings=warnings,
+            errors=errors,
         )
 
     def _all_jobs(self, *, limit: int) -> list[dict[str, Any]]:
@@ -618,6 +668,7 @@ def _no_match(
     source_refs: list[str] | None = None,
     matched_evidence: dict[str, Any] | None = None,
     warnings: list[str] | None = None,
+    errors: list[str] | None = None,
 ) -> _EvidenceResult:
     return _EvidenceResult(
         status="skipped_no_match",
@@ -626,7 +677,7 @@ def _no_match(
         reason_codes=_bounded_unique(reason_codes),
         matched_evidence=matched_evidence or {},
         warnings=_bounded_unique(warnings or []),
-        errors=[],
+        errors=_bounded_unique(errors or []),
     )
 
 
@@ -821,6 +872,21 @@ def _text_contains(record: dict[str, Any], needles: tuple[str, ...]) -> bool:
         for key in ("title", "summary", "description", "metric", "data_class", "direction")
     ).lower()
     return any(needle.lower() in haystack for needle in needles)
+
+
+def _ohlcv_trigger_targets(market: dict[str, Any], ohlcv: dict[str, Any]) -> list[tuple[str, str, str]]:
+    sources = _strings(ohlcv.get("sources"))
+    fallback_source = _optional_text(market.get("source"))
+    if not sources and fallback_source:
+        sources = [fallback_source]
+    symbols = _strings(market.get("symbols"))
+    timeframes = _strings(ohlcv.get("timeframes"))
+    targets: list[tuple[str, str, str]] = []
+    for source in sources:
+        for symbol in symbols:
+            for timeframe in timeframes:
+                targets.append((source, symbol, timeframe))
+    return targets
 
 
 def _active_trigger_job(jobs: list[dict[str, Any]], *, trigger_id: str) -> dict[str, Any] | None:

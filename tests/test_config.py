@@ -97,19 +97,8 @@ def test_config_example_loads_successfully() -> None:
     assert config["monitor"] == {
         "enabled": False,
         "interval_seconds": 300,
-        "max_cycles": 1,
         "failure_backoff_max_seconds": 3600,
-        "cooldown_seconds": 3600,
         "output_dir": "runs/monitor",
-        "source_cadence_seconds": {
-            "market": 300,
-            "derivatives": 300,
-            "text": 300,
-            "macro_calendar": 3600,
-            "onchain_flow": 3600,
-        },
-        "target_stage": "build_materials",
-        "no_codex": True,
     }
     assert config["quant"]["enabled"] is True
     assert config["quant"]["engine"] == "vectorbt"

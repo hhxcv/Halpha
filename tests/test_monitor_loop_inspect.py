@@ -77,25 +77,19 @@ def test_monitor_loop_stops_on_failed_cycle_and_health_records_failure(tmp_path:
     assert health_state["error_count"] >= 1
 
 
-def test_monitor_run_rejects_invalid_loop_interval(tmp_path: Path, capsys) -> None:
+def test_monitor_loop_rejects_invalid_interval(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
+    config = load_config(config_path)
 
-    with pytest.raises(SystemExit) as exc:
-        main(
-            [
-                "monitor",
-                "run",
-                "--config",
-                str(config_path),
-                "--max-cycles",
-                "2",
-                "--interval-seconds",
-                "0",
-            ]
+    with pytest.raises(ValueError, match="interval_seconds must be a positive integer"):
+        run_monitor_loop(
+            config,
+            config_path=config_path,
+            max_cycles=2,
+            interval_seconds=0,
+            now=_time(),
+            pipeline_runner=_pipeline_factory(tmp_path, statuses=["succeeded"]),
         )
-
-    assert exc.value.code == 2
-    assert "must be a positive integer" in capsys.readouterr().err
 
 
 def test_monitor_inspect_summarizes_health_without_running_pipeline(
@@ -117,8 +111,8 @@ def test_monitor_inspect_summarizes_health_without_running_pipeline(
     def fail_monitor_execution(*args, **kwargs):  # noqa: ANN002, ANN003
         raise AssertionError("monitor inspect must not run monitor cycles")
 
-    monkeypatch.setattr("halpha.cli.run_monitor_cycle", fail_monitor_execution)
-    monkeypatch.setattr("halpha.cli.run_monitor_loop", fail_monitor_execution)
+    monkeypatch.setattr("halpha.monitor.monitoring.run_monitor_cycle", fail_monitor_execution)
+    monkeypatch.setattr("halpha.monitor.monitoring.run_monitor_loop", fail_monitor_execution)
 
     exit_code = main(["monitor", "inspect", "--config", str(config_path)])
 

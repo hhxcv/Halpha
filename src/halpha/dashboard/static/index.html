@@ -78,8 +78,8 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="sidebar-card">
-          <div class="sidebar-card-title"><span class="health-dot unknown" id="sidebar-system-monitor-dot"></span><span id="sidebar-system-monitor-title">System Monitor</span></div>
-          <div class="sidebar-card-detail" id="sidebar-system-monitor-text">Loading runtime status.</div>
+          <div class="sidebar-card-title"><span class="health-dot unknown" id="sidebar-live-dot"></span><span id="sidebar-live-title">Live status</span></div>
+          <div class="sidebar-card-detail" id="sidebar-live-text">Loading Live status.</div>
         </div>
         <div class="sidebar-disclaimer">Market output is research material, not financial advice.</div>
       </div>
@@ -103,6 +103,12 @@
             <button class="tab-button active" type="button" data-strategy-operation-tab="backtest">Backtests</button>
             <button class="tab-button" type="button" data-strategy-operation-tab="experiment">Experiments</button>
             <button class="tab-button" type="button" data-strategy-operation-tab="optimize">Optimize</button>
+          </div>
+          <div class="tabs live-mode-tabs topbar-secondary-tabs hidden" id="live-mode-tabs" aria-label="Live review sections">
+            <button class="tab-button active" type="button" data-live-mode="now">Now</button>
+            <button class="tab-button" type="button" data-live-mode="sources">Sources</button>
+            <button class="tab-button" type="button" data-live-mode="reports">Reports</button>
+            <button class="tab-button" type="button" data-live-mode="history">History</button>
           </div>
         </div>
         <div class="topbar-actions" id="global-page-actions">
@@ -405,13 +411,27 @@
 
       <section id="live-view" class="view hidden" data-view="live">
         <div class="live-layout">
-          <nav class="segmented-control live-mode-tabs" id="live-mode-tabs" aria-label="Live review sections">
-            <button class="active" type="button" data-live-mode="now">Now</button>
-            <button type="button" data-live-mode="sources">Sources</button>
-            <button type="button" data-live-mode="reports">Reports</button>
-            <button type="button" data-live-mode="history">History</button>
-          </nav>
           <section class="summary-strip columns-6 live-summary" id="live-summary"></section>
+          <section class="live-now-grid" data-live-panel="now">
+            <section class="panel panel-pad live-intelligence-strip-panel">
+              <div class="live-section-head">
+                <h2 class="panel-title">Latest intelligence</h2>
+                <span class="muted">Most recent bounded signal per data type.</span>
+              </div>
+              <div id="live-intelligence-strip" class="live-intelligence-strip"></div>
+            </section>
+            <section class="panel panel-pad live-runtime-panel">
+              <h2 class="panel-title">System runtime</h2>
+              <div id="live-system-runtime"></div>
+            </section>
+            <section class="panel panel-pad live-stream-panel">
+              <div class="live-section-head">
+                <h2 class="panel-title">Intelligence stream</h2>
+                <span class="muted">Latest bounded alerts and source-state warnings.</span>
+              </div>
+              <div id="live-intelligence-stream" class="live-stream"></div>
+            </section>
+          </section>
           <section class="panel panel-pad live-source-board" data-live-panel="sources">
             <div class="live-section-head">
               <h2 class="panel-title">Source refresh</h2>
@@ -450,38 +470,23 @@
             </div>
             <div id="live-source-matrix" class="live-source-matrix"></div>
           </section>
-          <section class="panel panel-pad live-intelligence-strip-panel">
-            <div class="live-section-head">
-              <h2 class="panel-title">Latest intelligence</h2>
-              <span class="muted">Most recent bounded signal per data type.</span>
-            </div>
-            <div id="live-intelligence-strip" class="live-intelligence-strip"></div>
-          </section>
-          <section class="panel panel-pad live-stream-panel">
-            <div class="live-section-head">
-              <h2 class="panel-title">Intelligence stream</h2>
-              <span class="muted">Latest bounded alerts and source-state warnings.</span>
-            </div>
-            <div id="live-intelligence-stream" class="live-stream"></div>
-          </section>
-          <aside class="live-side">
-            <section class="panel panel-pad">
-              <h2 class="panel-title">Report schedule</h2>
-              <div id="live-report-history" class="live-report-history"></div>
-            </section>
-            <section class="panel panel-pad">
-              <h2 class="panel-title">System runtime</h2>
-              <div id="live-system-runtime"></div>
-            </section>
+          <aside class="live-side" data-live-panel="sources">
             <section class="panel panel-pad">
               <h2 class="panel-title">Target detail</h2>
               <div id="live-target-detail" class="live-target-detail"></div>
             </section>
           </aside>
           <section class="panel panel-pad live-review-panel" data-live-panel="reports">
+            <div class="live-report-schedule">
+              <div class="live-section-head">
+                <h2 class="panel-title">Report schedule</h2>
+                <span class="muted">Daily dispatch state and latest linked report.</span>
+              </div>
+              <div id="live-report-history" class="live-report-history"></div>
+            </div>
             <div class="live-section-head">
-              <h2 class="panel-title">Triggered reports</h2>
-              <span class="muted">Trigger-created reports, schedule dispatches, and alert archive outcomes.</span>
+              <h2 class="panel-title">Trigger decisions</h2>
+              <span class="muted">Deterministic trigger outcomes, linked jobs, report artifacts, and alert archive outcomes.</span>
             </div>
             <div id="live-triggered-reports" class="live-triggered-reports"></div>
             <div id="live-alert-archive" class="live-alert-archive"></div>
@@ -531,7 +536,7 @@
           <datalist id="strategy-ohlcv-source-options"></datalist>
 
           <section id="intel-overview-panel" class="intel-overview-panel">
-            <div class="summary-strip" id="intel-overview-kpis"></div>
+            <div class="intel-overview-kpis" id="intel-overview-kpis"></div>
             <div class="intel-overview-grid" id="intel-overview-content"></div>
           </section>
 

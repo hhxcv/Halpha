@@ -40,10 +40,6 @@ from halpha.runtime.exception_diagnostics import bounded_exception_diagnostic
 from halpha.runtime.logging_utils import configure_local_logging, redact_private_text
 from halpha.monitor.monitoring import (
     inspect_monitor_health,
-    load_monitor_config,
-    monitor_config_lines,
-    run_monitor_cycle,
-    run_monitor_loop,
 )
 from halpha.runtime.monitor_service import (
     MonitorServiceError,
@@ -394,8 +390,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     monitor_parser = subparsers.add_parser(
         "monitor",
-        help="Manage local monitoring runs.",
-        description="Manage local monitoring runs.",
+        help="Manage the local Monitor health service.",
+        description="Manage the local Monitor health service.",
     )
     monitor_subparsers = monitor_parser.add_subparsers(dest="monitor_command", required=True)
     for monitor_action in ("start", "status", "stop", "restart", "service"):
@@ -410,37 +406,10 @@ def build_parser() -> argparse.ArgumentParser:
                 "--restart-from-instance-id",
                 help=argparse.SUPPRESS,
             )
-    monitor_run_parser = monitor_subparsers.add_parser(
-        "run",
-        help="Run or validate local monitor cycles without hidden background execution.",
-        description="Run or validate local monitor cycles without hidden background execution.",
-    )
-    monitor_run_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
-    monitor_run_mode = monitor_run_parser.add_mutually_exclusive_group()
-    monitor_run_mode.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate monitor configuration and print effective settings without running a cycle.",
-    )
-    monitor_run_mode.add_argument(
-        "--once",
-        action="store_true",
-        help="Run exactly one bounded monitor cycle.",
-    )
-    monitor_run_mode.add_argument(
-        "--max-cycles",
-        type=_positive_int_arg,
-        help="Run a finite local monitor loop for the given positive cycle count.",
-    )
-    monitor_run_parser.add_argument(
-        "--interval-seconds",
-        type=_positive_int_arg,
-        help="Override the positive interval between finite-loop cycles.",
-    )
     monitor_inspect_parser = monitor_subparsers.add_parser(
         "inspect",
-        help="Inspect local monitor state.",
-        description="Inspect local monitor state.",
+        help="Inspect local Monitor health state.",
+        description="Inspect local Monitor health state.",
     )
     monitor_inspect_parser.add_argument("--config", required=True, help="Path to a Halpha YAML config file.")
 
@@ -592,15 +561,6 @@ def _dispatch_command(args: argparse.Namespace, parser: argparse.ArgumentParser)
 
     if args.command == "outcomes" and args.outcomes_command == "inspect":
         return _outcomes_inspect(args.config, run_dir=args.run_dir)
-
-    if args.command == "monitor" and args.monitor_command == "run":
-        return _monitor_run(
-            args.config,
-            dry_run=args.dry_run,
-            once=args.once,
-            max_cycles=args.max_cycles,
-            interval_seconds=args.interval_seconds,
-        )
 
     if args.command == "monitor" and args.monitor_command == "inspect":
         return _monitor_inspect(args.config)
@@ -1881,195 +1841,6 @@ def _outcomes_inspect(config_arg: str, *, run_dir: str | None) -> int:
     for line in result.lines:
         print(line)
     _log_command_succeeded("outcomes inspect", status=result.status, explicit_run=run_dir is not None)
-    return 0
-
-
-def _monitor_run(
-    config_arg: str,
-    *,
-    dry_run: bool,
-    once: bool,
-    max_cycles: int | None,
-    interval_seconds: int | None,
-) -> int:
-    config_path = Path(config_arg)
-    _configure_logging(config_path=config_path)
-    LOGGER.info(
-        "Halpha command started.",
-        extra={
-            "event": "cli.command.start",
-            "command": "monitor run",
-            "dry_run": dry_run,
-            "once": once,
-            "max_cycles": max_cycles,
-            "interval_seconds": interval_seconds,
-        },
-    )
-
-    try:
-        config = load_config(config_path)
-    except ConfigError as exc:
-        LOGGER.warning(
-            "Halpha command failed.",
-            extra={"event": "cli.command.failed", "command": "monitor run", "stage": "config", "reason": str(exc)},
-        )
-        print("Halpha monitor run failed.")
-        print("stage: config")
-        print(f"reason: {exc}")
-        return 2
-
-    _configure_logging(config_path=config_path, config=config)
-    if not dry_run:
-        if interval_seconds is not None and max_cycles is None:
-            LOGGER.warning(
-                "Halpha command failed.",
-                extra={
-                    "event": "cli.command.failed",
-                    "command": "monitor run",
-                    "stage": "monitor",
-                    "reason": "--interval-seconds requires --max-cycles.",
-                },
-            )
-            print("Halpha monitor run failed.")
-            print("stage: monitor")
-            print("reason: --interval-seconds requires --max-cycles.")
-            return 3
-        if max_cycles is not None:
-            settings = load_monitor_config(config)
-            try:
-                result = run_monitor_loop(
-                    config,
-                    config_path=config_path,
-                    max_cycles=max_cycles,
-                    interval_seconds=interval_seconds or settings.interval_seconds,
-                )
-            except PipelineError as exc:
-                LOGGER.warning(
-                    "Halpha monitor loop failed.",
-                    extra={
-                        "event": "monitor.loop.failed",
-                        "stage": exc.stage or "monitor",
-                        "exit_code": exc.exit_code,
-                        "reason": str(exc),
-                    },
-                )
-                print("Halpha monitor run failed.")
-                print(f"stage: {exc.stage or 'monitor'}")
-                print(f"reason: {exc}")
-                return exc.exit_code
-            health = _safe_local_display_path(result.health_state_path)
-            if result.succeeded:
-                print("Halpha monitor loop succeeded.")
-            else:
-                print("Halpha monitor loop failed.")
-            print(f"loop_id: {result.loop_id}")
-            print(f"status: {result.status}")
-            print(f"completed_cycles: {result.completed_cycles}")
-            print(f"max_cycles: {result.max_cycles}")
-            print(f"stop_reason: {result.stop_reason}")
-            if result.cycle_results:
-                print(f"latest_cycle_id: {result.cycle_results[-1].cycle_id}")
-            if result.reason:
-                print(f"reason: {result.reason}")
-            print(f"health_state: {health}")
-            LOGGER.log(
-                logging.INFO if result.succeeded else logging.WARNING,
-                "Halpha monitor loop finished.",
-                extra={
-                    "event": "monitor.loop.finished",
-                    "loop_id": result.loop_id,
-                    "status": result.status,
-                    "completed_cycles": result.completed_cycles,
-                    "max_cycles": result.max_cycles,
-                    "stop_reason": result.stop_reason,
-                    "exit_code": result.exit_code,
-                    "reason": result.reason,
-                },
-            )
-            return result.exit_code
-        if not once:
-            LOGGER.warning(
-                "Halpha command failed.",
-                extra={
-                    "event": "cli.command.failed",
-                    "command": "monitor run",
-                    "stage": "monitor",
-                    "reason": "choose --dry-run, --once, or --max-cycles.",
-                },
-            )
-            print("Halpha monitor run failed.")
-            print("stage: monitor")
-            print("reason: choose --dry-run, --once, or --max-cycles.")
-            return 3
-        try:
-            result = run_monitor_cycle(config, config_path=config_path)
-        except PipelineError as exc:
-            LOGGER.warning(
-                "Halpha monitor cycle failed.",
-                extra={
-                    "event": "monitor.cycle.failed",
-                    "stage": exc.stage or "monitor",
-                    "exit_code": exc.exit_code,
-                    "reason": str(exc),
-                },
-            )
-            print("Halpha monitor run failed.")
-            print(f"stage: {exc.stage or 'monitor'}")
-            print(f"reason: {exc}")
-            return exc.exit_code
-        manifest = _safe_local_display_path(result.manifest_path)
-        if result.succeeded:
-            print("Halpha monitor cycle succeeded.")
-            print(f"cycle_id: {result.cycle_id}")
-            if result.run_id:
-                print(f"run_id: {result.run_id}")
-            print(f"target_stage: {result.target_stage}")
-            print(f"no_codex: {str(result.no_codex).lower()}")
-            print(f"monitor_manifest: {manifest}")
-            LOGGER.info(
-                "Halpha monitor cycle finished.",
-                extra={
-                    "event": "monitor.cycle.finished",
-                    "cycle_id": result.cycle_id,
-                    "status": result.status,
-                    "run_id": result.run_id,
-                    "target_stage": result.target_stage,
-                    "no_codex": result.no_codex,
-                    "exit_code": result.exit_code,
-                },
-            )
-            return result.exit_code
-
-        LOGGER.warning(
-            "Halpha monitor cycle failed.",
-            extra={
-                "event": "monitor.cycle.finished",
-                "cycle_id": result.cycle_id,
-                "status": result.status,
-                "target_stage": result.target_stage,
-                "no_codex": result.no_codex,
-                "exit_code": result.exit_code,
-                "reason": result.reason,
-            },
-        )
-        print("Halpha monitor run failed.")
-        print("stage: monitor")
-        if result.reason:
-            print(f"reason: {result.reason}")
-        print(f"target_stage: {result.target_stage}")
-        print(f"no_codex: {str(result.no_codex).lower()}")
-        print(f"monitor_manifest: {manifest}")
-        return result.exit_code
-
-    settings = load_monitor_config(config)
-    print("Halpha monitor dry run succeeded.")
-    print("cycle_execution: not_run")
-    for line in monitor_config_lines(settings):
-        print(line)
-    LOGGER.info(
-        "Halpha monitor dry run finished.",
-        extra={"event": "monitor.dry_run.finished", "status": "succeeded"},
-    )
     return 0
 
 

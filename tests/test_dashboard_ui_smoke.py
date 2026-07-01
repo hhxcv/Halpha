@@ -128,7 +128,7 @@ def test_dashboard_pages_expose_primary_semantic_views(tmp_path: Path) -> None:
     assert "Artifacts" not in _nav_block(html)
 
 
-def test_dashboard_shell_uses_system_monitor_status_without_local_mode_badges(tmp_path: Path) -> None:
+def test_dashboard_shell_uses_live_status_without_local_mode_badges(tmp_path: Path) -> None:
     html = _dashboard_html(tmp_path)
     css = _style_block(html)
     script = _script_block(html)
@@ -136,13 +136,13 @@ def test_dashboard_shell_uses_system_monitor_status_without_local_mode_badges(tm
     assert "System healthy" not in html
     assert "Local mode" not in html
     assert "No data leaves this device through the dashboard UI." not in html
-    assert 'id="sidebar-system-monitor-dot"' in html
-    assert 'id="sidebar-system-monitor-title">System Monitor</span>' in html
-    assert 'id="sidebar-system-monitor-text">Loading runtime status.</div>' in html
-    assert "systemMonitorSidebarState" in script
-    assert "renderSidebarSystemMonitorStatus" in script
-    assert "Runtime monitoring is enabled and running." in script
-    assert "loadLivePayload().catch(() => renderSidebarSystemMonitorStatus())" in script
+    assert 'id="sidebar-live-dot"' in html
+    assert 'id="sidebar-live-title">Live status</span>' in html
+    assert 'id="sidebar-live-text">Loading Live status.</div>' in html
+    assert "liveSidebarState" in script
+    assert "renderSidebarLiveStatus" in script
+    assert "Live collection and scheduled review are enabled." in script
+    assert "loadLivePayload().catch(() => renderSidebarLiveStatus())" in script
     assert ".health-dot.stopped" in css
     assert ".health-dot.unknown" in css
 
@@ -501,9 +501,12 @@ def test_dashboard_intelligence_overview_is_reader_oriented(tmp_path: Path) -> N
     assert ".intel-overview-pulse" in css
     assert ".intel-overview-dashboard" in css
     assert ".intel-overview-record-row" in css
+    assert ".intel-overview-agenda-row > .tag-row" in css
     assert ".intel-overview-sparkline" in css
     assert ".intel-overview-spark-point.hovered .intel-overview-spark-hover" in css
     assert ".intel-overview-spark-cross.horizontal" in css
+    assert 'class="intel-overview-kpis" id="intel-overview-kpis"' in html
+    assert 'class="summary-strip" id="intel-overview-kpis"' not in html
     assert "renderIntelOverviewTextEvents" in script
     assert "renderIntelOverviewMacroAgenda" in script
     assert "renderIntelOverviewAnomalyRadar" in script

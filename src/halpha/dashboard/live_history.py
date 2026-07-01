@@ -53,6 +53,7 @@ def dashboard_live_history(
     filtered = filter_live_history_events(ordered, filters or {})
     timeline = filtered[:LIVE_HISTORY_TIMELINE_LIMIT]
     trigger_rows = _trigger_rows(recent_decisions, jobs=jobs)[:LIVE_HISTORY_TRIGGER_LIMIT]
+    trigger_report_artifacts = [row for row in trigger_rows if row.get("linked_report_ref")]
     alert_rows = _alert_rows(alerts)[:LIVE_HISTORY_ALERT_LIMIT]
     warnings = _bounded_unique(
         [
@@ -85,14 +86,16 @@ def dashboard_live_history(
             "timeline_events": len(ordered),
             "visible_timeline_events": len(filtered),
             "trigger_decisions": len(recent_decisions),
-            "triggered_report_rows": len(trigger_rows),
+            "trigger_created_jobs": sum(1 for row in trigger_rows if row.get("linked_job_id")),
+            "trigger_report_artifacts": len(trigger_report_artifacts),
             "alert_records": int(alert_counts.get("records") or len(alert_rows) or 0),
             "scheduled_dispatches": len(_list(schedule, "dispatches")),
         },
         "filter_options": _filter_options(ordered, recent_decisions),
         "filters": _normalized_filters(filters or {}),
         "timeline": timeline,
-        "triggered_reports": trigger_rows,
+        "trigger_decisions": trigger_rows,
+        "trigger_report_artifacts": trigger_report_artifacts,
         "alert_archive": {
             "counts": alert_counts,
             "records": alert_rows,
@@ -102,7 +105,8 @@ def dashboard_live_history(
             "live_disabled": not live_enabled,
             "triggers_disabled": not triggers_enabled,
             "no_live_history_yet": not ordered,
-            "no_triggered_reports_yet": not trigger_rows,
+            "no_trigger_decisions_yet": not trigger_rows,
+            "no_trigger_report_artifacts_yet": not trigger_report_artifacts,
             "no_alert_archive_records_yet": not alert_rows,
         },
         "omitted": {
@@ -255,18 +259,22 @@ def _trigger_report_job_events(jobs: list[dict[str, Any]]) -> list[dict[str, Any
             continue
         refs = _job_refs(job)
         result_refs = _dict(job.get("result_refs"))
+        report_ref = result_refs.get("report")
+        has_report = isinstance(report_ref, str) and bool(report_ref)
+        event_kind = "trigger_report_job" if has_report else "trigger_run_job"
+        title = "Trigger-created report job" if has_report else "Trigger-created run job"
         events.append(
             _event(
-                event_id=f"trigger_report_job:{job.get('job_id')}",
+                event_id=f"{event_kind}:{job.get('job_id')}",
                 timestamp=job.get("finished_at") or job.get("started_at") or job.get("created_at"),
-                event_kind="trigger_report_job",
+                event_kind=event_kind,
                 status=job.get("status"),
-                title=f"Trigger-created report job {requester.get('trigger_id') or job.get('job_id')}",
+                title=f"{title} {requester.get('trigger_id') or job.get('job_id')}",
                 summary=_job_summary(job),
                 trigger_id=requester.get("trigger_id"),
                 job_id=job.get("job_id"),
                 run_id=result_refs.get("run_id"),
-                report_ref=result_refs.get("report"),
+                report_ref=report_ref,
                 artifact_refs=refs,
                 warnings=_strings(job.get("warnings")),
                 errors=_strings(job.get("errors")),
@@ -438,6 +446,7 @@ def _trigger_rows(decisions: list[dict[str, Any]], *, jobs: list[dict[str, Any]]
                 "cooldown_until": decision.get("cooldown_until"),
                 "linked_collection_job_ids": _strings(decision.get("linked_collection_job_ids")),
                 "linked_job_id": job_id,
+                "job_intent": job.get("intent") if isinstance(job, dict) else None,
                 "linked_run_id": run_id,
                 "linked_report_ref": report_ref,
                 "terminal_job_status": decision.get("linked_report_job_status") or (job.get("status") if isinstance(job, dict) else None),
@@ -645,10 +654,7 @@ def _alert_counts(alerts: dict[str, Any]) -> dict[str, Any]:
 
 
 def _event_has_report_link(event: dict[str, Any]) -> bool:
-    return any(
-        isinstance(event.get(key), str) and event.get(key)
-        for key in ("report_ref", "run_id", "job_id")
-    ) or bool(event.get("artifact_refs"))
+    return isinstance(event.get("report_ref"), str) and bool(event.get("report_ref"))
 
 
 def _reference_state(report_ref: Any, refs: list[str]) -> str:

@@ -42,13 +42,18 @@ def test_dashboard_live_history_builds_ordered_bounded_review_payload() -> None:
         "monitor_cycle",
         "alert_archive_record",
     }.issubset(event_kinds)
-    trigger_row = payload["triggered_reports"][0]
+    assert payload["summary"]["trigger_decisions"] == 1
+    assert payload["summary"]["trigger_created_jobs"] == 1
+    assert payload["summary"]["trigger_report_artifacts"] == 1
+    trigger_row = payload["trigger_decisions"][0]
     assert trigger_row["trigger_id"] == "market_breakout"
     assert trigger_row["threshold_params"] == {"window_seconds": 3600}
     assert "record_count: 1" in trigger_row["evidence_summary"]
     assert trigger_row["linked_job_id"] == "trigger-job-1"
+    assert trigger_row["job_intent"] == "run_no_codex"
     assert trigger_row["linked_run_id"] == "run-trigger"
     assert trigger_row["linked_report_ref"] == "runs/run-trigger/report/report.md"
+    assert payload["trigger_report_artifacts"][0]["linked_report_ref"] == "runs/run-trigger/report/report.md"
     assert payload["alert_archive"]["counts"]["suppressed_duplicate"] == 1
     assert payload["alert_archive"]["records"][0]["suppression_reasons"] == ["duplicate"]
     assert payload["omitted"]["full_raw_stores_embedded"] is False
@@ -68,16 +73,71 @@ def test_dashboard_live_history_filters_and_marks_missing_refs() -> None:
         payload["timeline"],
         {
             "trigger_id": "market_breakout",
-            "event_kind": "trigger_report_job",
-            "attention_only": True,
+            "event_kind": "trigger_run_job",
+            "attention_only": False,
         },
     )
 
     assert len(filtered) == 1
-    assert filtered[0]["status"] == "degraded"
+    assert filtered[0]["status"] == "succeeded"
     assert filtered[0]["artifact_state"] == "missing"
-    assert "linked report artifact ref is missing." in filtered[0]["warnings"]
-    assert filter_live_history_events(payload["timeline"], {"report_linked_only": True})
+    assert "linked report artifact ref is missing." not in filtered[0]["warnings"]
+    assert not filter_live_history_events(payload["timeline"], {"report_linked_only": True})
+    assert payload["trigger_decisions"][0]["artifact_state"] == "missing"
+    assert payload["trigger_report_artifacts"] == []
+
+
+def test_dashboard_live_history_separates_decisions_jobs_and_report_artifacts() -> None:
+    live_payload = _live_payload(decision_report_ref=None)
+    live_payload["triggers"]["recent_decisions"] = [
+        {
+            **live_payload["triggers"]["recent_decisions"][0],
+            "decision_id": "decision-job",
+            "status": "triggered",
+            "linked_report_job_id": "trigger-job-1",
+            "linked_report_job_status": "succeeded",
+            "linked_run_id": "run-no-codex",
+            "linked_report_ref": None,
+            "reason_codes": ["major_market_move_price_change"],
+        },
+        {
+            **live_payload["triggers"]["recent_decisions"][0],
+            "decision_id": "decision-blocked",
+            "status": "blocked",
+            "linked_report_job_id": None,
+            "linked_run_id": None,
+            "linked_report_ref": None,
+            "reason_codes": ["live_trigger_authorization_missing"],
+        },
+        {
+            **live_payload["triggers"]["recent_decisions"][0],
+            "decision_id": "decision-skipped",
+            "status": "suppressed_cooldown",
+            "linked_report_job_id": None,
+            "linked_run_id": None,
+            "linked_report_ref": None,
+            "reason_codes": ["cooldown_active"],
+        },
+    ]
+
+    payload = dashboard_live_history(
+        live_payload=live_payload,
+        jobs_payload={"jobs": [_trigger_job(result_refs={"run_id": "run-no-codex"})]},
+        schedule_payload={"status": "missing", "dispatches": []},
+        cycles_payload={"status": "missing", "cycles": []},
+        alerts_payload={"status": "missing", "alert_archive": {"fields": {"counts": {}, "sample_records": []}}},
+    )
+
+    assert payload["summary"]["trigger_decisions"] == 3
+    assert payload["summary"]["trigger_created_jobs"] == 1
+    assert payload["summary"]["trigger_report_artifacts"] == 0
+    assert payload["trigger_report_artifacts"] == []
+    by_id = {row["decision_id"]: row for row in payload["trigger_decisions"]}
+    assert by_id["decision-job"]["job_intent"] == "run_no_codex"
+    assert by_id["decision-job"]["linked_run_id"] == "run-no-codex"
+    assert by_id["decision-job"]["linked_report_ref"] is None
+    assert by_id["decision-blocked"]["artifact_state"] == "missing"
+    assert by_id["decision-skipped"]["artifact_state"] == "missing"
 
 
 def test_dashboard_live_history_endpoint_reads_runtime_state(tmp_path: Path) -> None:
@@ -144,7 +204,8 @@ def test_dashboard_live_history_endpoint_reads_runtime_state(tmp_path: Path) -> 
     payload = response.json()
     assert payload["artifact_type"] == "dashboard_live_history"
     assert any(event["event_kind"] == "trigger_decision" for event in payload["timeline"])
-    assert payload["triggered_reports"][0]["linked_report_ref"] == "runs/run-api/report/report.md"
+    assert payload["trigger_decisions"][0]["linked_report_ref"] == "runs/run-api/report/report.md"
+    assert payload["trigger_report_artifacts"][0]["linked_report_ref"] == "runs/run-api/report/report.md"
     assert "decision-api" in response.text
     assert str(tmp_path) not in response.text
 
