@@ -9,6 +9,7 @@ from typing import Any
 from halpha.market.ohlcv_store import OHLCVParquetStore, OHLCVStoreError
 from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
+from halpha.strategy.funding_inputs import funding_cost_input_for_strategy
 from halpha.strategy.strategy_config import parameter_profile_record, resolve_strategy_for_target
 from halpha.strategy.strategy_evaluation_history import (
     STRATEGY_EVALUATION_HISTORY_ARTIFACT,
@@ -104,17 +105,23 @@ def run_standalone_strategy_backtest(
         raise StandaloneBacktestError(f"strategy is not supported: {strategy_name}", exit_code=2)
 
     try:
+        market_identity = {
+            "source": source,
+            "symbol": symbol,
+            "timeframe": timeframe,
+        }
         signals = definition.signal_records(strategy, view, window)
         evaluation = evaluate_single_window_backtest(
             strategy=strategy,
-            market_identity={
-                "source": source,
-                "symbol": symbol,
-                "timeframe": timeframe,
-            },
+            market_identity=market_identity,
             ohlcv_rows=window,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
+            funding_costs=funding_cost_input_for_strategy(
+                config_path,
+                market_identity=market_identity,
+                ohlcv_rows=window,
+            ),
         )
     except Exception as exc:
         raise StandaloneBacktestError(f"strategy backtest failed: {exc}", exit_code=3) from exc

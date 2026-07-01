@@ -775,6 +775,33 @@ def test_load_config_accepts_effectiveness_gate_thresholds(tmp_path: Path) -> No
     }
 
 
+def test_load_config_accepts_quant_walk_forward_policy(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            (
+                "        target_volatility: 0.2\n"
+                "  walk_forward_policy:\n"
+                "    calibration_rows: 120\n"
+                "    window_rows: 180\n"
+                "    min_window_rows: 120\n"
+                "    min_windows: 3"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["quant"]["walk_forward_policy"] == {
+        "calibration_rows": 120,
+        "window_rows": 180,
+        "min_window_rows": 120,
+        "min_windows": 3,
+    }
+
+
 def test_load_config_accepts_lifecycle_policy_records(tmp_path: Path) -> None:
     config_path = _write_valid_config(tmp_path)
     config_path.write_text(
@@ -872,6 +899,45 @@ def test_load_config_rejects_invalid_effectiveness_gate_thresholds(
         config_path.read_text(encoding="utf-8").replace(
             "        target_volatility: 0.2",
             f"        target_volatility: 0.2\n{gate_block}",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match=expected):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    ("policy_block", "expected"),
+    [
+        (
+            "  walk_forward_policy:\n    unsupported: 1",
+            r"unsupported quant\.walk_forward_policy field",
+        ),
+        (
+            "  walk_forward_policy:\n    calibration_rows: -1",
+            r"quant\.walk_forward_policy\.calibration_rows",
+        ),
+        (
+            "  walk_forward_policy:\n    window_rows: 0",
+            r"quant\.walk_forward_policy\.window_rows",
+        ),
+        (
+            "  walk_forward_policy:\n    window_rows: 20\n    min_window_rows: 21",
+            r"quant\.walk_forward_policy\.min_window_rows",
+        ),
+    ],
+)
+def test_load_config_rejects_invalid_quant_walk_forward_policy(
+    tmp_path: Path,
+    policy_block: str,
+    expected: str,
+) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "        target_volatility: 0.2",
+            f"        target_volatility: 0.2\n{policy_block}",
         ),
         encoding="utf-8",
     )

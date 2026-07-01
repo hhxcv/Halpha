@@ -2798,7 +2798,9 @@
 
         function renderError(selector, message, kind = "error") {
           if (selector === "#intel-data-preview-panel") updateIntelligencePropertiesSelection(null, null);
-          setHtml(selector, `<div class="message ${kind === "warning" ? "warning" : "error"}">${escapeHtml(message)}</div>`);
+          const isCoveragePanel = String(selector || "").endsWith("-coverage");
+          const title = isCoveragePanel ? `<strong>Coverage ${kind === "warning" ? "warning" : "failed"}</strong><br>` : "";
+          setHtml(selector, `<div class="message ${kind === "warning" ? "warning" : "error"}">${title}${escapeHtml(message)}</div>`);
         }
 
         function removeEmpty(value) {

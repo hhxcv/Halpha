@@ -137,29 +137,35 @@ def funding_cost_input_from_records(
     valid_records, invalid_warnings = _valid_funding_records(funding_records)
     periods = []
     matched_record_count = 0
+    missing_period_count = 0
+    expected_record_count = 0
     for index in range(1, len(ohlcv_rows)):
         period_start = _open_time(ohlcv_rows[index - 1])
         period_end = _open_time(ohlcv_rows[index])
         start_dt = _parse_utc(period_start, "period_start")
         end_dt = _parse_utc(period_end, "period_end")
+        expected_count = _expected_funding_record_count(start_dt, end_dt, period=period)
         matched = [
             record
             for record in valid_records
             if start_dt < record["as_of_dt"] <= end_dt
         ]
         matched_record_count += len(matched)
+        expected_record_count += expected_count
+        if len(matched) < expected_count:
+            missing_period_count += expected_count - len(matched)
         funding_rate = sum(record["funding_rate"] for record in matched)
         periods.append(
             {
                 "period_start": period_start,
                 "period_end": period_end,
+                "expected_record_count": expected_count,
                 "funding_rate": round(float(funding_rate), 12),
                 "matched_record_count": len(matched),
                 "funding_as_of": [record["as_of"] for record in matched],
             }
         )
 
-    missing_period_count = sum(1 for item in periods if item["matched_record_count"] == 0)
     status = _funding_status(matched_record_count=matched_record_count, missing_period_count=missing_period_count)
     warnings = [
         *_warning_list(upstream_warnings),
@@ -201,7 +207,11 @@ def _base_input(
     errors: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     matched_record_count = sum(int(item.get("matched_record_count") or 0) for item in periods)
-    missing_period_count = sum(1 for item in periods if int(item.get("matched_record_count") or 0) == 0)
+    missing_period_count = sum(
+        max(0, int(item.get("expected_record_count") or 0) - int(item.get("matched_record_count") or 0))
+        for item in periods
+    )
+    expected_record_count = sum(int(item.get("expected_record_count") or 0) for item in periods)
     return {
         "schema_version": FUNDING_COST_SCHEMA_VERSION,
         "artifact_type": "strategy_funding_cost_input",
@@ -214,6 +224,7 @@ def _base_input(
         "unit": "fraction_of_notional",
         "sign_convention": "positive_rate_paid_by_longs_received_by_shorts",
         "period_count": len(periods),
+        "expected_record_count": expected_record_count,
         "matched_record_count": matched_record_count,
         "missing_period_count": missing_period_count,
         "periods": periods,
@@ -258,6 +269,33 @@ def _funding_status(*, matched_record_count: int, missing_period_count: int) -> 
     if missing_period_count:
         return "partial"
     return "available"
+
+
+def _expected_funding_record_count(start: datetime, end: datetime, *, period: str) -> int:
+    seconds = _period_seconds(period)
+    if seconds is None or end <= start:
+        return 1
+    start_ts = int(start.timestamp())
+    end_ts = int(end.timestamp())
+    next_ts = ((start_ts // seconds) + 1) * seconds
+    count = 0
+    while next_ts <= end_ts:
+        count += 1
+        next_ts += seconds
+    return count
+
+
+def _period_seconds(period: str) -> int | None:
+    value = str(period or "").strip().lower()
+    if not value.endswith("h"):
+        return None
+    raw = value[:-1]
+    if not raw.isdigit():
+        return None
+    hours = int(raw)
+    if hours <= 0:
+        return None
+    return hours * 3600
 
 
 def _coverage_warnings(*, status: str, missing_period_count: int) -> list[dict[str, Any]]:

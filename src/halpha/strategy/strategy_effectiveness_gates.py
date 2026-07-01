@@ -977,7 +977,7 @@ def _overfitting_risk(
     parameter_status = str(parameter.get("status") or "unknown")
     parameter_performance_status = str(parameter.get("performance_status") or "unknown")
 
-    if min_sample_rows and min_sample_rows < thresholds["min_min_sample_rows"] * 2:
+    if min_sample_rows and min_sample_rows < thresholds["min_min_sample_rows"]:
         warnings.append(_warning("overfitting_short_sample", "Sample length is short for robust gate evidence."))
     if total_trade_count < thresholds["min_total_trade_count"]:
         warnings.append(_warning("overfitting_low_trade_count", "Trade count is too low for robust gate evidence."))

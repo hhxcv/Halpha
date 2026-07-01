@@ -189,6 +189,8 @@ def test_dashboard_status_class_covers_nonterminal_states(tmp_path: Path) -> Non
     assert 'return "skipped";' in script
     assert '"insufficient_data", "unavailable"' in script
     assert 'return "partial";' in script
+    assert '"created", "creating", "queued"' in script
+    assert 'return "pending";' in script
 
 
 def test_dashboard_report_job_controls_expose_dom_contracts(tmp_path: Path) -> None:
@@ -408,6 +410,7 @@ def test_dashboard_data_viewer_script_uses_backend_viewer_contracts(tmp_path: Pa
         "unknown",
     ):
         assert f'"{status}"' in script
+    assert "Coverage ${kind === \"warning\" ? \"warning\" : \"failed\"}" in script
     assert "Check the timeline to distinguish no_data from not_collected, partial, failed, stale, or unknown coverage." in script
 
 
@@ -547,6 +550,7 @@ def test_dashboard_dynamic_views_have_skeleton_loading_contracts(tmp_path: Path)
     assert "renderReportsLoading()" in script
     assert "renderStrategiesLoading()" in script
     assert "renderLiveLoading()" in script
+    assert 'setHtml("#live-intelligence-strip", skeletonCards(6, "live-intel-card"));' in script
     assert "renderIntelligenceLoading()" in script
     assert "renderSettingsLoading()" in script
     assert "VIEW_REFRESH_TTL_MS = 15000" in script
@@ -683,6 +687,9 @@ def test_dashboard_report_preview_and_job_contracts_are_present(tmp_path: Path) 
     assert ".report-source-chip" in css
     assert ".report-source-files" in css
     assert ".report-source-row.active" in css
+    assert ".report-progress" in css
+    assert ".report-milestone-list" in css
+    assert ".report-log-stream" in css
     assert ".artifact-document" in css
     assert ".artifact-field-grid" in css
     assert ".report-library-list" in css
@@ -690,6 +697,10 @@ def test_dashboard_report_preview_and_job_contracts_are_present(tmp_path: Path) 
     assert "reportArtifactFiles" in dashboard_reports_script()
     assert "reportArtifactGroups" in dashboard_reports_script()
     assert "renderReportSourceFiles" in script
+    assert "renderReportProgress" in script
+    assert "reportMilestones" in script
+    assert "reportJobRecord" in script
+    assert "Generating Report" in script
     assert "selectReportArtifact" in script
     assert "renderReportArtifactPreview" in script
     assert "renderJsonArtifact" in script
@@ -749,6 +760,10 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert ".live-alert-row" in css
     assert ".live-history-event-button" in css
     assert ".live-intelligence-strip" in css
+    assert "grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));" in css
+    assert ".live-stream-panel .live-section-head" in css
+    assert ".live-intel-card .live-stream-title strong" in css
+    assert "hyphens: none;" in css
     assert ".live-target-table" in css
     assert ".live-target-row.active" in css
     assert ".live-job-lane" in css

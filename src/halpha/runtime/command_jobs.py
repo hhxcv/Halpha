@@ -2,6 +2,7 @@
 
 from contextlib import nullcontext, suppress
 from datetime import datetime, timezone
+import json
 import logging
 import os
 from pathlib import Path
@@ -436,13 +437,14 @@ class CommandJobManager:
                 "source_artifacts": source_artifacts,
             }
         )
+        self._promote_stdout_diagnostics(job, stdout, failed=status == "failed")
         if status == "cancelled":
             job.setdefault("warnings", []).append("job was cancelled by caller request.")
         elif cancellation_unconfirmed:
             job.setdefault("errors", []).append("job cancellation could not confirm complete process-tree termination.")
         elif cleanup_unconfirmed:
             job.setdefault("errors", []).append("job process tree cleanup could not confirm descendant termination.")
-        elif status == "failed":
+        elif status == "failed" and not job.get("errors"):
             job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
         self._save_job(job, event_type=status)
         with self._lock:
@@ -570,6 +572,7 @@ class CommandJobManager:
         )
         if diagnostic is not None:
             job["diagnostic"] = diagnostic
+        self._promote_stdout_diagnostics(job, stdout, failed=status == "failed")
         if status == "failed" and not job.get("errors"):
             job.setdefault("errors", []).append(f"job exited with code {exit_code}.")
         try:
@@ -788,6 +791,63 @@ class CommandJobManager:
                 refs[key] = self._safe_result_artifact_ref(value, output_dir_ref=output_dir_ref)
         return refs
 
+    def _promote_stdout_diagnostics(self, job: dict[str, Any], stdout: str | None, *, failed: bool = False) -> None:
+        warnings: list[str] = []
+        errors: list[str] = []
+        for line in (stdout or "").splitlines():
+            key, separator, value = line.partition(":")
+            if not separator:
+                continue
+            key = key.strip().lower()
+            message = self._redact_text(value.strip())
+            if not message:
+                continue
+            if key == "warning":
+                warnings.append(message)
+            elif key == "error":
+                errors.append(message)
+            elif failed and key == "reason" and message.lower() not in {"none", "null"}:
+                errors.append(message)
+        if warnings:
+            job["warnings"] = _unique_strings([*_strings(job.get("warnings")), *warnings])
+        if errors:
+            job["errors"] = _unique_strings([*_strings(job.get("errors")), *errors])
+
+    def _enrich_persisted_stdout_diagnostics(self, job: dict[str, Any]) -> dict[str, Any]:
+        if str(job.get("status") or "").lower() != "failed":
+            return job
+        stdout = self._read_persisted_stdout(job)
+        if stdout is None:
+            return job
+        existing_errors = _strings(job.get("errors"))
+        only_generic_exit = bool(existing_errors) and all(_is_generic_job_exit_error(item) for item in existing_errors)
+        self._promote_stdout_diagnostics(job, stdout, failed=True)
+        if only_generic_exit:
+            specific_errors = [item for item in _strings(job.get("errors")) if not _is_generic_job_exit_error(item)]
+            if specific_errors:
+                job["errors"] = _unique_strings(specific_errors)
+        return job
+
+    def _read_persisted_stdout(self, job: dict[str, Any]) -> str | None:
+        logs = job.get("logs")
+        if not isinstance(logs, dict):
+            return None
+        ref = str(logs.get("stdout_ref") or "").strip().replace("\\", "/")
+        if not ref or ref in {EXTERNAL_ARTIFACT_REF, REDACTED_ARTIFACT_REF}:
+            return None
+        if not ref.startswith(f"{COMMAND_JOB_LOG_ROOT_REF}/") or not ref.endswith("/stdout.log"):
+            return None
+        path = (self.control_base / ref).resolve()
+        root = (self.control_base / COMMAND_JOB_LOG_ROOT_REF).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError:
+            return None
+        try:
+            return path.read_text(encoding="utf-8")[:MAX_JOB_LOG_CHARS]
+        except OSError:
+            return None
+
     def _safe_result_artifact_ref(self, value: str, *, output_dir_ref: str | None) -> str:
         if (
             output_dir_ref
@@ -807,6 +867,7 @@ class CommandJobManager:
         return REDACTED_ARTIFACT_REF if self._redact_text(ref) != ref else ref
 
     def _normalize_runtime_job_state(self, job: dict[str, Any]) -> dict[str, Any]:
+        job = self._enrich_persisted_stdout_diagnostics(job)
         status = str(job.get("status") or "").lower()
         if status not in JOB_PROCESS_STATUSES:
             return job
@@ -814,10 +875,12 @@ class CommandJobManager:
         if job_id in self._processes:
             job["runtime_attached"] = True
             job["process_alive"] = True
+            self._attach_active_run_refs(job)
             return job
         if self._is_internal_job_attached(job):
             job["runtime_attached"] = True
             job["process_alive"] = True
+            self._attach_active_run_refs(job)
             return job
 
         latest = self._repository.get_job(job_id)
@@ -826,6 +889,7 @@ class CommandJobManager:
         if self._persisted_process_identity_alive(job):
             job["runtime_attached"] = False
             job["process_alive"] = True
+            self._attach_active_run_refs(job)
             warnings = job.setdefault("warnings", [])
             if isinstance(warnings, list):
                 message = (
@@ -836,6 +900,65 @@ class CommandJobManager:
                     warnings.append(message)
             return job
         return self._mark_process_lost(job)
+
+    def _attach_active_run_refs(self, job: dict[str, Any]) -> None:
+        if str(job.get("intent") or "") not in {"run", "run_no_codex", "run_until"}:
+            return
+        refs = job.get("result_refs")
+        if not isinstance(refs, dict):
+            refs = {}
+        if refs.get("run_manifest"):
+            return
+        discovered = self._discover_run_refs_for_job(str(job.get("job_id") or ""))
+        if not discovered:
+            return
+        refs = {**refs, **discovered}
+        job["result_refs"] = refs
+        source_artifacts = _strings(job.get("source_artifacts"))
+        for key, ref in discovered.items():
+            if key != "run_id" and ref not in RESULT_REF_PLACEHOLDERS:
+                source_artifacts.append(ref)
+        job["source_artifacts"] = _unique_strings(source_artifacts)
+
+    def _discover_run_refs_for_job(self, job_id: str) -> dict[str, str]:
+        if not COMMAND_JOB_ID_RE.match(job_id):
+            return {}
+        run_root = self._run_output_root()
+        if not run_root.is_dir():
+            return {}
+        try:
+            manifests = sorted(
+                run_root.glob("*/run_manifest.json"),
+                key=lambda path: path.stat().st_mtime,
+                reverse=True,
+            )
+        except OSError:
+            return {}
+        for manifest_path in manifests[:100]:
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(manifest, dict):
+                continue
+            trigger = manifest.get("trigger")
+            if not isinstance(trigger, dict) or trigger.get("job_id") != job_id:
+                continue
+            run_id = str(manifest.get("run_id") or manifest_path.parent.name)
+            refs = {
+                "run_id": self._redact_text(run_id),
+                "run_manifest": self._safe_output_ref(str(manifest_path)),
+            }
+            report_ref = manifest.get("artifacts", {}).get("report") if isinstance(manifest.get("artifacts"), dict) else None
+            if isinstance(report_ref, str) and report_ref:
+                refs["report"] = self._safe_output_ref(str(manifest_path.parent / report_ref))
+            return refs
+        return {}
+
+    def _run_output_root(self) -> Path:
+        run = self.config.get("run")
+        output_dir = Path(str(run.get("output_dir") if isinstance(run, dict) else "runs"))
+        return output_dir if output_dir.is_absolute() else self.base / output_dir
 
     def _persisted_process_identity_alive(self, job: dict[str, Any]) -> bool:
         identity = job.get("process_identity")
@@ -937,6 +1060,27 @@ def _requested_by(value: Any, *, default: str) -> str:
     if requested_by in JOB_REQUESTED_BY_VALUES:
         return requested_by
     return default if default in JOB_REQUESTED_BY_VALUES else "CLI"
+
+
+def _strings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item)]
+
+
+def _unique_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+def _is_generic_job_exit_error(value: str) -> bool:
+    return re.fullmatch(r"job exited with code -?\d+\.", str(value or "").strip()) is not None
 
 
 def _job_run_trigger(job: dict[str, Any]) -> dict[str, Any]:

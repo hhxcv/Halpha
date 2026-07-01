@@ -19,7 +19,10 @@ def test_funding_cost_input_aligns_records_to_ohlcv_periods() -> None:
         [
             _funding_record("2026-06-01T08:00:00Z", 0.001),
             _funding_record("2026-06-01T16:00:00Z", 0.002),
+            _funding_record("2026-06-02T00:00:00Z", 0.003),
             _funding_record("2026-06-02T08:00:00Z", -0.001),
+            _funding_record("2026-06-02T16:00:00Z", -0.002),
+            _funding_record("2026-06-03T00:00:00Z", -0.003),
         ],
         source="binance_usdm",
         symbol="BTCUSDT",
@@ -28,12 +31,14 @@ def test_funding_cost_input_aligns_records_to_ohlcv_periods() -> None:
     )
 
     assert result["status"] == "available"
-    assert result["matched_record_count"] == 3
+    assert result["expected_record_count"] == 6
+    assert result["matched_record_count"] == 6
     assert result["missing_period_count"] == 0
-    assert [item["funding_rate"] for item in result["periods"]] == [0.003, -0.001]
+    assert [item["funding_rate"] for item in result["periods"]] == [0.006, -0.006]
     assert result["periods"][0]["funding_as_of"] == [
         "2026-06-01T08:00:00Z",
         "2026-06-01T16:00:00Z",
+        "2026-06-02T00:00:00Z",
     ]
 
 
@@ -53,8 +58,36 @@ def test_funding_cost_input_marks_partial_coverage() -> None:
 
     assert result["status"] == "partial"
     assert result["matched_record_count"] == 1
-    assert result["missing_period_count"] == 1
+    assert result["missing_period_count"] == 5
     assert "funding_history_partial" in {warning["code"] for warning in result["warnings"]}
+
+
+def test_funding_cost_input_does_not_mark_non_settlement_4h_bars_missing() -> None:
+    rows = [
+        _row("2026-06-01T00:00:00Z"),
+        _row("2026-06-01T04:00:00Z"),
+        _row("2026-06-01T08:00:00Z"),
+        _row("2026-06-01T12:00:00Z"),
+        _row("2026-06-01T16:00:00Z"),
+    ]
+
+    result = funding_cost_input_from_records(
+        rows,
+        [
+            _funding_record("2026-06-01T08:00:00Z", 0.001),
+            _funding_record("2026-06-01T16:00:00Z", -0.002),
+        ],
+        source="binance_usdm",
+        symbol="BTCUSDT",
+        period="8h",
+    )
+
+    assert result["status"] == "available"
+    assert result["expected_record_count"] == 2
+    assert result["matched_record_count"] == 2
+    assert result["missing_period_count"] == 0
+    assert [item["expected_record_count"] for item in result["periods"]] == [0, 1, 0, 1]
+    assert [item["funding_rate"] for item in result["periods"]] == [0.0, 0.001, 0.0, -0.002]
 
 
 def test_build_funding_cost_input_uses_derivatives_query_as_of_boundary(

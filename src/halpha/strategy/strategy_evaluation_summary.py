@@ -23,6 +23,7 @@ from halpha.strategy.strategy_evaluation_history import (
     register_report_strategy_evaluations,
 )
 from halpha.strategy.strategy_config import resolve_strategy_for_target
+from halpha.strategy.funding_inputs import funding_cost_input_for_strategy
 from halpha.storage import resolve_runtime_path, write_json
 
 
@@ -60,6 +61,7 @@ def build_strategy_evaluation_summary(
             strategy_run,
             views_by_id=views_by_id,
             storage_dir=storage_dir,
+            config_path=run.config_path,
             created_at=created_at,
         )
         for strategy_run in strategy_runs_artifact["runs"]
@@ -100,6 +102,7 @@ def _evaluation_record(
     *,
     views_by_id: dict[Any, dict[str, Any]],
     storage_dir: Path,
+    config_path: Path,
     created_at: str,
 ) -> dict[str, Any]:
     status = str(strategy_run.get("status") or "failed")
@@ -128,28 +131,33 @@ def _evaluation_record(
     try:
         rows = load_market_data_view_records(view, storage_dir=storage_dir)
         strategy = _strategy_input(config, strategy_run)
+        market_identity = {
+            "source": strategy_run.get("source"),
+            "symbol": strategy_run.get("symbol"),
+            "timeframe": strategy_run.get("timeframe"),
+        }
+        funding_costs = funding_cost_input_for_strategy(
+            config_path,
+            market_identity=market_identity,
+            ohlcv_rows=rows,
+        )
         signals = definition.signal_records(strategy, view, rows)
         single_window = evaluate_single_window_backtest(
             strategy=strategy,
-            market_identity={
-                "source": strategy_run.get("source"),
-                "symbol": strategy_run.get("symbol"),
-                "timeframe": strategy_run.get("timeframe"),
-            },
+            market_identity=market_identity,
             ohlcv_rows=rows,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
+            funding_costs=funding_costs,
         )
         walk_forward = evaluate_walk_forward_backtest(
             strategy=strategy,
-            market_identity={
-                "source": strategy_run.get("source"),
-                "symbol": strategy_run.get("symbol"),
-                "timeframe": strategy_run.get("timeframe"),
-            },
+            market_identity=market_identity,
             ohlcv_rows=rows,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
+            funding_costs=funding_costs,
+            window_policy=_walk_forward_policy_from_config(config),
         )
     except Exception as exc:
         return _failed_record(
@@ -333,6 +341,14 @@ def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
         "fees_bps": backtest.get("fees_bps", 0.0),
         "slippage_bps": backtest.get("slippage_bps", 0.0),
     }
+
+
+def _walk_forward_policy_from_config(config: dict[str, Any]) -> dict[str, Any] | None:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    value = quant.get("walk_forward_policy")
+    if isinstance(value, dict):
+        return value
+    return None
 
 
 def _assessment(

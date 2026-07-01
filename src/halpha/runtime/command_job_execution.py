@@ -109,15 +109,16 @@ def _execute_run(
         if report_artifact:
             lines.insert(2, f"report: {_display(result.run.run_dir / report_artifact, config_path=config_path)}")
         return _ok(lines)
-    return _fail(
-        result.exit_code,
-        [
-            "Halpha run failed.",
-            f"stage: {result.failed_stage}",
-            f"reason: {result.reason}",
-            f"manifest: {manifest}",
-        ],
-    )
+    lines = [
+        "Halpha run failed.",
+        f"stage: {result.failed_stage}",
+        f"reason: {result.reason}",
+    ]
+    report_artifact = result.run.manifest.get("artifacts", {}).get("report")
+    if report_artifact:
+        lines.append(f"report: {_display(result.run.run_dir / report_artifact, config_path=config_path)}")
+    lines.append(f"manifest: {manifest}")
+    return _fail(result.exit_code, lines)
 
 
 def _execute_stage_rerun(

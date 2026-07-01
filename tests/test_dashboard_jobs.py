@@ -1190,6 +1190,98 @@ def test_command_job_manager_preserves_attached_internal_running_job(
     assert completed["status"] == "succeeded"
 
 
+def test_command_job_manager_attaches_running_product_run_refs(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    job_id = "20260622T000005Z_deadbeef"
+    run_dir = tmp_path / "runs" / "active-run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "run_id": "active-run",
+                "status": "running",
+                "trigger": {"source": "Dashboard", "intent": "run", "job_id": job_id},
+                "artifacts": {},
+                "codex": {"status": "not_started"},
+                "stages": [],
+                "errors": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    manager = CommandJobManager(config, config_path=config_path)
+    _seed_state_job(config_path, job_id=job_id, status="running", intent="run", kind="product_run")
+    manager._processes[job_id] = object()  # type: ignore[assignment]
+
+    running = manager.get_job(job_id)
+
+    assert running is not None
+    assert running["result_refs"]["run_id"] == "active-run"
+    assert running["result_refs"]["run_manifest"] == "runs/active-run/run_manifest.json"
+    assert "runs/active-run/run_manifest.json" in running["source_artifacts"]
+
+
+def test_command_job_manager_promotes_stdout_diagnostics_to_job_fields(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    stdout = "\n".join(
+        [
+            "Halpha data collection apply succeeded.",
+            "collection_coverage: data/research/metadata/collection_coverage_state.json",
+            "warning: language is missing from raw/text_events.json.",
+            "error: source returned partial records.",
+        ]
+    )
+
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        return CommandJobExecutionResult(exit_code=0, stdout=stdout)
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
+    manager = CommandJobManager(config, config_path=config_path, execution_mode="internal")
+
+    job = manager.create_job({"intent": "validate", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "succeeded"
+    assert completed["result_refs"]["collection_coverage"] == "data/research/metadata/collection_coverage_state.json"
+    assert completed["warnings"] == ["language is missing from raw/text_events.json."]
+    assert completed["errors"] == ["source returned partial records."]
+
+
+def test_command_job_manager_promotes_failed_stdout_reason_to_job_errors(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    stdout = "\n".join(
+        [
+            "Halpha run failed.",
+            "stage: collect_market_data",
+            "reason: market collection failed for BTCUSDT.",
+            "manifest: runs/run-api/run_manifest.json",
+        ]
+    )
+
+    def fake_execute_command_job(*args, **kwargs):  # noqa: ANN002, ANN003
+        return CommandJobExecutionResult(exit_code=3, stdout=stdout)
+
+    monkeypatch.setattr("halpha.runtime.command_jobs.execute_command_job", fake_execute_command_job)
+    manager = CommandJobManager(config, config_path=config_path, execution_mode="internal")
+
+    job = manager.create_job({"intent": "run", "params": {"confirm_codex": True}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "failed"
+    assert completed["result_refs"]["run_manifest"] == "runs/run-api/run_manifest.json"
+    assert completed["errors"] == ["market collection failed for BTCUSDT."]
+
+
 def test_command_job_manager_normalizes_result_refs_without_external_path_leakage(
     tmp_path: Path,
     monkeypatch,
@@ -1418,6 +1510,40 @@ def test_command_job_manager_marks_stale_running_job_failed_on_restart(tmp_path:
     assert "recorded PID was not treated as proof" in detail["errors"][0]
     assert listed["status"] == "failed"
     assert not (tmp_path / ".halpha" / "dashboard" / "jobs" / "index.json").exists()
+
+
+def test_command_job_manager_enriches_persisted_failed_job_reason_from_stdout(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    job_id = "20260622T000003Z_deadbeef"
+    _seed_state_job(
+        config_path,
+        job_id=job_id,
+        status="failed",
+        exit_code=3,
+        errors=["job exited with code 3."],
+    )
+    stdout_path = tmp_path / ".halpha" / "command_jobs" / "job_logs" / job_id / "stdout.log"
+    stdout_path.parent.mkdir(parents=True)
+    stdout_path.write_text(
+        "\n".join(
+            [
+                "Halpha run failed.",
+                "stage: collect_market_data",
+                "reason: market collection failed for BTCUSDT.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    manager = CommandJobManager(config, config_path=config_path)
+
+    detail = manager.get_job(job_id)
+    listed = manager.list_jobs()["jobs"][0]
+
+    assert detail is not None
+    assert detail["status"] == "failed"
+    assert detail["errors"] == ["market collection failed for BTCUSDT."]
+    assert listed["errors"] == ["market collection failed for BTCUSDT."]
 
 
 def test_command_job_manager_rejects_unattached_live_pid_as_process_identity(tmp_path: Path) -> None:
@@ -1847,15 +1973,25 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
-def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | None = None) -> None:
+def _seed_state_job(
+    config_path: Path,
+    *,
+    job_id: str,
+    status: str,
+    intent: str = "monitor_loop",
+    kind: str = "monitor_loop",
+    pid: int | None = None,
+    exit_code: int | None = None,
+    errors: list[str] | None = None,
+) -> None:
     repository = CommandJobRepository(config_path=config_path)
     repository.save_job(
         {
             "schema_version": 1,
             "artifact_type": "command_job",
             "job_id": job_id,
-            "intent": "monitor_loop",
-            "kind": "monitor_loop",
+            "intent": intent,
+            "kind": kind,
             "requested_by": "Dashboard",
             "params": {},
             "config_ref": "config.yaml",
@@ -1865,7 +2001,7 @@ def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | N
             "started_at": "2026-06-22T00:00:00Z",
             "finished_at": None,
             "pid": pid,
-            "exit_code": None,
+            "exit_code": exit_code,
             "cancellable": True,
             "command": ["python", "-m", "halpha", "monitor", "run"],
             "job_dir": f".halpha/command_jobs/job_logs/{job_id}",
@@ -1881,7 +2017,7 @@ def _seed_state_job(config_path: Path, *, job_id: str, status: str, pid: int | N
             "result_refs": {},
             "source_artifacts": [],
             "warnings": [],
-            "errors": [],
+            "errors": errors or [],
         },
         event_type="seed",
     )

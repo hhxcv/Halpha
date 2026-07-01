@@ -37,17 +37,19 @@ def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) ->
     assert result.run.report_dir.is_dir()
     assert not (result.run.raw_dir / "market.json").exists()
     assert not (result.run.analysis_dir / "market_material.md").exists()
-    assert not (result.run.report_dir / "report.md").exists()
+    assert (result.run.report_dir / "report.md").exists()
+    assert (result.run.report_dir / "report_failure.json").exists()
 
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert manifest["status"] == "failed"
     assert manifest["stage_order"] == list(STAGE_ORDER)
-    assert manifest["codex"] == {
-        "enabled": True,
-        "command": "codex",
-        "status": "not_started",
-        "exit_code": None,
-    }
+    assert manifest["codex"]["status"] == "skipped"
+    assert manifest["codex"]["exit_code"] is None
+    assert manifest["codex"]["skip_reason"] == "stage collect_market_data is not implemented"
+    assert manifest["artifacts"]["report"] == "report/report.md"
+    assert manifest["artifacts"]["report_failure"] == "report/report_failure.json"
+    assert manifest["report_generation"]["status"] == "failed"
+    assert manifest["report_generation"]["kind"] == "exception_record"
     refresh_stage = manifest["stages"][0]
     collect_task = _task(manifest, "collect_market_data")
     assert refresh_stage["name"] == "refresh_data"
@@ -71,7 +73,55 @@ def test_pipeline_records_failed_stage_without_fake_artifacts(tmp_path: Path) ->
     assert collect_task["error"] == expected_error
     assert collect_task["errors"] == [expected_error]
     assert manifest["errors"] == [expected_error]
+    assert _stage(manifest, "build_source_evidence")["status"] == "not_run"
     _assert_manifest_timeline(manifest)
+
+
+def test_report_core_quant_failure_writes_exception_report_and_skips_codex(tmp_path: Path) -> None:
+    config_path = _write_quant_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers(
+            {
+                "build_market_data_views": _write_succeeded_market_data_views,
+                "evaluate_quant_strategies": _write_empty_quant_strategy_runs,
+                "run_codex_report": _fail_if_called,
+            }
+        ),
+    )
+
+    assert result.succeeded is False
+    assert result.exit_code == 3
+    assert result.failed_stage == "evaluate_quant_strategies"
+    assert "no successful quant strategy runs" in str(result.reason)
+
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["status"] == "failed"
+    assert manifest["codex"]["status"] == "skipped"
+    assert "no successful quant strategy runs" in manifest["codex"]["skip_reason"]
+    assert manifest["artifacts"]["report"] == "report/report.md"
+    assert manifest["artifacts"]["report_failure"] == "report/report_failure.json"
+    assert manifest["report_generation"] == {
+        "status": "failed",
+        "kind": "exception_record",
+        "artifact": "report/report.md",
+        "failure_artifact": "report/report_failure.json",
+        "failed_stage": "evaluate_quant_strategies",
+        "codex_started": False,
+        "private_values_embedded": False,
+    }
+    assert _stage(manifest, "run_strategy_research")["status"] == "failed"
+    assert _task(manifest, "evaluate_quant_strategies")["status"] == "failed"
+    assert _task(manifest, "run_codex_report")["status"] == "not_run"
+    failure_detail = json.loads((result.run.report_dir / "report_failure.json").read_text(encoding="utf-8"))
+    assert failure_detail["artifact_type"] == "report_generation_failure"
+    assert failure_detail["failed_stage"] == "evaluate_quant_strategies"
+    assert (result.run.report_dir / "report.md").read_text(encoding="utf-8").startswith(
+        "# \u62a5\u544a\u751f\u6210\u5f02\u5e38\u8bb0\u5f55"
+    )
 
 
 def test_pipeline_manifest_records_default_product_run_classification(tmp_path: Path) -> None:
@@ -187,7 +237,7 @@ def test_pipeline_records_successful_stage_lifecycle_before_later_failure(tmp_pa
     assert refresh_stage["error"] == text_task["error"]
     assert manifest["errors"] == [text_task["error"]]
     assert not (result.run.raw_dir / "text_events.json").exists()
-    assert not (result.run.report_dir / "report.md").exists()
+    assert (result.run.report_dir / "report.md").exists()
     _assert_manifest_timeline(manifest)
 
 
@@ -604,7 +654,11 @@ def test_cli_run_returns_codex_failure_exit_code(tmp_path: Path, capsys, monkeyp
     assert "stage: run_codex_report" in captured.out
     assert "reason: Codex command failed with exit code 17." in captured.out
     assert "manifest:" in captured.out
-    assert not list(tmp_path.glob("runs/*/report/report.md"))
+    report_paths = list(tmp_path.glob("runs/*/report/report.md"))
+    assert len(report_paths) == 1
+    assert report_paths[0].read_text(encoding="utf-8").startswith(
+        "# \u62a5\u544a\u751f\u6210\u5f02\u5e38\u8bb0\u5f55"
+    )
 
 
 def test_cli_run_no_codex_skips_report_without_fake_report(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -834,6 +888,54 @@ codex:
     return config_path
 
 
+def _write_quant_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    timeframes:
+      - 1d
+    lookback:
+      1d: 4
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: true
+  command: codex
+  args:
+    - exec
+    - --sandbox
+    - read-only
+    - "-"
+  timeout_seconds: 300
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _single_run_dir(tmp_path: Path) -> Path:
     run_dirs = sorted((tmp_path / "runs").iterdir())
     assert len(run_dirs) == 1
@@ -894,6 +996,44 @@ def _write_analysis_artifact(name: str, content: str, artifact_key: str):
         return [ref]
 
     return handler
+
+
+def _write_succeeded_market_data_views(config, run) -> list[str]:
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "market_data_views",
+        "views": [
+            {
+                "view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                "status": "succeeded",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+                "row_count": 4,
+            }
+        ],
+    }
+    (run.raw_dir / "market_data_views.json").write_text(json.dumps(artifact), encoding="utf-8")
+    run.manifest["artifacts"]["market_data_views"] = "raw/market_data_views.json"
+    run.manifest["counts"]["market_data_views"] = 1
+    return ["raw/market_data_views.json"]
+
+
+def _write_empty_quant_strategy_runs(config, run) -> list[str]:
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "quant_strategy_runs",
+        "runs": [],
+    }
+    (run.analysis_dir / "quant_strategy_runs.json").write_text(json.dumps(artifact), encoding="utf-8")
+    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["counts"]["quant_strategy_runs"] = 0
+    run.manifest["counts"]["quant_strategy_runs_succeeded"] = 0
+    return ["analysis/quant_strategy_runs.json"]
+
+
+def _fail_if_called(config, run) -> list[str]:
+    raise AssertionError("stage should not run")
 
 
 def _assert_manifest_timeline(manifest: dict) -> None:

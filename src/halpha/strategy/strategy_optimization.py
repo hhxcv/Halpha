@@ -11,6 +11,7 @@ from typing import Any
 from halpha.market.ohlcv_query import OHLCVQueryError, query_ohlcv_records
 from halpha.quant.registry import get_strategy_definition, get_supported_strategy_spec
 from halpha.quant.strategy_evaluation import evaluate_single_window_backtest
+from halpha.strategy.funding_inputs import funding_cost_input_for_strategy
 from halpha.strategy.strategy_benchmark_suite import create_strategy_benchmark_suite_artifact
 from halpha.strategy.strategy_config import parameter_profile_record, resolve_strategy_for_target
 from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
@@ -119,6 +120,7 @@ def run_strategy_optimization(
             candidate_params=params,
             benchmarks=_dict_list(benchmark_suite.get("benchmarks")),
             storage_dir=storage_dir,
+            config_path=config_path,
             definition=definition,
         )
         for index, params in enumerate(combinations, start=1)
@@ -129,6 +131,7 @@ def run_strategy_optimization(
         candidates=candidates,
         benchmarks=_dict_list(benchmark_suite.get("benchmarks")),
         storage_dir=storage_dir,
+        config_path=config_path,
         definition=definition,
         policy=_optimization_walk_forward_policy(walk_forward_policy),
     )
@@ -295,6 +298,7 @@ def _candidate_record(
     candidate_params: dict[str, Any],
     benchmarks: list[dict[str, Any]],
     storage_dir: Path,
+    config_path: Path,
     definition: Any,
 ) -> dict[str, Any]:
     params = {**base_params, **candidate_params}
@@ -307,6 +311,7 @@ def _candidate_record(
             strategy=strategy,
             benchmark=benchmark,
             storage_dir=storage_dir,
+            config_path=config_path,
             definition=definition,
         )
         for benchmark in benchmarks
@@ -339,6 +344,7 @@ def _evaluation_record(
     strategy: dict[str, Any],
     benchmark: dict[str, Any],
     storage_dir: Path,
+    config_path: Path,
     definition: Any,
 ) -> dict[str, Any]:
     identity = _evaluation_identity(strategy, benchmark)
@@ -382,6 +388,7 @@ def _evaluation_record(
                 "symbol": benchmark.get("symbol"),
                 "timeframe": benchmark.get("timeframe"),
             },
+            config_path=config_path,
         ),
         "benchmark_status": benchmark.get("status"),
         "parameter_profile": parameter_profile_record(strategy),
@@ -395,6 +402,7 @@ def _evaluate_strategy_rows(
     rows: list[dict[str, Any]],
     view: dict[str, Any],
     market_identity: dict[str, Any],
+    config_path: Path,
 ) -> dict[str, Any]:
     try:
         signals = definition.signal_records(strategy, view, rows)
@@ -404,6 +412,11 @@ def _evaluate_strategy_rows(
             ohlcv_rows=rows,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(strategy),
+            funding_costs=funding_cost_input_for_strategy(
+                config_path,
+                market_identity=market_identity,
+                ohlcv_rows=rows,
+            ),
         )
     except (KeyError, TypeError, ValueError) as exc:
         return {
@@ -432,6 +445,7 @@ def _walk_forward_optimization(
     candidates: list[dict[str, Any]],
     benchmarks: list[dict[str, Any]],
     storage_dir: Path,
+    config_path: Path,
     definition: Any,
     policy: dict[str, int],
 ) -> dict[str, Any]:
@@ -461,6 +475,7 @@ def _walk_forward_optimization(
                     window=window,
                     base_strategy=base_strategy,
                     candidates=candidates,
+                    config_path=config_path,
                     definition=definition,
                 )
             )
@@ -501,6 +516,7 @@ def _walk_forward_window_record(
     window: dict[str, int],
     base_strategy: dict[str, Any],
     candidates: list[dict[str, Any]],
+    config_path: Path,
     definition: Any,
 ) -> dict[str, Any]:
     train_rows = rows[window["train_start"] : window["train_end"]]
@@ -518,6 +534,7 @@ def _walk_forward_window_record(
             rows=train_rows,
             identity=identity,
             view_id=f"{benchmark.get('benchmark_id')}:train:{window_index}",
+            config_path=config_path,
         )
         for candidate in candidates
     ]
@@ -531,6 +548,7 @@ def _walk_forward_window_record(
             rows=validation_rows,
             identity=identity,
             view_id=f"{benchmark.get('benchmark_id')}:validation:{window_index}",
+            config_path=config_path,
         )
     status = _walk_forward_window_status(train_candidates, selected, validation)
     return {
@@ -558,6 +576,7 @@ def _walk_forward_candidate_outcome(
     rows: list[dict[str, Any]],
     identity: dict[str, Any],
     view_id: str,
+    config_path: Path,
 ) -> dict[str, Any]:
     strategy = {
         **base_strategy,
@@ -569,6 +588,7 @@ def _walk_forward_candidate_outcome(
         rows=rows,
         view=_view_from_rows(view_id, identity, rows),
         market_identity=identity,
+        config_path=config_path,
     )
     return {
         "candidate_id": candidate.get("candidate_id"),

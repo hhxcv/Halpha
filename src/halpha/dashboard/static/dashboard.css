@@ -735,7 +735,8 @@
     .status-pill.failed,
     .status-pill.error,
     .status-pill.degraded,
-    .status-pill.blocked {
+    .status-pill.blocked,
+    .status-pill.cancelled {
       border-color: #f4b4b4;
       background: var(--red-soft);
       color: var(--red);
@@ -1559,6 +1560,11 @@
       background: #fff4c2;
     }
 
+    .report-source-row.readonly:hover {
+      border-color: var(--border);
+      background: #fff;
+    }
+
     .report-source-row.pinned {
       border-color: #f0c25b;
       background: var(--amber-soft);
@@ -1588,6 +1594,152 @@
       flex: 0 0 auto;
       max-width: 74px;
       text-align: right;
+    }
+
+    .report-progress {
+      display: grid;
+      gap: 18px;
+      max-width: 920px;
+      color: var(--text);
+    }
+
+    .report-progress-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .report-progress-head h2 {
+      margin: 4px 0 0;
+      font-size: 24px;
+      line-height: 1.18;
+    }
+
+    .report-progress-meter {
+      height: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #edf2f7;
+    }
+
+    .report-progress-meter span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--primary);
+      transition: width var(--motion-standard) var(--ease-standard);
+    }
+
+    .report-progress-meta {
+      margin-top: -10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .report-milestone-list {
+      display: grid;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .report-milestone {
+      position: relative;
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr);
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .report-milestone:last-child {
+      border-bottom: 0;
+    }
+
+    .report-milestone-dot {
+      width: 12px;
+      height: 12px;
+      margin-top: 3px;
+      border: 2px solid var(--border-strong);
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .report-milestone.succeeded .report-milestone-dot,
+    .report-milestone.success .report-milestone-dot,
+    .report-milestone.available .report-milestone-dot {
+      border-color: var(--teal);
+      background: var(--teal);
+    }
+
+    .report-milestone.running .report-milestone-dot {
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+
+    .report-milestone.failed .report-milestone-dot,
+    .report-milestone.error .report-milestone-dot,
+    .report-milestone.blocked .report-milestone-dot,
+    .report-milestone.cancelled .report-milestone-dot {
+      border-color: var(--red);
+      background: var(--red);
+    }
+
+    .report-milestone.skipped .report-milestone-dot,
+    .report-milestone.not_run .report-milestone-dot,
+    .report-milestone.queued .report-milestone-dot,
+    .report-milestone.pending .report-milestone-dot {
+      background: #fff;
+    }
+
+    .report-milestone-main {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .report-milestone-title {
+      font-weight: 840;
+      line-height: 1.25;
+    }
+
+    .report-milestone-detail {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .report-log-panel {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .report-log-panel h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .report-log-stream {
+      max-height: 280px;
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #0f172a;
+      color: #dbeafe;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
     }
 
     .artifact-document {
@@ -3383,6 +3535,24 @@
       margin-bottom: 12px;
     }
 
+    .live-section-head h2,
+    .live-section-head h3 {
+      overflow-wrap: normal;
+      word-break: normal;
+      hyphens: none;
+    }
+
+    .live-stream-panel .live-section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      justify-content: start;
+      gap: 4px;
+    }
+
+    .live-stream-panel .live-section-head p {
+      margin: 0;
+    }
+
     .live-filter-bar {
       display: grid;
       grid-template-columns: minmax(180px, 0.9fr) minmax(160px, 0.75fr) auto auto auto;
@@ -3725,7 +3895,7 @@
 
     .live-intelligence-strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 10px;
       min-width: 0;
     }
@@ -3746,6 +3916,12 @@
     .live-intel-card span {
       margin: 0;
       overflow-wrap: anywhere;
+    }
+
+    .live-intel-card .live-stream-title strong {
+      overflow-wrap: normal;
+      word-break: normal;
+      hyphens: none;
     }
 
     .live-intel-card span {
@@ -7316,6 +7492,7 @@
     body[data-theme="solar"] .status-pill.error,
     body[data-theme="solar"] .status-pill.degraded,
     body[data-theme="solar"] .status-pill.blocked,
+    body[data-theme="solar"] .status-pill.cancelled,
     body[data-theme="solar"] .data-viewer-issue-button.error,
     body[data-theme="solar"] .data-viewer-issue-button.failed {
       border-color: #f0c1bd;

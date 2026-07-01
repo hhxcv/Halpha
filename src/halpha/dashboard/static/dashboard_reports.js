@@ -9,6 +9,9 @@
         }
 
         function reportType(run) {
+          if (String(run.status || "").toLowerCase() === "failed") {
+            return "Failed";
+          }
           const source = `${run.run_dir || ""} ${run.run_id || ""}`.toLowerCase();
           if (source.includes("monitor") || source.includes("cycle")) {
             return "Monitor-triggered";
@@ -20,6 +23,7 @@
         }
 
         function reportTitle(run, type) {
+          if (type === "Failed") return "Report Exception Record";
           if (type === "Monitor-triggered") return "Monitor Report";
           if (type === "Manual") return "Manual Research Report";
           return "Daily Market Brief";

@@ -132,6 +132,9 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
     base = _artifact_base(config_path)
     index_path = run_index_path(config_path)
     if not index_path.exists():
+        active_detail = _run_detail_from_manifest(base, run_id=run_id)
+        if active_detail is not None:
+            return active_detail
         return _run_detail_missing(run_id, warning="local run index was not found.")
     try:
         with closing(sqlite3.connect(index_path)) as connection:
@@ -151,6 +154,9 @@ def dashboard_run_detail(config_path: Path, *, run_id: str) -> dict[str, Any]:
             "errors": [f"{RUN_INDEX_ARTIFACT} is not readable: {exc}"],
         }
     if row is None:
+        active_detail = _run_detail_from_manifest(base, run_id=run_id)
+        if active_detail is not None:
+            return active_detail
         return _run_detail_missing(run_id, warning="run id was not found in the local run index.")
 
     run = _run_list_record(row, {}, base=base, latest=latest)
@@ -436,6 +442,86 @@ def _run_detail_missing(run_id: str, *, warning: str) -> dict[str, Any]:
         "warnings": [warning],
         "errors": [],
     }
+
+
+def _run_detail_from_manifest(base: Path, *, run_id: str) -> dict[str, Any] | None:
+    if not _safe_run_id(run_id):
+        return None
+    run_dir = base / "runs" / run_id
+    manifest_path = run_dir / "run_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    manifest, error = _read_json(manifest_path)
+    if error:
+        return {
+            "schema_version": 1,
+            "artifact_type": "dashboard_run_detail",
+            "status": "failed",
+            "run_id": run_id,
+            "source_artifacts": [_safe_ref(manifest_path, base=base)],
+            "fields": {},
+            "stages": [],
+            "artifacts": [],
+            "warnings": [],
+            "errors": [error],
+        }
+    report_state = _report_state(run_dir, manifest)
+    report_files, report_file_warnings = _report_file_catalog(run_dir, report_state=report_state, base=base)
+    errors = _manifest_error_messages(manifest)
+    fields = {
+        "run_id": str(manifest.get("run_id") or run_id),
+        "run_dir": _safe_ref(run_dir, base=base),
+        "started_at": manifest.get("started_at"),
+        "finished_at": manifest.get("finished_at"),
+        "status": str(manifest.get("status") or "unknown"),
+        "failed_stage": _manifest_failed_stage(manifest),
+        "codex_status": _dict(manifest.get("codex")).get("status"),
+        "run_kind": str(manifest.get("run_kind") or "unknown"),
+        "trigger": _dict(manifest.get("trigger")),
+        "disposal_class": str(manifest.get("disposal_class") or "legacy_archive"),
+        "warning_count": len(_string_list(manifest.get("warnings"))),
+        "error_count": len(errors),
+        "manifest": _safe_ref(manifest_path, base=base),
+        "integrity_state": {
+            "status": "available",
+            "run_dir": _safe_ref(run_dir, base=base),
+            "manifest": _safe_ref(manifest_path, base=base),
+            "missing": [],
+        },
+        "report": report_state.get("artifact") if report_state.get("status") == "available" else None,
+        "report_state": report_state,
+        "manifest_status": str(manifest.get("status") or "unknown"),
+        "codex": _bounded_mapping(manifest.get("codex")),
+        "counts": _bounded_mapping(manifest.get("counts")),
+        "latest_state": {
+            "is_latest_run": False,
+            "is_latest_successful_run": False,
+        },
+    }
+    return {
+        "schema_version": 1,
+        "artifact_type": "dashboard_run_detail",
+        "status": "available",
+        "run_id": run_id,
+        "source_artifacts": [_safe_ref(manifest_path, base=base)],
+        "fields": fields,
+        "stages": _stage_timeline(manifest),
+        "artifacts": _manifest_artifacts(manifest),
+        "report_files": report_files,
+        "warnings": [*_string_list(manifest.get("warnings")), *report_file_warnings],
+        "errors": errors,
+    }
+
+
+def _safe_run_id(run_id: str) -> bool:
+    return bool(run_id) and "/" not in run_id and "\\" not in run_id and Path(run_id).name == run_id
+
+
+def _manifest_failed_stage(manifest: dict[str, Any]) -> str | None:
+    for error in _list(manifest.get("errors")):
+        if isinstance(error, dict) and isinstance(error.get("stage"), str):
+            return error["stage"]
+    return None
 
 
 def _section(
