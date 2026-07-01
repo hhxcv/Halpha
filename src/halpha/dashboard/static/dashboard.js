@@ -122,6 +122,7 @@
       strategyDataVisualization: null,
       strategyOperationTab: "backtest",
       strategyWindow: "30",
+      strategyFocusedMarkerTime: "",
       strategyChartPreviewTimer: null,
       strategyChartPreviewRequest: 0,
       strategyCollectTargets: [],
@@ -1766,17 +1767,73 @@
         </div>`;
         return;
       }
-      const symbols = unique(profiles.map((profile) => profile.symbol));
-      const families = unique(profiles.map((profile) => label(profile.family || "uncategorized")));
-      const tunedCount = profiles.filter((profile) => profile.tuned).length;
-      const runCount = outputs.length;
-      node.innerHTML = `
-        <section class="strategy-profile-hero">
-          ${metricCell("Profiles", profiles.length, `${tunedCount} tuned target${tunedCount === 1 ? "" : "s"}`)}
-          ${metricCell("Backtest records", runCount, "stored evaluations")}
-          ${metricCell("Symbols", symbols.length, symbols.slice(0, 3).join(", ") || "n/a")}
-          ${metricCell("Families", families.length, families.slice(0, 3).join(", ") || "n/a")}
+      if (!outputs.length) {
+        const tunedCount = profiles.filter((profile) => profile.tuned).length;
+        node.innerHTML = `<section class="strategy-backtest-focus">
+          ${strategyFocusCell("Ready profiles", formatNumber(profiles.length), `${tunedCount} tuned target${tunedCount === 1 ? "" : "s"}`)}
+          ${strategyFocusCell("Latest run", "n/a", "No stored backtest yet")}
         </section>`;
+        return;
+      }
+      node.innerHTML = `<section class="strategy-backtest-focus">
+        ${strategyBacktestFocusCells(outputs)}
+      </section>`;
+    }
+
+    function strategyBacktestFocusCells(outputs) {
+      const summaries = outputs.map((item) => {
+        const identity = strategyIdentity(item);
+        const numbers = strategyMetricNumbers(item);
+        return {item, identity, numbers};
+      });
+      const bestReturn = bestByMetric(summaries, (item) => item.numbers.totalReturn, "max");
+      const bestSharpe = bestByMetric(summaries, (item) => item.numbers.sharpe, "max");
+      const lowestDrawdown = bestByMetric(
+        summaries,
+        (item) => Number.isFinite(item.numbers.drawdown) ? Math.abs(item.numbers.drawdown) : null,
+        "min",
+      );
+      const latest = summaries
+        .map((item) => ({...item, createdMs: createdTimeMs(item.item)}))
+        .filter((item) => Number.isFinite(item.createdMs))
+        .sort((a, b) => b.createdMs - a.createdMs)[0] || summaries[0];
+      return [
+        strategyFocusCell("Best return", bestReturn ? metricPercent(bestReturn.numbers.totalReturn) : "n/a", strategyFocusNote(bestReturn), bestReturn ? pnlClass(bestReturn.numbers.totalReturn) : ""),
+        strategyFocusCell("Best Sharpe", bestSharpe ? text(bestSharpe.numbers.sharpe) : "n/a", strategyFocusNote(bestSharpe), bestSharpe ? pnlClass(bestSharpe.numbers.sharpe) : ""),
+        strategyFocusCell("Lowest drawdown", lowestDrawdown ? metricPercent(lowestDrawdown.numbers.drawdown) : "n/a", strategyFocusNote(lowestDrawdown), lowestDrawdown ? pnlClass(lowestDrawdown.numbers.drawdown) : ""),
+        strategyFocusCell("Latest run", latest ? formatTimestamp(createdTimeValue(latest.item)) : "n/a", strategyFocusNote(latest)),
+      ].join("");
+    }
+
+    function strategyFocusCell(labelText, value, note = "", valueClass = "") {
+      return `<div class="strategy-focus-cell">
+        <span class="strategy-focus-label">${escapeHtml(labelText)}</span>
+        <strong class="${escapeHtml(valueClass)}">${escapeHtml(value)}</strong>
+        ${note ? `<span class="strategy-focus-note">${escapeHtml(note)}</span>` : ""}
+      </div>`;
+    }
+
+    function strategyFocusNote(summary) {
+      if (!summary) return "";
+      return [summary.identity.symbol, summary.identity.timeframe, summary.identity.name].filter(Boolean).join(" / ");
+    }
+
+    function bestByMetric(items, getValue, direction) {
+      const rows = items
+        .map((item) => ({item, value: getValue(item)}))
+        .filter((row) => Number.isFinite(row.value));
+      if (!rows.length) return null;
+      rows.sort((a, b) => direction === "min" ? a.value - b.value : b.value - a.value);
+      return rows[0].item;
+    }
+
+    function createdTimeValue(item) {
+      return item?.fields?.created_at || item?.created_at || item?.status || "";
+    }
+
+    function createdTimeMs(item) {
+      const value = createdTimeValue(item);
+      return value ? new Date(value).getTime() : NaN;
     }
 
     function syncBacktestProfileControls(force = false) {
@@ -2645,6 +2702,27 @@
       };
     }
 
+    function strategyMetricNumbers(item) {
+      const fields = item?.fields || {};
+      const metrics = fields.metrics || {};
+      const strategy = metrics.strategy_metrics || fields.strategy_metrics || {};
+      const trade = strategyTradeSummary(item);
+      return {
+        totalReturn: numberFromMetric(strategy.net_return_pct ?? strategy.total_return_pct ?? item?.records?.summary?.net_return_pct),
+        drawdown: numberFromMetric(strategy.max_drawdown_pct),
+        sharpe: numberFromMetric(strategy.sharpe_ratio ?? strategy.sharpe),
+        trades: numberFromMetric(trade.trade_count ?? fields.metrics?.trade_summary?.trade_count),
+      };
+    }
+
+    function numberFromMetric(value) {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value !== "string") return null;
+      const cleaned = value.replace(/[%,\s$]/g, "");
+      const number = Number(cleaned);
+      return Number.isFinite(number) ? number : null;
+    }
+
     function strategyTradeSummary(item) {
       const fields = item?.fields || {};
       const metrics = fields.metrics || {};
@@ -2671,7 +2749,8 @@
       const vis = item?.visualization || {};
       if ((Array.isArray(vis.bars) && vis.bars.length)
         || (Array.isArray(vis.markers) && vis.markers.length)
-        || (Array.isArray(vis.equity_curve) && vis.equity_curve.length)) {
+        || (Array.isArray(vis.equity_curve) && vis.equity_curve.length)
+        || (Array.isArray(vis.equity_sparkline) && vis.equity_sparkline.length)) {
         return vis;
       }
       const identity = strategyIdentity(item);
@@ -2683,14 +2762,12 @@
         bars: [],
         markers: [],
         equity_curve: [],
+        equity_sparkline: [],
       };
     }
 
     function visibleStrategyVisualization(item) {
-      if (item) {
-        return strategyVisualization(item);
-      }
-      return applyStrategyWindow(strategyVisualization(item), state.strategyWindow);
+      return applyStrategyWindow(strategyVisualization(item), state.strategyWindow, state.strategyFocusedMarkerTime);
     }
 
     function strategyVisualization(item) {
@@ -2780,6 +2857,10 @@
     }
 
     function visibleBacktestVisualization(item) {
+      return applyStrategyWindow(backtestVisualization(item), state.strategyWindow, state.strategyFocusedMarkerTime);
+    }
+
+    function fullBacktestVisualization(item) {
       return backtestVisualization(item);
     }
 
@@ -2788,23 +2869,30 @@
       return ["30", "90", "180", "360"].includes(normalized) ? normalized : "30";
     }
 
-    function applyStrategyWindow(vis, windowValue) {
+    function applyStrategyWindow(vis, windowValue, focusTime = "") {
       const bars = Array.isArray(vis.bars) ? vis.bars : [];
       const limit = Number(strategyChartWindowValue(windowValue));
       if (!Number.isInteger(limit) || limit <= 0 || bars.length <= limit) {
         return vis;
       }
-      const visibleBars = bars.slice(-limit);
+      const focusIndex = focusTime ? bars.findIndex((bar) => String(bar.time || bar.open_time || "") === String(focusTime)) : -1;
+      const start = focusIndex >= 0
+        ? Math.min(Math.max(0, focusIndex - Math.floor(limit / 2)), Math.max(0, bars.length - limit))
+        : Math.max(0, bars.length - limit);
+      const visibleBars = bars.slice(start, start + limit);
       const visibleTimes = new Set(visibleBars.map((bar) => bar.time));
       const markers = Array.isArray(vis.markers)
         ? vis.markers.filter((marker) => visibleTimes.has(marker.time))
         : [];
-      const curve = Array.isArray(vis.equity_curve) ? vis.equity_curve.slice(-limit) : [];
-      return {...vis, bars: visibleBars, markers, equity_curve: curve};
+      const curve = Array.isArray(vis.equity_curve)
+        ? vis.equity_curve.filter((point) => visibleTimes.has(point.time))
+        : [];
+      return {...vis, bars: visibleBars, markers, equity_curve: curve, focused_marker_time: focusIndex >= 0 ? focusTime : ""};
     }
 
     function setStrategyWindow(value, options = {}) {
       state.strategyWindow = strategyChartWindowValue(value);
+      state.strategyFocusedMarkerTime = "";
       const range = document.querySelector("#strategy-chart-range");
       if (range) range.value = state.strategyWindow;
       syncStrategyWindowControls();
@@ -2818,6 +2906,7 @@
     function syncStrategyWindowControls() {
       document.querySelectorAll("[data-strategy-window]").forEach((button) => {
         button.classList.toggle("active", button.dataset.strategyWindow === state.strategyWindow);
+        button.setAttribute("aria-pressed", button.dataset.strategyWindow === state.strategyWindow ? "true" : "false");
       });
     }
 
@@ -2892,7 +2981,6 @@
                   <h3>${escapeHtml(symbol)}</h3>
                   <p>${escapeHtml(`${runs.length} recorded run${runs.length === 1 ? "" : "s"}`)}</p>
                 </div>
-                <span class="chip">${escapeHtml(unique(runs.map((run) => run.identity.timeframe).filter(Boolean)).join(", ") || "timeframe n/a")}</span>
               </div>
               <div class="strategy-run-list" role="list">
                 <div class="strategy-run-list-head" aria-hidden="true">
@@ -3013,7 +3101,7 @@
     }
 
     function renderBacktestSparkline(item) {
-      const values = equityCurveValues(backtestVisualization(item).equity_curve || []);
+      const values = backtestSparklineReturns(item);
       if (values.length < 2) {
         return `<span class="strategy-run-sparkline-empty">n/a</span>`;
       }
@@ -3021,23 +3109,83 @@
       const height = 44;
       const padding = 4;
       const baseline = height / 2;
-      const start = values[0];
-      const deltas = values.map((value) => value - start);
-      const maxAbs = Math.max(...deltas.map((value) => Math.abs(value)), 0.000001);
+      const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 0.000001);
       const points = values.map((value, index) => {
         const x = padding + (index / (values.length - 1)) * (width - padding * 2);
-        const y = baseline - ((value - start) / maxAbs) * (baseline - padding);
+        const y = baseline - (value / maxAbs) * (baseline - padding);
         return {x: Number(x.toFixed(2)), y: Number(y.toFixed(2)), value};
       });
-      const segments = points.slice(1).map((point, index) => {
-        const previous = points[index];
-        const segmentClass = point.value >= start ? "profit" : "loss";
-        return `<path class="strategy-run-sparkline-segment ${segmentClass}" d="M ${previous.x} ${previous.y} L ${point.x} ${point.y}" />`;
-      }).join("");
+      const segments = splitSparklineSegments(points, baseline).map((segment) => (
+        `<path class="strategy-run-sparkline-segment ${segment.tone}" d="M ${segment.x1} ${segment.y1} L ${segment.x2} ${segment.y2}" />`
+      )).join("");
       return `<svg class="strategy-run-sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="Backtest equity curve">
           <line class="strategy-run-sparkline-baseline" x1="${padding}" x2="${width - padding}" y1="${baseline}" y2="${baseline}" />
           ${segments}
         </svg>`;
+    }
+
+    function backtestSparklineReturns(item) {
+      const vis = backtestVisualization(item);
+      const curve = Array.isArray(vis.equity_sparkline) && vis.equity_sparkline.length
+        ? vis.equity_sparkline
+        : vis.equity_curve || [];
+      const curveValues = equityCurveValues(curve);
+      const returns = normalizedEquityReturns(curveValues);
+      const metrics = strategyMetricNumbers(item);
+      const range = returns.length ? Math.max(...returns) - Math.min(...returns) : 0;
+      if (returns.length >= 2 && (range >= 0.05 || Math.abs(metrics.totalReturn || 0) < 0.05)) {
+        return returns;
+      }
+      return fallbackSparklineReturns(metrics);
+    }
+
+    function normalizedEquityReturns(values) {
+      if (!values.length) return [];
+      const start = values[0];
+      if (Number.isFinite(start) && start !== 0) {
+        return values.map((value) => ((value / start) - 1) * 100).filter(Number.isFinite);
+      }
+      return values.filter(Number.isFinite);
+    }
+
+    function fallbackSparklineReturns(metrics) {
+      const total = metrics.totalReturn;
+      const drawdown = metrics.drawdown;
+      if (!Number.isFinite(total) && !Number.isFinite(drawdown)) return [];
+      const finalValue = Number.isFinite(total) ? total : 0;
+      const drawdownValue = Number.isFinite(drawdown) ? Math.min(0, drawdown) : Math.min(0, finalValue);
+      if (Math.abs(finalValue) < 0.05 && Math.abs(drawdownValue) < 0.05) {
+        return [0, 0];
+      }
+      return [0, drawdownValue, finalValue];
+    }
+
+    function splitSparklineSegments(points, baseline) {
+      const segments = [];
+      points.slice(1).forEach((point, index) => {
+        const previous = points[index];
+        if (previous.value === point.value) {
+          segments.push(sparklineSegment(previous, point, point.value >= 0 ? "profit" : "loss"));
+          return;
+        }
+        if ((previous.value < 0 && point.value > 0) || (previous.value > 0 && point.value < 0)) {
+          const ratio = (0 - previous.value) / (point.value - previous.value);
+          const cross = {
+            x: Number((previous.x + (point.x - previous.x) * ratio).toFixed(2)),
+            y: Number(baseline.toFixed(2)),
+            value: 0,
+          };
+          segments.push(sparklineSegment(previous, cross, previous.value >= 0 ? "profit" : "loss"));
+          segments.push(sparklineSegment(cross, point, point.value >= 0 ? "profit" : "loss"));
+          return;
+        }
+        segments.push(sparklineSegment(previous, point, point.value >= 0 ? "profit" : "loss"));
+      });
+      return segments;
+    }
+
+    function sparklineSegment(start, end, tone) {
+      return {x1: start.x, y1: start.y, x2: end.x, y2: end.y, tone};
     }
 
     function selectBacktestRun(outputs, index) {
@@ -3045,6 +3193,7 @@
       if (!item) return;
       state.selectedStrategyOutput = item;
       state.strategyBacktestDetailOpen = true;
+      state.strategyFocusedMarkerTime = "";
       const identity = strategyIdentity(item);
       setSelectIfPresent("#strategy-name", identity.name);
       setSelectIfPresent("#strategy-symbol", identity.symbol);
@@ -3227,18 +3376,22 @@
     function renderStrategyTab(tab) {
       document.querySelectorAll("[data-strategy-tab]").forEach((button) => button.classList.toggle("active", button.dataset.strategyTab === tab));
       const vis = visibleBacktestVisualization(state.selectedStrategyOutput);
+      const fullVis = fullBacktestVisualization(state.selectedStrategyOutput);
       const metrics = strategyMetrics(state.selectedStrategyOutput);
+      let content = "";
       if (tab === "trades" || tab === "list") {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyTradesPanel(state.selectedStrategyOutput, vis, metrics);
+        content = renderStrategyTradesPanel(state.selectedStrategyOutput, fullVis, metrics);
       } else if (tab === "equity") {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyEquityPanel(vis);
+        content = renderStrategyEquityPanel(vis);
       } else if (tab === "drawdown") {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyDrawdownPanel(vis);
+        content = renderStrategyDrawdownPanel(vis);
       } else if (tab === "summary") {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyEvaluationPanels(state.selectedStrategyOutput, vis);
+        content = renderStrategyEvaluationPanels(state.selectedStrategyOutput, vis);
       } else {
-        document.querySelector("#strategy-tab-content").innerHTML = renderStrategyDiagnostics();
+        content = renderStrategyDiagnostics();
       }
+      document.querySelector("#strategy-tab-content").innerHTML = content;
+      wireStrategyMarkerJumps();
     }
 
     function renderStrategyTradesPanel(item, vis, metrics) {
@@ -3246,14 +3399,6 @@
       const markers = Array.isArray(vis.markers) ? vis.markers : [];
       const omittedMarkers = omittedVisualizationMarkers(vis);
       const fullTradeCount = numericOrNull(trade.trade_count);
-      const markerRows = markers.map((marker) => [
-        formatTimestamp(marker.time),
-        marker.label || marker.kind || "operation",
-        marker.side || marker.kind || "n/a",
-        marker.price ?? "n/a",
-        marker.position ?? marker.exposure ?? "n/a",
-        marker.execution_timing || "n/a",
-      ]);
       const scopeNotice = strategyOperationScopeNotice({
         fullTradeCount,
         visibleMarkerCount: markers.length,
@@ -3262,24 +3407,54 @@
       return `
         <div class="summary-strip columns-6">
           ${metricCell("Full trades", metrics.trades, "full evaluation")}
-          ${metricCell("Visible operations", markers.length, omittedMarkers ? `${formatNumber(omittedMarkers)} omitted` : "bounded chart")}
+          ${metricCell("Stored operations", markers.length, omittedMarkers ? `${formatNumber(omittedMarkers)} omitted` : "full evaluation")}
           ${metricCell("Completed", text(trade.completed_trade_count), "")}
           ${metricCell("Open", text(trade.open_trade_count), "")}
           ${metricCell("Hit rate", metrics.winRate, "")}
           ${metricCell("Turnover", text(trade.turnover), "")}
         </div>
         ${scopeNotice}
-        ${markerRows.length ? table(["Time", "Marker", "Side", "Price", "Exposure", "Execution"], markerRows) : `<div class="message">No operation markers are available for the selected chart window.</div>`}`;
+        ${markers.length ? strategyMarkerTable(markers) : `<div class="message">No operation markers are stored for this backtest.</div>`}`;
     }
 
     function strategyOperationScopeNotice({fullTradeCount, visibleMarkerCount, omittedMarkers}) {
       if (omittedMarkers > 0) {
-        return `<div class="message">This table lists bounded visualization markers for the selected chart window. ${escapeHtml(formatNumber(omittedMarkers))} operation marker${omittedMarkers === 1 ? "" : "s"} from the full evaluation window are omitted.</div>`;
+        return `<div class="message">This table lists stored operation markers for the full evaluation. ${escapeHtml(formatNumber(omittedMarkers))} older operation marker${omittedMarkers === 1 ? "" : "s"} are omitted by the bounded artifact.</div>`;
       }
       if (fullTradeCount !== null && visibleMarkerCount > 0 && visibleMarkerCount < fullTradeCount) {
-        return `<div class="message">The full evaluation reports ${escapeHtml(formatNumber(fullTradeCount))} trade${fullTradeCount === 1 ? "" : "s"}, while this table lists ${escapeHtml(formatNumber(visibleMarkerCount))} bounded visualization marker${visibleMarkerCount === 1 ? "" : "s"}. Full per-trade rows are not stored in this artifact.</div>`;
+        return `<div class="message">The full evaluation reports ${escapeHtml(formatNumber(fullTradeCount))} trade${fullTradeCount === 1 ? "" : "s"}, while this artifact stores ${escapeHtml(formatNumber(visibleMarkerCount))} operation marker${visibleMarkerCount === 1 ? "" : "s"}.</div>`;
       }
       return "";
+    }
+
+    function strategyMarkerTable(markers) {
+      const rows = markers.map((marker, index) => {
+        const price = marker.price === undefined || marker.price === null || marker.price === "" ? "n/a" : formatNumber(marker.price);
+        return `
+        <tr class="${marker.time === state.strategyFocusedMarkerTime ? "active" : ""}">
+          <td><button class="link-button strategy-marker-jump" type="button" data-strategy-marker-time="${escapeHtml(marker.time || "")}" data-strategy-marker-index="${index}">${escapeHtml(formatTimestamp(marker.time))}</button></td>
+          <td>${escapeHtml(marker.label || marker.kind || "operation")}</td>
+          <td>${escapeHtml(marker.side || marker.kind || "n/a")}</td>
+          <td>${escapeHtml(price)}</td>
+          <td>${escapeHtml(text(marker.position ?? marker.exposure ?? "n/a"))}</td>
+          <td>${escapeHtml(marker.execution_timing || "n/a")}</td>
+        </tr>`;
+      }).join("");
+      return `<div class="table-wrap"><table class="data-table strategy-marker-table"><thead><tr><th>Time</th><th>Marker</th><th>Side</th><th>Price</th><th>Exposure</th><th>Execution</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    function wireStrategyMarkerJumps() {
+      document.querySelectorAll("[data-strategy-marker-time]").forEach((button) => {
+        button.addEventListener("click", () => focusStrategyMarker(button.dataset.strategyMarkerTime));
+      });
+    }
+
+    function focusStrategyMarker(time) {
+      if (!time || !state.selectedStrategyOutput) return;
+      state.strategyFocusedMarkerTime = String(time);
+      strategyChart.resetCandlestickView("#backtest-chart");
+      renderBacktestDetail(state.selectedStrategyOutput);
+      document.querySelector("#backtest-chart")?.scrollIntoView({block: "center", behavior: "smooth"});
     }
 
     function renderStrategyEquityPanel(vis) {
@@ -5842,6 +6017,7 @@
       ["#strategy-chart-source", "#strategy-chart-symbol", "#strategy-chart-timeframe"].forEach((selector) => {
         document.querySelector(selector).addEventListener("change", () => {
           state.selectedStrategyOutput = null;
+          state.strategyFocusedMarkerTime = "";
           setSelectIfPresent("#strategy-name", "");
           queueStrategyChartRefresh({clearBacktest: true});
         });

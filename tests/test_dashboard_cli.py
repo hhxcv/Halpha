@@ -1780,6 +1780,7 @@ def test_dashboard_strategies_endpoint_summarizes_strategy_outputs(tmp_path: Pat
     assert backtest["visualization"]["markers"][0]["cost"] == 1.5
     assert backtest["visualization"]["markers"][0]["warnings"] == ["small marker sample"]
     assert len(backtest["visualization"]["equity_curve"]) == 2
+    assert len(backtest["visualization"]["equity_sparkline"]) == 2
     assert backtest["visualization"]["limits"]["max_bars"] == 120
     shared_backtest = payload["shared_history"]["backtests"][0]
     assert shared_backtest["fields"]["execution_source"]["type"] == "report_run"
@@ -1939,6 +1940,213 @@ def test_dashboard_strategies_endpoint_rebuilds_full_backtest_markers_from_equit
     assert markers[0]["execution_timing"] == "next_bar"
     assert backtest["visualization"]["omitted"]["markers"] == 0
     assert backtest["visualization"]["limits"]["max_markers"] == 1000
+
+
+def test_dashboard_strategies_endpoint_preserves_full_window_equity_sparkline_extremes(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    backtest_dir = tmp_path / "runs" / "strategy_backtests" / "20260620T000000Z_tsmom_binance_BTCUSDT_4h"
+    equity_curve = []
+    for index in range(240):
+        value = 100 + index * 0.1
+        if index == 10:
+            value = 180
+        elif index == 80:
+            value = 70
+        elif index == 120:
+            value = 160
+        elif index == 239:
+            value = 120
+        equity_curve.append(
+            {
+                "open_time": f"2026-06-{1 + index // 24:02d}T{index % 24:02d}:00:00Z",
+                "position": 1.0,
+                "net_equity": value,
+            }
+        )
+    write_json(
+        backtest_dir / "strategy_backtest.json",
+        {
+            "artifact_type": "strategy_backtest",
+            "status": "ok",
+            "sample": {
+                "start": equity_curve[0]["open_time"],
+                "end": equity_curve[-1]["open_time"],
+                "rows": len(equity_curve),
+            },
+            "execution_model": {"position_timing": "next_bar"},
+            "strategy_metrics": {"net_return_pct": 20.0, "max_drawdown_pct": -61.1111},
+            "trade_summary": {"trade_count": 1},
+            "equity_curve": equity_curve,
+            "visualization": {
+                "schema_version": 1,
+                "chart_type": "candlestick_backtest",
+                "status": "available",
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "4h",
+                "bars": [],
+                "markers": [],
+                "equity_curve": equity_curve,
+            },
+        },
+    )
+    write_json(
+        backtest_dir / "manifest.json",
+        {
+            "artifact_type": "standalone_strategy_backtest_manifest",
+            "created_at": "2026-06-20T00:00:00Z",
+            "status": "succeeded",
+            "evaluation_status": "succeeded",
+            "inputs": {
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "4h",
+            },
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    visualization = response.json()["standalone"]["backtests"][0]["visualization"]
+    sparkline = visualization["equity_sparkline"]
+    sparkline_times = {point["time"] for point in sparkline}
+    sparkline_values = {point["net_equity"] for point in sparkline}
+    assert len(sparkline) <= visualization["limits"]["max_sparkline_equity_points"]
+    assert visualization["limits"]["max_sparkline_equity_points"] == 160
+    assert sparkline[0]["time"] == equity_curve[0]["open_time"]
+    assert sparkline[-1]["time"] == equity_curve[-1]["open_time"]
+    assert len(visualization["equity_curve"]) == visualization["limits"]["max_equity_points"]
+    assert visualization["equity_curve"][0]["time"] == equity_curve[-120]["open_time"]
+    assert equity_curve[10]["open_time"] in sparkline_times
+    assert equity_curve[80]["open_time"] in sparkline_times
+    assert 180 in sparkline_values
+    assert 70 in sparkline_values
+    assert visualization["omitted"]["equity_sparkline_points"] == len(equity_curve) - len(sparkline)
+
+
+def test_dashboard_strategies_endpoint_rebuilds_shared_history_sparkline_from_source_summary(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    equity_curve = []
+    for index in range(240):
+        value = 1.107288 if index >= 120 else 1.0 + index * 0.0005
+        if index == 20:
+            value = 1.2
+        elif index == 80:
+            value = 0.9
+        equity_curve.append(
+            {
+                "open_time": f"2026-06-{1 + index // 24:02d}T{index % 24:02d}:00:00Z",
+                "position": 1.0 if 20 <= index < 80 else 0.0,
+                "net_equity": value,
+            }
+        )
+    bounded_curve = equity_curve[-120:]
+    write_json(
+        tmp_path / "runs" / "run-1" / "analysis" / "strategy_evaluation_summary.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_summary",
+            "records": [
+                {
+                    "evaluation_id": "strategy_evaluation:tsmom_vol_scaled:BTCUSDT:4h",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "source": "binance_usdm",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "4h",
+                    "latest_candle_time": equity_curve[-1]["open_time"],
+                    "single_window": {"equity_curve": equity_curve},
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    write_json(
+        tmp_path / "data" / "research" / "strategy_evaluations" / "strategy_evaluation_history.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_history",
+            "status": "ok",
+            "record_count": 1,
+            "records": [
+                {
+                    "history_id": "strategy_evaluation_history:report_run:run-1:tsmom",
+                    "record_type": "strategy_evaluation_history_record",
+                    "created_at": "2026-07-01T04:22:53Z",
+                    "execution_source": {
+                        "type": "report_run",
+                        "run_id": "run-1",
+                        "run_dir": "runs/run-1",
+                    },
+                    "evaluation_id": "strategy_evaluation:tsmom_vol_scaled:BTCUSDT:4h",
+                    "status": "succeeded",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "source": "binance_usdm",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "4h",
+                    "input_window_start": equity_curve[0]["open_time"],
+                    "input_window_end": equity_curve[-1]["open_time"],
+                    "latest_candle_time": equity_curve[-1]["open_time"],
+                    "metrics": {
+                        "strategy_metrics": {"net_return_pct": 10.72, "max_drawdown_pct": -7.82},
+                        "trade_summary": {"trade_count": 5},
+                    },
+                    "visualization": {
+                        "schema_version": 1,
+                        "chart_type": "candlestick_backtest",
+                        "status": "available",
+                        "strategy_name": "tsmom_vol_scaled",
+                        "source": "binance_usdm",
+                        "symbol": "BTCUSDT",
+                        "timeframe": "4h",
+                        "bars": [],
+                        "markers": [],
+                        "equity_curve": bounded_curve,
+                        "omitted": {"equity_points": len(equity_curve) - len(bounded_curve), "markers": 2},
+                    },
+                    "warnings": [],
+                    "errors": [],
+                    "source_artifacts": [
+                        "runs/run-1/analysis/strategy_evaluation_summary.json",
+                    ],
+                }
+            ],
+            "warnings": [],
+            "errors": [],
+        },
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    response = client.get("/api/strategies")
+
+    assert response.status_code == 200
+    visualization = response.json()["shared_history"]["backtests"][0]["visualization"]
+    sparkline = visualization["equity_sparkline"]
+    sparkline_times = {point["time"] for point in sparkline}
+    sparkline_values = {point["net_equity"] for point in sparkline}
+    assert len(visualization["equity_curve"]) == 120
+    assert visualization["equity_curve"][0]["time"] == bounded_curve[0]["open_time"]
+    assert len(sparkline) <= visualization["limits"]["max_sparkline_equity_points"]
+    assert sparkline[0]["time"] == equity_curve[0]["open_time"]
+    assert sparkline[-1]["time"] == equity_curve[-1]["open_time"]
+    assert equity_curve[20]["open_time"] in sparkline_times
+    assert equity_curve[80]["open_time"] in sparkline_times
+    assert 1.2 in sparkline_values
+    assert 0.9 in sparkline_values
+    assert visualization["omitted"]["equity_sparkline_points"] == len(equity_curve) - len(sparkline)
+    assert [marker["time"] for marker in visualization["markers"]] == [
+        equity_curve[20]["open_time"],
+        equity_curve[80]["open_time"],
+    ]
+    assert visualization["omitted"]["markers"] == 0
 
 
 def test_dashboard_strategies_endpoint_groups_repeated_warnings(tmp_path: Path) -> None:

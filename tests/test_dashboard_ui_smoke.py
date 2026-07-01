@@ -808,6 +808,7 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert 'id="strategy-backtest-back"' in html
     assert 'id="strategy-metrics"' not in html
     assert ".strategy-backtest-board" in css
+    assert ".strategy-backtest-focus" in css
     assert ".strategy-detail-view" in css
     assert ".strategy-profile-card" in css
     assert ".strategy-candidate-card" in css
@@ -817,6 +818,10 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "renderBacktestRunRow" in script
     assert "backtestRunDuration" in script
     assert "renderBacktestSparkline" in script
+    assert "backtestSparklineReturns" in script
+    assert "equity_sparkline" in script
+    assert "splitSparklineSegments" in script
+    assert "strategyBacktestFocusCells" in script
     assert ".strategy-profile-summary" in css
     assert ".operation-progress" in css
     assert ".collect-timeline-track" in css
@@ -848,8 +853,8 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "#0ECB81" not in script
     assert "#F6465D" not in script
     assert "Operations" in script
-    assert "Visible operations" in script
-    assert "Full per-trade rows are not stored in this artifact." in script
+    assert "Stored operations" in script
+    assert "This table lists stored operation markers for the full evaluation." in script
     assert "Operation markers" in html
     assert "Recent operations" in html
     assert "backtestRunMeta" in script
@@ -875,13 +880,15 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "migrateNativeTooltips" in script
     assert "MutationObserver" in script
     assert "removeAttribute(\"title\")" in script
-    assert "chart-tools" in html
-    assert "tool-dot" in html
+    assert "chart-tools" not in html
+    assert "tool-dot" not in html
+    assert "chart-window-control" in html
+    assert "segmented-button" in html
     chart_controls = html[html.index('id="strategy-chart-range"') : html.index('id="backtest-chart"')]
     assert 'value="all"' not in chart_controls
     assert 'data-strategy-window="all"' not in chart_controls
-    assert "Latest 30 candles" in chart_controls
-    assert "Latest 360 candles" in chart_controls
+    assert "Show latest 30 candles" in chart_controls
+    assert "Show latest 360 candles" in chart_controls
     assert 'data-strategy-window="30"' in chart_controls
     assert 'data-strategy-window="360"' in chart_controls
     assert 'strategyWindow: "30"' in script
@@ -894,7 +901,10 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "align-self: start;" in css
     assert "max-height: calc(clamp(360px, calc(100vh - 330px), 470px) + 122px);" in css
     assert "function visibleBacktestVisualization(item)" in script
-    assert "return backtestVisualization(item);" in script
+    assert "function fullBacktestVisualization(item)" in script
+    assert "return applyStrategyWindow(strategyVisualization(item), state.strategyWindow, state.strategyFocusedMarkerTime);" in script
+    assert "focusStrategyMarker" in script
+    assert "strategy-marker-jump" in script
 
 
 def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Path) -> None:

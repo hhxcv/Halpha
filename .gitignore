@@ -20,6 +20,8 @@ data/
 !src/halpha/data/**/*.py
 logs/
 test-output/
+test-results/
 runs/*
 !runs/README.md
 docs/.*
+design_demo
