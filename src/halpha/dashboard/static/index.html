@@ -319,18 +319,21 @@
                   <div class="field"><label for="strategy-chart-source">Source</label><input id="strategy-chart-source" class="text-input" type="text" list="strategy-ohlcv-source-options" placeholder="binance"></div>
                   <div class="field"><label for="strategy-chart-symbol">Symbol</label><select id="strategy-chart-symbol" class="select-input"></select></div>
                   <div class="field"><label for="strategy-chart-timeframe">Timeframe</label><select id="strategy-chart-timeframe" class="select-input"></select></div>
-                  <div class="field"><label for="strategy-chart-range">Candles</label><select id="strategy-chart-range" class="select-input"><option value="30" selected>Latest 30 candles</option><option value="90">Latest 90 candles</option><option value="180">Latest 180 candles</option><option value="360">Latest 360 candles</option></select></div>
+                  <div class="field chart-window-field">
+                    <span class="field-label">Candles</span>
+                    <input id="strategy-chart-range" type="hidden" value="30">
+                    <div class="segmented-control chart-window-control" aria-label="Candlestick chart window">
+                      <button class="segmented-button active" type="button" data-strategy-window="30" aria-pressed="true" aria-label="Show latest 30 candles">30</button>
+                      <button class="segmented-button" type="button" data-strategy-window="90" aria-pressed="false" aria-label="Show latest 90 candles">90</button>
+                      <button class="segmented-button" type="button" data-strategy-window="180" aria-pressed="false" aria-label="Show latest 180 candles">180</button>
+                      <button class="segmented-button" type="button" data-strategy-window="360" aria-pressed="false" aria-label="Show latest 360 candles">360</button>
+                    </div>
+                  </div>
                   <button class="ghost-button chart-refresh-button" type="button" id="strategy-chart-refresh">Refresh candles</button>
                   <span id="strategy-quote-label" class="status-pill ok">n/a</span>
                 </div>
               </div>
               <div class="chart-wrap">
-                <div class="chart-tools" aria-label="Candlestick chart window">
-                  <button class="tool-dot active" type="button" data-strategy-window="30" title="Show latest 30 candles">30</button>
-                  <button class="tool-dot" type="button" data-strategy-window="90" title="Show latest 90 candles">90</button>
-                  <button class="tool-dot" type="button" data-strategy-window="180" title="Show latest 180 candles">180</button>
-                  <button class="tool-dot" type="button" data-strategy-window="360" title="Show latest 360 candles">360</button>
-                </div>
                 <svg id="backtest-chart" viewBox="0 0 980 470" role="img" aria-label="OHLCV candlestick chart"></svg>
               </div>
               <div class="chart-footer"><span id="strategy-window-label">No selected window</span><span id="strategy-chart-clock">GMT+8</span></div>

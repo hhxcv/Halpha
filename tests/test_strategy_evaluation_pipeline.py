@@ -182,12 +182,18 @@ def test_strategy_evaluation_history_counts_markers_omitted_by_bounded_curve() -
     )
 
     assert len(visualization["equity_curve"]) == 120
+    assert len(visualization["equity_sparkline"]) <= 160
+    assert visualization["equity_sparkline"][0]["time"] == equity_curve[0]["open_time"]
+    assert visualization["equity_sparkline"][-1]["time"] == equity_curve[-1]["open_time"]
     assert [marker["time"] for marker in visualization["markers"]] == [
+        equity_curve[20]["open_time"],
+        equity_curve[32]["open_time"],
         equity_curve[168]["open_time"],
         equity_curve[176]["open_time"],
     ]
     assert visualization["omitted"]["equity_points"] == 60
-    assert visualization["omitted"]["markers"] == 2
+    assert visualization["omitted"]["equity_sparkline_points"] > 0
+    assert visualization["omitted"]["markers"] == 0
 
 
 def test_pipeline_writes_walk_forward_windows_when_history_is_sufficient(tmp_path: Path) -> None:

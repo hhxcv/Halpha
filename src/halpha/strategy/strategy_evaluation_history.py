@@ -14,6 +14,7 @@ SCHEMA_VERSION = 1
 MAX_HISTORY_RECORDS = 500
 MAX_VISUALIZATION_POINTS = 120
 MAX_VISUALIZATION_MARKERS = 80
+MAX_SPARKLINE_POINTS = 160
 
 
 def strategy_evaluation_history_path(config_path: Path) -> Path:
@@ -239,13 +240,9 @@ def _metrics_from_evaluation(evaluation: dict[str, Any]) -> dict[str, Any]:
 def _visualization_from_evaluation(record: dict[str, Any], evaluation: dict[str, Any]) -> dict[str, Any]:
     full_curve = _equity_curve_points(evaluation.get("equity_curve"))
     curve = full_curve[-MAX_VISUALIZATION_POINTS:]
-    visible_times = {str(point["time"]) for point in curve}
+    sparkline = _compressed_equity_curve(full_curve, max_points=MAX_SPARKLINE_POINTS)
     full_markers = _markers_from_equity_curve(full_curve, limit=None)
-    markers = [
-        marker
-        for marker in full_markers
-        if str(marker.get("time")) in visible_times
-    ][-MAX_VISUALIZATION_MARKERS:]
+    markers = full_markers[-MAX_VISUALIZATION_MARKERS:]
     if not curve and not markers:
         return {}
     return {
@@ -259,13 +256,16 @@ def _visualization_from_evaluation(record: dict[str, Any], evaluation: dict[str,
         "bars": [],
         "markers": markers,
         "equity_curve": curve,
+        "equity_sparkline": sparkline,
         "limits": {
             "max_markers": MAX_VISUALIZATION_MARKERS,
             "max_equity_points": MAX_VISUALIZATION_POINTS,
+            "max_sparkline_equity_points": MAX_SPARKLINE_POINTS,
         },
         "omitted": {
             "bars": 0,
             "equity_points": max(0, len(full_curve) - len(curve)),
+            "equity_sparkline_points": max(0, len(full_curve) - len(sparkline)),
             "markers": max(0, len(full_markers) - len(markers)),
         },
         "warnings": [],
@@ -279,11 +279,131 @@ def _bounded_visualization(visualization: dict[str, Any]) -> dict[str, Any]:
     result["bars"] = _dict_items(visualization.get("bars"))[-MAX_VISUALIZATION_POINTS:]
     result["markers"] = _dict_items(visualization.get("markers"))[-MAX_VISUALIZATION_MARKERS:]
     result["equity_curve"] = _dict_items(visualization.get("equity_curve"))[-MAX_VISUALIZATION_POINTS:]
+    sparkline = _equity_curve_points(visualization.get("equity_sparkline"))
+    if not sparkline:
+        sparkline = _equity_curve_points(visualization.get("equity_curve"))
+    result["equity_sparkline"] = _compressed_equity_curve(sparkline, max_points=MAX_SPARKLINE_POINTS)
+    limits = _dict(result.get("limits"))
+    limits["max_sparkline_equity_points"] = MAX_SPARKLINE_POINTS
+    result["limits"] = limits
     return result
 
 
 def _bounded_equity_curve(value: Any) -> list[dict[str, Any]]:
     return _equity_curve_points(value)[-MAX_VISUALIZATION_POINTS:]
+
+
+def _compressed_equity_curve(points: list[dict[str, Any]], *, max_points: int) -> list[dict[str, Any]]:
+    clean = [point for point in points if point]
+    if len(clean) <= max_points:
+        return clean
+    if max_points <= 2:
+        return [clean[0], clean[-1]][:max_points]
+    reserved = set(_reserved_equity_indices(clean))
+    budget = max(0, max_points - len(reserved))
+    optional = _bucket_extreme_equity_indices(clean, reserved=reserved, budget=budget)
+    keep = reserved | set(optional)
+    if len(keep) > max_points:
+        keep = reserved | set(_evenly_spaced_indices(sorted(keep - reserved), max_points - len(reserved)))
+    return [clean[index] for index in sorted(keep)]
+
+
+def _reserved_equity_indices(points: list[dict[str, Any]]) -> list[int]:
+    if not points:
+        return []
+    reserved = {0, len(points) - 1}
+    finite = _indexed_equity_values(points)
+    if finite:
+        reserved.add(min(finite, key=lambda item: item[1])[0])
+        reserved.add(max(finite, key=lambda item: item[1])[0])
+        reserved.update(_max_drawdown_equity_indices(finite))
+    return sorted(reserved)
+
+
+def _indexed_equity_values(points: list[dict[str, Any]]) -> list[tuple[int, float]]:
+    values: list[tuple[int, float]] = []
+    for index, point in enumerate(points):
+        value = _equity_numeric_value(point)
+        if value is not None:
+            values.append((index, value))
+    return values
+
+
+def _equity_numeric_value(point: dict[str, Any]) -> float | None:
+    for key in ("net_equity", "equity", "value", "gross_equity"):
+        raw_value = point.get(key)
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if value == value and value not in {float("inf"), float("-inf")}:
+            return value
+    return None
+
+
+def _max_drawdown_equity_indices(indexed_values: list[tuple[int, float]]) -> list[int]:
+    peak_index: int | None = None
+    peak_value: float | None = None
+    best_peak_index: int | None = None
+    best_trough_index: int | None = None
+    worst_drawdown = 0.0
+    for index, value in indexed_values:
+        if peak_value is None or value > peak_value:
+            peak_index = index
+            peak_value = value
+        if peak_value in {None, 0} or peak_index is None:
+            continue
+        drawdown = (value / peak_value) - 1
+        if drawdown < worst_drawdown:
+            worst_drawdown = drawdown
+            best_peak_index = peak_index
+            best_trough_index = index
+    return [index for index in (best_peak_index, best_trough_index) if index is not None]
+
+
+def _bucket_extreme_equity_indices(
+    points: list[dict[str, Any]],
+    *,
+    reserved: set[int],
+    budget: int,
+) -> list[int]:
+    inner_indices = [index for index in range(1, len(points) - 1) if index not in reserved]
+    if budget <= 0 or not inner_indices:
+        return []
+    if len(inner_indices) <= budget:
+        return inner_indices
+    if budget < 4:
+        return _evenly_spaced_indices(inner_indices, budget)
+    bucket_count = max(1, budget // 4)
+    bucket_size = max(1, (len(inner_indices) + bucket_count - 1) // bucket_count)
+    selected: set[int] = set()
+    for offset in range(0, len(inner_indices), bucket_size):
+        bucket = inner_indices[offset : offset + bucket_size]
+        if not bucket:
+            continue
+        selected.add(bucket[0])
+        selected.add(bucket[-1])
+        finite = [(index, _equity_numeric_value(points[index])) for index in bucket]
+        finite = [(index, value) for index, value in finite if value is not None]
+        if finite:
+            selected.add(min(finite, key=lambda item: item[1])[0])
+            selected.add(max(finite, key=lambda item: item[1])[0])
+    return sorted(selected)
+
+
+def _evenly_spaced_indices(indices: list[int], count: int) -> list[int]:
+    if count <= 0 or not indices:
+        return []
+    if count >= len(indices):
+        return indices
+    if count == 1:
+        return [indices[len(indices) // 2]]
+    last = len(indices) - 1
+    selected = {
+        indices[round(position * last / (count - 1))]
+        for position in range(count)
+    }
+    return sorted(selected)
 
 
 def _equity_curve_points(value: Any) -> list[dict[str, Any]]:

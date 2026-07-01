@@ -40,6 +40,7 @@ MAX_STANDALONE_RUNS = 50
 MAX_BACKTEST_VISUALIZATION_BARS = 120
 MAX_BACKTEST_VISUALIZATION_MARKERS = 1000
 MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS = 120
+MAX_BACKTEST_SPARKLINE_EQUITY_POINTS = 160
 MAX_WARNING_GROUPS = 12
 MAX_WARNING_GROUP_SOURCES = 5
 PIPELINE_STRATEGY_ARTIFACTS = [
@@ -545,6 +546,7 @@ def _shared_history_backtest(record: Any, *, base: Path) -> dict[str, Any]:
     item = _dict(record)
     source_artifacts = _safe_source_artifacts(_string_list(item.get("source_artifacts")), base=base)
     warnings = _messages(item.get("warnings"))
+    visualization = _source_backed_shared_history_visualization(item, base=base)
     return {
         "type": "strategy_backtest",
         "status": _normalize_status(str(item.get("status") or "unknown")),
@@ -564,12 +566,103 @@ def _shared_history_backtest(record: Any, *, base: Path) -> dict[str, Any]:
             "metrics": _backtest_metrics(_dict(item.get("metrics"))),
         },
         "records": {},
-        "visualization": _backtest_visualization(_dict(item)),
+        "visualization": visualization,
         "source_artifacts": source_artifacts,
         "warnings": warnings,
         "warning_groups": _warning_groups(warnings, source_artifacts),
         "errors": _messages(item.get("errors")),
     }
+
+
+def _source_backed_shared_history_visualization(record: dict[str, Any], *, base: Path) -> dict[str, Any]:
+    visualization = _backtest_visualization(record)
+    needs_sparkline = _needs_source_sparkline(visualization)
+    needs_markers = _needs_source_markers(visualization)
+    if not visualization or not (needs_sparkline or needs_markers):
+        return visualization
+    full_curve = _shared_history_source_equity_curve(record, base=base)
+    if not full_curve:
+        return visualization
+    updated = dict(visualization)
+    omitted = _bounded_mapping(updated.get("omitted"))
+    limits = _bounded_mapping(updated.get("limits"))
+    if needs_sparkline and len(full_curve) > _list_count(visualization.get("equity_sparkline")):
+        sparkline = _compressed_equity_curve(full_curve, max_points=MAX_BACKTEST_SPARKLINE_EQUITY_POINTS)
+        if len(sparkline) >= 2:
+            updated["equity_sparkline"] = sparkline
+            omitted["equity_sparkline_points"] = max(0, len(full_curve) - len(sparkline))
+            limits["max_sparkline_equity_points"] = MAX_BACKTEST_SPARKLINE_EQUITY_POINTS
+    if needs_markers:
+        markers = _position_transition_markers(
+            full_curve,
+            raw_markers=[],
+            execution_model=_dict(_dict(record.get("metrics")).get("execution_model")),
+        )
+        if len(markers) > _list_count(visualization.get("markers")):
+            visible_markers = markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:]
+            updated["markers"] = visible_markers
+            omitted["markers"] = max(0, len(markers) - len(visible_markers))
+            limits["max_markers"] = MAX_BACKTEST_VISUALIZATION_MARKERS
+    updated["omitted"] = omitted
+    updated["limits"] = limits
+    return updated
+
+
+def _needs_source_sparkline(visualization: dict[str, Any]) -> bool:
+    if not visualization:
+        return False
+    omitted = _dict(visualization.get("omitted"))
+    try:
+        omitted_equity_points = int(omitted.get("equity_points") or 0)
+    except (TypeError, ValueError):
+        omitted_equity_points = 0
+    if omitted_equity_points <= 0:
+        return False
+    return _list_count(visualization.get("equity_sparkline")) <= _list_count(visualization.get("equity_curve"))
+
+
+def _needs_source_markers(visualization: dict[str, Any]) -> bool:
+    if not visualization:
+        return False
+    omitted = _dict(visualization.get("omitted"))
+    try:
+        omitted_markers = int(omitted.get("markers") or 0)
+    except (TypeError, ValueError):
+        omitted_markers = 0
+    return omitted_markers > 0
+
+
+def _shared_history_source_equity_curve(record: dict[str, Any], *, base: Path) -> list[dict[str, Any]]:
+    for ref in _string_list(record.get("source_artifacts")):
+        if not ref.replace("\\", "/").endswith("analysis/strategy_evaluation_summary.json"):
+            continue
+        data, error = _read_json(_resolve_ref(ref, base=base))
+        if error:
+            continue
+        summary_record = _matching_strategy_summary_record(record, _list(data.get("records")))
+        if not summary_record:
+            continue
+        curve = [
+            _bounded_equity_point(point)
+            for point in _list(_dict(summary_record.get("single_window")).get("equity_curve"))
+        ]
+        return [point for point in curve if point]
+    return []
+
+
+def _matching_strategy_summary_record(record: dict[str, Any], records: list[Any]) -> dict[str, Any]:
+    evaluation_id = record.get("evaluation_id")
+    if evaluation_id:
+        for item in records:
+            candidate = _dict(item)
+            if candidate.get("evaluation_id") == evaluation_id:
+                return candidate
+    identity_fields = ("strategy_name", "source", "symbol", "timeframe", "latest_candle_time")
+    for item in records:
+        candidate = _dict(item)
+        if all(candidate.get(field) == record.get(field) for field in identity_fields):
+            return candidate
+    return {}
 
 
 def _shared_output_ref(record: dict[str, Any]) -> str:
@@ -1047,11 +1140,22 @@ def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
         markers = reconstructed_markers
     equity_curve = [_bounded_equity_point(item) for item in _list(raw.get("equity_curve"))]
     equity_curve = [item for item in equity_curve if item]
+    raw_sparkline = [_bounded_equity_point(item) for item in _list(raw.get("equity_sparkline"))]
+    raw_sparkline = [item for item in raw_sparkline if item]
+    artifact_equity_curve = [_bounded_equity_point(item) for item in _list(artifact.get("equity_curve"))]
+    artifact_equity_curve = [item for item in artifact_equity_curve if item]
+    sparkline_source = raw_sparkline or (artifact_equity_curve if len(artifact_equity_curve) > len(equity_curve) else equity_curve)
+    equity_sparkline = _compressed_equity_curve(
+        sparkline_source,
+        max_points=MAX_BACKTEST_SPARKLINE_EQUITY_POINTS,
+    )
     visible_markers = markers[-MAX_BACKTEST_VISUALIZATION_MARKERS:]
     omitted = _bounded_mapping(raw.get("omitted"))
     total_marker_count = len(markers) or _position_transition_marker_count(artifact.get("equity_curve"))
     if total_marker_count:
         omitted["markers"] = max(0, total_marker_count - len(visible_markers))
+    if sparkline_source:
+        omitted.setdefault("equity_sparkline_points", max(0, len(sparkline_source) - len(equity_sparkline)))
     return {
         "schema_version": raw.get("schema_version", 1),
         "chart_type": raw.get("chart_type", "candlestick_backtest"),
@@ -1063,10 +1167,12 @@ def _backtest_visualization(artifact: dict[str, Any]) -> dict[str, Any]:
         "bars": bars[-MAX_BACKTEST_VISUALIZATION_BARS:],
         "markers": visible_markers,
         "equity_curve": equity_curve[-MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS:],
+        "equity_sparkline": equity_sparkline,
         "limits": {
             "max_bars": MAX_BACKTEST_VISUALIZATION_BARS,
             "max_markers": MAX_BACKTEST_VISUALIZATION_MARKERS,
             "max_equity_points": MAX_BACKTEST_VISUALIZATION_EQUITY_POINTS,
+            "max_sparkline_equity_points": MAX_BACKTEST_SPARKLINE_EQUITY_POINTS,
         },
         "omitted": omitted,
         "warnings": _messages(raw.get("warnings")),
@@ -1195,6 +1301,119 @@ def _bounded_equity_point(value: Any) -> dict[str, Any]:
         "position": item.get("position"),
         "turnover": item.get("turnover"),
     }
+
+
+def _compressed_equity_curve(points: list[dict[str, Any]], *, max_points: int) -> list[dict[str, Any]]:
+    clean = [point for point in points if point]
+    if len(clean) <= max_points:
+        return clean
+    if max_points <= 2:
+        return [clean[0], clean[-1]][:max_points]
+    reserved = set(_reserved_equity_indices(clean))
+    budget = max(0, max_points - len(reserved))
+    optional = _bucket_extreme_equity_indices(clean, reserved=reserved, budget=budget)
+    keep = reserved | set(optional)
+    if len(keep) > max_points:
+        keep = reserved | set(_evenly_spaced_indices(sorted(keep - reserved), max_points - len(reserved)))
+    return [clean[index] for index in sorted(keep)]
+
+
+def _reserved_equity_indices(points: list[dict[str, Any]]) -> list[int]:
+    if not points:
+        return []
+    reserved = {0, len(points) - 1}
+    finite = _indexed_equity_values(points)
+    if finite:
+        reserved.add(min(finite, key=lambda item: item[1])[0])
+        reserved.add(max(finite, key=lambda item: item[1])[0])
+        reserved.update(_max_drawdown_equity_indices(finite))
+    return sorted(reserved)
+
+
+def _indexed_equity_values(points: list[dict[str, Any]]) -> list[tuple[int, float]]:
+    values: list[tuple[int, float]] = []
+    for index, point in enumerate(points):
+        value = _equity_numeric_value(point)
+        if value is not None:
+            values.append((index, value))
+    return values
+
+
+def _equity_numeric_value(point: dict[str, Any]) -> float | None:
+    for key in ("net_equity", "equity", "value", "gross_equity"):
+        raw_value = point.get(key)
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if value == value and value not in {float("inf"), float("-inf")}:
+            return value
+    return None
+
+
+def _max_drawdown_equity_indices(indexed_values: list[tuple[int, float]]) -> list[int]:
+    peak_index: int | None = None
+    peak_value: float | None = None
+    best_peak_index: int | None = None
+    best_trough_index: int | None = None
+    worst_drawdown = 0.0
+    for index, value in indexed_values:
+        if peak_value is None or value > peak_value:
+            peak_index = index
+            peak_value = value
+        if peak_value in {None, 0} or peak_index is None:
+            continue
+        drawdown = (value / peak_value) - 1
+        if drawdown < worst_drawdown:
+            worst_drawdown = drawdown
+            best_peak_index = peak_index
+            best_trough_index = index
+    return [index for index in (best_peak_index, best_trough_index) if index is not None]
+
+
+def _bucket_extreme_equity_indices(
+    points: list[dict[str, Any]],
+    *,
+    reserved: set[int],
+    budget: int,
+) -> list[int]:
+    inner_indices = [index for index in range(1, len(points) - 1) if index not in reserved]
+    if budget <= 0 or not inner_indices:
+        return []
+    if len(inner_indices) <= budget:
+        return inner_indices
+    if budget < 4:
+        return _evenly_spaced_indices(inner_indices, budget)
+    bucket_count = max(1, budget // 4)
+    bucket_size = max(1, (len(inner_indices) + bucket_count - 1) // bucket_count)
+    selected: set[int] = set()
+    for offset in range(0, len(inner_indices), bucket_size):
+        bucket = inner_indices[offset : offset + bucket_size]
+        if not bucket:
+            continue
+        selected.add(bucket[0])
+        selected.add(bucket[-1])
+        finite = [(index, _equity_numeric_value(points[index])) for index in bucket]
+        finite = [(index, value) for index, value in finite if value is not None]
+        if finite:
+            selected.add(min(finite, key=lambda item: item[1])[0])
+            selected.add(max(finite, key=lambda item: item[1])[0])
+    return sorted(selected)
+
+
+def _evenly_spaced_indices(indices: list[int], count: int) -> list[int]:
+    if count <= 0 or not indices:
+        return []
+    if count >= len(indices):
+        return indices
+    if count == 1:
+        return [indices[len(indices) // 2]]
+    last = len(indices) - 1
+    selected = {
+        indices[round(position * last / (count - 1))]
+        for position in range(count)
+    }
+    return sorted(selected)
 
 
 def _artifact_status(data: dict[str, Any]) -> str:

@@ -25,7 +25,7 @@ BROWSER_SMOKE_ENABLED = os.environ.get("HALPHA_BROWSER_SMOKE") == "1"
     not BROWSER_SMOKE_ENABLED,
     reason="set HALPHA_BROWSER_SMOKE=1 to run local Playwright dashboard smoke checks",
 )
-def test_dashboard_primary_pages_browser_smoke(tmp_path: Path) -> None:
+def test_dashboard_primary_pages_browser_smoke(tmp_path: Path, test_output_dir: Path) -> None:
     npx = shutil.which("npx") or shutil.which("npx.cmd")
     if npx is None:
         pytest.skip("npx is required for the Playwright browser smoke check.")
@@ -65,6 +65,8 @@ def test_dashboard_primary_pages_browser_smoke(tmp_path: Path) -> None:
                 "test",
                 spec_path.name,
                 "--browser=chromium",
+                "--output",
+                str(test_output_dir / "playwright"),
                 "--reporter=line",
                 "--workers=1",
             ],

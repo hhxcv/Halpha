@@ -1939,6 +1939,50 @@
       background: var(--panel);
     }
 
+    .strategy-backtest-focus {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .strategy-focus-cell {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+      padding: 10px 14px;
+      border-left: 1px solid var(--border);
+    }
+
+    .strategy-focus-cell:first-child {
+      border-left: 0;
+    }
+
+    .strategy-focus-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .strategy-focus-cell strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .strategy-focus-note {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
     .strategy-profile-grid,
     .strategy-candidate-grid {
       display: grid;
@@ -2543,7 +2587,7 @@
 
     .chart-selector {
       display: grid;
-      grid-template-columns: 110px 130px 96px 132px auto auto;
+      grid-template-columns: 110px 130px 96px minmax(196px, auto) auto auto;
       gap: 8px;
       align-items: end;
       min-width: 0;
@@ -2558,11 +2602,62 @@
       font-size: 11px;
     }
 
+    .chart-selector .field-label {
+      color: #9fb2c7;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
     .chart-selector .select-input,
     .chart-selector .text-input {
       min-height: 34px;
       padding: 7px 9px;
       border-color: rgba(219, 231, 243, 0.22);
+    }
+
+    .chart-window-field {
+      min-width: 196px;
+    }
+
+    .segmented-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      width: max-content;
+      min-width: 0;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .segmented-button {
+      min-width: 36px;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .segmented-button:hover {
+      background: var(--rail-hover);
+      color: var(--text);
+    }
+
+    .segmented-button.active,
+    .segmented-button[aria-pressed="true"] {
+      background: var(--primary);
+      color: var(--on-accent);
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
     }
 
     .chart-refresh-button {
@@ -2705,34 +2800,6 @@
       min-width: 0;
       overflow-wrap: anywhere;
       text-align: right;
-    }
-
-    .chart-tools {
-      position: absolute;
-      top: 14px;
-      left: 12px;
-      display: grid;
-      gap: 8px;
-      z-index: 2;
-    }
-
-    .tool-dot {
-      display: grid;
-      place-items: center;
-      width: 34px;
-      height: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 6px;
-      background: rgba(9, 18, 31, 0.82);
-      color: #dbe7f3;
-      font-size: 11px;
-      font-weight: 800;
-    }
-
-    .tool-dot.active {
-      border-color: rgba(20, 184, 166, 0.62);
-      background: rgba(0, 133, 117, 0.9);
-      color: #ffffff;
     }
 
     .chart-footer {
@@ -3232,6 +3299,31 @@
       color: var(--muted);
       font-size: 12px;
       font-weight: 760;
+    }
+
+    .strategy-marker-table tr.active {
+      background: var(--primary-soft);
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+
+    .strategy-marker-jump {
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--info-text);
+      font: inherit;
+      font-weight: 760;
+      text-align: left;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .strategy-marker-jump:hover,
+    .strategy-marker-jump:focus-visible {
+      color: var(--text);
+      text-decoration: underline;
+      outline: none;
     }
 
     .live-layout {
@@ -7570,7 +7662,7 @@
 
     body[data-theme="solar"] .chart-selector {
       width: 100%;
-      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      grid-template-columns: 140px 140px 140px minmax(196px, auto) auto auto;
       gap: 10px;
     }
 
@@ -7585,7 +7677,8 @@
       font-weight: 700;
     }
 
-    body[data-theme="solar"] .chart-selector .field label {
+    body[data-theme="solar"] .chart-selector .field label,
+    body[data-theme="solar"] .chart-selector .field-label {
       color: var(--muted);
     }
 
