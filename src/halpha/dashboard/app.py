@@ -650,7 +650,8 @@ def create_dashboard_app(
             return _unconfigured_payload(
                 "dashboard_live_history",
                 timeline=[],
-                triggered_reports=[],
+                trigger_decisions=[],
+                trigger_report_artifacts=[],
                 alert_archive={"counts": {}, "records": []},
             )
         active = context.active()
@@ -658,7 +659,8 @@ def create_dashboard_app(
             return _unconfigured_payload(
                 "dashboard_live_history",
                 timeline=[],
-                triggered_reports=[],
+                trigger_decisions=[],
+                trigger_report_artifacts=[],
                 alert_archive={"counts": {}, "records": []},
             )
         active_config, active_config_path = active

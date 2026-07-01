@@ -152,13 +152,19 @@ Supported decision statuses:
 
 Each trigger decision preserves decision id, trigger id, evaluated time, source
 data types, source refs, reason codes, threshold params, matched evidence
-summary, cooldown state, linked collection job ids, linked report job id,
-reconciled run/report refs, warnings, and errors.
+summary, cooldown state, linked collection job ids, linked job id, reconciled
+run/report refs, warnings, and errors.
 
-Trigger-created report jobs use the existing command-job manager. `run_no_codex`
-jobs may be created without Codex authorization. `run` jobs require valid
-persisted unattended Live trigger authorization. Missing or invalid authorization
-records `blocked_authorization` and does not create a Codex-capable job.
+Trigger-created jobs use the existing command-job manager. `run_no_codex` jobs
+may be created without Codex authorization and are no-report deterministic run
+jobs unless a later report artifact ref is present. `run` jobs require valid
+persisted unattended Live trigger authorization. Missing or invalid
+authorization records `blocked_authorization` and does not create a
+Codex-capable job.
+
+Live read models must distinguish trigger decisions, trigger-created jobs, and
+actual report artifacts. A trigger-created job is a report artifact only when it
+has a concrete `report_ref`.
 
 Trigger decisions must not be generated or revised by AI/Codex.
 

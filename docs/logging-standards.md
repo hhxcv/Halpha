@@ -126,8 +126,10 @@ Common context fields:
 - collectors: `stage`, `source`, `status`, `symbol_count`, `item_count`,
   `error_count`, `artifact`;
 - command jobs: `job_id`, `intent`, `kind`, `status`, `exit_code`;
-- monitor: `cycle_id`, `loop_id`, `run_id`, `target_stage`, `no_codex`,
-  `completed_cycles`, `stop_reason`;
+- monitor service: `service_id`, `status`, `heartbeat_at`,
+  `consecutive_failures`, `stop_reason`;
+- legacy monitor diagnostics: `cycle_id`, `loop_id`, `run_id`,
+  `target_stage`, `no_codex`, `completed_cycles`, `stop_reason`;
 - validation and inspection commands: `status`, `explicit_run`.
 
 ## Anti-Noise Rules

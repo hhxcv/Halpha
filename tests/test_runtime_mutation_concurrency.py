@@ -74,20 +74,11 @@ def test_read_only_monitor_inspect_remains_available_while_runtime_lease_is_busy
     assert "runtime_mutation_lease" not in output
 
 
-def test_monitor_run_cli_exits_nonzero_without_cycle_manifest_when_runtime_lease_is_busy(
+def test_product_run_cli_exits_nonzero_without_run_manifest_when_runtime_lease_is_busy(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    config_path = _write_config(
-        tmp_path,
-        monitor_block="""
-monitor:
-  enabled: true
-  output_dir: monitor
-  target_stage: refresh_data
-  no_codex: true
-""".strip(),
-    )
+    config_path = _write_config(tmp_path)
     lease = acquire_mutation_lease(
         config_path=config_path,
         owner_kind="test",
@@ -98,16 +89,15 @@ monitor:
     )
 
     try:
-        exit_code = main(["monitor", "run", "--config", str(config_path), "--once"])
+        exit_code = main(["run", "--config", str(config_path), "--no-codex", "--until", "refresh_data"])
     finally:
         lease.release()
 
     output = capsys.readouterr().out
     assert exit_code == 4
-    assert "Halpha monitor run failed." in output
+    assert "Halpha run failed." in output
     assert "stage: runtime_mutation_lease" in output
     assert "another mutating Halpha workflow" in output
-    assert not (tmp_path / "monitor").exists()
     assert not (tmp_path / "runs").exists()
     assert str(tmp_path) not in output
 

@@ -212,6 +212,151 @@ live:
     assert _collection_state(second, "text_event:all")["consecutive_failures"] == 1
 
 
+def test_live_read_model_reconciles_terminal_success_without_next_tick(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    repository = LiveCollectionStateRepository(config_path)
+    repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "cadence_seconds": 300,
+            "lookback_seconds": 3600,
+            "lookahead_seconds": None,
+            "last_attempt_at": "2026-06-30T11:59:00Z",
+            "last_success_at": None,
+            "next_attempt_at": "2026-06-30T12:04:00Z",
+            "latest_job_id": "collect-1",
+            "latest_job_status": "running",
+            "latest_terminal_job_id": None,
+            "latest_terminal_status": None,
+            "consecutive_failures": 0,
+            "source_refs": [],
+            "warnings": [],
+            "errors": [],
+            "updated_at": "2026-06-30T11:59:00Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager(
+        jobs=[
+            _live_job(
+                "collect-1",
+                status="succeeded",
+                target_key="ohlcv:binance_usdm:BTCUSDT:1m",
+                data_type="ohlcv",
+                created_at="2026-06-30T12:00:00Z",
+            )
+        ]
+    )
+
+    payload = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        state_repository=repository,
+        now=now,
+    ).read_model()
+    state = _collection_state(payload, "ohlcv:binance_usdm:BTCUSDT:1m")
+    persisted = _collection_state({"collections": repository.list_states()}, "ohlcv:binance_usdm:BTCUSDT:1m")
+
+    assert state["latest_job_status"] == "succeeded"
+    assert state["latest_terminal_job_id"] == "collect-1"
+    assert state["latest_terminal_status"] == "succeeded"
+    assert state["last_success_at"] == "2026-06-30T12:00:00Z"
+    assert state["source_refs"] == ["data/research/metadata/collection_coverage_state.json"]
+    assert persisted["latest_terminal_job_id"] == "collect-1"
+
+
+def test_live_read_model_reconciles_terminal_failure_once(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    repository = LiveCollectionStateRepository(config_path)
+    repository.upsert_state(
+        {
+            "target_key": "text_event:all",
+            "data_type": "text_event",
+            "target": {"data_type": "text_event"},
+            "enabled": True,
+            "cadence_seconds": 300,
+            "lookback_seconds": 3600,
+            "lookahead_seconds": None,
+            "last_attempt_at": "2026-06-30T11:59:00Z",
+            "last_success_at": None,
+            "next_attempt_at": "2026-06-30T12:04:00Z",
+            "latest_job_id": "collect-2",
+            "latest_job_status": "running",
+            "latest_terminal_job_id": None,
+            "latest_terminal_status": None,
+            "consecutive_failures": 0,
+            "source_refs": [],
+            "warnings": [],
+            "errors": [],
+            "updated_at": "2026-06-30T11:59:00Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager(
+        jobs=[
+            _live_job(
+                "collect-2",
+                status="failed",
+                target_key="text_event:all",
+                data_type="text_event",
+                created_at="2026-06-30T12:00:00Z",
+                errors=["collection failed"],
+            )
+        ]
+    )
+
+    first = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        state_repository=repository,
+        now=now,
+    ).read_model()
+    second = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        state_repository=repository,
+        now=now + timedelta(seconds=10),
+    ).read_model()
+
+    first_state = _collection_state(first, "text_event:all")
+    second_state = _collection_state(second, "text_event:all")
+    assert first_state["latest_job_status"] == "failed"
+    assert first_state["latest_terminal_status"] == "failed"
+    assert first_state["consecutive_failures"] == 1
+    assert first_state["errors"] == ["collection failed"]
+    assert second_state["consecutive_failures"] == 1
+
+
 class _RecordingLiveJobManager:
     def __init__(self, *, jobs: list[dict[str, Any]] | None = None, create_status: str = "queued") -> None:
         self.jobs = list(jobs or [])

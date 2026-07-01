@@ -399,6 +399,94 @@ live:
     assert decision["matched_evidence"]["failed_target_count"] == 1
 
 
+def test_major_market_move_evaluates_non_first_symbol_and_timeframe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: UTC
+market:
+  enabled: true
+  source: binance_usdm
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    sources:
+      - binance_usdm
+    timeframes:
+      - 1m
+      - 1h
+    lookback:
+      1m: 30
+      1h: 30
+text:
+  enabled: false
+  sources: []
+report:
+  language: zh-CN
+codex:
+  enabled: false
+monitor:
+  enabled: false
+live:
+  enabled: true
+  reports:
+    triggers:
+      major_market_move:
+        enabled: true
+        cooldown_seconds: 300
+        price_change_pct: 5
+""",
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    queried: list[tuple[str, str, str]] = []
+
+    def fake_query(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        target = (str(kwargs["source"]), str(kwargs["symbol"]), str(kwargs["timeframe"]))
+        queried.append(target)
+        if target == ("binance_usdm", "ETHUSDT", "1h"):
+            records = [
+                {"open_time": "2026-06-30T10:00:00Z", "close": 100.0, "volume": 10.0},
+                {"open_time": "2026-06-30T11:00:00Z", "close": 108.0, "volume": 11.0},
+            ]
+        else:
+            records = [
+                {"open_time": "2026-06-30T10:00:00Z", "close": 100.0, "volume": 10.0},
+                {"open_time": "2026-06-30T11:00:00Z", "close": 101.0, "volume": 10.5},
+            ]
+        return {
+            "records": records,
+            "source_artifacts": [f"ohlcv/{target[0]}/{target[1]}/{target[2]}"],
+            "warnings": [],
+        }
+
+    monkeypatch.setattr("halpha.live.triggers.query_latest_ohlcv_records", fake_query)
+
+    result = LiveTriggerEvaluator(config, config_path=config_path, job_manager=_RecordingJobManager(), now=now).evaluate()
+    decision = _decision(result, "major_market_move")
+
+    assert queried == [
+        ("binance_usdm", "BTCUSDT", "1m"),
+        ("binance_usdm", "BTCUSDT", "1h"),
+        ("binance_usdm", "ETHUSDT", "1m"),
+        ("binance_usdm", "ETHUSDT", "1h"),
+    ]
+    assert decision["status"] == "triggered"
+    assert decision["matched_evidence"]["matched_count"] == 1
+    assert decision["matched_evidence"]["symbol"] == "ETHUSDT"
+    assert decision["matched_evidence"]["timeframe"] == "1h"
+    assert decision["matched_evidence"]["matches"][0]["source"] == "binance_usdm"
+    assert decision["matched_evidence"]["matches"][0]["price_change_pct"] == 8.0
+
+
 def test_live_trigger_read_model_reconciles_linked_report_job_refs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
     config_path = _write_config(

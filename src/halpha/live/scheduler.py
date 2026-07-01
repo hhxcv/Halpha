@@ -167,6 +167,7 @@ class LiveScheduler:
         targets = build_live_collection_targets(self.config, settings)
         target_keys = {target.target_key for target in targets}
         now_text = _format_utc(self.now)
+        jobs = self._live_jobs(limit=200)
         states = {
             str(state.get("target_key")): state
             for state in self.state_repository.list_states()
@@ -174,7 +175,11 @@ class LiveScheduler:
         }
         collections: list[dict[str, Any]] = []
         for target in targets:
-            state = self._base_state(target, previous=states.get(target.target_key), now_text=now_text)
+            previous = states.get(target.target_key)
+            state = self._base_state(target, previous=previous, now_text=now_text)
+            state = self._reconcile_state(state, jobs=jobs, now_text=now_text)
+            if _reconciled_state_changed(previous, state):
+                state = self.state_repository.upsert_state(state)
             collections.append(state)
         for target_key, state in states.items():
             if target_key not in target_keys:
@@ -187,8 +192,11 @@ class LiveScheduler:
                         "next_attempt_at": None,
                         "updated_at": now_text,
                     }
+                previous = states.get(target_key)
+                state = self._reconcile_state(state, jobs=jobs, now_text=now_text)
+                if _reconciled_state_changed(previous, state):
+                    state = self.state_repository.upsert_state(state)
                 collections.append(state)
-        jobs = self._live_jobs(limit=200)
         active_jobs = [job for job in jobs if str(job.get("status") or "") in JOB_TRANSIENT_STATUSES]
         recent_jobs = [job for job in jobs if str(job.get("status") or "") in JOB_TERMINAL_STATUSES][:LIVE_RECENT_JOB_LIMIT]
         errors = _collection_errors(collections)
@@ -483,6 +491,22 @@ def _state_due(state: dict[str, Any], *, now: datetime) -> bool:
     if next_attempt is None:
         return True
     return next_attempt <= now
+
+
+def _reconciled_state_changed(previous: dict[str, Any] | None, state: dict[str, Any]) -> bool:
+    if not isinstance(previous, dict):
+        return False
+    tracked_keys = (
+        "last_success_at",
+        "latest_job_status",
+        "latest_terminal_job_id",
+        "latest_terminal_status",
+        "consecutive_failures",
+        "source_refs",
+        "warnings",
+        "errors",
+    )
+    return any(previous.get(key) != state.get(key) for key in tracked_keys)
 
 
 def _job_by_id(jobs: list[dict[str, Any]], job_id: str) -> dict[str, Any] | None:

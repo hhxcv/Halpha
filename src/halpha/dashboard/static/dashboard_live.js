@@ -55,23 +55,24 @@
         function renderLiveSummary() {
           const live = state.live || {};
           const collections = liveCollections();
-          const activeJobs = liveJobs().filter((job) => TRANSIENT_JOB_STATUSES.has(String(job.status || "")));
           const nextRefresh = nextCollectionAttempt(collections);
           const latestSuccess = latestCollectionSuccess(collections);
           const schedule = state.schedule || {};
           const alertCounts = liveAlertCounts();
-          const triggeredReports = triggeredReportCount(schedule);
+          const historySummary = state.liveHistory?.summary || {};
+          const triggerDecisions = Number(historySummary.trigger_decisions || 0);
+          const triggerReportArtifacts = Number(historySummary.trigger_report_artifacts || 0);
           const liveStatus = live.status || "unavailable";
           const enabled = live.scheduler?.enabled === true;
           const newestAge = latestSuccess ? ageLabel(latestSuccess) : "No successful refresh";
 
           setHtml("#live-summary", [
             metricCell("Live state", label(enabled ? liveStatus : "disabled"), enabled ? "Core scheduler" : "disabled in config"),
-            metricCell("Active refresh", activeJobs.length, activeJobs.length === 1 ? "job" : "jobs"),
             metricCell("Newest data", newestAge, latestSuccess ? formatTimestamp(latestSuccess) : "no success yet"),
             metricCell("Next refresh", nextRefresh ? formatTimestamp(nextRefresh) : "not scheduled", nextRefresh ? "source cadence" : "no due target"),
             metricCell("Next daily report", schedule.enabled ? formatTimestamp(schedule.next_run_at) : "disabled", schedule.status || "schedule"),
-            metricCell("Triggered reports", triggeredReports, alertCounts.records ? `${formatNumber(alertCounts.records)} alert records` : "trigger rules pending"),
+            metricCell("Trigger decisions", triggerDecisions, alertCounts.records ? `${formatNumber(alertCounts.records)} alert records` : "deterministic rules"),
+            metricCell("Report artifacts", triggerReportArtifacts, "trigger-linked reports"),
           ].join(""));
         }
 
@@ -84,13 +85,8 @@
         function applyLiveModeVisibility() {
           const mode = state.liveMode || "now";
           document.querySelectorAll("[data-live-panel]").forEach((panel) => {
-            const panelName = panel.dataset.livePanel;
-            const visible = panelName === mode || (mode === "now" && panelName !== "sources" && panelName !== "reports" && panelName !== "history");
-            panel.hidden = !visible;
+            panel.hidden = panel.dataset.livePanel !== mode;
           });
-          document.querySelector(".live-intelligence-strip-panel")?.toggleAttribute("hidden", mode !== "now");
-          document.querySelector(".live-stream-panel")?.toggleAttribute("hidden", mode !== "now");
-          document.querySelector(".live-side")?.toggleAttribute("hidden", mode !== "now" && mode !== "sources");
         }
 
         function renderLiveSourceMatrix() {
@@ -211,7 +207,7 @@
             detailRow("Latest dispatch", latestDispatch.scheduled_for ? `${formatTimestamp(latestDispatch.scheduled_for)} / ${latestDispatch.status || "unknown"}` : "n/a"),
             detailRow("Latest job", schedule.last_job_id || latestDispatch.job_id || "n/a"),
             detailRow("Linked report", linkedReports[0] || latestDispatch.report_ref || "n/a"),
-            detailRow("Triggered reports", triggeredReportCount(schedule)),
+            detailRow("Daily report artifacts", triggeredReportCount(schedule)),
           ].join(""));
         }
 
@@ -287,29 +283,30 @@
 
         function renderLiveTriggeredReports() {
           const history = state.liveHistory || {};
-          const rows = Array.isArray(history.triggered_reports) ? history.triggered_reports : [];
+          const rows = Array.isArray(history.trigger_decisions) ? history.trigger_decisions : [];
           if (!rows.length) {
             const empty = history.empty_states?.triggers_disabled
               ? "Live trigger rules are disabled."
-              : "No trigger decisions or trigger-created reports are available yet.";
+              : "No trigger decisions are available yet.";
             setHtml("#live-triggered-reports", `<div class="empty-state">${escapeHtml(empty)}</div>`);
             return;
           }
           setHtml("#live-triggered-reports", `
-            <div class="live-review-table" role="table" aria-label="Live triggered report review">
+            <div class="live-review-table" role="table" aria-label="Live trigger decision review">
               <div class="live-review-row live-review-head" role="row">
-                <span>Trigger</span><span>Status</span><span>Evidence</span><span>Cooldown</span><span>Linked report</span><span>Issues</span>
+                <span>Trigger</span><span>Status</span><span>Evidence</span><span>Cooldown</span><span>Job / report</span><span>Issues</span>
               </div>
               ${rows.map((row) => {
                 const status = statusClass(row.status || "unknown");
                 const issues = [...(Array.isArray(row.errors) ? row.errors : []), ...(Array.isArray(row.warnings) ? row.warnings : [])];
-                const link = row.linked_report_ref || row.linked_run_id || row.linked_job_id || "missing";
+                const linkedKind = row.linked_report_ref ? "report" : row.linked_job_id ? (row.job_intent || "job") : "none";
+                const link = row.linked_report_ref || row.linked_job_id || "none";
                 return `<button class="live-review-row" type="button" data-live-trigger-decision="${escapeHtml(row.decision_id || "")}" role="row">
                   <span><strong>${escapeHtml(row.trigger_id || "trigger")}</strong><small>${escapeHtml(formatTimestamp(row.evaluated_at))}</small></span>
                   <span>${statusPill(status, row.status || "unknown")}</span>
                   <span>${escapeHtml(row.evidence_summary || row.reason_summary || "n/a")}</span>
                   <span>${escapeHtml(row.cooldown_until ? formatTimestamp(row.cooldown_until) : "n/a")}</span>
-                  <span class="${escapeHtml(row.artifact_state === "missing" ? "live-ref-missing" : "")}">${escapeHtml(link)}</span>
+                  <span class="${escapeHtml(row.artifact_state === "missing" ? "live-ref-missing" : "")}"><small>${escapeHtml(linkedKind)}</small>${escapeHtml(link)}</span>
                   <span>${issues.length ? escapeHtml(issues[0]) : "none"}</span>
                 </button>`;
               }).join("")}
@@ -342,8 +339,8 @@
                   : record.attention_decision || "n/a";
                 const ref = record.source_report_ref || record.source_run_id || (Array.isArray(record.source_artifacts) ? record.source_artifacts[0] : "") || "n/a";
                 return `<article class="live-alert-row">
-                  <div>${statusPill(status, record.status || "unknown")}<strong>${escapeHtml(record.alert_key || record.record_id || "alert")}</strong></div>
-                  <p>${escapeHtml([record.symbol, record.timeframe, record.priority].filter(Boolean).join(" / ") || "bounded alert record")}</p>
+                  <div class="live-alert-key-cell">${statusPill(status, record.status || "unknown")}<strong>${escapeHtml(record.alert_key || record.record_id || "alert")}</strong></div>
+                  <p class="live-alert-meta">${escapeHtml([record.symbol, record.timeframe, record.priority].filter(Boolean).join(" / ") || "bounded alert record")}</p>
                   <span>${escapeHtml(formatTimestamp(record.created_at))}</span>
                   <span>${escapeHtml(reasons)}</span>
                   <span>${escapeHtml(ref)}</span>
@@ -484,7 +481,7 @@
         }
 
         function liveEventHasReportLink(event) {
-          return Boolean(event.report_ref || event.run_id || event.event_kind === "trigger_report_job" || event.event_kind === "scheduled_report_job" || event.event_kind === "scheduled_report_dispatch");
+          return Boolean(event.report_ref);
         }
 
         function alertCount(payload) {

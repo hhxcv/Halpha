@@ -650,12 +650,15 @@
       if (title) title.textContent = titleText;
       const intelTabs = document.querySelector("#intel-tabs");
       const strategyTabs = document.querySelector("#strategy-operation-tabs");
+      const liveTabs = document.querySelector("#live-mode-tabs");
       const reportGenerate = document.querySelector("#topbar-report-generate");
       intelTabs?.classList.toggle("hidden", state.view !== "intelligence");
       strategyTabs?.classList.toggle("hidden", state.view !== "strategies");
+      liveTabs?.classList.toggle("hidden", state.view !== "live");
       reportGenerate?.classList.toggle("hidden", state.view !== "reports");
       intelTabs?.setAttribute("aria-hidden", state.view === "intelligence" ? "false" : "true");
       strategyTabs?.setAttribute("aria-hidden", state.view === "strategies" ? "false" : "true");
+      liveTabs?.setAttribute("aria-hidden", state.view === "live" ? "false" : "true");
       refreshTopbarTabHints();
     }
 
@@ -936,55 +939,37 @@
       }
     }
 
-    function systemMonitorSidebarState() {
-      const services = state.services?.services || {};
-      const service = services.monitor || {};
-      const status = String(
-        service.lifecycle_status
-          || service.status
-          || service.process_health
-          || "unknown",
-      ).toLowerCase();
-      const lastError = service.last_error?.message ? ` Last error: ${service.last_error.message}` : "";
-      if (service.config_conflict) {
-        return {
-          tone: "warning",
-          title: "System Monitor config conflict",
-          detail: service.actionable || "System Monitor is running with a different active config.",
-        };
+    function liveSidebarState() {
+      const live = state.live;
+      if (!live) {
+        return {tone: "unknown", title: "Live status unavailable", detail: "Live enablement has not loaded yet."};
       }
-      if (status === "running") {
-        return {tone: "running", title: "System Monitor running", detail: "Runtime monitoring is enabled and running."};
-      }
-      if (status === "starting") {
-        return {tone: "warning", title: "System Monitor starting", detail: "Runtime monitoring is starting."};
-      }
-      if (status === "stop_requested") {
-        return {tone: "warning", title: "System Monitor stopping", detail: service.actionable || "Runtime monitoring is stopping."};
-      }
-      if (["unresponsive", "stale"].includes(status)) {
-        return {tone: "warning", title: "System Monitor stale", detail: service.actionable || "System Monitor heartbeat is stale."};
+      const enabled = live.scheduler?.enabled === true;
+      const status = String(live.status || (enabled ? "enabled" : "disabled")).toLowerCase();
+      const targetCount = Array.isArray(live.collections) ? live.collections.length : 0;
+      if (!enabled || ["disabled", "stopped", "unconfigured"].includes(status)) {
+        return {tone: "stopped", title: "Live disabled", detail: "Live collection and scheduled review are disabled in config."};
       }
       if (["failed", "crashed", "error"].includes(status)) {
-        return {tone: "failed", title: "System Monitor failed", detail: `Runtime monitoring needs attention.${lastError}`};
+        return {tone: "failed", title: "Live needs attention", detail: "Live collection or scheduling reported an error."};
       }
-      if (["stopped", "not_found", "unconfigured", "unmanaged", "disabled"].includes(status)) {
-        return {tone: "stopped", title: "System Monitor stopped", detail: "Runtime monitoring is not running."};
+      if (["partial", "degraded", "stale", "warning"].includes(status)) {
+        return {tone: "warning", title: "Live degraded", detail: targetCount ? `${targetCount} configured targets; review Live details.` : "Live is enabled with limited status detail."};
       }
-      return {tone: "unknown", title: "System Monitor", detail: "Runtime monitor status is unavailable."};
+      return {tone: "running", title: "Live enabled", detail: targetCount ? `${targetCount} collection targets configured.` : "Live collection and scheduled review are enabled."};
     }
 
-    function renderSidebarSystemMonitorStatus() {
-      const dot = document.querySelector("#sidebar-system-monitor-dot");
-      const title = document.querySelector("#sidebar-system-monitor-title");
-      const detail = document.querySelector("#sidebar-system-monitor-text");
+    function renderSidebarLiveStatus() {
+      const dot = document.querySelector("#sidebar-live-dot");
+      const title = document.querySelector("#sidebar-live-title");
+      const detail = document.querySelector("#sidebar-live-text");
       if (!dot || !title || !detail) {
         return;
       }
-      const monitorState = systemMonitorSidebarState();
-      dot.className = `health-dot ${monitorState.tone}`;
-      title.textContent = monitorState.title;
-      detail.textContent = monitorState.detail;
+      const liveState = liveSidebarState();
+      dot.className = `health-dot ${liveState.tone}`;
+      title.textContent = liveState.title;
+      detail.textContent = liveState.detail;
     }
 
     async function refreshHealthForView() {
@@ -1044,7 +1029,7 @@
       state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
       state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
       state.services = services.status === "fulfilled" ? services.value : null;
-      renderSidebarSystemMonitorStatus();
+      renderSidebarLiveStatus();
     }
 
     function renderOverview() {
@@ -5931,5 +5916,5 @@
     renderInitialLoadingPlaceholders();
     wireGlobalEvents();
     refreshHealthForView();
-    loadLivePayload().catch(() => renderSidebarSystemMonitorStatus());
+    loadLivePayload().catch(() => renderSidebarLiveStatus());
     setView(viewFromHash());
