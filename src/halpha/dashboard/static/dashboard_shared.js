@@ -20,7 +20,7 @@
         if (["ok", "available", "succeeded", "success", "completed", "running", "collected", "no_data"].includes(normalized)) {
           return normalized;
         }
-        if (["failed", "error", "degraded", "blocked"].includes(normalized)) {
+        if (["failed", "error", "degraded", "blocked", "cancelled"].includes(normalized)) {
           return normalized;
         }
         if (["disabled", "not_generated", "not_run", "unsupported"].includes(normalized)) {
@@ -28,6 +28,9 @@
         }
         if (["insufficient_data", "unavailable"].includes(normalized)) {
           return "partial";
+        }
+        if (["created", "creating", "queued"].includes(normalized)) {
+          return "pending";
         }
         if (["warning", "partial", "missing", "skipped", "pending", "not_collected", "stale"].includes(normalized)) {
           return normalized;

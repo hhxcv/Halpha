@@ -783,6 +783,40 @@ def test_quant_strategy_runner_uses_only_targeted_strategy_profiles(tmp_path: Pa
     }
 
 
+def test_quant_strategy_runner_falls_back_when_targeted_source_is_unavailable(tmp_path: Path) -> None:
+    config_path = _write_targeted_source_mismatch_strategy_config(tmp_path)
+    config = load_config(config_path)
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(source="binance_spot", open_time="2026-06-01T00:00:00Z", close=100, volume=10),
+            _record(source="binance_spot", open_time="2026-06-02T00:00:00Z", close=102, volume=11),
+            _record(source="binance_spot", open_time="2026-06-03T00:00:00Z", close=104, volume=12),
+            _record(source="binance_spot", open_time="2026-06-04T00:00:00Z", close=106, volume=13),
+            _record(source="binance_spot", open_time="2026-06-05T00:00:00Z", close=109, volume=14),
+        ]
+    )
+
+    result = _run_pipeline_with_strategies(config, config_path)
+
+    runs = _strategy_runs(result)["runs"]
+    manifest = _manifest(result)
+
+    assert result.succeeded is True
+    assert len(runs) == 1
+    assert runs[0]["status"] == "succeeded"
+    assert runs[0]["strategy_name"] == "tsmom_vol_scaled"
+    assert runs[0]["source"] == "binance_spot"
+    assert runs[0]["parameter_profile"]["source"] == "base_params"
+    assert runs[0]["parameter_profile"]["matched"] is False
+    assert manifest["counts"]["quant_strategy_runs"] == 1
+    assert manifest["counts"]["quant_strategy_runs_succeeded"] == 1
+    assert manifest["quant_strategies"]["selection_policy"] == {
+        "source": "targeted_params_source_fallback",
+        "unmatched_target_combinations_embedded": False,
+    }
+
+
 def test_quant_strategy_runner_writes_breakout_atr_trend_artifacts(tmp_path: Path) -> None:
     config_path = _write_breakout_strategy_config(tmp_path, lookback=6)
     config = load_config(config_path)
@@ -2602,6 +2636,67 @@ quant:
       params:
         short_window: 1
         long_window: 2
+      backtest:
+        enabled: true
+        initial_cash: 10000
+        fees_bps: 10
+        slippage_bps: 5
+        mode: long_flat
+  parameter_diagnostics:
+    enabled: false
+    max_combinations: 50
+text:
+  enabled: false
+report:
+  title: Daily Market Brief
+  language: zh-CN
+codex:
+  enabled: false
+""".strip(),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def _write_targeted_source_mismatch_strategy_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+run:
+  output_dir: runs
+  timezone: Asia/Shanghai
+market:
+  enabled: true
+  source: binance_spot
+  symbols:
+    - BTCUSDT
+  ohlcv:
+    storage_dir: data/market/ohlcv
+    sources:
+      - binance_usdm
+      - binance_spot
+    timeframes:
+      - 1d
+    lookback:
+      1d: 5
+quant:
+  enabled: true
+  engine: vectorbt
+  strategies:
+    - name: tsmom_vol_scaled
+      enabled: true
+      params:
+        return_window: 2
+        volatility_window: 2
+        target_volatility: 0.2
+      targeted_params:
+        - source: binance_usdm
+          symbol: BTCUSDT
+          timeframe: 1d
+          params:
+            return_window: 1
+            volatility_window: 1
+            target_volatility: 0.2
       backtest:
         enabled: true
         initial_cash: 10000

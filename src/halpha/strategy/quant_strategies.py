@@ -12,6 +12,7 @@ from halpha.quant.registry import get_strategy_definition
 from halpha.quant.strategy_records import failed_strategy_run
 from halpha.quant.vectorbt_engine import engine_metadata
 from halpha.strategy.strategy_config import (
+    configured_targeted_parameter_profiles,
     has_matching_targeted_parameter_profile,
     has_targeted_parameter_profiles,
     parameter_profile_record,
@@ -42,11 +43,12 @@ def evaluate_quant_strategies(
     enabled, disabled = _configured_strategies(quant)
     engine = engine_metadata()
     parameter_config = parameter_diagnostic_config(quant)
-    targeted_only = any(has_targeted_parameter_profiles(strategy) for strategy in enabled)
+    views = views_artifact.get("views", [])
+    selection_source = _selection_source(enabled, views)
     runs = []
 
-    for view in views_artifact.get("views", []):
-        view_strategies = _strategies_for_view(enabled, view, targeted_only=targeted_only)
+    for view in views:
+        view_strategies = _strategies_for_view(enabled, view, selection_source=selection_source)
         if not view_strategies:
             continue
         rows = load_market_data_view_records(view, storage_dir=storage_dir)
@@ -82,7 +84,7 @@ def evaluate_quant_strategies(
         enabled=enabled,
         disabled=disabled,
         parameter_config=parameter_config,
-        targeted_only=targeted_only,
+        selection_source=selection_source,
         runs=runs,
     )
     return [QUANT_STRATEGY_RUNS_ARTIFACT]
@@ -108,10 +110,20 @@ def _strategies_for_view(
     strategies: list[dict[str, Any]],
     view: dict[str, Any],
     *,
-    targeted_only: bool,
+    selection_source: str,
 ) -> list[dict[str, Any]]:
-    if not targeted_only:
+    if selection_source == "configured_strategy_view_matrix":
         return list(strategies)
+    if selection_source == "targeted_params_source_fallback":
+        return [
+            strategy
+            for strategy in strategies
+            if _has_matching_targeted_parameter_target(
+                strategy,
+                symbol=str(view.get("symbol") or ""),
+                timeframe=str(view.get("timeframe") or ""),
+            )
+        ]
     return [
         strategy
         for strategy in strategies
@@ -122,6 +134,56 @@ def _strategies_for_view(
             timeframe=str(view.get("timeframe") or ""),
         )
     ]
+
+
+def _selection_source(strategies: list[dict[str, Any]], views: list[dict[str, Any]]) -> str:
+    targeted = any(has_targeted_parameter_profiles(strategy) for strategy in strategies)
+    if not targeted:
+        return "configured_strategy_view_matrix"
+    if _has_any_exact_target_match(strategies, views):
+        return "targeted_params"
+    if _has_any_source_fallback_target_match(strategies, views):
+        return "targeted_params_source_fallback"
+    return "targeted_params"
+
+
+def _has_any_exact_target_match(strategies: list[dict[str, Any]], views: list[dict[str, Any]]) -> bool:
+    for view in views:
+        for strategy in strategies:
+            if has_matching_targeted_parameter_profile(
+                strategy,
+                source=str(view.get("source") or ""),
+                symbol=str(view.get("symbol") or ""),
+                timeframe=str(view.get("timeframe") or ""),
+            ):
+                return True
+    return False
+
+
+def _has_any_source_fallback_target_match(strategies: list[dict[str, Any]], views: list[dict[str, Any]]) -> bool:
+    for view in views:
+        for strategy in strategies:
+            if _has_matching_targeted_parameter_target(
+                strategy,
+                symbol=str(view.get("symbol") or ""),
+                timeframe=str(view.get("timeframe") or ""),
+            ):
+                return True
+    return False
+
+
+def _has_matching_targeted_parameter_target(
+    strategy: dict[str, Any],
+    *,
+    symbol: str,
+    timeframe: str,
+) -> bool:
+    if not symbol or not timeframe:
+        return False
+    for profile in configured_targeted_parameter_profiles(strategy):
+        if str(profile.get("symbol") or "") == symbol and str(profile.get("timeframe") or "") == timeframe:
+            return True
+    return False
 
 
 def _run_strategy(
@@ -264,7 +326,7 @@ def _record_manifest_summary(
     enabled: list[dict[str, Any]],
     disabled: list[str],
     parameter_config: dict[str, Any],
-    targeted_only: bool,
+    selection_source: str,
     runs: list[dict[str, Any]],
 ) -> None:
     run.manifest["quant_strategies"] = {
@@ -272,7 +334,7 @@ def _record_manifest_summary(
         "enabled": [str(strategy["name"]) for strategy in enabled],
         "disabled": disabled,
         "selection_policy": {
-            "source": "targeted_params" if targeted_only else "configured_strategy_view_matrix",
+            "source": selection_source,
             "unmatched_target_combinations_embedded": False,
         },
         "backtest_diagnostics_enabled": any(

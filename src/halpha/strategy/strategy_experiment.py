@@ -29,6 +29,7 @@ from halpha.strategy.strategy_config import (
     parameter_profile_record,
     resolve_strategy_for_target,
 )
+from halpha.strategy.funding_inputs import funding_cost_input_for_strategy
 from halpha.storage import display_path, ensure_directory, resolve_runtime_path, write_json
 
 
@@ -89,6 +90,8 @@ def build_strategy_experiment(
         strategies=strategies,
         benchmarks=benchmark_suite["benchmarks"],
         storage_dir=storage_dir,
+        config_path=run.config_path,
+        walk_forward_policy=_walk_forward_policy_from_config(config),
         targeted_only=targeted_only,
     )
     coverage = _coverage(candidates, benchmark_suite)
@@ -195,6 +198,8 @@ def run_strategy_experiment(
         strategies=strategies,
         benchmarks=benchmark_suite["benchmarks"],
         storage_dir=storage_dir,
+        config_path=config_path,
+        walk_forward_policy=_walk_forward_policy_from_config(config),
         targeted_only=targeted_only,
     )
     coverage = _coverage(candidates, benchmark_suite)
@@ -477,6 +482,8 @@ def _candidate_records(
     strategies: list[dict[str, Any]],
     benchmarks: list[dict[str, Any]],
     storage_dir: Path,
+    config_path: Path,
+    walk_forward_policy: dict[str, Any] | None,
     targeted_only: bool,
 ) -> list[dict[str, Any]]:
     records = []
@@ -489,6 +496,8 @@ def _candidate_records(
                 strategy=strategy,
                 benchmarks=strategy_benchmarks,
                 storage_dir=storage_dir,
+                config_path=config_path,
+                walk_forward_policy=walk_forward_policy,
             )
         )
     return records
@@ -519,6 +528,8 @@ def _candidate_record(
     strategy: dict[str, Any],
     benchmarks: list[dict[str, Any]],
     storage_dir: Path,
+    config_path: Path,
+    walk_forward_policy: dict[str, Any] | None,
 ) -> dict[str, Any]:
     name = str(strategy.get("name"))
     definition = get_strategy_definition(name)
@@ -543,6 +554,8 @@ def _candidate_record(
             strategy=strategy,
             benchmark=benchmark,
             storage_dir=storage_dir,
+            config_path=config_path,
+            walk_forward_policy=walk_forward_policy,
             definition=definition,
         )
         for benchmark in benchmarks
@@ -576,6 +589,8 @@ def _evaluation_record(
     strategy: dict[str, Any],
     benchmark: dict[str, Any],
     storage_dir: Path,
+    config_path: Path,
+    walk_forward_policy: dict[str, Any] | None,
     definition: Any,
 ) -> dict[str, Any]:
     effective_strategy = resolve_strategy_for_target(
@@ -614,28 +629,33 @@ def _evaluation_record(
                 benchmark,
                 f"Loaded {len(rows)} rows, expected benchmark row_count {benchmark.get('row_count')}.",
             )
+        market_identity = {
+            "source": benchmark.get("source"),
+            "symbol": benchmark.get("symbol"),
+            "timeframe": benchmark.get("timeframe"),
+        }
+        funding_costs = funding_cost_input_for_strategy(
+            config_path,
+            market_identity=market_identity,
+            ohlcv_rows=rows,
+        )
         signals = definition.signal_records(effective_strategy, _view_from_benchmark(benchmark), rows)
         evaluation = evaluate_single_window_backtest(
             strategy=effective_strategy,
-            market_identity={
-                "source": benchmark.get("source"),
-                "symbol": benchmark.get("symbol"),
-                "timeframe": benchmark.get("timeframe"),
-            },
+            market_identity=market_identity,
             ohlcv_rows=rows,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(effective_strategy),
+            funding_costs=funding_costs,
         )
         walk_forward = evaluate_walk_forward_backtest(
             strategy=effective_strategy,
-            market_identity={
-                "source": benchmark.get("source"),
-                "symbol": benchmark.get("symbol"),
-                "timeframe": benchmark.get("timeframe"),
-            },
+            market_identity=market_identity,
             ohlcv_rows=rows,
             signal_records=signals,
             cost_assumptions=_cost_assumptions(effective_strategy),
+            funding_costs=funding_costs,
+            window_policy=walk_forward_policy,
         )
     except (OHLCVQueryError, KeyError, TypeError, ValueError) as exc:
         return _failed_record(identity, type(exc).__name__, str(exc))
@@ -951,6 +971,14 @@ def _cost_assumptions(strategy: dict[str, Any]) -> dict[str, Any]:
         "fees_bps": backtest.get("fees_bps", 0.0),
         "slippage_bps": backtest.get("slippage_bps", 0.0),
     }
+
+
+def _walk_forward_policy_from_config(config: dict[str, Any]) -> dict[str, Any] | None:
+    quant = config.get("quant") if isinstance(config.get("quant"), dict) else {}
+    value = quant.get("walk_forward_policy")
+    if isinstance(value, dict):
+        return value
+    return None
 
 
 def _storage_dir(ohlcv: dict[str, Any], config_path: Path) -> Path:

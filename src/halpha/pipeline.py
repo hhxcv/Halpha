@@ -45,6 +45,9 @@ from halpha.time_display import display_run_id
 
 LOGGER = logging.getLogger(__name__)
 RUN_LOCAL_ARTIFACT_PREFIXES = ("raw/", "analysis/", "codex_context/", "report/")
+REPORT_FAILURE_ARTIFACT = "report/report.md"
+REPORT_FAILURE_DETAIL_ARTIFACT = "report/report_failure.json"
+REPORT_FAILURE_STATUSES = {"not_started", "not_run"}
 
 
 def run_pipeline(
@@ -150,6 +153,16 @@ def _run_pipeline_unlocked(
                 "task_count": len(_tasks_for_stage(stage)),
             },
         )
+        core_failure = _report_core_requirement_failure(config, run, completed_stage=stage)
+        if core_failure is not None:
+            finished_at = _utc_timestamp(clock())
+            return _fail_report_core_requirement(
+                config,
+                run,
+                core_failure,
+                finished_at=finished_at,
+                clock=clock,
+            )
         if stage == until_stage:
             _record_not_run_stages(
                 run,
@@ -1056,6 +1069,16 @@ def _run_stage_handler(
             _refresh_stage_record(parent_stage_record)
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
+        _record_report_failure_artifacts(
+            config,
+            run,
+            error=error,
+            reason=reason,
+            failed_stage=failed_stage,
+            finished_at=finished_at,
+            stage=stage,
+            parent_stage_record=parent_stage_record,
+        )
         _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
         LOGGER.error(
             "Pipeline stage failed.",
@@ -1085,6 +1108,16 @@ def _run_stage_handler(
             _refresh_stage_record(parent_stage_record)
         _set_codex_status(run, stage=stage, status="failed")
         _record_stage_failure_context(config, run, stage=stage, error=error)
+        _record_report_failure_artifacts(
+            config,
+            run,
+            error=error,
+            reason=reason,
+            failed_stage=stage,
+            finished_at=finished_at,
+            stage=stage,
+            parent_stage_record=parent_stage_record,
+        )
         _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
         LOGGER.error(
             "Pipeline stage failed.",
@@ -1145,6 +1178,328 @@ def _task_dependencies(task: str) -> list[str]:
     if operation is None:
         return []
     return list(operation.dependencies)
+
+
+def _report_core_requirement_failure(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    completed_stage: str,
+) -> dict[str, Any] | None:
+    if not _should_enforce_report_core_requirements(config, run):
+        return None
+    if completed_stage == "build_source_evidence" and _market_data_views_required(config):
+        succeeded_views = _succeeded_market_data_views(run)
+        if succeeded_views <= 0:
+            return {
+                "stage": "build_market_data_views",
+                "requirement": "latest_market_data",
+                "message": (
+                    "report core requirement failed: no succeeded latest OHLCV market data views were recorded; "
+                    "Codex report generation was skipped."
+                ),
+            }
+    if completed_stage == "run_strategy_research":
+        quant = config.get("quant")
+        if not isinstance(quant, dict) or quant.get("enabled") is not True:
+            return {
+                "stage": "evaluate_quant_strategies",
+                "requirement": "quant_strategy_run",
+                "message": (
+                    "report core requirement failed: quant strategy evaluation is not enabled; "
+                    "Codex report generation was skipped."
+                ),
+            }
+        succeeded_runs = _succeeded_quant_strategy_runs(run)
+        if succeeded_runs <= 0:
+            return {
+                "stage": "evaluate_quant_strategies",
+                "requirement": "quant_strategy_run",
+                "message": (
+                    "report core requirement failed: no successful quant strategy runs were recorded; "
+                    "Codex report generation was skipped."
+                ),
+            }
+    return None
+
+
+def _fail_report_core_requirement(
+    config: dict[str, Any],
+    run: RunContext,
+    failure: dict[str, Any],
+    *,
+    finished_at: str,
+    clock: Callable[[], datetime],
+) -> RunResult:
+    failed_stage = str(failure["stage"])
+    reason = str(failure["message"])
+    error = _error_summary(
+        failed_stage,
+        reason,
+        details={"requirement": str(failure["requirement"])},
+    )
+    _mark_record_failed_for_task(run, task_name=failed_stage, error=error, finished_at=finished_at)
+    product_stage = TASK_STAGE_MAP.get(failed_stage)
+    if product_stage in STAGE_ORDER:
+        _record_not_run_stages(run, _stages_after(str(product_stage)), reason=reason)
+    _mark_codex_skipped(run, reason=reason)
+    _write_report_failure_artifacts(
+        config,
+        run,
+        error=error,
+        reason=reason,
+        failed_stage=failed_stage,
+        finished_at=finished_at,
+    )
+    _finish_manifest(config, run, status="failed", error=error, finished_at=finished_at, clock=clock)
+    LOGGER.error(
+        "Pipeline report core requirement failed.",
+        extra={
+            "event": "pipeline.report_core_requirement.failed",
+            "run_id": run.run_id,
+            "stage": failed_stage,
+            "requirement": failure["requirement"],
+            "reason": reason,
+        },
+    )
+    return RunResult(False, run, 3, failed_stage, reason)
+
+
+def _record_report_failure_artifacts(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    error: dict[str, Any],
+    reason: str,
+    failed_stage: str,
+    finished_at: str,
+    stage: str,
+    parent_stage_record: dict[str, Any] | None,
+) -> None:
+    if not _should_write_report_failure(config, run):
+        return
+    product_stage = _product_stage_for_failure(stage, parent_stage_record)
+    if product_stage in STAGE_ORDER:
+        _record_not_run_stages(run, _stages_after(str(product_stage)), reason=reason)
+    if _codex_can_be_skipped_after_failure(run, failed_stage=failed_stage):
+        _mark_codex_skipped(run, reason=reason)
+    _write_report_failure_artifacts(
+        config,
+        run,
+        error=error,
+        reason=reason,
+        failed_stage=failed_stage,
+        finished_at=finished_at,
+    )
+
+
+def _should_enforce_report_core_requirements(config: dict[str, Any], run: RunContext) -> bool:
+    if not _is_report_archive_run(run):
+        return False
+    quant = config.get("quant")
+    market = config.get("market")
+    return (
+        isinstance(quant, dict)
+        and quant.get("enabled") is True
+        and isinstance(market, dict)
+        and market.get("enabled") is True
+    )
+
+
+def _should_write_report_failure(config: dict[str, Any], run: RunContext) -> bool:
+    if not _is_report_archive_run(run):
+        return False
+    market = config.get("market")
+    quant = config.get("quant")
+    return (
+        isinstance(market, dict)
+        and market.get("enabled") is True
+        or isinstance(quant, dict)
+        and quant.get("enabled") is True
+    )
+
+
+def _is_report_archive_run(run: RunContext) -> bool:
+    return str(run.manifest.get("disposal_class") or "") == "report_archive"
+
+
+def _market_data_views_required(config: dict[str, Any]) -> bool:
+    market = config.get("market")
+    return isinstance(market, dict) and isinstance(market.get("ohlcv"), dict)
+
+
+def _succeeded_market_data_views(run: RunContext) -> int:
+    artifact = run.raw_dir / "market_data_views.json"
+    try:
+        data = json.loads(artifact.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return 0
+    views = data.get("views") if isinstance(data, dict) else None
+    if not isinstance(views, list):
+        return 0
+    return sum(1 for view in views if isinstance(view, dict) and view.get("status") == "succeeded")
+
+
+def _succeeded_quant_strategy_runs(run: RunContext) -> int:
+    counts = run.manifest.get("counts")
+    if isinstance(counts, dict):
+        value = counts.get("quant_strategy_runs_succeeded")
+        if isinstance(value, int):
+            return value
+    artifact = run.analysis_dir / "quant_strategy_runs.json"
+    try:
+        data = json.loads(artifact.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return 0
+    records = data.get("runs") if isinstance(data, dict) else None
+    if not isinstance(records, list):
+        return 0
+    return sum(1 for record in records if isinstance(record, dict) and record.get("status") == "succeeded")
+
+
+def _product_stage_for_failure(stage: str, parent_stage_record: dict[str, Any] | None) -> str | None:
+    parent = parent_stage_record.get("name") if isinstance(parent_stage_record, dict) else None
+    if isinstance(parent, str) and parent in STAGE_ORDER:
+        return parent
+    if stage in STAGE_ORDER:
+        return stage
+    return TASK_STAGE_MAP.get(stage)
+
+
+def _mark_record_failed_for_task(
+    run: RunContext,
+    *,
+    task_name: str,
+    error: dict[str, Any],
+    finished_at: str,
+) -> None:
+    product_stage = TASK_STAGE_MAP.get(task_name)
+    for stage_record in run.manifest.get("stages", []):
+        if not isinstance(stage_record, dict):
+            continue
+        if product_stage and stage_record.get("name") != product_stage:
+            continue
+        for task_record in stage_record.get("tasks", []):
+            if isinstance(task_record, dict) and task_record.get("name") == task_name:
+                task_record["status"] = "failed"
+                task_record["finished_at"] = finished_at
+                task_record["error"] = error
+                task_record["errors"] = [error]
+                stage_record["status"] = "failed"
+                stage_record["finished_at"] = finished_at
+                stage_record["error"] = error
+                stage_record["errors"] = [error]
+                _refresh_stage_record(stage_record)
+                return
+
+
+def _codex_can_be_skipped_after_failure(run: RunContext, *, failed_stage: str) -> bool:
+    if failed_stage == "run_codex_report":
+        return False
+    codex = run.manifest.get("codex")
+    if not isinstance(codex, dict):
+        return False
+    return str(codex.get("status") or "") in REPORT_FAILURE_STATUSES
+
+
+def _mark_codex_skipped(run: RunContext, *, reason: str) -> None:
+    codex = run.manifest.get("codex")
+    if not isinstance(codex, dict):
+        return
+    if codex.get("status") in {"failed", "succeeded", "disabled"}:
+        return
+    codex["status"] = "skipped"
+    codex["exit_code"] = None
+    codex["skip_reason"] = reason
+
+
+def _write_report_failure_artifacts(
+    config: dict[str, Any],
+    run: RunContext,
+    *,
+    error: dict[str, Any],
+    reason: str,
+    failed_stage: str,
+    finished_at: str,
+) -> None:
+    detail = {
+        "schema_version": 1,
+        "artifact_type": "report_generation_failure",
+        "run_id": run.run_id,
+        "status": "failed",
+        "failed_stage": failed_stage,
+        "created_at": finished_at,
+        "reason": reason,
+        "error": error,
+        "codex": {
+            "status": run.manifest.get("codex", {}).get("status")
+            if isinstance(run.manifest.get("codex"), dict)
+            else "unknown",
+            "started": _codex_started(run),
+        },
+        "source_artifacts": ["run_manifest.json"],
+        "private_values_embedded": False,
+    }
+    write_json(run.report_dir / "report_failure.json", detail)
+    report_path = run.report_dir / "report.md"
+    if not report_path.exists():
+        report_path.write_text(_report_failure_markdown(detail), encoding="utf-8")
+        run.manifest.setdefault("artifacts", {})["report"] = REPORT_FAILURE_ARTIFACT
+    run.manifest.setdefault("artifacts", {})["report_failure"] = REPORT_FAILURE_DETAIL_ARTIFACT
+    run.manifest["report_generation"] = {
+        "status": "failed",
+        "kind": "exception_record",
+        "artifact": run.manifest.get("artifacts", {}).get("report"),
+        "failure_artifact": REPORT_FAILURE_DETAIL_ARTIFACT,
+        "failed_stage": failed_stage,
+        "codex_started": _codex_started(run),
+        "private_values_embedded": False,
+    }
+
+
+def _codex_started(run: RunContext) -> bool:
+    codex = run.manifest.get("codex")
+    if not isinstance(codex, dict):
+        return False
+    return str(codex.get("status") or "") not in {"", "not_started", "not_run", "skipped", "disabled"}
+
+
+def _report_failure_markdown(detail: dict[str, Any]) -> str:
+    reason = str(detail.get("reason") or "unknown failure")
+    failed_stage = str(detail.get("failed_stage") or "unknown")
+    created_at = str(detail.get("created_at") or "")
+    run_id = str(detail.get("run_id") or "")
+    codex = detail.get("codex") if isinstance(detail.get("codex"), dict) else {}
+    codex_status = str(codex.get("status") or "unknown")
+    codex_started = "true" if codex.get("started") is True else "false"
+    return "\n".join(
+        [
+            "# \u62a5\u544a\u751f\u6210\u5f02\u5e38\u8bb0\u5f55",
+            "",
+            "## \u8fd0\u884c\u72b6\u6001",
+            "",
+            f"- run_id: `{run_id}`",
+            "- status: `failed`",
+            f"- failed_stage: `{failed_stage}`",
+            f"- finished_at: `{created_at}`",
+            f"- codex_status: `{codex_status}`",
+            f"- codex_started: `{codex_started}`",
+            "",
+            "## \u5931\u8d25\u539f\u56e0",
+            "",
+            reason,
+            "",
+            "## \u5904\u7406\u7ed3\u679c",
+            "",
+            (
+                "\u672c\u6b21\u6d41\u7a0b\u672a\u751f\u6210\u5e38\u89c4\u7814\u62a5\u3002"
+                "\u8bf7\u5148\u4fee\u590d\u4e0a\u6e38\u6570\u636e\u91c7\u96c6\u3001"
+                "\u91cf\u5316\u8fd0\u884c\u6216\u62a5\u544a\u751f\u6210\u9519\u8bef\uff0c"
+                "\u518d\u91cd\u65b0\u751f\u6210\u62a5\u544a\u3002"
+            ),
+            "",
+        ]
+    )
 
 
 def _record_stage_failure_context(

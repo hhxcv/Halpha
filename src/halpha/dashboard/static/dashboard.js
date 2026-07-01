@@ -883,6 +883,7 @@
     function renderLiveLoading() {
       setHtml("#live-summary", skeletonCards(6, "summary-cell"));
       setHtml("#live-source-matrix", skeletonCards(6, "live-source-card"));
+      setHtml("#live-intelligence-strip", skeletonCards(6, "live-intel-card"));
       setHtml("#live-intelligence-stream", skeletonList(4));
       setHtml("#live-report-history", skeletonRows(6));
       setHtml("#live-system-runtime", skeletonRows(6));
@@ -1216,7 +1217,11 @@
     }
 
     function reportRecords() {
-      return reportHelpers.reportRecords(state.runs);
+      const records = reportHelpers.reportRecords(state.runs);
+      const jobRecord = reportJobRecord(state.reportJob);
+      if (!jobRecord) return records;
+      const duplicate = records.some((item) => item.run_id === jobRecord.run_id);
+      return duplicate ? records : [jobRecord, ...records];
     }
 
     function renderReportLibrary() {
@@ -1226,7 +1231,7 @@
         ? `<div class="report-library-list">${records.slice(0, 36).map((item) => {
           const generated = item.run_id === state.generatedReportRunId;
           return `
-          <button class="report-row ${state.selectedReport?.run_id === item.run_id ? "active" : ""}" type="button" data-report-run-id="${escapeHtml(item.run_id)}">
+          <button class="report-row ${item.is_job_record ? "job" : ""} ${state.selectedReport?.run_id === item.run_id ? "active" : ""}" type="button" data-report-run-id="${escapeHtml(item.run_id)}">
             <span class="report-row-title"><span class="report-source-chip">${escapeHtml(item.type || "Report")}</span><span class="report-row-name">${escapeHtml(item.title)}${generated ? ` <span class="tag">new</span>` : ""}</span></span>
             <span class="report-row-meta">${escapeHtml(formatTimestamp(item.finished_at || item.started_at))}</span>
           </button>`;
@@ -1237,6 +1242,10 @@
 
     async function selectReport(runId) {
       const run = reportRecords().find((item) => item.run_id === runId) || {run_id: runId};
+      if (run.is_job_record) {
+        await selectReportJob(run);
+        return;
+      }
       state.selectedReport = run;
       state.selectedReportDetail = null;
       state.selectedReportPreview = null;
@@ -1257,6 +1266,37 @@
         || {ref: run.report_path || reportPath(run), path: "report/report.md", title: "Report", category: "report", category_label: "Report", preview_kind: "markdown", pinned: true};
       renderReportSourceFiles();
       await selectReportArtifact(reportArtifact);
+    }
+
+    async function selectReportJob(run) {
+      state.selectedReport = run;
+      state.selectedReportDetail = null;
+      state.selectedReportPreview = null;
+      state.selectedReportArtifact = null;
+      state.selectedReportArtifactPreview = null;
+      renderReportLibrary();
+      document.querySelector("#selected-report-kicker").textContent = `${run.type || "Report"} - ${formatTimestamp(run.finished_at || run.started_at)}`;
+      document.querySelector("#report-details-button").disabled = false;
+      const refs = reportJobRefs(run.job || state.reportJob);
+      if (refs.run_id) {
+        try {
+          state.selectedReportDetail = await fetchJson(`${endpoints.runs}/${encodeURIComponent(refs.run_id)}`);
+        } catch (_error) {
+          state.selectedReportDetail = null;
+        }
+      }
+      renderReportDetails(run, state.selectedReportDetail);
+      renderReportJobSources(run.job || state.reportJob, state.selectedReportDetail);
+      renderReportProgress(run.job || state.reportJob, state.selectedReportDetail);
+    }
+
+    async function refreshSelectedReportJob(job) {
+      if (state.view !== "reports") return;
+      const selectedJobId = state.selectedReport?.job_id || state.selectedReport?.job?.job_id;
+      if (!selectedJobId || selectedJobId !== job?.job_id) return;
+      const record = reportJobRecord(job);
+      if (!record) return;
+      await selectReportJob(record);
     }
 
     function renderReportSourceFiles() {
@@ -1291,6 +1331,146 @@
           if (artifact) selectReportArtifact(artifact);
         });
       });
+    }
+
+    function renderReportJobSources(job, detail) {
+      const target = document.querySelector("#report-source-files");
+      if (!target) return;
+      const refs = [];
+      const jobRefs = reportJobRefs(job);
+      if (jobRefs.run_manifest) refs.push(["Run manifest", jobRefs.run_manifest]);
+      if (jobRefs.report) refs.push(["Report", jobRefs.report]);
+      const logs = job?.logs && typeof job.logs === "object" ? job.logs : {};
+      if (logs.stdout_ref) refs.push(["Stdout log", logs.stdout_ref]);
+      if (logs.stderr_ref) refs.push(["Stderr log", logs.stderr_ref]);
+      (detail?.source_artifacts || []).forEach((ref) => refs.push(["Source", ref]));
+      const uniqueRefs = unique(refs.filter((item) => item[1]).map((item) => `${item[0]}|${item[1]}`))
+        .map((item) => item.split("|"));
+      target.innerHTML = uniqueRefs.length
+        ? `<section class="report-source-group">
+            <h3>Process sources <span>${escapeHtml(String(uniqueRefs.length))}</span></h3>
+            <div class="report-source-group-list">
+              ${uniqueRefs.map(([title, ref]) => `
+                <div class="report-source-row readonly">
+                  <span class="report-source-row-main">
+                    <span class="report-source-row-title">${escapeHtml(title)}</span>
+                    <span class="report-source-row-path">${escapeHtml(ref)}</span>
+                  </span>
+                </div>`).join("")}
+            </div>
+          </section>`
+        : `<div class="message">Process artifacts will appear as soon as the run writes them.</div>`;
+    }
+
+    function renderReportProgress(job, detail) {
+      const target = document.querySelector("#report-reader");
+      if (!target) return;
+      const status = String(job?.status || detail?.fields?.status || "queued").toLowerCase();
+      const stages = Array.isArray(detail?.stages) ? detail.stages : [];
+      const percent = reportProgressPercent(status, stages);
+      const milestones = reportMilestones(stages, status);
+      const logs = reportProgressLogs(job, detail);
+      target.innerHTML = `
+        <section class="report-progress">
+          <div class="report-progress-head">
+            <div>
+              <span class="eyebrow">Report process</span>
+              <h2>${escapeHtml(label(status || "queued"))}</h2>
+            </div>
+            ${statusPill(status || "queued")}
+          </div>
+          <div class="report-progress-meter" aria-label="Report generation progress">
+            <span style="width: ${Math.max(0, Math.min(100, percent))}%"></span>
+          </div>
+          <div class="report-progress-meta">${escapeHtml(String(Math.round(percent)))}% complete</div>
+          <div class="report-milestone-list">
+            ${milestones.map((item) => `
+              <div class="report-milestone ${escapeHtml(statusClass(item.status))}">
+                <span class="report-milestone-dot"></span>
+                <span class="report-milestone-main">
+                  <span class="report-milestone-title">${escapeHtml(item.label)}</span>
+                  <span class="report-milestone-detail">${escapeHtml(item.detail)}</span>
+                </span>
+              </div>`).join("")}
+          </div>
+          <section class="report-log-panel">
+            <h3>Live log</h3>
+            <div class="report-log-stream">
+              ${logs.length ? logs.slice(-80).map((line) => `<div>${escapeHtml(line)}</div>`).join("") : `<div>Waiting for the run manifest.</div>`}
+            </div>
+          </section>
+        </section>
+      `;
+      renderOutline([]);
+    }
+
+    function reportProgressPercent(status, stages) {
+      if (status === "succeeded") return 100;
+      if (status === "failed" || status === "cancelled" || status === "blocked") {
+        return stages.length ? 100 : 0;
+      }
+      if (!stages.length) return 5;
+      const total = reportStageLabels().length;
+      let score = 0;
+      stages.forEach((stage) => {
+        const stageStatus = String(stage.status || "").toLowerCase();
+        if (stageStatus === "succeeded" || stageStatus === "skipped" || stageStatus === "not_run") score += 1;
+        else if (stageStatus === "running") score += 0.5;
+        else if (stageStatus === "failed") score += 1;
+      });
+      return Math.min(95, (score / total) * 100);
+    }
+
+    function reportMilestones(stages, jobStatus) {
+      const byName = new Map((Array.isArray(stages) ? stages : []).map((stage) => [stage.name, stage]));
+      return reportStageLabels().map((item) => {
+        const stage = byName.get(item.name);
+        const status = String(stage?.status || (reportJobIsActive({status: jobStatus}) ? "queued" : jobStatus || "queued")).toLowerCase();
+        const activeTask = (stage?.tasks || []).find((task) => String(task.status || "").toLowerCase() === "running");
+        const failedTask = (stage?.tasks || []).find((task) => String(task.status || "").toLowerCase() === "failed");
+        const task = activeTask || failedTask;
+        const detail = task
+          ? `${label(task.status || status)}: ${task.name}`
+          : stage?.reason
+          ? stage.reason
+          : stage?.finished_at
+          ? formatTimestamp(stage.finished_at)
+          : stage?.started_at
+          ? formatTimestamp(stage.started_at)
+          : "Waiting";
+        return {label: item.label, status, detail};
+      });
+    }
+
+    function reportStageLabels() {
+      return [
+        {name: "refresh_data", label: "Latest data"},
+        {name: "build_source_evidence", label: "Source evidence"},
+        {name: "run_strategy_research", label: "Quant strategy run"},
+        {name: "synthesize_intelligence", label: "Intelligence synthesis"},
+        {name: "build_materials", label: "Report materials"},
+        {name: "generate_report", label: "Codex report"},
+        {name: "finalize_run", label: "Finalize"},
+      ];
+    }
+
+    function reportProgressLogs(job, detail) {
+      const lines = [];
+      if (job?.created_at) lines.push(`${formatTimestamp(job.created_at)} job ${job.job_id || "pending"} created`);
+      if (job?.started_at) lines.push(`${formatTimestamp(job.started_at)} job started`);
+      (detail?.stages || []).forEach((stage) => {
+        if (stage.started_at) lines.push(`${formatTimestamp(stage.started_at)} stage ${stage.name} ${stage.status || "started"}`);
+        (stage.tasks || []).forEach((task) => {
+          if (task.started_at) lines.push(`${formatTimestamp(task.started_at)} task ${task.name} ${task.status || "started"}`);
+          if (task.error?.message) lines.push(`${formatTimestamp(task.finished_at || stage.finished_at)} error ${task.name}: ${task.error.message}`);
+          if (task.reason) lines.push(`${formatTimestamp(task.finished_at || stage.finished_at)} ${task.name}: ${task.reason}`);
+        });
+        if (stage.error?.message) lines.push(`${formatTimestamp(stage.finished_at)} error ${stage.name}: ${stage.error.message}`);
+      });
+      (job?.warnings || []).forEach((warning) => lines.push(`warning: ${warning}`));
+      (job?.errors || []).forEach((error) => lines.push(`error: ${error}`));
+      if (job?.finished_at) lines.push(`${formatTimestamp(job.finished_at)} job ${job.status || "finished"}`);
+      return lines.filter(Boolean);
     }
 
     function reportSourceButton(file, selectedRef, options = {}) {
@@ -5698,6 +5878,27 @@
       return reportJobs.find((job) => reportJobIsActive(job)) || null;
     }
 
+    function reportJobRecord(job) {
+      if (!reportJobShouldRender(job)) return null;
+      const refs = reportJobRefs(job);
+      const status = String(job.status || "created").toLowerCase();
+      const runId = refs.run_id || `job:${job.job_id || "pending"}`;
+      const failed = terminalJobStatus(status) && status !== "succeeded";
+      return {
+        run_id: runId,
+        job_id: job.job_id || "pending",
+        is_job_record: true,
+        job,
+        type: failed ? "Failed" : "Running",
+        title: failed ? "Report Exception Record" : "Generating Report",
+        status,
+        started_at: job.started_at || job.created_at,
+        finished_at: job.finished_at,
+        report_path: refs.report || "",
+        manifest: refs.run_manifest || refs.manifest || "",
+      };
+    }
+
     function reportJobRefs(job) {
       return job?.result_refs && typeof job.result_refs === "object" ? job.result_refs : {};
     }
@@ -5790,10 +5991,18 @@
       };
       state.reportJob = pending;
       renderReportJob(pending);
+      if (state.view === "reports") {
+        renderReportLibrary();
+        await selectReportJob(reportJobRecord(pending));
+      }
       try {
         const job = await postJob("run", {confirm_codex: true});
         state.reportJob = job;
         renderReportJob(job);
+        if (state.view === "reports") {
+          renderReportLibrary();
+          await selectReportJob(reportJobRecord(job));
+        }
         if (job.job_id) {
           pollReportJob(job.job_id);
         }
@@ -5804,6 +6013,10 @@
           errors: [error.message],
         };
         renderReportJob(state.reportJob);
+        if (state.view === "reports") {
+          renderReportLibrary();
+          await selectReportJob(reportJobRecord(state.reportJob));
+        }
         showToast(`Report generation failed: ${error.message}`);
       }
     }
@@ -5815,6 +6028,7 @@
           const job = await fetchJob(jobId);
           state.reportJob = job;
           renderReportJob(job);
+          await refreshSelectedReportJob(job);
           if (terminalJobStatus(job.status)) {
             await Promise.allSettled([loadRuns(), loadJobs()]);
             renderReportJob(job);
@@ -5845,6 +6059,7 @@
             warnings: [],
           };
           renderReportJob(state.reportJob);
+          await refreshSelectedReportJob(state.reportJob);
           return;
         }
       }

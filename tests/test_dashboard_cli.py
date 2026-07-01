@@ -10,7 +10,7 @@ from halpha.cli import main
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app, dashboard_display_timezone, dashboard_health
 from halpha.dashboard.app import write_dashboard_selected_config_state
-from halpha.dashboard.runs import dashboard_runs
+from halpha.dashboard.runs import dashboard_run_detail, dashboard_runs
 from halpha.dashboard.state import read_dashboard_config_history, read_dashboard_selected_config_state
 from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
@@ -1025,6 +1025,22 @@ def test_dashboard_runs_includes_report_runs_outside_latest_window(tmp_path: Pat
     report = next(run for run in payload["runs"] if run["run_id"] == "run-report")
     assert report["report"] == "report/report.md"
     assert report["report_state"] == {"status": "available", "artifact": "report/report.md"}
+
+
+def test_dashboard_run_detail_reads_active_manifest_before_index_exists(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    run = _write_run(tmp_path, config_path, run_id="active-run")
+    (run.report_dir / "report.md").write_text("# Report\n", encoding="utf-8")
+    assert not run_index_path(config_path).exists()
+
+    detail = dashboard_run_detail(config_path, run_id="active-run")
+
+    assert detail["status"] == "available"
+    assert detail["run_id"] == "active-run"
+    assert detail["fields"]["status"] == "succeeded"
+    assert detail["fields"]["manifest"] == "runs/active-run/run_manifest.json"
+    assert detail["fields"]["report"] == "report/report.md"
+    assert detail["stages"][0]["name"] == "collect_market_data"
 
 
 def test_dashboard_runs_endpoint_omits_missing_report_refs(tmp_path: Path) -> None:

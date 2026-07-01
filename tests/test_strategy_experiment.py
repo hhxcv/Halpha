@@ -194,6 +194,53 @@ def test_cli_experiment_uses_only_targeted_strategy_candidates(
     )
 
 
+def test_cli_experiment_applies_configured_walk_forward_policy(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config_path = _write_config(tmp_path, symbols=["BTCUSDT"], lookback=5)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "  parameter_diagnostics:",
+            (
+                "  walk_forward_policy:\n"
+                "    calibration_rows: 1\n"
+                "    window_rows: 2\n"
+                "    min_window_rows: 2\n"
+                "    min_windows: 1\n"
+                "  parameter_diagnostics:"
+            ),
+        ),
+        encoding="utf-8",
+    )
+    store = OHLCVParquetStore(tmp_path / "data" / "market" / "ohlcv")
+    store.write_records(
+        [
+            _record(symbol="BTCUSDT", open_time="2026-06-01T00:00:00Z", close=100),
+            _record(symbol="BTCUSDT", open_time="2026-06-02T00:00:00Z", close=102),
+            _record(symbol="BTCUSDT", open_time="2026-06-03T00:00:00Z", close=104),
+            _record(symbol="BTCUSDT", open_time="2026-06-04T00:00:00Z", close=106),
+            _record(symbol="BTCUSDT", open_time="2026-06-05T00:00:00Z", close=108),
+        ]
+    )
+    output_dir = tmp_path / "experiments"
+
+    exit_code = main(["experiment", "--config", str(config_path), "--output-dir", str(output_dir)])
+    capsys.readouterr()
+
+    experiment = json.loads((next(output_dir.iterdir()) / "strategy_experiment.json").read_text(encoding="utf-8"))
+    walk_forward = experiment["candidates"][0]["evaluations"][0]["walk_forward"]
+
+    assert exit_code == 0
+    assert walk_forward["window_policy"] == {
+        "calibration_rows": 1,
+        "window_rows": 2,
+        "min_window_rows": 2,
+        "min_windows": 1,
+    }
+    assert walk_forward["window_count"] == 2
+
+
 def test_cli_experiment_records_failed_evaluation_without_stopping(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

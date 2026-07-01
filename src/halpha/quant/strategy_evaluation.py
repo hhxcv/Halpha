@@ -54,7 +54,8 @@ def evaluate_single_window_backtest(
         costs = _cost_assumptions(cost_assumptions)
         records = _signal_record_list(signal_records)
         signed_exposure = _uses_signed_target_exposure(signal_records, records)
-        funding = _funding_cost_input(funding_costs, signed=signed_exposure)
+        contract_exposure = _contract_identity(market_identity) is not None
+        funding = _funding_cost_input(funding_costs, signed=signed_exposure or contract_exposure)
         model = _execution_model(execution_model, signed=signed_exposure)
         if len(rows) < 2:
             return _insufficient_record(
@@ -179,10 +180,12 @@ def evaluate_walk_forward_backtest(
     signal_records: dict[str, Any] | list[dict[str, Any]],
     cost_assumptions: dict[str, Any] | None = None,
     execution_model: dict[str, Any] | None = None,
+    funding_costs: dict[str, Any] | None = None,
     window_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     costs = _cost_assumptions(None)
     model = _execution_model(execution_model)
+    funding = None
     rows = _sorted_rows(ohlcv_rows)
     sample = _sample(rows)
     policy = _walk_forward_policy(window_policy)
@@ -191,6 +194,8 @@ def evaluate_walk_forward_backtest(
         costs = _cost_assumptions(cost_assumptions)
         records = _signal_record_list(signal_records)
         signed_exposure = _uses_signed_target_exposure(signal_records, records)
+        contract_exposure = _contract_identity(market_identity) is not None
+        funding = _funding_cost_input(funding_costs, signed=signed_exposure or contract_exposure)
         model = _execution_model(execution_model, signed=signed_exposure)
         if len(rows) < 2:
             return _walk_forward_record(
@@ -284,6 +289,7 @@ def evaluate_walk_forward_backtest(
                 window=window_item,
                 costs=costs,
                 model=model,
+                funding_costs=_window_funding_costs(funding, rows[window_item["start_index"] : window_item["end_index"]]),
             )
             for window_item in _walk_forward_windows(rows, policy)
         ]
@@ -777,6 +783,7 @@ def _walk_forward_window_record(
     window: dict[str, int],
     costs: dict[str, float],
     model: dict[str, str],
+    funding_costs: dict[str, Any] | None,
 ) -> dict[str, Any]:
     start = window["start_index"]
     end = window["end_index"]
@@ -789,6 +796,7 @@ def _walk_forward_window_record(
         signal_records=window_signals,
         cost_assumptions=costs,
         execution_model=model,
+        funding_costs=funding_costs,
     )
     return {
         "window_index": window["window_index"],
@@ -1482,6 +1490,40 @@ def _funding_by_period(funding: dict[str, Any] | None) -> dict[str, dict[str, An
         str(item["period_end"]): item
         for item in _dict_list(funding.get("periods"))
         if isinstance(item.get("period_end"), str)
+    }
+
+
+def _window_funding_costs(funding: dict[str, Any] | None, rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if funding is None:
+        return None
+    period_ends = {_open_time(row) for row in rows[1:]}
+    periods = [
+        item
+        for item in _dict_list(funding.get("periods"))
+        if isinstance(item.get("period_end"), str) and item["period_end"] in period_ends
+    ]
+    matched_record_count = sum(int(item.get("matched_record_count") or 0) for item in periods)
+    missing_period_count = sum(
+        max(0, int(item.get("expected_record_count") or 0) - int(item.get("matched_record_count") or 0))
+        for item in periods
+    )
+    expected_record_count = sum(int(item.get("expected_record_count") or 0) for item in periods)
+    if not periods:
+        status = "unavailable"
+    elif matched_record_count > 0 and missing_period_count == 0:
+        status = "available"
+    elif matched_record_count > 0:
+        status = "partial"
+    else:
+        status = "unavailable"
+    return {
+        **funding,
+        "status": status,
+        "period_count": len(periods),
+        "expected_record_count": expected_record_count,
+        "matched_record_count": matched_record_count,
+        "missing_period_count": missing_period_count,
+        "periods": periods,
     }
 
 

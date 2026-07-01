@@ -145,6 +145,12 @@ SUPPORTED_EFFECTIVENESS_GATE_FIELDS = {
     "require_parameter_stability",
     "require_walk_forward_stable",
 }
+SUPPORTED_WALK_FORWARD_POLICY_FIELDS = {
+    "calibration_rows",
+    "min_window_rows",
+    "min_windows",
+    "window_rows",
+}
 SUPPORTED_LIFECYCLE_POLICY_FIELDS = {"records"}
 SUPPORTED_LIFECYCLE_POLICY_RECORD_FIELDS = {
     "action",
@@ -682,6 +688,13 @@ def _require_positive_int(data: dict[str, Any], key: str, path: str) -> int:
     return value
 
 
+def _require_non_negative_int(data: dict[str, Any], key: str, path: str) -> int:
+    value = data.get(key)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ConfigError(f"{path} must be a non-negative integer.")
+    return value
+
+
 def _require_positive_number(data: dict[str, Any], key: str, path: str) -> float:
     value = data.get(key)
     if (
@@ -1021,6 +1034,11 @@ def _validate_quant_config(quant: dict[str, Any]) -> None:
         if not isinstance(gates, dict):
             raise ConfigError("quant.effectiveness_gates must be a mapping.")
         _validate_quant_effectiveness_gates(gates, "quant.effectiveness_gates")
+    if "walk_forward_policy" in quant:
+        policy = quant["walk_forward_policy"]
+        if not isinstance(policy, dict):
+            raise ConfigError("quant.walk_forward_policy must be a mapping.")
+        _validate_quant_walk_forward_policy(policy, "quant.walk_forward_policy")
     if "lifecycle_policy" in quant:
         policy = quant["lifecycle_policy"]
         if not isinstance(policy, dict):
@@ -1440,6 +1458,24 @@ def _validate_quant_effectiveness_gates(gates: dict[str, Any], path: str) -> Non
         _require_non_negative_number(gates, key, f"{path}.{key}")
     for key in sorted(bool_fields & set(gates)):
         _require_bool(gates, key, f"{path}.{key}")
+
+
+def _validate_quant_walk_forward_policy(policy: dict[str, Any], path: str) -> None:
+    _reject_unsupported_fields(
+        policy,
+        path=path,
+        supported_fields=SUPPORTED_WALK_FORWARD_POLICY_FIELDS,
+    )
+    if "calibration_rows" in policy:
+        _require_non_negative_int(policy, "calibration_rows", f"{path}.calibration_rows")
+    for key in ("window_rows", "min_window_rows", "min_windows"):
+        if key in policy:
+            _require_positive_int(policy, key, f"{path}.{key}")
+    if "window_rows" in policy and "min_window_rows" in policy:
+        window_rows = int(policy["window_rows"])
+        min_window_rows = int(policy["min_window_rows"])
+        if min_window_rows > window_rows:
+            raise ConfigError(f"{path}.min_window_rows must be less than or equal to {path}.window_rows.")
 
 
 def _validate_quant_lifecycle_policy(policy: dict[str, Any], path: str) -> None:

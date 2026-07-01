@@ -1093,6 +1093,10 @@ Validation contract:
 - Parameter grid field values must be non-empty lists, and each item must pass the same scalar type and value checks as strategy params.
 - The product of grid value counts for each configured strategy must be less than or equal to `quant.parameter_diagnostics.max_combinations`.
 - Parameter diagnostics may record runtime-invalid combinations, such as combinations with insufficient input data, without failing the whole strategy run.
+- `quant.walk_forward_policy` may be omitted. If present, it must be a mapping of fixed-parameter walk-forward window settings used by strategy evaluation summary and strategy experiment artifacts.
+- `quant.walk_forward_policy.calibration_rows` must be a non-negative integer when present.
+- `quant.walk_forward_policy.window_rows`, `quant.walk_forward_policy.min_window_rows`, and `quant.walk_forward_policy.min_windows` must be positive integers when present.
+- `quant.walk_forward_policy.min_window_rows` must be less than or equal to `quant.walk_forward_policy.window_rows`.
 - `quant.effectiveness_gates` may be omitted. If present, it must be a mapping of deterministic gate threshold overrides.
 - `quant.effectiveness_gates` supports only explicit threshold fields for benchmark coverage, performance, baseline comparison, drawdown, cost drag, turnover, funding drag, gross exposure, trade count, sample rows, walk-forward evidence, parameter performance-stability requirement, and overfitting-risk downgrade behavior.
 - Unknown `quant.effectiveness_gates` fields must fail config validation so gate threshold typos are not silently ignored.
