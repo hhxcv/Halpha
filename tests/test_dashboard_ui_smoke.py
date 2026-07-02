@@ -857,14 +857,20 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert 'id="strategy-backtest-back"' in html
     assert 'id="strategy-metrics"' not in html
     assert ".strategy-backtest-board" in css
-    assert ".strategy-backtest-focus" in css
+    assert ".strategy-backtest-focus" not in css
     assert ".strategy-detail-view" in css
     assert ".strategy-profile-card" in css
     assert ".strategy-candidate-card" in css
     assert ".strategy-run-list" in css
     assert ".strategy-run-row" in css
     assert ".strategy-run-toolbar" in css
+    assert ".strategy-run-filter-main" in css
+    assert ".strategy-run-filter-grid" in css
+    assert ".strategy-run-filter-foot" in css
     assert ".strategy-run-load-row" in css
+    assert ".strategy-run-load-button" in css
+    assert ".strategy-run-sort-button" in css
+    assert ".strategy-run-sort-icon" in css
     assert ".strategy-run-sparkline" in css
     assert "strategyRunFilters" in script
     assert "strategyRunSort" in script
@@ -874,18 +880,22 @@ def test_dashboard_strategy_chart_shell_contracts_are_present(tmp_path: Path) ->
     assert "strategy-run-timeframe-filter" in script
     assert "strategy-run-date-from" in script
     assert "strategy-run-date-to" in script
-    assert "strategy-run-sort" in script
+    assert 'id="strategy-run-sort"' not in script
+    assert 'id="strategy-run-page-size"' not in script
+    assert "data-strategy-run-sort" in script
+    assert 'id="strategy-run-search" class="search-input"' in script
     assert "strategy-run-load-more" in script
     assert "filteredBacktestRuns" in script
     assert "sortedBacktestRuns" in script
-    assert "strategyRunSortOptions" in script
+    assert "strategyRunSortColumns" in script
+    assert "nextStrategyRunSort" in script
     assert "renderBacktestRunRow" in script
     assert "backtestRunDuration" in script
     assert "renderBacktestSparkline" in script
     assert "backtestSparklineReturns" in script
     assert "equity_sparkline" in script
     assert "splitSparklineSegments" in script
-    assert "strategyBacktestFocusCells" in script
+    assert "strategyBacktestFocusCells" not in script
     assert ".strategy-profile-summary" in css
     assert ".operation-progress" in css
     assert ".operation-log-latest" in css

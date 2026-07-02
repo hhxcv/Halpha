@@ -138,7 +138,6 @@
       strategyExperimentSelectionInitialized: false,
       strategyRunFilters: {query: "", strategy: "all", timeframe: "all", start: "", end: ""},
       strategyRunSort: "time_desc",
-      strategyRunPageSize: 25,
       strategyRunVisibleCount: 25,
       strategyBacktestDialogOpen: false,
       strategyParamsDrawerOpen: false,
@@ -2006,7 +2005,6 @@
       const node = document.querySelector("#strategy-profile-overview");
       if (!node) return;
       const profiles = strategyProfiles();
-      const outputs = strategyOutputs();
       if (!profiles.length) {
         node.innerHTML = `<div class="empty-state">
           <strong>No strategy profiles are configured.</strong>
@@ -2014,64 +2012,7 @@
         </div>`;
         return;
       }
-      if (!outputs.length) {
-        const tunedCount = profiles.filter((profile) => profile.tuned).length;
-        node.innerHTML = `<section class="strategy-backtest-focus">
-          ${strategyFocusCell("Ready profiles", formatNumber(profiles.length), `${tunedCount} tuned target${tunedCount === 1 ? "" : "s"}`)}
-          ${strategyFocusCell("Latest run", "n/a", "No stored backtest yet")}
-        </section>`;
-        return;
-      }
-      node.innerHTML = `<section class="strategy-backtest-focus">
-        ${strategyBacktestFocusCells(outputs)}
-      </section>`;
-    }
-
-    function strategyBacktestFocusCells(outputs) {
-      const summaries = outputs.map((item) => {
-        const identity = strategyIdentity(item);
-        const numbers = strategyMetricNumbers(item);
-        return {item, identity, numbers};
-      });
-      const bestReturn = bestByMetric(summaries, (item) => item.numbers.totalReturn, "max");
-      const bestSharpe = bestByMetric(summaries, (item) => item.numbers.sharpe, "max");
-      const lowestDrawdown = bestByMetric(
-        summaries,
-        (item) => Number.isFinite(item.numbers.drawdown) ? Math.abs(item.numbers.drawdown) : null,
-        "min",
-      );
-      const latest = summaries
-        .map((item) => ({...item, createdMs: createdTimeMs(item.item)}))
-        .filter((item) => Number.isFinite(item.createdMs))
-        .sort((a, b) => b.createdMs - a.createdMs)[0] || summaries[0];
-      return [
-        strategyFocusCell("Best return", bestReturn ? metricPercent(bestReturn.numbers.totalReturn) : "n/a", strategyFocusNote(bestReturn), bestReturn ? pnlClass(bestReturn.numbers.totalReturn) : ""),
-        strategyFocusCell("Best Sharpe", bestSharpe ? text(bestSharpe.numbers.sharpe) : "n/a", strategyFocusNote(bestSharpe), bestSharpe ? pnlClass(bestSharpe.numbers.sharpe) : ""),
-        strategyFocusCell("Lowest drawdown", lowestDrawdown ? metricPercent(lowestDrawdown.numbers.drawdown) : "n/a", strategyFocusNote(lowestDrawdown), lowestDrawdown ? pnlClass(lowestDrawdown.numbers.drawdown) : ""),
-        strategyFocusCell("Latest run", latest ? formatTimestamp(createdTimeValue(latest.item)) : "n/a", strategyFocusNote(latest)),
-      ].join("");
-    }
-
-    function strategyFocusCell(labelText, value, note = "", valueClass = "") {
-      return `<div class="strategy-focus-cell">
-        <span class="strategy-focus-label">${escapeHtml(labelText)}</span>
-        <strong class="${escapeHtml(valueClass)}">${escapeHtml(value)}</strong>
-        ${note ? `<span class="strategy-focus-note">${escapeHtml(note)}</span>` : ""}
-      </div>`;
-    }
-
-    function strategyFocusNote(summary) {
-      if (!summary) return "";
-      return [summary.identity.symbol, summary.identity.timeframe, summary.identity.name].filter(Boolean).join(" / ");
-    }
-
-    function bestByMetric(items, getValue, direction) {
-      const rows = items
-        .map((item) => ({item, value: getValue(item)}))
-        .filter((row) => Number.isFinite(row.value));
-      if (!rows.length) return null;
-      rows.sort((a, b) => direction === "min" ? a.value - b.value : b.value - a.value);
-      return rows[0].item;
+      node.innerHTML = "";
     }
 
     function createdTimeValue(item) {
@@ -3396,16 +3337,7 @@
                 </div>
               </div>
               <div class="strategy-run-list" role="list">
-                <div class="strategy-run-list-head" aria-hidden="true">
-                  <span>Strategy</span>
-                  <span>Timeframe</span>
-                  <span>Window</span>
-                  <span>Return</span>
-                  <span>Drawdown</span>
-                  <span>Sharpe</span>
-                  <span>Trades</span>
-                  <span>Equity</span>
-                </div>
+                ${renderBacktestRunListHead()}
                 ${runs.map((run) => renderBacktestRunRow(run)).join("")}
               </div>
           </section>`).join("");
@@ -3413,7 +3345,7 @@
           board.innerHTML = `
             ${renderBacktestRunControls(indexedRuns, filteredRuns.length, visibleRuns.length)}
             ${groupMarkup || `<div class="empty-state"><strong>No matching backtest runs.</strong><span>Adjust filters or date range to review stored evaluations.</span></div>`}
-            ${remaining ? `<div class="strategy-run-load-row"><button class="secondary-button" type="button" id="strategy-run-load-more">Load ${escapeHtml(Math.min(pageSize, remaining))} more</button><span>${escapeHtml(`${remaining} remaining`)}</span></div>` : ""}`;
+            ${remaining ? `<div class="strategy-run-load-row"><button class="ghost-button compact-button strategy-run-load-button" type="button" id="strategy-run-load-more">Load ${escapeHtml(Math.min(pageSize, remaining))} more</button><span class="strategy-run-load-note">${escapeHtml(`${remaining} remaining`)}</span></div>` : ""}`;
         }
       }
       wireBacktestRunControls(outputs);
@@ -3431,46 +3363,40 @@
       const summary = `${visibleCount} shown / ${filteredCount} matching / ${runs.length} total`;
       return `
         <section class="strategy-run-toolbar" aria-label="Backtest run filters">
-          <div class="field strategy-run-search-field">
-            <label for="strategy-run-search">Search</label>
-            <input id="strategy-run-search" class="text-input" type="search" value="${escapeHtml(filters.query)}" placeholder="Strategy, symbol, timeframe">
+          <div class="strategy-run-filter-main">
+            <div class="field strategy-run-search-field">
+              <label for="strategy-run-search">Search</label>
+              <input id="strategy-run-search" class="search-input" type="search" value="${escapeHtml(filters.query)}" placeholder="Strategy, symbol, timeframe">
+            </div>
+            <div class="field strategy-run-strategy-field">
+              <label for="strategy-run-strategy-filter">Strategy</label>
+              <select id="strategy-run-strategy-filter" class="select-input" data-strategy-run-filter="strategy">
+                <option value="all">All strategies</option>
+                ${strategies.map((name) => `<option value="${escapeHtml(name)}" ${filters.strategy === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
+              </select>
+            </div>
+            <div class="field strategy-run-timeframe-field">
+              <label for="strategy-run-timeframe-filter">Timeframe</label>
+              <select id="strategy-run-timeframe-filter" class="select-input" data-strategy-run-filter="timeframe">
+                <option value="all">All timeframes</option>
+                ${timeframes.map((timeframe) => `<option value="${escapeHtml(timeframe)}" ${filters.timeframe === timeframe ? "selected" : ""}>${escapeHtml(timeframe)}</option>`).join("")}
+              </select>
+            </div>
           </div>
-          <div class="field">
-            <label for="strategy-run-strategy-filter">Strategy</label>
-            <select id="strategy-run-strategy-filter" data-strategy-run-filter="strategy">
-              <option value="all">All strategies</option>
-              ${strategies.map((name) => `<option value="${escapeHtml(name)}" ${filters.strategy === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}
-            </select>
+          <div class="strategy-run-filter-grid">
+            <div class="field strategy-run-from-field">
+              <label for="strategy-run-date-from">From</label>
+              <input id="strategy-run-date-from" class="text-input" type="date" value="${escapeHtml(filters.start)}" data-strategy-run-filter="start">
+            </div>
+            <div class="field strategy-run-to-field">
+              <label for="strategy-run-date-to">To</label>
+              <input id="strategy-run-date-to" class="text-input" type="date" value="${escapeHtml(filters.end)}" data-strategy-run-filter="end">
+            </div>
           </div>
-          <div class="field">
-            <label for="strategy-run-timeframe-filter">Timeframe</label>
-            <select id="strategy-run-timeframe-filter" data-strategy-run-filter="timeframe">
-              <option value="all">All timeframes</option>
-              ${timeframes.map((timeframe) => `<option value="${escapeHtml(timeframe)}" ${filters.timeframe === timeframe ? "selected" : ""}>${escapeHtml(timeframe)}</option>`).join("")}
-            </select>
+          <div class="strategy-run-filter-foot">
+            <span class="strategy-run-toolbar-summary">${escapeHtml(summary)}</span>
+            <button class="ghost-button compact-button" type="button" id="strategy-run-clear-filters">Clear filters</button>
           </div>
-          <div class="field">
-            <label for="strategy-run-date-from">From</label>
-            <input id="strategy-run-date-from" class="text-input" type="date" value="${escapeHtml(filters.start)}" data-strategy-run-filter="start">
-          </div>
-          <div class="field">
-            <label for="strategy-run-date-to">To</label>
-            <input id="strategy-run-date-to" class="text-input" type="date" value="${escapeHtml(filters.end)}" data-strategy-run-filter="end">
-          </div>
-          <div class="field">
-            <label for="strategy-run-sort">Sort</label>
-            <select id="strategy-run-sort">
-              ${strategyRunSortOptions().map((option) => `<option value="${escapeHtml(option.value)}" ${state.strategyRunSort === option.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
-            </select>
-          </div>
-          <div class="field">
-            <label for="strategy-run-page-size">Rows</label>
-            <select id="strategy-run-page-size">
-              ${[10, 25, 50, 100].map((size) => `<option value="${size}" ${strategyRunPageSize() === size ? "selected" : ""}>${size}</option>`).join("")}
-            </select>
-          </div>
-          <button class="secondary-button" type="button" id="strategy-run-clear-filters">Clear</button>
-          <span class="strategy-run-toolbar-summary">${escapeHtml(summary)}</span>
         </section>`;
     }
 
@@ -3498,15 +3424,12 @@
           renderBacktestRuns(outputs);
         });
       });
-      document.querySelector("#strategy-run-sort")?.addEventListener("change", (event) => {
-        state.strategyRunSort = event.target.value || "time_desc";
-        state.strategyRunVisibleCount = strategyRunPageSize();
-        renderBacktestRuns(outputs);
-      });
-      document.querySelector("#strategy-run-page-size")?.addEventListener("change", (event) => {
-        state.strategyRunPageSize = Number(event.target.value) || 25;
-        state.strategyRunVisibleCount = strategyRunPageSize();
-        renderBacktestRuns(outputs);
+      document.querySelectorAll("[data-strategy-run-sort]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.strategyRunSort = nextStrategyRunSort(button.dataset.strategyRunSort || "time");
+          state.strategyRunVisibleCount = strategyRunPageSize();
+          renderBacktestRuns(outputs);
+        });
       });
       document.querySelector("#strategy-run-clear-filters")?.addEventListener("click", () => {
         state.strategyRunFilters = {query: "", strategy: "all", timeframe: "all", start: "", end: ""};
@@ -3545,23 +3468,18 @@
     }
 
     function sortedBacktestRuns(runs) {
-      const sort = state.strategyRunSort || "time_desc";
+      const sort = strategyRunSortSpec();
       return [...runs].sort((a, b) => {
         const metricA = strategyMetricNumbers(a.item);
         const metricB = strategyMetricNumbers(b.item);
         let result = 0;
-        if (sort === "time_asc") result = compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), "asc");
-        else if (sort === "return_desc") result = compareNullableNumbers(metricA.totalReturn, metricB.totalReturn, "desc");
-        else if (sort === "return_asc") result = compareNullableNumbers(metricA.totalReturn, metricB.totalReturn, "asc");
-        else if (sort === "drawdown_best") result = compareNullableNumbers(metricA.drawdown, metricB.drawdown, "desc");
-        else if (sort === "drawdown_worst") result = compareNullableNumbers(metricA.drawdown, metricB.drawdown, "asc");
-        else if (sort === "sharpe_desc") result = compareNullableNumbers(metricA.sharpe, metricB.sharpe, "desc");
-        else if (sort === "sharpe_asc") result = compareNullableNumbers(metricA.sharpe, metricB.sharpe, "asc");
-        else if (sort === "trades_desc") result = compareNullableNumbers(metricA.trades, metricB.trades, "desc");
-        else if (sort === "trades_asc") result = compareNullableNumbers(metricA.trades, metricB.trades, "asc");
-        else if (sort === "name_asc") result = compareText(a.identity.name, b.identity.name, "asc");
-        else if (sort === "name_desc") result = compareText(a.identity.name, b.identity.name, "desc");
-        else if (sort === "timeframe_asc") result = compareText(a.identity.timeframe, b.identity.timeframe, "asc");
+        if (sort.key === "time") result = compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), sort.direction);
+        else if (sort.key === "timeframe") result = compareText(a.identity.timeframe, b.identity.timeframe, sort.direction);
+        else if (sort.key === "window") result = compareNullableNumbers(backtestRunDurationMs(a.item), backtestRunDurationMs(b.item), sort.direction);
+        else if (sort.key === "return") result = compareNullableNumbers(metricA.totalReturn, metricB.totalReturn, sort.direction);
+        else if (sort.key === "drawdown") result = compareNullableNumbers(metricA.drawdown, metricB.drawdown, sort.direction);
+        else if (sort.key === "sharpe") result = compareNullableNumbers(metricA.sharpe, metricB.sharpe, sort.direction);
+        else if (sort.key === "trades") result = compareNullableNumbers(metricA.trades, metricB.trades, sort.direction);
         else result = compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), "desc");
         return result || compareNullableNumbers(backtestRunCreatedTime(a.item), backtestRunCreatedTime(b.item), "desc") || compareText(a.identity.name, b.identity.name, "asc") || (a.index - b.index);
       });
@@ -3578,27 +3496,66 @@
       };
     }
 
-    function strategyRunSortOptions() {
+    function strategyRunSortColumns() {
       return [
-        {value: "time_desc", label: "Newest first"},
-        {value: "time_asc", label: "Oldest first"},
-        {value: "return_desc", label: "Return high to low"},
-        {value: "return_asc", label: "Return low to high"},
-        {value: "drawdown_best", label: "Drawdown best first"},
-        {value: "drawdown_worst", label: "Drawdown worst first"},
-        {value: "sharpe_desc", label: "Sharpe high to low"},
-        {value: "sharpe_asc", label: "Sharpe low to high"},
-        {value: "trades_desc", label: "Trades high to low"},
-        {value: "trades_asc", label: "Trades low to high"},
-        {value: "name_asc", label: "Name A to Z"},
-        {value: "name_desc", label: "Name Z to A"},
-        {value: "timeframe_asc", label: "Timeframe A to Z"},
+        {key: "time", label: "Strategy", description: "run time"},
+        {key: "timeframe", label: "Timeframe", description: "timeframe"},
+        {key: "window", label: "Window", description: "window length"},
+        {key: "return", label: "Return", description: "return"},
+        {key: "drawdown", label: "Drawdown", description: "drawdown"},
+        {key: "sharpe", label: "Sharpe", description: "Sharpe"},
+        {key: "trades", label: "Trades", description: "trade count"},
+        {key: "", label: "Equity", description: ""},
       ];
     }
 
     function strategyRunPageSize() {
-      const value = Number(state.strategyRunPageSize);
-      return [10, 25, 50, 100].includes(value) ? value : 25;
+      return 25;
+    }
+
+    function strategyRunSortSpec() {
+      const raw = String(state.strategyRunSort || "time_desc");
+      if (raw === "drawdown_best") return {key: "drawdown", direction: "desc"};
+      if (raw === "drawdown_worst") return {key: "drawdown", direction: "asc"};
+      const match = raw.match(/^([a-z]+)_(asc|desc)$/);
+      const key = match?.[1] || "time";
+      const direction = match?.[2] === "asc" ? "asc" : "desc";
+      return strategyRunSortColumns().some((column) => column.key === key) ? {key, direction} : {key: "time", direction: "desc"};
+    }
+
+    function nextStrategyRunSort(key) {
+      const sortKey = String(key || "time");
+      const current = strategyRunSortSpec();
+      const direction = current.key === sortKey && current.direction === "desc" ? "asc" : "desc";
+      return `${sortKey}_${direction}`;
+    }
+
+    function renderBacktestRunListHead() {
+      const sort = strategyRunSortSpec();
+      return `
+        <div class="strategy-run-list-head" role="row">
+          ${strategyRunSortColumns().map((column) => {
+            if (!column.key) {
+              return `<span class="strategy-run-head-static" role="columnheader">${escapeHtml(column.label)}</span>`;
+            }
+            const active = sort.key === column.key;
+            const direction = active ? sort.direction : "none";
+            return `
+              <button class="strategy-run-sort-button ${active ? "active" : ""}" type="button" data-strategy-run-sort="${escapeHtml(column.key)}" data-sort-direction="${escapeHtml(direction)}" aria-label="${escapeHtml(`Sort by ${column.description}`)}">
+                <span>${escapeHtml(column.label)}</span>
+                ${renderStrategyRunSortIcon(active, sort.direction)}
+              </button>`;
+          }).join("")}
+        </div>`;
+    }
+
+    function renderStrategyRunSortIcon(active, direction) {
+      const stateClass = active ? `active ${direction === "asc" ? "asc" : "desc"}` : "";
+      return `
+        <svg class="strategy-run-sort-icon ${stateClass}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path class="sort-up" d="M5 6.5 8 3.5l3 3" />
+          <path class="sort-down" d="M5 9.5l3 3 3-3" />
+        </svg>`;
     }
 
     function uniqueSorted(values) {
@@ -3690,6 +3647,13 @@
     function backtestRunDuration(item) {
       const window = backtestRunWindow(item);
       return compactDurationBetween(window.start, window.end);
+    }
+
+    function backtestRunDurationMs(item) {
+      const window = backtestRunWindow(item);
+      const startMs = window.start ? new Date(window.start).getTime() : NaN;
+      const endMs = window.end ? new Date(window.end).getTime() : NaN;
+      return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs >= startMs ? endMs - startMs : null;
     }
 
     function compactDurationBetween(start, end) {
