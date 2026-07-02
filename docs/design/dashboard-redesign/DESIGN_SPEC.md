@@ -117,6 +117,10 @@ Required behavior:
 - Avoid nested cards.
 - Repeated comparable data uses rows, tables, tabs, or dropdowns.
 - Long selectable lists use dropdowns, compact rows, search, or pagination.
+- Long history, timeline, job, run, alert, artifact, and other repeated
+  operational lists must render a bounded first page with pagination or
+  load-more controls; do not render an entire long history payload into the DOM
+  by default.
 - Pages should avoid whole-page horizontal scrolling.
 - Desktop first viewport should show the essential workflow for that page.
 

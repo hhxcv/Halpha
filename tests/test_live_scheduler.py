@@ -182,6 +182,67 @@ live:
     }
 
 
+def test_live_scheduler_monthly_backfill_falls_back_to_aligned_previous_month(tmp_path: Path) -> None:
+    now = datetime(2026, 7, 2, 12, 0, 30, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+""",
+    )
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "    timeframes:\n      - 1m\n    lookback:\n      1m: 30",
+            "    timeframes:\n      - 1M\n    lookback:\n      1M: 30",
+        ),
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    stream_repository = LiveStreamStateRepository(config_path)
+    stream_repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1M",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1M"},
+            "enabled": True,
+            "status": "reconnecting",
+            "stream_name": "btcusdt@kline_1M",
+            "backfill_required": True,
+            "backfill_since": "2026-07-02T11:59:00Z",
+            "updated_at": "2026-07-02T11:59:00Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager()
+
+    LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        stream_state_repository=stream_repository,
+        now=now,
+    ).tick(tick_id="tick-1")
+
+    assert len(jobs.created_requests) == 1
+    assert jobs.created_requests[0]["params"] == {
+        "data_type": "ohlcv",
+        "source": "binance_usdm",
+        "symbol": "BTCUSDT",
+        "timeframe": "1M",
+        "start": "2026-06-01T00:00:00Z",
+        "end": "2026-07-01T00:00:00Z",
+    }
+
+
 def test_live_read_model_filters_recoverable_stream_backfill_errors(tmp_path: Path) -> None:
     now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
     config_path = _write_config(

@@ -165,6 +165,7 @@
         reportLinkedOnly: false,
         attentionOnly: false,
       },
+      liveHistoryPage: 1,
       selectedLiveEventId: "",
       liveEventDrawerOpen: false,
       selectedLiveTargetKey: "",

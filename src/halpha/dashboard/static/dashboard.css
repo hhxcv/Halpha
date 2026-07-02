@@ -4335,8 +4335,7 @@
       overflow-wrap: anywhere;
     }
 
-    .live-target-head,
-    .live-job-head {
+    .live-target-head {
       cursor: default;
       background: var(--panel-muted);
       color: var(--muted);
@@ -4669,66 +4668,92 @@
       font-weight: 720;
     }
 
+    .live-event-list,
     .live-timeline {
       display: grid;
       gap: 0;
       margin: 0;
       padding: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
       list-style: none;
     }
 
-    .timeline-row {
+    .live-event-row {
       display: grid;
-      grid-template-columns: 76px 42px minmax(0, 1fr) auto;
+      grid-template-columns: minmax(132px, 0.38fr) minmax(0, 1fr) minmax(106px, auto);
       gap: 12px;
       align-items: center;
-      min-height: 74px;
+      min-width: 0;
+      min-height: 72px;
+      padding: 12px;
       border-bottom: 1px solid var(--border);
+      background: transparent;
+      color: var(--ink);
     }
 
-    .timeline-row:last-child {
+    .live-event-row:last-child {
       border-bottom: 0;
     }
 
-    .timeline-time {
-      color: var(--muted);
-      font-weight: 650;
-    }
-
-    .timeline-node {
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      background: var(--teal);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 900;
-    }
-
-    .timeline-node.warning {
-      background: var(--amber);
-    }
-
-    .timeline-node.failed {
-      background: var(--red);
-    }
-
-    .timeline-body {
+    .live-event-time {
       min-width: 0;
-    }
-
-    .timeline-body strong {
-      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
       overflow-wrap: anywhere;
     }
 
-    .timeline-body span {
+    .live-event-main {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .live-event-title {
       display: block;
-      margin-top: 4px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .live-event-summary,
+    .live-event-main small {
+      display: block;
+      min-width: 0;
       color: var(--muted);
       font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .live-event-status {
+      justify-self: end;
+      min-width: 0;
+    }
+
+    .list-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .list-pagination-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .list-pagination .compact-button[disabled] {
+      cursor: default;
+      opacity: 0.45;
     }
 
     .control-grid {
@@ -7701,19 +7726,11 @@
       }
 
       .live-stream-row,
-      .timeline-row {
+      .live-event-row {
         grid-template-columns: 1fr;
         gap: 8px;
         align-items: start;
-        padding: 12px 0;
-      }
-
-      .timeline-node {
-        display: none;
-      }
-
-      .live-job-head {
-        display: none;
+        padding: 12px;
       }
 
       .data-viewer-header {
@@ -8052,7 +8069,7 @@
     body[data-theme="solar"] .summary-note,
     body[data-theme="solar"] .muted,
     body[data-theme="solar"] .chart-meta,
-    body[data-theme="solar"] .timeline-time {
+    body[data-theme="solar"] .live-event-time {
       color: var(--muted);
     }
 
@@ -8722,21 +8739,6 @@
       background: var(--panel-soft);
       color: var(--muted);
       font-weight: 700;
-    }
-
-    body[data-theme="solar"] .timeline-node {
-      background: var(--teal);
-      color: #ffffff;
-    }
-
-    body[data-theme="solar"] .timeline-node.warning {
-      background: var(--amber);
-      color: #111827;
-    }
-
-    body[data-theme="solar"] .timeline-node.failed {
-      background: var(--red);
-      color: #ffffff;
     }
 
     body[data-theme="solar"] .toggle {
