@@ -34,7 +34,7 @@ from halpha.live.contracts import (
     LIVE_TRIGGER_PRIORITY_LEVELS,
 )
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS
-from halpha.market.ohlcv_source import SUPPORTED_OHLCV_SOURCES
+from halpha.market.ohlcv_source import OHLCV_SOURCE_PLATFORM_BY_SOURCE, SUPPORTED_OHLCV_SOURCES
 from halpha.monitor.monitoring import MONITOR_SOURCE_KEYS, SUPPORTED_MONITOR_FIELDS
 from halpha.quant.registry import SUPPORTED_STRATEGY_NAMES
 from halpha.storage import resolve_runtime_path
@@ -823,12 +823,30 @@ def _validate_ohlcv_config(
         sources = _require_non_empty_string_list(ohlcv, "sources", "market.ohlcv.sources")
         for index, source in enumerate(sources):
             _require_supported_value(source, f"market.ohlcv.sources[{index}]", SUPPORTED_OHLCV_DATA_SOURCES)
+        _require_single_ohlcv_source_platform(sources, market_source=str(market.get("source") or ""))
 
     lookback = ohlcv.get("lookback")
     if not isinstance(lookback, dict):
         raise ConfigError("market.ohlcv.lookback must be a mapping.")
     for timeframe in timeframes:
         _require_positive_int(lookback, timeframe, f"market.ohlcv.lookback.{timeframe}")
+
+
+def _require_single_ohlcv_source_platform(sources: list[str], *, market_source: str) -> None:
+    platforms = sorted({OHLCV_SOURCE_PLATFORM_BY_SOURCE.get(source, source) for source in sources})
+    if len(platforms) <= 1:
+        market_platform = OHLCV_SOURCE_PLATFORM_BY_SOURCE.get(market_source)
+        if market_platform is None or not platforms or platforms[0] == market_platform:
+            return
+        raise ConfigError(
+            "market.ohlcv.sources must match the market.source exchange platform family. "
+            f"market.source selects {market_platform}; market.ohlcv.sources selects {platforms[0]}."
+        )
+    names = ", ".join(platforms)
+    raise ConfigError(
+        "market.ohlcv.sources must contain one exchange platform family only. "
+        f"Found platforms: {names}. Select one platform family, for example binance with binance_spot and binance_usdm."
+    )
 
 
 def _validate_derivatives_config(market: dict[str, Any], *, market_enabled: bool) -> None:

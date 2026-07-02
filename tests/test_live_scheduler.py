@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import sqlite3
 from typing import Any
 
 import pytest
@@ -9,7 +10,7 @@ import pytest
 from halpha.config import load_config
 from halpha.live.contracts import LIVE_DATA_TYPES
 from halpha.live.scheduler import LiveScheduler
-from halpha.live.state_store import LiveCollectionStateRepository
+from halpha.live.state_store import LiveCollectionStateRepository, LiveTriggerStateRepository
 from halpha.live.stream_state import LiveStreamStateRepository
 from halpha.runtime.mutation_lease import LEASE_BLOCKED_MESSAGE
 
@@ -711,6 +712,142 @@ live:
     assert state["consecutive_failures"] == 0
     assert state["errors"] == []
     assert persisted["latest_terminal_status"] == "deferred"
+
+
+def test_live_read_model_omits_stale_ohlcv_targets_from_previous_platform(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+""",
+    )
+    config = load_config(config_path)
+    repository = LiveCollectionStateRepository(config_path)
+    repository.upsert_state(
+        {
+            "target_key": "ohlcv:okx_spot:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "okx_spot", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "cadence_seconds": 300,
+            "lookback_seconds": 3600,
+            "lookahead_seconds": None,
+            "last_attempt_at": None,
+            "last_success_at": None,
+            "next_attempt_at": None,
+            "latest_job_id": None,
+            "latest_job_status": None,
+            "latest_terminal_job_id": None,
+            "latest_terminal_status": None,
+            "consecutive_failures": 0,
+            "source_refs": [],
+            "warnings": [],
+            "errors": [],
+            "updated_at": "2026-06-30T11:00:00Z",
+        }
+    )
+
+    payload = LiveScheduler(config, config_path=config_path, job_manager=_RecordingLiveJobManager(), state_repository=repository, now=now).read_model()
+
+    target_keys = {state["target_key"] for state in payload["collections"]}
+    assert "ohlcv:binance_usdm:BTCUSDT:1m" in target_keys
+    assert "ohlcv:okx_spot:BTCUSDT:1m" not in target_keys
+    assert repository.get_state("ohlcv:okx_spot:BTCUSDT:1m") is not None
+
+
+def test_live_read_model_does_not_persist_stream_overlay_only_change(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+""",
+    )
+    config = load_config(config_path)
+    repository = LiveCollectionStateRepository(config_path)
+    stream_repository = LiveStreamStateRepository(config_path)
+    repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "cadence_seconds": 300,
+            "lookback_seconds": 3600,
+            "lookahead_seconds": None,
+            "last_attempt_at": None,
+            "last_success_at": None,
+            "next_attempt_at": None,
+            "latest_job_id": None,
+            "latest_job_status": None,
+            "latest_terminal_job_id": None,
+            "latest_terminal_status": None,
+            "consecutive_failures": 0,
+            "source_refs": [],
+            "warnings": [],
+            "errors": [],
+            "updated_at": "2026-06-30T11:00:00Z",
+        }
+    )
+    stream_repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "status": "disabled",
+            "stream_name": "btcusdt@kline_1m",
+            "endpoint": "binance_usdm_market_stream",
+            "updated_at": "2026-06-30T11:59:00Z",
+        }
+    )
+
+    payload = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=_RecordingLiveJobManager(),
+        state_repository=repository,
+        stream_state_repository=stream_repository,
+        now=now,
+    ).read_model()
+
+    state = _collection_state(payload, "ohlcv:binance_usdm:BTCUSDT:1m")
+    persisted = repository.get_state("ohlcv:binance_usdm:BTCUSDT:1m")
+    assert state["transport"] == "websocket"
+    assert state["stream"]["status"] == "disabled"
+    assert persisted is not None
+    assert persisted["updated_at"] == "2026-06-30T11:00:00Z"
+
+
+def test_live_trigger_state_adds_recent_decision_order_index(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    repository = LiveTriggerStateRepository(config_path)
+
+    repository.list_decisions(limit=1)
+
+    with sqlite3.connect(repository.database_path) as connection:
+        index_names = {
+            str(row[1])
+            for row in connection.execute("PRAGMA index_list('live_trigger_decisions')").fetchall()
+        }
+    assert "idx_live_trigger_decisions_recent" in index_names
 
 
 class _RecordingLiveJobManager:

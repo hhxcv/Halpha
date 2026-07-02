@@ -263,6 +263,8 @@ class LiveScheduler:
             if target_key not in target_keys:
                 data_type = str(state.get("data_type") or "")
                 collection = settings.collections.get(data_type)
+                if collection is not None and collection.enabled:
+                    continue
                 if collection is not None and not collection.enabled:
                     state = {
                         **state,
@@ -798,8 +800,6 @@ def _reconciled_state_changed(previous: dict[str, Any] | None, state: dict[str, 
         "source_refs",
         "warnings",
         "errors",
-        "transport",
-        "stream",
     )
     return any(previous.get(key) != state.get(key) for key in tracked_keys)
 

@@ -20,6 +20,7 @@ from halpha.runtime.state_store import (
 
 LIVE_COLLECTION_STATE_MIGRATION_VERSION = 17
 LIVE_TRIGGER_STATE_MIGRATION_VERSION = 18
+LIVE_TRIGGER_RECENT_INDEX_MIGRATION_VERSION = 19
 LIVE_COLLECTION_STATE_MIGRATIONS = (
     StateStoreMigration(
         version=LIVE_COLLECTION_STATE_MIGRATION_VERSION,
@@ -90,6 +91,16 @@ LIVE_TRIGGER_STATE_MIGRATIONS = (
               decision_id TEXT NOT NULL,
               updated_at TEXT NOT NULL
             )
+            """,
+        ),
+    ),
+    StateStoreMigration(
+        version=LIVE_TRIGGER_RECENT_INDEX_MIGRATION_VERSION,
+        name="live_trigger_recent_decisions_index",
+        statements=(
+            """
+            CREATE INDEX IF NOT EXISTS idx_live_trigger_decisions_recent
+            ON live_trigger_decisions(evaluated_at DESC, decision_id DESC)
             """,
         ),
     ),

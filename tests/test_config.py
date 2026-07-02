@@ -38,16 +38,6 @@ def test_config_example_loads_successfully() -> None:
         "binance_usdm",
         "binance",
         "binance_spot",
-        "okx_spot",
-        "okx_swap",
-        "bybit_spot",
-        "bybit_swap",
-        "kucoin_spot",
-        "kucoin_swap",
-        "bitget_spot",
-        "bitget_swap",
-        "kraken_spot",
-        "coinbase_spot",
     ]
     assert config["market"]["ohlcv"]["timeframes"] == [
         "1m",
@@ -1329,6 +1319,49 @@ def test_load_config_rejects_unsupported_ohlcv_market_source(tmp_path: Path) -> 
     )
 
     with pytest.raises(ConfigError, match="market.source must be one of: binance, binance_spot, binance_usdm"):
+        load_config(config_path)
+
+
+def test_load_config_rejects_multiple_ohlcv_source_platforms(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "    storage_dir: data/market/ohlcv",
+            "    storage_dir: data/market/ohlcv\n    sources:\n      - binance_spot\n      - binance_usdm\n      - okx_spot",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="market.ohlcv.sources must contain one exchange platform family only"):
+        load_config(config_path)
+
+
+def test_load_config_accepts_single_ohlcv_source_platform_family(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "    storage_dir: data/market/ohlcv",
+            "    storage_dir: data/market/ohlcv\n    sources:\n      - binance\n      - binance_spot\n      - binance_usdm",
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config["market"]["ohlcv"]["sources"] == ["binance", "binance_spot", "binance_usdm"]
+
+
+def test_load_config_rejects_ohlcv_source_platform_that_does_not_match_market_source(tmp_path: Path) -> None:
+    config_path = _write_valid_config(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "    storage_dir: data/market/ohlcv",
+            "    storage_dir: data/market/ohlcv\n    sources:\n      - okx_spot\n      - okx_swap",
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="market.ohlcv.sources must match the market.source exchange platform family"):
         load_config(config_path)
 
 

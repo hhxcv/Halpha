@@ -97,6 +97,12 @@ rejected with actionable errors.
 
 Unsupported Live config fields must not be silently ignored.
 
+Live OHLCV source-refresh targets reuse `market.ohlcv.sources`. That source
+list is a single exchange platform family, not a multi-exchange fan-out. A
+Binance selection may include `binance`, `binance_spot`, and `binance_usdm`;
+it must not run OKX, Bybit, KuCoin, Bitget, Coinbase, or Kraken targets at the
+same time. The selected OHLCV source family must match `market.source`.
+
 Dashboard Settings exposes the common safe Live fields listed above:
 
 - `live.enabled`, `live.tick_seconds`, and `live.reports.daily.enabled`;

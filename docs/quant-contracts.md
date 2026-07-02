@@ -828,8 +828,6 @@ market:
       - binance
       - binance_spot
       - binance_usdm
-      - okx_spot
-      - okx_swap
     timeframes:
       - 1m
       - 5m
@@ -1056,9 +1054,13 @@ Validation contract:
 - Supported OHLCV timeframes are `1m`, `5m`, `15m`, `1h`, `4h`, `1d`,
   `1w`, and `1M`.
 - `market.ohlcv.sources` may list explicit public OHLCV collection sources for
-  CLI and Dashboard collection. If omitted, explicit collection may use the
-  built-in supported OHLCV sources. Product OHLCV sync still uses
-  `market.source` unless a later contract changes sync selection.
+  CLI and Dashboard collection, but every source in the list must belong to
+  one exchange platform family. For example, Binance selection may include
+  `binance`, `binance_spot`, and `binance_usdm`; it must not include OKX,
+  Bybit, KuCoin, Bitget, Coinbase, or Kraken sources at the same time. The
+  selected OHLCV source family must match the `market.source` platform family.
+  Product OHLCV sync still uses `market.source` unless a later contract changes
+  sync selection.
 - `market.ohlcv.lookback` must define a positive integer for each configured timeframe when `market.ohlcv` exists or `quant.enabled` is true.
 - `quant` may be omitted when the report path does not use quant strategies.
 - `quant.enabled` is required when `quant` exists.

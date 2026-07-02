@@ -24,16 +24,6 @@ market:
       - binance_usdm
       - binance
       - binance_spot
-      - okx_spot
-      - okx_swap
-      - bybit_spot
-      - bybit_swap
-      - kucoin_spot
-      - kucoin_swap
-      - bitget_spot
-      - bitget_swap
-      - kraken_spot
-      - coinbase_spot
     timeframes:
       - 1m
       - 5m
