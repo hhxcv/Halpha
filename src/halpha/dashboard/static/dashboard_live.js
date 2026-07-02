@@ -25,6 +25,7 @@
         const FAILED_JOB_STATUSES = new Set(["failed", "error", "blocked"]);
         const SKIPPED_JOB_STATUSES = new Set(["skipped", "cancelled", "unsupported"]);
         const ATTENTION_STATUSES = new Set(["blocked", "cancelled", "degraded", "failed", "missing", "partial", "stale", "suppressed_cooldown", "suppressed_duplicate", "warning"]);
+        const LIVE_HISTORY_PAGE_SIZE = 12;
 
         async function refreshLive() {
           await loadLivePayload();
@@ -271,16 +272,14 @@
         }
 
         function renderLiveJobLane() {
-          const jobs = liveJobs().slice(0, 10);
+          const allJobs = liveJobs();
+          const jobs = allJobs.slice(0, 8);
           setHtml("#live-job-lane", jobs.length ? `
             <div class="live-job-lane-head">
               <strong>Recent collection jobs</strong>
-              <span>${escapeHtml(`${jobs.length} visible`)}</span>
+              <span>${escapeHtml(`${jobs.length} of ${allJobs.length} visible`)}</span>
             </div>
-            <div class="live-job-table" role="table" aria-label="Recent Live collection jobs">
-              <div class="live-job-row live-job-head" role="row">
-                <span>Job</span><span>Target</span><span>Status</span><span>Created</span><span>Duration</span><span>Result</span>
-              </div>
+            <div class="live-event-list live-job-table" role="list" aria-label="Recent Live collection jobs">
               ${jobs.map((job) => liveJobRow(job)).join("")}
             </div>
           ` : `<div class="empty-state">No Live collection jobs are available yet.</div>`);
@@ -374,9 +373,14 @@
 
         function renderLiveOperationsTimeline() {
           const rows = filteredLiveHistoryEvents();
-          setHtml("#live-operations-timeline", rows.length ? rows.slice(0, 200).map((row) => {
+          const total = rows.length;
+          const pageCount = Math.max(1, Math.ceil(total / LIVE_HISTORY_PAGE_SIZE));
+          const page = Math.min(Math.max(1, Number(state.liveHistoryPage) || 1), pageCount);
+          const startIndex = (page - 1) * LIVE_HISTORY_PAGE_SIZE;
+          const visibleRows = rows.slice(startIndex, startIndex + LIVE_HISTORY_PAGE_SIZE);
+          state.liveHistoryPage = page;
+          setHtml("#live-operations-timeline", visibleRows.length ? visibleRows.map((row) => {
             const status = statusClass(row.status || "unknown");
-            const marker = status === "failed" ? "x" : status === "warning" || status === "stale" || status === "degraded" ? "!" : "ok";
             const meta = [
               row.event_kind ? label(row.event_kind) : null,
               row.data_type ? (DATA_TYPE_LABELS[row.data_type] || label(row.data_type)) : null,
@@ -386,18 +390,35 @@
               row.report_ref,
             ].filter(Boolean);
             const refs = Array.isArray(row.artifact_refs) ? row.artifact_refs : [];
-            return `<li class="timeline-row live-history-row" data-live-event-id="${escapeHtml(row.event_id || "")}">
-              <div class="timeline-time">${escapeHtml(formatTimestamp(row.timestamp))}</div>
-              <div class="timeline-node ${escapeHtml(status)}">${escapeHtml(marker)}</div>
-              <button class="timeline-body live-history-event-button" type="button" data-live-event-id="${escapeHtml(row.event_id || "")}">
-                <strong>${escapeHtml(row.title || "Live event")}</strong>
-                <span>${escapeHtml(row.summary || "n/a")}</span>
+            return `<li class="live-event-row live-history-row" data-live-event-id="${escapeHtml(row.event_id || "")}">
+              <time class="live-event-time">${escapeHtml(formatTimestamp(row.timestamp))}</time>
+              <button class="live-event-main live-history-event-button" type="button" data-live-event-id="${escapeHtml(row.event_id || "")}">
+                <strong class="live-event-title">${escapeHtml(row.title || "Live event")}</strong>
+                <span class="live-event-summary">${escapeHtml(row.summary || "n/a")}</span>
                 <small>${escapeHtml(meta.join(" / ") || "bounded event")}</small>
                 ${refs.length ? `<div class="live-ref-list">${refs.slice(0, 3).map((ref) => `<span>${escapeHtml(ref)}</span>`).join("")}</div>` : ""}
               </button>
-              <span class="status-pill ${escapeHtml(status)}">${escapeHtml(row.status || "unknown")}</span>
+              <div class="live-event-status">${statusPill(status, row.status || "unknown")}</div>
             </li>`;
           }).join("") : `<li class="empty-state">No Live history matches current filters.</li>`);
+          renderLiveHistoryPagination(total, page, pageCount, startIndex, visibleRows.length);
+        }
+
+        function renderLiveHistoryPagination(total, page, pageCount, startIndex, visibleCount) {
+          if (!total) {
+            setHtml("#live-history-pagination", "");
+            return;
+          }
+          const first = startIndex + 1;
+          const last = startIndex + visibleCount;
+          setHtml("#live-history-pagination", `
+            <span>${escapeHtml(`${first}-${last} of ${total}`)}</span>
+            <div class="list-pagination-actions">
+              <button class="ghost-button compact-button" type="button" data-live-history-page="prev" ${page <= 1 ? "disabled" : ""}>Previous</button>
+              <span>${escapeHtml(`Page ${page} / ${pageCount}`)}</span>
+              <button class="ghost-button compact-button" type="button" data-live-history-page="next" ${page >= pageCount ? "disabled" : ""}>Next</button>
+            </div>
+          `);
         }
 
         function renderLiveEventDrawer() {
@@ -583,14 +604,15 @@
           const warnings = Array.isArray(job.warnings) ? job.warnings : [];
           const refs = job.result_refs && typeof job.result_refs === "object" ? Object.values(job.result_refs).filter(Boolean) : [];
           const result = errors[0] || warnings[0] || refs[0] || "n/a";
-          return `<div class="live-job-row" role="row">
-            <span>${escapeHtml(job.job_id || "n/a")}</span>
-            <span>${escapeHtml(requester.target_key || requester.data_type || "n/a")}</span>
-            <span>${statusPill(status, job.status || "unknown")}</span>
-            <span>${escapeHtml(formatTimestamp(job.created_at))}</span>
-            <span>${escapeHtml(durationBetween(job.started_at, job.finished_at))}</span>
-            <span>${escapeHtml(result)}</span>
-          </div>`;
+          return `<article class="live-event-row live-job-row" role="listitem">
+            <time class="live-event-time">${escapeHtml(formatTimestamp(job.created_at))}</time>
+            <div class="live-event-main">
+              <strong class="live-event-title">${escapeHtml(requester.target_key || requester.data_type || "n/a")}</strong>
+              <span class="live-event-summary">${escapeHtml(result)}</span>
+              <small>${escapeHtml(["Collection job", job.job_id, durationBetween(job.started_at, job.finished_at)].filter(Boolean).join(" / "))}</small>
+            </div>
+            <div class="live-event-status">${statusPill(status, job.status || "unknown")}</div>
+          </article>`;
         }
 
         function latestIntelligenceHeadline(dataType, item) {
@@ -644,6 +666,7 @@
             reportLinkedOnly: state.liveHistoryFilters?.reportLinkedOnly === true,
             attentionOnly: state.liveHistoryFilters?.attentionOnly === true,
           };
+          state.liveHistoryPage = Math.max(1, Number(state.liveHistoryPage) || 1);
         }
 
         function ensureSelectedLiveTarget() {
@@ -871,6 +894,7 @@
             if (target.id === "live-history-filter-status") filters.status = target.value || "all";
             if (target.id === "live-history-filter-report-linked") filters.reportLinkedOnly = target.checked === true;
             if (target.id === "live-history-filter-attention") filters.attentionOnly = target.checked === true;
+            state.liveHistoryPage = 1;
             renderLiveOperationsTimeline();
           });
           document.querySelector("#live-history-filter-clear")?.addEventListener("click", () => {
@@ -884,7 +908,18 @@
               reportLinkedOnly: false,
               attentionOnly: false,
             };
+            state.liveHistoryPage = 1;
             renderLiveHistoryFilters();
+            renderLiveOperationsTimeline();
+          });
+          document.querySelector("#live-history-pagination")?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-live-history-page]");
+            if (!button || button.disabled) return;
+            const action = button.dataset.liveHistoryPage || "";
+            const rows = filteredLiveHistoryEvents();
+            const pageCount = Math.max(1, Math.ceil(rows.length / LIVE_HISTORY_PAGE_SIZE));
+            const current = Math.min(Math.max(1, Number(state.liveHistoryPage) || 1), pageCount);
+            state.liveHistoryPage = action === "next" ? Math.min(pageCount, current + 1) : Math.max(1, current - 1);
             renderLiveOperationsTimeline();
           });
           document.querySelector("#live-operations-timeline")?.addEventListener("click", (event) => {

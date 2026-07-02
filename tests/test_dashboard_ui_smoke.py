@@ -763,6 +763,7 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert 'id="live-target-detail"' in html
     assert 'id="live-job-lane"' in html
     assert 'id="live-operations-timeline"' in html
+    assert 'id="live-history-pagination"' in html
     assert 'id="live-triggered-reports"' in html
     assert 'id="live-alert-archive"' in html
     assert 'id="live-history-filter-start"' in html
@@ -791,10 +792,14 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert ".live-target-row.active" in css
     assert ".live-job-lane" in css
     assert ".live-job-row" in css
+    assert ".live-event-row" in css
+    assert ".list-pagination" in css
     assert ".live-target-detail" in css
     assert "overflow-wrap: anywhere;" in css
-    assert ".live-job-head" in css
+    assert ".live-job-head" not in css
+    assert ".timeline-node" not in css
     assert "DATA_TYPE_ORDER = [\"ohlcv\", \"text_event\", \"macro_calendar\", \"onchain_flow\", \"derivatives_market\", \"market_anomaly\"]" in dashboard_script()
+    assert "LIVE_HISTORY_PAGE_SIZE = 12" in dashboard_script()
     assert "renderLiveIntelligenceStrip" in dashboard_script()
     assert "renderLiveJobLane" in dashboard_script()
     assert "renderLiveTriggeredReports" in dashboard_script()
@@ -803,6 +808,9 @@ def test_dashboard_live_workflow_contracts_are_present(tmp_path: Path) -> None:
     assert "openLiveEventDrawer" in dashboard_script()
     assert "closeLiveEventDrawer" in dashboard_script()
     assert "filteredLiveHistoryEvents" in dashboard_script()
+    assert "renderLiveHistoryPagination" in dashboard_script()
+    assert "rows.slice(0, 200)" not in dashboard_script()
+    assert "data-live-history-page" in dashboard_script()
     assert "data-live-target-key" in dashboard_script()
     assert "data-live-event-id" in dashboard_script()
     assert "matchesLiveFilters" in dashboard_script()

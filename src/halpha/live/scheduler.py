@@ -768,9 +768,18 @@ def _ohlcv_collection_window(
     else:
         start = _floor_ohlcv_time(end - timedelta(seconds=lookback_seconds), timeframe)
     if end <= start:
-        duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe, timedelta(seconds=max(1, lookback_seconds)))
-        start = end - duration
+        start = _previous_ohlcv_time(end, timeframe, fallback_seconds=lookback_seconds)
     return start, end
+
+
+def _previous_ohlcv_time(value: datetime, timeframe: str, *, fallback_seconds: int) -> datetime:
+    value = _floor_ohlcv_time(value, timeframe)
+    if timeframe == "1M":
+        year = value.year - (1 if value.month == 1 else 0)
+        month = 12 if value.month == 1 else value.month - 1
+        return value.replace(year=year, month=month, day=1, hour=0, minute=0, second=0)
+    duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe, timedelta(seconds=max(1, fallback_seconds)))
+    return _floor_ohlcv_time(value - duration, timeframe)
 
 
 def _floor_ohlcv_time(value: datetime, timeframe: str) -> datetime:
