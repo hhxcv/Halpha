@@ -6078,7 +6078,7 @@
     }
 
     .macro-event-sidebar {
-      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
     }
 
     .intel-list-toolbar,
@@ -6095,6 +6095,55 @@
       font-size: 12px;
       font-weight: 700;
       white-space: nowrap;
+    }
+
+    .macro-event-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .macro-event-tabs .tab-button {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      min-height: 32px;
+      padding: 6px 8px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-small);
+      font-size: 12px;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .macro-event-tabs .tab-button span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .macro-event-tabs .tab-button small {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      color: inherit;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .macro-event-empty {
+      min-height: 120px;
+      align-content: center;
     }
 
     .compact-button {
@@ -6327,6 +6376,7 @@
 
     .macro-calendar-shell.year {
       grid-template-rows: auto minmax(0, 1fr);
+      overflow-x: auto;
     }
 
     .macro-calendar-toolbar,
@@ -6503,7 +6553,7 @@
 
     .macro-year-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(228px, 1fr));
       gap: 12px;
       min-height: 0;
       overflow: auto;
@@ -6513,7 +6563,7 @@
     .macro-year-month {
       display: grid;
       gap: 6px;
-      min-width: 0;
+      min-width: 228px;
       padding: 10px;
       border: 1px solid var(--border);
       border-radius: var(--radius-control);
@@ -6529,8 +6579,9 @@
     .macro-year-weekdays,
     .macro-year-month-grid {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(26px, 1fr));
       gap: 3px;
+      min-width: 200px;
     }
 
     .macro-year-weekdays span {
@@ -6543,6 +6594,7 @@
     .macro-year-day {
       display: grid;
       place-items: center;
+      min-width: 26px;
       min-height: 28px;
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -6550,6 +6602,11 @@
       color: var(--muted);
       font-size: 10px;
       font-weight: 780;
+    }
+
+    .macro-year-day span,
+    .macro-year-day small {
+      white-space: nowrap;
     }
 
     .macro-year-day.empty {
@@ -7409,7 +7466,7 @@
       }
 
       .macro-year-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(228px, 1fr));
       }
 
       .detail-rail,
@@ -9254,7 +9311,7 @@
       }
 
       .macro-year-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(228px, 1fr);
       }
 
       body[data-theme="solar"] .form-row {

@@ -17,6 +17,7 @@ from halpha.pipeline import RunContext
 from halpha.data.run_index import run_index_path, write_run_index
 from halpha.monitor.state_store import MonitorArchivePersistence, MonitorStateRepository
 from halpha.storage import write_json
+from dashboard_asset_helpers import ASSET_VERSION_QUERY
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -266,10 +267,10 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert "halpha-dashboard-app" in response.text
     assert 'id="global-page-title">Overview</h1>' in response.text
     assert 'id="global-page-subtitle"' not in response.text
-    assert '<script src="/assets/dashboard_shared.js" defer></script>' in response.text
-    assert '<script src="/assets/dashboard_strategy_chart.js" defer></script>' in response.text
-    assert '<script src="/assets/dashboard_live.js" defer></script>' in response.text
-    assert '<script src="/assets/dashboard.js" defer></script>' in response.text
+    assert f'<script src="/assets/dashboard_shared.js{ASSET_VERSION_QUERY}" defer></script>' in response.text
+    assert f'<script src="/assets/dashboard_strategy_chart.js{ASSET_VERSION_QUERY}" defer></script>' in response.text
+    assert f'<script src="/assets/dashboard_live.js{ASSET_VERSION_QUERY}" defer></script>' in response.text
+    assert f'<script src="/assets/dashboard.js{ASSET_VERSION_QUERY}" defer></script>' in response.text
     assert response.text.index("/assets/dashboard_shared.js") < response.text.index("/assets/dashboard_strategy_chart.js")
     assert response.text.index("/assets/dashboard_strategy_chart.js") < response.text.index("/assets/dashboard_live.js")
     assert response.text.index("/assets/dashboard_live.js") < response.text.index("/assets/dashboard.js")

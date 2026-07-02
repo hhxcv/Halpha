@@ -156,6 +156,7 @@
           state.macroCalendarYear = null;
           state.macroCalendarHighlightedDate = "";
           state.macroCalendarDetailIndex = null;
+          state.macroCalendarEventTab = "future";
           state.onchainDataClass = "";
           state.onchainMetricKey = "";
           state.onchainSelectedIndex = null;
@@ -687,16 +688,23 @@
               </div>`);
             return;
           }
+          const eventTabs = macroCalendarEventTabs(events);
+          const activeEventTab = macroCalendarActiveEventTab();
+          const activeEventEntries = eventTabs[activeEventTab] || [];
           state.selectedIntelPreviewIndex = Math.min(Math.max(0, Number(state.selectedIntelPreviewIndex) || 0), events.length - 1);
+          if (activeEventEntries.length && !activeEventEntries.some((entry) => entry.index === state.selectedIntelPreviewIndex)) {
+            state.selectedIntelPreviewIndex = activeEventEntries[0].index;
+          }
           ensureMacroCalendarViewport(events);
-          const selected = events[state.selectedIntelPreviewIndex];
+          const selected = activeEventEntries.length ? events[state.selectedIntelPreviewIndex] : null;
           updateIntelligencePropertiesSelection(selected, payload);
           setHtml(selector, `
             <div class="macro-calendar-preview">
               <aside class="intel-preview-sidebar macro-event-sidebar">
-                <div class="intel-list-toolbar"><strong>Events</strong><span>${escapeHtml(formatNumber(events.length))} events</span></div>
+                <div class="intel-list-toolbar macro-event-toolbar"><strong>Events</strong><span>${escapeHtml(formatNumber(activeEventEntries.length))} / ${escapeHtml(formatNumber(events.length))} events</span></div>
+                ${macroEventTabControls(eventTabs, activeEventTab)}
                 <div class="intel-preview-list macro-event-list" aria-label="Macro calendar events">
-                  ${macroEventListItemsWithDates(events)}
+                  ${activeEventEntries.length ? macroEventListItemsWithDates(activeEventEntries) : macroEventEmptyState(activeEventTab)}
                 </div>
               </aside>
               <article class="macro-calendar-main">
@@ -1764,6 +1772,62 @@
           });
         }
 
+        function macroCalendarActiveEventTab() {
+          return state.macroCalendarEventTab === "history" ? "history" : "future";
+        }
+
+        function macroEventTimestamp(record) {
+          const timestamp = Date.parse(record?.scheduled_at || recordTime(record, "macro_calendar"));
+          return Number.isFinite(timestamp) ? timestamp : NaN;
+        }
+
+        function macroEventTabKey(record) {
+          const timestamp = macroEventTimestamp(record);
+          return Number.isFinite(timestamp) && timestamp > Date.now() ? "future" : "history";
+        }
+
+        function macroCalendarEventTabs(events) {
+          const tabs = {future: [], history: []};
+          events.forEach((record, index) => {
+            tabs[macroEventTabKey(record)].push({record, index});
+          });
+          tabs.future.sort((left, right) => macroEventEntryTime(left) - macroEventEntryTime(right) || macroEventEntryTitle(left).localeCompare(macroEventEntryTitle(right)));
+          tabs.history.sort((left, right) => macroEventEntryTime(right) - macroEventEntryTime(left) || macroEventEntryTitle(left).localeCompare(macroEventEntryTitle(right)));
+          return tabs;
+        }
+
+        function macroEventEntryTime(entry) {
+          const timestamp = macroEventTimestamp(entry?.record);
+          return Number.isFinite(timestamp) ? timestamp : 0;
+        }
+
+        function macroEventEntryTitle(entry) {
+          return recordTitle(entry?.record, "macro_calendar");
+        }
+
+        function macroEventTabControls(eventTabs, activeEventTab) {
+          return `
+            <div class="segmented-control macro-event-tabs" role="tablist" aria-label="Macro event timeline">
+              ${macroEventTabButton("future", "Future", eventTabs.future.length, activeEventTab)}
+              ${macroEventTabButton("history", "History", eventTabs.history.length, activeEventTab)}
+            </div>`;
+        }
+
+        function macroEventTabButton(tab, labelText, count, activeEventTab) {
+          const active = tab === activeEventTab;
+          return `
+            <button class="tab-button ${active ? "active" : ""}" type="button" role="tab" aria-selected="${active ? "true" : "false"}" data-macro-event-tab="${escapeHtml(tab)}">
+              <span>${escapeHtml(labelText)}</span><small>${escapeHtml(formatNumber(count))}</small>
+            </button>`;
+        }
+
+        function macroEventEmptyState(activeEventTab) {
+          const message = activeEventTab === "history"
+            ? "No historical macro calendar events are available for the current preview range."
+            : "No future macro calendar events are available for the current preview range.";
+          return `<div class="empty-state macro-event-empty">${escapeHtml(message)}</div>`;
+        }
+
         function ensureMacroCalendarViewport(events) {
           const selected = events[state.selectedIntelPreviewIndex] || events[0];
           const selectedDate = recordDateKey(selected, "macro_calendar") || new Date().toISOString().slice(0, 10);
@@ -1773,9 +1837,9 @@
           if (!state.macroCalendarYear) state.macroCalendarYear = state.macroCalendarMonth.slice(0, 4);
         }
 
-        function macroEventListItemsWithDates(events) {
+        function macroEventListItemsWithDates(entries) {
           let currentDate = "";
-          return events.map((record, index) => {
+          return entries.map(({record, index}) => {
             const dateKey = recordDateKey(record, "macro_calendar");
             const heading = dateKey && dateKey !== currentDate
               ? `<div class="intel-date-heading macro-date-heading" data-intel-date-heading="${escapeHtml(dateKey)}">${escapeHtml(formatDateHeading(dateKey))}</div>`
@@ -1928,6 +1992,16 @@
         function wireMacroCalendarPreview(selector, payload, events) {
           const root = node(selector);
           if (!root) return;
+          root.querySelectorAll("[data-macro-event-tab]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state.macroCalendarEventTab = button.dataset.macroEventTab === "history" ? "history" : "future";
+              const eventTabs = macroCalendarEventTabs(events);
+              const activeEntries = eventTabs[macroCalendarActiveEventTab()] || [];
+              state.selectedIntelPreviewIndex = activeEntries.length ? activeEntries[0].index : 0;
+              state.macroCalendarDetailIndex = null;
+              renderMacroCalendarPreview(selector, payload, events);
+            });
+          });
           root.querySelectorAll("[data-macro-list-index]").forEach((button) => {
             button.addEventListener("click", () => {
               selectMacroEvent(events, Number(button.dataset.macroListIndex) || 0, false);
@@ -1995,6 +2069,7 @@
           const record = events[safeIndex];
           const dateKey = recordDateKey(record, "macro_calendar");
           state.selectedIntelPreviewIndex = safeIndex;
+          state.macroCalendarEventTab = macroEventTabKey(record);
           if (dateKey) {
             state.macroCalendarHighlightedDate = dateKey;
             state.macroCalendarMonth = dateKey.slice(0, 7);
@@ -2010,7 +2085,10 @@
           state.macroCalendarMonth = dateKey.slice(0, 7);
           state.macroCalendarYear = dateKey.slice(0, 4);
           const firstIndex = events.findIndex((record) => recordDateKey(record, "macro_calendar") === dateKey);
-          if (firstIndex >= 0) state.selectedIntelPreviewIndex = firstIndex;
+          if (firstIndex >= 0) {
+            state.selectedIntelPreviewIndex = firstIndex;
+            state.macroCalendarEventTab = macroEventTabKey(events[firstIndex]);
+          }
           state.macroCalendarDetailIndex = null;
         }
 

@@ -99,6 +99,56 @@ def test_dashboard_data_viewer_summary_and_timeline_show_coverage_states(tmp_pat
     assert str(tmp_path) not in timeline_response.text
 
 
+def test_dashboard_data_viewer_issues_are_scoped_to_current_data_type(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    write_collection_coverage_state(
+        config_path,
+        [
+            {
+                "data_type": "ohlcv",
+                "source": "binance",
+                "identity": {"symbol": "BTCUSDT", "timeframe": "1m"},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-02T00:00:00Z",
+                "status": "partial",
+                "warnings": ["binance BTCUSDT 1m returned 1000 of 1440 expected candle(s)."],
+            },
+            {
+                "data_type": "macro_calendar",
+                "source": "configured",
+                "identity": {},
+                "range_start": "2026-06-01T00:00:00Z",
+                "range_end": "2026-06-02T00:00:00Z",
+                "status": "collected",
+                "record_count": 2,
+            },
+        ],
+        now="2026-06-03T00:00:00Z",
+    )
+    client = TestClient(create_dashboard_app(config, config_path=config_path))
+
+    summary = client.get("/api/data/viewer/summary").json()
+    stores = {store["data_type"]: store for store in summary["stores"]}
+    timeline = client.post(
+        "/api/data/viewer/timeline",
+        json={
+            "data_type": "macro_calendar",
+            "start": "2026-06-01T00:00:00Z",
+            "end": "2026-06-03T00:00:00Z",
+        },
+    ).json()
+
+    assert any("binance BTCUSDT 1m returned 1000" in warning for warning in stores["ohlcv"]["warnings"])
+    assert stores["macro_calendar"]["coverage"]["warnings"] == []
+    assert stores["macro_calendar"]["coverage"]["errors"] == []
+    assert stores["macro_calendar"]["coverage"]["state_status"] == "ok"
+    assert not any("BTCUSDT 1m returned" in warning for warning in stores["macro_calendar"]["warnings"])
+    assert timeline["warnings"] == []
+    assert timeline["coverage"]["warnings"] == []
+    assert timeline["coverage"]["state_status"] == "ok"
+
+
 def test_dashboard_data_viewer_preview_uses_query_boundaries(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)

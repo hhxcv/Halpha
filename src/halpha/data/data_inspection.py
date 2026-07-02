@@ -323,11 +323,13 @@ def _derivatives_section(
         "errors": len(_list(state.get("errors"))) if isinstance(state, dict) else 0,
     }
 
-    view_run_dir = _resolve_run_dir(run_dir, base=base) if run_dir is not None else _latest_run_from_index(config_path)
+    explicit_view_run = run_dir is not None
+    view_run_dir = _resolve_run_dir(run_dir, base=base) if explicit_view_run else _latest_run_from_index(config_path)
     if view_run_dir is not None:
         views, views_error = _read_json(view_run_dir / DERIVATIVES_VIEWS_ARTIFACT)
         if views_error:
-            warnings.append(views_error)
+            if explicit_view_run or not _is_missing_artifact_warning(views_error):
+                warnings.append(views_error)
         else:
             view_records = _list(views.get("views"))
             fields["views"] = len(view_records)
@@ -414,11 +416,13 @@ def _macro_calendar_section(
         "degraded_records": _status_count(availability, "degraded"),
     }
 
-    view_run_dir = _resolve_run_dir(run_dir, base=base) if run_dir is not None else _latest_run_from_index(config_path)
+    explicit_view_run = run_dir is not None
+    view_run_dir = _resolve_run_dir(run_dir, base=base) if explicit_view_run else _latest_run_from_index(config_path)
     if view_run_dir is not None:
         views, views_error = _read_json(view_run_dir / MACRO_CALENDAR_VIEWS_ARTIFACT)
         if views_error:
-            warnings.append(views_error)
+            if explicit_view_run or not _is_missing_artifact_warning(views_error):
+                warnings.append(views_error)
         else:
             view_records = _list(views.get("views"))
             fields["views"] = len(view_records)
@@ -472,11 +476,13 @@ def _onchain_flow_section(
         "insufficient_data_records": _status_count(availability, "insufficient_data"),
     }
 
-    view_run_dir = _resolve_run_dir(run_dir, base=base) if run_dir is not None else _latest_run_from_index(config_path)
+    explicit_view_run = run_dir is not None
+    view_run_dir = _resolve_run_dir(run_dir, base=base) if explicit_view_run else _latest_run_from_index(config_path)
     if view_run_dir is not None:
         views, views_error = _read_json(view_run_dir / ONCHAIN_FLOW_VIEWS_ARTIFACT)
         if views_error:
-            warnings.append(views_error)
+            if explicit_view_run or not _is_missing_artifact_warning(views_error):
+                warnings.append(views_error)
         else:
             view_records = _list(views.get("views"))
             fields["views"] = len(view_records)
@@ -1174,6 +1180,10 @@ def _field_text(fields: dict[str, Any]) -> str:
 def _read_json(path: Path) -> tuple[dict[str, Any], str | None]:
     result = read_inspection_json_object(path)
     return result.data, result.error
+
+
+def _is_missing_artifact_warning(message: str) -> bool:
+    return message.endswith(" was not found.")
 
 
 def _store_statuses(catalog: dict[str, Any]) -> str | None:

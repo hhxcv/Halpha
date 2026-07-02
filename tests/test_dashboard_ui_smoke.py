@@ -14,6 +14,7 @@ import pytest
 from halpha.config import load_config
 from halpha.dashboard import create_dashboard_app
 from dashboard_asset_helpers import (
+    ASSET_VERSION_QUERY,
     dashboard_css,
     dashboard_reports_script,
     dashboard_script,
@@ -51,10 +52,10 @@ def test_dashboard_static_assets_are_served_from_external_files(tmp_path: Path) 
     missing = client.get("/assets/missing.js")
 
     assert html.status_code == 200
-    assert html.text.count('<link rel="stylesheet" href="/assets/dashboard.css">') == 1
-    assert '<link rel="stylesheet" href="/assets/dashboard.css">' in html.text
+    assert html.text.count(f'<link rel="stylesheet" href="/assets/dashboard.css{ASSET_VERSION_QUERY}">') == 1
+    assert f'<link rel="stylesheet" href="/assets/dashboard.css{ASSET_VERSION_QUERY}">' in html.text
     for asset in REQUIRED_SCRIPT_ASSETS:
-        assert html.text.count(f'<script src="{asset}" defer></script>') == 1
+        assert html.text.count(f'<script src="{asset}{ASSET_VERSION_QUERY}" defer></script>') == 1
     script_positions = [html.text.index(asset) for asset in REQUIRED_SCRIPT_ASSETS]
     assert script_positions == sorted(script_positions)
     assert "<style>" not in html.text
@@ -1132,6 +1133,11 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "height: clamp(680px, calc(100vh - 180px), 980px);" in css
     assert "grid-auto-rows: minmax(112px, 1fr);" in css
     assert ".macro-year-grid" in css
+    assert "grid-template-columns: repeat(3, minmax(228px, 1fr));" in css
+    assert "grid-template-columns: repeat(7, minmax(26px, 1fr));" in css
+    assert ".macro-year-day span," in css
+    assert ".macro-year-day small" in css
+    assert "white-space: nowrap;" in css
     assert ".macro-event-dialog" in css
     assert ".intel-collect-dialog-controls" in css
     assert ".intelligence-collect-dialog" in css
@@ -1172,6 +1178,12 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "Key metrics" in script
     assert "Record context" in script
     assert "macroCalendarTemporalState" in script
+    assert "macroCalendarEventTabs" in script
+    assert "macroCalendarActiveEventTab" in script
+    assert "macroCalendarEventTab" in script
+    assert "data-macro-event-tab" in script
+    assert "No future macro calendar events" in script
+    assert "No historical macro calendar events" in script
     assert "Future event" in script
     assert "Past event" in script
     assert "macroEventTooltip" in script
@@ -1201,6 +1213,8 @@ def test_dashboard_intelligence_preview_shell_contracts_are_present(tmp_path: Pa
     assert "data-macro-event-index" in script
     assert "data-macro-year-date" in script
     assert "macroCalendarView" in script
+    assert ".macro-event-tabs" in css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in css
     assert "updateIntelligencePropertiesSelection" in script
     assert "openIntelligencePropertiesDrawer" in script
     assert "closeIntelligencePropertiesDrawer" in script

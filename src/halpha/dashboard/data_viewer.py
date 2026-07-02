@@ -64,10 +64,23 @@ def dashboard_data_viewer_summary(config: dict[str, Any], *, config_path: Path) 
             config_path=config_path,
         )
         coverage = summarize_collection_coverage(coverage_state, data_type=data_type)
-        coverage_payload = _coverage_summary(coverage, coverage_state=coverage_state)
+        coverage_warnings, coverage_errors = _coverage_messages(
+            coverage_state,
+            data_type=data_type,
+            source=None,
+            identity=None,
+        )
+        coverage_payload = _coverage_summary(
+            coverage,
+            coverage_state=coverage_state,
+            warnings=coverage_warnings,
+            errors=coverage_errors,
+        )
         _fill_history_range_fallback(coverage_payload, data_type=data_type, config_path=config_path)
-        warnings = _string_list(store.get("warnings"))
-        warnings.extend(str(item) for item in coverage_state.get("warnings", []) if isinstance(item, str))
+        warnings = _store_warnings(store)
+        warnings.extend(coverage_warnings)
+        errors = _string_list(store.get("errors"))
+        errors.extend(coverage_errors)
         summaries.append(
             {
                 "data_type": data_type,
@@ -81,7 +94,7 @@ def dashboard_data_viewer_summary(config: dict[str, Any], *, config_path: Path) 
                 "export_capability": _export_capability(data_type),
                 "collection_capability": _collection_capability(data_type),
                 "warnings": _bounded_strings(warnings),
-                "errors": _bounded_strings(_string_list(store.get("errors"))),
+                "errors": _bounded_strings(errors),
                 "source_artifacts": _bounded_strings(_string_list(store.get("source_artifacts"))),
             }
         )
@@ -127,7 +140,12 @@ def dashboard_data_viewer_timeline(config: dict[str, Any], *, config_path: Path,
     intervals = sorted(intervals, key=lambda item: (str(item.get("range_start") or ""), str(item.get("status") or "")))
     bounded = intervals[: parsed["limit"]]
     omitted = max(0, len(intervals) - len(bounded))
-    warnings = _string_list(state.get("warnings"))
+    warnings, errors = _coverage_messages(
+        state,
+        data_type=parsed["data_type"],
+        source=parsed.get("source"),
+        identity=parsed["identity"] if parsed["identity"] else None,
+    )
     if omitted:
         warnings.append(f"{omitted} coverage timeline interval(s) omitted by limit.")
     return {
@@ -139,12 +157,12 @@ def dashboard_data_viewer_timeline(config: dict[str, Any], *, config_path: Path,
         "identity": parsed["identity"],
         "requested_start": parsed["start"],
         "requested_end": parsed["end"],
-        "coverage": _coverage_summary(summary, coverage_state=state),
+        "coverage": _coverage_summary(summary, coverage_state=state, warnings=warnings, errors=errors),
         "intervals": bounded,
         "omitted": {"intervals": omitted, "full_coverage_state_embedded": False},
         "source_artifacts": ["data/research/metadata/collection_coverage_state.json"],
         "warnings": _bounded_strings(warnings),
-        "errors": _bounded_error_messages(state.get("errors")),
+        "errors": _bounded_strings(errors),
     }
 
 
@@ -564,9 +582,22 @@ def _clip_range(record: dict[str, Any], *, requested_start: str, requested_end: 
     return {"range_start": start, "range_end": end}
 
 
-def _coverage_summary(summary: dict[str, Any], *, coverage_state: dict[str, Any]) -> dict[str, Any]:
+def _coverage_summary(
+    summary: dict[str, Any],
+    *,
+    coverage_state: dict[str, Any],
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    scoped_warnings = _bounded_strings(warnings if warnings is not None else _string_list(coverage_state.get("warnings")))
+    scoped_errors = _bounded_strings(errors if errors is not None else _bounded_error_messages(coverage_state.get("errors")))
     return {
-        "state_status": coverage_state.get("status") or "skipped",
+        "state_status": _coverage_state_status(
+            summary,
+            fallback_status=str(coverage_state.get("status") or "skipped"),
+            warnings=scoped_warnings,
+            errors=scoped_errors,
+        ),
         "record_count": int(summary.get("record_count") or 0),
         "status_counts": summary.get("status_counts") or {},
         "range_start": summary.get("range_start"),
@@ -575,9 +606,82 @@ def _coverage_summary(summary: dict[str, Any], *, coverage_state: dict[str, Any]
         "failed_ranges": summary.get("failed_ranges") or [],
         "not_collected_ranges": summary.get("not_collected_ranges") or [],
         "unknown_ranges": summary.get("unknown_ranges") or [],
-        "warnings": _bounded_strings(_string_list(coverage_state.get("warnings"))),
-        "errors": _bounded_error_messages(coverage_state.get("errors")),
+        "warnings": scoped_warnings,
+        "errors": scoped_errors,
     }
+
+
+def _coverage_messages(
+    coverage_state: dict[str, Any],
+    *,
+    data_type: str,
+    source: str | None,
+    identity: dict[str, str] | None,
+) -> tuple[list[str], list[str]]:
+    wanted_identity = _normalized_identity(identity or {}) if identity is not None else None
+    matched_records = []
+    attributable_records = 0
+    for record in coverage_state.get("records", []):
+        if not isinstance(record, dict):
+            continue
+        record_data_type = record.get("data_type")
+        if isinstance(record_data_type, str) and record_data_type:
+            attributable_records += 1
+        if record_data_type != data_type:
+            continue
+        if source is not None and record.get("source") != source:
+            continue
+        record_identity = _normalized_identity(record.get("identity"))
+        if wanted_identity is not None and record_identity != wanted_identity:
+            continue
+        matched_records.append(record)
+
+    warnings = [
+        message
+        for record in matched_records
+        for message in _string_list(record.get("warnings"))
+    ]
+    errors = [
+        message
+        for record in matched_records
+        for message in _bounded_error_messages(record.get("errors"))
+    ]
+    if not attributable_records:
+        warnings.extend(_string_list(coverage_state.get("warnings")))
+        errors.extend(_bounded_error_messages(coverage_state.get("errors")))
+    return _bounded_strings(warnings), _bounded_strings(errors)
+
+
+def _coverage_state_status(
+    summary: dict[str, Any],
+    *,
+    fallback_status: str,
+    warnings: list[str],
+    errors: list[str],
+) -> str:
+    if errors:
+        return "failed"
+    counts = summary.get("status_counts") if isinstance(summary.get("status_counts"), dict) else {}
+    if counts.get("failed") or counts.get("error"):
+        return "failed"
+    if counts.get("partial"):
+        return "partial"
+    if warnings or counts.get("warning"):
+        return "warning"
+    if counts.get("stale"):
+        return "stale"
+    if counts.get("not_collected"):
+        return "not_collected"
+    if counts.get("collected") or counts.get("no_data"):
+        return "ok"
+    if fallback_status == "skipped":
+        return fallback_status
+    return "ok"
+
+
+def _store_warnings(store: dict[str, Any]) -> list[str]:
+    drilldown = _dict(store.get("drilldown"))
+    return _bounded_strings([*_string_list(store.get("warnings")), *_string_list(drilldown.get("warnings"))])
 
 
 def _fill_history_range_fallback(coverage: dict[str, Any], *, data_type: str, config_path: Path) -> None:
