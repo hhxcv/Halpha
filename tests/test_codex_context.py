@@ -140,6 +140,11 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "do not recreate it from raw text" in prompt
     assert "organize each main section with symbol-level subheadings" in prompt
     assert "Do not include fixed boilerplate" in prompt
+    assert "Write as an analyst memo, not a material digest" in prompt
+    assert "Start with a decision-useful thesis" in prompt
+    assert "Do not default to neutral to avoid judgment" in prompt
+    assert "research guidance, watch conditions, review steps, and invalidation conditions" in prompt
+    assert "Halpha may append deterministic evidence appendices" in prompt
     assert "not financial advice" not in prompt
     assert "Do not modify repository files" in prompt
     assert "<context>" in prompt
@@ -162,7 +167,9 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "codex_may_generate_user_state: false" in prompt
     assert "codex_may_generate_allocations: false" in prompt
     assert "codex_may_generate_price_forecasts: false" in prompt
-    assert "- 核心摘要" in prompt
+    assert "- 核心结论" in prompt
+    assert "- 决策框架" in prompt
+    assert "- 风险提示" in prompt
     assert "- 标题" not in prompt
     assert "- Market Overview" not in prompt
 
@@ -308,6 +315,9 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     assert "Do not invent prices, events, links, sources, or certainty." in prompt
     assert "Preserve source awareness." in prompt
     assert "Do not include fixed boilerplate" in prompt
+    assert "Start with a decision-useful thesis" in prompt
+    assert "Do not default to neutral to avoid judgment" in prompt
+    assert "Do not create standalone material-led sections" in prompt
     assert "Simplified Chinese Markdown" in prompt
     assert manifest["artifacts"]["codex_context"] == "codex_context/context.md"
     assert manifest["artifacts"]["codex_prompt"] == "codex_context/prompt.md"

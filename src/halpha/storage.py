@@ -38,15 +38,19 @@ def _atomic_write_text(path: Path, text: str) -> None:
 
 
 def _replace_with_retry(source: Path, target: Path) -> None:
-    delays = (0.01, 0.05, 0.1)
+    delays = (0.02, 0.05, 0.1, 0.25, 0.5, 1.0)
     for delay in (*delays, None):
         try:
             os.replace(source, target)
             return
-        except PermissionError:
-            if delay is None:
+        except OSError as exc:
+            if delay is None or not _is_retryable_replace_error(exc):
                 raise
             time.sleep(delay)
+
+
+def _is_retryable_replace_error(exc: OSError) -> bool:
+    return isinstance(exc, PermissionError) or getattr(exc, "winerror", None) in {5, 32}
 
 
 def display_path(path: Path, *, base: Path | None = None, external_ref: str = EXTERNAL_ARTIFACT_REF) -> str:
