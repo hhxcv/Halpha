@@ -153,7 +153,8 @@ The current job runner supports:
 - workbench build: `workbench_build`;
 - strategy and text jobs: `backtest`, `experiment`, `optimize`,
   `text_models_prepare`, and `text_intel`;
-- monitor jobs: `monitor_dry_run`, `monitor_once`, and `monitor_inspect`.
+- monitor jobs: `monitor_dry_run`, `monitor_once`, `monitor_sources_once`,
+  and `monitor_inspect`.
 
 The dashboard UI may expose short monitor validation jobs directly in System
 Monitor or runtime control surfaces. It must not create a resident Monitor loop

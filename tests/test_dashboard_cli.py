@@ -339,7 +339,7 @@ def test_dashboard_root_serves_operational_overview_shell(tmp_path: Path) -> Non
     assert 'href="#artifacts"' not in response.text
     assert 'href="#commands"' not in response.text
     assert "Report operations" in response.text
-    assert "All reports" in response.text
+    assert 'id="report-library-groups"' in response.text
     assert "Report outline" in response.text
     assert "Markdown" not in response.text
     assert "OHLCV candlestick chart" in response.text

@@ -59,7 +59,7 @@ def test_golden_corpus_accepts_traceable_high_confidence_event_outputs(
     _assert_signal_traceability(signals, classifications)
 
 
-def test_golden_corpus_keeps_model_unavailable_classification_unknown(
+def test_golden_corpus_uses_rule_fallback_for_asset_backed_events_when_model_unavailable(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -83,20 +83,34 @@ def test_golden_corpus_keeps_model_unavailable_classification_unknown(
     assert result.succeeded is True
     classifications = _artifact(result, "text_event_classification_evidence.json")
     signals = _artifact(result, "text_event_signals.json")
+    expectations = _expectations()
+    fallback_raw_ids = set(expectations["accepted_asset_relevance"])
 
     assert [state["status"] for state in classifications["model_states"]] == ["unavailable", "unavailable"]
     for record in classifications["records"]:
         category = record["category_evidence"]
         tone = record["financial_tone_evidence"]
-        assert category["state"] == "unknown"
-        assert category["primary_category"] == "unknown"
-        assert category["candidates"] == []
+        if record["raw_item_id"] in fallback_raw_ids:
+            assert category["state"] == "accepted"
+            assert category["primary_category"] == expectations["accepted_categories"][record["raw_item_id"]]
+            assert category["confidence"] == "low"
+            assert category["candidates"][0]["accepted_by_gate"] is True
+            assert category["candidates"][0]["model_score"] == 0.0
+            assert "rule_based_category_fallback" in record["warnings"]
+        else:
+            assert category["state"] == "unknown"
+            assert category["primary_category"] == "unknown"
+            assert category["candidates"] == []
         assert tone["state"] == "unknown"
         assert tone["tone"] == "unknown"
         assert "classifier_model_unavailable" in record["warnings"]
         assert "sentiment_model_unavailable" in record["warnings"]
-    assert {signal["status"] for signal in signals["signals"]} == {"unknown"}
-    assert all(signal["primary_category"] == "unknown" for signal in signals["signals"])
+    assert signals["coverage"]["accepted_signals"] >= 1
+    assert signals["coverage"]["unknown_signals"] >= 1
+    assert any(
+        signal["status"] == "accepted" and signal["primary_category"] in {"etf_flows", "security_exploit"}
+        for signal in signals["signals"]
+    )
 
 
 def _assert_asset_relevance(artifact: dict[str, Any], expected: dict[str, str]) -> None:

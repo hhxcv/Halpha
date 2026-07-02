@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -10,6 +11,12 @@ from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.runtime.public_http import market_proxy_url_from_market, urlopen_from_public_proxy
+from halpha.runtime.public_rate_limits import (
+    PublicApiRateLimitError,
+    is_public_api_rate_limit_response,
+    record_public_api_rate_limit,
+    retry_after_seconds_from_headers,
+)
 from halpha.data.raw_artifacts import RawArtifactError, validate_market_raw_artifact
 from halpha.storage import write_json
 
@@ -57,7 +64,7 @@ def collect_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
             "symbol_count": symbol_count,
         },
     )
-    raw = _collect_raw_market(market)
+    raw = _collect_raw_market(market, config_path=run.config_path)
     try:
         validate_market_raw_artifact(raw, MARKET_ARTIFACT)
     except RawArtifactError as exc:
@@ -115,7 +122,7 @@ def collect_market_data(config: dict[str, Any], run: RunContext) -> list[str]:
     return [MARKET_ARTIFACT]
 
 
-def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
+def _collect_raw_market(market: dict[str, Any], *, config_path: Path | None = None) -> dict[str, Any]:
     source_name = market.get("source")
     collected_at = _utc_timestamp()
     raw = _raw_artifact(source_name, collected_at)
@@ -132,7 +139,7 @@ def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
         return raw
 
     try:
-        urlopen_func = _urlopen_from_market_config(market)
+        urlopen_func = _urlopen_from_market_config(market, config_path=config_path, source_name=str(source_name))
     except MarketCollectionError as exc:
         raw["errors"].append(
             {
@@ -144,7 +151,12 @@ def _collect_raw_market(market: dict[str, Any]) -> dict[str, Any]:
 
     for symbol in market.get("symbols", []):
         try:
-            ticker = _request_ticker(symbol, source_name=str(source_name), urlopen_func=urlopen_func)
+            ticker = _request_ticker(
+                symbol,
+                source_name=str(source_name),
+                urlopen_func=urlopen_func,
+                config_path=config_path,
+            )
             raw["items"].append(_market_item(ticker, source_name=str(source_name), collected_at=collected_at))
         except MarketCollectionError as exc:
             raw["errors"].append(
@@ -176,7 +188,13 @@ def _raw_artifact(source_name: Any, collected_at: str) -> dict[str, Any]:
     }
 
 
-def _request_ticker(symbol: str, *, source_name: str, urlopen_func) -> dict[str, Any]:
+def _request_ticker(
+    symbol: str,
+    *,
+    source_name: str,
+    urlopen_func,
+    config_path: Path | None = None,
+) -> dict[str, Any]:
     url = _ticker_url(source_name, symbol)
     request = Request(url, headers={"User-Agent": "Halpha/0.0.0"})
     try:
@@ -184,7 +202,16 @@ def _request_ticker(symbol: str, *, source_name: str, urlopen_func) -> dict[str,
             body = response.read().decode("utf-8")
     except HTTPError as exc:
         detail = _read_error_detail(exc)
+        _record_public_rate_limit_if_needed(
+            config_path=config_path,
+            url=url,
+            source=source_name,
+            error=exc,
+            message=detail,
+        )
         raise MarketCollectionError(f"{source_name} request failed for {symbol}: HTTP {exc.code}{detail}") from exc
+    except PublicApiRateLimitError as exc:
+        raise MarketCollectionError(f"{source_name} request rate-limited for {symbol}: {exc}") from exc
     except URLError as exc:
         raise MarketCollectionError(f"{source_name} request failed for {symbol}: {exc.reason}") from exc
     except TimeoutError as exc:
@@ -208,7 +235,12 @@ def _ticker_url(source_name: str, symbol: str) -> str:
     return f"{base_url}{ticker_path}?{query}"
 
 
-def _urlopen_from_market_config(market: dict[str, Any]):
+def _urlopen_from_market_config(
+    market: dict[str, Any],
+    *,
+    config_path: Path | None = None,
+    source_name: str | None = None,
+):
     return urlopen_from_public_proxy(
         _proxy_url_from_market_config(market),
         error_factory=MarketCollectionError,
@@ -218,6 +250,8 @@ def _urlopen_from_market_config(market: dict[str, Any]):
         missing_url_message="market.proxy.url must be a non-empty string when market.proxy.enabled is true",
         invalid_url_message="market.proxy.url must be an http or https URL",
         credentials_message="market.proxy.url must not include credentials",
+        rate_limit_config_path=config_path,
+        rate_limit_source=source_name,
     )
 
 
@@ -287,6 +321,27 @@ def _read_error_detail(error: HTTPError) -> str:
         return ""
     excerpt = body[:200].replace("\n", " ")
     return f": {excerpt}"
+
+
+def _record_public_rate_limit_if_needed(
+    *,
+    config_path: Path | None,
+    url: str,
+    source: str,
+    error: HTTPError,
+    message: str,
+) -> None:
+    headers = getattr(error, "headers", None)
+    if not is_public_api_rate_limit_response(error.code, headers=headers, message=message):
+        return
+    record_public_api_rate_limit(
+        config_path=config_path,
+        url=url,
+        source=source,
+        status_code=error.code,
+        retry_after_seconds=retry_after_seconds_from_headers(headers),
+        message=message,
+    )
 
 
 class MarketCollectionError(Exception):

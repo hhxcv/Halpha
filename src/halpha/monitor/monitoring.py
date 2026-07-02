@@ -370,6 +370,7 @@ def run_monitor_source_cycle(
     now: datetime | None = None,
     pipeline_runner: PipelineRunner = run_pipeline,
     source_refresher: SourceRefresher | None = None,
+    reassess_changed_sources: bool = True,
     cycle_id: str | None = None,
     loop_id: str | None = None,
     cycle_sequence: int | None = None,
@@ -382,6 +383,7 @@ def run_monitor_source_cycle(
             now=now,
             pipeline_runner=pipeline_runner,
             source_refresher=source_refresher,
+            reassess_changed_sources=reassess_changed_sources,
             cycle_id=cycle_id,
             loop_id=loop_id,
             cycle_sequence=cycle_sequence,
@@ -396,6 +398,7 @@ def _run_monitor_source_cycle_unlocked(
     now: datetime | None = None,
     pipeline_runner: PipelineRunner = run_pipeline,
     source_refresher: SourceRefresher | None = None,
+    reassess_changed_sources: bool = True,
     cycle_id: str | None = None,
     loop_id: str | None = None,
     cycle_sequence: int | None = None,
@@ -458,6 +461,7 @@ def _run_monitor_source_cycle_unlocked(
             "failed_sources": [],
             "source_results": [],
             "slow_tasks_excluded": list(SOURCE_CADENCE_EXCLUDED_TASKS),
+            "reassess_changed_sources": reassess_changed_sources,
         },
         "alert_archive": _monitor_alert_archive_summary(status="not_run"),
         "warnings": [],
@@ -565,7 +569,7 @@ def _run_monitor_source_cycle_unlocked(
     changed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "changed"]
     failed_sources = [str(result["source_key"]) for result in source_results if result.get("status") == "failed"]
 
-    if changed_sources:
+    if changed_sources and reassess_changed_sources:
         try:
             pipeline_result = pipeline_runner(
                 config,

@@ -80,6 +80,14 @@
     const VIEW_REFRESH_TTL_MS = 15000;
     const HEALTH_REFRESH_TTL_MS = 15000;
     const SIDEBAR_COLLAPSED_STORAGE_KEY = "halpha.dashboard.sidebarCollapsed";
+    const TRASH_ICON = `
+      <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 6h18"></path>
+        <path d="M8 6V4h8v2"></path>
+        <path d="M19 6l-1 14H6L5 6"></path>
+        <path d="M10 11v5"></path>
+        <path d="M14 11v5"></path>
+      </svg>`;
     const VIEW_TITLES = {
       overview: "Overview",
       reports: "Reports",
@@ -1587,7 +1595,6 @@
         setHtml("#report-details-drawer-body", `<div class="empty-state">Select a report to inspect its details.</div>`);
         return;
       }
-      const refs = reportSourceRefs(run, detail);
       const details = [
         detailRow("Type", run.type),
         detailRow("Run", run.run_id),
@@ -1603,12 +1610,6 @@
           ${statusPill(run.status || "unknown")}
         </div>
         <div class="report-detail-stack">${details}</div>
-        <section class="drawer-section">
-          <h3>Sources</h3>
-          <ul class="compact-list report-source-list">
-            ${refs.length ? refs.slice(0, 12).map((source) => `<li class="compact-row">${escapeHtml(source)}</li>`).join("") : `<li class="message">No source refs recorded for this report.</li>`}
-          </ul>
-        </section>
       `);
     }
 
@@ -6134,14 +6135,14 @@
             <section class="cleanup-panel">
               <div class="cleanup-panel-head">
                 <strong>Single-run artifacts</strong>
-                <button class="danger-button" type="button" id="cleanup-run-artifacts">Delete selected</button>
+                <button class="icon-button danger-icon-button" type="button" id="cleanup-run-artifacts" aria-label="Delete selected run artifacts" title="Delete selected run artifacts">${TRASH_ICON}</button>
               </div>
               <div id="run-cleanup-list" class="cleanup-list"></div>
             </section>
             <section class="cleanup-panel">
               <div class="cleanup-panel-head">
                 <strong>Shared data stores</strong>
-                <button class="danger-button" type="button" id="cleanup-shared-data">Delete selected</button>
+                <button class="icon-button danger-icon-button" type="button" id="cleanup-shared-data" aria-label="Delete selected shared data stores" title="Delete selected shared data stores">${TRASH_ICON}</button>
               </div>
               <div id="shared-cleanup-list" class="cleanup-list"></div>
             </section>

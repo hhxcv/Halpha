@@ -48,6 +48,17 @@ RUN_LOCAL_ARTIFACT_PREFIXES = ("raw/", "analysis/", "codex_context/", "report/")
 REPORT_FAILURE_ARTIFACT = "report/report.md"
 REPORT_FAILURE_DETAIL_ARTIFACT = "report/report_failure.json"
 REPORT_FAILURE_STATUSES = {"not_started", "not_run"}
+REPORT_READINESS_MIN_VIEW_COVERAGE_RATIO = 0.95
+REPORT_READY_QUALITY_STATUSES = {"", "available", "ok", "succeeded"}
+REPORT_BLOCKING_QUALITY_STATUSES = {
+    "degraded",
+    "failed",
+    "insufficient",
+    "insufficient_data",
+    "partial",
+    "stale",
+    "unavailable",
+}
 
 
 def run_pipeline(
@@ -1220,6 +1231,8 @@ def _report_core_requirement_failure(
                     "Codex report generation was skipped."
                 ),
             }
+    if completed_stage == "build_materials":
+        return _report_readiness_failure(config, run)
     return None
 
 
@@ -1233,10 +1246,14 @@ def _fail_report_core_requirement(
 ) -> RunResult:
     failed_stage = str(failure["stage"])
     reason = str(failure["message"])
+    details: dict[str, Any] = {"requirement": str(failure["requirement"])}
+    failure_details = failure.get("details")
+    if isinstance(failure_details, dict):
+        details.update(failure_details)
     error = _error_summary(
         failed_stage,
         reason,
-        details={"requirement": str(failure["requirement"])},
+        details=details,
     )
     _mark_record_failed_for_task(run, task_name=failed_stage, error=error, finished_at=finished_at)
     product_stage = TASK_STAGE_MAP.get(failed_stage)
@@ -1355,6 +1372,290 @@ def _market_data_view_succeeded(view: dict[str, Any]) -> bool:
     if isinstance(row_count, str) and row_count.isdigit():
         return int(row_count) > 0
     return False
+
+
+def _report_readiness_failure(config: dict[str, Any], run: RunContext) -> dict[str, Any] | None:
+    checks: list[dict[str, Any]] = []
+    if _market_data_views_required(config):
+        market_failure = _market_data_views_readiness_failure(run)
+        checks.append(_readiness_check_record("latest_ohlcv_views", market_failure))
+        if market_failure is not None:
+            _record_report_readiness(run, "failed", checks)
+            return market_failure
+
+    quant = config.get("quant")
+    if isinstance(quant, dict) and quant.get("enabled") is True:
+        evaluation_failure = _strategy_evaluation_readiness_failure(run)
+        checks.append(_readiness_check_record("strategy_evaluation", evaluation_failure))
+        if evaluation_failure is not None:
+            _record_report_readiness(run, "failed", checks)
+            return evaluation_failure
+
+    _record_report_readiness(run, "passed", checks)
+    return None
+
+
+def _market_data_views_readiness_failure(run: RunContext) -> dict[str, Any] | None:
+    artifact = run.raw_dir / "market_data_views.json"
+    if not artifact.exists():
+        return _readiness_failure(
+            "latest_ohlcv_views",
+            "report readiness failed: no latest OHLCV market data views are available after collection; "
+            "Codex report generation was skipped.",
+            details={"artifact": "raw/market_data_views.json", "view_count": 0},
+        )
+    data, error = _read_json_object(artifact)
+    if error is not None:
+        return _readiness_failure(
+            "latest_ohlcv_views",
+            f"report readiness failed: {error}; Codex report generation was skipped.",
+            details={"artifact": "raw/market_data_views.json"},
+        )
+    views = data.get("views")
+    if not isinstance(views, list) or not views:
+        return _readiness_failure(
+            "latest_ohlcv_views",
+            "report readiness failed: no latest OHLCV market data views are available after collection; "
+            "Codex report generation was skipped.",
+            details={"artifact": "raw/market_data_views.json", "view_count": 0},
+        )
+
+    blocking_views = [
+        _market_data_view_readiness_summary(view)
+        for view in views
+        if not isinstance(view, dict) or not _market_data_view_report_ready(view)
+    ]
+    if blocking_views:
+        return _readiness_failure(
+            "latest_ohlcv_views",
+            "report readiness failed: one or more latest OHLCV market data views are incomplete or degraded "
+            "after collection; Codex report generation was skipped.",
+            details={
+                "artifact": "raw/market_data_views.json",
+                "view_count": len(views),
+                "blocking_view_count": len(blocking_views),
+                "min_coverage_ratio": REPORT_READINESS_MIN_VIEW_COVERAGE_RATIO,
+                "blocking_views": blocking_views[:5],
+            },
+        )
+    return None
+
+
+def _market_data_view_report_ready(view: dict[str, Any]) -> bool:
+    status = str(view.get("status") or "").strip().lower()
+    if status:
+        if status != "succeeded":
+            return False
+    elif not _market_data_view_succeeded(view):
+        return False
+    if view.get("insufficient_data") is True:
+        return False
+    quality = view.get("quality")
+    quality_status = str(view.get("quality_status") or "").strip().lower()
+    if not quality_status and isinstance(quality, dict):
+        quality_status = str(quality.get("status") or "").strip().lower()
+    if quality_status not in REPORT_READY_QUALITY_STATUSES:
+        return False
+    row_count = _optional_int(view.get("row_count"))
+    if row_count is None or row_count <= 0:
+        return False
+    requested_lookback = _optional_int(view.get("requested_lookback"))
+    if requested_lookback and row_count / requested_lookback < REPORT_READINESS_MIN_VIEW_COVERAGE_RATIO:
+        return False
+    return True
+
+
+def _market_data_view_readiness_summary(view: Any) -> dict[str, Any]:
+    if not isinstance(view, dict):
+        return {"status": "invalid_view_record"}
+    quality = view.get("quality")
+    quality_status = str(view.get("quality_status") or "").strip().lower()
+    if not quality_status and isinstance(quality, dict):
+        quality_status = str(quality.get("status") or "").strip().lower()
+    return {
+        "view_id": view.get("view_id"),
+        "source": view.get("source"),
+        "symbol": view.get("symbol"),
+        "timeframe": view.get("timeframe"),
+        "status": view.get("status"),
+        "quality_status": quality_status or None,
+        "insufficient_data": view.get("insufficient_data"),
+        "row_count": _optional_int(view.get("row_count")),
+        "requested_lookback": _optional_int(view.get("requested_lookback")),
+    }
+
+
+def _strategy_evaluation_readiness_failure(run: RunContext) -> dict[str, Any] | None:
+    artifact = run.analysis_dir / "strategy_evaluation_summary.json"
+    if not artifact.exists():
+        return _readiness_failure(
+            "strategy_evaluation",
+            "report readiness failed: no successful strategy evaluation records are available; "
+            "Codex report generation was skipped.",
+            details={
+                "artifact": "analysis/strategy_evaluation_summary.json",
+                "record_count": 0,
+                "succeeded_record_count": 0,
+            },
+        )
+    data, error = _read_json_object(artifact)
+    if error is not None:
+        return _readiness_failure(
+            "strategy_evaluation",
+            f"report readiness failed: {error}; Codex report generation was skipped.",
+            details={"artifact": "analysis/strategy_evaluation_summary.json"},
+        )
+    records = data.get("records")
+    if not isinstance(records, list):
+        records = []
+    succeeded_records = [
+        record for record in records if isinstance(record, dict) and _strategy_evaluation_record_succeeded(record)
+    ]
+    if not succeeded_records:
+        return _readiness_failure(
+            "strategy_evaluation",
+            "report readiness failed: no successful strategy evaluation records are available; "
+            "Codex report generation was skipped.",
+            details={
+                "artifact": "analysis/strategy_evaluation_summary.json",
+                "record_count": len(records),
+                "succeeded_record_count": 0,
+            },
+        )
+
+    funding_failure = _strategy_funding_coverage_failure(succeeded_records)
+    if funding_failure is not None:
+        return funding_failure
+    return None
+
+
+def _strategy_evaluation_record_succeeded(record: dict[str, Any]) -> bool:
+    status = str(record.get("status") or "").strip().lower()
+    if status:
+        return status == "succeeded"
+    return record.get("error") in {None, ""}
+
+
+def _strategy_funding_coverage_failure(records: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for record in records:
+        single_window = record.get("single_window")
+        funding = single_window.get("funding_costs") if isinstance(single_window, dict) else None
+        if not isinstance(funding, dict):
+            if _strategy_record_requires_funding(record):
+                return _readiness_failure(
+                    "futures_funding_coverage",
+                    "report readiness failed: a futures strategy evaluation has no funding-cost input; "
+                    "Codex report generation was skipped.",
+                    details={
+                        "artifact": "analysis/strategy_evaluation_summary.json",
+                        "evaluation_id": record.get("evaluation_id"),
+                        "strategy_name": record.get("strategy_name"),
+                    },
+                )
+            continue
+        funding_issue = _funding_cost_coverage_issue(record, funding)
+        if funding_issue is not None:
+            return funding_issue
+    return None
+
+
+def _funding_cost_coverage_issue(record: dict[str, Any], funding: dict[str, Any]) -> dict[str, Any] | None:
+    errors = funding.get("errors")
+    error_count = len(errors) if isinstance(errors, list) else 0
+    expected = _optional_int(funding.get("expected_record_count"))
+    matched = _optional_int(funding.get("matched_record_count"))
+    missing = _optional_int(funding.get("missing_period_count")) or 0
+    status = str(funding.get("status") or "").strip().lower()
+    matched_shortfall = expected is not None and matched is not None and matched < expected
+    if error_count <= 0 and missing <= 0 and not matched_shortfall and status not in REPORT_BLOCKING_QUALITY_STATUSES:
+        return None
+    return _readiness_failure(
+        "futures_funding_coverage",
+        "report readiness failed: futures strategy funding-cost coverage is incomplete after collection; "
+        "Codex report generation was skipped.",
+        details={
+            "artifact": "analysis/strategy_evaluation_summary.json",
+            "evaluation_id": record.get("evaluation_id"),
+            "strategy_name": record.get("strategy_name"),
+            "funding_status": status or None,
+            "expected_record_count": expected,
+            "matched_record_count": matched,
+            "missing_period_count": missing,
+            "error_count": error_count,
+        },
+    )
+
+
+def _strategy_record_requires_funding(record: dict[str, Any]) -> bool:
+    sources: list[str] = []
+    for key in ("evaluation_id", "input_view_id", "strategy_run_id"):
+        value = record.get(key)
+        if isinstance(value, str):
+            sources.append(value)
+    parameter_profile = record.get("parameter_profile")
+    if isinstance(parameter_profile, dict):
+        profile = parameter_profile.get("profile")
+        if isinstance(profile, dict):
+            value = profile.get("source")
+            if isinstance(value, str):
+                sources.append(value)
+    joined = " ".join(sources).lower()
+    return any(token in joined for token in ("usdm", "futures", "perp", "swap"))
+
+
+def _readiness_failure(requirement: str, message: str, *, details: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "stage": "build_data_quality_summary",
+        "requirement": requirement,
+        "message": message,
+        "details": details,
+    }
+
+
+def _readiness_check_record(name: str, failure: dict[str, Any] | None) -> dict[str, Any]:
+    if failure is None:
+        return {"name": name, "status": "ok"}
+    return {
+        "name": name,
+        "status": "failed",
+        "requirement": failure.get("requirement"),
+        "message": failure.get("message"),
+    }
+
+
+def _record_report_readiness(run: RunContext, status: str, checks: list[dict[str, Any]]) -> None:
+    run.manifest["report_readiness"] = {
+        "status": status,
+        "checks": checks,
+    }
+
+
+def _read_json_object(path: Path) -> tuple[dict[str, Any], str | None]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}, f"{display_path(path)} was not found"
+    except json.JSONDecodeError as exc:
+        return {}, f"{display_path(path)} is not valid JSON: {exc.msg}"
+    except OSError as exc:
+        return {}, f"{display_path(path)} could not be read: {exc}"
+    if not isinstance(data, dict):
+        return {}, f"{display_path(path)} must contain a JSON object"
+    return data, None
+
+
+def _optional_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+    return None
 
 
 def _succeeded_quant_strategy_runs(run: RunContext) -> int:
@@ -1489,8 +1790,7 @@ def _report_failure_markdown(detail: dict[str, Any]) -> str:
     codex = detail.get("codex") if isinstance(detail.get("codex"), dict) else {}
     codex_status = str(codex.get("status") or "unknown")
     codex_started = "true" if codex.get("started") is True else "false"
-    return "\n".join(
-        [
+    lines = [
             "# \u62a5\u544a\u751f\u6210\u5f02\u5e38\u8bb0\u5f55",
             "",
             "## \u8fd0\u884c\u72b6\u6001",
@@ -1506,6 +1806,21 @@ def _report_failure_markdown(detail: dict[str, Any]) -> str:
             "",
             reason,
             "",
+    ]
+    stderr_summary = _report_failure_stderr_summary(detail)
+    if stderr_summary:
+        lines.extend(
+            [
+                "## \u8bca\u65ad\u6458\u8981",
+                "",
+                "```text",
+                stderr_summary,
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
             "## \u5904\u7406\u7ed3\u679c",
             "",
             (
@@ -1517,6 +1832,17 @@ def _report_failure_markdown(detail: dict[str, Any]) -> str:
             "",
         ]
     )
+    return "\n".join(lines)
+
+
+def _report_failure_stderr_summary(detail: dict[str, Any]) -> str | None:
+    error = detail.get("error")
+    if not isinstance(error, dict):
+        return None
+    value = error.get("stderr_summary")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _record_stage_failure_context(

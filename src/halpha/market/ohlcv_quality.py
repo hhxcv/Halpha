@@ -17,6 +17,7 @@ OHLCV_TIMEFRAME_DURATIONS = {
 }
 OHLCV_TIMEFRAME_ORDER = ("1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M")
 STALE_CANDLE_TOLERANCE_MULTIPLIER = 2
+STALE_CANDLE_MIN_TOLERANCE = timedelta(minutes=15)
 QUALITY_SAMPLE_LIMIT = 3
 
 
@@ -172,13 +173,14 @@ def _freshness_state(
         }
     latest = _parse_utc_or_none(latest_open_time)
     if latest is None:
+        stale_tolerance = _stale_tolerance(duration)
         return {
             "stale_latest_candle": False,
             "freshness_reference_time": _format_utc(reference),
             "stale_after_open_time": None,
-            "stale_tolerance_seconds": int(duration.total_seconds() * STALE_CANDLE_TOLERANCE_MULTIPLIER),
+            "stale_tolerance_seconds": int(stale_tolerance.total_seconds()),
         }
-    stale_tolerance = duration * STALE_CANDLE_TOLERANCE_MULTIPLIER
+    stale_tolerance = _stale_tolerance(duration)
     stale_after = latest + stale_tolerance
     return {
         "stale_latest_candle": reference > stale_after,
@@ -186,6 +188,10 @@ def _freshness_state(
         "stale_after_open_time": _format_utc(stale_after),
         "stale_tolerance_seconds": int(stale_tolerance.total_seconds()),
     }
+
+
+def _stale_tolerance(duration: timedelta) -> timedelta:
+    return max(duration * STALE_CANDLE_TOLERANCE_MULTIPLIER, STALE_CANDLE_MIN_TOLERANCE)
 
 
 def _record_identity(record: dict[str, Any]) -> str:

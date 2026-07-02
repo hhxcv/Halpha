@@ -230,6 +230,35 @@ def test_monitor_source_cycle_batches_multiple_changed_sources_into_one_run(tmp_
     ]
 
 
+def test_monitor_source_cycle_can_skip_changed_source_reassessment(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path, text_enabled=True)
+    config = load_config(config_path)
+    calls: list[str] = []
+
+    def fail_pipeline(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("source-only monitor cycle must not run reassessment")
+
+    result = run_monitor_source_cycle(
+        config,
+        config_path=config_path,
+        now=_time(),
+        pipeline_runner=fail_pipeline,
+        source_refresher=_source_refresher(calls=calls),
+        reassess_changed_sources=False,
+    )
+
+    health = MonitorStateRepository(config_path=config_path).health_state(monitor_output_dir="monitor", base=tmp_path)
+    states = {state["source_key"]: state for state in health["source_states"]}
+
+    assert result.succeeded is True
+    assert result.status == "changed"
+    assert result.run_id is None
+    assert calls == ["text"]
+    assert _product_run_dirs(tmp_path) == []
+    assert states["text"]["status"] == "changed"
+    assert states["text"].get("latest_run_id") is None
+
+
 def test_monitor_source_cycle_caps_per_source_failure_backoff(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path, text_enabled=True)
     config = load_config(config_path)

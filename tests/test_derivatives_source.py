@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from email.message import Message
 from datetime import datetime
 from io import BytesIO
 from typing import Any
@@ -141,6 +142,40 @@ def test_binance_usdm_derivatives_source_parses_supported_payloads() -> None:
     }
 
 
+def test_funding_rate_history_accepts_explicit_time_window() -> None:
+    requested_urls: list[str] = []
+    start_time = _millis("2026-03-01T00:00:00Z")
+    end_time = _millis("2026-07-02T00:00:00Z")
+    expected_url = (
+        "https://fapi.binance.com/fapi/v1/fundingRate?"
+        f"symbol=BTCUSDT&startTime={start_time}&endTime={end_time}&limit=720"
+    )
+
+    def fake_urlopen(request, timeout):
+        requested_urls.append(request.full_url)
+        return _FakeResponse(
+            [
+                {
+                    "symbol": "BTCUSDT",
+                    "fundingRate": "0.00010000",
+                    "fundingTime": _millis("2026-06-18T00:00:00Z"),
+                }
+            ]
+        )
+
+    result = PublicDerivativesSource("binance_usdm", urlopen_func=fake_urlopen).fetch_records(
+        "funding_rate_history",
+        symbol="BTCUSDT",
+        start_time_ms=start_time,
+        end_time_ms=end_time,
+        limit=720,
+    )
+
+    assert requested_urls == [expected_url]
+    assert result["errors"] == []
+    assert result["records"][0]["period"] == "8h"
+
+
 def test_derivatives_source_records_partial_malformed_rows() -> None:
     def fake_urlopen(request, timeout):
         return _FakeResponse(
@@ -241,6 +276,42 @@ def test_derivatives_source_records_http_unsupported_symbol_error() -> None:
             "message": "binance_usdm derivatives endpoint returned HTTP 400: Invalid symbol.",
             "status_code": 400,
             "raw_error_code": -1121,
+        }
+    ]
+
+
+def test_derivatives_source_records_rate_limit_error_without_private_ip() -> None:
+    def fake_urlopen(request, timeout):
+        headers = Message()
+        headers["Retry-After"] = "120"
+        body = b'{"code": -1003, "msg": "Way too many requests; IP(10.119.110.193) banned until 1782962213508."}'
+        raise HTTPError(request.full_url, 418, "Rate limited", headers, BytesIO(body))
+
+    result = PublicDerivativesSource("binance_usdm", urlopen_func=fake_urlopen).fetch_records(
+        "basis",
+        symbol="BTCUSDT",
+        period="1h",
+        limit=1,
+    )
+
+    assert result["records"] == []
+    assert result["errors"] == [
+        {
+            "source": "binance_usdm",
+            "market_type": "usd_m_futures",
+            "request_class": "basis",
+            "data_class": "basis",
+            "endpoint": "basis",
+            "symbol": "BTCUSDT",
+            "period": "1h",
+            "error_type": "rate_limited",
+            "message": (
+                "binance_usdm derivatives endpoint returned HTTP 418: "
+                "Way too many requests; IP(<redacted-ip>) banned until 1782962213508."
+            ),
+            "status_code": 418,
+            "raw_error_code": -1003,
+            "retry_after_seconds": 120,
         }
     ]
 

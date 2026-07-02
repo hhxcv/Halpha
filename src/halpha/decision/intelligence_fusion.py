@@ -23,8 +23,6 @@ RISK_ASSESSMENT_ARTIFACT = "analysis/risk_assessment.json"
 FACTOR_STATES_ARTIFACT = "analysis/factor_states.json"
 MULTI_SOURCE_SIGNALS_ARTIFACT = "analysis/multi_source_signals.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment.json"
-OUTCOME_EVALUATIONS_ARTIFACT = "analysis/outcome_evaluations.json"
-DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 
 STATE_ORDER = (
     "supportive",
@@ -111,8 +109,6 @@ class _FusionInputs:
         self._load_factor_states()
         self._load_multi_source_signals()
         self._load_event_assessments()
-        self._load_outcome_evaluations()
-        self._load_data_quality()
 
     def _load_market_signals(self) -> None:
         artifact = self._read("strategy", MARKET_SIGNALS_ARTIFACT, self.run.analysis_dir / "market_signals.json", "signals")
@@ -355,65 +351,6 @@ class _FusionInputs:
                     "downgrade_reasons": _string_list(record.get("downgrade_reasons")),
                 },
             )
-
-    def _load_outcome_evaluations(self) -> None:
-        artifact = self._read(
-            "outcome",
-            OUTCOME_EVALUATIONS_ARTIFACT,
-            self.run.analysis_dir / "outcome_evaluations.json",
-            "evaluations",
-        )
-        if artifact is None:
-            return
-        for record in _dict_list(artifact.data.get("evaluations")):
-            self._add(
-                _scope_from_fields(record.get("symbol") or record.get("asset"), record.get("timeframe")),
-                "outcome",
-                OUTCOME_EVALUATIONS_ARTIFACT,
-                _text(record.get("outcome_id") or record.get("target_id")),
-                state=_text(record.get("outcome_state") or record.get("evaluation_status")),
-                direction=_direction_from_outcome(record),
-                confidence="medium" if record.get("evaluation_status") == "evaluated" else "low",
-                evidence=_string_list(record.get("evidence")) or [f"outcome_state={_text(record.get('outcome_state'))}"],
-                uncertainty=_string_list(record.get("uncertainty")),
-                warnings=_string_list(record.get("warnings")),
-                errors=_error_list(record.get("errors")),
-                source_artifacts=[OUTCOME_EVALUATIONS_ARTIFACT, *_string_list(record.get("source_artifacts"))],
-                extra={
-                    "evaluation_status": _text(record.get("evaluation_status")),
-                    "outcome_state": _text(record.get("outcome_state")),
-                },
-            )
-
-    def _load_data_quality(self) -> None:
-        artifact = self._read(
-            "data_quality",
-            DATA_QUALITY_SUMMARY_ARTIFACT,
-            self.run.analysis_dir / "data_quality_summary.json",
-            "checks",
-        )
-        if artifact is None:
-            return
-        counts = _dict(artifact.data.get("counts"))
-        status = _text(artifact.data.get("status"))
-        self._add(
-            _global_scope(),
-            "data_quality",
-            DATA_QUALITY_SUMMARY_ARTIFACT,
-            "data_quality_summary",
-            state=status,
-            direction="cautionary" if status in {"warning", "degraded", "failed"} else "neutral",
-            confidence="medium",
-            evidence=[
-                "data_quality status="
-                + status
-                + f" warnings={_int(counts.get('warnings'))} errors={_int(counts.get('errors'))}"
-            ],
-            uncertainty=_string_list(artifact.data.get("warnings")),
-            warnings=_string_list(artifact.data.get("warnings")),
-            errors=_error_list(artifact.data.get("errors")),
-            source_artifacts=[DATA_QUALITY_SUMMARY_ARTIFACT, *_string_list(artifact.data.get("source_artifacts"))],
-        )
 
     def _read(self, source_layer: str, artifact: str, path: Path, records_key: str) -> "_LoadedArtifact | None":
         data, error = _read_json(path)
@@ -1034,15 +971,6 @@ def _direction_from_event(record: dict[str, Any]) -> str:
     if impact == "supports_existing_view" and risk_effect in {"neutral", "risk_down"}:
         return "supportive"
     if impact in {"could_invalidate", "could_downgrade"} or risk_effect == "risk_up":
-        return "cautionary"
-    return "unknown"
-
-
-def _direction_from_outcome(record: dict[str, Any]) -> str:
-    state = _text(record.get("outcome_state"))
-    if state in {"favorable", "confirmed", "aligned"}:
-        return "supportive"
-    if state in {"adverse", "contradicted", "misaligned"}:
         return "cautionary"
     return "unknown"
 

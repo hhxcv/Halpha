@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from html import unescape
 from html.parser import HTMLParser
 from json import JSONDecodeError
+from pathlib import Path
 import re
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -14,6 +15,12 @@ from halpha.data.public_capabilities import unsupported_macro_calendar_raw_colle
 from halpha.data.raw_artifacts import RawArtifactError, validate_macro_calendar_raw_artifact
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.runtime.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
+from halpha.runtime.public_rate_limits import (
+    PublicApiRateLimitError,
+    is_public_api_rate_limit_response,
+    record_public_api_rate_limit,
+    retry_after_seconds_from_headers,
+)
 from halpha.storage import write_json
 
 
@@ -84,6 +91,7 @@ def collect_macro_calendar_data(config: dict[str, Any], run: RunContext) -> list
         macro_calendar,
         affected_assets=_market_symbols(config),
         proxy_url=market_proxy_url_from_config(config, error_factory=MacroCalendarCollectionError),
+        rate_limit_config_path=run.config_path,
     )
     artifact_path = run.raw_dir / "macro_calendar.json"
     write_json(artifact_path, raw)
@@ -99,6 +107,7 @@ def collect_macro_calendar_raw(
     affected_assets: list[str] | None = None,
     proxy_url: str | None = None,
     now: datetime | None = None,
+    rate_limit_config_path: Path | None = None,
 ) -> dict[str, Any]:
     now_value = _utc_now() if now is None else now.astimezone(timezone.utc)
     collected_at = _utc_timestamp(now_value)
@@ -136,6 +145,7 @@ def collect_macro_calendar_raw(
             window_end=window_end,
             affected_assets=affected_assets or [],
             proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
         )
         raw["items"].extend(result["items"])
         raw["availability"].extend(result["availability"])
@@ -158,6 +168,7 @@ def _collect_macro_calendar_source(
     window_end: datetime,
     affected_assets: list[str],
     proxy_url: str | None,
+    rate_limit_config_path: Path | None,
 ) -> dict[str, list[dict[str, Any]]]:
     if source == FEDERAL_RESERVE_FOMC_SOURCE:
         return _collect_fomc_source(
@@ -169,6 +180,7 @@ def _collect_macro_calendar_source(
             window_end=window_end,
             affected_assets=affected_assets,
             proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
         )
     if source == BEA_RELEASE_CALENDAR_SOURCE:
         return _collect_bea_release_calendar_source(
@@ -180,6 +192,7 @@ def _collect_macro_calendar_source(
             window_end=window_end,
             affected_assets=affected_assets,
             proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
         )
     availability = [
         _availability_record(
@@ -203,6 +216,7 @@ def _collect_fomc_source(
     window_end: datetime,
     affected_assets: list[str],
     proxy_url: str | None,
+    rate_limit_config_path: Path | None,
 ) -> dict[str, list[dict[str, Any]]]:
     items: list[dict[str, Any]] = []
     availability: list[dict[str, Any]] = []
@@ -231,7 +245,12 @@ def _collect_fomc_source(
         return {"items": items, "availability": availability, "errors": errors}
 
     try:
-        body = _request_source(source_url, proxy_url=proxy_url)
+        body = _request_source(
+            source_url,
+            proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
+            rate_limit_source=source,
+        )
     except MacroCalendarCollectionError as exc:
         error = _collector_error(source=source, message=str(exc), source_url=source_url)
         errors.append(error)
@@ -286,6 +305,7 @@ def _collect_bea_release_calendar_source(
     window_end: datetime,
     affected_assets: list[str],
     proxy_url: str | None,
+    rate_limit_config_path: Path | None,
 ) -> dict[str, list[dict[str, Any]]]:
     items: list[dict[str, Any]] = []
     availability: list[dict[str, Any]] = []
@@ -314,7 +334,12 @@ def _collect_bea_release_calendar_source(
         return {"items": items, "availability": availability, "errors": errors}
 
     try:
-        body = _request_source(source_url, proxy_url=proxy_url)
+        body = _request_source(
+            source_url,
+            proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
+            rate_limit_source=source,
+        )
     except MacroCalendarCollectionError as exc:
         error = _collector_error(source=source, message=str(exc), source_url=source_url)
         errors.append(error)
@@ -359,7 +384,13 @@ def _collect_bea_release_calendar_source(
     return {"items": items, "availability": availability, "errors": errors}
 
 
-def _request_source(source_url: str, *, proxy_url: str | None) -> str:
+def _request_source(
+    source_url: str,
+    *,
+    proxy_url: str | None,
+    rate_limit_config_path: Path | None = None,
+    rate_limit_source: str | None = None,
+) -> str:
     request = Request(source_url, headers={"User-Agent": "Halpha/0.0.0"})
     urlopen_func = urlopen_from_public_proxy(
         proxy_url,
@@ -367,13 +398,24 @@ def _request_source(source_url: str, *, proxy_url: str | None) -> str:
         default_urlopen=urlopen,
         proxy_handler_factory=ProxyHandler,
         opener_factory=build_opener,
+        rate_limit_config_path=rate_limit_config_path,
+        rate_limit_source=rate_limit_source,
     )
     try:
         with urlopen_func(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read()
     except HTTPError as exc:
         detail = _read_error_detail(exc)
+        _record_public_rate_limit_if_needed(
+            config_path=rate_limit_config_path,
+            url=source_url,
+            source=str(rate_limit_source or "macro_calendar"),
+            error=exc,
+            message=detail,
+        )
         raise MacroCalendarCollectionError(f"macro calendar request failed: HTTP {exc.code}{detail}") from exc
+    except PublicApiRateLimitError as exc:
+        raise MacroCalendarCollectionError(f"macro calendar request rate-limited: {exc}") from exc
     except URLError as exc:
         raise MacroCalendarCollectionError(f"macro calendar request failed: {exc.reason}") from exc
     except TimeoutError as exc:
@@ -935,6 +977,27 @@ def _read_error_detail(error: HTTPError) -> str:
         return ""
     excerpt = body[:200].replace("\n", " ")
     return f": {excerpt}"
+
+
+def _record_public_rate_limit_if_needed(
+    *,
+    config_path: Path | None,
+    url: str,
+    source: str,
+    error: HTTPError,
+    message: str,
+) -> None:
+    headers = getattr(error, "headers", None)
+    if not is_public_api_rate_limit_response(error.code, headers=headers, message=message):
+        return
+    record_public_api_rate_limit(
+        config_path=config_path,
+        url=url,
+        source=source,
+        status_code=error.code,
+        retry_after_seconds=retry_after_seconds_from_headers(headers),
+        message=message,
+    )
 
 
 def _clean_text(value: str) -> str:

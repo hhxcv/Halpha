@@ -120,14 +120,14 @@ DEFAULT_CONFIG_STORAGE_DIR = Path(".halpha") / "configs"
 CONFIG_IMPORT_MAX_BYTES = 512 * 1024
 LIVE_COLLECTION_DEFAULTS = {
     "ohlcv": {"cadence_seconds": 300, "lookback_seconds": 24 * 3600},
-    "text_event": {"cadence_seconds": 300, "lookback_seconds": 6 * 3600},
+    "text_event": {"cadence_seconds": 600, "lookback_seconds": 6 * 3600},
     "macro_calendar": {
-        "cadence_seconds": 3600,
+        "cadence_seconds": 6 * 3600,
         "lookback_seconds": 7 * 24 * 3600,
         "lookahead_seconds": 45 * 24 * 3600,
     },
     "onchain_flow": {"cadence_seconds": 3600, "lookback_seconds": 24 * 3600},
-    "derivatives_market": {"cadence_seconds": 300, "lookback_seconds": 6 * 3600},
+    "derivatives_market": {"cadence_seconds": 900, "lookback_seconds": 6 * 3600},
     "market_anomaly": {"cadence_seconds": 300, "lookback_seconds": 6 * 3600},
 }
 LIVE_TRIGGER_DEFAULTS = {

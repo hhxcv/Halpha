@@ -52,7 +52,7 @@ def sync_ohlcv_history(
     base = runtime_root(run.config_path)
     artifacts = _artifact_paths(metadata_paths, base)
     store = OHLCVParquetStore(storage_dir, run_output_dir=run.run_dir.parent)
-    factory = source_factory or _default_source_factory
+    factory = source_factory or (lambda source, proxy_url: _default_source_factory(source, proxy_url, run.config_path))
     source_name = str(market["source"])
 
     try:
@@ -207,8 +207,12 @@ def _sync_item(
     }
 
 
-def _default_source_factory(source_name: str, proxy_url: str | None) -> OHLCVSourceClient:
-    return CCXTOHLCVSource(source_name, proxy_url=proxy_url)
+def _default_source_factory(
+    source_name: str,
+    proxy_url: str | None,
+    config_path: Path | None = None,
+) -> OHLCVSourceClient:
+    return CCXTOHLCVSource(source_name, proxy_url=proxy_url, rate_limit_config_path=config_path)
 
 
 def _record_skipped_sync(run: RunContext, reason: str) -> None:

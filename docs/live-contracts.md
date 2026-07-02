@@ -112,6 +112,34 @@ authorization until the user confirms again.
 Live settings are configuration only. They must not start, stop, or mutate the
 resident System Monitor process lifecycle.
 
+The implemented Dashboard Settings defaults use source-value-aware refresh
+cadences:
+
+- `ohlcv`: 300 seconds;
+- `market_anomaly`: 300 seconds;
+- `text_event`: 600 seconds;
+- `derivatives_market`: 900 seconds;
+- `onchain_flow`: 3600 seconds;
+- `macro_calendar`: 21600 seconds.
+
+These are default scheduling values only. A configured collection must still
+respect provider rate-limit cooldowns before sending public API requests.
+
+## Public API Rate Limits
+
+Public HTTP collection must check the runtime rate-limit cooldown state before
+sending a request. The implemented cooldown state is stored in
+`.halpha/state.sqlite` under the `public_api_rate_limits` runtime metadata key.
+It is mutable operational state, not research evidence and not Codex context by
+default.
+
+When a public provider returns a rate-limit response such as HTTP `429` or
+Binance-style HTTP `418`, Halpha records a source/host cooldown with status
+code, bounded retry interval, last-seen time, and a sanitized reason. Full
+request URLs, proxy URLs, credentials, local hostnames, and IP addresses must
+not be stored. Later requests to the same public API host must be skipped until
+the cooldown expires, including after a Core or Dashboard process restart.
+
 ## Supported Live Data Types
 
 The current Live source-refresh scheduler can refresh these implemented

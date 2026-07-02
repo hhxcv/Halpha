@@ -19,6 +19,8 @@ STAGE_NAME = "run_codex_report"
 CODEX_PROMPT_ARTIFACT = "codex_context/prompt.md"
 REPORT_ARTIFACT = "report/report.md"
 STDERR_SUMMARY_LIMIT = 1000
+STDERR_SUMMARY_HEAD_LIMIT = 450
+STDERR_SUMMARY_TAIL_LIMIT = 450
 RISK_SECTION_HEADING_RE = re.compile(r"^##\s+风险提示\s*$", re.MULTILINE)
 
 
@@ -151,7 +153,9 @@ def _stderr_summary(value: str | bytes | None) -> str | None:
     if not summary:
         return None
     if len(summary) > STDERR_SUMMARY_LIMIT:
-        return f"{summary[: STDERR_SUMMARY_LIMIT - 3].rstrip()}..."
+        head = summary[:STDERR_SUMMARY_HEAD_LIMIT].rstrip()
+        tail = summary[-STDERR_SUMMARY_TAIL_LIMIT:].lstrip()
+        return f"{head}\n...[stderr truncated]...\n{tail}"
     return summary
 
 

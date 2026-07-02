@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from io import BytesIO
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
 from halpha.config import load_config
 from halpha.pipeline import PipelineError, run_pipeline
+from halpha.runtime.public_rate_limits import active_public_api_cooldown
 
 
 pytestmark = pytest.mark.usefixtures("isolate_artifact_cwd")
@@ -172,6 +174,33 @@ def test_market_collection_failure_writes_error_artifact_without_fake_records(
     assert (result.run.report_dir / "report_failure.json").exists()
     assert manifest["artifacts"]["report"] == "report/report.md"
     assert manifest["artifacts"]["report_failure"] == "report/report_failure.json"
+
+
+def test_market_collection_records_nonstandard_rate_limit_body(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    def failing_urlopen(request, timeout):
+        body = b'{"error": "quota exceeded for this public endpoint"}'
+        raise HTTPError(request.full_url, 403, "Forbidden", {}, BytesIO(body))
+
+    monkeypatch.setattr("halpha.collectors.market.urlopen", failing_urlopen)
+
+    result = run_pipeline(config, config_path=config_path)
+
+    assert result.succeeded is False
+    assert result.failed_stage == "collect_market_data"
+    active = active_public_api_cooldown(
+        config_path=config_path,
+        url="https://data-api.binance.vision/api/v3/ticker/24hr",
+        source="binance",
+    )
+    assert active is not None
+    assert active["status_code"] == 403
+    assert active["source"] == "binance"
 
 
 def test_market_collection_uses_configured_proxy(tmp_path: Path, monkeypatch) -> None:

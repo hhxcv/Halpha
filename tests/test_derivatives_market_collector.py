@@ -165,8 +165,15 @@ def test_derivatives_collector_passes_configured_market_proxy(tmp_path: Path, mo
     captured_proxy_urls: list[str | None] = []
 
     class FakeDerivativesSource:
-        def __init__(self, source: str, *, proxy_url: str | None = None) -> None:
+        def __init__(
+            self,
+            source: str,
+            *,
+            proxy_url: str | None = None,
+            rate_limit_config_path: Path | None = None,
+        ) -> None:
             self.source = source
+            _ = rate_limit_config_path
             captured_proxy_urls.append(proxy_url)
 
         def fetch_records(self, request_class, *, symbol, period=None, limit=None):
@@ -207,8 +214,15 @@ def test_derivatives_collector_records_unsupported_data_class_as_unavailable(
     run = _run_context(tmp_path)
 
     class FakeDerivativesSource:
-        def __init__(self, source: str, *, proxy_url: str | None = None) -> None:
+        def __init__(
+            self,
+            source: str,
+            *,
+            proxy_url: str | None = None,
+            rate_limit_config_path: Path | None = None,
+        ) -> None:
             self.source = source
+            _ = proxy_url, rate_limit_config_path
 
         def fetch_records(self, request_class, *, symbol, period=None, limit=None):
             raise AssertionError("unsupported data classes should not call fetch_records")
@@ -233,6 +247,256 @@ def test_derivatives_collector_records_unsupported_data_class_as_unavailable(
         }
     ]
     assert run.manifest["counts"]["derivatives_market_unavailable"] == 1
+
+
+def test_derivatives_collector_windows_large_funding_lookback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = {
+        "market": {
+            "derivatives": {
+                "enabled": True,
+                "source": "binance_usdm",
+                "symbols": ["BTCUSDT"],
+                "data_classes": ["funding_rate"],
+                "periods": ["4h"],
+                "lookback": {"4h": 720},
+            }
+        }
+    }
+    run = _run_context(tmp_path)
+    requests: list[dict[str, int | None | str]] = []
+
+    class FakeDerivativesSource:
+        def __init__(
+            self,
+            source: str,
+            *,
+            proxy_url: str | None = None,
+            rate_limit_config_path: Path | None = None,
+        ) -> None:
+            self.source = source
+            _ = proxy_url, rate_limit_config_path
+
+        def fetch_records(
+            self,
+            request_class,
+            *,
+            symbol,
+            period=None,
+            limit=None,
+            start_time_ms=None,
+            end_time_ms=None,
+        ):
+            requests.append(
+                {
+                    "request_class": request_class,
+                    "symbol": symbol,
+                    "period": period,
+                    "limit": limit,
+                    "start_time_ms": start_time_ms,
+                    "end_time_ms": end_time_ms,
+                }
+            )
+            return {
+                "request_class": request_class,
+                "data_class": "funding_rate",
+                "endpoint": "funding_rate_history",
+                "period": "8h",
+                "records": [],
+                "errors": [],
+            }
+
+    monkeypatch.setattr(
+        "halpha.collectors.derivatives_market.PublicDerivativesSource",
+        FakeDerivativesSource,
+    )
+    monkeypatch.setattr(
+        "halpha.collectors.derivatives_market._utc_timestamp",
+        lambda value=None: "2026-07-02T00:00:00Z",
+    )
+
+    collect_derivatives_market_data(config, run)
+
+    assert requests == [
+        {
+            "request_class": "funding_rate_history",
+            "symbol": "BTCUSDT",
+            "period": None,
+            "limit": 720,
+            "start_time_ms": _millis("2025-11-04T00:00:00Z"),
+            "end_time_ms": _millis("2026-07-02T00:00:00Z"),
+        }
+    ]
+
+
+def test_derivatives_collector_stops_requests_after_rate_limit(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = {
+        "market": {
+            "derivatives": {
+                "enabled": True,
+                "source": "binance_usdm",
+                "symbols": ["BTCUSDT"],
+                "data_classes": ["basis"],
+                "periods": ["1h", "4h", "1d"],
+                "lookback": {"1h": 120, "4h": 120, "1d": 120},
+            }
+        }
+    }
+    run = _run_context(tmp_path)
+    requests: list[dict[str, int | None | str]] = []
+
+    class FakeDerivativesSource:
+        def __init__(
+            self,
+            source: str,
+            *,
+            proxy_url: str | None = None,
+            rate_limit_config_path: Path | None = None,
+        ) -> None:
+            self.source = source
+            _ = proxy_url, rate_limit_config_path
+
+        def fetch_records(
+            self,
+            request_class,
+            *,
+            symbol,
+            period=None,
+            limit=None,
+            start_time_ms=None,
+            end_time_ms=None,
+        ):
+            requests.append(
+                {
+                    "request_class": request_class,
+                    "symbol": symbol,
+                    "period": period,
+                    "limit": limit,
+                }
+            )
+            if len(requests) > 1:
+                raise AssertionError("collector should skip remaining derivatives requests after rate limit")
+            return {
+                "request_class": request_class,
+                "data_class": "basis",
+                "endpoint": "basis",
+                "period": period,
+                "records": [],
+                "errors": [
+                    {
+                        "source": "binance_usdm",
+                        "market_type": "usd_m_futures",
+                        "request_class": request_class,
+                        "data_class": "basis",
+                        "endpoint": "basis",
+                        "symbol": symbol,
+                        "period": period,
+                        "error_type": "rate_limited",
+                        "message": "binance_usdm derivatives endpoint returned HTTP 418",
+                        "status_code": 418,
+                        "retry_after_seconds": 120,
+                    }
+                ],
+            }
+
+    monkeypatch.setattr(
+        "halpha.collectors.derivatives_market.PublicDerivativesSource",
+        FakeDerivativesSource,
+    )
+
+    collect_derivatives_market_data(config, run)
+
+    raw = json.loads((run.raw_dir / "derivatives_market.json").read_text(encoding="utf-8"))
+    assert requests == [
+        {
+            "request_class": "basis",
+            "symbol": "BTCUSDT",
+            "period": "1h",
+            "limit": 120,
+        }
+    ]
+    assert [item["status"] for item in raw["availability"]] == ["failed", "skipped", "skipped"]
+    assert raw["availability"][1]["reason"] == (
+        "skipped because binance_usdm returned a derivatives rate-limit response earlier in this collection run"
+    )
+    assert raw["availability"][1]["retry_after_seconds"] == 120
+    assert raw["errors"][0]["error_type"] == "rate_limited"
+
+
+def test_derivatives_collector_caps_basis_requests_to_public_window(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = {
+        "market": {
+            "derivatives": {
+                "enabled": True,
+                "source": "binance_usdm",
+                "symbols": ["BTCUSDT"],
+                "data_classes": ["basis"],
+                "periods": ["1h", "4h", "1d"],
+                "lookback": {"1h": 720, "4h": 720, "1d": 720},
+            }
+        }
+    }
+    run = _run_context(tmp_path)
+    requests: list[dict[str, int | None | str]] = []
+
+    class FakeDerivativesSource:
+        def __init__(
+            self,
+            source: str,
+            *,
+            proxy_url: str | None = None,
+            rate_limit_config_path: Path | None = None,
+        ) -> None:
+            self.source = source
+            _ = proxy_url, rate_limit_config_path
+
+        def fetch_records(
+            self,
+            request_class,
+            *,
+            symbol,
+            period=None,
+            limit=None,
+            start_time_ms=None,
+            end_time_ms=None,
+        ):
+            requests.append(
+                {
+                    "request_class": request_class,
+                    "symbol": symbol,
+                    "period": period,
+                    "limit": limit,
+                }
+            )
+            return {
+                "request_class": request_class,
+                "data_class": "basis",
+                "endpoint": "basis",
+                "period": period,
+                "records": [],
+                "errors": [],
+            }
+
+    monkeypatch.setattr(
+        "halpha.collectors.derivatives_market.PublicDerivativesSource",
+        FakeDerivativesSource,
+    )
+
+    collect_derivatives_market_data(config, run)
+
+    assert requests == [
+        {"request_class": "basis", "symbol": "BTCUSDT", "period": "1h", "limit": 500},
+        {"request_class": "basis", "symbol": "BTCUSDT", "period": "4h", "limit": 180},
+        {"request_class": "basis", "symbol": "BTCUSDT", "period": "1d", "limit": 30},
+    ]
 
 
 def _write_config(

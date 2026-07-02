@@ -125,6 +125,13 @@ SUPPORTED_COMMANDS = {
         cli_parts=("monitor", "run"),
         extra_cli_parts=("--once",),
     ),
+    "monitor_sources_once": CommandSpec(
+        intent="monitor_sources_once",
+        kind="monitor_cycle",
+        cancellable=True,
+        cli_parts=("monitor", "run"),
+        extra_cli_parts=("--source-cadence",),
+    ),
     "backtest": CommandSpec(
         intent="backtest",
         kind="strategy_backtest",
@@ -221,7 +228,7 @@ class CommandJobBuilder:
 
     def _param_mode_supported_params(self, param_mode: str | None) -> set[str]:
         if param_mode == "backtest":
-            return {"strategy_name", "symbol", "timeframe", "output_dir"}
+            return {"strategy_name", "source", "symbol", "timeframe", "start", "end", "output_dir"}
         if param_mode == "experiment":
             return {"strategy_names", "output_dir"}
         if param_mode == "optimize":
@@ -263,10 +270,24 @@ class CommandJobBuilder:
     ) -> None:
         if param_mode == "backtest":
             strategy_name = self._validated_strategy_name(params.get("strategy_name"), param_name="strategy_name")
+            source = self._validated_optional_ohlcv_source(params.get("source"))
             symbol = self._validated_symbol(params.get("symbol"))
             timeframe = self._validated_timeframe(params.get("timeframe"))
-            command.extend(["--strategy", strategy_name, "--symbol", symbol, "--timeframe", timeframe])
-            preview.extend(["--strategy", strategy_name, "--symbol", symbol, "--timeframe", timeframe])
+            start = self._validated_optional_text(params.get("start"), param_name="start")
+            end = self._validated_optional_text(params.get("end"), param_name="end")
+            command.extend(["--strategy", strategy_name])
+            preview.extend(["--strategy", strategy_name])
+            if source:
+                command.extend(["--source", source])
+                preview.extend(["--source", source])
+            command.extend(["--symbol", symbol, "--timeframe", timeframe])
+            preview.extend(["--symbol", symbol, "--timeframe", timeframe])
+            if start:
+                command.extend(["--start", start])
+                preview.extend(["--start", start])
+            if end:
+                command.extend(["--end", end])
+                preview.extend(["--end", end])
             self._extend_optional_output_dir(params, command, preview)
         elif param_mode == "experiment":
             strategy_names = self._validated_strategy_names(params.get("strategy_names"))
@@ -470,6 +491,23 @@ class CommandJobBuilder:
         if timeframe not in self._configured_timeframes():
             raise CommandJobError(f"timeframe is not configured: {timeframe}.")
         return timeframe
+
+    def _validated_optional_ohlcv_source(self, value: Any) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip():
+            raise CommandJobError("source must not be empty when provided.")
+        source = value.strip()
+        if source not in self._configured_ohlcv_sources():
+            raise CommandJobError(f"source is not configured: {source}.")
+        return source
+
+    def _validated_optional_text(self, value: Any, *, param_name: str) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip():
+            raise CommandJobError(f"{param_name} must not be empty when provided.")
+        return value.strip()
 
     def _validated_non_empty_text(self, value: Any, *, param_name: str) -> str:
         if not isinstance(value, str) or not value.strip():

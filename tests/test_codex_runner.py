@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from halpha.config import load_config
+from halpha.codex.runner import _stderr_summary
 from halpha.pipeline import run_pipeline
 from halpha.storage import write_json
 
@@ -329,6 +330,18 @@ def test_codex_runner_records_failure_exit_code_and_stderr_summary(
         },
     }
     assert manifest["errors"] == [failed_stage["error"]]
+
+
+def test_codex_stderr_summary_preserves_tail_error_when_truncated() -> None:
+    stderr = "\n".join([f"warning {index}" for index in range(120)])
+    stderr += "\nERROR: usage limit reached; try again later.\n"
+
+    summary = _stderr_summary(stderr)
+
+    assert summary is not None
+    assert "[stderr truncated]" in summary
+    assert "warning 0" in summary
+    assert "ERROR: usage limit reached; try again later." in summary
 
 
 def test_codex_runner_rejects_report_without_risk_section(tmp_path: Path, monkeypatch) -> None:

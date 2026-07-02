@@ -22,7 +22,6 @@ MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 ONCHAIN_FLOW_CONTEXT_ARTIFACT = "analysis/onchain_flow_context.json"
 EVENT_INTELLIGENCE_ASSESSMENT_ARTIFACT = "analysis/event_intelligence_assessment.json"
 OUTCOME_EVALUATIONS_ARTIFACT = "analysis/outcome_evaluations.json"
-DATA_QUALITY_SUMMARY_ARTIFACT = "analysis/data_quality_summary.json"
 
 
 def build_feature_snapshots(
@@ -41,7 +40,6 @@ def build_feature_snapshots(
     builder.add_onchain_flow_context()
     builder.add_event_intelligence_assessment()
     builder.add_outcome_evaluations()
-    builder.add_data_quality_summary()
 
     artifact = builder.artifact()
     write_json(run.analysis_dir / "feature_snapshots.json", artifact)
@@ -340,44 +338,6 @@ class _FeatureSnapshotBuilder:
                 )
             )
 
-    def add_data_quality_summary(self) -> None:
-        data = self._read_source(
-            "data_quality",
-            DATA_QUALITY_SUMMARY_ARTIFACT,
-            self.run.analysis_dir / "data_quality_summary.json",
-            "checks",
-        )
-        if data is None:
-            return
-        counts = data.get("counts") if isinstance(data.get("counts"), dict) else {}
-        status = _normalize_status(data.get("status"))
-        self.records.append(
-            _feature_record(
-                run_id=self.run.run_id,
-                feature_type="source_quality",
-                factor_family="evidence_quality",
-                source_layer="data_quality",
-                source_artifact=DATA_QUALITY_SUMMARY_ARTIFACT,
-                source_record_id=f"data_quality:{self.run.run_id}",
-                scope=_scope(),
-                observed_at=_text_or_none(data.get("created_at")) or self.created_at,
-                calculation_window={"start": None, "end": _text_or_none(data.get("created_at")), "row_count": counts.get("checks")},
-                value=_quality_value(data.get("status")),
-                value_unit="bounded_-1_to_1",
-                direction_hint=_direction_from_quality(data.get("status")),
-                status=status,
-                confidence="high" if status == "available" else "medium",
-                evidence=[
-                    f"Data quality status is {data.get('status') or 'unknown'}.",
-                    f"{counts.get('checks', 0)} check(s), {counts.get('warnings', 0)} warning(s), {counts.get('errors', 0)} error(s).",
-                ],
-                uncertainty=_string_list(data.get("warnings")),
-                warnings=_string_list(data.get("warnings")),
-                errors=_error_list(data.get("errors")),
-                source_artifacts=[DATA_QUALITY_SUMMARY_ARTIFACT, *_string_list(data.get("source_artifacts"))],
-            )
-        )
-
     def artifact(self) -> dict[str, Any]:
         records = sorted(self.records, key=lambda record: record["feature_id"])
         coverage = sorted(self.coverage, key=lambda item: (item["source_layer"], item["source_artifact"]))
@@ -452,6 +412,8 @@ class _FeatureSnapshotBuilder:
     ) -> dict[str, Any] | None:
         data, error = _read_json(path)
         if error is not None:
+            if not required and error["type"] == "missing":
+                return None
             status = "missing" if error["type"] == "missing" else "failed"
             self._record_coverage(source_layer, artifact_path, status, error=error["message"])
             if required:
@@ -838,18 +800,6 @@ def _numeric_strength(value: Any) -> int | None:
     return mapping.get(strength)
 
 
-def _quality_value(value: Any) -> float | None:
-    status = str(value or "").strip().lower()
-    mapping = {
-        "ok": 1.0,
-        "warning": 0.3,
-        "degraded": -0.4,
-        "failed": -1.0,
-        "skipped": 0.0,
-    }
-    return mapping.get(status)
-
-
 def _outcome_value(value: Any) -> int | None:
     state = str(value or "").strip().lower()
     mapping = {
@@ -925,17 +875,6 @@ def _direction_from_outcome(value: Any) -> str:
     if state in {"invalidated", "failed"}:
         return "cautionary"
     if state in {"mixed", "unresolved", "skipped"}:
-        return "neutral"
-    return "unknown"
-
-
-def _direction_from_quality(value: Any) -> str:
-    status = str(value or "").strip().lower()
-    if status == "ok":
-        return "supportive"
-    if status in {"warning", "degraded", "failed"}:
-        return "cautionary"
-    if status == "skipped":
         return "neutral"
     return "unknown"
 

@@ -90,7 +90,6 @@ def test_feature_snapshots_records_missing_enabled_optional_sources_without_fake
 def test_feature_snapshots_preserve_stale_and_degraded_states(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
     _write_stale_onchain_context({}, run)
-    _write_data_quality_degraded({}, run)
 
     build_feature_snapshots(
         {
@@ -103,15 +102,37 @@ def test_feature_snapshots_preserve_stale_and_degraded_states(tmp_path: Path) ->
 
     artifact = _feature_snapshots(run)
     onchain = next(record for record in artifact["records"] if record["source_layer"] == "onchain_flow")
-    quality = next(record for record in artifact["records"] if record["source_layer"] == "data_quality")
 
     assert onchain["status"] == "stale"
     assert onchain["direction_hint"] == "cautionary"
     assert "latest on-chain observation is stale." in onchain["warnings"]
-    assert quality["status"] == "degraded"
-    assert quality["direction_hint"] == "cautionary"
+    assert all(record["source_layer"] != "data_quality" for record in artifact["records"])
     assert artifact["counts"]["status_counts"]["stale"] == 1
-    assert artifact["counts"]["status_counts"]["degraded"] == 1
+
+
+def test_feature_snapshots_do_not_depend_on_post_data_quality_summary(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_raw_market({}, run)
+
+    build_feature_snapshots(
+        {
+            "market": {"enabled": True},
+            "quant": {"enabled": False},
+            "onchain_flow": {"enabled": False},
+        },
+        run,
+        now="2026-06-05T00:00:00Z",
+    )
+
+    artifact = _feature_snapshots(run)
+
+    assert all(record["source_layer"] != "data_quality" for record in artifact["records"])
+    assert all(item["source_layer"] != "data_quality" for item in artifact["coverage"])
+    assert all(item["source_layer"] != "outcome_tracking" for item in artifact["coverage"])
+    assert all(
+        "data_quality_summary.json" not in warning and "outcome_evaluations.json" not in warning
+        for warning in artifact["warnings"]
+    )
 
 
 def _write_config(tmp_path: Path, *, onchain_enabled: bool = False) -> Path:
@@ -285,17 +306,6 @@ def _write_data_quality_ok(config: dict[str, Any], run: RunContext) -> list[str]
         },
     )
     run.manifest["artifacts"]["data_quality_summary"] = "analysis/data_quality_summary.json"
-    return ["analysis/data_quality_summary.json"]
-
-
-def _write_data_quality_degraded(config: dict[str, Any], run: RunContext) -> list[str]:
-    _write_data_quality_ok(config, run)
-    artifact = json.loads((run.analysis_dir / "data_quality_summary.json").read_text(encoding="utf-8"))
-    artifact["status"] = "degraded"
-    artifact["counts"]["degraded"] = 1
-    artifact["counts"]["warnings"] = 1
-    artifact["warnings"] = ["raw_market timestamp is stale."]
-    write_json(run.analysis_dir / "data_quality_summary.json", artifact)
     return ["analysis/data_quality_summary.json"]
 
 

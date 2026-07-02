@@ -145,6 +145,8 @@ def test_pipeline_generates_codex_context_and_prompt_artifacts(tmp_path: Path) -
     assert "Do not default to neutral to avoid judgment" in prompt
     assert "research guidance, watch conditions, review steps, and invalidation conditions" in prompt
     assert "Halpha may append deterministic evidence appendices" in prompt
+    assert "core report prerequisites" in prompt
+    assert "report_readiness passed" in prompt
     assert "not financial advice" not in prompt
     assert "Do not modify repository files" in prompt
     assert "<context>" in prompt
@@ -223,6 +225,7 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
             "evaluate_quant_strategies": _write_quant_strategy_runs,
+            "evaluate_strategy_evaluation": _write_strategy_evaluation_summary,
             "build_strategy_experiment_material": _write_strategy_experiment_material,
             "run_codex_report": _skip_codex_report,
         },
@@ -233,6 +236,10 @@ def test_codex_context_and_prompt_include_market_signal_material_when_quant_enab
     prompt = (result.run.codex_context_dir / "prompt.md").read_text(encoding="utf-8")
     manifest = json.loads(result.run.manifest_path.read_text(encoding="utf-8"))
     assert "market_signals: analysis/market_signals.json" in context
+    assert "report_readiness:" in context
+    assert "status: passed" in context
+    assert "name: latest_ohlcv_views" in context
+    assert "name: strategy_evaluation" in context
     assert "strategy_evaluation_summary: analysis/strategy_evaluation_summary.json" in context
     assert "strategy_evaluation_material: analysis/strategy_evaluation_material.md" in context
     assert "strategy_experiment: analysis/strategy_experiment.json" in context
@@ -704,6 +711,50 @@ def _write_quant_strategy_runs(config, run) -> list[str]:
     run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
     run.manifest["counts"]["quant_strategy_runs"] = 1
     return ["analysis/quant_strategy_runs.json"]
+
+
+def _write_strategy_evaluation_summary(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "strategy_evaluation_summary.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_summary",
+            "created_at": "2026-06-05T00:00:00Z",
+            "records": [
+                {
+                    "evaluation_id": (
+                        "strategy_evaluation:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z"
+                    ),
+                    "status": "succeeded",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+                    "single_window": {
+                        "status": "succeeded",
+                        "strategy_metrics": {"net_return_pct": 6.0, "max_drawdown_pct": -1.0},
+                    },
+                }
+            ],
+        },
+    )
+    (run.analysis_dir / "strategy_evaluation_material.md").write_text(
+        "\n".join(
+            [
+                "# strategy_evaluation_material",
+                "",
+                "```yaml",
+                "artifact_type: analysis_strategy_evaluation_material",
+                "record_count: 1",
+                "```",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    run.manifest["artifacts"]["strategy_evaluation_summary"] = "analysis/strategy_evaluation_summary.json"
+    run.manifest["artifacts"]["strategy_evaluation_material"] = "analysis/strategy_evaluation_material.md"
+    run.manifest["counts"]["strategy_evaluation_records"] = 1
+    run.manifest["counts"]["strategy_evaluation_material_records"] = 1
+    return ["analysis/strategy_evaluation_summary.json", "analysis/strategy_evaluation_material.md"]
 
 
 def _write_strategy_experiment_material(config, run) -> list[str]:

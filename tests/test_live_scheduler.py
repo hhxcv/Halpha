@@ -145,8 +145,49 @@ live:
     state = _collection_state(tick, "text_event:all")
     assert state["latest_job_id"] is None
     assert state["latest_job_status"] is None
-    assert state["next_attempt_at"] == "2026-06-30T12:00:15Z"
+    assert state["next_attempt_at"] == "2026-06-30T12:01:00Z"
     assert state["consecutive_failures"] == 0
+
+
+def test_live_scheduler_globally_throttles_recent_collection_dispatch(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  tick_seconds: 15
+  collections:
+    text_event:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+    macro_calendar:
+      enabled: true
+      cadence_seconds: 3600
+      lookback_seconds: 86400
+      lookahead_seconds: 604800
+""",
+    )
+    config = load_config(config_path)
+    jobs = _RecordingLiveJobManager(
+        jobs=[
+            _live_job(
+                "collect-recent",
+                status="succeeded",
+                target_key="text_event:all",
+                data_type="text_event",
+                created_at="2026-06-30T11:59:30Z",
+            )
+        ]
+    )
+
+    tick = LiveScheduler(config, config_path=config_path, job_manager=jobs, now=now).tick(tick_id="tick-1")
+
+    assert tick["status"] == "available"
+    assert jobs.created_requests == []
+    assert _collection_state(tick, "text_event:all")["next_attempt_at"] == "2026-06-30T12:00:30Z"
+    assert _collection_state(tick, "macro_calendar:configured")["next_attempt_at"] == "2026-06-30T12:01:30Z"
 
 
 def test_live_scheduler_treats_mutation_lease_blocked_collection_as_deferred(tmp_path: Path) -> None:

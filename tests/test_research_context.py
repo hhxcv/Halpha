@@ -253,6 +253,7 @@ def test_research_context_embeds_market_signal_material_when_quant_enabled(tmp_p
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
             "evaluate_quant_strategies": _write_quant_strategy_runs,
+            "evaluate_strategy_evaluation": _write_strategy_evaluation_summary_and_material,
             "build_strategy_experiment_material": _write_strategy_experiment_material,
             "run_codex_report": _skip_codex_report,
         },
@@ -377,6 +378,7 @@ def test_research_context_fails_when_decision_material_is_missing_for_quant_enab
             "sync_ohlcv": _noop_stage,
             "build_market_data_views": _write_market_data_views,
             "evaluate_quant_strategies": _write_quant_strategy_runs,
+            "evaluate_strategy_evaluation": _write_strategy_evaluation_summary_and_material,
             "build_decision_intelligence_material": _noop_stage,
         },
     )
@@ -695,6 +697,47 @@ def _write_quant_strategy_runs(config, run) -> list[str]:
     run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
     run.manifest["counts"]["quant_strategy_runs"] = 1
     return ["analysis/quant_strategy_runs.json"]
+
+
+def _write_strategy_evaluation_summary_and_material(config, run) -> list[str]:
+    write_json(
+        run.analysis_dir / "strategy_evaluation_summary.json",
+        {
+            "schema_version": 1,
+            "artifact_type": "strategy_evaluation_summary",
+            "records": [
+                {
+                    "evaluation_id": "strategy_evaluation:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+                    "status": "succeeded",
+                    "strategy_name": "tsmom_vol_scaled",
+                    "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-03T00:00:00Z",
+                    "single_window": {"status": "succeeded"},
+                }
+            ],
+        },
+    )
+    (run.analysis_dir / "strategy_evaluation_material.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "artifact_type: analysis_strategy_evaluation_material",
+                "schema_version: 1",
+                "---",
+                "",
+                "# strategy_evaluation_material",
+                "",
+                "record_type: strategy_evaluation",
+                "strategy_name: tsmom_vol_scaled",
+                "status: succeeded",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    run.manifest["artifacts"]["strategy_evaluation_summary"] = "analysis/strategy_evaluation_summary.json"
+    run.manifest["artifacts"]["strategy_evaluation_material"] = "analysis/strategy_evaluation_material.md"
+    run.manifest["counts"]["strategy_evaluation_records"] = 1
+    run.manifest["counts"]["strategy_evaluation_material_records"] = 1
+    return ["analysis/strategy_evaluation_summary.json", "analysis/strategy_evaluation_material.md"]
 
 
 def _write_strategy_experiment_material(config, run) -> list[str]:

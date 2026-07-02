@@ -136,6 +136,24 @@ def test_intelligence_fusion_emits_insufficient_record_when_inputs_are_missing(t
     assert "No source records were available for intelligence fusion." in record["warnings"]
 
 
+def test_intelligence_fusion_does_not_depend_on_post_data_quality_summary(tmp_path: Path) -> None:
+    run = _run_context(tmp_path)
+    _write_market_signals(run)
+
+    build_intelligence_fusion({}, run, now="2026-06-05T00:00:00Z")
+
+    artifact = _fusion(run)
+
+    assert all(
+        ref["source_layer"] != "data_quality"
+        for record in artifact["records"]
+        for ref in record.get("source_record_refs", [])
+    )
+    assert all(item["source_layer"] != "data_quality" for item in artifact["coverage"])
+    assert all("data_quality_summary.json" not in warning for warning in artifact["warnings"])
+    assert "analysis/data_quality_summary.json" not in artifact["source_artifacts"]
+
+
 def test_intelligence_fusion_uses_degraded_lifecycle_as_cautionary_context(tmp_path: Path) -> None:
     run = _run_context(tmp_path)
     _write_market_signals(run)
@@ -305,8 +323,6 @@ def _write_empty_upstream_artifacts(run: RunContext) -> None:
     _write_records_artifact(run, "strategy_effectiveness_gates.json", "strategy_effectiveness_gates", "records", [])
     _write_records_artifact(run, "event_intelligence_assessment.json", "event_intelligence_assessment", "records", [])
     _write_records_artifact(run, "alert_decisions.json", "alert_decisions", "records", [])
-    _write_records_artifact(run, "outcome_evaluations.json", "outcome_evaluations", "evaluations", [])
-    _write_records_artifact(run, "data_quality_summary.json", "data_quality_summary", "checks", [])
 
 
 def _write_market_signals(run: RunContext) -> None:

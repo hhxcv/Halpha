@@ -248,9 +248,15 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
         return _BytesResponse(_rss_payload())
 
     class FakeOHLCVSource:
-        def __init__(self, source_name: str, proxy_url: str | None = None) -> None:
+        def __init__(
+            self,
+            source_name: str,
+            proxy_url: str | None = None,
+            rate_limit_config_path: Path | None = None,
+        ) -> None:
             self.source_name = source_name
             self.proxy_url = proxy_url
+            _ = rate_limit_config_path
 
         def fetch_records(self, *, symbol, timeframe, since=None, limit=None, now=None):
             ohlcv_requests.append(
