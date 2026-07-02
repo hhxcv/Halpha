@@ -41,6 +41,20 @@ OHLCV_SOURCE_ORDER = (
     "coinbase_spot",
 )
 SUPPORTED_OHLCV_SOURCES = frozenset(OHLCV_SOURCE_ORDER)
+OHLCV_SOURCE_PLATFORM_FAMILIES = {
+    "binance": ("binance", "binance_spot", "binance_usdm"),
+    "okx": ("okx_spot", "okx_swap"),
+    "bybit": ("bybit_spot", "bybit_swap"),
+    "kucoin": ("kucoin_spot", "kucoin_swap"),
+    "bitget": ("bitget_spot", "bitget_swap"),
+    "kraken": ("kraken_spot",),
+    "coinbase": ("coinbase_spot",),
+}
+OHLCV_SOURCE_PLATFORM_BY_SOURCE = {
+    source: platform
+    for platform, sources in OHLCV_SOURCE_PLATFORM_FAMILIES.items()
+    for source in sources
+}
 QUOTE_SUFFIXES = ("USDT", "USDC", "USD", "BTC", "ETH", "EUR")
 TIMEFRAME_DURATIONS = OHLCV_TIMEFRAME_DURATIONS
 

@@ -42,7 +42,7 @@ from halpha.live.contracts import (
     LIVE_TRIGGER_REVISION,
 )
 from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_ORDER
-from halpha.market.ohlcv_source import OHLCV_SOURCE_ORDER
+from halpha.market.ohlcv_source import OHLCV_SOURCE_PLATFORM_FAMILIES, OHLCV_SOURCE_ORDER
 from halpha.storage import config_base, display_path, safe_local_ref
 
 
@@ -276,8 +276,8 @@ CONFIG_PROFILE_FIELDS = (
         "control": "multi_select",
         "value_type": "string_list",
         "options": OHLCV_SOURCE_ORDER,
-        "default": OHLCV_SOURCE_ORDER,
-        "description": "Public OHLCV sources available to CLI and dashboard collection.",
+        "default": OHLCV_SOURCE_PLATFORM_FAMILIES["binance"],
+        "description": "Public OHLCV sources for one exchange platform family. Binance may include spot and USD-M futures together.",
     },
     {
         "section": "Market data",

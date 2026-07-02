@@ -148,7 +148,9 @@ def test_dashboard_shell_uses_live_status_without_local_mode_badges(tmp_path: Pa
     assert "liveSidebarState" in script
     assert "renderSidebarLiveStatus" in script
     assert "Live collection and scheduled review are enabled." in script
-    assert "loadLivePayload().catch(() => renderSidebarLiveStatus())" in script
+    assert "loadLivePayload({includeHistory: false})" in script
+    assert "includeHistory ? fetchJson(endpoints.liveHistory) : Promise.resolve(null)" in script
+    assert "loadLivePayload().catch(() => renderSidebarLiveStatus())" not in script
     assert ".health-dot.stopped" in css
     assert ".health-dot.unknown" in css
 

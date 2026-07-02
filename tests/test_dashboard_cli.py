@@ -2423,16 +2423,6 @@ def test_dashboard_strategies_endpoint_reports_configured_command_options() -> N
         "binance",
         "binance_spot",
         "binance_usdm",
-        "okx_spot",
-        "okx_swap",
-        "bybit_spot",
-        "bybit_swap",
-        "kucoin_spot",
-        "kucoin_swap",
-        "bitget_spot",
-        "bitget_swap",
-        "kraken_spot",
-        "coinbase_spot",
     ]
     assert payload["commands"]["options"]["symbols"] == ["BTCUSDT"]
     assert payload["commands"]["options"]["timeframes"] == [

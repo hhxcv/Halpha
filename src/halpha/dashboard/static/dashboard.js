@@ -216,6 +216,7 @@
       selectedRunArtifacts: [],
       selectedSharedStores: [],
       validationJob: null,
+      livePayloadRequest: null,
     };
     const liveWorkflow = liveWorkflowModule.createLiveWorkflow({
       state,
@@ -1041,7 +1042,7 @@
     }
 
     async function refreshOverview() {
-      await Promise.allSettled([loadHealth(), loadRuns(), loadStores(), loadLivePayload()]);
+      await Promise.allSettled([loadHealth(), loadRuns(), loadStores(), loadLivePayload({includeHistory: false})]);
       try {
         state.overview = await fetchJson(endpoints.overview);
       } catch (error) {
@@ -1073,24 +1074,45 @@
       return state.deletionPlan;
     }
 
-    async function loadLivePayload() {
-      const [live, cycles, alerts, history, jobs, schedule, services] = await Promise.allSettled([
-        fetchJson(endpoints.live),
-        fetchJson(endpoints.liveCycles),
-        fetchJson(endpoints.liveAlerts),
-        fetchJson(endpoints.liveHistory),
-        loadJobs(),
-        fetchJson(endpoints.schedule),
-        fetchJson(endpoints.services),
-      ]);
-      state.live = live.status === "fulfilled" ? live.value : null;
-      state.liveCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
-      state.liveAlerts = alerts.status === "fulfilled" ? alerts.value : null;
-      state.liveHistory = history.status === "fulfilled" ? history.value : null;
-      state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
-      state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
-      state.services = services.status === "fulfilled" ? services.value : null;
-      renderSidebarLiveStatus();
+    async function loadLivePayload(options = {}) {
+      const includeHistory = options.includeHistory !== false;
+      if (state.livePayloadRequest) {
+        if (state.livePayloadRequest.includeHistory === includeHistory) {
+          return state.livePayloadRequest.promise;
+        }
+        if (!includeHistory && state.livePayloadRequest.includeHistory) {
+          return state.livePayloadRequest.promise;
+        }
+      }
+      const promise = (async () => {
+        const [live, cycles, alerts, history, jobs, schedule, services] = await Promise.allSettled([
+          fetchJson(endpoints.live),
+          fetchJson(endpoints.liveCycles),
+          fetchJson(endpoints.liveAlerts),
+          includeHistory ? fetchJson(endpoints.liveHistory) : Promise.resolve(null),
+          loadJobs(),
+          fetchJson(endpoints.schedule),
+          fetchJson(endpoints.services),
+        ]);
+        state.live = live.status === "fulfilled" ? live.value : null;
+        state.liveCycles = cycles.status === "fulfilled" && Array.isArray(cycles.value.cycles) ? cycles.value.cycles : [];
+        state.liveAlerts = alerts.status === "fulfilled" ? alerts.value : null;
+        if (includeHistory) {
+          state.liveHistory = history.status === "fulfilled" ? history.value : null;
+        }
+        state.jobs = jobs.status === "fulfilled" && Array.isArray(jobs.value.jobs) ? jobs.value.jobs : [];
+        state.schedule = schedule.status === "fulfilled" ? schedule.value : null;
+        state.services = services.status === "fulfilled" ? services.value : null;
+        renderSidebarLiveStatus();
+      })();
+      state.livePayloadRequest = {includeHistory, promise};
+      try {
+        return await promise;
+      } finally {
+        if (state.livePayloadRequest?.promise === promise) {
+          state.livePayloadRequest = null;
+        }
+      }
     }
 
     function renderOverview() {
@@ -6912,5 +6934,5 @@
     renderInitialLoadingPlaceholders();
     wireGlobalEvents();
     refreshHealthForView();
-    loadLivePayload().catch(() => renderSidebarLiveStatus());
+    renderSidebarLiveStatus();
     setView(viewFromHash());
