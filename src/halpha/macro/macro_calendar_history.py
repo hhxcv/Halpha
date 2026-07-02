@@ -203,6 +203,7 @@ def _merge_history(
         conflict_label="macro calendar",
         sort_key=_record_sort_key,
         extra_string_list_fields=("affected_assets",),
+        replace_conflicting_payload=True,
     )
 
 

@@ -203,6 +203,7 @@
       macroCalendarYear: null,
       macroCalendarHighlightedDate: "",
       macroCalendarDetailIndex: null,
+      macroCalendarEventTab: "future",
       onchainDataClass: "",
       onchainMetricKey: "",
       onchainSelectedIndex: null,
@@ -6915,6 +6916,7 @@
         state.macroCalendarYear = null;
         state.macroCalendarHighlightedDate = "";
         state.macroCalendarDetailIndex = null;
+        state.macroCalendarEventTab = "future";
         state.onchainDataClass = "";
         state.onchainMetricKey = "";
         state.onchainSelectedIndex = null;

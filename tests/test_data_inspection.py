@@ -525,6 +525,25 @@ def test_data_inspect_reports_macro_calendar_store_and_current_run_views(
     assert str(tmp_path) not in output
 
 
+def test_data_inspect_does_not_warn_macro_history_when_latest_run_has_no_views(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    config_path = _write_config(tmp_path, ohlcv_enabled=False, macro_enabled=True)
+    _write_run_with_quality(tmp_path, config_path, quality_status="ok")
+    _write_macro_store_metadata(tmp_path)
+
+    exit_code = main(["data", "inspect", "--config", str(config_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "status: ok" in output
+    assert "macro_calendar_history: ok" in output
+    assert "records=2" in output
+    assert "macro_calendar_views.json was not found" not in output
+    assert str(tmp_path) not in output
+
+
 def test_data_inspect_reports_onchain_flow_store_and_current_run_views(
     tmp_path: Path,
     capsys,

@@ -133,6 +133,52 @@ def test_macro_calendar_history_deduplicates_repeated_records_with_run_traceabil
     )
 
 
+def test_macro_calendar_history_replaces_updated_duplicate_payload(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    first_run = _run_context(tmp_path, config_path, "run-1")
+    second_run = _run_context(tmp_path, config_path, "run-2")
+    old_item = _macro_item("2026-03-18T00:00:00Z")
+    old_item["raw_fields"] = {
+        **old_item["raw_fields"],
+        "date_label": "17-18",
+        "summary_of_economic_projections": False,
+    }
+    new_item = _macro_item("2026-03-18T00:00:00Z")
+    new_item["raw_fields"] = {
+        **new_item["raw_fields"],
+        "date_label": "17-18*",
+        "summary_of_economic_projections": True,
+    }
+
+    _write_raw(first_run, [old_item])
+    sync_macro_calendar_history(config, first_run, now="2026-06-18T01:00:00Z")
+    _write_raw(second_run, [new_item])
+    sync_macro_calendar_history(config, second_run, now="2026-06-18T02:00:00Z")
+
+    state = _state(tmp_path)
+    records = _stored_records(tmp_path)
+
+    assert state["status"] == "ok"
+    assert state["totals"]["records"] == 1
+    assert state["totals"]["duplicate_records"] == 1
+    assert state["totals"]["conflicting_duplicates"] == 0
+    assert state["warnings"] == []
+    assert records[0]["raw_fields"]["date_label"] == "17-18*"
+    assert records[0]["raw_fields"]["summary_of_economic_projections"] is True
+    assert not any("conflicting duplicate" in warning for warning in records[0]["warnings"])
+    assert_history_traceability(
+        records[0],
+        origin_run_ids=["run-1", "run-2"],
+        first_seen_run_id="run-1",
+        last_seen_run_id="run-2",
+        source_artifacts=[
+            "runs/run-1/raw/macro_calendar.json",
+            "runs/run-2/raw/macro_calendar.json",
+        ],
+    )
+
+
 def test_macro_calendar_views_record_stale_current_window(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
