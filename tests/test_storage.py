@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import halpha.storage as storage
 from halpha.storage import EXTERNAL_ARTIFACT_REF, display_path, resolve_local_ref, safe_local_ref, write_json
 
 
@@ -38,6 +39,31 @@ def test_write_json_replaces_through_same_directory_temp_file(tmp_path: Path, mo
     assert src.name.endswith(".tmp")
     assert dst == path
     assert not src.exists()
+
+
+def test_write_json_retries_windows_sharing_violation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "artifact.json"
+    attempts = 0
+    sleeps: list[float] = []
+    original_replace = os.replace
+
+    def replace(src: Path, dst: Path) -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            exc = OSError("sharing violation")
+            exc.winerror = 32
+            raise exc
+        original_replace(src, dst)
+
+    monkeypatch.setattr(storage.os, "replace", replace)
+    monkeypatch.setattr(storage.time, "sleep", lambda delay: sleeps.append(delay))
+
+    write_json(path, {"ok": True})
+
+    assert attempts == 2
+    assert sleeps == [0.02]
+    assert json.loads(path.read_text(encoding="utf-8")) == {"ok": True}
 
 
 def test_write_json_keeps_existing_file_and_cleans_temp_on_replace_failure(

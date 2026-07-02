@@ -15,8 +15,8 @@ MACRO_CALENDAR_CONTEXT_ARTIFACT = "analysis/macro_calendar_context.json"
 MACRO_CALENDAR_MATERIAL_ARTIFACT = "analysis/macro_calendar_material.md"
 ONCHAIN_FLOW_CONTEXT_ARTIFACT = "analysis/onchain_flow_context.json"
 ONCHAIN_FLOW_MATERIAL_ARTIFACT = "analysis/onchain_flow_material.md"
-MAX_DERIVATIVES_REPORT_ROWS = 8
-MAX_MACRO_CALENDAR_REPORT_ROWS = 8
+MAX_DERIVATIVES_REPORT_ROWS = 6
+MAX_MACRO_CALENDAR_REPORT_ROWS = 4
 MAX_ONCHAIN_FLOW_REPORT_ROWS = 8
 
 
@@ -26,7 +26,7 @@ def inject_derivatives_market_section(report: str, run: RunContext) -> str:
         return report
     section = "\n".join(
         [
-            "## \u884d\u751f\u54c1\u4e0e\u5e02\u573a\u7ed3\u6784\u8bc1\u636e",
+            "## 附录：衍生品与市场结构证据",
             "",
             (
                 "\u4ee5\u4e0b\u5185\u5bb9\u6765\u81ea "
@@ -49,7 +49,7 @@ def inject_macro_calendar_section(report: str, run: RunContext) -> str:
         return report
     section = "\n".join(
         [
-            "## \u5b8f\u89c2\u65e5\u5386\u4e0e\u8c03\u5ea6\u98ce\u9669\u8bc1\u636e",
+            "## 附录：宏观日历与调度风险证据",
             "",
             (
                 "\u4ee5\u4e0b\u5185\u5bb9\u6765\u81ea "
@@ -73,7 +73,7 @@ def inject_onchain_flow_section(report: str, run: RunContext) -> str:
         return report
     section = "\n".join(
         [
-            "## \u94fe\u4e0a\u6d41\u4e0e\u6765\u6e90\u53ef\u7528\u6027\u8bc1\u636e",
+            "## 附录：链上流与来源可用性证据",
             "",
             (
                 "\u4ee5\u4e0b\u5185\u5bb9\u6765\u81ea "
@@ -98,7 +98,7 @@ def inject_quant_strategy_table(report: str, run: RunContext) -> str:
         return report
     section = "\n".join(
         [
-            "## 量化策略输出表",
+            "## 附录：量化策略输出表",
             "",
             table,
             "",
@@ -667,7 +667,7 @@ def inject_strategy_effectiveness_table(report: str, run: RunContext) -> str:
         return report
     section = "\n".join(
         [
-            "## \u7b56\u7565\u6709\u6548\u6027\u95e8\u69db\u8868",
+            "## 附录：策略有效性门槛表",
             "",
             table,
             "",
@@ -851,10 +851,6 @@ def _strategy_table_sort_key(row: list[str]) -> tuple[str, str, str, str]:
 
 def _insert_report_section(report: str, section: str) -> str:
     stripped = report.rstrip()
-    for heading in ("## 综合判断", "## 风险提示"):
-        index = stripped.find(f"\n{heading}")
-        if index != -1:
-            return f"{stripped[:index].rstrip()}\n\n{section}{stripped[index:]}\n"
     return f"{stripped}\n\n{section}"
 
 

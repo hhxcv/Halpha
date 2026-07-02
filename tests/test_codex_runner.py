@@ -59,7 +59,9 @@ def test_codex_runner_writes_report_from_stdout(tmp_path: Path, monkeypatch) -> 
     assert "Do not create a separate title section." in calls[0]["input"]
     assert "Use Markdown tables for market data" in calls[0]["input"]
     assert "do not recreate the full strategy run table" in calls[0]["input"]
-    assert "- 核心摘要" in calls[0]["input"]
+    assert "Start with a decision-useful thesis" in calls[0]["input"]
+    assert "- 核心结论" in calls[0]["input"]
+    assert "- 决策框架" in calls[0]["input"]
     assert "Do not invent prices, events, links, sources, or certainty." in calls[0]["input"]
 
     report = result.run.report_dir / "report.md"
@@ -117,13 +119,13 @@ def test_codex_runner_injects_quant_strategy_markdown_table_after_codex_stdout(
 
     assert result.succeeded is True
     report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
-    table_heading = "## \u91cf\u5316\u7b56\u7565\u8f93\u51fa\u8868"
-    gate_heading = "## \u7b56\u7565\u6709\u6548\u6027\u95e8\u69db\u8868"
-    synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
+    table_heading = "## 附录：量化策略输出表"
+    gate_heading = "## 附录：策略有效性门槛表"
+    risk_heading = "## \u98ce\u9669\u63d0\u793a"
     assert table_heading in report
     assert gate_heading in report
-    assert report.index(table_heading) < report.index(synthesis_heading)
-    assert report.index(gate_heading) < report.index(synthesis_heading)
+    assert report.index(risk_heading) < report.index(table_heading)
+    assert report.index(table_heading) < report.index(gate_heading)
     assert (
         "| \u7b56\u7565 | \u6765\u6e90 | \u6807\u7684 | \u5468\u671f | "
         "\u8f93\u5165\u7a97\u53e3 | \u72b6\u6001 | \u65b9\u5411 | \u5f3a\u5ea6 | "
@@ -189,10 +191,10 @@ def test_codex_runner_injects_derivatives_market_section_after_codex_stdout(
 
     assert result.succeeded is True
     report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
-    derivatives_heading = "## \u884d\u751f\u54c1\u4e0e\u5e02\u573a\u7ed3\u6784\u8bc1\u636e"
-    synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
+    derivatives_heading = "## 附录：衍生品与市场结构证据"
+    risk_heading = "## \u98ce\u9669\u63d0\u793a"
     assert derivatives_heading in report
-    assert report.index(derivatives_heading) < report.index(synthesis_heading)
+    assert report.index(risk_heading) < report.index(derivatives_heading)
     assert "analysis/derivatives_market_material.md" in report
     assert "\u8d44\u91d1\u8d39\u7387\u538b\u529b" in report
     assert "extreme_positive_funding" in report
@@ -245,10 +247,10 @@ def test_codex_runner_injects_onchain_flow_section_after_codex_stdout(
 
     assert result.succeeded is True
     report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
-    onchain_heading = "## \u94fe\u4e0a\u6d41\u4e0e\u6765\u6e90\u53ef\u7528\u6027\u8bc1\u636e"
-    synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
+    onchain_heading = "## 附录：链上流与来源可用性证据"
+    risk_heading = "## \u98ce\u9669\u63d0\u793a"
     assert onchain_heading in report
-    assert report.index(onchain_heading) < report.index(synthesis_heading)
+    assert report.index(risk_heading) < report.index(onchain_heading)
     assert "analysis/onchain_flow_material.md" in report
     assert "\u7a33\u5b9a\u5e01\u6d41\u52a8\u6027" in report
     assert "sharp_stablecoin_supply_contraction" in report

@@ -808,7 +808,7 @@ def test_m3_smoke_pipeline_generates_decision_intelligence_report_path_with_test
     assert "risk_escalation" in report
     assert "recheck_next_run" in report
     assert "## 量化信号结论" in report
-    assert "## \u7b56\u7565\u6709\u6548\u6027\u95e8\u69db\u8868" in report
+    assert "## 附录：策略有效性门槛表" in report
     assert "\u8bc1\u636e\u4e0d\u8db3" in report
     assert "趋势信号" in report
     assert "证据" in report

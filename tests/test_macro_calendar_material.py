@@ -161,10 +161,10 @@ def test_codex_runner_injects_macro_calendar_section_after_codex_stdout(
 
     assert result.succeeded is True
     report = (result.run.report_dir / "report.md").read_text(encoding="utf-8")
-    macro_heading = "## \u5b8f\u89c2\u65e5\u5386\u4e0e\u8c03\u5ea6\u98ce\u9669\u8bc1\u636e"
-    synthesis_heading = "## \u7efc\u5408\u5224\u65ad"
+    macro_heading = "## 附录：宏观日历与调度风险证据"
+    risk_heading = "## \u98ce\u9669\u63d0\u793a"
     assert macro_heading in report
-    assert report.index(macro_heading) < report.index(synthesis_heading)
+    assert report.index(risk_heading) < report.index(macro_heading)
     assert "analysis/macro_calendar_material.md" in report
     assert "\u8ba1\u5212\u4e2d\u50ac\u5316\u5242" in report
     assert "succeeded/upcoming" in report

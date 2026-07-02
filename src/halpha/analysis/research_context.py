@@ -740,7 +740,8 @@ def _generation_constraints() -> dict[str, Any]:
             "do_not_generate_event_classification": True,
             "do_not_generate_event_impacts": True,
             "do_not_generate_price_forecasts": True,
-            "do_not_generate_action_guidance": True,
+            "do_not_generate_event_action_guidance": True,
+            "may_explain_halpha_supported_research_guidance": True,
             "do_not_upgrade_low_confidence_or_unknown_event_evidence": True,
         },
         "data_quality_requirements": {
@@ -766,11 +767,11 @@ def _generation_constraints() -> dict[str, Any]:
             "full_outcome_history_embedded": False,
         },
         "required_sections": [
-            "核心摘要",
-            "市场概览",
-            "文本事件",
-            "综合判断",
-            "观察要点",
+            "核心结论",
+            "决策框架",
+            "证据解读",
+            "量化与策略含义",
+            "观察触发与失效条件",
             "风险提示",
         ],
     }

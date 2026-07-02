@@ -96,9 +96,11 @@ def test_pipeline_generates_research_context_with_embedded_materials(tmp_path: P
     assert "do_not_generate_event_classification: true" in context
     assert "do_not_generate_event_impacts: true" in context
     assert "do_not_generate_price_forecasts: true" in context
-    assert "do_not_generate_action_guidance: true" in context
+    assert "do_not_generate_event_action_guidance: true" in context
+    assert "may_explain_halpha_supported_research_guidance: true" in context
     assert "required_sections:" in context
-    assert "- 核心摘要" in context
+    assert "- 核心结论" in context
+    assert "- 决策框架" in context
     assert "- 标题" not in context
     assert "- market_overview" not in context
     assert '<embed path="analysis/market_material.md">' in context
