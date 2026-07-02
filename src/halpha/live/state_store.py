@@ -191,7 +191,11 @@ class LiveCollectionStateRepository:
                     )
         except sqlite3.Error as exc:
             return _state_error(exc, operation="write Live collection state")
-        return self.get_state(target_key) or dict(state)
+        persisted = self.get_state(target_key) or dict(state)
+        for volatile_key in ("transport", "stream"):
+            if volatile_key in state:
+                persisted[volatile_key] = state[volatile_key]
+        return persisted
 
     def _ensure_tables(self) -> None:
         with closing(open_runtime_state_connection(config_path=self.config_path)) as connection:

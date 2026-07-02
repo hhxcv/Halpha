@@ -8,6 +8,8 @@ from typing import Any, Protocol
 from halpha.live.config import LiveCollectionConfig, LiveSettings, load_live_settings
 from halpha.live.contracts import LIVE_DATA_TYPES
 from halpha.live.state_store import LiveCollectionStateRepository
+from halpha.live.stream_state import LiveStreamStateRepository
+from halpha.market.ohlcv_quality import OHLCV_TIMEFRAME_DURATIONS
 from halpha.live.triggers import LiveTriggerEvaluator
 from halpha.runtime.command_job_store import JOB_TERMINAL_STATUSES, JOB_TRANSIENT_STATUSES
 from halpha.runtime.mutation_lease import LEASE_BLOCKED_MESSAGE, MUTATION_LEASE_STAGE, is_mutating_workflow_kind
@@ -19,6 +21,10 @@ LIVE_SCHEDULER_SOURCE = "live_scheduler"
 LIVE_COLLECTION_JOB_INTENT = "data_collect"
 LIVE_RECENT_JOB_LIMIT = 20
 LIVE_COLLECTION_MIN_DISPATCH_SECONDS = 60
+RECOVERABLE_LIVE_COLLECTION_ERROR_FRAGMENTS = (
+    "requested_start must align to the",
+    "job process identity was lost after the owning runtime restarted",
+)
 
 
 class _JobManager(Protocol):
@@ -51,12 +57,14 @@ class LiveScheduler:
         config_path: Path,
         job_manager: _JobManager,
         state_repository: LiveCollectionStateRepository | None = None,
+        stream_state_repository: LiveStreamStateRepository | None = None,
         now: datetime | None = None,
     ) -> None:
         self.config = config
         self.config_path = Path(config_path)
         self.job_manager = job_manager
         self.state_repository = state_repository or LiveCollectionStateRepository(self.config_path)
+        self.stream_state_repository = stream_state_repository or LiveStreamStateRepository(self.config_path)
         self.now = _utc_datetime(now)
 
     def tick(self, *, tick_id: str | None = None) -> dict[str, Any]:
@@ -97,6 +105,11 @@ class LiveScheduler:
             for state in self.state_repository.list_states()
             if isinstance(state, dict) and state.get("target_key")
         }
+        stream_states = {
+            str(state.get("target_key")): state
+            for state in self.stream_state_repository.list_states()
+            if isinstance(state, dict) and state.get("target_key")
+        }
         state_error = existing_states.get("__live_state_error__")
         if state_error:
             errors.extend(_strings(state_error.get("errors")))
@@ -105,6 +118,22 @@ class LiveScheduler:
             state = existing_states.get(target.target_key)
             state = self._base_state(target, previous=state, now_text=now_text)
             state = self._reconcile_state(state, jobs=jobs, now_text=now_text)
+            stream_state = stream_states.get(target.target_key)
+            state = _apply_stream_state(
+                state,
+                stream_state,
+                settings=settings,
+                now=self.now,
+            )
+            if (
+                target.data_type == "ohlcv"
+                and _is_successful_rest_backfill(state)
+                and isinstance(stream_state, dict)
+                and stream_state.get("backfill_required") is True
+            ):
+                self._mark_stream_backfill_succeeded(stream_state, now_text=now_text)
+                stream_state = self.stream_state_repository.get_state(target.target_key)
+                state = _apply_stream_state(state, stream_state, settings=settings, now=self.now)
             if not target.enabled:
                 updated_states.append(self.state_repository.upsert_state(state))
                 continue
@@ -119,6 +148,16 @@ class LiveScheduler:
                 state["latest_job_status"] = duplicate.get("status")
                 state["next_attempt_at"] = state.get("next_attempt_at") or _format_utc(
                     self.now + timedelta(seconds=target.cadence_seconds or 1)
+                )
+                updated_states.append(self.state_repository.upsert_state(state))
+                continue
+            if target.data_type == "ohlcv" and _stream_state_is_fresh(
+                stream_state,
+                now=self.now,
+                stale_after_seconds=settings.ohlcv_stream.stale_after_seconds,
+            ):
+                state["next_attempt_at"] = _format_utc(
+                    self.now + timedelta(seconds=settings.ohlcv_stream.stale_after_seconds)
                 )
                 updated_states.append(self.state_repository.upsert_state(state))
                 continue
@@ -201,11 +240,22 @@ class LiveScheduler:
             for state in self.state_repository.list_states()
             if isinstance(state, dict) and state.get("target_key")
         }
+        stream_states = {
+            str(state.get("target_key")): state
+            for state in self.stream_state_repository.list_states()
+            if isinstance(state, dict) and state.get("target_key")
+        }
         collections: list[dict[str, Any]] = []
         for target in targets:
             previous = states.get(target.target_key)
             state = self._base_state(target, previous=previous, now_text=now_text)
             state = self._reconcile_state(state, jobs=jobs, now_text=now_text)
+            state = _apply_stream_state(
+                state,
+                stream_states.get(target.target_key),
+                settings=settings,
+                now=self.now,
+            )
             if _reconciled_state_changed(previous, state):
                 state = self.state_repository.upsert_state(state)
             collections.append(state)
@@ -384,6 +434,16 @@ class LiveScheduler:
         lookback_seconds = target.lookback_seconds or 1
         start = self.now - timedelta(seconds=lookback_seconds)
         end = self.now
+        if target.data_type == "ohlcv":
+            timeframe = str(target.params.get("timeframe") or "")
+            stream_state = self.stream_state_repository.get_state(target.target_key)
+            stream_since = _parse_utc(stream_state.get("backfill_since")) if isinstance(stream_state, dict) else None
+            start, end = _ohlcv_collection_window(
+                now=self.now,
+                timeframe=timeframe,
+                lookback_seconds=lookback_seconds,
+                backfill_since=stream_since,
+            )
         if target.data_type == "macro_calendar" and target.lookahead_seconds:
             end = self.now + timedelta(seconds=target.lookahead_seconds)
         params["start"] = _format_utc(start)
@@ -410,6 +470,19 @@ class LiveScheduler:
         except Exception:
             return None
         return job if isinstance(job, dict) else None
+
+    def _mark_stream_backfill_succeeded(self, stream_state: dict[str, Any], *, now_text: str) -> None:
+        state = dict(stream_state)
+        state["backfill_required"] = False
+        state["backfill_since"] = None
+        state["warnings"] = [
+            warning
+            for warning in _strings(state.get("warnings"))
+            if "REST backfill" not in warning
+        ]
+        state["errors"] = []
+        state["updated_at"] = now_text
+        self.stream_state_repository.upsert_state(state)
 
 
 def build_live_collection_targets(config: dict[str, Any], settings: LiveSettings) -> list[LiveCollectionTarget]:
@@ -573,6 +646,146 @@ def _state_due(state: dict[str, Any], *, now: datetime) -> bool:
     return next_attempt <= now
 
 
+def _apply_stream_state(
+    state: dict[str, Any],
+    stream_state: dict[str, Any] | None,
+    *,
+    settings: LiveSettings,
+    now: datetime,
+) -> dict[str, Any]:
+    if state.get("data_type") != "ohlcv" or not settings.ohlcv_stream.enabled or not isinstance(stream_state, dict):
+        return state
+    status = str(stream_state.get("status") or "unknown")
+    state["transport"] = "websocket"
+    state["stream"] = {
+        "enabled": stream_state.get("enabled") is True,
+        "status": status,
+        "stream_name": stream_state.get("stream_name"),
+        "endpoint": stream_state.get("endpoint"),
+        "connected_at": stream_state.get("connected_at"),
+        "last_event_at": stream_state.get("last_event_at"),
+        "last_closed_candle_at": stream_state.get("last_closed_candle_at"),
+        "backfill_required": stream_state.get("backfill_required") is True,
+        "backfill_since": stream_state.get("backfill_since"),
+        "next_reconnect_at": stream_state.get("next_reconnect_at"),
+        "reconnect_count": stream_state.get("reconnect_count"),
+        "stale_after_seconds": settings.ohlcv_stream.stale_after_seconds,
+    }
+    stream_warnings = _strings(stream_state.get("warnings"))
+    stream_errors = _strings(stream_state.get("errors"))
+    prior_errors = _non_recoverable_live_collection_errors(_strings(state.get("errors")))
+    state["warnings"] = _bounded_unique([*_strings(state.get("warnings")), *stream_warnings])
+    if status in {"dependency_missing", "unsupported"}:
+        state["warnings"] = _bounded_unique(
+            [
+                *_strings(state.get("warnings")),
+                "Live OHLCV WebSocket is unavailable for this target; REST collection remains the fallback.",
+            ]
+        )
+        state["errors"] = prior_errors
+        return state
+    if _stream_state_is_fresh(
+        stream_state,
+        now=now,
+        stale_after_seconds=settings.ohlcv_stream.stale_after_seconds,
+    ):
+        state["latest_job_status"] = state.get("latest_job_status") or "streaming"
+        state["last_success_at"] = stream_state.get("last_closed_candle_at") or stream_state.get("last_event_at")
+        state["errors"] = []
+        return state
+    if _stream_state_requires_backfill(
+        stream_state,
+        now=now,
+        stale_after_seconds=settings.ohlcv_stream.stale_after_seconds,
+    ):
+        state["warnings"] = _bounded_unique(
+            [
+                *_strings(state.get("warnings")),
+                "Live OHLCV WebSocket is stale or reconnecting; REST backfill will run for the missing window.",
+            ]
+        )
+    state["errors"] = _bounded_unique([*prior_errors, *stream_errors])
+    return state
+
+
+def _stream_state_is_fresh(state: dict[str, Any] | None, *, now: datetime, stale_after_seconds: int) -> bool:
+    if not isinstance(state, dict):
+        return False
+    if state.get("status") not in {"connected", "streaming", "available"}:
+        return False
+    if state.get("backfill_required") is True:
+        return False
+    last_event_at = _parse_utc(state.get("last_event_at")) or _parse_utc(state.get("updated_at"))
+    if last_event_at is None:
+        return False
+    return now.astimezone(timezone.utc) - last_event_at <= timedelta(seconds=stale_after_seconds)
+
+
+def _stream_state_requires_backfill(
+    state: dict[str, Any] | None,
+    *,
+    now: datetime,
+    stale_after_seconds: int,
+) -> bool:
+    if not isinstance(state, dict):
+        return False
+    if state.get("backfill_required") is True:
+        return True
+    if state.get("status") in {"dependency_missing", "unsupported", "disabled"}:
+        return False
+    return not _stream_state_is_fresh(state, now=now, stale_after_seconds=stale_after_seconds)
+
+
+def _is_successful_rest_backfill(state: dict[str, Any]) -> bool:
+    if state.get("data_type") != "ohlcv":
+        return False
+    if state.get("latest_terminal_status") != "succeeded":
+        return False
+    stream = state.get("stream") if isinstance(state.get("stream"), dict) else {}
+    return stream.get("backfill_required") is True
+
+
+def _non_recoverable_live_collection_errors(errors: list[str]) -> list[str]:
+    return [
+        error
+        for error in errors
+        if not any(fragment in error for fragment in RECOVERABLE_LIVE_COLLECTION_ERROR_FRAGMENTS)
+    ]
+
+
+def _ohlcv_collection_window(
+    *,
+    now: datetime,
+    timeframe: str,
+    lookback_seconds: int,
+    backfill_since: datetime | None,
+) -> tuple[datetime, datetime]:
+    end = _floor_ohlcv_time(now, timeframe)
+    if backfill_since is not None:
+        start = _floor_ohlcv_time(backfill_since, timeframe)
+    else:
+        start = _floor_ohlcv_time(end - timedelta(seconds=lookback_seconds), timeframe)
+    if end <= start:
+        duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe, timedelta(seconds=max(1, lookback_seconds)))
+        start = end - duration
+    return start, end
+
+
+def _floor_ohlcv_time(value: datetime, timeframe: str) -> datetime:
+    value = value.astimezone(timezone.utc).replace(microsecond=0)
+    if timeframe == "1M":
+        return value.replace(day=1, hour=0, minute=0, second=0)
+    if timeframe == "1w":
+        start_of_day = value.replace(hour=0, minute=0, second=0)
+        return start_of_day - timedelta(days=start_of_day.weekday())
+    duration = OHLCV_TIMEFRAME_DURATIONS.get(timeframe)
+    if duration is None:
+        return value
+    seconds = int(value.timestamp())
+    interval = int(duration.total_seconds())
+    return datetime.fromtimestamp(seconds - (seconds % interval), timezone.utc)
+
+
 def _reconciled_state_changed(previous: dict[str, Any] | None, state: dict[str, Any]) -> bool:
     if not isinstance(previous, dict):
         return False
@@ -585,6 +798,8 @@ def _reconciled_state_changed(previous: dict[str, Any] | None, state: dict[str, 
         "source_refs",
         "warnings",
         "errors",
+        "transport",
+        "stream",
     )
     return any(previous.get(key) != state.get(key) for key in tracked_keys)
 

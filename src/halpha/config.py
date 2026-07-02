@@ -25,9 +25,11 @@ from halpha.live.contracts import (
     LIVE_CONFIG_FIELDS,
     LIVE_DAILY_REPORT_FIELDS,
     LIVE_DATA_TYPES,
+    LIVE_OHLCV_STREAM_FIELDS,
     LIVE_REPORT_TRIGGER_JOB_INTENTS,
     LIVE_REPORT_TRIGGER_FIELDS,
     LIVE_REPORTS_FIELDS,
+    LIVE_STREAM_FIELDS,
     LIVE_TRIGGER_IDS,
     LIVE_TRIGGER_PRIORITY_LEVELS,
 )
@@ -486,6 +488,8 @@ def _validate_live_config(live: Any) -> None:
         _require_positive_int(live, "tick_seconds", "live.tick_seconds")
     if "collections" in live:
         _validate_live_collections_config(live["collections"])
+    if "streams" in live:
+        _validate_live_streams_config(live["streams"])
     if "reports" in live:
         _validate_live_reports_config(live["reports"])
 
@@ -516,6 +520,37 @@ def _validate_live_collections_config(collections: Any) -> None:
                 _require_positive_int(collection, "lookahead_seconds", f"{path}.lookahead_seconds")
         elif "lookahead_seconds" in collection:
             raise ConfigError(f"{path}.lookahead_seconds is only supported for macro_calendar.")
+
+
+def _validate_live_streams_config(streams: Any) -> None:
+    if not isinstance(streams, dict):
+        raise ConfigError("live.streams must be a mapping.")
+    unsupported = sorted(set(streams) - LIVE_STREAM_FIELDS)
+    if unsupported:
+        supported = ", ".join(sorted(LIVE_STREAM_FIELDS))
+        names = ", ".join(str(item) for item in unsupported)
+        raise ConfigError(f"unsupported live.streams data type(s): {names}. Supported stream data types: {supported}.")
+    if "ohlcv" not in streams:
+        return
+    ohlcv_stream = streams["ohlcv"]
+    if not isinstance(ohlcv_stream, dict):
+        raise ConfigError("live.streams.ohlcv must be a mapping.")
+    _reject_unsupported_fields(
+        ohlcv_stream,
+        path="live.streams.ohlcv",
+        supported_fields=LIVE_OHLCV_STREAM_FIELDS,
+    )
+    if "enabled" in ohlcv_stream:
+        _require_bool(ohlcv_stream, "enabled", "live.streams.ohlcv.enabled")
+    for field in ("stale_after_seconds", "reconnect_initial_seconds", "reconnect_max_seconds"):
+        if field in ohlcv_stream:
+            _require_positive_int(ohlcv_stream, field, f"live.streams.ohlcv.{field}")
+    if (
+        "reconnect_initial_seconds" in ohlcv_stream
+        and "reconnect_max_seconds" in ohlcv_stream
+        and int(ohlcv_stream["reconnect_initial_seconds"]) > int(ohlcv_stream["reconnect_max_seconds"])
+    ):
+        raise ConfigError("live.streams.ohlcv.reconnect_max_seconds must be greater than or equal to reconnect_initial_seconds.")
 
 
 def _validate_live_reports_config(reports: Any) -> None:

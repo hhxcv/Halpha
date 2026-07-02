@@ -10,6 +10,8 @@ import threading
 import time
 from typing import Any, Callable, Mapping
 
+from halpha.runtime.process_creation import hidden_subprocess_kwargs
+
 
 COMMAND_JOB_CANCEL_GRACE_SECONDS = 2.0
 COMMAND_JOB_FORCE_GRACE_SECONDS = 2.0
@@ -142,7 +144,7 @@ def launch_command_job_process(
     if platform == "posix":
         kwargs["start_new_session"] = True
     elif platform == "windows":
-        kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        kwargs.update(hidden_subprocess_kwargs(new_process_group=True, platform="win32"))
     else:
         raise CommandJobProcessError("command job process trees are not supported on this platform.")
 
@@ -458,7 +460,13 @@ def _run_taskkill(pid: int, *, force: bool) -> None:
     if force:
         command.append("/F")
     with _suppress_os_error():
-        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            **hidden_subprocess_kwargs(platform="win32"),
+        )
 
 
 def _positive_int(value: Any) -> int | None:

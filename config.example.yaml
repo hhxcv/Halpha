@@ -325,3 +325,18 @@ codex:
     - read-only
     - "-"
   timeout_seconds: 300
+
+live:
+  enabled: false
+  tick_seconds: 30
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 86400
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+      reconnect_initial_seconds: 5
+      reconnect_max_seconds: 300

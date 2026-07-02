@@ -19,6 +19,7 @@ from halpha.monitor.monitoring import (
     Sleeper,
     load_monitor_config,
 )
+from halpha.runtime.process_creation import hidden_subprocess_kwargs
 from halpha.monitor.state_store import MonitorStateRepository
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
 from halpha.storage import artifact_base, display_path
@@ -80,6 +81,7 @@ class LocalCoreServiceClient:
                 cwd=Path.cwd(),
                 timeout=CORE_START_TIMEOUT_SECONDS,
                 check=False,
+                **hidden_subprocess_kwargs(new_process_group=True),
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise MonitorCoreClientError("core service could not be started by monitor supervision.") from exc
@@ -485,7 +487,7 @@ def _launch_monitor_service_process(
         "cwd": Path.cwd(),
     }
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+        kwargs.update(hidden_subprocess_kwargs(new_process_group=True, detached=True))
     else:
         kwargs["start_new_session"] = True
     return subprocess.Popen(command, **kwargs)

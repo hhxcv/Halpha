@@ -78,6 +78,10 @@ rejected with actionable errors.
 | `live.collections.<data_type>.cadence_seconds` | Required when that collection is enabled unless a future source-specific default is explicitly documented. | Positive integer. Core must not refresh a data type before the cadence has elapsed unless an explicit user action requests it. |
 | `live.collections.<data_type>.lookback_seconds` | Required when that collection is enabled unless a future source-specific default is explicitly documented. | Positive integer. Defines the incremental collection window and must not be interpreted as full-history backfill. |
 | `live.collections.macro_calendar.lookahead_seconds` | Required when `macro_calendar` Live collection is enabled. | Positive integer. Defines future scheduled-catalyst coverage. |
+| `live.streams.ohlcv.enabled` | Defaults to the configured `live.collections.ohlcv.enabled` value. | Boolean only. Enables Core-owned public OHLCV WebSocket ingestion for implemented sources. |
+| `live.streams.ohlcv.stale_after_seconds` | Defaults to `180`. | Positive integer. If no WebSocket event is seen within this window, Live treats the stream as stale and schedules REST backfill. |
+| `live.streams.ohlcv.reconnect_initial_seconds` | Defaults to `5`. | Positive integer. Initial reconnect delay after WebSocket disconnect or provider shutdown. |
+| `live.streams.ohlcv.reconnect_max_seconds` | Defaults to `300`. | Positive integer greater than or equal to `reconnect_initial_seconds`. Caps exponential reconnect delay. |
 | `live.reports.daily.enabled` | Defaults to `false`. | Boolean only. Links the existing daily report schedule state into the Live page; it must not create a second daily scheduler authority. |
 | `live.reports.triggers.<trigger_id>.enabled` | Defaults to `false` for every supported trigger. | Boolean only. Unknown `trigger_id` keys are unsupported. |
 | `live.reports.triggers.<trigger_id>.cooldown_seconds` | Required when that trigger is enabled. | Positive integer. Prevents duplicate report dispatch for equivalent trigger decisions within the cooldown window. |
@@ -124,6 +128,52 @@ cadences:
 
 These are default scheduling values only. A configured collection must still
 respect provider rate-limit cooldowns before sending public API requests.
+
+## Live OHLCV WebSocket Streams
+
+Live OHLCV WebSocket ingestion is implemented as an internal Core transport,
+not as a new resident process role. It writes finalized public kline candles to
+the same `data/market/ohlcv` shared store as REST collection and records stream
+state in runtime metadata under `live_stream_state`.
+
+Implemented WebSocket sources:
+
+- `binance` and `binance_spot`: public market-data stream endpoint
+  `data-stream.binance.vision`;
+- `binance_usdm`: USD-M futures market stream endpoint routed through
+  Binance's `/market` WebSocket path.
+
+Current stream behavior:
+
+- uses combined stream URLs such as `<symbol>@kline_<interval>`;
+- records only closed candles (`k.x == true`) as OHLCV store records;
+- updates collection coverage with `coverage_method:
+  ohlcv_websocket_stream`;
+- marks initial startup, reconnect, or stale-stream gaps as requiring REST
+  backfill;
+- lets the existing visible `data_collect` command-job path perform REST
+  backfill instead of hiding recovery work in the stream loop;
+- suppresses periodic OHLCV REST collection while the WebSocket stream is
+  fresh and no backfill is required.
+
+Provider rules that shape the implementation:
+
+- Binance spot and USD-M futures WebSocket connections are valid for only 24
+  hours and must be expected to disconnect.
+- Binance spot sends WebSocket ping frames every 20 seconds and requires prompt
+  pong responses.
+- Binance USD-M futures sends ping frames every 3 minutes and disconnects if a
+  pong is not received within the documented timeout.
+- Binance WebSocket control-message limits apply to client messages, so Halpha
+  avoids repeated subscribe/unsubscribe calls and uses URL-based combined
+  stream subscriptions.
+- Binance USD-M futures kline streams belong to the routed `/market` endpoint;
+  unrouted URLs are not used for those streams.
+
+Unsupported OHLCV sources remain on REST collection until their public
+WebSocket contracts are implemented source by source. Unsupported stream
+targets are recorded as stream warnings; they must not be silently treated as
+healthy WebSocket coverage.
 
 ## Public API Rate Limits
 
