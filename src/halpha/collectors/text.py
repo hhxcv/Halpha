@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
@@ -12,6 +13,12 @@ from xml.etree import ElementTree
 
 from halpha.runtime.pipeline_contracts import PipelineError, RunContext
 from halpha.runtime.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
+from halpha.runtime.public_rate_limits import (
+    PublicApiRateLimitError,
+    is_public_api_rate_limit_response,
+    record_public_api_rate_limit,
+    retry_after_seconds_from_headers,
+)
 from halpha.data.raw_artifacts import RawArtifactError, validate_text_events_raw_artifact
 from halpha.storage import write_json
 
@@ -28,7 +35,11 @@ def collect_text_events(config: dict[str, Any], run: RunContext) -> list[str]:
         run.manifest["counts"]["text_event_items"] = 0
         return []
 
-    raw = collect_text_events_raw(text, proxy_url=_proxy_url_from_config(config))
+    raw = collect_text_events_raw(
+        text,
+        proxy_url=_proxy_url_from_config(config),
+        rate_limit_config_path=run.config_path,
+    )
     artifact_path = run.raw_dir / "text_events.json"
     write_json(artifact_path, raw)
     run.manifest["artifacts"]["raw_text_events"] = TEXT_ARTIFACT
@@ -45,8 +56,13 @@ def collect_text_events(config: dict[str, Any], run: RunContext) -> list[str]:
     return [TEXT_ARTIFACT]
 
 
-def collect_text_events_raw(text: dict[str, Any], *, proxy_url: str | None = None) -> dict[str, Any]:
-    raw = _collect_raw_text_events(text, proxy_url=proxy_url)
+def collect_text_events_raw(
+    text: dict[str, Any],
+    *,
+    proxy_url: str | None = None,
+    rate_limit_config_path: Path | None = None,
+) -> dict[str, Any]:
+    raw = _collect_raw_text_events(text, proxy_url=proxy_url, rate_limit_config_path=rate_limit_config_path)
     try:
         validate_text_events_raw_artifact(raw, TEXT_ARTIFACT)
     except RawArtifactError as exc:
@@ -54,7 +70,12 @@ def collect_text_events_raw(text: dict[str, Any], *, proxy_url: str | None = Non
     return raw
 
 
-def _collect_raw_text_events(text: dict[str, Any], *, proxy_url: str | None) -> dict[str, Any]:
+def _collect_raw_text_events(
+    text: dict[str, Any],
+    *,
+    proxy_url: str | None,
+    rate_limit_config_path: Path | None,
+) -> dict[str, Any]:
     collected_at = _utc_timestamp()
     max_items = text.get("max_items")
     if not isinstance(max_items, int) or isinstance(max_items, bool):
@@ -71,14 +92,19 @@ def _collect_raw_text_events(text: dict[str, Any], *, proxy_url: str | None) -> 
         "items": [],
         "errors": [],
     }
-    urlopen_func = _urlopen_from_proxy(proxy_url)
+    urlopen_func = _urlopen_from_proxy(proxy_url, rate_limit_config_path=rate_limit_config_path)
 
     for source in sources:
         if max_items is not None and len(raw["items"]) >= max_items:
             break
 
         try:
-            items = _collect_rss_source(source, collected_at, urlopen_func=urlopen_func)
+            items = _collect_rss_source(
+                source,
+                collected_at,
+                urlopen_func=urlopen_func,
+                rate_limit_config_path=rate_limit_config_path,
+            )
         except TextCollectionError as exc:
             raw["errors"].append(
                 {
@@ -95,12 +121,18 @@ def _collect_raw_text_events(text: dict[str, Any], *, proxy_url: str | None) -> 
     return raw
 
 
-def _collect_rss_source(source: dict[str, Any], collected_at: str, *, urlopen_func) -> list[dict[str, Any]]:
+def _collect_rss_source(
+    source: dict[str, Any],
+    collected_at: str,
+    *,
+    urlopen_func,
+    rate_limit_config_path: Path | None,
+) -> list[dict[str, Any]]:
     source_type = source.get("type")
     if source_type != RSS_SOURCE_TYPE:
         raise TextCollectionError(f"unsupported text source type: {source_type}")
 
-    body = _request_feed(source, urlopen_func=urlopen_func)
+    body = _request_feed(source, urlopen_func=urlopen_func, rate_limit_config_path=rate_limit_config_path)
     try:
         root = ElementTree.fromstring(body)
     except ElementTree.ParseError as exc:
@@ -113,7 +145,7 @@ def _collect_rss_source(source: dict[str, Any], collected_at: str, *, urlopen_fu
     return [_text_item(source, item, collected_at) for item in rss_items]
 
 
-def _request_feed(source: dict[str, Any], *, urlopen_func) -> str:
+def _request_feed(source: dict[str, Any], *, urlopen_func, rate_limit_config_path: Path | None) -> str:
     url = source.get("url")
     request = Request(str(url), headers={"User-Agent": "Halpha/0.0.0"})
     try:
@@ -121,7 +153,16 @@ def _request_feed(source: dict[str, Any], *, urlopen_func) -> str:
             body = response.read()
     except HTTPError as exc:
         detail = _read_error_detail(exc)
+        _record_public_rate_limit_if_needed(
+            config_path=rate_limit_config_path,
+            url=str(url),
+            source=str(source.get("name") or "rss"),
+            error=exc,
+            message=detail,
+        )
         raise TextCollectionError(f"RSS request failed: HTTP {exc.code}{detail}") from exc
+    except PublicApiRateLimitError as exc:
+        raise TextCollectionError(f"RSS request rate-limited: {exc}") from exc
     except URLError as exc:
         raise TextCollectionError(f"RSS request failed: {exc.reason}") from exc
     except TimeoutError as exc:
@@ -134,13 +175,14 @@ def _proxy_url_from_config(config: dict[str, Any]) -> str | None:
     return market_proxy_url_from_config(config, error_factory=TextCollectionError)
 
 
-def _urlopen_from_proxy(proxy_url: str | None):
+def _urlopen_from_proxy(proxy_url: str | None, *, rate_limit_config_path: Path | None = None):
     return urlopen_from_public_proxy(
         proxy_url,
         error_factory=TextCollectionError,
         default_urlopen=urlopen,
         proxy_handler_factory=ProxyHandler,
         opener_factory=build_opener,
+        rate_limit_config_path=rate_limit_config_path,
     )
 
 
@@ -276,6 +318,27 @@ def _read_error_detail(error: HTTPError) -> str:
         return ""
     excerpt = body[:200].replace("\n", " ")
     return f": {excerpt}"
+
+
+def _record_public_rate_limit_if_needed(
+    *,
+    config_path: Path | None,
+    url: str,
+    source: str,
+    error: HTTPError,
+    message: str,
+) -> None:
+    headers = getattr(error, "headers", None)
+    if not is_public_api_rate_limit_response(error.code, headers=headers, message=message):
+        return
+    record_public_api_rate_limit(
+        config_path=config_path,
+        url=url,
+        source=source,
+        status_code=error.code,
+        retry_after_seconds=retry_after_seconds_from_headers(headers),
+        message=message,
+    )
 
 
 class _HTMLTextExtractor(HTMLParser):

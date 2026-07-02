@@ -4,6 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from math import isfinite
+from pathlib import Path
+import re
 from typing import Any
 
 import ccxt
@@ -14,9 +16,15 @@ from halpha.market.ohlcv_quality import (
     ohlcv_record_invariant_errors,
 )
 from halpha.runtime.public_http import market_proxy_url_from_market, normalize_public_proxy_url
+from halpha.runtime.public_rate_limits import (
+    PublicApiRateLimitError,
+    raise_if_public_api_rate_limited,
+    record_public_api_rate_limit,
+)
 
 
 BINANCE_SPOT_PUBLIC_API_URL = "https://data-api.binance.vision/api/v3"
+BINANCE_USDM_PUBLIC_API_URL = "https://fapi.binance.com"
 OHLCV_SOURCE_ORDER = (
     "binance",
     "binance_spot",
@@ -89,8 +97,10 @@ class CCXTOHLCVSource:
         *,
         proxy_url: str | None = None,
         exchange_factory: Callable[[dict[str, Any]], Any] | None = None,
+        rate_limit_config_path: Path | None = None,
     ) -> None:
         self.source = _require_supported_source(source)
+        self._rate_limit_config_path = rate_limit_config_path
         proxy_url = normalize_public_proxy_url(proxy_url, error_factory=OHLCVSourceError)
         factory = exchange_factory or _ccxt_exchange_factory(self.source)
         self.exchange = factory(_exchange_options(self.source, proxy_url=proxy_url))
@@ -113,14 +123,25 @@ class CCXTOHLCVSource:
         exchange_timeframe = _exchange_timeframe(timeframe)
 
         try:
+            self._raise_if_rate_limited()
             rows = self.exchange.fetch_ohlcv(exchange_symbol, exchange_timeframe, since=since_ms, limit=limit)
         except ccxt.BadSymbol as exc:
             raise OHLCVSourceError(f"unsupported symbol {symbol} for {self.source}: {exc}") from exc
+        except PublicApiRateLimitError as exc:
+            raise OHLCVSourceError(
+                f"ohlcv rate-limited for {self.source} {symbol} {timeframe}: {exc}"
+            ) from exc
+        except (ccxt.RateLimitExceeded, ccxt.DDoSProtection) as exc:
+            raise self._rate_limited_error(symbol=symbol, timeframe=timeframe, exc=exc) from exc
         except ccxt.NetworkError as exc:
+            if _looks_like_rate_limit_error(exc):
+                raise self._rate_limited_error(symbol=symbol, timeframe=timeframe, exc=exc) from exc
             raise OHLCVSourceError(
                 f"ohlcv network failure for {self.source} {symbol} {timeframe}: {exc}"
             ) from exc
         except ccxt.ExchangeError as exc:
+            if _looks_like_rate_limit_error(exc):
+                raise self._rate_limited_error(symbol=symbol, timeframe=timeframe, exc=exc) from exc
             raise OHLCVSourceError(
                 f"ohlcv source error for {self.source} {symbol} {timeframe}: {exc}"
             ) from exc
@@ -166,17 +187,44 @@ class CCXTOHLCVSource:
                 f"unsupported timeframe {timeframe} for {self.source}. Exchange timeframes: {supported}."
             )
 
+    def _raise_if_rate_limited(self) -> None:
+        url = _rate_limit_url_for_source(self.source)
+        if url is None:
+            return
+        raise_if_public_api_rate_limited(
+            config_path=self._rate_limit_config_path,
+            url=url,
+            source=self.source,
+        )
+
+    def _rate_limited_error(self, *, symbol: str, timeframe: str, exc: Exception) -> OHLCVSourceError:
+        url = _rate_limit_url_for_source(self.source)
+        record = record_public_api_rate_limit(
+            config_path=self._rate_limit_config_path,
+            url=url or self.source,
+            source=self.source,
+            status_code=_status_code_from_exception(exc),
+            message=str(exc),
+        )
+        cooldown_until = record.get("cooldown_until") if isinstance(record, dict) else None
+        suffix = f"; cooldown until {cooldown_until}" if cooldown_until else ""
+        return OHLCVSourceError(
+            f"ohlcv rate-limited for {self.source} {symbol} {timeframe}{suffix}: {exc}"
+        )
+
 
 def _fetch_configured_ohlcv(
     market: dict[str, Any],
     *,
     now: datetime | str | None = None,
     exchange_factory: Callable[[dict[str, Any]], Any] | None = None,
+    rate_limit_config_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     source = CCXTOHLCVSource(
         _required_mapping_text(market, "source", "market.source"),
         proxy_url=_proxy_url_from_market_config(market),
         exchange_factory=exchange_factory,
+        rate_limit_config_path=rate_limit_config_path,
     )
     symbols = _required_string_list(market, "symbols", "market.symbols")
     ohlcv = _required_mapping(market, "ohlcv", "market.ohlcv")
@@ -228,6 +276,45 @@ def _exchange_options(source: str, *, proxy_url: str | None) -> dict[str, Any]:
     if proxy_url is not None:
         options["httpsProxy"] = proxy_url
     return options
+
+
+def _rate_limit_url_for_source(source: str) -> str | None:
+    spec = OHLCV_SOURCE_SPECS[source]
+    if spec.public_api_url:
+        return spec.public_api_url
+    if source == "binance_usdm":
+        return BINANCE_USDM_PUBLIC_API_URL
+    host_by_exchange = {
+        "okx": "https://www.okx.com",
+        "bybit": "https://api.bybit.com",
+        "kucoin": "https://api.kucoin.com",
+        "kucoinfutures": "https://api-futures.kucoin.com",
+        "bitget": "https://api.bitget.com",
+        "kraken": "https://api.kraken.com",
+        "coinbase": "https://api.exchange.coinbase.com",
+    }
+    return host_by_exchange.get(spec.exchange_id)
+
+
+def _looks_like_rate_limit_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return (
+        "rate limit" in text
+        or "too many requests" in text
+        or "quota exceeded" in text
+        or "request quota" in text
+        or "throttl" in text
+        or "http 429" in text
+        or "http 418" in text
+    )
+
+
+def _status_code_from_exception(exc: Exception) -> int | None:
+    text = str(exc)
+    match = re.search(r"\b(418|429)\b", text)
+    if match:
+        return int(match.group(1))
+    return 429
 
 
 def _exchange_timeframe(timeframe: str) -> str:

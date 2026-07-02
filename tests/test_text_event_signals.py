@@ -104,6 +104,41 @@ def test_text_event_signals_preserves_low_confidence_events_without_accepting_th
     assert any(item["type"] == "category_gate" and item["accepted_by_gate"] is False for item in signal["evidence"])
 
 
+def test_text_event_signals_accepts_rule_fallback_when_classifier_model_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr("halpha.text.text_entity_evidence._load_ner_model", _skipped_ner_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_classifier_model", _unavailable_classifier_model)
+    monkeypatch.setattr("halpha.text.text_event_classification._load_sentiment_model", _unavailable_sentiment_model)
+    monkeypatch.setattr("halpha.text.text_event_topics._load_embedding_model", _skipped_embedding_model)
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        until_stage="build_source_evidence",
+        stage_handlers={"collect_text_events": _write_bitcoin_etf_raw},
+    )
+
+    assert result.succeeded is True
+    artifact = json.loads((result.run.analysis_dir / "text_event_signals.json").read_text(encoding="utf-8"))
+    signal = artifact["signals"][0]
+
+    assert artifact["coverage"]["accepted_signals"] == 1
+    assert artifact["coverage"]["unknown_signals"] == 0
+    assert signal["status"] == "accepted"
+    assert signal["symbol"] == "BTCUSDT"
+    assert signal["primary_category"] == "etf_flows"
+    assert signal["confidence"] == "low"
+    assert signal["strength"] == "low"
+    assert signal["event_bias"] == "supportive"
+    assert "rule_based_category_fallback" in signal["warnings"]
+    assert "sentiment_model_unavailable" in signal["warnings"]
+    assert "signal_status_unknown" not in signal["warnings"]
+
+
 def _write_config(tmp_path: Path) -> Path:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(

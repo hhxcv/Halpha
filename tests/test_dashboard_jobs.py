@@ -430,6 +430,7 @@ def test_command_job_manager_accepts_monitor_command_intents(tmp_path: Path, mon
     outputs = [
         "Halpha monitor dry run succeeded.\ncycle_execution: not_run",
         "Halpha monitor cycle succeeded.\nmonitor_manifest: runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json",
+        "Halpha monitor source cycle succeeded.\nmonitor_manifest: runs/monitor/cycles/cycle-2/monitor_cycle_manifest.json",
     ]
 
     def fake_popen(command, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
@@ -452,6 +453,12 @@ def test_command_job_manager_accepts_monitor_command_intents(tmp_path: Path, mon
             ["python", "-m", "halpha", "monitor", "run", "--config", "<external-config>", "--once"],
             {"monitor_manifest": "runs/monitor/cycles/cycle-1/monitor_cycle_manifest.json"},
         ),
+        (
+            "monitor_sources_once",
+            {},
+            ["python", "-m", "halpha", "monitor", "run", "--config", "<external-config>", "--source-cadence"],
+            {"monitor_manifest": "runs/monitor/cycles/cycle-2/monitor_cycle_manifest.json"},
+        ),
     ]
 
     for intent, params, preview, expected_refs in cases:
@@ -466,6 +473,40 @@ def test_command_job_manager_accepts_monitor_command_intents(tmp_path: Path, mon
 
     assert len(commands) == len(cases)
     assert all(command[:3] == [commands[0][0], "-m", "halpha"] for command in commands)
+
+
+def test_monitor_sources_internal_job_skips_reassessment(tmp_path: Path, monkeypatch) -> None:
+    config_path = _write_config(tmp_path)
+    config = load_config(config_path)
+    captured_calls: list[dict[str, Any]] = []
+
+    class _Result:
+        succeeded = True
+        exit_code = 0
+        cycle_id = "cycle-source-only"
+        status = "changed"
+        target_stage = "refresh_data"
+        no_codex = True
+        manifest_path = None
+        run_id = None
+        reason = None
+
+    def fake_run_monitor_source_cycle(*args, **kwargs):  # noqa: ANN002, ANN003
+        captured_calls.append(kwargs)
+        return _Result()
+
+    monkeypatch.setattr(
+        "halpha.runtime.command_job_execution.run_monitor_source_cycle",
+        fake_run_monitor_source_cycle,
+    )
+    manager = CommandJobManager(config, config_path=config_path, execution_mode="internal")
+
+    job = manager.create_job({"intent": "monitor_sources_once", "params": {}})
+    completed = _wait_for_terminal(manager, job["job_id"])
+
+    assert completed["status"] == "succeeded"
+    assert completed["command"] == ["internal", "monitor_sources_once"]
+    assert captured_calls[0]["reassess_changed_sources"] is False
 
 
 def test_command_job_manager_accepts_product_run_command_intents(tmp_path: Path, monkeypatch) -> None:
@@ -620,8 +661,11 @@ def test_command_job_manager_accepts_strategy_and_text_command_intents(
             "backtest",
             {
                 "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
                 "symbol": "BTCUSDT",
                 "timeframe": "1d",
+                "start": "2026-06-02T00:00:00Z",
+                "end": "2026-07-02T00:00:00Z",
                 "output_dir": "runs/manual-backtests",
             },
             [
@@ -633,10 +677,16 @@ def test_command_job_manager_accepts_strategy_and_text_command_intents(
                 "<external-config>",
                 "--strategy",
                 "tsmom_vol_scaled",
+                "--source",
+                "binance",
                 "--symbol",
                 "BTCUSDT",
                 "--timeframe",
                 "1d",
+                "--start",
+                "2026-06-02T00:00:00Z",
+                "--end",
+                "2026-07-02T00:00:00Z",
                 "--output-dir",
                 "runs/manual-backtests",
             ],
@@ -1068,8 +1118,11 @@ def test_command_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypa
             "intent": "backtest",
             "params": {
                 "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
                 "symbol": "BTCUSDT",
                 "timeframe": "1d",
+                "start": "2026-06-02T00:00:00Z",
+                "end": "2026-07-02T00:00:00Z",
             },
         },
     )
@@ -1082,6 +1135,9 @@ def test_command_job_api_starts_strategy_command_intent(tmp_path: Path, monkeypa
     assert completed["command"] == ["internal", "backtest"]
     assert completed["pid"] is None
     assert captured_calls[0]["params"]["strategy_name"] == "tsmom_vol_scaled"
+    assert captured_calls[0]["params"]["source"] == "binance"
+    assert captured_calls[0]["params"]["start"] == "2026-06-02T00:00:00Z"
+    assert captured_calls[0]["params"]["end"] == "2026-07-02T00:00:00Z"
     assert completed["result_refs"]["strategy_backtest"] == "runs/backtests/run-api/strategy_backtest.json"
     assert completed["result_refs"]["manifest"] == "runs/backtests/run-api/manifest.json"
     assert str(tmp_path) not in create_response.text

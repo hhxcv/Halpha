@@ -76,7 +76,7 @@ def test_core_scheduler_creates_monitor_cycle_when_enabled(tmp_path: Path) -> No
     assert tick["monitor_cycle_job"]["status"] == "available"
     assert jobs.created_requests == [
         {
-            "intent": "monitor_once",
+            "intent": "monitor_sources_once",
             "params": {},
             "requested_by": "Core",
             "requester": {

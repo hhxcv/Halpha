@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -12,6 +13,13 @@ from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from halpha.data.public_capabilities import SUPPORTED_DERIVATIVES_MARKET_SOURCES
 from halpha.runtime.public_http import urlopen_from_public_proxy
+from halpha.runtime.public_rate_limits import (
+    PublicApiRateLimitError,
+    is_public_api_rate_limit_response,
+    record_public_api_rate_limit,
+    retry_after_seconds_from_headers,
+    sanitize_public_api_error_message,
+)
 
 BINANCE_USDM_BASE_URL = "https://fapi.binance.com"
 MARKET_TYPE = "usd_m_futures"
@@ -30,11 +38,13 @@ class _EndpointFetchError(Exception):
         error_type: str,
         status_code: int | None = None,
         raw_error_code: int | str | None = None,
+        retry_after_seconds: int | None = None,
     ) -> None:
         super().__init__(message)
         self.error_type = error_type
         self.status_code = status_code
         self.raw_error_code = raw_error_code
+        self.retry_after_seconds = retry_after_seconds
 
 
 @dataclass(frozen=True)
@@ -47,6 +57,7 @@ class _RequestSpec:
     response_shape: str
     period_required: bool = False
     limit_allowed: bool = False
+    time_window_allowed: bool = False
     fixed_params: tuple[tuple[str, str], ...] = ()
     default_period: str = "snapshot"
 
@@ -60,6 +71,7 @@ _REQUEST_SPECS: dict[str, _RequestSpec] = {
         symbol_param="symbol",
         response_shape="list",
         limit_allowed=True,
+        time_window_allowed=True,
         default_period="8h",
     ),
     "open_interest_current": _RequestSpec(
@@ -118,14 +130,18 @@ class PublicDerivativesSource:
         *,
         proxy_url: str | None = None,
         urlopen_func: Callable[..., Any] | None = None,
+        rate_limit_config_path: Path | None = None,
     ) -> None:
         self.source = _require_supported_source(source)
+        self._rate_limit_config_path = rate_limit_config_path
         self._urlopen = urlopen_func or urlopen_from_public_proxy(
             proxy_url,
             error_factory=DerivativesSourceError,
             default_urlopen=urlopen,
             proxy_handler_factory=ProxyHandler,
             opener_factory=build_opener,
+            rate_limit_config_path=rate_limit_config_path,
+            rate_limit_source=self.source,
         )
 
     def fetch_records(
@@ -135,12 +151,26 @@ class PublicDerivativesSource:
         symbol: str,
         period: str | None = None,
         limit: int | None = None,
+        start_time_ms: int | None = None,
+        end_time_ms: int | None = None,
     ) -> dict[str, Any]:
         spec = _require_request_spec(request_class)
         symbol = _require_non_empty_text(symbol, "symbol")
         period = _normalize_period(spec, period)
         limit = _normalize_limit(spec, limit)
-        url = _request_url(spec, symbol=symbol, period=period, limit=limit)
+        start_time_ms, end_time_ms = _normalize_time_window(
+            spec,
+            start_time_ms=start_time_ms,
+            end_time_ms=end_time_ms,
+        )
+        url = _request_url(
+            spec,
+            symbol=symbol,
+            period=period,
+            limit=limit,
+            start_time_ms=start_time_ms,
+            end_time_ms=end_time_ms,
+        )
 
         try:
             payload = self._request_json(url)
@@ -161,6 +191,7 @@ class PublicDerivativesSource:
                         message=str(exc),
                         status_code=exc.status_code,
                         raw_error_code=exc.raw_error_code,
+                        retry_after_seconds=exc.retry_after_seconds,
                     )
                 ],
             )
@@ -188,12 +219,36 @@ class PublicDerivativesSource:
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
             message, raw_error_code = _http_error_message(exc)
-            error_type = "unsupported_symbol" if _is_unsupported_symbol_error(exc, message) else "http_error"
+            if _is_rate_limit_error(exc, message):
+                error_type = "rate_limited"
+                retry_after_seconds = _retry_after_seconds(exc)
+                recorded = record_public_api_rate_limit(
+                    config_path=self._rate_limit_config_path,
+                    url=url,
+                    source=self.source,
+                    status_code=exc.code,
+                    retry_after_seconds=retry_after_seconds,
+                    message=message,
+                )
+                retry_after_seconds = _record_retry_after_seconds(recorded) or retry_after_seconds
+            elif _is_unsupported_symbol_error(exc, message):
+                error_type = "unsupported_symbol"
+                retry_after_seconds = None
+            else:
+                error_type = "http_error"
+                retry_after_seconds = None
             raise _EndpointFetchError(
                 message,
                 error_type=error_type,
                 status_code=exc.code,
                 raw_error_code=raw_error_code,
+                retry_after_seconds=retry_after_seconds,
+            ) from exc
+        except PublicApiRateLimitError as exc:
+            raise _EndpointFetchError(
+                str(exc),
+                error_type="rate_limited",
+                retry_after_seconds=exc.retry_after_seconds,
             ) from exc
         except URLError as exc:
             raise _EndpointFetchError(
@@ -481,11 +536,33 @@ def _request_result(
     }
 
 
-def _request_url(spec: _RequestSpec, *, symbol: str, period: str, limit: int | None) -> str:
+def derivatives_request_metadata(request_class: str, *, period: str | None = None) -> dict[str, str]:
+    spec = _require_request_spec(request_class)
+    return {
+        "request_class": spec.request_class,
+        "data_class": spec.data_class,
+        "endpoint": spec.endpoint,
+        "period": _normalize_period(spec, period),
+    }
+
+
+def _request_url(
+    spec: _RequestSpec,
+    *,
+    symbol: str,
+    period: str,
+    limit: int | None,
+    start_time_ms: int | None,
+    end_time_ms: int | None,
+) -> str:
     params: list[tuple[str, str | int]] = [(spec.symbol_param, symbol)]
     params.extend(spec.fixed_params)
     if spec.period_required:
         params.append(("period", period))
+    if start_time_ms is not None:
+        params.append(("startTime", start_time_ms))
+    if end_time_ms is not None:
+        params.append(("endTime", end_time_ms))
     if limit is not None:
         params.append(("limit", limit))
     return f"{BINANCE_USDM_BASE_URL}{spec.path}?{urlencode(params)}"
@@ -528,6 +605,31 @@ def _normalize_limit(spec: _RequestSpec, limit: int | None) -> int | None:
     if spec.request_class == "order_book_depth" and limit not in {5, 10, 20, 50, 100, 500, 1000}:
         raise DerivativesSourceError("order_book_depth limit must be one of: 5, 10, 20, 50, 100, 500, 1000.")
     return limit
+
+
+def _normalize_time_window(
+    spec: _RequestSpec,
+    *,
+    start_time_ms: int | None,
+    end_time_ms: int | None,
+) -> tuple[int | None, int | None]:
+    if start_time_ms is None and end_time_ms is None:
+        return None, None
+    if not spec.time_window_allowed:
+        raise DerivativesSourceError(f"{spec.request_class} does not accept start_time_ms or end_time_ms.")
+    start_time_ms = _normalize_optional_millis(start_time_ms, "start_time_ms")
+    end_time_ms = _normalize_optional_millis(end_time_ms, "end_time_ms")
+    if start_time_ms is not None and end_time_ms is not None and start_time_ms >= end_time_ms:
+        raise DerivativesSourceError("start_time_ms must be earlier than end_time_ms.")
+    return start_time_ms, end_time_ms
+
+
+def _normalize_optional_millis(value: int | None, field: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise DerivativesSourceError(f"{field} must be a positive millisecond timestamp.")
+    return value
 
 
 def _required_text(data: dict[str, Any], key: str, endpoint: str) -> str:
@@ -685,6 +787,7 @@ def _error_record(
     message: str,
     status_code: int | None = None,
     raw_error_code: int | str | None = None,
+    retry_after_seconds: int | None = None,
 ) -> dict[str, Any]:
     error: dict[str, Any] = {
         "source": source,
@@ -701,6 +804,8 @@ def _error_record(
         error["status_code"] = status_code
     if raw_error_code is not None:
         error["raw_error_code"] = raw_error_code
+    if retry_after_seconds is not None:
+        error["retry_after_seconds"] = retry_after_seconds
     return error
 
 
@@ -714,9 +819,9 @@ def _http_error_message(error: HTTPError) -> tuple[str, int | str | None]:
             raw_error_code = parsed.get("code")
             source_message = parsed.get("msg")
             if source_message:
-                message = f"{message}: {source_message}"
+                message = f"{message}: {_sanitize_error_message(str(source_message))}"
         else:
-            message = f"{message}: {body[:200].replace(chr(10), ' ')}"
+            message = f"{message}: {_sanitize_error_message(body[:200].replace(chr(10), ' '))}"
     return message, raw_error_code
 
 
@@ -739,3 +844,22 @@ def _parse_error_body(body: str) -> dict[str, Any] | None:
 
 def _is_unsupported_symbol_error(error: HTTPError, message: str) -> bool:
     return error.code == 400 and "invalid symbol" in message.lower()
+
+
+def _is_rate_limit_error(error: HTTPError, message: str) -> bool:
+    return is_public_api_rate_limit_response(error.code, headers=getattr(error, "headers", None), message=message)
+
+
+def _retry_after_seconds(error: HTTPError) -> int | None:
+    return retry_after_seconds_from_headers(getattr(error, "headers", None))
+
+
+def _record_retry_after_seconds(record: dict[str, Any]) -> int | None:
+    value = record.get("retry_after_seconds")
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
+
+
+def _sanitize_error_message(message: str) -> str:
+    return sanitize_public_api_error_message(message) or ""

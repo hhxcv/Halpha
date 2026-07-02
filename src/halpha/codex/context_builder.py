@@ -121,13 +121,13 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "26. When derivatives market material is present, include derivatives and market-structure evidence in the report where it affects market interpretation, risk notes, watch points, or downstream Halpha artifacts.",
             "27. Distinguish confirming, conflicting, no-impact, unavailable, stale, degraded, partial, and failed derivatives evidence conservatively from Halpha material.",
             "28. Do not treat unavailable, stale, degraded, partial, failed, or missing derivatives evidence as low risk.",
-            "29. Do not calculate funding pressure, open-interest changes, premium, basis, spread, depth imbalance, or liquidation summaries from raw data.",
+            "29. When derivatives evidence is unavailable, explain whether Halpha material says it is source/product-boundary unavailable or failed collection; do not collapse source-boundary unavailability into generic data failure. Do not calculate funding pressure, open-interest changes, premium, basis, spread, depth imbalance, or liquidation summaries from raw data.",
             "30. When macro calendar material is present, explain scheduled catalyst timing risk, recent catalyst context, no-event windows, source availability, freshness, time-zone, and data-quality limits only from Halpha material.",
             "31. Distinguish upcoming scheduled catalyst risk from confirmed realized market impact; do not treat a scheduled macro event as a forecast or confirmed market response.",
             "32. Do not generate or revise macro events, macro states, risk levels, watch triggers, alert priorities, source availability, release outcomes, policy outcomes, price forecasts, trading advice, position sizing, or account actions.",
             "33. When on-chain flow material is present, explain stablecoin liquidity, chain activity, network congestion, and exchange-flow source availability only from Halpha material.",
             "34. Distinguish on-chain context from trading signals; do not treat unavailable, stale, partial, failed, insufficient, or missing on-chain evidence as low risk.",
-            "35. Do not generate or revise on-chain records, flow states, address labels, risk levels, watch triggers, alert priorities, source availability, price forecasts, trading advice, position sizing, wallet actions, or account actions.",
+            "35. When on-chain exchange-flow evidence is unavailable, explain the configured source boundary from Halpha material before using it as uncertainty; do not imply wallet, account, or private exchange-flow collection is required. Do not generate or revise on-chain records, flow states, address labels, risk levels, watch triggers, alert priorities, source availability, price forecasts, trading advice, position sizing, wallet actions, or account actions.",
             "36. When decision intelligence material is present, use it for action-facing decision language and use quantitative material as upstream evidence.",
             "37. Include supported decision coverage for current decision view, what to do, what not to do, tentative opportunities, wait/watch conditions, risk state, invalidation conditions, changes versus previous run, uncertainty, and method limits.",
             "38. Do not invent action levels, signals, prices, strategy conclusions, unsupported trading instructions, or stronger advice than the decision material supports.",
@@ -156,10 +156,12 @@ def render_prompt(context: str, *, report_title: str, generated_at: str) -> str:
             "61. When alert decision material is present, explain Halpha-generated P0, P1, P2, P3, and no-alert states where supported.",
             "62. Use only Halpha-generated alert priority, event severity, decision impact, downgrade reasons, suppression reasons, and uncertainty from the alert decision material.",
             "63. Do not generate or revise alert priority, event severity, decision impact, action levels, alert delivery, price forecasts, trading advice, position sizing, or account actions.",
-            "64. When data quality material is present, explain Halpha-generated quality status only where it affects interpretation.",
-            "65. Do not generate or revise data-quality checks, validation results, store contents, catalog contents, run-index contents, raw archive contents, or reusable history records.",
-            "66. When outcome tracking material is present, explain Halpha-generated outcome states only as accountability evidence.",
-            "67. Do not create outcome labels, validate missing histories, infer omitted outcome stores, score prior recommendations independently, or rank strategies from outcomes.",
+            "64. When report_readiness status is passed, state that core report prerequisites such as latest OHLCV views and successful strategy evaluation passed before discussing auxiliary evidence gaps.",
+            "65. Do not treat optional-source, source-boundary, or downstream fusion degradation as missing core OHLCV or missing strategy evidence when report_readiness passed.",
+            "66. When data quality material is present, explain Halpha-generated quality status only where it affects interpretation. If overall quality is failed or degraded, name the specific failed or degraded checks from material and separate core-readiness state, source-boundary unavailable evidence, fixable collection gaps, and strategy-risk evidence.",
+            "67. Do not generate or revise data-quality checks, validation results, store contents, catalog contents, run-index contents, raw archive contents, or reusable history records.",
+            "68. When outcome tracking material is present, explain Halpha-generated outcome states only as accountability evidence.",
+            "69. Do not create outcome labels, validate missing histories, infer omitted outcome stores, score prior recommendations independently, or rank strategies from outcomes.",
             "",
             "Quantitative strategy material rules:",
             "",
@@ -347,6 +349,7 @@ def _read_research_context(run: RunContext) -> str:
 def _artifact_index(run: RunContext) -> dict[str, Any]:
     artifacts = run.manifest.get("artifacts", {})
     index = {
+        "report_readiness": _report_readiness_index(run),
         "raw_market": artifacts.get("raw_market"),
         "raw_text_events": artifacts.get("raw_text_events"),
         "quant_strategy_runs": artifacts.get("quant_strategy_runs"),
@@ -461,6 +464,27 @@ def _artifact_index(run: RunContext) -> dict[str, Any]:
             }
         )
     return index
+
+
+def _report_readiness_index(run: RunContext) -> dict[str, Any] | None:
+    readiness = run.manifest.get("report_readiness")
+    if not isinstance(readiness, dict):
+        return None
+    checks = []
+    for item in readiness.get("checks", []):
+        if not isinstance(item, dict):
+            continue
+        checks.append(
+            {
+                "name": item.get("name"),
+                "status": item.get("status"),
+                "requirement": item.get("requirement"),
+            }
+        )
+    return {
+        "status": readiness.get("status"),
+        "checks": checks,
+    }
 
 
 def _report_title(config: dict[str, Any]) -> str:

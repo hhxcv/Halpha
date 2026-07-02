@@ -113,7 +113,7 @@ def test_text_event_classification_downgrades_weak_model_evidence(
     assert artifact["coverage"]["low_confidence_financial_tone_records"] == 1
 
 
-def test_text_event_classification_marks_missing_models_unknown(
+def test_text_event_classification_uses_rule_fallback_when_classifier_model_is_missing(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -137,14 +137,27 @@ def test_text_event_classification_marks_missing_models_unknown(
     record = artifact["records"][0]
 
     assert [state["status"] for state in artifact["model_states"]] == ["unavailable", "unavailable"]
-    assert record["category_evidence"]["state"] == "unknown"
-    assert record["category_evidence"]["primary_category"] == "unknown"
-    assert record["category_evidence"]["candidates"] == []
+    assert record["accepted_symbols"] == ["BTCUSDT"]
+    assert record["category_evidence"]["state"] == "accepted"
+    assert record["category_evidence"]["primary_category"] == "etf_flows"
+    assert record["category_evidence"]["confidence"] == "low"
+    assert record["category_evidence"]["threshold_checks"] == {
+        "classifier_accept_score_met": False,
+        "classifier_top_margin_met": False,
+        "rule_or_entity_evidence_met": True,
+        "rule_fallback_used": True,
+    }
+    assert record["category_evidence"]["candidates"][0]["category"] == "etf_flows"
+    assert record["category_evidence"]["candidates"][0]["model_score"] == 0.0
+    assert record["category_evidence"]["candidates"][0]["accepted_by_gate"] is True
+    assert "matched term: bitcoin etf" in record["category_evidence"]["candidates"][0]["rule_evidence"]
     assert record["financial_tone_evidence"]["state"] == "unknown"
     assert record["financial_tone_evidence"]["tone"] == "unknown"
     assert "classifier_model_unavailable" in record["warnings"]
+    assert "rule_based_category_fallback" in record["warnings"]
     assert "sentiment_model_unavailable" in record["warnings"]
-    assert artifact["coverage"]["unknown_category_records"] == 1
+    assert artifact["coverage"]["accepted_category_records"] == 1
+    assert artifact["coverage"]["unknown_category_records"] == 0
     assert artifact["coverage"]["financial_tone_evidence"] == 0
 
 

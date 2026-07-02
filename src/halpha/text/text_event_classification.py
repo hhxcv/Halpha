@@ -188,6 +188,15 @@ def _category_evidence(
     thresholds = _classifier_thresholds(config)
     rule_evidence = _category_rule_evidence(event)
     if classifier is None:
+        fallback = _rule_fallback_category_evidence(
+            event,
+            model_state=model_state,
+            thresholds=thresholds,
+            rule_evidence=rule_evidence,
+            accepted_symbols=accepted_symbols,
+        )
+        if fallback is not None:
+            return fallback
         return _unknown_category_evidence(
             state="unknown",
             model_state=model_state,
@@ -269,6 +278,53 @@ def _unknown_category_evidence(
         "model": _model_ref(model_state),
         "thresholds": thresholds,
         "warnings": [warning for warning in warnings if warning],
+    }
+
+
+def _rule_fallback_category_evidence(
+    event: dict[str, Any],
+    *,
+    model_state: dict[str, Any],
+    thresholds: dict[str, float],
+    rule_evidence: dict[str, list[str]],
+    accepted_symbols: list[str],
+) -> dict[str, Any] | None:
+    ranked_rules = _ranked_rule_evidence(rule_evidence)
+    if not accepted_symbols or not ranked_rules:
+        return None
+    unavailable_warning = _model_unavailable_warning("classifier", model_state)
+    warnings = [warning for warning in [unavailable_warning, "rule_based_category_fallback"] if warning]
+    candidates = [
+        {
+            "event_id": str(event.get("event_id") or ""),
+            "category": category,
+            "model_score": 0.0,
+            "rank": index + 1,
+            "top_margin": 0.0,
+            "rule_evidence": list(matches),
+            "accepted_by_gate": index == 0,
+            "confidence": "low",
+            "model": _model_ref(model_state),
+            "warnings": [] if index == 0 else ["rule_based_category_not_selected"],
+        }
+        for index, (category, matches) in enumerate(ranked_rules[:5])
+    ]
+    top_candidate = candidates[0]
+    return {
+        "state": "accepted",
+        "primary_category": str(top_candidate["category"]),
+        "confidence": "low",
+        "threshold_checks": {
+            "classifier_accept_score_met": False,
+            "classifier_top_margin_met": False,
+            "rule_or_entity_evidence_met": True,
+            "rule_fallback_used": True,
+        },
+        "candidates": candidates,
+        "rule_evidence": rule_evidence,
+        "model": _model_ref(model_state),
+        "thresholds": thresholds,
+        "warnings": warnings,
     }
 
 
@@ -519,6 +575,17 @@ def _category_rule_evidence(event: dict[str, Any]) -> dict[str, list[str]]:
         if matches:
             evidence[category] = matches
     return evidence
+
+
+def _ranked_rule_evidence(rule_evidence: dict[str, list[str]]) -> list[tuple[str, list[str]]]:
+    return sorted(
+        (
+            (category, list(matches))
+            for category, matches in rule_evidence.items()
+            if category in EVENT_TAXONOMY and matches
+        ),
+        key=lambda item: (-len(item[1]), item[0]),
+    )
 
 
 def _category_warnings(

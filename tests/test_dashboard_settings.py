@@ -556,7 +556,7 @@ def test_dashboard_settings_save_live_collection_and_trigger_round_trip(tmp_path
     }
     assert saved["live"]["collections"]["macro_calendar"] == {
         "enabled": True,
-        "cadence_seconds": 3600,
+        "cadence_seconds": 21600,
         "lookback_seconds": 604800,
         "lookahead_seconds": 3888000,
     }

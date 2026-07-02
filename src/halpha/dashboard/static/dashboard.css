@@ -494,6 +494,12 @@
       color: var(--red);
     }
 
+    .danger-icon-button {
+      border-color: #ef8585;
+      background: #fff;
+      color: var(--red);
+    }
+
     .ghost-button:hover,
     .icon-button:hover {
       border-color: var(--border-strong);
@@ -502,9 +508,26 @@
 
     .primary-button:disabled,
     .ghost-button:disabled,
-    .danger-button:disabled {
+    .danger-button:disabled,
+    .danger-icon-button:disabled {
       cursor: not-allowed;
       opacity: 0.55;
+    }
+
+    .danger-icon-button:hover:not(:disabled) {
+      border-color: #df7777;
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .compact-icon-button {
+      width: 32px;
+      min-height: 32px;
+    }
+
+    .compact-icon-button .button-icon {
+      width: 16px;
+      height: 16px;
     }
 
     .view {
@@ -1234,7 +1257,7 @@
       align-content: start;
       min-height: 0;
       overflow: auto;
-      padding: 0 14px 14px;
+      padding: 12px 14px 14px;
     }
 
     .library-header {
@@ -1347,10 +1370,16 @@
 
     .report-toolbar .primary-button,
     .report-toolbar .danger-button,
+    .report-toolbar .danger-icon-button,
     .report-toolbar .ghost-button {
       min-height: 36px;
       padding: 8px 12px;
       white-space: nowrap;
+    }
+
+    .report-toolbar .danger-icon-button {
+      width: 38px;
+      padding: 0;
     }
 
     .report-toolbar .search-input {
@@ -1555,14 +1584,6 @@
     .report-detail-stack {
       display: grid;
       gap: 0;
-    }
-
-    .report-source-list {
-      display: grid;
-      gap: 8px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
     }
 
     .report-source-files {
@@ -8147,9 +8168,17 @@
       color: #873631;
     }
 
-    body[data-theme="solar"] .danger-button:hover:not(:disabled) {
+    body[data-theme="solar"] .danger-icon-button {
+      border-color: #f0c1bd;
+      background: var(--red-soft);
+      color: #873631;
+    }
+
+    body[data-theme="solar"] .danger-button:hover:not(:disabled),
+    body[data-theme="solar"] .danger-icon-button:hover:not(:disabled) {
       border-color: var(--red);
       background: #ffe6e2;
+      color: #873631;
     }
 
     body[data-theme="solar"] .primary-button:disabled,

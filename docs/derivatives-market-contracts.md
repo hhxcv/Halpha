@@ -151,7 +151,9 @@ failed
 
 Rules:
 
-- `skipped` means the class is disabled or not configured.
+- `skipped` means the class is disabled, not configured, or deliberately not
+  requested because the same configured source already returned a rate-limit
+  response earlier in the same collection run.
 - `unavailable` means the configured source does not provide a reliable
   periodic product-run input for the class.
 - `stale` means the latest usable record is older than the configured freshness
@@ -256,6 +258,11 @@ Rules:
   store credentials, local proxy values, or private endpoints.
 - Endpoint failures should be represented in `errors` or `availability`, not by
   fabricating neutral records.
+- Public HTTP `429` and `418` responses must be recorded as `rate_limited`
+  errors. If a rate-limit response includes `Retry-After`, preserve it as
+  `retry_after_seconds`; subsequent derivatives HTTP requests to the same
+  source in that collection run may be represented as `availability.status:
+  skipped` with the same retry hint.
 
 ## Shared Derivatives Market History
 

@@ -124,6 +124,98 @@ def test_report_core_quant_failure_writes_exception_report_and_skips_codex(tmp_p
     )
 
 
+def test_report_readiness_blocks_degraded_ohlcv_before_codex(tmp_path: Path) -> None:
+    config_path = _write_quant_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers(
+            {
+                "build_market_data_views": _write_degraded_market_data_views,
+                "evaluate_quant_strategies": _write_succeeded_quant_strategy_runs,
+                "evaluate_strategy_evaluation": _write_succeeded_strategy_evaluation_summary,
+                "run_codex_report": _fail_if_called,
+            }
+        ),
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_data_quality_summary"
+    assert "OHLCV market data views are incomplete or degraded" in str(result.reason)
+
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["report_readiness"]["status"] == "failed"
+    assert manifest["report_readiness"]["checks"][0]["name"] == "latest_ohlcv_views"
+    assert manifest["codex"]["status"] == "skipped"
+    assert _stage(manifest, "build_materials")["status"] == "failed"
+    assert _task(manifest, "run_codex_report")["status"] == "not_run"
+    failure_detail = json.loads((result.run.report_dir / "report_failure.json").read_text(encoding="utf-8"))
+    assert failure_detail["failed_stage"] == "build_data_quality_summary"
+    assert failure_detail["error"]["requirement"] == "latest_ohlcv_views"
+    assert failure_detail["error"]["blocking_view_count"] == 1
+
+
+def test_report_readiness_requires_strategy_evaluation_before_codex(tmp_path: Path) -> None:
+    config_path = _write_quant_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers(
+            {
+                "build_market_data_views": _write_succeeded_market_data_views,
+                "evaluate_quant_strategies": _write_succeeded_quant_strategy_runs,
+                "run_codex_report": _fail_if_called,
+            }
+        ),
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_data_quality_summary"
+    assert "no successful strategy evaluation records" in str(result.reason)
+
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["report_readiness"]["status"] == "failed"
+    assert manifest["report_readiness"]["checks"][1]["name"] == "strategy_evaluation"
+    assert manifest["codex"]["status"] == "skipped"
+    assert _task(manifest, "run_codex_report")["status"] == "not_run"
+    failure_detail = json.loads((result.run.report_dir / "report_failure.json").read_text(encoding="utf-8"))
+    assert failure_detail["error"]["requirement"] == "strategy_evaluation"
+
+
+def test_report_readiness_blocks_missing_futures_funding_before_codex(tmp_path: Path) -> None:
+    config_path = _write_quant_config(tmp_path)
+    config = load_config(config_path)
+
+    result = run_pipeline(
+        config,
+        config_path=config_path,
+        stage_handlers=_noop_handlers(
+            {
+                "build_market_data_views": _write_succeeded_market_data_views,
+                "evaluate_quant_strategies": _write_succeeded_quant_strategy_runs,
+                "evaluate_strategy_evaluation": _write_strategy_evaluation_with_missing_funding,
+                "run_codex_report": _fail_if_called,
+            }
+        ),
+    )
+
+    assert result.succeeded is False
+    assert result.failed_stage == "build_data_quality_summary"
+    assert "funding-cost coverage is incomplete" in str(result.reason)
+
+    manifest = _manifest(result.run.run_dir)
+    assert manifest["report_readiness"]["status"] == "failed"
+    assert manifest["codex"]["status"] == "skipped"
+    failure_detail = json.loads((result.run.report_dir / "report_failure.json").read_text(encoding="utf-8"))
+    assert failure_detail["error"]["requirement"] == "futures_funding_coverage"
+    assert failure_detail["error"]["expected_record_count"] == 3
+    assert failure_detail["error"]["missing_period_count"] == 1
+
+
 def test_pipeline_manifest_records_default_product_run_classification(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
     config = load_config(config_path)
@@ -1019,6 +1111,31 @@ def _write_succeeded_market_data_views(config, run) -> list[str]:
     return ["raw/market_data_views.json"]
 
 
+def _write_degraded_market_data_views(config, run) -> list[str]:
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "market_data_views",
+        "views": [
+            {
+                "view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                "status": "succeeded",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+                "row_count": 2,
+                "requested_lookback": 4,
+                "insufficient_data": False,
+                "quality_status": "degraded",
+                "quality": {"status": "degraded", "missing_interval_count": 1},
+            }
+        ],
+    }
+    (run.raw_dir / "market_data_views.json").write_text(json.dumps(artifact), encoding="utf-8")
+    run.manifest["artifacts"]["market_data_views"] = "raw/market_data_views.json"
+    run.manifest["counts"]["market_data_views"] = 1
+    return ["raw/market_data_views.json"]
+
+
 def _write_empty_quant_strategy_runs(config, run) -> list[str]:
     artifact = {
         "schema_version": 1,
@@ -1030,6 +1147,77 @@ def _write_empty_quant_strategy_runs(config, run) -> list[str]:
     run.manifest["counts"]["quant_strategy_runs"] = 0
     run.manifest["counts"]["quant_strategy_runs_succeeded"] = 0
     return ["analysis/quant_strategy_runs.json"]
+
+
+def _write_succeeded_quant_strategy_runs(config, run) -> list[str]:
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "quant_strategy_runs",
+        "runs": [
+            {
+                "run_id": "quant_strategy_run:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                "status": "succeeded",
+                "strategy_name": "tsmom_vol_scaled",
+                "source": "binance",
+                "symbol": "BTCUSDT",
+                "timeframe": "1d",
+            }
+        ],
+    }
+    (run.analysis_dir / "quant_strategy_runs.json").write_text(json.dumps(artifact), encoding="utf-8")
+    run.manifest["artifacts"]["quant_strategy_runs"] = "analysis/quant_strategy_runs.json"
+    run.manifest["counts"]["quant_strategy_runs"] = 1
+    run.manifest["counts"]["quant_strategy_runs_succeeded"] = 1
+    return ["analysis/quant_strategy_runs.json"]
+
+
+def _write_succeeded_strategy_evaluation_summary(config, run) -> list[str]:
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "strategy_evaluation_summary",
+        "records": [
+            {
+                "evaluation_id": "strategy_evaluation:tsmom_vol_scaled:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                "status": "succeeded",
+                "strategy_name": "tsmom_vol_scaled",
+                "input_view_id": "ohlcv_view:binance:BTCUSDT:1d:2026-06-05T00:00:00Z",
+                "single_window": {"status": "succeeded"},
+            }
+        ],
+    }
+    (run.analysis_dir / "strategy_evaluation_summary.json").write_text(json.dumps(artifact), encoding="utf-8")
+    run.manifest["artifacts"]["strategy_evaluation_summary"] = "analysis/strategy_evaluation_summary.json"
+    run.manifest["counts"]["strategy_evaluation_records"] = 1
+    return ["analysis/strategy_evaluation_summary.json"]
+
+
+def _write_strategy_evaluation_with_missing_funding(config, run) -> list[str]:
+    artifact = {
+        "schema_version": 1,
+        "artifact_type": "strategy_evaluation_summary",
+        "records": [
+            {
+                "evaluation_id": "strategy_evaluation:tsmom_vol_scaled:binance_usdm:BTCUSDT:4h:2026-06-05T00:00:00Z",
+                "status": "succeeded",
+                "strategy_name": "tsmom_vol_scaled",
+                "input_view_id": "ohlcv_view:binance_usdm:BTCUSDT:4h:2026-06-05T00:00:00Z",
+                "single_window": {
+                    "status": "succeeded",
+                    "funding_costs": {
+                        "artifact_type": "strategy_funding_cost_input",
+                        "expected_record_count": 3,
+                        "matched_record_count": 2,
+                        "missing_period_count": 1,
+                        "errors": [],
+                    },
+                },
+            }
+        ],
+    }
+    (run.analysis_dir / "strategy_evaluation_summary.json").write_text(json.dumps(artifact), encoding="utf-8")
+    run.manifest["artifacts"]["strategy_evaluation_summary"] = "analysis/strategy_evaluation_summary.json"
+    run.manifest["counts"]["strategy_evaluation_records"] = 1
+    return ["analysis/strategy_evaluation_summary.json"]
 
 
 def _fail_if_called(config, run) -> list[str]:

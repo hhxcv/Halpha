@@ -363,7 +363,7 @@ def _derivatives_availability_warnings(raw: dict[str, Any]) -> list[str]:
         if not isinstance(item, dict):
             continue
         status = item.get("status")
-        if status not in {"failed", "partial", "unavailable", "stale", "degraded"}:
+        if status not in {"failed", "partial", "unavailable", "stale", "degraded", "skipped"}:
             continue
         data_class = item.get("data_class") or "unknown"
         symbol = item.get("symbol") or "all_symbols"

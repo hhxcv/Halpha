@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -15,6 +16,12 @@ from halpha.data.public_capabilities import (
 from halpha.data.raw_artifacts import RawArtifactError, validate_onchain_flow_raw_artifact
 from halpha.runtime.pipeline_contracts import RunContext
 from halpha.runtime.public_http import market_proxy_url_from_config, urlopen_from_public_proxy
+from halpha.runtime.public_rate_limits import (
+    PublicApiRateLimitError,
+    is_public_api_rate_limit_response,
+    record_public_api_rate_limit,
+    retry_after_seconds_from_headers,
+)
 from halpha.storage import write_json
 
 
@@ -73,6 +80,7 @@ def collect_onchain_flow_data(config: dict[str, Any], run: RunContext) -> list[s
     raw = collect_onchain_flow_raw(
         onchain_flow,
         proxy_url=market_proxy_url_from_config(config, error_factory=OnchainFlowCollectionError),
+        rate_limit_config_path=run.config_path,
     )
     artifact_path = run.raw_dir / "onchain_flow.json"
     write_json(artifact_path, raw)
@@ -87,6 +95,7 @@ def collect_onchain_flow_raw(
     *,
     proxy_url: str | None = None,
     now: datetime | None = None,
+    rate_limit_config_path: Path | None = None,
 ) -> dict[str, Any]:
     now_value = _utc_now() if now is None else now.astimezone(timezone.utc)
     collected_at = _utc_timestamp(now_value)
@@ -116,7 +125,13 @@ def collect_onchain_flow_raw(
         return raw
 
     if "stablecoin_supply" in data_classes:
-        _collect_stablecoin_supply(raw, onchain_flow, window_start=window_start, proxy_url=proxy_url)
+        _collect_stablecoin_supply(
+            raw,
+            onchain_flow,
+            window_start=window_start,
+            proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
+        )
     if "chain_activity" in data_classes:
         _collect_blockchain_charts(
             raw,
@@ -125,6 +140,7 @@ def collect_onchain_flow_raw(
             chart_specs=CHAIN_ACTIVITY_CHART_SPECS,
             window_start=window_start,
             proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
         )
     if "network_congestion" in data_classes:
         _collect_blockchain_charts(
@@ -134,6 +150,7 @@ def collect_onchain_flow_raw(
             chart_specs=NETWORK_CONGESTION_CHART_SPECS,
             window_start=window_start,
             proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
         )
     if "exchange_flow_availability" in data_classes:
         raw["availability"].append(_exchange_flow_availability_record())
@@ -151,13 +168,19 @@ def _collect_stablecoin_supply(
     *,
     window_start: datetime,
     proxy_url: str | None,
+    rate_limit_config_path: Path | None,
 ) -> None:
     source_url = str(onchain_flow.get("stablecoin_source_url") or DEFILLAMA_STABLECOIN_CHARTS_URL)
     records: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     parsed_count = 0
     try:
-        payload = _request_json(source_url, proxy_url=proxy_url)
+        payload = _request_json(
+            source_url,
+            proxy_url=proxy_url,
+            rate_limit_config_path=rate_limit_config_path,
+            rate_limit_source=DEFILLAMA_STABLECOINS_SOURCE,
+        )
         if not isinstance(payload, list):
             raise OnchainFlowCollectionError("stablecoin supply response must be a JSON list.")
         parsed_count = len(payload)
@@ -214,6 +237,7 @@ def _collect_blockchain_charts(
     chart_specs: tuple[dict[str, str], ...],
     window_start: datetime,
     proxy_url: str | None,
+    rate_limit_config_path: Path | None,
 ) -> None:
     if "bitcoin" not in _string_list(onchain_flow.get("chains")):
         raw["availability"].append(
@@ -247,7 +271,12 @@ def _collect_blockchain_charts(
         source_urls[endpoint] = source_url
         request_endpoints.append(endpoint)
         try:
-            payload = _request_json(source_url, proxy_url=proxy_url)
+            payload = _request_json(
+                source_url,
+                proxy_url=proxy_url,
+                rate_limit_config_path=rate_limit_config_path,
+                rate_limit_source=BLOCKCHAIN_COM_CHARTS_SOURCE,
+            )
             if not isinstance(payload, dict):
                 raise OnchainFlowCollectionError(f"{data_class} response must be a JSON object.")
             values = payload.get("values")
@@ -316,7 +345,13 @@ def _collect_blockchain_charts(
     )
 
 
-def _request_json(source_url: str, *, proxy_url: str | None) -> Any:
+def _request_json(
+    source_url: str,
+    *,
+    proxy_url: str | None,
+    rate_limit_config_path: Path | None = None,
+    rate_limit_source: str | None = None,
+) -> Any:
     request = Request(source_url, headers={"User-Agent": "Halpha/0.0.0"})
     urlopen_func = urlopen_from_public_proxy(
         proxy_url,
@@ -324,13 +359,24 @@ def _request_json(source_url: str, *, proxy_url: str | None) -> Any:
         default_urlopen=urlopen,
         proxy_handler_factory=ProxyHandler,
         opener_factory=build_opener,
+        rate_limit_config_path=rate_limit_config_path,
+        rate_limit_source=rate_limit_source,
     )
     try:
         with urlopen_func(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read()
     except HTTPError as exc:
         detail = _read_error_detail(exc)
+        _record_public_rate_limit_if_needed(
+            config_path=rate_limit_config_path,
+            url=source_url,
+            source=str(rate_limit_source or "onchain_flow"),
+            error=exc,
+            message=detail,
+        )
         raise OnchainFlowCollectionError(f"on-chain flow request failed: HTTP {exc.code}{detail}") from exc
+    except PublicApiRateLimitError as exc:
+        raise OnchainFlowCollectionError(f"on-chain flow request rate-limited: {exc}") from exc
     except URLError as exc:
         raise OnchainFlowCollectionError(f"on-chain flow request failed: {exc.reason}") from exc
     except TimeoutError as exc:
@@ -679,6 +725,27 @@ def _read_error_detail(error: HTTPError) -> str:
         return ""
     excerpt = body[:200].replace("\n", " ")
     return f": {excerpt}"
+
+
+def _record_public_rate_limit_if_needed(
+    *,
+    config_path: Path | None,
+    url: str,
+    source: str,
+    error: HTTPError,
+    message: str,
+) -> None:
+    headers = getattr(error, "headers", None)
+    if not is_public_api_rate_limit_response(error.code, headers=headers, message=message):
+        return
+    record_public_api_rate_limit(
+        config_path=config_path,
+        url=url,
+        source=source,
+        status_code=error.code,
+        retry_after_seconds=retry_after_seconds_from_headers(headers),
+        message=message,
+    )
 
 
 def _utc_now() -> datetime:

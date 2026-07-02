@@ -16,7 +16,7 @@ from halpha.runtime.command_jobs import CommandJobManager
 CORE_SCHEDULER_TICK_ARTIFACT = "core_scheduler_tick"
 CORE_SCHEDULER_SOURCE = "core_scheduler"
 MONITOR_CYCLE_JOB_KIND = "monitor_cycle"
-MONITOR_CYCLE_JOB_INTENT = "monitor_once"
+MONITOR_CYCLE_JOB_INTENT = "monitor_sources_once"
 DEFAULT_CORE_SCHEDULER_TICK_SECONDS = 30.0
 
 

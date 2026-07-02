@@ -18,6 +18,7 @@ LIVE_READ_MODEL_ARTIFACT = "dashboard_live"
 LIVE_SCHEDULER_SOURCE = "live_scheduler"
 LIVE_COLLECTION_JOB_INTENT = "data_collect"
 LIVE_RECENT_JOB_LIMIT = 20
+LIVE_COLLECTION_MIN_DISPATCH_SECONDS = 60
 
 
 class _JobManager(Protocol):
@@ -84,6 +85,13 @@ class LiveScheduler:
         all_jobs = self._jobs(limit=200)
         jobs = [job for job in all_jobs if _is_live_collection_job(job)]
         active_mutation_job = _transient_mutating_job(all_jobs)
+        dispatch_gap_seconds = max(settings.tick_seconds, LIVE_COLLECTION_MIN_DISPATCH_SECONDS)
+        next_collection_dispatch_at = _next_collection_dispatch_at(
+            jobs,
+            now=self.now,
+            dispatch_gap_seconds=dispatch_gap_seconds,
+        )
+        deferred_dispatch_count = 0
         existing_states = {
             str(state.get("target_key")): state
             for state in self.state_repository.list_states()
@@ -117,8 +125,17 @@ class LiveScheduler:
             if not _state_due(state, now=self.now):
                 updated_states.append(self.state_repository.upsert_state(state))
                 continue
-            if active_mutation_job is not None:
-                state["next_attempt_at"] = _format_utc(self.now + timedelta(seconds=max(1, settings.tick_seconds)))
+            dispatch_block_until = _collection_dispatch_block_until(
+                active_mutation_job,
+                next_collection_dispatch_at,
+                now=self.now,
+                dispatch_gap_seconds=dispatch_gap_seconds,
+            )
+            if dispatch_block_until is not None:
+                state["next_attempt_at"] = _format_utc(
+                    dispatch_block_until + timedelta(seconds=dispatch_gap_seconds * deferred_dispatch_count)
+                )
+                deferred_dispatch_count += 1
                 updated_states.append(self.state_repository.upsert_state(state))
                 continue
             job = self._create_collection_job(target, tick_id=tick_id)
@@ -137,6 +154,8 @@ class LiveScheduler:
                 state = self._reconcile_state(state, jobs=[job, *jobs], now_text=now_text)
                 if _transient_mutating_job([job]) is not None:
                     active_mutation_job = job
+                    next_collection_dispatch_at = self.now + timedelta(seconds=dispatch_gap_seconds)
+                    deferred_dispatch_count = 0
             elif str(job.get("status") or "") in JOB_TERMINAL_STATUSES:
                 state["latest_terminal_status"] = str(job.get("status") or "")
                 state["consecutive_failures"] = int(state.get("consecutive_failures") or 0) + 1
@@ -511,6 +530,42 @@ def _transient_mutating_job(jobs: list[dict[str, Any]]) -> dict[str, Any] | None
     return None
 
 
+def _next_collection_dispatch_at(
+    jobs: list[dict[str, Any]],
+    *,
+    now: datetime,
+    dispatch_gap_seconds: int,
+) -> datetime | None:
+    timestamps = [
+        timestamp
+        for job in jobs
+        if (timestamp := _job_created_at(job)) is not None
+    ]
+    if not timestamps:
+        return None
+    next_dispatch = max(timestamps) + timedelta(seconds=max(1, dispatch_gap_seconds))
+    if next_dispatch <= now:
+        return None
+    return next_dispatch
+
+
+def _collection_dispatch_block_until(
+    active_mutation_job: dict[str, Any] | None,
+    next_collection_dispatch_at: datetime | None,
+    *,
+    now: datetime,
+    dispatch_gap_seconds: int,
+) -> datetime | None:
+    blocked_until: list[datetime] = []
+    if active_mutation_job is not None:
+        blocked_until.append(now + timedelta(seconds=max(1, dispatch_gap_seconds)))
+    if next_collection_dispatch_at is not None:
+        blocked_until.append(next_collection_dispatch_at)
+    if not blocked_until:
+        return None
+    return max(blocked_until)
+
+
 def _state_due(state: dict[str, Any], *, now: datetime) -> bool:
     next_attempt = _parse_utc(state.get("next_attempt_at"))
     if next_attempt is None:
@@ -557,6 +612,14 @@ def _job_time(job: dict[str, Any]) -> str | None:
     for key in ("finished_at", "updated_at", "created_at"):
         value = job.get(key)
         if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _job_created_at(job: dict[str, Any]) -> datetime | None:
+    for key in ("created_at", "started_at", "finished_at", "updated_at"):
+        value = _parse_utc(job.get(key))
+        if value is not None:
             return value
     return None
 

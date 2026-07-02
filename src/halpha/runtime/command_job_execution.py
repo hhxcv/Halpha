@@ -12,6 +12,7 @@ from halpha.monitor.monitoring import (
     load_monitor_config,
     monitor_config_lines,
     run_monitor_cycle,
+    run_monitor_source_cycle,
 )
 from halpha.outcome.outcome_inspection import OutcomeInspectionError, inspect_local_outcomes
 from halpha.pipeline import run_pipeline, run_pipeline_stage
@@ -64,8 +65,13 @@ def execute_command_job(
             return _execute_workbench_inspect(config, config_path=config_path)
         if intent == "monitor_inspect":
             return _execute_monitor_inspect(config, config_path=config_path)
-        if intent in {"monitor_dry_run", "monitor_once"}:
-            return _execute_monitor_run(config, config_path=config_path, dry_run=intent == "monitor_dry_run")
+        if intent in {"monitor_dry_run", "monitor_once", "monitor_sources_once"}:
+            return _execute_monitor_run(
+                config,
+                config_path=config_path,
+                dry_run=intent == "monitor_dry_run",
+                source_cadence=intent == "monitor_sources_once",
+            )
         if intent == "backtest":
             return _execute_backtest(config, config_path=config_path, params=params)
         if intent == "experiment":
@@ -186,25 +192,37 @@ def _execute_monitor_inspect(config: dict[str, Any], *, config_path: Path) -> Co
     return CommandJobExecutionResult(exit_code=result.exit_code, stdout=_lines(result.lines))
 
 
-def _execute_monitor_run(config: dict[str, Any], *, config_path: Path, dry_run: bool) -> CommandJobExecutionResult:
+def _execute_monitor_run(
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+    dry_run: bool,
+    source_cadence: bool = False,
+) -> CommandJobExecutionResult:
     if dry_run:
         settings = load_monitor_config(config)
         return _ok(["Halpha monitor dry run succeeded.", "cycle_execution: not_run", *monitor_config_lines(settings)])
     try:
-        result = run_monitor_cycle(config, config_path=config_path)
+        result = (
+            run_monitor_source_cycle(config, config_path=config_path, reassess_changed_sources=False)
+            if source_cadence
+            else run_monitor_cycle(config, config_path=config_path)
+        )
     except PipelineError as exc:
         return _fail(exc.exit_code, ["Halpha monitor run failed.", f"stage: {exc.stage or 'monitor'}", f"reason: {exc}"])
-    manifest = _display(result.manifest_path, config_path=config_path)
+    manifest = _display(result.manifest_path, config_path=config_path) if result.manifest_path else None
     if result.succeeded:
         lines = [
-            "Halpha monitor cycle succeeded.",
+            "Halpha monitor source cycle succeeded." if source_cadence else "Halpha monitor cycle succeeded.",
             f"cycle_id: {result.cycle_id}",
+            f"status: {result.status}",
             f"target_stage: {result.target_stage}",
             f"no_codex: {str(result.no_codex).lower()}",
-            f"monitor_manifest: {manifest}",
         ]
         if result.run_id:
             lines.insert(2, f"run_id: {result.run_id}")
+        if manifest:
+            lines.append(f"monitor_manifest: {manifest}")
         return _ok(lines)
     return _fail(
         result.exit_code,
@@ -212,7 +230,7 @@ def _execute_monitor_run(config: dict[str, Any], *, config_path: Path, dry_run: 
             "Halpha monitor run failed.",
             "stage: monitor",
             *([f"reason: {result.reason}"] if result.reason else []),
-            f"monitor_manifest: {manifest}",
+            *([f"monitor_manifest: {manifest}"] if manifest else []),
         ],
     )
 
