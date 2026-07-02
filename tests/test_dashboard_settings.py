@@ -28,6 +28,10 @@ LIVE_EDITABLE_CONFIG_PATHS = {
     "live.enabled",
     "live.tick_seconds",
     "live.reports.daily.enabled",
+    "live.streams.ohlcv.enabled",
+    "live.streams.ohlcv.reconnect_initial_seconds",
+    "live.streams.ohlcv.reconnect_max_seconds",
+    "live.streams.ohlcv.stale_after_seconds",
     *(
         f"live.collections.{data_type}.{suffix}"
         for data_type in LIVE_DATA_TYPES

@@ -10,6 +10,7 @@ from halpha.config import load_config
 from halpha.live.contracts import LIVE_DATA_TYPES
 from halpha.live.scheduler import LiveScheduler
 from halpha.live.state_store import LiveCollectionStateRepository
+from halpha.live.stream_state import LiveStreamStateRepository
 from halpha.runtime.mutation_lease import LEASE_BLOCKED_MESSAGE
 
 
@@ -32,7 +33,7 @@ def test_live_scheduler_skips_when_live_is_not_enabled(tmp_path: Path) -> None:
 
 
 def test_live_scheduler_creates_due_ohlcv_collection_job(tmp_path: Path) -> None:
-    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 6, 30, 12, 0, 30, tzinfo=timezone.utc)
     config_path = _write_config(
         tmp_path,
         live_block="""
@@ -70,6 +71,180 @@ live:
         "start": "2026-06-30T11:00:00Z",
         "end": "2026-06-30T12:00:00Z",
     }
+
+
+def test_live_scheduler_skips_rest_ohlcv_when_websocket_stream_is_fresh(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+""",
+    )
+    config = load_config(config_path)
+    stream_repository = LiveStreamStateRepository(config_path)
+    stream_repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "status": "available",
+            "stream_name": "btcusdt@kline_1m",
+            "endpoint": "binance_usdm_market_stream",
+            "connected_at": "2026-06-30T11:55:00Z",
+            "last_event_at": "2026-06-30T11:59:50Z",
+            "last_closed_candle_at": "2026-06-30T11:59:00Z",
+            "backfill_required": False,
+            "updated_at": "2026-06-30T11:59:50Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager()
+
+    tick = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        stream_state_repository=stream_repository,
+        now=now,
+    ).tick(tick_id="tick-1")
+
+    assert tick["status"] == "available"
+    assert jobs.created_requests == []
+    state = _collection_state(tick, "ohlcv:binance_usdm:BTCUSDT:1m")
+    assert state["transport"] == "websocket"
+    assert state["stream"]["status"] == "available"
+    assert state["next_attempt_at"] == "2026-06-30T12:03:00Z"
+
+
+def test_live_scheduler_runs_rest_backfill_when_websocket_stream_requires_it(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, 30, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+""",
+    )
+    config = load_config(config_path)
+    stream_repository = LiveStreamStateRepository(config_path)
+    stream_repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "status": "reconnecting",
+            "stream_name": "btcusdt@kline_1m",
+            "backfill_required": True,
+            "backfill_since": "2026-06-30T11:57:00Z",
+            "updated_at": "2026-06-30T11:59:00Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager()
+
+    LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        stream_state_repository=stream_repository,
+        now=now,
+    ).tick(tick_id="tick-1")
+
+    assert len(jobs.created_requests) == 1
+    assert jobs.created_requests[0]["params"] == {
+        "data_type": "ohlcv",
+        "source": "binance_usdm",
+        "symbol": "BTCUSDT",
+        "timeframe": "1m",
+        "start": "2026-06-30T11:57:00Z",
+        "end": "2026-06-30T12:00:00Z",
+    }
+
+
+def test_live_read_model_filters_recoverable_stream_backfill_errors(tmp_path: Path) -> None:
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=timezone.utc)
+    config_path = _write_config(
+        tmp_path,
+        live_block="""
+live:
+  enabled: true
+  collections:
+    ohlcv:
+      enabled: true
+      cadence_seconds: 300
+      lookback_seconds: 3600
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+""",
+    )
+    config = load_config(config_path)
+    stream_repository = LiveStreamStateRepository(config_path)
+    stream_repository.upsert_state(
+        {
+            "target_key": "ohlcv:binance_usdm:BTCUSDT:1m",
+            "data_type": "ohlcv",
+            "target": {"data_type": "ohlcv", "source": "binance_usdm", "symbol": "BTCUSDT", "timeframe": "1m"},
+            "enabled": True,
+            "status": "streaming",
+            "stream_name": "btcusdt@kline_1m",
+            "last_event_at": "2026-06-30T11:59:50Z",
+            "backfill_required": True,
+            "backfill_since": "2026-06-30T11:57:00Z",
+            "updated_at": "2026-06-30T11:59:50Z",
+        }
+    )
+    jobs = _RecordingLiveJobManager(
+        jobs=[
+            _live_job(
+                "collect-1",
+                status="failed",
+                target_key="ohlcv:binance_usdm:BTCUSDT:1m",
+                data_type="ohlcv",
+                created_at="2026-06-30T11:59:55Z",
+                errors=[
+                    "requested_start must align to the 1m UTC timeframe boundary.",
+                    "job process identity was lost after the owning runtime restarted; the recorded PID was not treated as proof of the original job.",
+                ],
+            )
+        ]
+    )
+
+    payload = LiveScheduler(
+        config,
+        config_path=config_path,
+        job_manager=jobs,
+        stream_state_repository=stream_repository,
+        now=now,
+    ).read_model()
+    state = _collection_state(payload, "ohlcv:binance_usdm:BTCUSDT:1m")
+
+    assert payload["status"] == "available"
+    assert payload["errors"] == []
+    assert state["errors"] == []
+    assert state["stream"]["backfill_required"] is True
+    assert "REST backfill will run" in state["warnings"][0]
 
 
 def test_live_scheduler_suppresses_duplicate_transient_collection_target(tmp_path: Path) -> None:

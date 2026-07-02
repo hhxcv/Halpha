@@ -404,6 +404,12 @@ live:
       cadence_seconds: 3600
       lookback_seconds: 86400
       lookahead_seconds: 604800
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+      reconnect_initial_seconds: 5
+      reconnect_max_seconds: 300
   reports:
     daily:
       enabled: false
@@ -417,6 +423,36 @@ live:
     config = load_config(config_path)
 
     assert config["live"]["enabled"] is True
+    assert config["live"]["streams"]["ohlcv"]["enabled"] is True
+
+
+def test_load_config_rejects_invalid_live_ohlcv_stream_config(tmp_path: Path) -> None:
+    config_path = _write_config_text(
+        tmp_path,
+        """
+run:
+  output_dir: runs
+market:
+  enabled: false
+text:
+  enabled: false
+report:
+  language: zh-CN
+codex:
+  enabled: false
+live:
+  enabled: true
+  streams:
+    ohlcv:
+      enabled: true
+      stale_after_seconds: 180
+      reconnect_initial_seconds: 30
+      reconnect_max_seconds: 5
+""",
+    )
+
+    with pytest.raises(ConfigError, match="live.streams.ohlcv.reconnect_max_seconds"):
+        load_config(config_path)
 
 
 def test_load_config_rejects_unknown_live_collection_type(tmp_path: Path) -> None:

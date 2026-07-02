@@ -37,6 +37,14 @@ class LiveTriggerConfig:
 
 
 @dataclass(frozen=True)
+class LiveOHLCVStreamConfig:
+    enabled: bool
+    stale_after_seconds: int
+    reconnect_initial_seconds: int
+    reconnect_max_seconds: int
+
+
+@dataclass(frozen=True)
 class LiveReportsConfig:
     daily_enabled: bool
     triggers: dict[str, LiveTriggerConfig]
@@ -47,6 +55,7 @@ class LiveSettings:
     enabled: bool
     tick_seconds: int
     collections: dict[str, LiveCollectionConfig]
+    ohlcv_stream: LiveOHLCVStreamConfig
     reports: LiveReportsConfig
 
 
@@ -63,6 +72,17 @@ def load_live_settings(config: dict[str, Any]) -> LiveSettings:
             lookback_seconds=_optional_positive_int(item.get("lookback_seconds")),
             lookahead_seconds=_optional_positive_int(item.get("lookahead_seconds")),
         )
+    streams_config = live.get("streams") if isinstance(live.get("streams"), dict) else {}
+    ohlcv_stream_config = streams_config.get("ohlcv") if isinstance(streams_config.get("ohlcv"), dict) else {}
+    ohlcv_stream_enabled = ohlcv_stream_config.get("enabled")
+    if ohlcv_stream_enabled is None:
+        ohlcv_stream_enabled = collections.get("ohlcv", LiveCollectionConfig("ohlcv", False, None, None, None)).enabled
+    ohlcv_stream = LiveOHLCVStreamConfig(
+        enabled=ohlcv_stream_enabled is True,
+        stale_after_seconds=_optional_positive_int(ohlcv_stream_config.get("stale_after_seconds")) or 180,
+        reconnect_initial_seconds=_optional_positive_int(ohlcv_stream_config.get("reconnect_initial_seconds")) or 5,
+        reconnect_max_seconds=_optional_positive_int(ohlcv_stream_config.get("reconnect_max_seconds")) or 300,
+    )
     reports_config = live.get("reports") if isinstance(live.get("reports"), dict) else {}
     daily = reports_config.get("daily") if isinstance(reports_config.get("daily"), dict) else {}
     triggers_config = reports_config.get("triggers") if isinstance(reports_config.get("triggers"), dict) else {}
@@ -91,6 +111,7 @@ def load_live_settings(config: dict[str, Any]) -> LiveSettings:
         enabled=live.get("enabled") is True,
         tick_seconds=_optional_positive_int(live.get("tick_seconds")) or DEFAULT_LIVE_TICK_SECONDS,
         collections=collections,
+        ohlcv_stream=ohlcv_stream,
         reports=LiveReportsConfig(
             daily_enabled=daily.get("enabled") is True,
             triggers=triggers,

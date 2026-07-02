@@ -11,8 +11,15 @@ LIVE_DATA_TYPES = (
     "market_anomaly",
 )
 
-LIVE_CONFIG_FIELDS = {"enabled", "tick_seconds", "collections", "reports"}
+LIVE_CONFIG_FIELDS = {"enabled", "tick_seconds", "collections", "streams", "reports"}
 LIVE_COLLECTION_FIELDS = {"enabled", "cadence_seconds", "lookback_seconds", "lookahead_seconds"}
+LIVE_STREAM_FIELDS = {"ohlcv"}
+LIVE_OHLCV_STREAM_FIELDS = {
+    "enabled",
+    "stale_after_seconds",
+    "reconnect_initial_seconds",
+    "reconnect_max_seconds",
+}
 LIVE_REPORTS_FIELDS = {"daily", "triggers"}
 LIVE_DAILY_REPORT_FIELDS = {"enabled"}
 LIVE_REPORT_TRIGGER_FIELDS = {

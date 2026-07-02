@@ -63,7 +63,9 @@ from halpha.dashboard.strategy_actions import dashboard_strategy_action_job
 from halpha.dashboard.strategy import dashboard_delete_strategy_backtest, dashboard_strategy_research
 from halpha.dashboard.ui import dashboard_index_html
 from halpha.live.scheduler import LiveScheduler
+from halpha.live.ohlcv_stream import LiveOHLCVStreamService
 from halpha.runtime.command_jobs import CommandJobManager
+from halpha.runtime.process_creation import hidden_subprocess_kwargs
 from halpha.runtime.service_lifecycle import ServiceLifecycleRepository, ServiceLifecycleResult
 from halpha.storage import artifact_base
 from halpha.time_display import configured_display_timezone
@@ -108,6 +110,9 @@ class DashboardConfigContext:
         self.config_path: Path | None = None
         self.job_manager: CommandJobManager | None = None
         self.schedule_manager: DashboardScheduleManager | None = None
+        self._stream_stop_event: Event | None = None
+        self._stream_service: LiveOHLCVStreamService | None = None
+        self._streams_active = False
         if config is not None and config_path is not None:
             self.set_active_config(config, config_path=config_path, persist=False)
 
@@ -125,6 +130,8 @@ class DashboardConfigContext:
             self.schedule_manager = DashboardScheduleManager(config, config_path=config_path, job_manager=self.job_manager)
             if persist:
                 write_dashboard_selected_config_state(config_path)
+            if self._streams_active:
+                self._restart_live_streams_locked()
 
     def active(self) -> tuple[dict[str, Any], Path] | None:
         with self._lock:
@@ -142,6 +149,34 @@ class DashboardConfigContext:
             ):
                 return None
             return self.config, self.config_path, self.job_manager, self.schedule_manager
+
+    def start_live_streams(self) -> None:
+        with self._lock:
+            self._streams_active = True
+            self._restart_live_streams_locked()
+
+    def stop_live_streams(self) -> None:
+        with self._lock:
+            self._streams_active = False
+            self._stop_live_streams_locked()
+
+    def _restart_live_streams_locked(self) -> None:
+        self._stop_live_streams_locked()
+        if self.config is None or self.config_path is None:
+            return
+        stop_event = Event()
+        service = LiveOHLCVStreamService(self.config, config_path=self.config_path, stop_event=stop_event)
+        service.start()
+        self._stream_stop_event = stop_event
+        self._stream_service = service
+
+    def _stop_live_streams_locked(self) -> None:
+        if self._stream_stop_event is not None:
+            self._stream_stop_event.set()
+        if self._stream_service is not None:
+            self._stream_service.stop(timeout=1.5)
+        self._stream_stop_event = None
+        self._stream_service = None
 
 
 def _run_core_scheduler_loop(context: DashboardConfigContext, stop_event: Event) -> None:
@@ -325,6 +360,7 @@ def create_dashboard_app(
         nonlocal scheduler_thread
         if start_core_scheduler is not True:
             return
+        context.start_live_streams()
         scheduler_thread = Thread(
             target=_run_core_scheduler_loop,
             args=(context, scheduler_stop_event),
@@ -335,6 +371,7 @@ def create_dashboard_app(
 
     @app.on_event("shutdown")
     def stop_core_scheduler_loop() -> None:
+        context.stop_live_streams()
         scheduler_stop_event.set()
         if scheduler_thread is not None:
             scheduler_thread.join(timeout=3)
@@ -1185,7 +1222,7 @@ def _launch_dashboard_service_process(
         "cwd": Path.cwd(),
     }
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+        kwargs.update(hidden_subprocess_kwargs(new_process_group=True, detached=True))
     else:
         kwargs["start_new_session"] = True
     return subprocess.Popen(command, **kwargs)
