@@ -91,4 +91,6 @@ python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py <files-m
 
 For a Chinese candidate task, add `--proposal-only`; to check all currently accepted shared specification bundles, add `--accepted-integrity`. The script can detect only mechanical issues and cannot replace semantic and design review.
 
+When `HALPHA-PLAN-001`, a construction gate, package eligibility, or real-write status changes, also run `python governance/validate_construction_plan.py`. This gate validates only machine-readable current-state consistency and does not prove that design semantics are aligned.
+
 When delivering, report the conclusion first, then describe the actual changes, the basis for component reuse and retained custom implementation, the complexity change, validation results, and anything that remains unknown or unauthorized. Do not use document count, length, number of checks, or agreement by multiple people as a proxy for quality.

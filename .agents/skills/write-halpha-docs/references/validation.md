@@ -136,9 +136,12 @@ python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py --change
 
 # 重算当前已接受共同规范包正文和联合哈希
 python .agents/skills/write-halpha-docs/scripts/validate_halpha_docs.py --accepted-integrity
+
+# 修改 HALPHA-PLAN-001、建设门或真实写状态时，检查机器可读治理一致性
+python governance/validate_construction_plan.py
 ```
 
-脚本检查 UTF-8、YAML、规范文件名与核心元数据、语义锚点重复、相对链接、proposal 修改边界和 bundle 哈希。它不判断内容是否放在正确层级、概念是否值得建立或业务路径是否完整；这些必须人工复核。
+文档脚本检查 UTF-8、YAML、规范文件名与核心元数据、语义锚点重复、相对链接、proposal 修改边界和 bundle 哈希。治理脚本只检查当前 PLAN 的冲突阻断、建设依赖和真实写 fail-closed。两者都不判断内容是否放在正确层级、概念是否值得建立、业务路径是否完整或冲突语义是否真的关闭；这些必须人工复核。
 
 脚本对错误返回非零状态；警告需要结合任务范围判断。传入明确路径优于在脏工作区直接使用 `--changed`，以免把所有者已有改动误算为本次范围。
 

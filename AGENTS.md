@@ -11,6 +11,8 @@ Applies to design, implementation, review, documentation, and validation work wi
 ## Specialized Guidance Entry Points
 
 - When creating, modifying, splitting, reviewing, or validating L0–L4 documents, Chinese candidates, responsibility registries, the current plan, or documentation indexes, use [`write-halpha-docs`](.agents/skills/write-halpha-docs/SKILL.md). Maintain the specific layering, terminology, content-quality, synchronization-scope, and validation requirements only in that skill.
+- When implementing, testing, refactoring, qualifying dependencies, changing builds or runtime configuration, or handling implementation evidence that conflicts with design, use [`develop-halpha`](.agents/skills/develop-halpha/SKILL.md). Follow its design-reading, value-tradeoff, impact-validation, and L4/L3/L2+ inconsistency decision gates.
+- When designing or reviewing Halpha page scope, information architecture, wireframes, high-fidelity prototypes, interaction states, command feedback, risk confirmation, responsive behavior, accessibility, or UI acceptance evidence, use [`design-halpha-ux`](.agents/skills/design-halpha-ux/SKILL.md). Apply its professional-trader, P0-complexity, progressive-disclosure, async-feedback, and risk-control gates before implementation.
 - Register future specialized guidance in this section; do not copy complete workflows, templates, or reference material back into this file.
 
 ## Repository Work Baseline

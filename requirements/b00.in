@@ -1,0 +1,10 @@
+# B00 dependency and target-platform qualification only.
+# Product runtime dependency groups are established after B00=QUALIFIED.
+pip==26.1.2
+pip-tools==7.5.3
+nautilus-trader==1.230.0
+keyring==25.7.0
+pywin32==312
+pytest==9.1.1
+hypothesis==6.156.6
+PyYAML==6.0.3
