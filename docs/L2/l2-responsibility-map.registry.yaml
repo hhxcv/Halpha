@@ -1,0 +1,88 @@
+schema_version: 3
+registry_kind: non_normative_machine_index
+language: zh-CN
+current_depth_authority: docs/L4/HALPHA-PLAN-001-current-construction-plan.yaml
+upstream_versions:
+  - HALPHA-CON-001@v2.10.0
+  - HALPHA-DOC-001@v1.10.0
+  - HALPHA-VIS-001@v1.4.0
+  - HALPHA-FLOW-001@v1.7.0
+  - HALPHA-ARC-001@v1.8.0
+
+responsibilities:
+  - id: CTX
+    shape: horizontal
+    responsibility_source: HALPHA-FLOW-001@v1.7.0#FLOW-HOF-001
+    l2_document: HALPHA-CTX-001@v1.4.0
+    scope_source: HALPHA-CTX-001@v1.4.0#CTX-SCP-001
+    owned_stable_semantics: [研究或交易计划候选, 研究或交易计划候选去向决定]
+
+  - id: ALP
+    shape: horizontal
+    responsibility_source: HALPHA-FLOW-001@v1.7.0#FLOW-HOF-001
+    l2_document: HALPHA-ALP-001@v1.5.0
+    scope_source: HALPHA-ALP-001@v1.5.0#ALP-SCP-001
+    owned_stable_semantics: [正式经济研究, 经济证据判断, 交易策略, 固定策略提供的交易计划依据]
+
+  - id: POR
+    shape: horizontal
+    responsibility_source: HALPHA-FLOW-001@v1.7.0#FLOW-HOF-001
+    l2_document: HALPHA-POR-001@v1.6.0
+    scope_source: HALPHA-POR-001@v1.6.0#POR-SCP-001
+    owned_stable_semantics: []
+
+  - id: TRADEPLAN
+    shape: horizontal
+    responsibility_source: HALPHA-FLOW-001@v1.7.0#FLOW-HOF-001
+    l2_document: HALPHA-TRADEPLAN-001@v1.7.0
+    scope_source: HALPHA-TRADEPLAN-001@v1.7.0#TRADEPLAN-SCP-001
+    owned_stable_semantics: [交易计划草案, 交易计划资金需求, 交易计划版本, 交易计划启用, 交易计划条件判断, 交易计划事件, 拟执行动作]
+
+  - id: EXE
+    shape: horizontal
+    responsibility_source: HALPHA-FLOW-001@v1.7.0#FLOW-HOF-001
+    l2_document: HALPHA-EXE-001@v1.6.0
+    scope_source: HALPHA-EXE-001@v1.6.0#EXE-SCP-001
+    owned_stable_semantics: [待执行动作记录, 外部写入控制权, 交易场所提交记录, 交易场所结果引用, 执行结果未决, 风险敞口保护任务, 交易执行核对事项]
+
+  - id: OUT
+    shape: horizontal
+    responsibility_source: HALPHA-FLOW-001@v1.7.0#FLOW-HOF-001
+    l2_document: HALPHA-OUT-001@v1.5.0
+    scope_source: HALPHA-OUT-001@v1.5.0#OUT-SCP-001
+    owned_stable_semantics: [复盘记录, 复盘改进事项]
+
+  - id: CAP
+    shape: vertical
+    responsibility_source: HALPHA-ARC-001@v1.8.0#ARC-L2D-001
+    l2_document: HALPHA-CAP-001@v2.9.0
+    scope_source: HALPHA-CAP-001@v2.9.0#CAP-SCP-001
+    owned_stable_semantics: [资金使用上限与范围的记录与执行规则, 策略激活额度配额, Halpha 真实资金操作权限, Halpha 新增真实动作停用状态, 拟执行动作资金与权限检查结果]
+
+  - id: DAT
+    shape: vertical
+    responsibility_source: HALPHA-ARC-001@v1.8.0#ARC-L2D-001
+    l2_document: HALPHA-DAT-001@v2.3.0
+    scope_source: HALPHA-DAT-001@v2.3.0#DAT-SCP-001
+    owned_stable_semantics: [带来源的外部观察, 可追溯派生结果, 交易记录环境身份, 可引用事实判断, 来源追溯关系, 事实未知状态]
+
+  - id: UX
+    shape: vertical
+    responsibility_source: HALPHA-ARC-001@v1.8.0#ARC-L2D-001
+    l2_document: HALPHA-UX-001@v1.5.0
+    scope_source: HALPHA-UX-001@v1.5.0#UX-SCP-001
+    owned_stable_semantics: [用户交互任务, 用户操作指令, 用户操作处理回执, 用户任务通知]
+
+  - id: SYS
+    shape: vertical
+    responsibility_source: HALPHA-ARC-001@v1.8.0#ARC-L2D-001
+    l2_document: HALPHA-SYS-001@v1.5.0
+    scope_source: HALPHA-SYS-001@v1.5.0#SYS-BND-001
+    owned_stable_semantics: [业务模块, 应用交互类型, 应用命令提交责任, 业务状态冲突处理责任, 模块间交接方式, 可重建只读视图, 运行实体宿主与进程边界, 运行时配置与秘密注入边界, 启动停止与恢复前置边界, 权威状态备份范围]
+
+  - id: ENG
+    shape: vertical
+    responsibility_source: HALPHA-ARC-001@v1.8.0#ARC-L2D-001
+    l2_document: HALPHA-ENG-001@v1.6.0
+    scope_source: HALPHA-ENG-001@v1.6.0#ENG-SCP-001
+    owned_stable_semantics: [工程影响级别, 可重复构建与发布回退边界, 部署说明与构建配置识别要求]

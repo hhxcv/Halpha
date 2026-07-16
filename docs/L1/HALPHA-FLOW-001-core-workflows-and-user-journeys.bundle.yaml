@@ -1,0 +1,20 @@
+schema_version: 3
+document_id: HALPHA-FLOW-001
+version: v1.7.0
+bundle_id: HALPHA-FLOW-001@v1.7.0+20260715T190415+0800
+status: ACCEPTED
+alignment: ALIGNED
+supersedes: HALPHA-FLOW-001@v1.6.0+20260715T170933+0800
+normative_languages: [zh-CN, en-US]
+language_authority: co_normative_equal
+files:
+  zh-CN:
+    path: docs/L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md
+    body_sha256: 507f2ddc20dacc83c2e9564a7aff8f5f5d1a15425e6c046266594b579f25d14b
+  en-US:
+    path: docs/L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.en-US.md
+    body_sha256: 389ff95abb785eafc7de7eab1d1c5db652b1bcf0bddb2cdbea20f4ba3779266a
+joint_set:
+  sha256: 67c954ddc8eaf6f83b4af1977e1937d3b086f94003e4c99adc1bfa7c591ac24c
+accepted_by: Halpha Project Owner
+accepted_at: "2026-07-15T19:04:15+08:00"

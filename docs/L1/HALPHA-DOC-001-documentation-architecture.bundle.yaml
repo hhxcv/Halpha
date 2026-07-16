@@ -1,0 +1,20 @@
+schema_version: 3
+document_id: HALPHA-DOC-001
+version: v1.10.0
+bundle_id: HALPHA-DOC-001@v1.10.0+20260716T124501+0800
+status: ACCEPTED
+alignment: ALIGNED
+supersedes: HALPHA-DOC-001@v1.9.0+20260715T190413+0800
+normative_languages: [zh-CN, en-US]
+language_authority: co_normative_equal
+files:
+  zh-CN:
+    path: docs/L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md
+    body_sha256: b5281c43954440c3063a0f55e0fab5ad2120def15c1fb1d43adf2c45f6157348
+  en-US:
+    path: docs/L1/HALPHA-DOC-001-documentation-architecture.en-US.md
+    body_sha256: ff2798ed8cbd034bfd16c667c5c0d9f4580f20763b7a821ec4ed4870bd0c7178
+joint_set:
+  sha256: d7cd8943c6fcf6829c79045596bd8449a93dbb9a07e753a1b7378d200c9dd07f
+accepted_by: Halpha Project Owner
+accepted_at: "2026-07-16T12:45:01+08:00"

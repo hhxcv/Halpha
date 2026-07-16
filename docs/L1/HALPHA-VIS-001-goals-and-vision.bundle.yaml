@@ -1,0 +1,20 @@
+schema_version: 3
+document_id: HALPHA-VIS-001
+version: v1.4.0
+bundle_id: HALPHA-VIS-001@v1.4.0+20260715T190414+0800
+status: ACCEPTED
+alignment: ALIGNED
+supersedes: HALPHA-VIS-001@v1.3.0+20260715T170933+0800
+normative_languages: [zh-CN, en-US]
+language_authority: co_normative_equal
+files:
+  zh-CN:
+    path: docs/L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md
+    body_sha256: 252333af7495ea6fe7cb5b27128f85cd465d4f10bb6674de0ae2e1c92f273d9e
+  en-US:
+    path: docs/L1/HALPHA-VIS-001-goals-and-vision.en-US.md
+    body_sha256: fff2c5bd79611f957bdebafb4c8ee3f9eb2221a1e3180ca99f6f4f6e75b8e331
+joint_set:
+  sha256: 5516316d992ed914541e92d9dc7d8009f5135bef114f4c909c79b831ffe3a633
+accepted_by: Halpha Project Owner
+accepted_at: "2026-07-15T19:04:14+08:00"

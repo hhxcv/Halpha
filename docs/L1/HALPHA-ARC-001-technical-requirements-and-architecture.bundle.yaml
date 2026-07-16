@@ -1,0 +1,20 @@
+schema_version: 3
+document_id: HALPHA-ARC-001
+version: v1.8.0
+bundle_id: HALPHA-ARC-001@v1.8.0+20260716T124502+0800
+status: ACCEPTED
+alignment: ALIGNED
+supersedes: HALPHA-ARC-001@v1.7.0+20260715T190416+0800
+normative_languages: [zh-CN, en-US]
+language_authority: co_normative_equal
+files:
+  zh-CN:
+    path: docs/L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md
+    body_sha256: c5c3580eb282ec1568465818317aa9b5b4933b3e65c3adf94101fceb150a5b1f
+  en-US:
+    path: docs/L1/HALPHA-ARC-001-technical-requirements-and-architecture.en-US.md
+    body_sha256: 7da4bf784123923b6ab3c3a15b6ab3226b6454f7a8c41d70e9431f4d51809216
+joint_set:
+  sha256: db5f54b08a25511a1ab5b99a43fec2fd730f7c9f3b731a03f0cbcde1a7b6ea8d
+accepted_by: Halpha Project Owner
+accepted_at: "2026-07-16T12:45:02+08:00"
