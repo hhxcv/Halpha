@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Halpha UX"
+  short_description: "Design and validate Halpha trading-workbench UX"
+  default_prompt: "Use $design-halpha-ux to design or review this Halpha trading-workbench experience against accepted design and validate any executable surface with Playwright."
