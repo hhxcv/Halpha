@@ -1,0 +1,4 @@
+interface:
+  display_name: "Halpha 设计与文档"
+  short_description: "按组件优先原则设计、编写并校验 Halpha L0–L4"
+  default_prompt: "使用 $write-halpha-docs 先完成组件复用与最小自研判断，再按当前文档体系起草或评审 Halpha L0–L4 设计。"

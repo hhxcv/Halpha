@@ -1,0 +1,412 @@
+# Halpha 要求与限制索引
+
+**索引性质：** 非规范性导航文档  
+**索引基准：** 2026-07-16  
+**覆盖范围：** 当前最新中文 L0–L4 文档  
+**当前来源状态：** ACCEPTED
+
+本索引只收录能够直接判断符合或偏离的规范内容：必须、不得、默认要求、允许边界，以及会改变范围、责任、顺序、失败行为、记录义务或验收结果的约束。定量值、适用条件、例外和完整语义始终以所指正文为准。
+
+最小归类单元是“文档 + 语义锚点”。混合章节中的要求使用 `-REQ` 子锚点；原章节锚点只作结构和既有引用入口。定义对象本身进入[概念定义索引](concept-definition-index.zh-CN.md)；解释问题、前提和取舍的内容进入[决策与依据索引](decision-rationale-index.zh-CN.md)。决策名称可以在要求中出现，但“为什么选择”不在本索引重复记录。
+
+当前每个文档编号只记录最新中文 ACCEPTED 正文，不重复记录旧版、英文、bundle、archive 或历史参考稿。当前 ACCEPTED 集包含 ALP、TRADEPLAN、DAT、CAP、EXE、OUT、UX、SYS、ENG 九个领域的 L3 及其相关 L4 P0 当前建设计划：L3 收录长期功能、失败、交接、组件使用和验收要求；L4 将既有长期设计转为当前可调整建设基线、阶段实施目标和资格门。其他 L2 对未来 L3 的强制交接仍属于要求。L4 使用 YAML，不具备 Markdown 章节锚点，因此以稳定键路径作为归类单元，并用行链接跳转到当前键位置。
+
+## 规范、责任与文档治理
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 规范文档只有满足对应条件后才能生效、替代或撤回 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [生效要求【CON-GOV-002-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#生效要求con-gov-002-req) |
+| 规范权威、下位登记与证据（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [权威使用要求【CON-GOV-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#权威使用要求con-gov-001-req) |
+| 规范性用语及偏离必须按统一规则处理 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [偏离处理要求【CON-GOV-003-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#偏离处理要求con-gov-003-req) |
+| 最高冲突顺序（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [1.5【CON-PRI-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#15-最高冲突顺序con-pri-001) |
+| 共同规范语言文本与语言冲突（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [对齐、生效与冲突处理要求【CON-GOV-006-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#对齐生效与冲突处理要求con-gov-006-req) |
+| 复核、修订与问题处理（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [9.1【CON-GOV-004】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#91-复核修订与问题处理con-gov-004) |
+| 宪法生效与真实资金使用（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [9.2【CON-GOV-005】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#92-宪法生效与真实资金使用con-gov-005) |
+| L0–L4 设计文档总体结构 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [层级使用要求【DOC-STR-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#层级使用要求doc-str-001-req) |
+| 四篇 L1 文档的依赖顺序 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [1.3【DOC-L1-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#13-l1-的依赖顺序doc-l1-001) |
+| L2–L4 只在有真实消费者时深化，并按责任形态选择文档深度 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [L2–L4 使用要求【DOC-L24-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#l2l4-使用要求doc-l24-001-req) |
+| 文档文件命名与中文术语规则 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [2.1【DOC-NAM-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#21-命名doc-nam-001) |
+| 具有特殊含义的概念须先在最高适当层级定义，再供其他章节引用 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [概念、行为主体与记录要求【DOC-SEM-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#概念行为主体与记录要求doc-sem-001-req) |
+| 常见词语不得被赋予隐藏的项目含义；一次性说明不得升级为概念 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [概念、行为主体与记录要求【DOC-SEM-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#概念行为主体与记录要求doc-sem-001-req) |
+| 概念名脱离原章节后仍须明确业务对象和作用，跨文档使用同一完整名称 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [概念、行为主体与记录要求【DOC-SEM-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#概念行为主体与记录要求doc-sem-001-req) |
+| 领域编号只表示语义责任，运行行为须由具体主体承担 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [概念、行为主体与记录要求【DOC-SEM-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#概念行为主体与记录要求doc-sem-001-req) |
+| 新概念、对象、记录行为及其数据须有真实消费者，价值须覆盖完整成本 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [概念、行为主体与记录要求【DOC-SEM-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#概念行为主体与记录要求doc-sem-001-req) |
+| L2 只固定会改变决定、责任或失败处理的记录语义，具体字段进入 L3，当前事实进入 L4 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [概念、行为主体与记录要求【DOC-SEM-001-REQ】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#概念行为主体与记录要求doc-sem-001-req) |
+| 规范文档须声明最小元数据、语言对应和适用时间字段 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [2.2【DOC-MET-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#22-最小元数据doc-met-001) |
+| 设计文档目录与存放位置 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [2.3【DOC-LOC-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#23-文件位置doc-loc-001) |
+| AI 的设计文档最小读取规则 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [3【DOC-AIR-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#3-ai-最小读取规则doc-air-001) |
+| 设计文档创建、拆分与复核条件 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [6【DOC-SPL-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#6-创建拆分与复核doc-spl-001) |
+| 设计语义变更的分层更新位置 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [5【DOC-UPD-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#5-更新位置doc-upd-001) |
+| 正式实现的文档前置条件 | [HALPHA-DOC-001](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md) | [4【DOC-IMP-001】](L1/HALPHA-DOC-001-documentation-architecture.zh-CN.md#4-进入实现doc-imp-001) |
+
+## 产品定位、价值与演进
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 项目使命（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [项目使命与价值要求【CON-MIS-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#项目使命与价值要求con-mis-001-req) |
+| 人的决策主权与认知安全（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [2.3【CON-HUM-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#23-人的决策主权与认知安全con-hum-001) |
+| 长期范围与非目标（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [2.4【CON-NGL-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#24-长期范围与非目标con-ngl-001) |
+| 结果优先级（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [3.1【CON-ECO-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#31-结果优先级con-eco-001) |
+| 账户净结果、投资 Alpha 与产品增量价值须分别评价；优势的发现、证伪、淘汰和替换按产品能力评价 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [分离评价要求【CON-ECO-002-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#分离评价要求con-eco-002-req) |
+| 事前评价与反事实完整性（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [3.3【CON-ECO-003】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#33-事前评价与反事实完整性con-eco-003) |
+| 现金与不交易不得视为产品失败，产品成功须按增量价值判定 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [产品成功与失败判定要求【CON-ECO-004-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#产品成功与失败判定要求con-eco-004-req) |
+| 产品设计须服务单一用户投入的交易资本，并受项目所有者可承担的建设与维护成本约束 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [1.3 产品身份保持要求【VIS-IDN-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#13-产品身份保持要求vis-idn-001-req) |
+| 要解决的真实问题（产品目标与愿景） | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [2.2 由问题产生的产品要求【VIS-PRB-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#22-由问题产生的产品要求vis-prb-001-req) |
+| 八类产品价值须分别形成并以长期净资本价值为最终目标 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [3.2 产品价值要求【VIS-VAL-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#32-产品价值要求vis-val-001-req) |
+| 用户、项目所有者、Halpha 与外部系统或工具须保持产品责任边界；运行实体、进程和模块边界由 ARC、SYS 与下位设计拥有 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [参与者要求【VIS-OPS-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#参与者要求vis-ops-001-req) |
+| 候选优势不得被当作永久属性；回测、单次盈利或叙事不得自行提高经济证据结论 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [派生术语使用要求【VIS-ADV-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#派生术语使用要求vis-adv-001-req) |
+| 竞争方向须服从个人资本、数据、接入、维护和证据边界 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [5.3 竞争范围要求【VIS-ADV-001-REQ-002】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#53-竞争范围要求vis-adv-001-req-002) |
+| 产品能力须按阶段实现，并共同遵守简单、可验证的稳定性约束 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [6.2 能力实现要求【VIS-CAP-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#62-能力实现要求vis-cap-001-req) |
+| 核心交易与 UX 闭环可同 Alpha 研究并行，但都须服从价值依赖和真实场景验证 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [9.1 能力协同要求【VIS-PHS-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#91-能力协同要求vis-phs-001-req) |
+| 当前阶段、里程碑和进度只由 L4 记录，不得成为扩资或启用资格 | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [10.1 建设顺序要求【VIS-EVO-001-REQ】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#101-建设顺序要求vis-evo-001-req) |
+| 必须闭合的产品价值环节（产品目标与愿景） | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [7【VIS-LOOP-001】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#7-必须闭合的产品价值环节vis-loop-001) |
+| 方向失败信号（产品目标与愿景） | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [12【VIS-FAL-001】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#12-方向失败信号vis-fal-001) |
+| 用户应获得的结果（产品目标与愿景） | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [8【VIS-OUT-001】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#8-用户应获得的结果vis-out-001) |
+| 下位设计交接（产品目标与愿景） | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [13【VIS-HOF-001】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#13-下位设计交接vis-hof-001) |
+| 长期非目标与阶段共同约束（产品目标与愿景） | [HALPHA-VIS-001](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md) | [11【VIS-NGL-001】](L1/HALPHA-VIS-001-goals-and-vision.zh-CN.md#11-长期非目标与阶段共同约束vis-ngl-001) |
+
+## 用户、资金使用限制与风险控制
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 定位与复杂度上限（资金使用控制） | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [0.2 CAP 责任与复杂度要求【CAP-SCP-001-REQ】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#02-cap-责任与复杂度要求cap-scp-001-req) |
+| CAP 稳定语义只负责资金使用限制、真实资金操作权限、新增真实动作停用和动作前检查，不得替代计划、事实或执行状态 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [1.2 CAP 稳定语义责任边界【CAP-OBJ-001-REQ】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#12-cap-稳定语义责任边界cap-obj-001-req) |
+| 资金使用上限与范围须继承用户在系统外作出的交易资本决定并限制全部真实动作 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [2.1 资金使用上限与范围继承【CAP-ENV-001-REQ】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#21-资金使用上限与范围继承cap-env-001-req) |
+| 用户在 Halpha 外投入的交易资本、Halpha 全局资金上限和单笔资金上限必须分开；全局和单笔上限只在资金使用上限与范围版本的环境、场所、账户、币种、工具、动作和计划范围内有效 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [三种额度使用要求【CAP-ENV-002-REQ】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#三种额度使用要求cap-env-002-req) |
+| Halpha 真实资金操作权限须由用户显式提高，并可立即降低或撤销 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [3.2 Halpha 真实资金操作权限进入与转换要求【CAP-MOD-001-REQ】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#32-halpha-真实资金操作权限进入与转换要求cap-mod-001-req) |
+| 用户拥有产品使用与资本控制的最终决定权；Halpha 必须接受并执行用户明确配置的账户、资金使用上限与范围、真实资金操作权限以及停止、缩小和恢复决定，不得自行扩权或扩大范围 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [项目所有者责任与系统边界要求【CON-USR-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#项目所有者责任与系统边界要求con-usr-001-req) |
+| 当前项目只有一位真人用户；项目所有者可以兼任用户和开发者，AI 工具也可以作为开发者，但开发者不属于用户角色，不新增管理员、审批人和值守人身份 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [真人身份使用要求【CON-USR-002-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#真人身份使用要求con-usr-002-req) |
+| Halpha 只能记录并执行用户已配置的资金使用上限与范围 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [资金使用上限与范围要求【CON-CAP-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#资金使用上限与范围要求con-cap-001-req) |
+| 真实动作通常须引用完整交易计划；例外仅限用户已固定的已有风险敞口保护或降低风险决定，以及用户明确提交且可证明不增加或转换风险的撤销、保护、划转或降低风险指令，并须固定对象、范围、原因和允许结果，经过同一资金、权限、执行与核对路径 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [5.3 真实动作前的必要决定](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#53-真实动作前的必要决定) |
+| Halpha 真实动作只有人工授权与机器授权两条路径；授权必须在动作前取得、与风险相称、不得混用，并始终受当前资金使用上限与范围约束 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [4.3【CON-CAP-003】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#43-halpha-真实资金操作权限的宪法边界con-cap-003) |
+| 关键事实不能确认时必须明确保留“事实未知”，不得用推断、旧值、默认值或用户确认伪造确定性 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [4.4【CON-CAP-004】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#44-关键事实无法确认时的上位边界con-cap-004) |
+| Halpha 真实资金操作权限与资金使用上限、范围变更 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [4.5【CON-CAP-005】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#45-halpha-真实资金操作权限与资金使用上限范围变更con-cap-005) |
+| 收缩与恢复 Halpha 真实资金操作权限 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [4.6【CON-CAP-006】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#46-收缩与恢复-halpha-真实资金操作权限con-cap-006) |
+| 简单限额检查（资金使用控制） | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [4【CAP-CHK-001】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#4-简单限额检查cap-chk-001) |
+| 停用 Halpha 新增资金、保护、风险减少或订单管理动作，或用 GLOBAL `ALL_REAL_ACTIONS` 一键停止全部 Halpha 真实写入；总开关下仍可启动、读事实、展示、模拟和核对，但不新增、不撤销、不平仓、不保护、不修改，且不自动改变既有场所订单、保护或持仓 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [5【CAP-CTL-001】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#5-停用真实动作缩小范围与恢复权限cap-ctl-001) |
+| 与核心业务的边界（资金使用控制） | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [6【CAP-BND-001】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#6-与核心业务的边界cap-bnd-001) |
+| 资金使用控制的 L4 选择边界 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [8. L4 选择边界【CAP-L4-001】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#8-l4-选择边界cap-l4-001) |
+| 资金使用控制的实现契约 L3 必答项 | [HALPHA-CAP-001](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md) | [7【CAP-L3-001】](L2/HALPHA-CAP-001-capital-risk-and-authority.zh-CN.md#7-l3-必须精确定义cap-l3-001) |
+| 每次计划激活必须同时取得机器授权，并独占 `max_margin`、`max_notional`、`max_allowed_loss` 三轴额度；多个激活可以并行，但同一额度不得重复分配，资金仍留在 Binance 账户 | [HALPHA-CAP-002](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md) | [2. 分配与互斥【CAP-AUTO-ALLOC-001】](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md#2-分配与互斥cap-auto-alloc-001) |
+| `max_margin` 与 `max_notional` 只阻止 Halpha 主动增加风险；行情、费用、资金费或场所规则造成的自然越界不触发 CAP 强制减仓或平仓 | [HALPHA-CAP-002](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md) | [3. 动作分类【CAP-AUTO-CLS-001】](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md#3-动作分类cap-auto-cls-001) |
+| 激活和每次增险动作都必须经过机器授权、三轴额度、当前事实与停用状态检查；明确拒绝或未知时不得增加风险 | [HALPHA-CAP-002](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md) | [4. 两阶段检查【CAP-AUTO-CHK-001】](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md#4-两阶段检查cap-auto-chk-001) |
+| 最大允许损失只归属本激活动作与持仓，并合并已实现盈亏、未实现盈亏、资金费和手续费；触线后锁存为只退出，停止新增风险并退出本激活全部持仓，不受其他策略损益影响 | [HALPHA-CAP-002](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md) | [5. 损失归属与锁存【CAP-AUTO-LOSS-001】](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md#5-损失归属与锁存cap-auto-loss-001) |
+| NautilusTrader 的 Portfolio 与 RiskEngine 只能作为技术投影和更保守检查，不能成为机器授权、额度、激活损失或释放权威 | [HALPHA-CAP-002](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md) | [6. 框架边界与故障恢复【CAP-AUTO-CMP-001】](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md#6-框架边界与故障恢复cap-auto-cmp-001) |
+| 额度只在 EXE `closure_digest` 被 TRADEPLAN 完成状态引用后释放；用户接管本身或尚无该闭合证据时继续占用，接管关闭证据成立后按同一闭合路径释放 | [HALPHA-CAP-002](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md) | [2. 分配与互斥【CAP-AUTO-ALLOC-001】](L3/HALPHA-CAP-002-machine-authorization-and-plan-allocation.zh-CN.md#2-分配与互斥cap-auto-alloc-001) |
+
+## 研究或交易计划候选、研究、证据与策略
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 正式经济研究入口必须明确经济机制、被评价对象、决策用途与可证伪问题 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [1.1 进入要求【ALP-OBJ-001-REQ】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#11-进入要求alp-obj-001-req) |
+| 候选优势进入正式研究前须具备经济机制、适用边界、成本假设与证伪条件 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [2.1 候选优势进入研究要求【ALP-ADV-001-REQ】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#21-候选优势进入研究要求alp-adv-001-req) |
+| 研究材料不得直接充当经济证据判断，关键主张须独立确认 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [2.2 研究材料与经济证据判断分离【ALP-EVD-001-REQ】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#22-研究材料与经济证据判断分离alp-evd-001-req) |
+| 正式策略须绑定固定定义、经济证据判断和适用范围，并说明如何形成计划输入 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [3.1 正式策略边界【ALP-STR-001-REQ】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#31-正式策略边界alp-str-001-req) |
+| 失败与失效结论须保留适用边界，并在无新增信息时阻止重复研究 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [4.1 保留和复用要求【ALP-NEG-001-REQ】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#41-保留和复用要求alp-neg-001-req) |
+| 功能与实现验证和经济证据须回答不同问题，并按后果提高验证强度 | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [两类问题的边界【CON-EVD-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#两类问题的边界con-evd-001-req) |
+| 证据适用范围、晋级与衰减（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [5.3【CON-EVD-002】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#53-证据适用范围晋级与衰减con-evd-002) |
+| 事前记录与失败、失效结论（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [5.4【CON-LRN-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#54-事前记录与失败失效结论con-lrn-001) |
+| 自适应不得自行提高资金使用上限或扩大范围（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [5.5【CON-ADP-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#55-自适应不得自行提高资金使用上限或扩大范围con-adp-001) |
+| 研究或交易计划候选及其去向决定的唯一职责 | [HALPHA-CTX-001](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md) | [0.2 CTX 责任边界要求【CTX-SCP-001-REQ】](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md#02-ctx-责任边界要求ctx-scp-001-req) |
+| 研究或交易计划候选输入须使用户能够识别问题、来源、时点、适用对象、主要未知和下一步选择；来源本身不赋予事实权威 | [HALPHA-CTX-001](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md) | [2.1 输入边界【CTX-CAP-001-REQ】](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md#21-输入边界ctx-cap-001-req) |
+| 研究或交易计划候选去向决定只能采用进入研究、进入计划、等待、结束或当前不形成计划，并说明理由和输出边界 | [HALPHA-CTX-001](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md) | [2.2 去向选择要求【CTX-RTE-001-REQ】](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md#22-去向选择要求ctx-rte-001-req) |
+| Alpha 研究与策略必须明确输入与输出，不得形成交易计划、资金决定或真实动作 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [5. 明确输入与输出【ALP-IO-001】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#5-明确输入与输出alp-io-001) |
+| Alpha 研究与策略的唯一职责 | [HALPHA-ALP-001](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md) | [0【ALP-SCP-001】](L2/HALPHA-ALP-001-alpha-research-evidence-and-strategy.zh-CN.md#0-唯一职责alp-scp-001) |
+| 代码策略必须复用 NautilusTrader 的 Strategy/Controller、行情、原生指标与 BacktestEngine；不得另建策略运行框架、指标库、历史回放撮合器、绩效统计器或第二量化栈 | [HALPHA-ALP-002](L3/HALPHA-ALP-002-code-defined-strategy-basis.zh-CN.md) | [1.1 NautilusTrader 使用范围【ALP-CODE-CMP-001-REQ】](L3/HALPHA-ALP-002-code-defined-strategy-basis.zh-CN.md#11-nautilustrader-使用范围alp-code-cmp-001-req) |
+| Halpha 只保留代码策略清单与版本、参数 schema、策略提议适配、经济证据门和一次激活产品断言；组件可承担的技术部分必须删除，不保留自动 fallback | [HALPHA-ALP-002](L3/HALPHA-ALP-002-code-defined-strategy-basis.zh-CN.md) | [1.2 保留的最小 Halpha 能力【ALP-CODE-CMP-002-REQ】](L3/HALPHA-ALP-002-code-defined-strategy-basis.zh-CN.md#12-保留的最小-halpha-能力alp-code-cmp-002-req) |
+| 实时与离线使用同一策略适配与纯逻辑类；策略只能形成不可变 `StrategyProposal`，不得取得计划、资金授权或场所写入权 | [HALPHA-ALP-002](L3/HALPHA-ALP-002-code-defined-strategy-basis.zh-CN.md) | [3.1 同一策略类【ALP-CODE-EVD-001-REQ】](L3/HALPHA-ALP-002-code-defined-strategy-basis.zh-CN.md#31-同一策略类alp-code-evd-001-req) |
+| 研究或交易计划候选及其去向决定必须明确交付或缺失结果，不得形成无人承担的待办 | [HALPHA-CTX-001](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md) | [3. 交付与缺失结果【CTX-IO-001】](L2/HALPHA-CTX-001-candidate-and-decision-context.zh-CN.md#3-交付与缺失结果ctx-io-001) |
+
+## 组合、交易计划与运行条件
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| TRADEPLAN 的起点与终点（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [TRADEPLAN 起点与终点要求【TRADEPLAN-SCP-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#tradeplan-起点与终点要求tradeplan-scp-001-req) |
+| 稳定计划语义须保留各自身份，不得由研究或交易计划候选、界面或相邻状态替代 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [稳定计划语义边界要求【TRADEPLAN-OBJ-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#稳定计划语义边界要求tradeplan-obj-001-req) |
+| 内容、运行、条件、动作、外部结果与责任状态须分轴表达 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [状态分轴要求【TRADEPLAN-AXS-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#状态分轴要求tradeplan-axs-001-req) |
+| 与 POR 的有界往返（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [1.4【TRADEPLAN-POR-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#14-与-por-的有界往返tradeplan-por-001) |
+| 计划合并、拆分和拟执行动作映射须保持一次完整交易决定可识别 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [计划合并、拆分与拟执行动作映射要求【TRADEPLAN-GRN-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#计划合并拆分与拟执行动作映射要求tradeplan-grn-001-req) |
+| 固定交易计划须完整回答论点、范围、进入、退出、保护、调整和失败处理 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [2.2 完整计划要求【TRADEPLAN-DEC-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#22-完整计划要求tradeplan-dec-001-req) |
+| 草案允许不完整（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [3.1【TRADEPLAN-DRF-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#31-草案允许不完整tradeplan-drf-001) |
+| 固定版本不可改写（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [3.2【TRADEPLAN-VER-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#32-固定版本不可改写tradeplan-ver-001) |
+| 交易计划启用建立运行责任 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [3.3【TRADEPLAN-ACT-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#33-交易计划启用建立运行责任tradeplan-act-001) |
+| 交易计划启用必须绑定交易记录环境身份 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [3.4【TRADEPLAN-ENV-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#34-交易计划启用必须绑定交易记录环境身份tradeplan-env-001) |
+| 计划条件须声明类型、用途、事实来源和适用版本 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [条件声明与引用要求【TRADEPLAN-CND-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#条件声明与引用要求tradeplan-cnd-001-req) |
+| 交易计划条件无法判定或冲突时须停止依赖动作并进入明确处理路径 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [条件评价与冲突处理要求【TRADEPLAN-EVL-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#条件评价与冲突处理要求tradeplan-evl-001-req) |
+| 交易计划事件须不可变保存版本、事实截止点和责任变化 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [交易计划事件保存与使用要求【TRADEPLAN-EVT-001-REQ】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#交易计划事件保存与使用要求tradeplan-evt-001-req) |
+| 可行性按完整链路判断（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [5.1【TRADEPLAN-TIM-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#51-可行性按完整链路判断tradeplan-tim-001) |
+| 连续观察与用户参与（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [5.2【TRADEPLAN-WAT-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#52-连续观察与用户参与tradeplan-wat-001) |
+| 计划决定与资金使用决定分离（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [6.2【TRADEPLAN-AUT-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#62-计划决定与资金使用决定分离tradeplan-aut-001) |
+| 外部结果只能驱动预定义分支（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [7.1【TRADEPLAN-RES-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#71-外部结果只能驱动预定义分支tradeplan-res-001) |
+| 计划暂停、失效与过期必须显式处理后续责任 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [7.2【TRADEPLAN-STP-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#72-暂停失效与过期tradeplan-stp-001) |
+| 计划结束必须闭合未完成责任并保留结果材料 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [7.3【TRADEPLAN-END-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#73-计划结束与责任闭合tradeplan-end-001) |
+| POR 在深化条件未满足时只定义进入与人工计划交接边界，不建立独立配置对象或许可生命周期 | [HALPHA-POR-001](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md) | [1.1 输入与所有权边界【POR-OBJ-001-REQ】](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md#11-输入与所有权边界por-obj-001-req) |
+| 现金与不配置须进入多项资金用途比较且不得默认视为失败 | [HALPHA-POR-001](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md) | [2.1 边界要求【POR-BND-001-REQ】](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md#21-边界要求por-bnd-001-req) |
+| 多项资金用途比较不得提高资金使用上限、扩大范围、建立预留或形成自动再平衡责任 | [HALPHA-POR-001](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md) | [2.1 边界要求【POR-BND-001-REQ】](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md#21-边界要求por-bnd-001-req) |
+| 研究或交易计划候选、研究与计划（核心业务流程） | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [5【FLOW-TRADEPLAN-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#5-研究或交易计划候选研究与计划flow-tradeplan-001) |
+| 供复盘使用的交易计划事实 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [8【TRADEPLAN-RVW-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#8-供复盘使用的交易计划事实tradeplan-rvw-001) |
+| 交易计划的 L4 选择边界 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [12. L4 选择边界【TRADEPLAN-L4-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#12-l4-选择边界tradeplan-l4-001) |
+| 交易计划的输入输出边界 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [10【TRADEPLAN-HOF-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#10-明确的输入输出tradeplan-hof-001) |
+| 交易计划的实现契约 L3 必答项 | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [11【TRADEPLAN-L3-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#11-l3-必须精确定义tradeplan-l3-001) |
+| 失败闭合（交易计划） | [HALPHA-TRADEPLAN-001](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md) | [9【TRADEPLAN-FAL-001】](L2/HALPHA-TRADEPLAN-001-trade-plan-and-condition-lifecycle.zh-CN.md#9-失败闭合tradeplan-fal-001) |
+| 一次 `PlanActivation` 必须绑定不可变计划版本、代码策略、参数、机器授权和三轴额度；激活后无需逐动作确认，策略可以在用户离开后持续判断与形成动作提议 | [HALPHA-TRADEPLAN-002](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md) | [1. 对象与身份【TRADEPLAN-AUTO-OBJ-001】](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md#1-对象与身份tradeplan-auto-obj-001) |
+| 每次激活只允许一个交易周期：入场成交前可等待、撤单或移动挂单；首次入场成交后最终完全平仓并清理责任即永久结束，不自动再次开仓。同一不可变计划版本可在用户重新授权、重新分配额度后产生新的独立激活；内容变化才新建计划版本 | [HALPHA-TRADEPLAN-002](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md) | [3. 生命周期与不变量【TRADEPLAN-AUTO-LIF-001】](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md#3-生命周期与不变量tradeplan-auto-lif-001) |
+| 策略组件只能生成瞬态 `StrategyProposal`；TRADEPLAN 将其规范化为 `PlanEvent` 中的 `ProposedAction`，条件输入、判断结果和历史责任可嵌入既有记录，不另建六套物理记录族 | [HALPHA-TRADEPLAN-002](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md) | [2. 策略组件使用契约【TRADEPLAN-AUTO-CMP-001】](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md#2-策略组件使用契约tradeplan-auto-cmp-001) |
+| 用户控制必须分开停止新增风险、退出策略和用户接管；用户接管先冻结责任转移范围，Halpha 停止该激活自动写入且不自动撤单或平仓；范围内官方风险减少/关闭事实可帮助闭合，但不得冒充 Halpha 动作或确定损益 | [HALPHA-TRADEPLAN-002](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md) | [4. 三类用户控制【TRADEPLAN-AUTO-CTL-001】](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md#4-三类用户控制tradeplan-auto-ctl-001) |
+| 场所原生支持且经资格化的条件交给场所持续触发；不支持的条件由 Halpha 持续判断，成立后可形成市价、限价或场所条件单提议 | [HALPHA-TRADEPLAN-002](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md) | [5. 条件责任与场所委托【TRADEPLAN-AUTO-CND-001】](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md#5-条件责任与场所委托tradeplan-auto-cnd-001) |
+| 计划验证必须覆盖一次性周期、机器授权、重启恢复、重复提议、事实未知、最大损失、三类控制和用户接管 | [HALPHA-TRADEPLAN-002](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md) | [7. 最小验证契约【TRADEPLAN-AUTO-TST-001】](L3/HALPHA-TRADEPLAN-002-machine-authorized-one-shot-trade-plan.zh-CN.md#7-最小验证契约tradeplan-auto-tst-001) |
+| 多项资金用途比较只在多个真实资金用途、共同风险敞口或明确再平衡需要比较时进入业务流程 | [HALPHA-POR-001](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md) | [0【POR-SCP-001】](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md#0-唯一职责与进入条件por-scp-001) |
+| 用户完成比较后只向 TRADEPLAN 返回被选择计划、资金范围和主要限制 | [HALPHA-POR-001](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md) | [3.1 深化条件未满足时的人工交接要求【POR-HOF-001-REQ】](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md#31-深化条件未满足时的人工交接要求por-hof-001-req) |
+| POR 只有在真实用途反复出现、人工比较成为瓶颈且更小方案不足时才可深化 | [HALPHA-POR-001](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md) | [3.1 深化条件未满足时的人工交接要求【POR-HOF-001-REQ】](L2/HALPHA-POR-001-portfolio-and-capital-allocation.zh-CN.md#31-深化条件未满足时的人工交接要求por-hof-001-req) |
+
+## 执行、外部动作、保护与核对
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| EXE 的唯一入口（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [1.1【EXE-SCP-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#11-exe-的唯一入口exe-scp-001) |
+| 稳定执行语义须保留历史身份与责任链，并不得由相邻状态替代 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [稳定执行语义保存与责任要求【EXE-OBJ-001-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#稳定执行语义保存与责任要求exe-obj-001-req) |
+| 模拟执行不进入真实交易场所或账户变化处理过程（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [1.3 模拟执行不进入真实交易场所或账户变化处理过程【EXE-SIM-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#13-模拟执行不进入真实交易场所或账户变化处理过程exe-sim-001) |
+| 先持久化，后交易场所或账户变化（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [3.1【EXE-INT-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#31-先持久化后交易场所或账户变化exe-int-001) |
+| 跨越交易场所或账户变化分界前后须采用不同的唯一性、重试与恢复规则 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [交易场所或账户变化分界识别要求【EXE-BND-001-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#交易场所或账户变化分界识别要求exe-bnd-001-req) |
+| 同一写入范围只能有一个可验证执行器拥有控制权 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [4.2 执行唯一性要求【EXE-OWN-001-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#42-执行唯一性要求exe-own-001-req) |
+| 场所适配须绑定稳定身份、能力与故障语义 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [5.2 场所适配与身份要求【EXE-VEN-001-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#52-场所适配与身份要求exe-ven-001-req) |
+| 防重复提交必须绑定唯一待执行动作记录（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [6.1 防重复提交绑定待执行动作记录【EXE-IDM-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#61-防重复提交绑定待执行动作记录exe-idm-001) |
+| 无法确认外部结果时须进入执行结果未决并停止冲突写入 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [未决进入与处理要求【EXE-UNK-001-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#未决进入与处理要求exe-unk-001-req) |
+| 风险敞口保护任务须记录保护的建立、验证、维持、替换和明确移交 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [8.2 保护落实要求【EXE-PRT-002-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#82-保护落实要求exe-prt-002-req) |
+| 交易执行核对事项须持续推进到待执行动作、外部结果与资金责任闭合 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [核对推进要求【EXE-REC-001-REQ】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#核对推进要求exe-rec-001-req) |
+| 必须触发核对的时点（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [10.2【EXE-TRG-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#102-必须触发核对的时点exe-trg-001) |
+| 差异只能显式闭合（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [10.3【EXE-DIF-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#103-差异只能显式闭合exe-dif-001) |
+| 现成设施恢复进程，执行器恢复执行责任（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [12.1 现成设施恢复进程，执行器恢复执行责任【EXE-RCV-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#121-现成设施恢复进程执行器恢复执行责任exe-rcv-001) |
+| 用户接管后的执行控制返回 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [12.2【EXE-TKO-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#122-控制返回exe-tko-001) |
+| 动作责任闭合与结果材料（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [13【EXE-END-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#13-动作责任闭合与结果材料exe-end-001) |
+| 计划、资金使用限制与真实动作（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [5【ARC-ACT-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#5-计划资金使用限制与真实动作arc-act-001) |
+| 交易执行的 L4 选择边界 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [16. L4 选择边界【EXE-L4-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#16-l4-选择边界exe-l4-001) |
+| 交易执行的输入输出边界 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [14【EXE-HOF-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#14-明确的输入输出exe-hof-001) |
+| 交易执行的实现契约 L3 必答项 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [15【EXE-L3-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#15-l3-必须精确定义exe-l3-001) |
+| `PendingAction` 是唯一执行持久记录族；它必须保留不可变动作身份，并嵌入提交尝试、场所结果、保护和核对证据，使六项稳定责任仍可分别验证 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [1. PendingAction【EXE-AUTO-ACT-001】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#1-pendingactionexe-auto-act-001) |
+| `PendingAction` 只能在计划提议、CAP 检查和本地事务成功后建立；Executor 复核当前事实与授权后，通过唯一场所写链至多提交一次 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [2. 建立、提交与崩溃恢复【EXE-AUTO-SUB-001】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#2-建立提交与崩溃恢复exe-auto-sub-001) |
+| 真实写入不得盲目自动重试；超时、断线或结果不确定时保持执行结果未决，禁止重发，并以稳定身份查询和核对 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [2.3 不确定调用【EXE-AUTO-UNK-001-REQ】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#23-不确定调用exe-auto-unk-001-req) |
+| 条件单、撤单和跟随重挂只能来自固定计划规则与新 `PendingAction`；场所支持的条件可委托场所，不支持的条件由 Halpha 监测后再提交 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [3. 条件、撤单与重挂【EXE-AUTO-ORD-001】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#3-条件撤单与重挂exe-auto-ord-001) |
+| 每笔正成交形成的敞口都必须被经资格化的场所保护覆盖；只有场所全平保护能随仓位变化且可在重启后查询、取消和核对时才可复用同一身份，否则须建立可恢复的显式保护责任 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [4. 场所保护与风险减少【EXE-AUTO-PROT-001】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#4-场所保护与风险减少exe-auto-prot-001) |
+| P0 保护、TP1/TP2 和市场退出必须使用已核对的显式数量与 `reduce_only`；保护使用 StopMarket，禁止 `closePosition`、bracket/OCO，数量未知时不提交 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [p0_order_profiles](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L698) |
+| 最大允许损失触线后只允许保护、撤单、减仓和平仓，不允许新增风险；退出全部归属持仓后仍须核对闭环 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [5. 最大允许损失【EXE-AUTO-LOSS-001-REQ】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#5-最大允许损失exe-auto-loss-001-req) |
+| 框架 reconciliation 只能提供技术观察；Halpha 必须以持久动作、DAT 场所事实和稳定身份闭合订单、成交、持仓、保护、费用和资金费责任 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [6. Reconciliation 与闭环【EXE-AUTO-REC-001】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#6-reconciliation-与闭环exe-auto-rec-001) |
+| 启动恢复不得重放旧命令或复活失效授权；用户接管时冻结责任范围并停止 Halpha 自动写入。Halpha 动作无在途/未知、场所净仓位与开放订单均为零且无范围外冲突时可形成接管关闭，精确损益可以保持 UNKNOWN | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [7. 启动恢复与用户接管【EXE-AUTO-HO-001】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#7-启动恢复与用户接管exe-auto-ho-001) |
+| 执行验证必须覆盖动作唯一、崩溃边界、重复与未知、部分成交、保护、最大损失、核对、用户接管和重启 | [HALPHA-EXE-002](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md) | [9. 验证契约【EXE-AUTO-TST-001-REQ】](L3/HALPHA-EXE-002-single-venue-real-action-execution.zh-CN.md#9-验证契约exe-auto-tst-001-req) |
+| 接受、部分结果、取消与迟到结果（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [7【EXE-PRT-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#7-接受部分结果取消与迟到结果exe-prt-001) |
+| 交易执行失败时必须停止或收缩受影响写入，不得由限制反向授予动作 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [11. 失败时停止或收缩写入【EXE-FAL-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#11-失败时停止或收缩写入exe-fal-001) |
+| 外部人工活动与用户接管（交易执行） | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [9【EXE-EXT-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#9-外部人工活动与用户接管exe-ext-001) |
+| 研究、模拟与真实运行必须分离；真实动作只能经受控路径形成 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [6【FLOW-RUN-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#6-运行方式交易计划启用事件与真实动作flow-run-001) |
+| 拟执行动作资金与权限检查结果须与待执行动作记录在一次本地原子提交中共同形成 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [2【EXE-ING-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#2-拟执行动作资金与权限检查结果和待执行动作记录的本地提交exe-ing-001) |
+
+## 事实、数据、时间与状态
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 事实完整性（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [5.1【CON-TRU-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#51-事实完整性con-tru-001) |
+| 来源材料或主张、带来源的外部观察、可引用事实判断、可追溯派生结果与其他业务记录不是互斥对象类型，不得通过改标签改变证明力或所有权 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [信息关系使用要求【DAT-ROL-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#信息关系使用要求dat-rol-001-req) |
+| DAT 只拥有事实与质量，不得重写领域决定或业务状态 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [DAT 责任边界要求【DAT-SCP-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#dat-责任边界要求dat-scp-001-req) |
+| 账户、动作和结果记录须携带交易记录环境身份，模拟记录不得转为真实记录 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [交易记录环境身份使用要求【DAT-ENV-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#交易记录环境身份使用要求dat-env-001-req) |
+| Halpha 须按 DAT 规则维护足以解释真实账户、持仓、资金和外部动作责任的事实 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [2.2 事实覆盖与责任要求【DAT-TRU-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#22-事实覆盖与责任要求dat-tru-001-req) |
+| 影响真实资金的对象须使用稳定身份并显式版本化映射 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [3.1【DAT-IDN-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#31-对象身份dat-idn-001) |
+| 市场、账户与工具映射（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [3.2【DAT-MAP-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#32-市场账户与工具映射dat-map-001) |
+| 数据来源须按用途、对象、时间尺度、质量和故障行为选择 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [来源选择与使用要求【DAT-SRC-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#来源选择与使用要求dat-src-001-req) |
+| 正式数据输入须说明身份、来源、时间、单位、完整性和失败行为；具体字段进入 L3 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [4.2【DAT-CTR-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#42-正式数据输入需要说明的内容dat-ctr-001) |
+| 失败与来源切换（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [4.3【DAT-FBK-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#43-失败与来源切换dat-fbk-001) |
+| 会改变计划、资金与权限检查、场所命令、核对或结果解释的数值须保留单位、精度、来源、时点和不确定性 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [数值表示要求【DAT-VAL-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#数值表示要求dat-val-001-req) |
+| 发生、观察、可得、接收和处理时间须分别保存并处理异常 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [时间保存与异常处理要求【DAT-TIM-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#时间保存与异常处理要求dat-tim-001-req) |
+| 市场序列、周期与修订（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [5.3【DAT-SEQ-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#53-市场序列周期与修订dat-seq-001) |
+| 消费用途决定可用性（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [6.1【DAT-QLT-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#61-消费用途决定可用性dat-qlt-001) |
+| 所需数据缺失、不完整或连续性无法确认时不得补造事实，后续数据不得改写当时所知 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [处理与后续取得数据的使用要求【DAT-GAP-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#处理与后续取得数据的使用要求dat-gap-001-req) |
+| 关键事实未知时须限制依赖该事实的决定和自动动作 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [事实未知状态处理要求【DAT-UNK-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#事实未知状态处理要求dat-unk-001-req) |
+| 可引用事实判断须基于可追溯观察形成并按用途消费 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [可引用事实判断形成与使用要求【DAT-FCT-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#可引用事实判断形成与使用要求dat-fct-001-req) |
+| 事实判断修正须保留原值、原因、时点并传播到受影响结论 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [修正保存与传播要求【DAT-COR-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#修正保存与传播要求dat-cor-001-req) |
+| 按责任保留（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [9.1【DAT-RET-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#91-按责任保留dat-ret-001) |
+| 迁移与兼容（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [9.2【DAT-MIG-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#92-迁移与兼容dat-mig-001) |
+| 独立导出（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [9.3【DAT-EXP-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#93-独立导出dat-exp-001) |
+| 来源追溯关系须支持从来源材料和观察恢复到可追溯派生结果、可引用事实判断及修正 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [来源追溯与重建要求【DAT-LIN-001-REQ】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#来源追溯与重建要求dat-lin-001-req) |
+| 权威事实与数据的 L4 选择边界 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [13. L4 选择边界【DAT-L4-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#13-l4-选择边界dat-l4-001) |
+| 权威事实与数据的输入输出边界 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [11【DAT-HOF-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#11-明确的输入输出dat-hof-001) |
+| 权威事实与数据的实现契约 L3 必答项 | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [12【DAT-L3-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#12-l3-必须精确定义dat-l3-001) |
+| `VenueFact` 单一记录族必须覆盖机器授权闭环所需的市场、工具、账户、订单、成交、持仓、余额、费用和资金费事实，并保留稳定身份、来源与时间 | [HALPHA-DAT-002](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md) | [1. VenueFact 记录族【DAT-RT-FACT-001】](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md#1-venuefact-记录族dat-rt-fact-001) |
+| 普通 Halpha 活动只按 PendingAction UUID32 归属；接管后仅精确匹配冻结范围且只减少/关闭风险的场所事实可标为 `USER_TAKEOVER`，其来源保持场所事实且不形成 PendingAction 或确定策略损益 | [HALPHA-DAT-002](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md) | [2. 来源与激活归属【DAT-RT-ATTR-001】](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md#2-来源与激活归属dat-rt-attr-001) |
+| 每次事实消费必须声明用途与截止点；缺失、冲突、过期或无法归属时保持事实未知，并阻止依赖它的新风险动作 | [HALPHA-DAT-002](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md) | [3. 消费、未知与 cutoff【DAT-RT-USE-001】](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md#3-消费未知与-cutoffdat-rt-use-001) |
+| NautilusTrader 的行情、订单和账户投影是首选技术来源，但组件缓存不是产品事实权威；必要的官方只读查询只能补足未公开事实，不能形成第二写客户端或第二事实循环 | [HALPHA-DAT-002](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md) | [4. NautilusTrader 与只读补充【DAT-RT-NT-001】](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md#4-nautilustrader-与只读补充dat-rt-nt-001) |
+| B00 必须资格化 `/fapi/v1/income` 的 `incomeType=FUNDING_FEE` 查询、`(incomeType, tranId)` 去重、60 秒游标/重启和失败保持 `UNKNOWN`；仅在高层查询确有缺口时启用同包只读 GET 补充 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [dependency_qualification_gate.required_outputs（资金费）](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L1149) |
+| 重启与核对必须从持久 VenueFact、稳定来源身份和场所查询恢复，不得用本地预期、组件缓存或旧推送补造当前事实 | [HALPHA-DAT-002](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md) | [5. 恢复与闭环输入【DAT-RT-REC-001】](L3/HALPHA-DAT-002-single-venue-real-trade-facts.zh-CN.md#5-恢复与闭环输入dat-rt-rec-001) |
+| 权威状态必须落入关系型数据库，并保留来源、形成方式、证明力与所有权差异 | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [4【ARC-DAT-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#4-权威状态与数据arc-dat-001) |
+| 投影、缓存与外部交接（权威事实与数据） | [HALPHA-DAT-001](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md) | [10【DAT-PRJ-001】](L2/HALPHA-DAT-001-authoritative-facts-market-data-and-time.zh-CN.md#10-投影缓存与外部交接dat-prj-001) |
+
+## 结果、归因、反馈与学习
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| OUT 只负责形成简短复盘和可行动问题，不得改写计划、资金、执行、事实或交互历史 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [0.2 OUT 责任边界要求【OUT-SCP-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#02-out-责任边界要求out-scp-001-req) |
+| OUT 只建立复盘记录与复盘改进事项；归因和产品增量价值是记录内结论 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [1.2 对象责任边界【OUT-OBJ-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#12-对象责任边界out-obj-001-req) |
+| 复盘记录须固定计划版本、交易记录环境、账户、场所、评价时间、事实截止点和适用比较基准 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [2.1 复盘建立要求【OUT-CAS-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#21-复盘建立要求out-cas-001-req) |
+| 拒绝、不行动、等待后结束、条件未满足、事实未知、资金或权限拒绝、过期、取消和用户接管等非成交结果具有同等复盘资格 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [2.2 非成交结果【OUT-NTD-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#22-非成交结果out-ntd-001) |
+| 交易记录环境身份与结果不得混合；涉及真实资金时同时引用适用的 Halpha 真实资金操作权限 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [2.3 环境与结果不得混合【OUT-ENV-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#23-环境与结果不得混合out-env-001) |
+| 复盘记录按适用范围引用计划、资金、执行、事实、交互和实际影响结果的材料，不复制相邻领域完整状态 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [3.1 最小来源引用【OUT-EVD-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#31-最小来源引用out-evd-001) |
+| 评价必须区分各时点可知信息；后来修正改变结论时形成新复盘版本 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [3.2 事实截止点与修正【OUT-TIM-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#32-事实截止点与修正out-tim-001) |
+| 简短复盘须分开评价账户结果与计划、资金权限、执行事实、交互、系统维护五类质量范围，不得用盈利掩盖其他失败 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [4.1 分开评价要求【OUT-QLT-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#41-分开评价要求out-qlt-001-req) |
+| 最小归因须区分外部、计划或用户决定、执行/数据/交互/系统、混合贡献或证据不足，不估算伪精确比例 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [4.2 最小归因【OUT-ATT-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#42-最小归因out-att-001-req) |
+| 反事实只有事前明确且能按当时事实和真实成本重建时才可比较 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [4.3 反事实边界【OUT-CNT-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#43-反事实边界out-cnt-001) |
+| 产品增量价值由项目所有者评价，须比较事前选定且用户实际可用的替代方式并计入全部可归属成本 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [5.1 评价责任要求【OUT-VAL-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#51-评价责任要求out-val-001-req) |
+| 复盘改进事项须交给唯一目标语义所有者，不得由 OUT 改写领域规范 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [6.2 交接要求【OUT-FBK-001-REQ】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#62-交接要求out-fbk-001-req) |
+| 复盘记录修正与评价完成必须版本化且不改写历史或关闭相邻领域责任 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [7. 版本与评价完成【OUT-VER-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#7-版本与评价完成out-ver-001) |
+| 结果、学习与资金使用上限、范围变更（核心业务流程） | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [7【FLOW-LRN-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#7-结果学习与资金使用上限范围变更flow-lrn-001) |
+| OUT 必须明确消费的计划、资金、执行、事实和用户材料，以及交付的复盘记录和改进事项 | [HALPHA-OUT-001](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md) | [8. 明确输入与输出【OUT-HOF-001】](L2/HALPHA-OUT-001-outcomes-attribution-and-learning.zh-CN.md#8-明确输入与输出out-hof-001) |
+| 每条 `PlanActivation` 最多建立一份 `Review` 并引用其计划版本；同一计划版本的多次激活分别复盘，重复结束或闭合信号不得生成并行复盘 | [HALPHA-OUT-002](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md) | [1.1 唯一边界【OUT-RT-SCP-001-REQ】](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md#11-唯一边界out-rt-scp-001-req) |
+| Review 必须覆盖成交、非成交、结果未决和用户接管，并连接计划、额度、授权、事实、执行、成本与开放责任；未知不得填零或伪造成交 | [HALPHA-OUT-002](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md) | [2. Review 契约【OUT-RT-REV-001】](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md#2-review-契约out-rt-rev-001) |
+| 评价完成必须列明输入缺失、开放责任和改进交接；复盘失败、迟到或重试不得回滚激活额度释放，也不得关闭相邻领域责任 | [HALPHA-OUT-002](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md) | [2.4 评价完成【OUT-RT-END-001-REQ】](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md#24-评价完成out-rt-end-001-req) |
+| 复盘和改进交接必须幂等恢复，且不得建设自动因果归因、策略评分、排行榜或自动扩权反馈 | [HALPHA-OUT-002](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md) | [6. 明确不建设【OUT-RT-NON-001-REQ】](L3/HALPHA-OUT-002-one-shot-activation-review.zh-CN.md#6-明确不建设out-rt-non-001-req) |
+
+## 用户交互任务、交互与操作控制
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 流程定位与核心承诺（核心业务流程） | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [0.2 核心流程要求【FLOW-SUM-001-REQ】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#02-核心流程要求flow-sum-001-req) |
+| 外部工具与 Halpha 边界（核心业务流程） | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [3.2 Halpha 自持与交接要求【FLOW-TOOL-001-REQ】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#32-halpha-自持与交接要求flow-tool-001-req) |
+| 六类用户任务域须保持用户交互任务连续性，不得固化为页面模块 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [用户任务域使用要求【FLOW-UX-001-REQ】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#用户任务域使用要求flow-ux-001-req) |
+| 六项横向业务责任与五项纵向约束责任只组成十一项责任地图，不得推导十一项等深模块、服务或实现 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [9.2 责任地图使用与下位要求【FLOW-HOF-001-REQ】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#92-责任地图使用与下位要求flow-hof-001-req) |
+| UX的唯一职责（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [UX 责任边界要求【UX-SCP-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#ux-责任边界要求ux-scp-001-req) |
+| 交互对象须关联用户交互任务和领域对象，不得形成平行业务状态 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [交互对象使用要求【UX-OBJ-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#交互对象使用要求ux-obj-001-req) |
+| 所有 Halpha 交互入口须采用取得当前任务、形成预览、提交用户操作指令、返回处理回执并更新业务结果的同一闭环 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [命令闭环使用要求【UX-CMD-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#命令闭环使用要求ux-cmd-001-req) |
+| 跨任务域导航须保持上下文，并明确区分模拟与真实环境 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [跨任务域导航与环境区分要求【UX-WRK-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#跨任务域导航与环境区分要求ux-wrk-001-req) |
+| 用户待处理事项列表只收录需知悉或决定事项，并按时限与影响排序 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [待处理事项内容与排序要求【UX-ATT-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#待处理事项内容与排序要求ux-att-001-req) |
+| 不同使用场景须匹配可完成任务，不得在快速查看场景中压缩复杂决定 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [五种使用场景及交互要求【UX-SES-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#五种使用场景及交互要求ux-ses-001-req) |
+| 中断与恢复（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [2.3【UX-INT-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#23-中断与恢复ux-int-001) |
+| 结论、依据、行动和历史四层信息须逐层展开并可回到来源 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [信息层次使用要求【UX-INF-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#信息层次使用要求ux-inf-001-req) |
+| 界面须明确区分信息性质、对象、状态、来源、所有权和交易记录环境 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [3.2【UX-SEM-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#32-信息性质状态与所有权必须可辨ux-sem-001) |
+| 涉及资金的当前决定须呈现版本、资金影响、证据、未知、选项、时限与不响应结果 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [3.3【UX-COG-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#33-决策呈现ux-cog-001) |
+| 用户任务通知必须最小化、可追溯且不得冒充任务状态 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [5.1 用户任务通知【UX-NTF-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#51-用户任务通知ux-ntf-001) |
+| 不同决定保持不同命令（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [5.2【UX-CTL-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#52-不同决定保持不同命令ux-ctl-001) |
+| 跨工具交接体验（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [8.1【UX-HND-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#81-跨工具交接体验ux-hnd-001) |
+| 五类交互入口须共享任务、命令和从权威状态生成的只读视图，并遵守职责限制 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [五类交互入口及职责【UX-SRF-001-REQ】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#五类交互入口及职责ux-srf-001-req) |
+| AI 辅助交互（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [8.3【UX-AIX-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#83-ai-辅助交互ux-aix-001) |
+| 十一类重复使用场景须具备明确触发、责任路径与结束状态 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [2【FLOW-MAP-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#2-重复使用场景flow-map-001) |
+| UX 技术边界（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [7【ARC-UX-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#7-ux-技术边界arc-ux-001) |
+| 计划、模拟与价格—时间视图（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [7【UX-CHT-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#7-计划交易所模拟盘与价格时间视图ux-cht-001) |
+| 交互质量（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [10【UX-QLT-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#10-交互质量ux-qlt-001) |
+| 用户路径必须在有限注意力和中断后保持上下文连续 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [1【FLOW-TIM-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#1-有限注意力下的路径连续性flow-tim-001) |
+| 视觉与交互品味（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [4【UX-VIS-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#4-视觉与交互品味ux-vis-001) |
+| 用户交互的当前事实 L4 记录范围 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [13. L4 当前事实范围【UX-L4-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#13-l4-当前事实范围ux-l4-001) |
+| 用户交互的输入输出边界 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [11【UX-HOF-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#11-明确的输入输出ux-hof-001) |
+| 用户交互的实现契约 L3 必答项 | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [12【UX-L3-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#12-l3-必须精确定义ux-l3-001) |
+| 工作台直接采用 React、MUI、RJSF、TanStack Query 与 OpenAPI 生成客户端；浏览器状态只作可重建投影，不成为计划、资金、动作或回执权威 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [1. 组件实现方案【UX-AUTO-CMP-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#1-组件实现方案ux-auto-cmp-001) |
+| UX 只持久化 Task、Command、Receipt、Notification 四个记录族；命令接收、处理与场所结果必须分开表达 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [2. 四个交互记录族【UX-AUTO-REC-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#2-四个交互记录族ux-auto-rec-001) |
+| 工作台围绕计划、运行、资本、复盘和设置组织，并持续展示环境、账户、授权、停用、事实截止点和开放责任 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [3. 信息架构与路由【UX-AUTO-IA-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#3-信息架构与路由ux-auto-ia-001) |
+| 策略参数由 schema 驱动；激活复核必须明确代码版本、参数、账户/工具、机器授权、三轴额度、期限和失败行为 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [4. 计划配置与激活【UX-AUTO-PLAN-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#4-计划配置与激活ux-auto-plan-001) |
+| B04 必须从 schema 合法范围冻结用户实际选择的参数与 LONG/SHORT 方向；B05 只允许该精确 manifest 进入 LIVE，其他组合在分别资格化前仅支持 DEMO | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [historical_and_runtime_evidence.strategy_manifest.first_real_scope](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L1028) |
+| 运行页与唯一时间线必须区分计划决定、Halpha 回执、场所事实、结果未知、保护、核对与闭合，不得让前态冒充后态 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [5. 运行观察与时间线【UX-AUTO-RUN-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#5-运行观察与时间线ux-auto-run-001) |
+| 停止新增风险、退出策略和用户接管必须是三个独立命令；用户接管指向 Halpha 之外的官方路径，Halpha 不自动撤单或平仓 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [6. 三类控制与恢复【UX-AUTO-CTL-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#6-三类控制与恢复ux-auto-ctl-001) |
+| 资金和授权页面必须区分账户事实、全局边界、每激活三轴额度、机器授权与停止状态，不得把额度写成损失保证 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [7. 资金、授权与结束【UX-AUTO-CAP-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#7-资金授权与结束ux-auto-cap-001) |
+| P0 外部通知只使用邮件；通知不可成为动作触发、事实权威或邮件命令通道 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [8. Task 与邮件通知【UX-AUTO-NOT-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#8-task-与邮件通知ux-auto-not-001) |
+| 本地 Web 仍须落实 owner 认证、Session、CSRF、Host/Origin 与限速，并以真实浏览器覆盖激活、未知、控制、接管和恢复 | [HALPHA-UX-002](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md) | [9. Web 安全【UX-AUTO-SEC-001】](L3/HALPHA-UX-002-owner-trading-workbench-interaction-and-visual-standard.zh-CN.md#9-web-安全ux-auto-sec-001) |
+| 异常、停用与用户接管（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [6【UX-INC-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#6-异常停用与用户接管ux-inc-001) |
+| 有界定制（用户交互） | [HALPHA-UX-001](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md) | [9【UX-CUS-001】](L2/HALPHA-UX-001-owner-interaction-and-control-surfaces.zh-CN.md#9-有界定制ux-cus-001) |
+
+## 系统架构、集成与技术边界
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 工程目标与取舍（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [1.2 质量优先级要求【ARC-QLT-001-REQ】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#12-质量优先级要求arc-qlt-001-req) |
+| 总体架构须保持模块化单体、关系型权威状态与隔离的外部适配 | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [2.2 总体形态约束【ARC-TOP-001-REQ】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#22-总体形态约束arc-top-001-req) |
+| 稳定性技术选择与最小恢复（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [8.2 稳定性与恢复要求【ARC-OPS-001-REQ】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#82-稳定性与恢复要求arc-ops-001-req) |
+| AI 信任边界（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [6.1【CON-AI-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#61-ai-信任边界con-ai-001) |
+| 技术与数据主权（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [6.2【CON-SOV-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#62-技术与数据主权con-sov-001) |
+| 自动化非交易成本边界（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [6.3【CON-CST-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#63-自动化非交易成本边界con-cst-001) |
+| 身份、凭据与最小权限（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [6.4【CON-SEC-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#64-身份凭据与最小权限con-sec-001) |
+| 实际影响范围与简单隔离（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [6.5【CON-SEC-002】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#65-实际影响范围与简单隔离con-sec-002) |
+| SYS 只拥有系统组成与集成，不得重写业务领域含义 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [1.1 SYS 纵向责任要求【SYS-BND-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#11-sys-纵向责任要求sys-bnd-001-req) |
+| 模块边界只在稳定责任和真实消费者支持时建立 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [1.5 模块边界建立要求【SYS-BND-001-REQ-002】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#15-模块边界建立要求sys-bnd-001-req-002) |
+| 每项稳定含义须由单一模块承担语义责任并保持单向依赖 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [2.2 单一拥有模块要求【SYS-DEP-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#22-单一拥有模块要求sys-dep-001-req) |
+| 查询、命令、事件与后台责任须按交互语义选择，不得混用 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [应用交互使用要求【SYS-INT-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#应用交互使用要求sys-int-001-req) |
+| 本地提交、业务状态冲突处理与不能随本地事务回滚的外部操作须分界并由明确责任方负责 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [4.2 应用命令提交责任要求【SYS-TXN-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#42-应用命令提交责任要求sys-txn-001-req) |
+| 模块间交接方式须按一致性、时效、失败和恢复责任选择 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [模块间交接方式选择要求【SYS-HOF-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#模块间交接方式选择要求sys-hof-001-req) |
+| 后台任务须绑定对象版本、幂等身份、失败处理和恢复责任 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [6.2 后台任务契约要求【SYS-JOB-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#62-后台任务契约要求sys-job-001-req) |
+| 可重建只读视图与缓存不得成为业务权威来源 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [7.2 可重建只读视图与缓存使用要求【SYS-PRJ-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#72-可重建只读视图与缓存使用要求sys-prj-001-req) |
+| 外部适配器只翻译协议、身份和故障，不得拥有业务决定 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [适配器责任要求【SYS-ADP-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#适配器责任要求sys-adp-001-req) |
+| 配置须按语义所有者和生效方式使用，并保留兼容边界 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [配置使用与兼容要求【SYS-CFG-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#配置使用与兼容要求sys-cfg-001-req) |
+| 真实交易核心长期保持 `planning`、`venue_integration`、`capital`、`outcomes`、`user_workbench` 五个业务模块、App/Executor 两个进程和一个 PostgreSQL 产品事实权威 | [HALPHA-SYS-002](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md) | [1. 模块、进程与事实权威【SYS-AUTO-BND-001】](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md#1-模块进程与事实权威sys-auto-bnd-001) |
+| NautilusTrader 只装载于 Executor，不能成为第三进程、第二产品事实源、第二授权者或 App 的写入口 | [HALPHA-SYS-002](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md) | [1.3 NautilusTrader 使用边界【SYS-AUTO-NT-001-REQ】](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md#13-nautilustrader-使用边界sys-auto-nt-001-req) |
+| 每个未闭合且非用户接管的激活只有一个 HalphaStrategyAdapter；所有真实写必须经 HalphaCoordinator 和已持久 PendingAction 的唯一写链 | [HALPHA-SYS-002](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md) | [2. HalphaStrategyAdapter 与 HalphaCoordinator【SYS-AUTO-COORD-001】](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md#2-halphastrategyadapter-与-halphacoordinatorsys-auto-coord-001) |
+| 产品持久状态硬限制为 16 个记录族，持久工作器硬限制为 HalphaCoordinator 与 NotificationDispatcher 两类；框架内部循环不得伪装成新的 Halpha worker | [HALPHA-SYS-002](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md) | [3. 持久记录与工作器上限【SYS-AUTO-CPLX-001】](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md#3-持久记录与工作器上限sys-auto-cplx-001) |
+| 激活停止、退出与用户接管必须由各领域记录持久交接；重启只恢复仍有效责任，不重放旧命令或复活失效授权 | [HALPHA-SYS-002](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md) | [4. 激活、停止、退出与用户接管【SYS-AUTO-CTL-001】](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md#4-激活停止退出与用户接管sys-auto-ctl-001) |
+| Windows 单机运行必须拒绝 Executor 重叠启动、保持凭据隔离和可验证停止/恢复；不得增加微服务、消息总线、第二量化栈或第二真实写链 | [HALPHA-SYS-002](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md) | [5. Windows 单机生命周期【SYS-AUTO-WIN-001-REQ】](L3/HALPHA-SYS-002-real-trade-core-module-and-runtime-entity-boundaries.zh-CN.md#5-windows-单机生命周期sys-auto-win-001-req) |
+| AI 开发与技术策略（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [10【ARC-TEC-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#10-ai-开发与技术策略arc-tec-001) |
+| SYS 不变量（系统组成与集成） | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [13【SYS-INV-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#13-sys-不变量sys-inv-001) |
+| ARC 决定是否拆分；SYS 只约束拆分后的所有权、事务与交接边界 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [11【SYS-EVO-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#11-架构演进后的系统边界sys-evo-001) |
+| 复杂度预算与演进（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [11【ARC-CMP-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#11-复杂度预算与演进arc-cmp-001) |
+| SYS 只提供架构不变量，验证和发布判定由 ENG 负责 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [10【SYS-CHK-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#10-架构不变量与验证交接sys-chk-001) |
+| 架构结论（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [0【ARC-SUM-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#0-架构结论arc-sum-001) |
+| 身份与基本安全（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [9【ARC-SEC-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#9-身份与基本安全arc-sec-001) |
+| 外部适配与工具边界（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [6【ARC-ADP-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#6-外部适配与工具边界arc-adp-001) |
+| 系统组成结论（系统组成与集成） | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [0【SYS-SUM-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#0-系统组成结论sys-sum-001) |
+| 系统组成与集成的当前事实 L4 记录范围 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [14【SYS-L4-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#14-l4-当前事实sys-l4-001) |
+| 业务模块与依赖（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [3【ARC-BND-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#3-业务模块与依赖arc-bnd-001) |
+| 与相邻领域的固定边界（系统组成与集成） | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [12【SYS-HND-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#12-与相邻领域的固定边界sys-hnd-001) |
+
+## 工程开发、稳定运行与恢复
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 稳定性优先来自简单选择，动作正确性由核心领域保证（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [稳定运行的实现要求【CON-OPS-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#稳定运行的实现要求con-ops-001-req) |
+| 简单停止与可见降级（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [7.2【CON-OPS-002】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#72-简单停止与可见降级con-ops-002) |
+| 恢复与独立最终控制（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [7.3【CON-OPS-003】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#73-恢复与独立最终控制con-ops-003) |
+| 停用、退出与资料保留（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [7.4【CON-LIF-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#74-停用退出与资料保留con-lif-001) |
+| 项目所有者可验证复杂度（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [8.1【CON-CMP-001】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#81-项目所有者可验证复杂度con-cmp-001) |
+| 真实消费者与纵向闭环（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [8.2【CON-CMP-002】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#82-真实消费者与纵向闭环con-cmp-002) |
+| 真实动作的最低正确性与控制要求（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [真实动作最低要求【CON-CMP-003-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#真实动作最低要求con-cmp-003-req) |
+| 技术引入门槛（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [8.4【CON-CMP-004】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#84-技术引入门槛con-cmp-004) |
+| AI 驱动开发边界（项目宪法） | [HALPHA-CON-001](L0/HALPHA-CON-001-project-constitution.zh-CN.md) | [AI 驱动开发要求【CON-DEV-001-REQ】](L0/HALPHA-CON-001-project-constitution.zh-CN.md#ai-驱动开发要求con-dev-001-req) |
+| 变更须按影响级别选择验证、证据和发布强度 | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [2.2 分级与验证要求【ENG-IMP-001-REQ】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#22-分级与验证要求eng-imp-001-req) |
+| 运行实体、宿主、进程、资源、运行时配置、秘密注入、启动停止、备份范围和恢复前置边界由 SYS 统一规定 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [1.1 SYS 纵向责任要求【SYS-BND-001-REQ】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#11-sys-纵向责任要求sys-bnd-001-req) |
+| AI 开发的分级验证策略 | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [5【ENG-TST-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#5-验证策略eng-tst-001) |
+| AI 开发与工程质量的 L3 设计与 L4 记录交接 | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [11【ENG-HOF-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#11-l3-与-l4-交接eng-hof-001) |
+| AI、自动化、开发者与项目所有者（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [开发者与项目所有者边界要求【ENG-AID-001-REQ】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#开发者与项目所有者边界要求eng-aid-001-req) |
+| 定位与复杂度预算（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [0【ENG-SCP-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#0-定位与复杂度预算eng-scp-001) |
+| 工程反馈与经验保留 | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [9【ENG-LRN-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#9-反馈与经验eng-lrn-001) |
+| 构建、发布与回退（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [7【ENG-REL-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#7-构建发布与回退eng-rel-001) |
+| 启动、停止、重启和备份还原不得授予或扩大业务权限或复活旧责任；持久机器授权只有在 CAP、DAT 与 EXE 重新检查后才可继续 | [HALPHA-SYS-001](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md) | [14. SYS 不变量【SYS-INV-001】](L2/HALPHA-SYS-001-system-composition-and-integration.zh-CN.md#14-sys-不变量sys-inv-001) |
+| 接入、真实验证、故障与退出（核心业务流程） | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [8【FLOW-REC-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#8-接入真实验证故障与退出flow-rec-001) |
+| 真实验证流程须分别记录验证目标、真实环境、资金范围、授权路径、停止条件和结果证据；真实动作仍须引用适用交易计划，或保留允许例外所需的固定决定或指令 | [HALPHA-FLOW-001](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md) | [8.2 真实验证流程【FLOW-REC-001】](L1/HALPHA-FLOW-001-core-workflows-and-user-journeys.zh-CN.md#82-真实验证流程) |
+| 评审与接受（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [6【ENG-REV-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#6-评审与接受eng-rev-001) |
+| 真实写凭据只能由唯一外部写入执行器消费，交互、查询、模拟和普通任务不得取得真实写能力 | [HALPHA-EXE-001](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md) | [4. 唯一外部写入执行器【EXE-OWN-001】](L2/HALPHA-EXE-001-execution-protection-reconciliation-and-recovery.zh-CN.md#4-唯一外部写入执行器exe-own-001) |
+| 稳定性优先来自成熟技术、简单结构和业务正确性，不默认建设专门稳定性平台 | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [8.2 稳定性与恢复要求【ARC-OPS-001-REQ】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#82-稳定性与恢复要求arc-ops-001-req) |
+| 小切片与并行（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [4【ENG-WRK-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#4-小切片与并行eng-wrk-001) |
+| 依赖与技术选择（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [8【ENG-DEP-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#8-依赖与技术选择eng-dep-001) |
+| 成熟组件完整承担的通用能力不得重写；可妥协差异按组件公开行为调整，Halpha 只保留一次激活、资本归属、动作唯一、用户控制和事实权威等最小产品语义 | [HALPHA-ENG-002](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md) | [1. 第三方优先决策【ENG-AUTO-DEP-001】](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md#1-第三方优先决策eng-auto-dep-001) |
+| NautilusTrader 是唯一实时、回测、指标、订单模型和 Binance 适配量化栈；实时与回测共用策略提议边界，不保留自研行情、指标、撮合、订单状态机或第二连接 fallback | [HALPHA-ENG-002](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md) | [2. NautilusTrader 使用契约【ENG-AUTO-NTL-001】](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md#2-nautilustrader-使用契约eng-auto-ntl-001) |
+| FastAPI/Pydantic/SQLAlchemy/PostgreSQL 与 React/MUI/RJSF/TanStack Query/OpenAPI 组件承担通用 App、数据、表单和客户端能力，Halpha 不复制其内部实现 | [HALPHA-ENG-002](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md) | [3. App 与数据技术契约【ENG-AUTO-APP-001】](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md#3-app-与数据技术契约eng-auto-app-001) |
+| Windows 宿主、秘密、日志、邮件、备份、构建和迁移优先复用已列组件与操作系统能力；组件资格失败必须停止，不得自动切换第二实现 | [HALPHA-ENG-002](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md) | [5. Windows 运行、备份与构建【ENG-AUTO-BLD-001】](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md#5-windows-运行备份与构建eng-auto-bld-001) |
+| NautilusTrader 1.230.0 的官方 Windows 支持边界是 Windows Server 2022+ x86_64 与 Python 3.12–3.14；非官方目标平台须由 B00 先证明可运行，否则停止后续建设并修订 L4，不得因 wheel 存在推定受支持 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [component_selection.quant_stack.nautilus_trader.platform_caveat](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L275) |
+| 组件、许可证、精度、身份、重启、升级和退出必须在当前固定版本上资格化；未知或不兼容时保持真实写禁用 | [HALPHA-ENG-002](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md) | [7. 验收契约【ENG-AUTO-TST-001】](L3/HALPHA-ENG-002-real-trade-core-technology-stack-and-build-boundaries.zh-CN.md#7-验收契约eng-auto-tst-001) |
+| 与相邻领域的边界（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [10【ENG-BND-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#10-与相邻领域的边界eng-bnd-001) |
+| 只有重复实际故障且简化结构、更换组件、修正配置和现成工具都不足时，才增加具有当前消费者的最小运行能力切片 | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [8.2 稳定性与恢复要求【ARC-OPS-001-REQ】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#82-稳定性与恢复要求arc-ops-001-req) |
+| 构建、迁移、发布、回退和部署说明由 ENG 规定；当前主机、配置、命令和验证结果由 L4 记录 | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [7. 构建、发布与回退【ENG-REL-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#7-构建发布与回退eng-rel-001) |
+| 最小开发闭环（AI 开发与工程质量） | [HALPHA-ENG-001](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md) | [3【ENG-LCY-001】](L2/HALPHA-ENG-001-ai-development-and-engineering-quality.zh-CN.md#3-最小开发闭环eng-lcy-001) |
+| 当前组件精确版本、配置、主机资格和实现证据只由 L4/BuildManifest 记录，不建立平行运行权威 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [component_selection](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L250) |
+
+## 当前建设计划与下位交接
+
+| 要求或限制 | 文档 | 章节 |
+|---|---|---|
+| 十一项责任只保留长期架构关注点，当前深度和投入只由 L4 记录 | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [12【ARC-L2D-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#12-十一项责任的长期架构关注点arc-l2d-001) |
+| 下位设计清单（总体技术架构） | [HALPHA-ARC-001](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md) | [13【ARC-HOF-001】](L1/HALPHA-ARC-001-technical-requirements-and-architecture.zh-CN.md#13-下位设计清单arc-hof-001) |
+| 当前只展开 P0：以本地 Web 工作台、代码策略、一次机器授权激活和 Binance USDⓈ-M 永续闭合真实下单、保护、退出、核对、复盘与额度释放 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [planning_horizon](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L38) |
+| L0–L2 核心语义严格遵守，L3 长期边界保持稳定；L4 精确参数、配置、接线、探针和包内顺序可按实现证据调整，核心方向基本无误时停止设计修正 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [implementation_adaptation_rule](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L48) |
+| 每激活只运行一个交易周期，绑定机器授权与三轴互斥额度；场所支持的条件交给场所，不支持的条件由 Halpha 持续监测，用户可停止新增风险、退出策略或用户接管 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [owner_confirmed_p0_requirements](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L79) |
+| 先资格化成熟组件并按其实际能力调整可妥协细节；同一能力不得保留组件与自研平行 fallback，资格失败只阻断并修订 L4 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [third_party_first_policy](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L131) |
+| 修复后硬上限为 16 个权威持久记录族、2 类持久 worker、5 个业务模块、2 个运行进程、1 个数据库产品、1 条授权路径、1 条真实场所写链和 1 个独立发布制品组，且不新增通用平台 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [complexity_budget.after_hard_limits](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L150) |
+| D00 已完成正式化并标记 `ACCEPTED_FOR_B00`；该门不产生代码、依赖安装或外部写 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [design_formalization_gate](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L1105) |
+| 第一项建设是 B00 固定 NautilusTrader、Binance Demo 与目标 Windows 资格；B00 通过前真实写保持禁用 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [dependency_qualification_gate](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L1117) |
+| P0 核心设计入口已就绪；开始 B00 前只剩目标 Windows 非秘密信息与用户本地注入的 Binance Demo credential reference，不再把 L4 非核心细节作为设计阻塞 | [HALPHA-PLAN-001](L4/HALPHA-PLAN-001-current-construction-plan.yaml) | [definition_of_ready_to_start_p0](L4/HALPHA-PLAN-001-current-construction-plan.yaml#L1262) |
+
+## 维护规则
+
+- 新增或修改会改变项目行为、责任、边界、失败处理或验收的规范时，更新正文与本索引。
+- 要求段只写规范结论及其适用条件；稳定对象含义移入 `-DEF`，问题背景和取舍理由移入 `-RAT`。
+- 新增记录或生成数据的要求必须指出实际消费者以及它会改变的决定、责任或失败处理；没有消费者的字段和记录行为从 L2 删除。
+- 同一语义锚点或 L4 键路径不得同时出现在概念、要求、决策与依据索引；直接引用同一上位要求不新增重复条目。
+- 章节标题、编号或锚点变化时同步修正链接；索引摘要不缩小、扩大或替代正文要求。

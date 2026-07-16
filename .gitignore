@@ -1,0 +1,87 @@
+# Python bytecode and tool caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.pyre/
+.tox/
+.nox/
+.dmypy.json
+dmypy.json
+
+# Python virtual environments and packaging output
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+wheels/
+cython_debug/
+
+# Frontend dependencies and Vite output
+node_modules/
+.vite/
+vite.config.*.timestamp-*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test and coverage output
+.coverage
+.coverage.*
+coverage/
+coverage.xml
+htmlcov/
+.nyc_output/
+playwright-report/
+blob-report/
+test-results/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+.pgpass
+pgpass.conf
+*.pem
+*.p12
+*.pfx
+/secrets/
+/.secrets/
+
+# Runtime files and local database backups
+*.log
+*.pid
+*.pid.lock
+/logs/
+/tmp/
+/temp/
+/backups/
+
+# Editors and IDEs
+.idea/
+.vscode/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
