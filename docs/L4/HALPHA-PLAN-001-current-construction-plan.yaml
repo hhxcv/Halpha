@@ -5,14 +5,14 @@ status: ACCEPTED
 language: zh-CN
 as_of: 2026-07-18
 accepted_by: Halpha 项目所有者
-accepted_at: 2026-07-18T20:13:31+08:00
-supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T15:42:30+08:00
-document_update_reason: 将已接受的独立 R00 启动治理提交绑定为干净 base_revision 与 accepted_design_set_and_basis 输入身份，冻结 R00 包契约并开放实施资格；不启动 R00、不改变 B04/B05 或三项真实写门
-state_updated_at: 2026-07-18T20:13:31+08:00
+accepted_at: 2026-07-18T23:18:42+08:00
+supersedes: HALPHA-PLAN-001 ACCEPTED 2026-07-18T20:13:31+08:00
+document_update_reason: 接受可信 AI 研究工程边界简化，删除 R00 的安全 sandbox、父进程/worker、第二研究 venv、observation/intent 与专用 IPC；保留按错误成本选择的审查、校验、重演、holdout、人工最终审查和产品内重新资格化
+state_updated_at: 2026-07-18T23:18:42+08:00
 state_update_reason: >-
-  独立 R00 启动治理已形成干净提交 113bbe9c8a6afbc0cc6ec37663677444029da5e8；该提交同时绑定为 R00 base_revision 与 accepted_design_set_and_basis 输入身份，
-  R00 完整包契约已冻结且 eligibility=ELIGIBLE。研究目录、运行、venv、锁和资格证据仍未创建，R00 status 保持 NOT_STARTED；后续只能从包含本合同绑定的干净提交建立独立 worktree/branch 开始。
-  B04 完成仍只约束 R01 完成、research_policy 冻结和 confirmation_eligible_not_before 固定；B04/B05 状态、证据和三项真实写门均不因本次合同绑定改变。
+  HALPHA-RSCH-TRUST-SIMPLIFICATION-001 协调版本集已经接受；B04/B05、P0 build_order、BuildManifest 和三项真实写门不变。
+  R00 的方向授权和 depends_on=[] 保持存在，但既有 ac5270fc344ea4502c6238a13857fc0573aa3f01 / 113bbe9c8a6afbc0cc6ec37663677444029da5e8 绑定只属于被替代合同；
+  简化 R00 必须重新绑定包含本接受文本的干净 base_revision 与 accepted_design_set_and_basis 输入身份并冻结完整包合同后方可继续，当前保持 NOT_STARTED 与阻断。
 
 accepted_design_set:
   upper_level:
@@ -31,7 +31,7 @@ accepted_design_set:
     - HALPHA-SYS-001@v1.6.0
     - HALPHA-OUT-001@v1.5.0
     - HALPHA-UX-001@v1.6.0
-    - HALPHA-ENG-001@v1.6.0
+    - HALPHA-ENG-001@v1.7.0
   l3:
     - HALPHA-ALP-002@v0.5.0
     - HALPHA-TRADEPLAN-002@v0.10.0
@@ -42,8 +42,8 @@ accepted_design_set:
     - HALPHA-UX-002@v0.11.0
     - HALPHA-SYS-002@v0.9.0
     - HALPHA-ENG-002@v0.8.0
-    - HALPHA-ALP-003@v0.3.0
-    - HALPHA-ENG-003@v0.3.0
+    - HALPHA-ALP-003@v0.4.0
+    - HALPHA-ENG-003@v0.4.0
 
 planning_horizon: >-
   当前只展开 P0。P0 交付一个带基本 Web 工作台的最小真实交易闭环：用户选择代码策略、配置参数和互斥额度，
@@ -51,7 +51,7 @@ planning_horizon: >-
   首个 LIVE 闭环从激活到上述条件成立必须由用户主动在线监控，并已验证最小操作入口和 Binance 官方入口可用；P0 不宣称无人在线故障自动恢复。
   首个闭环使用 Binance USDⓈ-M 永续和 ONE_SHOT_DONCHIAN_ATR_BREAKOUT。P0 使用 MANUAL_PLAN_RESUME：Executor、主机或 PostgreSQL 写连续性丢失后开放激活先暂停，
   只读核对后由用户明确选择恢复激活、退出策略或用户接管；长期严格证据自动续行不在 P0 实现。除本计划显式登记、对 P0 产品闭环保持零 effects 的独立研究轨外，P0 之外产品模块暂不设计。
-  R00 在自身包契约冻结后可通过独立 worktree/branch 与 B04/B05 包级并行；R01 可在 R00 完成后开始，但完成、政策冻结和 confirmation 边界必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。研究轨不属于 P0 产品运行时；R03 仍等待 R02、B05、V01 与项目所有者证据选择。本计划不定义 P1–P3；上位设计保留交互形态可演进性不构成任何阶段的建设承诺或当前支持。
+  R00 按本计划重新绑定干净 base_revision 与输入身份并冻结完整包合同后，可通过独立 worktree/branch 与 B04/B05 包级并行；R01 可在 R00 完成后开始，但完成、政策冻结和 confirmation 边界必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。研究轨不属于 P0 产品运行时；R03 仍等待 R02、B05、V01 与项目所有者证据选择。本计划不定义 P1–P3；上位设计保留交互形态可演进性不构成任何阶段的建设承诺或当前支持。
 
 stable_contract_references:
   rule: >-
@@ -65,7 +65,8 @@ stable_contract_references:
   command_and_receipt: HALPHA-UX-002@v0.11.0
   records_processes_and_transactions: HALPHA-SYS-002@v0.9.0#SYS-AUTO-SCH-001、#SYS-AUTO-WORK-001
   build_and_component_boundary: HALPHA-ENG-002@v0.8.0
-  research_and_parallel_integration: HALPHA-ALP-003@v0.3.0、HALPHA-ENG-003@v0.3.0
+  engineering_quality: HALPHA-ENG-001@v1.7.0
+  research_and_parallel_integration: HALPHA-ALP-003@v0.4.0、HALPHA-ENG-003@v0.4.0
   document_version_history: HALPHA-DOC-001@v1.11.0#DOC-LOC-001
   l4_change_rule: 稳定契约变化先修订其 L2/L3 所有者；L4 只能选择、收缩或记录当前事实，不得复制后再局部改写。
   live_write_gate_representation: L4 以工程能力、B05 包授权和运行时开门三个机器字段记录当前状态；它们不是新的领域权限对象，不能互相替代或覆盖上述稳定权限原则
@@ -86,8 +87,8 @@ basis:
     - HALPHA-OUT-001@v1.5.0
     - HALPHA-UX-001@v1.6.0
     - HALPHA-SYS-001@v1.6.0
-    - HALPHA-ENG-001@v1.6.0
-  owner_confirmed_at: 2026-07-18T09:59:00+08:00
+    - HALPHA-ENG-001@v1.7.0
+  owner_confirmed_at: 2026-07-18T23:18:42+08:00
   current_p0_selections:
     strategy_configuration: 代码策略加 JSON Schema 参数；不启用 DSL、代码上传或可视化编排
     target_host: Windows 10
@@ -108,7 +109,7 @@ basis:
 current_state:
   current_stage: P0
   design_status: ALIGNED
-  research_track_status: R00_ELIGIBLE_CONTRACT_FROZEN_NOT_STARTED
+  research_track_status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE_NOT_STARTED
   implementation_status: B00 的 14/14 required outputs 资格证据保持有效；D00 已对齐，B01–B03 已完成；B04 的本地产品与机制证据（包括 LIVE_READ_ONLY 能力裁剪路径）已资格化并由 B04 总结聚合，72 小时 Windows 正在观察，LIVE_READ_ONLY 连续外部观察与实际 SMTP 尚未满足；BuildManifest v2 明确保持 INCOMPLETE，B05 继续按包依赖推进
   first_authorized_work: B04
   live_write_build_capability: NOT_QUALIFIED
@@ -1196,7 +1197,7 @@ dependency_qualification_gate:
     runtime_real_write_gate: CLOSED；B00 资格化不替代 D00、B01–B04、B05 包授权或运行时用户授权
 
 research_track:
-  status: ACCEPTED_NOT_CREATED
+  status: ACCEPTED_SIMPLIFIED_DESIGN_R00_REQUIRES_REFREEZE
   current_package: R00
   owner_authorization:
     status: AUTHORIZED
@@ -1206,15 +1207,15 @@ research_track:
     scope: R00–R02 独立研究建设与试点；不授权 R03、产品变更、真实资金动作或任何真实写门变化
   r00_candidate_inputs:
     status: FROZEN_FOR_QUALIFICATION
-    identity: r00-candidate-inputs@v1.0.0
-    meaning: 本节只固定 R00 必须尝试资格化的候选选择，不声明 lock、sandbox、平台支持、许可证或运行边界已经 QUALIFIED
+    identity: r00-candidate-inputs@v2.0.0
+    meaning: 本节固定 R00 必须尝试资格化的候选选择，不声明研究锁、组件、平台或运行边界已经 QUALIFIED；R00 只资格化单一研究环境、固定 harness、无状态 CLI 与研究证据边界，不资格化安全 sandbox 或 AI 敌对代码隔离
     target_platform: Windows 10 Pro 22H2、10.0.19045、x64；CPython 3.13.14
     resolution_probe:
       observed_at: 2026-07-18T15:42:30+08:00
       source: https://pypi.org/simple/
       method: 'CPython 3.13.14 venv 中对全部精确直接依赖执行 pip 26.1.2 dry-run、ignore-installed 与 only-binary=:all:'
       result: CANDIDATE_WHEEL_CLOSURE_RESOLVED_NOT_QUALIFIED
-    trusted_parent_direct_dependencies:
+    research_direct_dependencies:
       python: 3.13.14
       pip: 26.1.2
       pip_tools: 7.5.3
@@ -1230,21 +1231,12 @@ research_track:
       jupytext: 1.19.4
       pytest: 9.1.1
       hypothesis: 6.156.6
-    worker_direct_dependency_subset:
-      python: 3.13.14
-      numpy: 2.5.1
-      pydantic: 2.13.4
-      exclusion: 不安装或挂载 NautilusTrader、runner、harness、evidence、数据文件、Jupyter、Plotly、SciPy、pandas、PyArrow、Pandera、产品包或产品配置
-    sandbox_selection:
-      candidate: WINDOWS_APPCONTAINER_JOB_OBJECT_NATIVE_LAUNCHER
-      provider_identity: Microsoft Windows 10.0.19045 built-in AppContainer and Job Object APIs
-      launcher_implementation: 可信父环境内的薄 Python 3.13.14 标准库 ctypes launcher；不实现 Python 语言沙箱，不安装 driver、service、VM、image、distro 或第四种依赖定义
-      launch_boundary: 无 capability AppContainer profile；STARTUPINFOEX security capabilities；suspended worker 在 resume 前加入禁止 breakaway、kill-on-close 的 Job Object
-      ipc_candidate: 继承匿名管道；每帧为 4-byte unsigned big-endian 长度头加无 BOM UTF-8 规范 JSON；先验最大 65536 bytes；stdout 只允许协议帧，stderr 并发有界排空
-      required_qualification: 文件与 reparse point、网络、环境/WinVault 秘密、父进程与引擎、子进程/进程树、CPU/内存/墙钟、partial frame/EOF/BrokenPipe/超限前分配、终止与零残留恶意 fixture 全部通过
-      current_qualification: NOT_QUALIFIED
-      host_observation: Windows Sandbox optional feature 当前为 DISABLED，且因缺少直接双向 stdio 契约不作为本候选；未执行系统功能启用、安装或重启
-      failure_result: 只允许公开、合成或脱敏材料 discovery；完整数据、confirmation holdout 和最终候选资格保持 DISABLED
+    ai_trust_and_error_control:
+      trust_principle: 开发者所使用的 AI 不会作恶并会尽最大努力保障工作正确，但可能理解错误、遗漏、误用工具或产生实现缺陷
+      control_selection: 按场景重要程度、潜在错误成本和可恢复性选择审查、schema、静态检查、测试、独立重演、holdout、证据复核与产品内重新资格化
+      proportionality_rule: 只有新增控制降低的预期风险高于其实现、运行、升级和退出成本时才采用；不使用成本投入明显高于风险价值的隔离手段
+      explicit_non_selections: [SECURITY_SANDBOX, WINDOWS_APPCONTAINER, WINDOWS_JOB_OBJECT_AS_SECURITY_BOUNDARY, PARENT_WORKER_SPLIT, SECOND_RESEARCH_VENV, OBSERVATION_INTENT_PROTOCOL, FRAMED_STDIO_IPC, DEDICATED_LAUNCHER]
+      unchanged_limits: 可信不授予产品数据库写角色、DEMO/LIVE 写凭据、场所写端口、真实动作权限或扩大任务/路径/秘密/供应商数据处理范围
   research_policy:
     status: NOT_FROZEN
     policy_ref: null
@@ -1264,8 +1256,8 @@ research_track:
     qualification: NOT_QUALIFIED
     execution_state: STOPPED
     rule: >-
-      R00 可与 B04/B05 保持包级并行，R01 可在 R00 完成后与 B04 的剩余观察并行，但不能在 B04 最终数据边界前完成；资源隔离未资格化且 runtime_real_write_gate=OPEN 时，研究计算必须为 PAUSED 或 STOPPED。
-      资格化只能来自 R00 在目标宿主上的 CPU、内存、墙钟、进程树与零残留证据，不建立资源调度服务。
+      R00 可与 B04/B05 保持包级并行，R01 可在 R00 完成后与 B04 的剩余观察并行，但不能在 B04 最终数据边界前完成。研究使用普通 CPU、内存、墙钟和输入输出预算；
+      若与交易产品资源或开放责任竞争，研究必须降低并发、暂停或停止。R00 只验证预算停止、进程退出和可删除输出，不把这些措施表述为恶意源码安全隔离，也不建立资源调度服务。
   preexisting_data_boundary:
     identity_rule: R00/R01 只接受 DAT-qualified 不可变 data_snapshot_ref 与 UTC `[start_inclusive,end_exclusive)` 半开区间；不建立 lineage 自动归一化、数据目录服务或第二事实权威
     historical_holdout:
@@ -1401,33 +1393,35 @@ construction_packages:
     failure: 任一事实、保护、费用、资金费、写结果或闭合未知时不声称 P0 通过；保持退出/接管责任并停止后续真实激活
   R00:
     id: R00
-    name: 研究栈、CLI 与 AI 边界资格化
-    eligibility: ELIGIBLE
+    name: 研究栈、CLI 与可信 AI 防错边界资格化
+    eligibility: BLOCKED_UNTIL_NEW_BASE_AND_ACCEPTED_DESIGN_INPUT_BOUND
     status: NOT_STARTED
-    contract_state: FROZEN
+    contract_state: REQUIRES_REFREEZE
     depends_on: []
     semantic_scopes:
-      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-DEP-004-REQ}
-      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-AICLI-001-REQ}
-      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-ISO-002-REQ}
-    base_revision: 113bbe9c8a6afbc0cc6ec37663677444029da5e8
+      - {owner: HALPHA-ALP-003@v0.4.0, anchor: ALP-RSCH-DEP-004-REQ}
+      - {owner: HALPHA-ENG-003@v0.4.0, anchor: ENG-MONO-AICLI-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.4.0, anchor: ENG-MONO-ISO-002-REQ}
+    base_revision: null
     owned_paths: [research/**]
     contracts:
       inputs:
-        - {ref: accepted_design_set_and_basis, identity: 113bbe9c8a6afbc0cc6ec37663677444029da5e8}
-        - {ref: research_track.r00_candidate_inputs, identity: r00-candidate-inputs@v1.0.0}
+        - {ref: accepted_design_set_and_basis, identity: null}
+        - {ref: research_track.r00_candidate_inputs, identity: r00-candidate-inputs@v2.0.0}
       outputs:
-        - {ref: research_workspace_cli_harness_and_sandbox_qualification}
+        - {ref: research_workspace_cli_harness_and_evidence_boundary_qualification}
     effects: {migration: NONE, runtime: NONE, release: NONE, authority: NONE, credential: NONE}
     integration_gate: R00_SELECTIVE_VALIDATION_AND_PATH_OWNERSHIP_GATE
     authorization_ref: OWNER-DIRECTION-20260718-R00-INDEPENDENT-START
     scope:
-      - 建立独立 `research/**` 工作区、研究 Python 锁、可信父进程与隔离 worker 两个可删除物理 venv
-      - 建立固定 ResearchStrategyHarness、Pydantic 研究政策/observation/intent schema 与 schema/validate/run/gate/freeze/verify 六个无状态 CLI 子命令
-      - 在目标 Windows 上资格化模型外沙箱、stdio framing、文件/网络/秘密/进程树/资源限制和零残留；失败时完整数据、confirmation 和最终候选能力保持禁用
+      - 建立独立 `research/**` 工作区、唯一研究 Python 锁和每个 worktree 一套可删除研究 venv
+      - 建立直接装载已提交 study 的固定 ResearchStrategyHarness、Pydantic 研究政策/任务/用例/请求/回执/索引/证据 schema 与 schema/validate/run/gate/freeze/verify 六个无状态 CLI 子命令
+      - 资格化路径、schema、数据时点、依赖、预算停止、独立进程/输出目录、重演、证据完整性和无产品/真实写 effects；不建立或资格化安全 sandbox、父进程/worker、第二研究 venv、observation/intent、framed stdio 或专用 launcher
     exit_evidence:
       requirements:
-        - 固定版本、锁摘要、许可证、父/worker 安装闭包、sys.path/DLL 根、sandbox/launcher/IPC 与恶意 fixture 证据可重演
+        - 固定版本、锁摘要、许可证、单一研究 venv 安装闭包、sys.path/DLL 根、harness/study 入口、CLI/schema、预算停止、独立重演与错误反例证据可重演
+        - 证明 AI study 可在同一研究环境直接装载，同时 study 自报/篡改 PASS、p 值、绩效、报告、候选计数、失败记录或胜者集合不能越过来源摘要与 gate 重算
+        - 明确记录可信 AI 仍可能犯错，控制强度按场景重要度与错误成本选择，且不采用成本投入明显高于风险价值的隔离手段
         - 研究侧对产品数据库、迁移、产品进程、产品发布组、交易凭据、真实写路径和三项真实写门 effects 全为 NONE
         - R00 不消费 B04 完成证据、不固定或声称 confirmation_eligible_not_before；历史 holdout 与进行中的 forward observation 继续只作 discovery/validation，confirmation 保持禁用至 R01 完成门
       output_revision: null
@@ -1439,9 +1433,9 @@ construction_packages:
     contract_state: TO_BE_FROZEN_AT_PACKAGE_START
     depends_on: [R00]
     semantic_scopes:
-      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-REG-001-REQ}
-      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-VAL-001-REQ}
-      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-WRK-001-REQ}
+      - {owner: HALPHA-ALP-003@v0.4.0, anchor: ALP-RSCH-REG-001-REQ}
+      - {owner: HALPHA-ALP-003@v0.4.0, anchor: ALP-RSCH-VAL-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.4.0, anchor: ENG-MONO-WRK-001-REQ}
     base_revision: null
     owned_paths: [research/**]
     contracts:
@@ -1469,9 +1463,9 @@ construction_packages:
     contract_state: TO_BE_FROZEN_AT_PACKAGE_START
     depends_on: [R01]
     semantic_scopes:
-      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-FNL-001-REQ}
-      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-AIR-001-REQ}
-      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-WRK-002-REQ}
+      - {owner: HALPHA-ALP-003@v0.4.0, anchor: ALP-RSCH-FNL-001-REQ}
+      - {owner: HALPHA-ALP-003@v0.4.0, anchor: ALP-RSCH-AIR-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.4.0, anchor: ENG-MONO-WRK-002-REQ}
     base_revision: null
     owned_paths: [research/**]
     contracts:
@@ -1484,7 +1478,7 @@ construction_packages:
     effects: {migration: NONE, runtime: NONE, release: NONE, authority: NONE, credential: NONE}
     integration_gate: R02_SELECTIVE_VALIDATION_AND_FROZEN_POLICY_GATE
     scope:
-      - AI 在冻结研究政策内自主形成任务、用例和 worker 源码，完成探索、反证、confirmation/复现与最终筛选
+      - AI 在冻结研究政策内自主形成任务、用例和 study 源码，使用同一研究环境与固定 harness 完成探索、反证、confirmation/复现与最终筛选
       - 项目所有者不逐项批准中间任务或淘汰，只在存在达到门槛的最终候选时进行必要结果审查；零候选是有效结果
     exit_evidence:
       requirements:
@@ -1499,9 +1493,9 @@ construction_packages:
     contract_state: TO_BE_FROZEN_AFTER_OWNER_AUTHORIZATION
     depends_on: [R02, B05, V01]
     semantic_scopes:
-      - {owner: HALPHA-ALP-003@v0.3.0, anchor: ALP-RSCH-PRM-001-REQ}
-      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-INT-001-REQ}
-      - {owner: HALPHA-ENG-003@v0.3.0, anchor: ENG-MONO-WRK-003-REQ}
+      - {owner: HALPHA-ALP-003@v0.4.0, anchor: ALP-RSCH-PRM-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.4.0, anchor: ENG-MONO-INT-001-REQ}
+      - {owner: HALPHA-ENG-003@v0.4.0, anchor: ENG-MONO-WRK-003-REQ}
     base_revision: null
     owned_paths: []
     contracts:
@@ -1541,13 +1535,12 @@ value_decision_gate:
 build_order: [D00, B00, B01, B02, B03, B04, B05]
 research_build_order: [R00, R01, R02, R03]
 post_p0_decision_order: [B05, V01]
-currently_authorized_work: [B04, R00]
+currently_authorized_work: [B04]
 parallelization_rule: >-
   B01–B03 已完成；B04 当前实施历史/Demo/LIVE_READ_ONLY 证据、完整工作台和运维闭环，B05 继续按前序包完成及 exit evidence 推进。
-  R00 已获授权且不依赖 B04 完成；干净 base_revision、accepted_design_set_and_basis 输入身份与完整包契约均已冻结，可从包含该绑定的干净提交建立独立 worktree/branch，与 B04/B05 包级并行。
+  项目所有者对 R00 的建设方向授权保持存在且 R00 不依赖 B04 完成；可信 AI 简化设计已经接受，但新的 base_revision、accepted_design_set_and_basis 输入身份与完整包契约尚未重新冻结，因此必须先形成新的干净治理绑定，不能直接沿用被替代合同继续实施。
   R01 可在 R00 完成后开始非确认性建设，但完成、research_policy 冻结和 confirmation_eligible_not_before 固定必须等待 B04 最终数据边界，R02 再按 R01 完成与政策冻结推进。
-  R00–R02 不改变 B01–B05、P0 build_order 或三项真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；资源隔离未资格化且
-  runtime_real_write_gate=OPEN 时研究计算必须 PAUSED/STOPPED。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 授权和运行时真实写门继续分别 fail closed。
+  R00–R02 不改变 B01–B05、P0 build_order 或三项真实写门。B05 冻结 BuildManifest 后研究变更不得合入该产品基线，至少等待 B05 完成与 V01 决定；研究资源与交易产品或开放责任竞争时必须降低并发、PAUSED 或 STOPPED，不为此建设安全隔离或资源调度平台。B00 资格证据保留，账户实际持仓模式、保证金模式和杠杆不是 P0 建设阻断项；真实写工程能力、B05 授权和运行时真实写门继续分别 fail closed。
 
 owner_inputs_before_specific_gates:
   before_B00:
@@ -1583,7 +1576,7 @@ definition_of_ready_to_start_p0:
     - D00 已接受 DEMO/LIVE 统一 EXE ExecutionAction、环境限定 CAP 和系统机制验证优先的协调版本集
   blocking: []
   remaining_runtime_inputs_before_B00: []
-  first_step: 继续 B04；并从包含已冻结 R00 合同的干净提交建立独立 worktree/branch 开始 R00，不等待 B04 完成；两轨均不得建立 LIVE 写动作、装载 LIVE 写凭据或打开真实写门
+  first_step: 继续 B04；为已接受的简化 R00 重新绑定干净 base_revision、accepted_design_set_and_basis 输入身份与完整包合同后，再决定实施续行；不得直接沿用被替代合同的绑定。两轨均不得建立 LIVE 写动作、装载 LIVE 写凭据或打开真实写门
   current_assessment: >-
     P0 当前已完成 B01–B03，B04 正在实施证据、完整工作台与运维闭环，仍不具备真实交易资格。Windows 10 和 B00 的目标主机、固定 wheel、Demo 行情/订单/恢复与生命周期证据仍有效；
     账户实际 CROSSED/20x 不阻断建设，按 accepted CAP 兼容边界只读处理。live_write_build_capability=NOT_QUALIFIED、b05_package_eligibility=NOT_AUTHORIZED、runtime_real_write_gate=CLOSED。
@@ -1658,16 +1651,9 @@ source_evidence:
       - https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page
 
       - https://github.com/mhammond/pywin32
-  - claim: R00 候选模型外边界使用 Windows AppContainer 的默认拒绝能力与目标宿主内置 API
-    urls:
-      - https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-isolation
-      - https://learn.microsoft.com/en-us/windows/win32/secauthz/implementing-an-appcontainer
-  - claim: R00 候选进程树与资源边界使用 Windows Job Object，禁止 breakaway 并以 kill-on-close 终止整棵进程树
-    urls:
-      - https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects
 
 final_acceptance_statement: >-
-  本计划是项目所有者已接受的当前建设状态入口。DEMO 系统机制验证优先、DEMO/LIVE 共用 EXE 执行实现、环境限定 CAP、AI 主导独立研究、monorepo 并行集成及文档 Git-only 历史规则已进入 accepted_design_set；
-  D00=ALIGNED、B00=QUALIFIED、B01–B03=COMPLETED、B04=IN_PROGRESS，当前授权 B04 与 R00，B05 按依赖推进，B05 后执行人工 V01。R00 不依赖 B04，干净 base_revision、输入身份与完整包契约已经冻结，当前 status=NOT_STARTED，可从包含本绑定的干净提交建立独立 worktree/branch；
-  R01 可在 R00 完成后开始，但其完成、研究政策冻结和 confirmation 边界固定等待 B04 最终数据边界；R02 再按 R01 与政策门推进。R00–R02 只以零 P0 effects、独立 worktree/branch 和资源 fail-closed 边界并行，R03 继续等待 R02、B05、V01 与项目所有者证据选择。当前工作树未提交，BuildManifest 不具备发布资格；
-  工程资格不等于真实资金权限，B05 未获授权且 runtime_real_write_gate 保持 CLOSED。
+  本计划已接受 HALPHA-RSCH-TRUST-SIMPLIFICATION-001 协调版本集，把项目开发者使用的 AI 定义为不会作恶并会尽最大努力、但仍可能犯错的可信开发者；
+  按场景重要程度、错误成本和可恢复性优先使用审查、schema、测试、重演、holdout、证据复核和产品内重新资格化，不采用成本投入明显高于风险价值的研究安全隔离。
+  R00 仍不依赖 B04，但必须重新绑定包含本接受文本的干净 base_revision、accepted_design_set_and_basis 输入身份并冻结简化合同后方可实施；不得沿用被替代合同的 ac5270fc344ea4502c6238a13857fc0573aa3f01 / 113bbe9c8a6afbc0cc6ec37663677444029da5e8 绑定。
+  B04/B05、P0 build_order、BuildManifest 和三项真实写门均不改变；工程资格不等于真实资金权限，B05 未获授权且 runtime_real_write_gate 保持 CLOSED。
