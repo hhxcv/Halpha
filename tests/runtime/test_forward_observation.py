@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from hashlib import sha256
 import json
 from types import SimpleNamespace
 
@@ -19,6 +18,7 @@ from halpha.executor.forward_observation import (
     require_forward_observation_source_identity,
 )
 from halpha.planning.registry import OneShotParameters
+from halpha.source_identity import source_file_sha256
 
 
 def _spec() -> ForwardObservationSpec:
@@ -203,7 +203,7 @@ def test_forward_observation_runtime_rejects_frozen_source_drift(
         ("src/*.py",),
     )
     source_sha256 = {
-        "src/runtime.py": sha256(file.read_bytes()).hexdigest()
+        "src/runtime.py": source_file_sha256(file)
     }
     spec = ForwardObservationSpec.model_validate(
         {

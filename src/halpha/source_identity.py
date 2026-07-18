@@ -11,6 +11,27 @@ from halpha.domain_values import content_digest
 
 
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+_TEXT_SOURCE_SUFFIXES = frozenset(
+    {
+        ".cjs",
+        ".css",
+        ".html",
+        ".js",
+        ".json",
+        ".map",
+        ".md",
+        ".mjs",
+        ".py",
+        ".svg",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".txt",
+        ".xml",
+        ".yaml",
+        ".yml",
+    }
+)
 
 PRODUCT_RUNTIME_SOURCE_PATTERNS = (
     "pyproject.toml",
@@ -26,6 +47,15 @@ PRODUCT_RUNTIME_SOURCE_PATTERNS = (
 
 class SourceIdentityError(RuntimeError):
     """A sanitized source-identity failure."""
+
+
+def source_file_sha256(path: Path) -> str:
+    """Hash text with canonical LF line endings and binary files byte-exactly."""
+
+    content = path.read_bytes()
+    if path.suffix.lower() in _TEXT_SOURCE_SUFFIXES:
+        content = content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return sha256(content).hexdigest()
 
 
 def _safe_relative_path(raw_path: str, *, code: str) -> PurePosixPath:
@@ -47,7 +77,7 @@ def capture_source_sha256(
     root: Path,
     patterns: Iterable[str],
 ) -> dict[str, str]:
-    """Hash the exact repository files selected by safe relative glob patterns."""
+    """Hash selected files with platform-stable text and exact binary identity."""
 
     repository_root = root.resolve()
     files: set[Path] = set()
@@ -71,9 +101,7 @@ def capture_source_sha256(
     if not files:
         raise SourceIdentityError("SOURCE_IDENTITY_FILE_SET_EMPTY")
     return {
-        path.relative_to(repository_root).as_posix(): sha256(
-            path.read_bytes()
-        ).hexdigest()
+        path.relative_to(repository_root).as_posix(): source_file_sha256(path)
         for path in sorted(files, key=lambda item: item.as_posix())
     }
 

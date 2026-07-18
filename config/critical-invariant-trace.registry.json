@@ -34,7 +34,7 @@
         ".venv/Scripts/python.exe -m pytest tests/planning tests/app/test_web_security.py -q",
         ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
       ],
-      "evidence_digest": "sha256:02e18813dc206606e53978cd8b32f8766f042e98c97c9c116b824df52f471ead",
+      "evidence_digest": "sha256:10f4bcdc3fa1a67445e0d25f01a5ca72f1b12ad18e9a45c70711d329b6b14855",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -73,7 +73,7 @@
       "build_gate": [
         ".venv/Scripts/python.exe -m pytest tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
       ],
-      "evidence_digest": "sha256:e48591fe8c9056e9bf69db7a953fa2d50566d33d7067645106f4f7f2a404da7f",
+      "evidence_digest": "sha256:d1362663d0a32d862ceccdc56089f7afc4c78de1b24921853964f4baee8c0088",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -110,7 +110,7 @@
         ".venv/Scripts/python.exe -m pytest tests/capital -q",
         ".venv/Scripts/python.exe tools/qualification/verify_b02_database_boundary.py"
       ],
-      "evidence_digest": "sha256:e9372fe26babf2edfb48eb1a10aaf8dbb0dfe71c5d7e3fa3947954633df30c75",
+      "evidence_digest": "sha256:9913940705b864fbde3850be632e51356d5f67c11d36b58cf1357eca9b559525",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -149,7 +149,7 @@
       "build_gate": [
         ".venv/Scripts/python.exe -m pytest tests/runtime/test_windows_runtime.py tests/database/test_record_family_contract.py tests/architecture/test_process_boundaries.py -q"
       ],
-      "evidence_digest": "sha256:68caed30e8504cfc9590e6e197b4a2ed95d7ee8ccadd767457d3194a61c7caa7",
+      "evidence_digest": "sha256:cc364e46ba9e673d71d592483377208ca03bd75002014d538bcaac910f25bfd3",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -179,7 +179,7 @@
         ".venv/Scripts/python.exe -m pytest tests/app/test_web_security.py -q",
         "Playwright /operations static-dist-loss and shared-command qualification"
       ],
-      "evidence_digest": "sha256:a1d0e356d03d2b9623b59865a03a57fb2327f16db10a550155a1da3b45480e67",
+      "evidence_digest": "sha256:706de56521ec5fbeee5a0bc64198fbb79ff0bb3b0bf7a54d1444f9e3bb2e4daa",
       "implementation_status": "IMPLEMENTED",
       "deviation_status": "NONE"
     },
@@ -200,7 +200,7 @@
       "build_gate": [
         "P0 construction validation keeps automatic continuation deferred"
       ],
-      "evidence_digest": "sha256:70febc9ee1a47677eae0612ce98e13218c025d7eb0f1769ba824723bc31cda66",
+      "evidence_digest": "sha256:e6983b35c924e38bccaa55e353268e4a7da5539879f42ed925bf62aaf5c249f5",
       "implementation_status": "DEFERRED",
       "deviation_status": "NONE"
     }

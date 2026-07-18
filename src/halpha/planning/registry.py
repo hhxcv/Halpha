@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 from enum import StrEnum
-from hashlib import sha256
 import json
 from pathlib import Path
 from typing import Any
@@ -12,6 +11,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from halpha.domain_values import canonical_decimal, content_digest, decimal_from_string
+from halpha.source_identity import source_file_sha256
 
 
 ONE_SHOT_STRATEGY_ID = "ONE_SHOT_DONCHIAN_ATR_BREAKOUT"
@@ -116,7 +116,7 @@ def _implementation_path() -> Path:
 
 
 def _implementation_digest() -> str:
-    return sha256(_implementation_path().read_bytes()).hexdigest()
+    return source_file_sha256(_implementation_path())
 
 
 def _parameter_schema() -> dict[str, Any]:

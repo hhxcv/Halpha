@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from halpha.source_identity import source_file_sha256  # noqa: E402
 from tools.qualification.source_binding import (  # noqa: E402
     SourceBindingError,
     capture_source_sha256,
@@ -100,7 +101,7 @@ def compute_record_digest(
     )
     files = _expand_files(root, references)
     file_digests = {
-        path.relative_to(root).as_posix(): sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): source_file_sha256(path)
         for path in files
     }
     record_basis = {

@@ -7,6 +7,7 @@ import pytest
 from halpha.source_identity import (
     SourceIdentityError,
     require_source_sha256,
+    source_file_sha256,
     source_sha256_digest,
     validate_source_sha256,
 )
@@ -30,6 +31,25 @@ def test_source_binding_detects_content_and_file_set_changes(tmp_path: Path) -> 
     (source / "second.py").write_text("VALUE = 3\n", encoding="utf-8")
     after_file_set_change = capture_source_sha256(tmp_path, ("src/*.py",))
     assert set(after_file_set_change) == {"src/first.py", "src/second.py"}
+
+
+def test_source_identity_normalizes_text_line_endings_but_not_binary(
+    tmp_path: Path,
+) -> None:
+    text_path = tmp_path / "source.py"
+    text_path.write_bytes(b"VALUE = 1\nNEXT = 2\n")
+    lf_digest = source_file_sha256(text_path)
+    text_path.write_bytes(b"VALUE = 1\r\nNEXT = 2\r\n")
+    assert source_file_sha256(text_path) == lf_digest
+
+    text_path.write_bytes(b"VALUE = 3\r\nNEXT = 2\r\n")
+    assert source_file_sha256(text_path) != lf_digest
+
+    binary_path = tmp_path / "artifact.bin"
+    binary_path.write_bytes(b"\x00\r\n\xff")
+    binary_crlf_digest = source_file_sha256(binary_path)
+    binary_path.write_bytes(b"\x00\n\xff")
+    assert source_file_sha256(binary_path) != binary_crlf_digest
 
 
 @pytest.mark.parametrize(
